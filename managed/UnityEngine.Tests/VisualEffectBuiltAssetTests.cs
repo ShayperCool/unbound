@@ -101,22 +101,83 @@ namespace UnityEngine.Tests
             Assert.True(built.m_Data.SameGraph(Read(Document.Replace("5.5", "8")).m_Data));
             Assert.False(built.m_Data.SameGraph(Read(Document.Replace(@"""data[3]"": 3", @"""data[3]"": 2")).m_Data));
             Assert.False(built.m_Data.SameGraph(Read(Document.Replace(@"""m_CompilationVersion"": 7", @"""m_CompilationVersion"": 8")).m_Data));
-            // No graph of the project compiles to it: it does not run, and says why.
-            built.TakeBuiltPrograms(name => new[] { Read(Document.Replace(@"""data[3]"": 3", @"""data[3]"": 2")) });
-            Assert.Equal("programs built for a graphics device, and no graph of the project compiles to the same graph", VisualEffect.Unsupported(built.m_Data));
-            // One does: it runs with that graph's programs (taken once).
+            // The project's graph at its path compiles to another graph, or there is none: it
+            // does not run, and says why.
+            var decoy = Read(Document.Replace(@"""data[3]"": 3", @"""data[3]"": 2"));
+            decoy.TakeBuiltPrograms(null, path => null);
+            built.TakeBuiltPrograms("assets/built.vfx", path => decoy);
+            Assert.Equal("programs built for a graphics device, and the project's graph at assets/built.vfx compiles to another graph", VisualEffect.Unsupported(built.m_Data));
+            var lost = Read(Document);
+            lost.TakeBuiltPrograms(null, path => throw new InvalidOperationException("no path to look at"));
+            Assert.Equal("programs built for a graphics device, and the project has no graph at its path to compile them from", VisualEffect.Unsupported(lost.m_Data));
+            // It does: the asset runs with that graph's programs and what a build does not keep
+            // of its tasks, taken once.
             var other = Read(Document);
             // (A graph of the project: one not waiting for programs of its own.)
             var twin = Read(Document);
-            twin.TakeBuiltPrograms(name => Array.Empty<VisualEffectAsset>());
+            twin.TakeBuiltPrograms(null, path => null);
             Object program = VisualEffectAsset.Create();
             twin.m_Data.Processors[1][0] = program;
+            twin.m_Data.Systems[1].tasks[0].usesMaterialVariant = true;
             string asked = null;
-            other.TakeBuiltPrograms(name => { asked = name; return new[] { twin }; });
-            Assert.Equal("Built", asked);
+            other.TakeBuiltPrograms("assets/built.vfx", path => { asked = path; return twin; });
+            Assert.Equal("assets/built.vfx", asked);
             Assert.Same(program, other.m_Data.Processors[1][0]);
+            Assert.True(other.m_Data.Systems[1].tasks[0].usesMaterialVariant);
             Assert.Null(other.m_Data.BuiltRefusal);
-            other.TakeBuiltPrograms(name => throw new InvalidOperationException("asked twice"));
+            other.TakeBuiltPrograms("assets/built.vfx", path => throw new InvalidOperationException("asked twice"));
+        }
+
+        [Fact]
+        public void ABuiltAssetOfAnotherRuntimeDataVersionDoesNotRun()
+        {
+            var asset = Read(Document.Replace(@"""m_RuntimeVersion"": 38", @"""m_RuntimeVersion"": 37"));
+            Assert.Equal("a compiled graph of runtime data version 37 (this release's is 38)", VisualEffect.Unsupported(asset.m_Data));
+            asset.TakeBuiltPrograms("assets/built.vfx", path => throw new InvalidOperationException("not looked for"));
+        }
+
+        [Fact]
+        public void EveryKindOfConstantIsRead()
+        {
+            const string Sheet = @"""m_PropertySheet"": {
+      ""m_Float"": { ""m_Array"": [ { ""m_ExpressionIndex"": 0, ""m_Value"": 5.5 } ] },
+      ""m_Vector2f"": { ""m_Array"": [ { ""m_ExpressionIndex"": 3, ""m_Value"": { ""x"": 4, ""y"": 5 } } ] },
+      ""m_Vector3f"": { ""m_Array"": [ { ""m_ExpressionIndex"": 1, ""m_Value"": { ""x"": 1, ""y"": 2, ""z"": 3 } } ] },
+      ""m_Vector4f"": { ""m_Array"": [ { ""m_ExpressionIndex"": 4, ""m_Value"": { ""x"": 6, ""y"": 7, ""z"": 8, ""w"": 9 } } ] },
+      ""m_Uint"": { ""m_Array"": [ { ""m_ExpressionIndex"": 5, ""m_Value"": 4294967295 } ] },
+      ""m_Int"": { ""m_Array"": [ { ""m_ExpressionIndex"": 6, ""m_Value"": -7 } ] },
+      ""m_Matrix4x4f"": { ""m_Array"": [ { ""m_ExpressionIndex"": 7, ""m_Value"": { ""e00"": 1, ""e01"": 2, ""e02"": 0, ""e03"": 3, ""e10"": 0, ""e11"": 1, ""e12"": 0, ""e13"": 4, ""e20"": 0, ""e21"": 0, ""e22"": 1, ""e23"": 5, ""e30"": 0, ""e31"": 0, ""e32"": 0, ""e33"": 1 } } ] },
+      ""m_AnimationCurve"": { ""m_Array"": [ { ""m_ExpressionIndex"": 8, ""m_Value"": { ""m_Curve"": [ { ""time"": 0, ""value"": 1, ""inSlope"": 0, ""outSlope"": 0, ""tangentMode"": 0, ""weightedMode"": 0 }, { ""time"": 2, ""value"": 3, ""inSlope"": 0, ""outSlope"": 0, ""tangentMode"": 0, ""weightedMode"": 0 } ], ""m_PreInfinity"": 2, ""m_PostInfinity"": 1 } } ] },
+      ""m_Gradient"": { ""m_Array"": [ { ""m_ExpressionIndex"": 9, ""m_Value"": { ""key0"": { ""r"": 1, ""g"": 0, ""b"": 0, ""a"": 1 }, ""key1"": { ""r"": 0, ""g"": 0, ""b"": 1, ""a"": 0.5 }, ""ctime0"": 0, ""ctime1"": 65535, ""atime0"": 0, ""atime1"": 65535, ""m_Mode"": 1, ""m_NumColorKeys"": 2, ""m_NumAlphaKeys"": 2 } } ] },
+      ""m_Bool"": { ""m_Array"": [ { ""m_ExpressionIndex"": 2, ""m_Value"": 1 } ] }
+    },";
+            const string Expressions = @"""data[3]"": 18 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 2 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 4 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 6 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 5 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 13 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 14 },
+        { ""op"": 1, ""valueIndex"": 0, ""data[0]"": -1, ""data[1]"": -1, ""data[2]"": -1, ""data[3]"": 15 }";
+            int sheetStart = Document.IndexOf(@"""m_PropertySheet"": {"), sheetEnd = Document.IndexOf(@"""m_ExposedExpressions""");
+            var document = (Document.Substring(0, sheetStart) + Sheet + Document.Substring(sheetEnd))
+                .Replace(@"""data[3]"": 18 }", Expressions).Replace(@"""m_MaxCommonExpressionsIndex"": 3", @"""m_MaxCommonExpressionsIndex"": 10");
+            var data = Read(document).m_Data;
+            Assert.Equal(10, data.Expressions.Length);
+            var values = new VisualEffectValues(data);
+            Assert.Equal(new Vector4(4f, 5f, 0f, 0f), values.GetVector(3, 2));
+            Assert.Equal(new Vector4(6f, 7f, 8f, 9f), values.GetVector(4, 4));
+            Assert.Equal(uint.MaxValue, values.GetWord(5));
+            Assert.Equal(unchecked((uint)-7), values.GetWord(6));
+            var matrix = values.GetMatrix(7);
+            Assert.Equal(new Vector4(3f, 4f, 5f, 1f), matrix.GetColumn(3));
+            Assert.Equal(2f, matrix[0, 1]);
+            var curve = Assert.IsType<AnimationCurve>(values.GetObject(8));
+            Assert.Equal(2, curve.length);
+            Assert.Equal(WrapMode.Loop, curve.postWrapMode);
+            var gradient = Assert.IsType<Gradient>(values.GetObject(9));
+            Assert.Equal(GradientMode.Fixed, gradient.mode);
+            Assert.Equal(0.5f, gradient.alphaKeys[1].alpha);
         }
     }
 }

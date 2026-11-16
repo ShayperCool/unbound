@@ -156,10 +156,11 @@ namespace UnityEngine.VFX
         void CreateSystems(bool sendInitialEvent)
         {
             DestroySystems();
+            // A built asset takes its programs before its renderer lists their materials.
+            if (m_Asset != null) m_Asset.TakeBuiltPrograms();
             UpdateRenderer();
             // Systems are made once the effect's object is active (enabled or not), and kept.
             if (m_Asset == null || m_Data.Systems.Length == 0 || !(m_Registered || gameObject.activeInHierarchy)) return;
-            m_Asset.TakeBuiltPrograms();
             m_Unsupported = Unsupported(m_Data);
             if (m_Unsupported != null)
             {

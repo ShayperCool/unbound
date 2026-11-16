@@ -219,6 +219,16 @@ namespace UnityEngine
 
         // ------------------------------------------------------------ assets
 
+        /// <summary>The path a loaded bundle's container gives an object it holds; null for an
+        /// object of no loaded bundle.</summary>
+        internal static string ContainerPathOf(Object o)
+        {
+            foreach (var bundle in s_Loaded)
+                foreach (var entry in bundle.m_Container)
+                    if (ReferenceEquals(bundle.Resolve(entry.Asset), o)) return entry.Name;
+            return null;
+        }
+
         Object Resolve(long fileId) => m_AssetFile == null || fileId == 0 ? null : BundleFiles.Load("bundle:" + m_AssetFile, fileId);
 
         // m_PathFlags bits: a name without '/' may be an asset's file name without its extension (1)

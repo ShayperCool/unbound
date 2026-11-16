@@ -337,11 +337,20 @@ namespace Unbound.Runtime
                 || CpuBuffers.Length != other.CpuBuffers.Length || Exposed.Length != other.Exposed.Length)
                 return false;
             for (int i = 0; i < Exposed.Length; i++)
-                if (Exposed[i].mapping.name != other.Exposed[i].mapping.name || Exposed[i].mapping.index != other.Exposed[i].mapping.index) return false;
+                if (Exposed[i].mapping.name != other.Exposed[i].mapping.name || Exposed[i].mapping.index != other.Exposed[i].mapping.index
+                    || Exposed[i].space != other.Exposed[i].space)
+                    return false;
             for (int i = 0; i < Events.Length; i++)
                 if (Events[i].name != other.Events[i].name) return false;
             for (int i = 0; i < GpuBuffers.Length; i++)
-                if (GpuBuffers[i].size != other.GpuBuffers[i].size || GpuBuffers[i].stride != other.GpuBuffers[i].stride || GpuBuffers[i].target != other.GpuBuffers[i].target) return false;
+                if (!SameBuffer(GpuBuffers[i], other.GpuBuffers[i])) return false;
+            for (int i = 0; i < CpuBuffers.Length; i++)
+                if (CpuBuffers[i].capacity != other.CpuBuffers[i].capacity || CpuBuffers[i].stride != other.CpuBuffers[i].stride
+                    || !SameLayout(CpuBuffers[i].layout, other.CpuBuffers[i].layout))
+                    return false;
+            if (TemporaryBuffers.Length != other.TemporaryBuffers.Length) return false;
+            for (int i = 0; i < TemporaryBuffers.Length; i++)
+                if (TemporaryBuffers[i].frameCount != other.TemporaryBuffers[i].frameCount || !SameBuffer(TemporaryBuffers[i].desc, other.TemporaryBuffers[i].desc)) return false;
             for (int s = 0; s < Systems.Length; s++)
             {
                 var a = Systems[s];
@@ -353,9 +362,23 @@ namespace Unbound.Runtime
                 var tb = b.tasks ?? Array.Empty<VFXEditorTaskDesc>();
                 if (ta.Length != tb.Length) return false;
                 for (int t = 0; t < ta.Length; t++)
-                    if (ta[t].type != tb[t].type || !SameMappings(ta[t].buffers, tb[t].buffers) || !SameMappings(ta[t].values, tb[t].values)
-                        || !SameMappings(ta[t].parameters, tb[t].parameters))
+                {
+                    if (ta[t].type != tb[t].type || ta[t].instanceSplitIndex != tb[t].instanceSplitIndex || !SameMappings(ta[t].buffers, tb[t].buffers)
+                        || !SameMappings(ta[t].values, tb[t].values) || !SameMappings(ta[t].parameters, tb[t].parameters))
                         return false;
+                    var pa = ta[t].temporaryBuffers ?? Array.Empty<VFXMappingTemporary>();
+                    var pb = tb[t].temporaryBuffers ?? Array.Empty<VFXMappingTemporary>();
+                    if (pa.Length != pb.Length) return false;
+                    for (int i = 0; i < pa.Length; i++)
+                        if (pa[i].mapping.name != pb[i].mapping.name || pa[i].mapping.index != pb[i].mapping.index
+                            || pa[i].pastFrameIndex != pb[i].pastFrameIndex || pa[i].perCameraBuffer != pb[i].perCameraBuffer)
+                            return false;
+                }
+                var sa = a.instanceSplitDescs ?? Array.Empty<VFXInstanceSplitDesc>();
+                var sb = b.instanceSplitDescs ?? Array.Empty<VFXInstanceSplitDesc>();
+                if (sa.Length != sb.Length) return false;
+                for (int i = 0; i < sa.Length; i++)
+                    if (!(sa[i].values ?? Array.Empty<uint>()).AsSpan().SequenceEqual(sb[i].values ?? Array.Empty<uint>())) return false;
             }
             return true;
         }
@@ -371,6 +394,21 @@ namespace Unbound.Runtime
                 for (int k = 0; k < 4; k++)
                     if ((a[i].data != null && k < a[i].data.Length ? a[i].data[k] : -1) != (b[i].data != null && k < b[i].data.Length ? b[i].data[k] : -1)) return false;
             }
+            return true;
+        }
+
+        static bool SameBuffer(in VFXGPUBufferDesc a, in VFXGPUBufferDesc b) =>
+            a.target == b.target && a.size == b.size && a.stride == b.stride && a.capacity == b.capacity && a.mode == b.mode && SameLayout(a.layout, b.layout);
+
+        static bool SameLayout(VFXLayoutElementDesc[] a, VFXLayoutElementDesc[] b)
+        {
+            a ??= Array.Empty<VFXLayoutElementDesc>();
+            b ??= Array.Empty<VFXLayoutElementDesc>();
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+                if (a[i].name != b[i].name || a[i].type != b[i].type || a[i].offset.bucket != b[i].offset.bucket
+                    || a[i].offset.structure != b[i].offset.structure || a[i].offset.element != b[i].offset.element)
+                    return false;
             return true;
         }
 

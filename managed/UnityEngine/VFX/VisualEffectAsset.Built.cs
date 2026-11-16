@@ -50,7 +50,10 @@ namespace UnityEngine.VFX
             data.Processors = built;
             data.Seal();
             m_Data = data;
-            m_BuiltPrograms = true;
+            uint version = (uint)infos.Long("m_RuntimeVersion");
+            // A graph of another runtime data layout is not read as this one.
+            if (version != RuntimeDataVersion) data.BuiltRefusal = $"a compiled graph of runtime data version {version} (this release's is {RuntimeDataVersion})";
+            else m_BuiltPrograms = true;
         }
 
         static VFXMapping[] Mappings(YNode list)
@@ -225,31 +228,50 @@ namespace UnityEngine.VFX
             return values.ToArray();
         }
 
-        /// <summary>For an asset read from a build, before an effect first runs it: the programs of
-        /// the project's graph of its name that compiles to the same graph (the same systems,
-        /// tasks, expressions and buffers); without one the asset says why it does not run.</summary>
-        internal void TakeBuiltPrograms() => TakeBuiltPrograms(ProjectGraphs);
+        /// <summary>For an asset read from a build, before an effect first runs it: the programs
+        /// of the project's graph at the asset's path in its bundle, when that graph compiles to
+        /// the same graph; otherwise the asset says why it does not run. The values written into
+        /// the graph's blocks are part of its programs: a project graph changed in those after
+        /// the build cannot be told apart, so the asset says which graph it runs with.</summary>
+        internal void TakeBuiltPrograms() => TakeBuiltPrograms(UnityEngine.AssetBundle.ContainerPathOf(this), ProjectGraphAt);
 
-        /// <summary>The project's graph assets of a name (any folder).</summary>
-        static IEnumerable<VisualEffectAsset> ProjectGraphs(string name)
+        /// <summary>The project's graph asset at a path, compared without case (a bundle keeps
+        /// its paths in lower case); null without one.</summary>
+        static VisualEffectAsset ProjectGraphAt(string path)
         {
-            foreach (var guid in AssetDatabase.FindAssets("t:VisualEffectAsset " + name))
-                if (AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(AssetDatabase.GUIDToAssetPath(guid)) is VisualEffectAsset asset) yield return asset;
+            foreach (var guid in AssetDatabase.FindAssets("t:VisualEffectAsset"))
+            {
+                string found = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.Equals(found, path, StringComparison.OrdinalIgnoreCase)) return AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(found);
+            }
+            return null;
         }
 
-        internal void TakeBuiltPrograms(Func<string, IEnumerable<VisualEffectAsset>> graphsNamed)
+        internal void TakeBuiltPrograms(string path, Func<string, VisualEffectAsset> graphAt)
         {
             if (!m_BuiltPrograms) return;
             m_BuiltPrograms = false;
-            foreach (var twin in graphsNamed(name))
+            var twin = path == null ? null : graphAt(path);
+            if (twin == null || ReferenceEquals(twin, this) || twin.m_BuiltPrograms)
             {
-                if (twin == null || ReferenceEquals(twin, this) || twin.m_BuiltPrograms || !twin.m_Data.SameGraph(m_Data)) continue;
-                m_Data.Processors = twin.m_Data.Processors;
-                m_Data.OutputRefusals = twin.m_Data.OutputRefusals;
-                m_ShaderSourceIndices = twin.m_ShaderSourceIndices;
+                m_Data.BuiltRefusal = $"programs built for a graphics device, and the project has no graph at {path ?? "its path"} to compile them from";
                 return;
             }
-            m_Data.BuiltRefusal = "programs built for a graphics device, and no graph of the project compiles to the same graph";
+            if (!twin.m_Data.SameGraph(m_Data))
+            {
+                m_Data.BuiltRefusal = $"programs built for a graphics device, and the project's graph at {path} compiles to another graph";
+                return;
+            }
+            m_Data.Processors = twin.m_Data.Processors;
+            m_Data.OutputRefusals = twin.m_Data.OutputRefusals;
+            m_ShaderSourceIndices = twin.m_ShaderSourceIndices;
+            // What a build does not keep of a task: whether its output's material is a variant.
+            for (int s = 0; s < m_Data.Systems.Length; s++)
+            {
+                var tasks = m_Data.Systems[s].tasks;
+                for (int t = 0; t < (tasks?.Length ?? 0); t++) tasks[t].usesMaterialVariant = twin.m_Data.Systems[s].tasks[t].usesMaterialVariant;
+            }
+            Debug.Log($"Unbound: the built VisualEffectAsset '{name}' runs with the programs the project's {path} compiles to (values written into its blocks are the project's).");
         }
     }
 }

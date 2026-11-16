@@ -331,10 +331,11 @@ the asset (an object of its own, not the project's), its events and exposed prop
 effect that uses it (its systems, and at frames 3 and 20 whether it is culled and awake).
 
 Unbound reads the built asset's compiled graph from the bundle. Its programs are built for the
-Editor's graphics device, so Unbound runs it with the programs of the project's graph of the
-same name that compiles to the same graph (here `Bundled.vfx` itself); a built asset without
-such a graph in the project does not run and says so (a unit test holds that case, not this
-probe).
+Editor's graphics device, so Unbound runs it with the programs of the project's graph at the
+asset's path in its bundle when that graph compiles to the same graph (here `Bundled.vfx`
+itself); a built asset without such a graph in the project does not run and says so (a unit test
+holds that case, not this probe). The rows here show the asset's graph and that the effect
+runs (culled, awake), not its particles or an image of them.
 
 ## Not covered yet
 
