@@ -75,6 +75,14 @@ public class ResidentDrawerProbe : MonoBehaviour
     static readonly int[] SceneCaptures = { 8, 14 };
     const int SceneLastFrame = 16;
 
+    /// <summary>The motion profile (RESIDENT_DRAWER_MOTION): a wall with cubes behind and beside
+    /// it, the camera jumping sideways past the wall and back, moving sideways and then zooming in
+    /// and out (<see cref="StepMotion"/>), every frame captured: with GPU occlusion culling each frame's draws are
+    /// tested against the previous frame's depth and the culled ones again against the frame's
+    /// own, so a cube coming out from behind the wall is drawn in the frame it shows.</summary>
+    static readonly bool s_MotionMode = Environment.GetEnvironmentVariable("RESIDENT_DRAWER_MOTION") == "1";
+    const int MotionLastFrame = 50;
+
     void Start()
     {
         s_Out = Environment.GetEnvironmentVariable("RESIDENT_DRAWER_OUT");
@@ -105,6 +113,13 @@ public class ResidentDrawerProbe : MonoBehaviour
             }
             return;
         }
+        if (s_MotionMode)
+        {
+            Row("device", SystemInfo.graphicsDeviceType.ToString());
+            Row("drawer.enabled.start", DrawerEnabled());
+            Guarded("build", BuildMotion);
+            return;
+        }
         m_Light.shadows = LightShadows.Hard;
         Row("device", SystemInfo.graphicsDeviceType.ToString());
 #if UNITY_EDITOR
@@ -123,6 +138,35 @@ public class ResidentDrawerProbe : MonoBehaviour
         {
             Row("exception.build", e.GetType().Name + ": " + e.Message);
         }
+    }
+
+    /// <summary>The motion profile's scene: a grey wall, five cubes in a row behind it and two beside
+    /// it farther away, all drawn by the drawer; the camera looking along +z at the wall.</summary>
+    void BuildMotion()
+    {
+        var grey = Lit("Universal Render Pipeline/Lit", new Color(0.55f, 0.55f, 0.6f), "Grey");
+        var colors = new[] { new Color(0.9f, 0.15f, 0.1f), new Color(0.2f, 0.8f, 0.25f), new Color(0.2f, 0.35f, 0.95f),
+            new Color(0.95f, 0.85f, 0.2f), new Color(0.9f, 0.4f, 0.9f) };
+        var wall = Make("Wall", PrimitiveType.Cube, new Vector3(0, 1.5f, 2), grey);
+        wall.transform.localScale = new Vector3(3, 3, 0.2f);
+        for (int i = 0; i < colors.Length; i++)
+            Make("Behind" + i, PrimitiveType.Cube, new Vector3(-2 + i, 1.5f, 5), Lit("Universal Render Pipeline/Lit", colors[i], "Behind" + i));
+        Make("SideLeft", PrimitiveType.Cube, new Vector3(-6, 1, 9), Lit("Universal Render Pipeline/Lit", colors[0], "SideLeft"));
+        Make("SideRight", PrimitiveType.Cube, new Vector3(6, 1, 9), Lit("Universal Render Pipeline/Lit", colors[2], "SideRight"));
+        m_Camera.transform.SetPositionAndRotation(new Vector3(0, 1.5f, -4), Quaternion.identity);
+        m_Camera.fieldOfView = 60;
+    }
+
+    /// <summary>The motion profile's camera: straight behind the wall (the middle cubes hidden,
+    /// frames 1 to 10), a jump 6 to the left (frame 11: they show at once), back behind the wall
+    /// (16), a jump 6 to the right (21), then from x -3 sideways at 0.25 a frame (25 to 36) and
+    /// the field of view from 60 to 20 (37 to 42) and back (43 to 48).</summary>
+    void StepMotion(int frame)
+    {
+        float x = frame < 11 ? 0 : frame < 16 ? -6 : frame < 21 ? 0 : frame < 25 ? 6 : -3 + 0.25f * Math.Min(frame - 24, 12);
+        m_Camera.transform.position = new Vector3(x, 1.5f, -4);
+        int zoom = Math.Max(frame - 36, 0);
+        m_Camera.fieldOfView = zoom <= 6 ? 60 - 40 * zoom / 6f : 20 + 40 * Math.Min(zoom - 6, 6) / 6f;
     }
 
     static bool DrawerEnabled() =>
@@ -370,6 +414,14 @@ public class ResidentDrawerProbe : MonoBehaviour
             DebugShaders();
         }
         m_Frame++;
+        if (s_MotionMode)
+        {
+            // Every frame from the first moved one on: the image of the frame before.
+            if (m_Frame >= 2) Guarded("capture", () => Capture(m_Frame - 1));
+            Guarded("step", () => StepMotion(m_Frame));
+            if (m_Frame == MotionLastFrame) Finish();
+            return;
+        }
         if (Array.IndexOf(s_SceneMode ? SceneCaptures : Captures, m_Frame - 1) >= 0) Guarded("capture", () => Capture(m_Frame - 1));
         if (!s_SceneMode) Guarded("step", () => Step(m_Frame));
         if (m_Frame == (s_SceneMode ? SceneLastFrame : LastFrame)) Finish();
@@ -505,7 +557,7 @@ public class ResidentDrawerProbe : MonoBehaviour
         names.Sort(StringComparer.Ordinal);
         foreach (var name in names)
             Row(prefix + ".visible." + name, m_Renderers[name].isVisible);
-        if (!s_SceneMode) Row(prefix + ".willRenderCalled", m_Renderers["Callback"].GetComponent<WillRender>().calls > 0);
+        if (!s_SceneMode && !s_MotionMode) Row(prefix + ".willRenderCalled", m_Renderers["Callback"].GetComponent<WillRender>().calls > 0);
         RecordDrawer(prefix);
     }
 

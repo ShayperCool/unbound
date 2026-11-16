@@ -106,7 +106,7 @@ def stage(label):
     edit(project/'ProjectSettings/GraphicsSettings.asset', 'm_BrgStripping: 0', 'm_BrgStripping: 2')
     edit(project/'Assets/Settings/ProbeRenderer.asset', 'm_RenderingMode: 0', 'm_RenderingMode: 2')
     edit(project/'Assets/Settings/ProbeURP.asset', 'm_GPUResidentDrawerMode: 0', 'm_GPUResidentDrawerMode: 1')
-    if PROFILE == 'occlusion':
+    if PROFILE in ('occlusion', 'motion'):
         edit(project/'Assets/Settings/ProbeURP.asset', 'm_GPUResidentDrawerEnableOcclusionCullingInCameras: 0',
              'm_GPUResidentDrawerEnableOcclusionCullingInCameras: 1')
     if PROFILE == 'controls':
@@ -136,6 +136,8 @@ def probe_env(work):
         env['RESIDENT_DRAWER_CONTROLS'] = '1'
     if PROFILE == 'speedtree':
         env['RESIDENT_DRAWER_SPEEDTREE'] = '1'
+    if PROFILE == 'motion':
+        env['RESIDENT_DRAWER_MOTION'] = '1'
     return env
 
 
@@ -321,7 +323,7 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check', 'compare'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--profile', choices=('direct', 'occlusion', 'controls', 'speedtree', *SCENES), default='direct')
+    parser.add_argument('--profile', choices=('direct', 'occlusion', 'motion', 'controls', 'speedtree', *SCENES), default='direct')
     args = parser.parse_args()
     global PROFILE
     PROFILE = args.profile
