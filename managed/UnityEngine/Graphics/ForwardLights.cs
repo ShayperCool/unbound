@@ -288,20 +288,21 @@ namespace Unbound.Runtime
         static readonly int s_LightTexture0 = Shader.PropertyToID("_LightTexture0");
         static readonly int s_LightTextureB0 = Shader.PropertyToID("_LightTextureB0");
 
-        /// <summary>A pixel light's ForwardAdd variables (its colour times <paramref name="scale"/>) and its keyword.</summary>
         static readonly int s_OcclusionMaskSelector = Shader.PropertyToID("unity_OcclusionMaskSelector");
         static readonly object[] s_Selectors =
             { new Vector4(1f, 0f, 0f, 0f), new Vector4(0f, 1f, 0f, 0f), new Vector4(0f, 0f, 1f, 0f), new Vector4(0f, 0f, 0f, 1f) };
 
         /// <summary>unity_OcclusionMaskSelector of a light's passes: its baked occlusion channel,
         /// the first without one (a realtime light, no light; measured in ForwardBase: Unity
-        /// 6000.0.71f1, tests/projects/lppv selector). Boxed once.</summary>
+        /// 6000.0.71f1, tests/projects/lppv selector.*; the add and deferred light passes take
+        /// the same rule, unmeasured). Boxed once.</summary>
         internal static object OcclusionMaskSelector(Light l)
         {
             int channel = l != null ? l.bakingOutput.occlusionMaskChannel : -1;
             return s_Selectors[channel >= 0 && channel < 4 ? channel : 0];
         }
 
+        /// <summary>A pixel light's ForwardAdd variables (its colour times <paramref name="scale"/>) and its keyword.</summary>
         internal static string AddPassProperties(Light l, float scale, Dictionary<int, object> into)
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;

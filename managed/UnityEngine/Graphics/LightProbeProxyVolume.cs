@@ -120,8 +120,23 @@ namespace UnityEngine
         /// <summary>What the shaders read of a built volume (<see cref="Apply"/>).</summary>
         internal bool Built => m_Built && m_Texture != null;
 
+        /// <summary>Whether volumes light anything: in the built-in pipeline, or a render pipeline
+        /// that says it supports them (URP does not: its renderers keep Blend Probes' probes;
+        /// measured: tests/projects/urp per-object-constants.jsonl, the Proxy Sphere).</summary>
+        internal static bool Active =>
+            GraphicsSettings.currentRenderPipeline == null || SupportedRenderingFeatures.active.lightProbeProxyVolumes;
+
+        internal override void OnEngineDestroy()
+        {
+            Volumes.Remove(this);
+            if (m_Texture != null) DestroyImmediate(m_Texture);
+            m_Texture = null;
+            m_Built = false;
+        }
+
         static void RefreshAll()
         {
+            if (!Active) return;
             for (int i = Volumes.Count - 1; i >= 0; i--)
             {
                 var volume = Volumes[i];
@@ -324,6 +339,7 @@ namespace UnityEngine
         /// <summary>The volume a renderer that uses one samples: its override's, else its own.</summary>
         internal static LightProbeProxyVolume Of(Renderer renderer)
         {
+            if (!Active) return null;
             var owner = renderer.lightProbeProxyVolumeOverride;
             var volume = owner != null ? owner.GetComponent<LightProbeProxyVolume>() : renderer.GetComponent<LightProbeProxyVolume>();
             return volume != null && volume.isActiveAndEnabled && volume.Built ? volume : null;

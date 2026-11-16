@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -123,6 +124,76 @@ namespace Unbound.Tests
                 var renderer = go.GetComponent<Renderer>();
                 renderer.lightProbeUsage = LightProbeUsage.UseProxyVolume;
                 Assert.Same(volume, LightProbeProxyVolume.Of(renderer));
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+        sealed class NoVolumesPipelineAsset : RenderPipelineAsset
+        {
+            protected override RenderPipeline CreatePipeline() => new NoVolumesPipeline();
+        }
+
+        sealed class NoVolumesPipeline : RenderPipeline
+        {
+            protected override void Render(ScriptableRenderContext context, Camera[] cameras) { }
+        }
+
+        /// <summary>A renderer that uses a built volume draws through it in the built-in pipeline;
+        /// under a render pipeline that does not support volumes (URP) it keeps the probes Blend
+        /// Probes gives (tests/projects/urp per-object-constants.jsonl, the Proxy Sphere).</summary>
+        [Fact]
+        public void OnlyPipelinesWithVolumesDrawThroughThem()
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var asset = ScriptableObject.CreateInstance<NoVolumesPipelineAsset>();
+            var saved = GraphicsSettings.defaultRenderPipeline;
+            bool supported = SupportedRenderingFeatures.active.lightProbeProxyVolumes;
+            var texture = Shader.PropertyToID("unity_ProbeVolumeSH");
+            try
+            {
+                var renderer = go.GetComponent<Renderer>();
+                renderer.lightProbeUsage = LightProbeUsage.UseProxyVolume;
+                var volume = go.AddComponent<LightProbeProxyVolume>();
+                // Not built yet: nothing to draw through.
+                Assert.Null(LightProbeProxyVolume.Of(renderer));
+                volume.Update();
+                var keywords = new List<string>();
+                var drawn = BakedLighting.Apply(renderer, null, keywords);
+                Assert.True(drawn.ContainsKey(texture));
+                GraphicsSettings.defaultRenderPipeline = asset;
+                SupportedRenderingFeatures.active.lightProbeProxyVolumes = false;
+                Assert.Null(LightProbeProxyVolume.Of(renderer));
+                drawn = BakedLighting.Apply(renderer, null, keywords);
+                Assert.True(drawn == null || !drawn.ContainsKey(texture));
+                SupportedRenderingFeatures.active.lightProbeProxyVolumes = true;
+                Assert.Same(volume, LightProbeProxyVolume.Of(renderer));
+            }
+            finally
+            {
+                SupportedRenderingFeatures.active.lightProbeProxyVolumes = supported;
+                GraphicsSettings.defaultRenderPipeline = saved;
+                Object.DestroyImmediate(asset);
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        /// <summary>unity_OcclusionMaskSelector: the light's baked occlusion channel, the first
+        /// without one (tests/projects/lppv selector.scene, .channel2, .realtime). Programs built
+        /// with proxy volumes weigh even unbaked lights with it.</summary>
+        [Fact]
+        public void TheOcclusionMaskSelectorIsTheLightsChannel()
+        {
+            var go = new GameObject("selector light");
+            try
+            {
+                var light = go.AddComponent<Light>();
+                Assert.Equal(new Vector4(1f, 0f, 0f, 0f), (Vector4)ForwardLights.OcclusionMaskSelector(null));
+                light.bakingOutput = new LightBakingOutput { isBaked = false, lightmapBakeType = LightmapBakeType.Realtime, occlusionMaskChannel = -1 };
+                Assert.Equal(new Vector4(1f, 0f, 0f, 0f), (Vector4)ForwardLights.OcclusionMaskSelector(light));
+                light.bakingOutput = new LightBakingOutput { isBaked = true, lightmapBakeType = LightmapBakeType.Mixed, mixedLightingMode = MixedLightingMode.Shadowmask, occlusionMaskChannel = 2 };
+                Assert.Equal(new Vector4(0f, 0f, 1f, 0f), (Vector4)ForwardLights.OcclusionMaskSelector(light));
+                var into = new Dictionary<int, object>();
+                ForwardLights.AddPassProperties(light, 1f, into);
+                Assert.Equal(new Vector4(0f, 0f, 1f, 0f), into[Shader.PropertyToID("unity_OcclusionMaskSelector")]);
             }
             finally { Object.DestroyImmediate(go); }
         }
