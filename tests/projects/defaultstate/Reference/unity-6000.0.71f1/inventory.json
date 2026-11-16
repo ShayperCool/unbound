@@ -3391,6 +3391,12 @@
       "type": "UnityEngine.ExposedReference`1"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.ExpressionEvaluator"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.PhysicsModule",
       "status": "candidate",
@@ -7569,6 +7575,12 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DoubleField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "abstract",
       "type": "UnityEngine.UIElements.DragAndDropData"
     },
@@ -7719,6 +7731,12 @@
     {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.FloatField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.UIElements.FocusChangeDirection"
     },
@@ -7822,6 +7840,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.IntegerField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.KeyDownEvent"
     },
     {
@@ -7865,6 +7889,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.ListViewController"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.LongField"
     },
     {
       "category": "class",
@@ -8437,6 +8467,12 @@
       "type": "UnityEngine.UIElements.TextShadow"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "open-generic",
+      "type": "UnityEngine.UIElements.TextValueField`1"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
@@ -8573,6 +8609,18 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.UQueryState`1+Enumerator"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.UnsignedIntegerField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.UnsignedLongField"
     },
     {
       "category": "class",

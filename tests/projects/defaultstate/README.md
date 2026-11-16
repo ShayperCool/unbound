@@ -614,3 +614,12 @@ The slider drag slice (Q516) adds `SliderInt`, `FieldMouseDragger<T>` and `BaseF
 the handwritten inventory. Two independent 6000.0.71f1 GPU Editor captures agree on all 58 of their
 rows, appended before the completion row; every earlier row and inventory entry is byte-identical
 (13,362 rows).
+
+The numeric fields slice (Q528) adds `ExpressionEvaluator`, `IntegerField`, `LongField`,
+`FloatField`, `DoubleField`, `UnsignedIntegerField`, `UnsignedLongField` and `TextValueField<T>` to
+the handwritten inventory. Two independent 6000.0.71f1 GPU Editor captures agree on all 434 of their
+rows, appended before the completion row; every earlier row and inventory entry is byte-identical
+(13,801 rows). Each text-input field's cursor position and the values containing it are queued with
+TextField's (they need laid-out text). Event type registration numbers are Unbound's raw values and
+moved as the fields touch event types earlier: their queued actual values are refreshed, and
+GeometryChangedEvent now matches the release.
