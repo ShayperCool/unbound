@@ -821,6 +821,7 @@ namespace Unbound.UIElements
                     element.dataSourceType = UxmlAttributeValues.ReadTypeReference(node, name, value, typeof(object));
                     return;
             }
+            if (TryApplyComponentAttribute(element, name, value)) return;
             var property = FindProperty(element.GetType(), name, engineDeclaredOnly);
             if (property == null)
             {
@@ -1075,17 +1076,86 @@ namespace Unbound.UIElements
                 }
                 return false;
             }
-            if (type == typeof(Vector2))
-            {
-                var p = value.Split(',');
-                if (p.Length == 2 && float.TryParse(p[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) && float.TryParse(p[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
-                {
-                    result = new Vector2(x, y);
-                    return true;
-                }
-                return false;
-            }
+            // Vectors, rects, bounds and hashes read as the UXML attributes of game elements do.
+            if (s_ComponentNames.ContainsKey(type) || type == typeof(Hash128))
+                return UxmlAttributeValues.TryRead(value, type, null, null, out result, out _);
             return false;
+        }
+
+        /// <summary>The per-component attributes the composite fields also read (an older UXML
+        /// form, matches the Unity 6000.0.71f1 Editor, tests/projects/compositefields): each sets
+        /// one component of the value, in this order; bounds take a center and a size.</summary>
+        static readonly Dictionary<Type, string[]> s_ComponentNames = new Dictionary<Type, string[]>
+        {
+            [typeof(Vector2)] = new[] { "x", "y" },
+            [typeof(Vector3)] = new[] { "x", "y", "z" },
+            [typeof(Vector4)] = new[] { "x", "y", "z", "w" },
+            [typeof(Rect)] = new[] { "x", "y", "w", "h" },
+            [typeof(Bounds)] = new[] { "cx", "cy", "cz", "ex", "ey", "ez" },
+            [typeof(Vector2Int)] = new[] { "x", "y" },
+            [typeof(Vector3Int)] = new[] { "x", "y", "z" },
+            [typeof(RectInt)] = new[] { "x", "y", "w", "h" },
+            [typeof(BoundsInt)] = new[] { "px", "py", "pz", "sx", "sy", "sz" },
+        };
+
+        static double[] Components(object v) => v switch
+        {
+            Vector2 a => new double[] { a.x, a.y },
+            Vector3 a => new double[] { a.x, a.y, a.z },
+            Vector4 a => new double[] { a.x, a.y, a.z, a.w },
+            Rect a => new double[] { a.x, a.y, a.width, a.height },
+            Bounds a => new double[] { a.center.x, a.center.y, a.center.z, a.size.x, a.size.y, a.size.z },
+            Vector2Int a => new double[] { a.x, a.y },
+            Vector3Int a => new double[] { a.x, a.y, a.z },
+            RectInt a => new double[] { a.x, a.y, a.width, a.height },
+            BoundsInt a => new double[] { a.position.x, a.position.y, a.position.z, a.size.x, a.size.y, a.size.z },
+            _ => null,
+        };
+
+        static object FromComponents(Type type, double[] c)
+        {
+            float F(int i) => (float)c[i];
+            int I(int i) => (int)c[i];
+            if (type == typeof(Vector2)) return new Vector2(F(0), F(1));
+            if (type == typeof(Vector3)) return new Vector3(F(0), F(1), F(2));
+            if (type == typeof(Vector4)) return new Vector4(F(0), F(1), F(2), F(3));
+            if (type == typeof(Rect)) return new Rect(F(0), F(1), F(2), F(3));
+            if (type == typeof(Bounds)) return new Bounds(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)));
+            if (type == typeof(Vector2Int)) return new Vector2Int(I(0), I(1));
+            if (type == typeof(Vector3Int)) return new Vector3Int(I(0), I(1), I(2));
+            if (type == typeof(RectInt)) return new RectInt(I(0), I(1), I(2), I(3));
+            return new BoundsInt(I(0), I(1), I(2), I(3), I(4), I(5));
+        }
+
+        /// <summary>Applies a per-component attribute of an engine field holding a vector, rect or
+        /// bounds; false for other attributes and elements.</summary>
+        static bool TryApplyComponentAttribute(VisualElement element, string name, string value)
+        {
+            if (name.Length > 2) return false;
+            Type valueType = null;
+            for (var t = element.GetType(); t != null && valueType == null; t = t.BaseType)
+                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(BaseField<>)) valueType = t.GetGenericArguments()[0];
+            if (valueType == null || !s_ComponentNames.TryGetValue(valueType, out var names) || !UxmlTypeIndex.IsEngineType(element.GetType())) return false;
+            int index = Array.IndexOf(names, name);
+            if (index < 0) return false;
+            bool integral = valueType == typeof(Vector2Int) || valueType == typeof(Vector3Int) || valueType == typeof(RectInt) || valueType == typeof(BoundsInt);
+            double component;
+            if (integral)
+            {
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return true;
+                component = i;
+            }
+            else
+            {
+                if (!float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return true;
+                component = f;
+            }
+            var property = element.GetType().GetProperty("value", BindingFlags.Public | BindingFlags.Instance, null, valueType, Type.EmptyTypes, null);
+            if (property == null) return false;
+            var components = Components(property.GetValue(element));
+            components[index] = component;
+            property.SetValue(element, FromComponents(valueType, components));
+            return true;
         }
     }
 

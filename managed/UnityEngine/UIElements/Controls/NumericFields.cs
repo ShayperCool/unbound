@@ -200,8 +200,9 @@ namespace UnityEngine.UIElements
             protected override TValueType StringToValue(string str) => base.StringToValue(str);
         }
 
-        /// <summary>The one input class of the numeric fields, forwarding to its field.</summary>
-        private protected sealed class NumericInput : TextValueInput
+        /// <summary>The input of the numeric fields, forwarding to its field (each field names its
+        /// own subclass, as the release's inputs are named).</summary>
+        private protected class NumericInput : TextValueInput
         {
             readonly string m_AllowedCharacters;
 
@@ -258,12 +259,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class IntegerInput : NumericInput
+        {
+            internal IntegerInput() : base(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString) { }
+        }
+
         public IntegerField() : this((string)null) { }
 
         public IntegerField(int maxLength) : this(null, maxLength) { }
 
         public IntegerField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString))
+            : base(label, maxLength, new IntegerInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);
@@ -297,12 +303,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class LongInput : NumericInput
+        {
+            internal LongInput() : base(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString) { }
+        }
+
         public LongField() : this((string)null) { }
 
         public LongField(int maxLength) : this(null, maxLength) { }
 
         public LongField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString))
+            : base(label, maxLength, new LongInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);
@@ -336,12 +347,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class UnsignedIntegerInput : NumericInput
+        {
+            internal UnsignedIntegerInput() : base(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString) { }
+        }
+
         public UnsignedIntegerField() : this((string)null) { }
 
         public UnsignedIntegerField(int maxLength) : this(null, maxLength) { }
 
         public UnsignedIntegerField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString))
+            : base(label, maxLength, new UnsignedIntegerInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);
@@ -375,12 +391,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class UnsignedLongInput : NumericInput
+        {
+            internal UnsignedLongInput() : base(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString) { }
+        }
+
         public UnsignedLongField() : this((string)null) { }
 
         public UnsignedLongField(int maxLength) : this(null, maxLength) { }
 
         public UnsignedLongField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForInt, UINumericFieldsUtils.k_IntFieldFormatString))
+            : base(label, maxLength, new UnsignedLongInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);
@@ -414,12 +435,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class FloatInput : NumericInput
+        {
+            internal FloatInput() : base(UINumericFieldsUtils.k_AllowedCharactersForFloat, UINumericFieldsUtils.k_FloatFieldFormatString) { }
+        }
+
         public FloatField() : this((string)null) { }
 
         public FloatField(int maxLength) : this(null, maxLength) { }
 
         public FloatField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForFloat, UINumericFieldsUtils.k_FloatFieldFormatString))
+            : base(label, maxLength, new FloatInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);
@@ -460,12 +486,17 @@ namespace UnityEngine.UIElements
         public new static readonly string labelUssClassName = ussClassName + "__label";
         public new static readonly string inputUssClassName = ussClassName + "__input";
 
+        sealed class DoubleInput : NumericInput
+        {
+            internal DoubleInput() : base(UINumericFieldsUtils.k_AllowedCharactersForFloat, UINumericFieldsUtils.k_DoubleFieldFormatString) { }
+        }
+
         public DoubleField() : this((string)null) { }
 
         public DoubleField(int maxLength) : this(null, maxLength) { }
 
         public DoubleField(string label, int maxLength = kMaxValueFieldLength)
-            : base(label, maxLength, new NumericInput(UINumericFieldsUtils.k_AllowedCharactersForFloat, UINumericFieldsUtils.k_DoubleFieldFormatString))
+            : base(label, maxLength, new DoubleInput())
         {
             AddToClassList(ussClassName);
             labelElement.AddToClassList(labelUssClassName);

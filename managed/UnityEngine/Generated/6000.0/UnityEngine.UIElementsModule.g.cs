@@ -137,34 +137,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseBoolField.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class BaseCompositeField<TValueType, TField, TFieldValue> : global::UnityEngine.UIElements.BaseField<TValueType> where TField : global::UnityEngine.UIElements.TextValueField<TFieldValue>, new()
+    unsafe partial class BaseCompositeField<TValueType, TField, TFieldValue>
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string spacerUssClassName;
-        [global::Unbound.Stub] public static readonly string multilineVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string fieldGroupUssClassName;
-        [global::Unbound.Stub] public static readonly string fieldUssClassName;
-        [global::Unbound.Stub] public static readonly string firstFieldVariantUssClassName;
-        [global::Unbound.Stub] public static readonly string twoLinesVariantUssClassName;
-        internal abstract global::UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.FieldDescription[] DescribeFields();
-        [global::Unbound.Stub] protected BaseCompositeField(string label, int fieldsByLine) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.SetValueWithoutNotify"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.UpdateMixedValueContent"); }
-        internal global::System.Collections.Generic.List<TField> fields { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.fields"); return new global::System.Collections.Generic.List<TField>(); } }
-        [global::Unbound.Stub]
-        internal unsafe partial struct FieldDescription
-        {
-            [global::Unbound.Stub] internal readonly string name;
-            [global::Unbound.Stub] internal readonly string ussName;
-            [global::Unbound.Stub] internal readonly global::System.Func<TValueType, TFieldValue> read;
-            [global::Unbound.Stub] internal readonly global::UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.FieldDescription.WriteDelegate write;
-            [global::Unbound.Stub] public FieldDescription(string name, string ussName, global::System.Func<TValueType, TFieldValue> read, global::UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.FieldDescription.WriteDelegate write) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.FieldDescription.ctor"); }
-            public unsafe delegate void WriteDelegate(ref TValueType val, TFieldValue fieldValue);
-        }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData
@@ -519,18 +494,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static string GetRootDataSourceError(object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingUpdater.GetRootDataSourceError"); return default; }
         [global::Unbound.Stub] public BindingUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingUpdater.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class BoundsField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Bounds>
+    unsafe partial class BoundsField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string centerFieldUssClassName;
-        [global::Unbound.Stub] public static readonly string extentsFieldUssClassName;
-        [global::Unbound.Stub] public BoundsField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.ctor"); }
-        [global::Unbound.Stub] public BoundsField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Bounds newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.UpdateMixedValueContent"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Bounds>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -554,18 +519,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class BoundsIntField : global::UnityEngine.UIElements.BaseField<global::UnityEngine.BoundsInt>
+    unsafe partial class BoundsIntField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public static readonly string positionUssClassName;
-        [global::Unbound.Stub] public static readonly string sizeUssClassName;
-        [global::Unbound.Stub] public BoundsIntField() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.ctor"); }
-        [global::Unbound.Stub] public BoundsIntField(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.ctor"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.BoundsInt newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.UpdateMixedValueContent"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.BoundsInt>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -1666,22 +1621,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.IGroupBoxOption GetSelectedOption(this global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.GetSelectedOption"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.IGroupManager GetGroupManager(this global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.GetGroupManager"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Hash128Field : global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>
+    unsafe partial class Hash128Field
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] public Hash128Field() : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.ctor"); }
-        [global::Unbound.Stub] public Hash128Field(int maxLength) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.ctor"); }
-        [global::Unbound.Stub] public Hash128Field(string label, int maxLength = -1) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.ctor"); }
-        [global::Unbound.Stub] internal override void UpdateValueFromText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.UpdateValueFromText"); }
-        [global::Unbound.Stub] internal override void UpdateTextFromValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.UpdateTextFromValue"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.Hash128 newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] protected override string ValueToString(global::UnityEngine.Hash128 value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override global::UnityEngine.Hash128 StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.StringToValue"); return default; }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.HandleEventBubbleUp"); }
-        public override global::UnityEngine.Hash128 value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.value"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<global::UnityEngine.Hash128>.UxmlSerializedData
@@ -3114,15 +3055,8 @@ namespace UnityEngine.UIElements
         public bool IsSynchronized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReadOnlyHierarchyViewModelList.IsSynchronized"); return default; } }
         public object SyncRoot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ReadOnlyHierarchyViewModelList.SyncRoot"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class RectField : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Rect, global::UnityEngine.UIElements.FloatField, float>
+    unsafe partial class RectField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Rect, global::UnityEngine.UIElements.FloatField, float>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Rect, global::UnityEngine.UIElements.FloatField, float>.FieldDescription>(); }
-        [global::Unbound.Stub] public RectField() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.ctor"); }
-        [global::Unbound.Stub] public RectField(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Rect, global::UnityEngine.UIElements.FloatField, float>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -3146,15 +3080,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class RectIntField : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.RectInt, global::UnityEngine.UIElements.IntegerField, int>
+    unsafe partial class RectIntField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.RectInt, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.RectInt, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription>(); }
-        [global::Unbound.Stub] public RectIntField() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.ctor"); }
-        [global::Unbound.Stub] public RectIntField(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.RectInt, global::UnityEngine.UIElements.IntegerField, int>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -5291,15 +5218,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public UxmlValueMatches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.ctor"); }
         public string regex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.regex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlValueMatches.regex"); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Vector2Field : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2, global::UnityEngine.UIElements.FloatField, float>
+    unsafe partial class Vector2Field
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2, global::UnityEngine.UIElements.FloatField, float>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2, global::UnityEngine.UIElements.FloatField, float>.FieldDescription>(); }
-        [global::Unbound.Stub] public Vector2Field() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.ctor"); }
-        [global::Unbound.Stub] public Vector2Field(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2, global::UnityEngine.UIElements.FloatField, float>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -5323,15 +5243,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Vector2IntField : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2Int, global::UnityEngine.UIElements.IntegerField, int>
+    unsafe partial class Vector2IntField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2Int, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2Int, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription>(); }
-        [global::Unbound.Stub] public Vector2IntField() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.ctor"); }
-        [global::Unbound.Stub] public Vector2IntField(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector2Int, global::UnityEngine.UIElements.IntegerField, int>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -5355,15 +5268,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Vector3Field : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3, global::UnityEngine.UIElements.FloatField, float>
+    unsafe partial class Vector3Field
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3, global::UnityEngine.UIElements.FloatField, float>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3, global::UnityEngine.UIElements.FloatField, float>.FieldDescription>(); }
-        [global::Unbound.Stub] public Vector3Field() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.ctor"); }
-        [global::Unbound.Stub] public Vector3Field(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3, global::UnityEngine.UIElements.FloatField, float>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -5387,15 +5293,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Vector3IntField : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3Int, global::UnityEngine.UIElements.IntegerField, int>
+    unsafe partial class Vector3IntField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3Int, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3Int, global::UnityEngine.UIElements.IntegerField, int>.FieldDescription>(); }
-        [global::Unbound.Stub] public Vector3IntField() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.ctor"); }
-        [global::Unbound.Stub] public Vector3IntField(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector3Int, global::UnityEngine.UIElements.IntegerField, int>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
@@ -5419,15 +5318,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Vector4Field : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector4, global::UnityEngine.UIElements.FloatField, float>
+    unsafe partial class Vector4Field
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] internal override global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector4, global::UnityEngine.UIElements.FloatField, float>.FieldDescription[] DescribeFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.DescribeFields"); return global::System.Array.Empty<global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector4, global::UnityEngine.UIElements.FloatField, float>.FieldDescription>(); }
-        [global::Unbound.Stub] public Vector4Field() : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.ctor"); }
-        [global::Unbound.Stub] public Vector4Field(string label) : base(default(string), default(int)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.ctor"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseCompositeField<global::UnityEngine.Vector4, global::UnityEngine.UIElements.FloatField, float>.UxmlSerializedData, global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler
