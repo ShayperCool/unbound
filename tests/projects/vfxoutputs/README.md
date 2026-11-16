@@ -45,12 +45,17 @@ Sorted outputs (`Assets/OutputGraphs/Sort*.vfx`): thirty alpha-blended quads (al
 with its own kernels (Shaders/Sort.compute) after the kernel that writes each particle's key:
 `SortDistance` (distance to the camera, for each camera), `SortDepth` (camera depth, for each
 camera), `SortReverse` (distance, reversed), `SortCustom` (a custom key of 1 for all: the order of
-equal keys), `SortYoungest` (thirty a second, youngest in front: sorted at each step) and
-`SortMany` (6000 quads: more than one pass of the sort takes, sorted in chunks and merged).
+equal keys), `SortKeyed` (a custom key of each particle's own, drawn at random: not the order of
+the particles' places), `SortYoungest` (thirty a second living 0.3 to 1.5 seconds, youngest in
+front: dead particles' places are taken again, so age is not the order of places), `SortMany`
+(6000 quads sorted for each camera: values only, see "Not covered") and `SortKeyedMany` (20000 quads sorted at each step by a key of their own: merged
+three times, through the scratch list and the list itself).
 
 `Priority`: two systems over the same particles (one seed), the first with two outputs and the
 second with one, unsorted and alpha blended, each output of a colour of its own and a label of its
 own, with output priorities (`sortPriority`, the asset's output render order) of 2 and 0, then 1.
+`PriorityTies`: two systems of two such outputs each, all of priority 0, added to the graph one of
+each system in turn.
 
 `Assets/Scenes/Probe.unity` holds only a camera that sees none of the stages. The Editor-authored
 files (graphs, scene, the package lock) are kept in `Authored/unity-<release>/default`
@@ -75,8 +80,12 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
 - `SortDistance`, `SortDepth`, `SortReverse`, `SortCustom` (frames 3 and 10): `front` and
   `offset` (2 units right, 1.5 up, 6 units away: the distances and depths order the quads
   otherwise) in each frame.
-- `SortYoungest` (frames 10 and 20), `SortMany` (frame 5).
-- `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems.
+- `SortKeyed` as the four above; `SortYoungest` (frames 30 and 45); `SortKeyedMany` (frame 5);
+  `SortMany` (frame 5, values only).
+- `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems;
+  `PriorityTies` (frame 3): equal ones in their systems' order, then each system's.
+- `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` two units
+  nearer the camera): the farther drawn first.
 - `late` (frame 10): made in frame 6, after the others' draws began: its outputs take more entries
   of indirect arguments than there were, which are made anew, and every effect's arguments with
   them (the images of the others after frame 6 show it).
@@ -96,6 +105,9 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
 - The images are the cameras' colour without alpha. An opaque output writes its texture's filtered
   alpha, which the Editor's own graphs give one unit apart from each other where a texel is
   magnified (the three routes of one graph in one capture); nothing is drawn with it here.
+- `SortMany` is not shot either: its list is made and sorted for each camera, and two captures of
+  the same project drew it differently in the Editor (3820 of 4096 pixels), while two earlier ones
+  agreed; the step-sorted `SortKeyedMany` (20000) agreed in every capture.
 - The `FrustumCulled` route of `many` is not shot. In the Editor (OpenGL Core, NVIDIA) the lists
   made for each camera of large systems are drawn incompletely and differently from capture to
   capture: of 20000 particles, 5 were drawn in one capture and 32 in another; in two further
@@ -131,5 +143,6 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   Graph outputs: Unbound refuses them loudly. Outputs of one system named alike (no label: the
   graph's API makes them so; the Editor's window gives them letters) are refused too: Unbound
   finds generated shaders by name.
-- Sorting on a device whose compute groups share less than 32 KB of memory.
+- Sorting on a device whose compute groups share less than 32 KB of memory; effects over each
+  other at one distance.
 - Several instances of one asset in one batch: Unbound runs each effect as a batch of its own.

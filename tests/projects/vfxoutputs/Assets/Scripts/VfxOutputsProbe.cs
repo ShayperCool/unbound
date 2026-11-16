@@ -133,14 +133,25 @@ public sealed class VfxOutputsProbe : MonoBehaviour
                 };
             }
             // Sorted for each camera: two cameras that see the cloud from different places.
-            foreach (var name in new[] { "SortDistance", "SortDepth", "SortReverse", "SortCustom" })
+            foreach (var name in new[] { "SortDistance", "SortDepth", "SortReverse", "SortCustom", "SortKeyed" })
             {
                 var sorted = Front(AddStage(name, name, 3, 10));
                 Eye(sorted, "offset", new Vector3(2f, 1.5f, -6f), Vector3.forward);
             }
-            Front(AddStage("SortYoungest", "SortYoungest", 10, 20));
-            Front(AddStage("SortMany", "SortMany", 5));
+            Front(AddStage("SortYoungest", "SortYoungest", 30, 45));
+            // Sorted for each camera: the Editor's lists made for each camera of large systems
+            // are not repeatable (README.md): not shot.
+            Front(AddStage("SortMany", "SortMany", 5)).Shots = false;
+            Front(AddStage("SortKeyedMany", "SortKeyedMany", 5));
             Front(AddStage("Priority", "Priority", 3));
+            Front(AddStage("PriorityTies", "PriorityTies", 3));
+            // Two effects over each other, the second nearer the camera: drawn from the farther.
+            var pair = Front(AddStage("Effects", "SortKeyed", 3));
+            var nearer = new GameObject("stage Effects nearer").AddComponent<VisualEffect>();
+            nearer.transform.position = pair.Effect.transform.position + new Vector3(0.3f, 0.2f, -2f);
+            nearer.resetSeedOnPlay = false;
+            nearer.startSeed = 12;
+            nearer.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>("Assets/OutputGraphs/SortDistance.vfx");
             StartCoroutine(EndOfFrames());
         }
         catch (Exception e)

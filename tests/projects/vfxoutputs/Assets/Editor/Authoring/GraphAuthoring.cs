@@ -51,6 +51,11 @@ public static class GraphAuthoring
         AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(resource), ImportAssetOptions.ForceUpdate);
     }
 
+    static void Link(VFXSlot from, VFXSlot to)
+    {
+        if (!from.Link(to)) throw new InvalidOperationException("cannot link " + from.property.type.Name + " '" + from.name + "' to " + to.property.type.Name + " '" + to.name + "'");
+    }
+
     static VFXSlot Input(VFXModel model, string name) => ((IVFXSlotContainer)model).inputSlots.First(s => s.name == name);
 
     /// <summary>A spawner, an initialize, an update and a quad output, linked; returns them.</summary>
@@ -246,20 +251,38 @@ public static class GraphAuthoring
             if (mode == VFXSortingUtility.SortCriteria.Custom) Input(output, "sortKey").value = 1f;
             Save(graph);
         }
+
+        // A key of each particle's own, drawn at random (constant per particle): not the order
+        // of the particles' indices.
+        void RandomKey(VFXGraph graph, VFXPlanarPrimitiveOutput output)
+        {
+            output.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.Custom);
+            var random = Make<UnityEditor.VFX.Operator.Random>();
+            graph.AddChild(random);
+            Link(random.outputSlots[0], Input(output, "sortKey"));
+        }
         Graph("SortDistance", VFXSortingUtility.SortCriteria.DistanceToCamera);
         Graph("SortDepth", VFXSortingUtility.SortCriteria.CameraDepth);
         Graph("SortReverse", VFXSortingUtility.SortCriteria.DistanceToCamera, true);
         // One key for all: the order of equal keys.
         Graph("SortCustom", VFXSortingUtility.SortCriteria.Custom);
+        var keyed = NewGraph("SortKeyed");
+        RandomKey(keyed, Overlapping(keyed, 32, 30f, 0.7f, 0.6f));
+        Save(keyed);
+        // Sorted at each step, more than two merges: 20000 small quads by a key of their own.
+        var keyedMany = NewGraph("SortKeyedMany");
+        RandomKey(keyedMany, Overlapping(keyedMany, 20000, 20000f, 0.08f, 1.4f));
+        Save(keyedMany);
 
-        // Thirty a second living long: the youngest in front.
+        // Thirty a second living between a third of a second and a second and a half: dead
+        // particles' places are taken again, so the youngest are not the last places.
         var youngest = NewGraph("SortYoungest");
         var (spawn, init, output) = System(youngest, 64);
         output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
         output.SetSettingValue("sortMode", VFXSortingUtility.SortCriteria.YoungestInFront);
         ConstantRate(spawn, 30f);
         SetRandom(init, "position", new Vector3(-0.6f, -0.6f, -1f), new Vector3(0.6f, 0.6f, 1f));
-        Set(init, "lifetime", 10f);
+        SetRandom(init, "lifetime", 0.3f, 1.5f);
         Set(init, "size", 0.7f);
         Set(init, "alpha", 0.6f);
         SetRandom(init, "color", new Vector3(0f, 0f, 0f), new Vector3(1f, 1f, 1f));
@@ -276,12 +299,22 @@ public static class GraphAuthoring
     /// over the same particles (none is sorted: each draws its particles in their order).</summary>
     static void Prioritized()
     {
-        var graph = NewGraph("Priority");
-        VFXPlanarPrimitiveOutput Output(VFXBasicUpdate update, int priority, Vector3 color)
+        Prioritized("Priority", new[] { new[] { 2, 0 }, new[] { 1 } });
+        // Equal priorities: the order of the systems, then of each system's outputs, whatever
+        // the order the outputs were added to the graph in (one of each system in turn).
+        Prioritized("PriorityTies", new[] { new[] { 0, 0 }, new[] { 0, 0 } });
+    }
+
+    static readonly Vector3[] k_OutputColors = { new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f), new Vector3(0f, 0f, 1f), new Vector3(1f, 1f, 0f) };
+
+    static void Prioritized(string name, int[][] priorities)
+    {
+        var graph = NewGraph(name);
+        VFXPlanarPrimitiveOutput Output(VFXBasicUpdate update, int priority, Vector3 color, string label)
         {
             var output = Make<VFXPlanarPrimitiveOutput>();
             // A label of its own: the outputs' shaders are named after it.
-            output.label = "Priority " + priority;
+            output.label = label;
             graph.AddChild(output);
             update.LinkTo(output);
             output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
@@ -290,11 +323,8 @@ public static class GraphAuthoring
             SetVector(output, "color", color);
             return output;
         }
-        foreach (var (priorities, colors) in new[]
-        {
-            (new[] { 2, 0 }, new[] { new Vector3(1f, 0f, 0f), new Vector3(0f, 1f, 0f) }),
-            (new[] { 1 }, new[] { new Vector3(0f, 0f, 1f) }),
-        })
+        var updates = new VFXBasicUpdate[priorities.Length];
+        for (int s = 0; s < priorities.Length; s++)
         {
             var spawn = Make<VFXBasicSpawner>();
             var init = Make<VFXBasicInitialize>();
@@ -309,8 +339,17 @@ public static class GraphAuthoring
             SetRandom(init, "position", new Vector3(-0.8f, -0.8f, -1f), new Vector3(0.8f, 0.8f, 1f));
             Set(init, "size", 0.5f);
             Set(init, "alpha", 0.5f);
-            for (int i = 0; i < priorities.Length; i++) Output(update, priorities[i], colors[i]);
+            updates[s] = update;
         }
+        // The outputs added one of each system in turn, each of a colour of its own.
+        int color = 0;
+        for (int o = 0; o < 2; o++)
+            for (int s = 0; s < priorities.Length; s++)
+                if (o < priorities[s].Length)
+                {
+                    Output(updates[s], priorities[s][o], k_OutputColors[color], "Output " + s + "." + o);
+                    color++;
+                }
         Save(graph);
     }
 
