@@ -88,19 +88,30 @@ namespace UnityEngine.Tests
             Assert.Equal(WhiteSpace.NoWrap, p.a.resolvedStyle.whiteSpace);
         }
 
-        // Keyword background sizes have no lengths to interpolate: cover to pixels is taken at once.
+        // A keyword background size's components are 0px, so contain to pixels runs from 0
+        // (bgSizeCover*: cover to pixels and to contain); one with an auto component never runs.
         [Fact]
-        public void KeywordBackgroundSizesDoNotTransition()
+        public void KeywordBackgroundSizesTransitionFromZero()
         {
             using var p = new ClockPanel();
-            p.a.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover);
+            p.a.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
             Linear(p.a, "background-size");
             var runs = Runs(p.a);
             p.Tick(0);
-            p.a.style.backgroundSize = new BackgroundSize(40, 20);
+            p.a.style.backgroundSize = new BackgroundSize(80, 60);
             p.Tick(0);
-            Assert.Empty(runs);
-            Assert.Equal(40, p.a.resolvedStyle.backgroundSize.x.value);
+            p.Tick(250);
+            Assert.Equal(new[] { "background-size" }, runs);
+            Assert.Equal(20, p.a.resolvedStyle.backgroundSize.x.value);
+            Assert.Equal(15, p.a.resolvedStyle.backgroundSize.y.value);
+            Linear(p.b, "background-size");
+            p.b.style.backgroundSize = new BackgroundSize(40, Length.Auto());
+            var autoRuns = Runs(p.b);
+            p.Tick(250);
+            p.b.style.backgroundSize = new BackgroundSize(80, Length.Auto());
+            p.Tick(250);
+            Assert.Empty(autoRuns);
+            Assert.Equal(80, p.b.resolvedStyle.backgroundSize.x.value);
         }
 
         // An inline percent font size keeps its number; a child inherits the percentage and its own

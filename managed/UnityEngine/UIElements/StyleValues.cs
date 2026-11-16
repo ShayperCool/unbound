@@ -792,7 +792,8 @@ namespace UnityEngine.UIElements
         Length m_Y;
 
         public BackgroundSize(Length sizeX, Length sizeY) { m_SizeType = BackgroundSizeType.Length; m_X = sizeX; m_Y = sizeY; }
-        public BackgroundSize(BackgroundSizeType sizeType) { m_SizeType = sizeType; m_X = Length.Auto(); m_Y = Length.Auto(); }
+        // A keyword size's components are 0px (also what a transition from it starts at).
+        public BackgroundSize(BackgroundSizeType sizeType) { m_SizeType = sizeType; m_X = new Length(0f); m_Y = new Length(0f); }
         internal static BackgroundSize Initial() => BackgroundPropertyHelper.ConvertScaleModeToBackgroundSize();
 
         public BackgroundSizeType sizeType { get => m_SizeType; set { m_SizeType = value; m_X = new Length(0f); m_Y = new Length(0f); } }
