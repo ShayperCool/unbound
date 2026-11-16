@@ -61,9 +61,11 @@ namespace Unbound.Runtime
 
         /// <summary>The largest number of cascades a directional light has.</summary>
         const int MaxCascades = 4;
-        /// <summary>How small a ray's slope against a plane may be for the ray to leave through it.</summary>
+        /// <summary>How small a ray's slope against a plane may be for the ray to leave through it
+        /// (the Editor's threshold; its effect is not measured on its own).</summary>
         const float GrazingSlope = 1e-6f;
-        /// <summary>Keeps the shadow volume's length finite where its ray grazes the exit plane.</summary>
+        /// <summary>Keeps the shadow volume's length finite where its ray grazes the exit plane (the
+        /// Editor's value; its effect is not measured on its own).</summary>
         const float LengthGuard = 1e-4f;
 
         /// <summary>
@@ -76,9 +78,13 @@ namespace Unbound.Runtime
         /// does not lie beyond the cascade's sphere by more than their overlap allows. The
         /// cascades are taken in order, and the first whose culling sphere holds the caster's
         /// shadow volume (its sphere swept along the light until it leaves the camera's frustum
-        /// cut at the shadow distance) ends the search: later cascades leave the caster out. With
-        /// one cascade, close-fit projection or splits that are not a directional light's, every
-        /// cascade takes it. The cascades' blend culling factor is unmeasured (URP gives 1).
+        /// cut at the shadow distance) ends the search: later cascades leave the caster out. The
+        /// sphere that holds it is the culling sphere with its radius times the split's
+        /// shadowCascadeBlendCullingFactor (the documented multiplier: lower values let cascades
+        /// share more casters; URP gives 1, the measured case). With one cascade, or splits that
+        /// are not a directional light's, every cascade takes it; close-fit projection takes every
+        /// cascade too (unmeasured: the probe measures stable fit). Bounds that are not finite are
+        /// left to the culling planes.
         /// </summary>
         static bool InCascadeSphere(CullingData data, int light, in LightShadowCasterCullingInfo info, int split, Bounds bounds)
         {
@@ -88,9 +94,12 @@ namespace Unbound.Runtime
             if (info.splitRange.start < 0 || info.splitRange.start + count > data.ShadowSplits.Count) return true;
             var extent = bounds.extents;
             if (extent.x <= 0 && extent.y <= 0 && extent.z <= 0) return true;
-            var toWorld = data.Lights[light].localToWorldMatrix;
-            Vector3 right = toWorld.GetColumn(0), up = toWorld.GetColumn(1), along = toWorld.GetColumn(2);
             var center = bounds.center;
+            if (!float.IsFinite(center.x + center.y + center.z + extent.x + extent.y + extent.z)) return true;
+            // The light's frame, without its scale.
+            var toWorld = data.Lights[light].localToWorldMatrix;
+            Vector3 right = ((Vector3)toWorld.GetColumn(0)).normalized, up = ((Vector3)toWorld.GetColumn(1)).normalized,
+                along = ((Vector3)toWorld.GetColumn(2)).normalized;
             float radius = MathF.Sqrt((extent.z * extent.z + extent.y * extent.y) + extent.x * extent.x);
             var frustum = ShadowFrustumPlanes(data);
             if (frustum == null) return true;
@@ -103,7 +112,8 @@ namespace Unbound.Runtime
             for (int s = 0; s < count; s++)
             {
                 if ((info.splitExclusionMask & (1 << s)) != 0) continue;
-                var sphere = data.ShadowSplits[info.splitRange.start + s].cullingSphere;
+                var cascade = data.ShadowSplits[info.splitRange.start + s];
+                var sphere = cascade.cullingSphere;
                 float sx = (sphere.z * right.z + sphere.y * right.y) + sphere.x * right.x;
                 float sy = (sphere.z * up.z + sphere.y * up.y) + sphere.x * up.x;
                 float sz = (sphere.z * along.z + sphere.y * along.y) + sphere.x * along.x;
@@ -115,7 +125,8 @@ namespace Unbound.Runtime
                 float overlap = MathF.Sqrt((reach - dx) - dy);
                 if (!(depth <= sz + overlap)) continue;
                 mask |= 1 << s;
-                if (CapsuleInsideSphere(center, end, radius, sphere)) break;
+                var holding = new Vector4(sphere.x, sphere.y, sphere.z, sphere.w * cascade.shadowCascadeBlendCullingFactor);
+                if (CapsuleInsideSphere(center, end, radius, holding)) break;
             }
             return (mask & (1 << split)) != 0;
         }

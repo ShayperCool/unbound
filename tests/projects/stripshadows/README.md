@@ -58,8 +58,10 @@ order until one cascade's culling sphere holds the caster's whole shadow volume 
 sphere swept along the light until it leaves the camera's frustum cut at the shadow distance);
 the later cascades leave it out. A cascade also takes a caster only when, in the light's frame,
 the caster's bounding sphere reaches the cascade's sphere across the light and is not wholly
-beyond it along the light; the cascades' culling planes then apply as before. Both the default
-gate and `--cascades` are strict gate commands.
+beyond it along the light; the cascades' culling planes then apply as before. The holding sphere's
+radius is the culling sphere's times the split's blend culling factor (URP gives 1). Unmeasured:
+close-fit projection (Unbound keeps every cascade there), other blend culling factors. Both the
+default gate and `--cascades` are strict gate commands.
 
 SRP lists retain renderers whose coarse bounds are unmeasured, including non-rigid skins,
 while still respecting split exclusions. Measured strip face selection and trusted mesh

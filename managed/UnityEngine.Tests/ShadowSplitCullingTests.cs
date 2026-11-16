@@ -53,8 +53,10 @@ namespace UnityEngine.Tests
 
         /// <summary>A directional light's cascades by their culling spheres (stable fit): a caster
         /// whose shadow stays inside the first cascade's sphere is left out of the second; one
-        /// reaching past it is drawn into both; a caster beside every sphere into none. Close fit
-        /// takes every cascade (the planes alone decide).</summary>
+        /// reaching past it is drawn into both; a caster beside every sphere into none. A blend
+        /// culling factor of 0 lets the cascades share every caster; an excluded first cascade
+        /// holds nothing; a scaled light keeps the same frame; bounds that are not finite are left
+        /// to the planes.</summary>
         [Fact]
         public void ACasterInsideAnEarlierCascadesSphereLeavesTheLaterOnes()
         {
@@ -81,8 +83,8 @@ namespace UnityEngine.Tests
                 var lights=new NativeArray<LightShadowCasterCullingInfo>(1,Allocator.Temp);
                 try
                 {
-                    splits[0]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,10f,10f) };
-                    splits[1]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,30f,20f) };
+                    splits[0]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,10f,10f),shadowCascadeBlendCullingFactor=1f };
+                    splits[1]=new ShadowSplitData { cullingSphere=new Vector4(0f,0f,30f,20f),shadowCascadeBlendCullingFactor=1f };
                     lights[0]=new LightShadowCasterCullingInfo { splitRange=new RangeInt(0,2) };
                     context.CullShadowCasters(results,new ShadowCastersCullingInfos { splitBuffer=splits,perLightInfos=lights });
                 }
@@ -99,9 +101,28 @@ namespace UnityEngine.Tests
                 var beside=new Bounds(new Vector3(40f,0f,10f),Vector3.one);
                 Assert.False(ShadowCasterCulling.SeesSplit(data,0,0,beside,default));
                 Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,beside,default));
-                QualitySettings.shadowProjection=ShadowProjection.CloseFit;
+                var nan=new Bounds(new Vector3(float.NaN,0f,10f),Vector3.one);
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,nan,default));
+                // No blend culling: the second cascade shares the held caster.
+                var first=data.ShadowSplits[0];
+                first.shadowCascadeBlendCullingFactor=0f;
+                data.ShadowSplits[0]=first;
                 Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
-                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,beside,default));
+                first.shadowCascadeBlendCullingFactor=1f;
+                data.ShadowSplits[0]=first;
+                // An excluded first cascade holds nothing back.
+                var info=data.ShadowLights[0];
+                info.splitExclusionMask=1;
+                data.ShadowLights[0]=info;
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
+                info.splitExclusionMask=0;
+                data.ShadowLights[0]=info;
+                // A scaled light: the same frame.
+                var scaled=data.Lights[0];
+                scaled.localToWorldMatrix=Matrix4x4.TRS(Vector3.zero,Quaternion.Euler(90f,0f,0f),new Vector3(2f,3f,4f));
+                data.Lights[0]=scaled;
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,between,default));
             }
             finally
             {
