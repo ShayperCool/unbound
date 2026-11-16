@@ -110,6 +110,8 @@ namespace UnityEngine.Tests
                     Logs(() => Assert.Null(SceneManager.LoadSceneAsync(99))));
                 Assert.Equal(new[] { "Error: Scene with build index: -1 couldn't be loaded because it has not been added to the build settings." },
                     Logs(() => Assert.Null(SceneManager.LoadSceneAsync(-1))));
+                Assert.Equal(new[] { "Error: Scene 'NoSuchScene' couldn't be loaded because it has not been added to the build settings or the AssetBundle has not been loaded." },
+                    Logs(() => Assert.Null(SceneManager.LoadSceneAsync("NoSuchScene"))));
             }
         }
 
@@ -230,6 +232,32 @@ namespace UnityEngine.Tests
             // Control: a region inside both copies.
             Assert.Empty(Logs(() => Graphics.CopyTexture(source, 0, 0, 0, 0, 2, 2, destination, 0, 0, 0, 0)));
             Assert.Equal(Color.red, destination.GetPixel(0, 0));
+        }
+
+        [Fact]
+        public void AWholeCopyNeedsMatchingSizesWhileALevelCopyTakesWhatBothHold()
+        {
+            var wide = Own(new Texture2D(8, 4, TextureFormat.RGBA32, false));
+            var tall = Own(new Texture2D(4, 8, TextureFormat.RGBA32, false));
+            wide.SetPixels32(new Color32[32]);
+            wide.SetPixel(0, 0, Color.red);
+            wide.SetPixel(3, 3, Color.green);
+            wide.SetPixel(7, 3, Color.white);
+            wide.Apply();
+            tall.SetPixel(0, 0, Color.blue);
+            tall.Apply();
+            Assert.Equal(new[] { "Error: Graphics.CopyTexture called with mismatching texture sizes (src 8x4x1 (array length 0), dst 4x8x1 (array length 0))" },
+                Logs(() => Graphics.CopyTexture(wide, tall)));
+            Assert.Equal(Color.blue, tall.GetPixel(0, 0));
+            // A level copy takes the 4x4 both hold, without wrapping rows.
+            Assert.Empty(Logs(() => Graphics.CopyTexture(wide, 0, 0, tall, 0, 0)));
+            Assert.Equal(Color.red, tall.GetPixel(0, 0));
+            Assert.Equal(Color.green, tall.GetPixel(3, 3));
+            Assert.NotEqual(Color.white, tall.GetPixel(3, 4));
+            // Control: a whole copy of the same size copies.
+            var same = Own(new Texture2D(8, 4, TextureFormat.RGBA32, false));
+            Assert.Empty(Logs(() => Graphics.CopyTexture(wide, same)));
+            Assert.Equal(Color.white, same.GetPixel(7, 3));
         }
 
         [Fact]
