@@ -136,22 +136,42 @@ class PostlandTests(unittest.TestCase):
     def test_suite_checks_get_time_by_their_recorded_durations(self):
         summary = self.root/'summary.json'
         summary.write_text(json.dumps({'probes': {
-            'realtimegi': {'seconds': 1139.2}, 'quick': {'seconds': 12.0}, 'huge': {'seconds': 5000},
-            'classids': {'seconds': 900}, 'untimed': {'status': 'pass'}}}))
+            'realtimegi': {'seconds': 1139.2, 'release': '6000.0.71f1'}, 'quick': {'seconds': 12.0},
+            'huge': {'seconds': 4735.7}, 'edge': {'seconds': 1800}, 'classids': {'seconds': 900},
+            'untimed': {'status': 'pass'}}}))
         suite = 'python3 tools/agents/suite.py --only {} --jobs 1'
-        checks = [['realtimegi', suite.format('realtimegi'), 'changed files', '6000.0.71f1'],
-                  ['quick', suite.format('quick'), 'engine paths', '6000.0.71f1'],
-                  ['huge', suite.format('huge'), 'engine paths', '6000.0.71f1'],
-                  ['untimed', suite.format('untimed'), 'engine paths', '6000.0.71f1'],
-                  ['unknown', suite.format('unknown'), 'engine paths', '6000.0.71f1'],
+        def check(name, command=None, release='6000.0.71f1'):
+            return [name, command or suite.format(name), 'engine paths', release]
+        checks = [check('realtimegi'), check('quick'), check('huge'), check('edge'), check('untimed'),
+                  check('unknown'),
+                  # Another release than the baseline's run of the probe: not its duration.
+                  check('realtimegi', release='2022.3.10f1'),
                   # A fast check is not the suite's run of the probe: the gate's limit stays.
-                  ['classids', 'python3 tests/projects/classids/run.py check', 'fast check', '6000.0.71f1']]
+                  check('classids', 'python3 tests/projects/classids/run.py check')]
+        key = land.automatic_limit_key
         self.assertEqual(postland.recorded_limits(checks, summary),
-                         {'realtimegi': 2278, 'quick': land.AUTO_PROBE_TIMEOUT_SECONDS,
-                          'huge': postland.RECORDED_LIMIT_MAX_SECONDS})
+                         {key(checks[0]): 2278, key(checks[1]): land.AUTO_PROBE_TIMEOUT_SECONDS,
+                          key(checks[3]): postland.RECORDED_LIMIT_MAX_SECONDS})
+        self.assertEqual(postland.too_long(checks, summary), [(checks[2], 4735.7)])
         self.assertEqual(postland.recorded_limits(checks, self.root/'missing.json'), {})
         summary.write_text('{')
         self.assertEqual(postland.recorded_limits(checks, summary), {})
+        self.assertEqual(postland.too_long(checks, summary), [])
+
+    def test_a_check_recorded_beyond_the_cap_is_reported_for_an_explicit_probe_not_run(self):
+        (self.state/'baseline').mkdir(parents=True)
+        (self.state/'baseline/summary.json').write_text(json.dumps({'probes': {'a': {'seconds': 4000}}}))
+        suite = 'python3 tools/agents/suite.py --only a --jobs 1'
+        self.land_branch('one', {'value.txt': '1\n'}, [['a', suite, 'changed files', '6000.0.71f1'],
+                                                     ['b', 'check b', 'fast check', '6000.0.71f1']])
+        checker = self.checker(lambda commit, check, label: False)
+        self.assertTrue(checker.round())
+        self.assertEqual([names for _, names, _ in checker.calls], [['b']])
+        reports = self.reports()
+        self.assertEqual([(r['probe'], r['kind'], r['recorded_seconds']) for r in reports],
+                         [('a', 'longer than the post-land limit', 4000)])
+        self.assertIn('--probe', reports[0]['advice'])
+        self.assertEqual(checker.state()['checked'], self.git('rev-parse', 'main'))
 
     def test_the_checker_gives_its_gate_the_recorded_limits(self):
         (self.state/'baseline').mkdir(parents=True)
@@ -167,7 +187,7 @@ class PostlandTests(unittest.TestCase):
         with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate), \
              mock.patch.object(land, 'freeze_automatic_baseline', side_effect=lambda rows: rows):
             self.assertEqual(checker.run(self.base, checks, 'control'), [])
-        self.assertEqual(gates[0].automatic_limits, {'probe': 800})
+        self.assertEqual(gates[0].automatic_limits, {land.automatic_limit_key(checks[0]): 800})
         self.assertFalse(gates[0].automatic_budget)
 
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):

@@ -399,6 +399,11 @@ def automatic_union(groups, explicit=()):
     return selected
 
 
+def automatic_limit_key(row):
+    """An automatic check's identity for a per-check time limit: probe, command and release."""
+    return (row[0], row[1], row[3] if len(row) > 3 else None)
+
+
 def freeze_automatic_baseline(checks):
     """Keep a sheriff promotion during the gate from changing its automatic suite verdicts."""
     if not any(suite_arguments(row[1]) is not None for row in checks):
@@ -446,8 +451,8 @@ class Gate:
         # Driver count for automatic checks (None: EXPLICIT_PROBE_WORKERS) and whether they share
         # the gate's wall-clock budget; the post-land checker sets fewer drivers and no budget.
         self.automatic_workers, self.automatic_budget = None, True
-        # Per-check time limits by probe name for checks without the shared budget (the post-land
-        # checker's recorded durations); others keep AUTO_PROBE_TIMEOUT_SECONDS.
+        # Per-check time limits by automatic_limit_key for checks without the shared budget (the
+        # post-land checker's recorded durations); others keep AUTO_PROBE_TIMEOUT_SECONDS.
         self.automatic_limits = {}
 
     def note(self, text):
@@ -810,9 +815,12 @@ class Gate:
 
     def run_automatic_probes(self):
         """Parallel checks share wall-clock and per-command limits, with barriers."""
-        print(f'land: automatic probes: {len(self.automatic)} checks, '
-              f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, '
-              f'{AUTO_PROBE_TIMEOUT_SECONDS}s per check; explicit --probe commands are separate', flush=True)
+        budget = (f'budget {AUTO_PROBE_BUDGET_SECONDS}s total, {AUTO_PROBE_TIMEOUT_SECONDS}s per check'
+                  if self.automatic_budget else
+                  f'no shared budget, {AUTO_PROBE_TIMEOUT_SECONDS}s per check unless recorded longer '
+                  f'({len(self.automatic_limits)} checks)')
+        print(f'land: automatic probes: {len(self.automatic)} checks, {budget}; '
+              f'explicit --probe commands are separate', flush=True)
         deadline = time.monotonic()+AUTO_PROBE_BUDGET_SECONDS if self.automatic_budget else None
         self.note('automatic probes started')
         specs = self.probe_specs()
@@ -821,7 +829,7 @@ class Gate:
         commands, limits = [], {}
         for index, row in enumerate(self.automatic, 1):
             name, command, reason = row[:3]
-            limits[f'{index:03d}'] = self.automatic_limits.get(name, AUTO_PROBE_TIMEOUT_SECONDS)
+            limits[f'{index:03d}'] = self.automatic_limits.get(automatic_limit_key(row), AUTO_PROBE_TIMEOUT_SECONDS)
             release = row[3] if len(row) > 3 else probe_release(f'tests/projects/{name}', self.worktree)
             exclusive = self.probe_exclusive(command, specs, (name,))
             argv = suite_arguments(command)
