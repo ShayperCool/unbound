@@ -175,20 +175,29 @@ class PostlandTests(unittest.TestCase):
 
     def test_the_checker_gives_its_gate_the_recorded_limits(self):
         (self.state/'baseline').mkdir(parents=True)
-        (self.state/'baseline/summary.json').write_text(json.dumps({'probes': {'probe': {'seconds': 400}}}))
+        summary = self.state/'baseline/summary.json'
+        summary.write_text(json.dumps({'probes': {'probe': {'seconds': 400}}}))
         checks = [['probe', 'python3 tools/agents/suite.py --only probe --jobs 1', 'changed files', '6000.0.71f1']]
         checker = postland.Checker(self.repo)
         gates = []
         class Gate:
             def __init__(self, *args, **kwargs):
+                self.automatic = kwargs['automatic']
                 gates.append(self)
             def check_only(self):
                 pass
-        with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate), \
-             mock.patch.object(land, 'freeze_automatic_baseline', side_effect=lambda rows: rows):
+        with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate):
             self.assertEqual(checker.run(self.base, checks, 'control'), [])
-        self.assertEqual(gates[0].automatic_limits, {land.automatic_limit_key(checks[0]): 800})
-        self.assertFalse(gates[0].automatic_budget)
+            # The gate runs the frozen command; its limit is found under that row.
+            row = gates[0].automatic[0]
+            self.assertIn('--against', row[1])
+            self.assertEqual(gates[0].automatic_limits[land.automatic_limit_key(row)], 800)
+            self.assertFalse(gates[0].automatic_budget)
+            # Within a round the limits read at its start stay, whatever the baseline says later.
+            checker.limits = postland.recorded_limits(checks)
+            summary.write_text(json.dumps({'probes': {'probe': {'seconds': 1000}}}))
+            checker.run(self.base, checks, 'alone')
+            self.assertEqual(gates[1].automatic_limits[land.automatic_limit_key(gates[1].automatic[0])], 800)
 
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):
         check = ['old', 'old-check', 'fast check', 'r']

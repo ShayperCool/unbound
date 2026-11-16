@@ -1562,6 +1562,18 @@ class AutomaticProbeTests(unittest.TestCase):
         logs = self.gate.log.with_suffix('.automatic')
         self.assertTrue((logs/'002.retry.log').is_file() and (logs/'003.retry.log').is_file())
 
+    def test_a_limit_key_names_a_suite_check_with_or_without_its_frozen_baseline(self):
+        recorded = ('a', 'python3 tools/agents/suite.py --only a --jobs 1 --label land-1-a', 'changed files', '6000.0.71f1')
+        frozen = ('a', '/usr/bin/python3 tools/agents/suite.py --only a --jobs 1 --against /state/b.json',
+                  'changed files', '6000.0.71f1')
+        key = land.automatic_limit_key
+        self.assertEqual(key(recorded), key(frozen))
+        self.assertEqual(key(frozen), key(('a', frozen[1].replace(' /state', '=/state').replace('--against =', '--against='),
+                                           'changed files', '6000.0.71f1')))
+        self.assertNotEqual(key(recorded), key(recorded[:3]+('2022.3.10f1',)))
+        self.assertNotEqual(key(recorded), key(('a', 'python3 tests/projects/a/run.py check', 'fast check', '6000.0.71f1')))
+        self.assertNotEqual(key(recorded), key(('b',)+recorded[1:]))
+
     def test_checks_without_the_shared_budget_keep_their_own_limits_when_run_again(self):
         # The post-land checker: no shared budget, limits by probe from recorded durations.
         self.gate.automatic_budget = False

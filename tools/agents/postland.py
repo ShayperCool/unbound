@@ -127,6 +127,8 @@ class Checker:
         self.root = root()
         self.root.mkdir(parents=True, exist_ok=True)
         self.worktree = land.integration_root().resolve()/WORKTREE
+        # The time limits of the round's checks, read once from the baseline (see round()).
+        self.limits = None
 
     # --- state -----------------------------------------------------------------------------
     def git(self, *args, cwd=None, check=True):
@@ -193,7 +195,7 @@ class Checker:
         # No land lock is held: no shared wall-clock budget, and probes known to take longer
         # than the gate's per-check limit get time by their recorded durations.
         gate.automatic_workers, gate.automatic_budget = background_workers(), False
-        gate.automatic_limits = recorded_limits(frozen)
+        gate.automatic_limits = self.limits if self.limits is not None else recorded_limits(frozen)
         print(f'postland: {len(checks)} checks at {commit[:10]}; log {log}', flush=True)
         try:
             gate.check_only()
@@ -375,14 +377,15 @@ class Checker:
             self.save(checked=target, reported={})
             return True
         span = [rows[0]['old'], target]
-        frozen = land.freeze_automatic_baseline(checks)
-        long = too_long(frozen)
+        # One reading of the baseline's durations for the whole round (its reruns, bisection and
+        # confirmations), so that a promotion meanwhile changes no limit.
+        self.limits = recorded_limits(checks)
+        long = too_long(checks)
         for check, seconds in long:
             self.report(check, 'longer than the post-land limit', recorded_seconds=seconds,
                         limit_seconds=RECORDED_LIMIT_MAX_SECONDS, range=span,
                         advice='run it as an explicit --probe of a landing, or in a sheriff suite')
-        skipped = {land.automatic_limit_key(check) for check, _ in long}
-        checks = [check for check, row in zip(checks, frozen) if land.automatic_limit_key(row) not in skipped]
+        checks = [check for check in checks if check not in [row for row, _ in long]]
         if not checks:
             self.save(checked=target, reported={})
             return self.git('rev-parse', 'main') == target

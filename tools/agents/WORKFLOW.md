@@ -236,8 +236,8 @@ Other private X display helpers and the audio reference recorder's named PulseAu
 to reference recording. Gate commands cannot run those paths because the Editor guard refuses
 them. Audio gate captures use private run directories and virtual engine device layouts.
 Automatic checks use the same bounded driver pool and exclusivity barriers, with the same total 600 s wall-clock budget and 300 s limit
-per check. A touched recipe exceeding 300 s still fails (exit 5 in `--check`, a post-land finding after
-landing) unless every declared command is supplied explicitly, or an explicit suite invocation
+per check. A touched recipe exceeding 300 s still fails in `--check` (exit 5; after landing the
+post-land checker's limits apply, see Post-land checks) unless every declared command is supplied explicitly, or an explicit suite invocation
 covers it. Trains leave these checks to the post-land checker (see Post-land checks). A passing train fast-forwards main through each branch, records one `landed.jsonl`
 line per branch and pushes once. Each caller then refreshes its own branch to its rebased tip.
 A single queued branch uses its original worktree and warm target, as before. `--check` remains an independent gate that also runs the automatic checks; because trains no longer run them, a `--check` pass is not reused by a train for a code change.
@@ -348,7 +348,9 @@ current main, so landings that arrive while it runs are checked in its next roun
 in its own locked worktree beside the land trains and runs the union of those checks with the
 gate's rules: the sheriff baseline frozen for suite checks (`--against`), one rerun of
 time-limited checks, and unchanged comparators. A suite check gets twice its duration in the
-sheriff baseline (at least 300 s, at most an hour); other checks keep 300 s. It holds no lock, so it
+sheriff baseline at its release (at least 300 s); other checks keep 300 s. A suite check that
+would need more than an hour is not run there: it is reported as "longer than the post-land
+limit", to be run as an explicit `--probe` or in a sheriff suite. It holds no lock, so it
 has no shared 600 s budget, and it runs only as many checks at once as the machine's free
 hardware threads allow (two per check, at least one, at most the engine pool's slots).
 

@@ -400,8 +400,22 @@ def automatic_union(groups, explicit=()):
 
 
 def automatic_limit_key(row):
-    """An automatic check's identity for a per-check time limit: probe, command and release."""
-    return (row[0], row[1], row[3] if len(row) > 3 else None)
+    """An automatic check's identity for a per-check time limit: probe, command and release. A
+    suite command is the same check with or without the frozen baseline (--against), whatever
+    its interpreter and label."""
+    release = row[3] if len(row) > 3 else None
+    argv = suite_arguments(row[1])
+    if argv is None:
+        return (row[0], 'command', row[1], release)
+    kept, skip = [], False
+    for token in without_suite_label(argv):
+        if skip:
+            skip = False
+        elif token == '--against':
+            skip = True
+        elif not token.startswith('--against='):
+            kept.append(token)
+    return (row[0], 'suite', tuple(kept), release)
 
 
 def freeze_automatic_baseline(checks):
