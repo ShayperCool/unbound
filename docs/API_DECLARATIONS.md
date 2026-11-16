@@ -112,7 +112,7 @@ probe checks argument evaluation with profiler defines present and absent, plus 
 unconditional CommandBuffer string overloads. Its metadata rows include internal
 Editor and collection-validation methods.
 
-| Category | Before Q410 | Retained now |
+| Category | Before Q410 | Q410 entries retained |
 | --- | ---: | ---: |
 | Attributes | 938 | 13 |
 | Modifiers | 87 | 6 |
@@ -127,7 +127,8 @@ Editor and collection-validation methods.
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
-extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry.
+extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry. With the one
+pipeline-restriction lookup entry outside Q410, the allow-list holds 109 entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
