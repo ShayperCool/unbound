@@ -150,8 +150,7 @@ In dependency order; each item ends with an Editor-reference probe.
       Deferred Shading (Unity's deferred shaders) and Vertex Lit paths, material variants, raster
       states (AlphaToMask, ZClip, wireframe, sRGB writes), vertex streams, billboards, static
       batching (`tests/projects/builtinfx`); halos and lens flares (`tests/projects/flares`).
-      Left: the mipmap limit's sampling, light probe proxy volumes' 3D textures, shadowmask
-      mixing, and the halo/flare cases COMPATIBILITY_GAPS lists as unmeasured (they warn).
+      Left: the mipmap limit's sampling, shadowmask mixing, and the halo/flare cases COMPATIBILITY_GAPS lists as unmeasured (they warn).
 - [x] Compute: ComputeShader compiled from Unity's sources, ComputeBuffer, GraphicsBuffer
       (`tests/projects/graphics`, 25/25 cases match the Editor).
 - [x] Scriptable Render Pipeline core: RenderPipelineAsset/RenderPipeline/RenderPipelineManager,

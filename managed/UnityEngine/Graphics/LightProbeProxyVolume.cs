@@ -120,11 +120,12 @@ namespace UnityEngine
         /// <summary>What the shaders read of a built volume (<see cref="Apply"/>).</summary>
         internal bool Built => m_Built && m_Texture != null;
 
-        /// <summary>Whether volumes light anything: in the built-in pipeline, or a render pipeline
-        /// that says it supports them (URP does not: its renderers keep Blend Probes' probes;
-        /// measured: tests/projects/urp per-object-constants.jsonl, the Proxy Sphere).</summary>
-        internal static bool Active =>
-            GraphicsSettings.currentRenderPipeline == null || SupportedRenderingFeatures.active.lightProbeProxyVolumes;
+        /// <summary>Whether volumes are built and drawn through: the graphics tier compiles
+        /// programs with them (TierSettings.enableLPPV; Android's automatic tiers do not). A render
+        /// pipeline's draws use them only when they ask (PerObjectData.LightProbeProxyVolume; URP's
+        /// do not: their renderers keep Blend Probes' probes, tests/projects/urp
+        /// per-object-constants.jsonl, the Proxy Sphere).</summary>
+        internal static bool Active => GraphicsSettings.HasShaderDefine(BuiltinShaderDefine.UNITY_LIGHT_PROBE_PROXY_VOLUME);
 
         internal override void OnEngineDestroy()
         {

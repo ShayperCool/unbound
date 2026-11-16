@@ -284,7 +284,8 @@ namespace UnityEngine
         /// neither applies. <paramref name="lightmaps"/>, <paramref name="probes"/>: what the
         /// pipeline asks for (PerObjectData).
         /// </summary>
-        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, List<string> keywords, bool lightmaps = true, bool probes = true)
+        internal static Dictionary<int, object> Apply(Renderer renderer, Dictionary<int, object> properties, List<string> keywords, bool lightmaps = true, bool probes = true,
+            bool proxyVolumes = true)
         {
             if (renderer == null) return properties;
             // Precomputed realtime GI's lightmap (unity_DynamicLightmap with the renderer's realtime
@@ -347,7 +348,7 @@ namespace UnityEngine
             // Through a built proxy volume: its texture and constants; the renderer's probe
             // constants stay the ambient probe's (the frame's), none with Low quality (measured:
             // tests/projects/lppv *.sh). Without one it is lit as Blend Probes lights it.
-            if (probes && renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume && LightProbeProxyVolume.Of(renderer) is { } volume)
+            if (probes && proxyVolumes && renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume && LightProbeProxyVolume.Of(renderer) is { } volume)
             {
                 properties = volume.LowQuality ? WithProbe(default, properties, owner: renderer) : DrawPropertyPool.Copy(properties);
                 volume.Apply(properties);

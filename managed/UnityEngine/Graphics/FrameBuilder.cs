@@ -953,6 +953,7 @@ namespace Unbound.Runtime
                     : s_Items[order[i]].Material.Sync();
             bool lightmaps = (drawing.perObjectData & PerObjectData.Lightmaps) != 0;
             bool probes = (drawing.perObjectData & PerObjectData.LightProbe) != 0;
+            bool proxyVolumes = (drawing.perObjectData & PerObjectData.LightProbeProxyVolume) != 0;
             // Per-tag state blocks: switched between draws as their materials' tags change.
             int block = -1;
             for (int i = 0; i < count; i++)
@@ -969,7 +970,7 @@ namespace Unbound.Runtime
                     {
                         if (tagged != null) SelectTaggedState(tagged, item.Material, p, ref block);
                         if (motion) NextDrawMotion(item);
-                        EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true);
+                        EmitDraw(item, s_MaterialHandles[i], p, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes);
                     }
                     continue;
                 }
@@ -992,7 +993,7 @@ namespace Unbound.Runtime
                     SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
                 if (motion) NextDrawMotion(item);
-                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true);
+                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes);
             }
             if (block >= 0) GfxStream.StateOverride(null);
         }
@@ -1105,7 +1106,7 @@ namespace Unbound.Runtime
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
-            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false)
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true)
         {
             using var pooled = DrawPropertyPool.Begin();
             Describe(item);
@@ -1114,7 +1115,7 @@ namespace Unbound.Runtime
             var properties = item.Properties;
             if (IsMeshLike(item.Renderer))
             {
-                properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes);
+                properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes, proxyVolumes);
                 properties = ReflectionProbe.Apply(item.Renderer, properties, srp);
                 properties = SpeedTreeWindSystem.Apply(item.Renderer, properties);
             }

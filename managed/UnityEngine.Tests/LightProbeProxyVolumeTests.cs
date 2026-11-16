@@ -127,26 +127,16 @@ namespace Unbound.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
-        sealed class NoVolumesPipelineAsset : RenderPipelineAsset
-        {
-            protected override RenderPipeline CreatePipeline() => new NoVolumesPipeline();
-        }
-
-        sealed class NoVolumesPipeline : RenderPipeline
-        {
-            protected override void Render(ScriptableRenderContext context, Camera[] cameras) { }
-        }
-
-        /// <summary>A renderer that uses a built volume draws through it in the built-in pipeline;
-        /// under a render pipeline that does not support volumes (URP) it keeps the probes Blend
-        /// Probes gives (tests/projects/urp per-object-constants.jsonl, the Proxy Sphere).</summary>
+        /// <summary>A renderer that uses a built volume draws through it, unless its draw does not
+        /// ask for volumes (a render pipeline's without PerObjectData.LightProbeProxyVolume, as
+        /// URP's: tests/projects/urp per-object-constants.jsonl, the Proxy Sphere) or the graphics
+        /// tier compiles programs without them (TierSettings.enableLPPV off).</summary>
         [Fact]
-        public void OnlyPipelinesWithVolumesDrawThroughThem()
+        public void DrawsGoThroughVolumesTheyAskForAndTheTierCompiles()
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            var asset = ScriptableObject.CreateInstance<NoVolumesPipelineAsset>();
-            var saved = GraphicsSettings.defaultRenderPipeline;
-            bool supported = SupportedRenderingFeatures.active.lightProbeProxyVolumes;
+            var definesField = typeof(GraphicsSettings).GetField("s_PlatformDefines", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var defines = definesField.GetValue(null);
             var texture = Shader.PropertyToID("unity_ProbeVolumeSH");
             try
             {
@@ -157,21 +147,23 @@ namespace Unbound.Tests
                 Assert.Null(LightProbeProxyVolume.Of(renderer));
                 volume.Update();
                 var keywords = new List<string>();
-                var drawn = BakedLighting.Apply(renderer, null, keywords);
-                Assert.True(drawn.ContainsKey(texture));
-                GraphicsSettings.defaultRenderPipeline = asset;
-                SupportedRenderingFeatures.active.lightProbeProxyVolumes = false;
+                Assert.True(BakedLighting.Apply(renderer, null, keywords).ContainsKey(texture));
+                var unasked = BakedLighting.Apply(renderer, null, keywords, proxyVolumes: false);
+                Assert.True(unasked == null || !unasked.ContainsKey(texture));
+                GraphicsSettings.SetPlatformShaderDefines(new[] { "SHADER_API_DESKTOP" });
                 Assert.Null(LightProbeProxyVolume.Of(renderer));
-                drawn = BakedLighting.Apply(renderer, null, keywords);
-                Assert.True(drawn == null || !drawn.ContainsKey(texture));
-                SupportedRenderingFeatures.active.lightProbeProxyVolumes = true;
+                definesField.SetValue(null, defines);
                 Assert.Same(volume, LightProbeProxyVolume.Of(renderer));
+                // Destroying the volume destroys its texture.
+                var properties = new Dictionary<int, object>();
+                volume.Apply(properties);
+                var built = (Texture3D)properties[texture];
+                Object.DestroyImmediate(volume);
+                Assert.True(built == null);
             }
             finally
             {
-                SupportedRenderingFeatures.active.lightProbeProxyVolumes = supported;
-                GraphicsSettings.defaultRenderPipeline = saved;
-                Object.DestroyImmediate(asset);
+                definesField.SetValue(null, defines);
                 Object.DestroyImmediate(go);
             }
         }

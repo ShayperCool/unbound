@@ -8,6 +8,7 @@
     "managed/UnityEngine/Graphics/Lightmapping.cs",
     "managed/UnityEngine/Graphics/ForwardLights.cs",
     "managed/UnityEngine/Graphics/Lighting.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
     "crates/unbound-shaders/src/lib.rs"
   ]
 }

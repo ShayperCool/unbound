@@ -575,9 +575,9 @@ impl Settings {
     /// highest graphics tier the Editor runs, which `UNITY_HARDWARE_TIER3` names only when the
     /// tiers differ, and the define of the lightmap encoding ([`Self::lighting_encodings`]).
     /// `GraphicsSettings.HasShaderDefine` answers the same set without the tier's name
-    /// (tests/projects/lightmapencoding, Standalone and Android); programs compile without
-    /// `UNITY_LIGHT_PROBE_PROXY_VOLUME`: proxy volumes are not supported, and without one its
-    /// branch is off (unbound_shaders' NOT_COMPILED). The Metal device adds framebuffer fetch, and its fallback
+    /// (tests/projects/lightmapencoding, Standalone and Android); programs compile with them all,
+    /// `UNITY_LIGHT_PROBE_PROXY_VOLUME` included where the tier enables proxy volumes
+    /// (tests/projects/lppv). The Metal device adds framebuffer fetch, and its fallback
     /// for GPUs without it while the standalone target is active and the macOS standalone
     /// platform's graphics API list has Metal (an automatic list has): measured on the macOS
     /// Editor (tests/projects/urp CapsProbe `HasShaderDefine.*`: `caps-metal.jsonl`; without the

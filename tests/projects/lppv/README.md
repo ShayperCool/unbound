@@ -52,5 +52,6 @@ What the Editor does (also the class summary of `LightProbeProxyVolume`):
 
 Unmeasured: refreshing (Every Frame, Via Scripting, an Automatic volume whose inputs change), the
 Vulkan device, `Graphics.DrawMesh*`'s volume argument and a renderer using a volume that is not
-built (lit as Blend Probes lights it). Values compare within 2e-4; images report their mean and
+built (lit as Blend Probes lights it), a graphics tier without proxy volumes, a render pipeline
+that asks for them. Particle system renderers do not draw through volumes in Unbound yet. Values compare within 2e-4; images report their mean and
 worst difference.
