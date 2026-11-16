@@ -1,7 +1,7 @@
 # Six-input output layouts
 
 Unity 6000.0.71f1 on Linux, with a private eight-channel PulseAudio device, 48000 and
-44100 Hz and 1024-frame DSP periods. The `six-layouts` diagnostic adds 17 controls to the
+44100 Hz and 1024-frame DSP periods. The `six-layouts` profile adds 17 controls to the
 [encoding](ENCODING.md) availability profile: a non-streamed six-channel clip on a 2D source
 (`spatialBlend` 0) through every other output speaker mode (Mono, Quad, Surround, 5.1 and
 7.1), each with `panStereo` 0, -0.65 and 0.65, plus Stereo with both pans. Each input channel
@@ -33,8 +33,7 @@ on this release (`Compat` AudioOutputRules.six_channel_2d_voices). `context_run.
 six-layouts` gates every control at both rates: all 8,323,278 values per rate pass, with
 no failure in the strict comparison either (existing bounds, device PCM compared without
 a 16-bit step). Spatial and streamed six-input voices still fail to start with the existing
-diagnostic. Record two
-fresh projects per rate with `native.py --release 6000.0.71f1 --rate RATE --set six-layouts
---work FRESH_CACHE_DIRECTORY`, then publish with `publish.py --six-layouts --capture FIRST/capture
---repeat SECOND/capture`. The canonical reference is under
+diagnostic. Record two fresh projects per rate with `native.py --release 6000.0.71f1 --rate
+RATE --set six-layouts --work FRESH_CACHE_DIRECTORY`, then publish with `publish.py
+--six-layouts --capture FIRST/capture --repeat SECOND/capture`. The canonical reference is under
 `Reference/unity-6000.0.71f1/six-layouts`.
