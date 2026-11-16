@@ -33,7 +33,13 @@
     <p:OldProgress class="case progressFull" low-value="1" high-value="5" value="3" title="P" />
     <p:CustomButton class="case customEmpty" />
     <p:CustomButton class="case customFull" text="C" number="4" />
+    <p:OldEnum class="case enumType" type="LegacyProbe.Fruit, Assembly-CSharp" />
+    <p:OldEnum class="case enumValue" type="LegacyProbe.Fruit, Assembly-CSharp" value="Pear" />
+    <p:OldEnum class="case enumLowerCase" type="LegacyProbe.Fruit, Assembly-CSharp" value="pear" />
+    <p:OldEnum class="case enumUndefined" type="LegacyProbe.Fruit, Assembly-CSharp" value="Plum" />
+    <p:OldEnum class="case enumNoType" value="Pear" />
     <ui:TextField class="case builtinTextPlaceholder" placeholder-text="Type here" hide-placeholder-on-focus="true" />
+    <ui:IntegerField class="case builtinIntegerPlaceholder" placeholder-text="Num" hide-placeholder-on-focus="true" />
     <ui:TextField class="case builtinTextSelect" select-word-by-double-click="false" select-line-by-triple-click="false" />
     <ui:Label class="case builtinLabelSelectable" text="L" selectable="true" double-click-selects-word="false" triple-click-selects-line="false" />
     <ui:Label class="case builtinLabelObsolete" text="L" selectWordByDoubleClick="false" select-line-by-triple-click="false" />

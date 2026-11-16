@@ -15,8 +15,8 @@
 {"key":"element.vectorValue","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value \"(0.00, 0.00, 0.00)\""}
 {"key":"element.sliderEmpty","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True label \"\" value \"0\" low 0 high 10 page 0 input False inverted False direction Horizontal"}
 {"key":"element.sliderFull","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True label \"\" value \"2\" low 1 high 3 page 0.5 input False inverted False direction Horizontal"}
-{"key":"element.integerEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value \"0\" delayed False"}
-{"key":"element.integerFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"I\" value \"7\" delayed False"}
+{"key":"element.integerEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value \"0\" delayed False placeholder \"\" hideOnFocus False"}
+{"key":"element.integerFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"I\" value \"7\" delayed False placeholder \"\" hideOnFocus False"}
 {"key":"element.scrollEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True mode Vertical h Auto v Auto elasticity 0.1 deceleration 0.135 touch Clamped hPage -1 vPage -1 wheel 18 nested Default"}
 {"key":"element.scrollFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True mode Vertical h AlwaysVisible v Auto elasticity 0.2 deceleration 0.135 touch Elastic hPage -1 vPage -1 wheel 18 nested Default"}
 {"key":"element.listEmpty","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True height 40 reorderable False border False selection Single alternating None foldout False title \"\" footer False horizontal False virtualization FixedHeight reorderMode Simple binding <null>"}
@@ -32,8 +32,14 @@
 {"key":"element.progressFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True low 1 high 5 value 3 title \"P\""}
 {"key":"element.customEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True text \"\" number 9"}
 {"key":"element.customFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True text \"C\" number 4"}
-{"key":"element.builtinTextPlaceholder","value":"name \"\" key <null> tip \"\" picking Ignore hints None focusable True tab 0 enabled True binding <null>"}
-{"key":"element.builtinTextSelect","value":"name \"\" key <null> tip \"\" picking Ignore hints None focusable True tab 0 enabled True binding <null>"}
+{"key":"element.enumType","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value LegacyProbe.Fruit.Apple"}
+{"key":"element.enumValue","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value LegacyProbe.Fruit.Pear"}
+{"key":"element.enumLowerCase","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value <null>"}
+{"key":"element.enumUndefined","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value <null>"}
+{"key":"element.enumNoType","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value <null>"}
+{"key":"element.builtinTextPlaceholder","value":"name \"\" key <null> tip \"\" picking Ignore hints None focusable True tab 0 enabled True label \"\" value \"\" readOnly False maxLength -1 password False mask 42 delayed False placeholder \"Type here\" hideOnFocus True allOnFocus True allOnMouseUp True word True line True vScroller Hidden"}
+{"key":"element.builtinIntegerPlaceholder","value":"name \"\" key <null> tip \"\" picking Position hints None focusable True tab 0 enabled True label \"\" value \"0\" delayed False placeholder \"Num\" hideOnFocus True"}
+{"key":"element.builtinTextSelect","value":"name \"\" key <null> tip \"\" picking Ignore hints None focusable True tab 0 enabled True label \"\" value \"\" readOnly False maxLength -1 password False mask 42 delayed False placeholder \"\" hideOnFocus False allOnFocus True allOnMouseUp True word False line False vScroller Hidden"}
 {"key":"element.builtinLabelSelectable","value":"name \"\" key <null> tip \"\" picking Position hints None focusable True tab -1 enabled True text \"L\" rich True elided True escape False selectable True word False line False"}
 {"key":"element.builtinLabelObsolete","value":"name \"\" key <null> tip \"\" picking Position hints None focusable False tab -1 enabled True text \"L\" rich True elided True escape False selectable False word False line False"}
 {"key":"control.scrollerSingleLine","value":"AlwaysVisible -> AlwaysVisible"}

@@ -17,6 +17,14 @@ using UnityEngine.UIElements;
 // (placeholder-text, hide-placeholder-on-focus, selectable, ...).
 namespace LegacyProbe
 {
+    public enum Fruit { Apple, Pear }
+
+    public class OldEnum : EnumField
+    {
+        public new class UxmlFactory : UxmlFactory<OldEnum, UxmlTraits> { }
+        public OldEnum() : base(KeyCode.Space) { label = "ctorLabel"; }
+    }
+
     public class OldPlain : VisualElement
     {
         public new class UxmlFactory : UxmlFactory<OldPlain, UxmlTraits> { }
@@ -199,12 +207,14 @@ public class UxmlLegacyProbe : MonoBehaviour
         switch (e)
         {
             case LegacyProbe.OldText t: s += Field(t) + Text(t) + " multiline " + t.multiline; break;
+            case TextInputBaseField<string> t: s += Field(t) + Text(t); break;
+            case EnumField ef: s += " label " + S(ef.label) + " value " + (ef.value == null ? "<null>" : ef.value.GetType().FullName + "." + ef.value); break;
             case LegacyProbe.CustomButton c: s += " text " + S(c.text) + " number " + c.number; break;
             case Button b: s += " text " + S(b.text); break;
             case Toggle t: s += Field(t) + " text " + S(t.text); break;
             case Vector3Field v: s += Field(v); break;
             case Slider sl: s += Field(sl) + " low " + F(sl.lowValue) + " high " + F(sl.highValue) + " page " + F(sl.pageSize) + " input " + sl.showInputField + " inverted " + sl.inverted + " direction " + sl.direction; break;
-            case IntegerField i: s += Field(i) + " delayed " + i.isDelayed; break;
+            case IntegerField i: s += Field(i) + " delayed " + i.isDelayed + " placeholder " + S(i.textEdition.placeholder) + " hideOnFocus " + i.textEdition.hidePlaceholderOnFocus; break;
             case ScrollView v: s += " mode " + v.mode + " h " + v.horizontalScrollerVisibility + " v " + v.verticalScrollerVisibility + " elasticity " + F(v.elasticity)
                 + " deceleration " + F(v.scrollDecelerationRate) + " touch " + v.touchScrollBehavior + " hPage " + F(v.horizontalPageSize) + " vPage " + F(v.verticalPageSize)
                 + " wheel " + F(v.mouseWheelScrollSize) + " nested " + v.nestedInteractionKind; break;

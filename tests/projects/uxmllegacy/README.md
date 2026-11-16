@@ -18,8 +18,11 @@ once with them:
 - `element.*Full`, `element.*Obsolete`: the attributes, under their names and former names;
   `vectorValue`: a composite field's traits read its components, not `value`;
 - `element.custom*`: a game traits class over Button's, its own attribute read after the base's;
-- `element.builtin*`: built-in elements (not through a factory) read `placeholder-text`,
-  `hide-placeholder-on-focus` and a text element's `selectable`, `double-click-selects-word` and
+- `element.enum*`: an EnumField subclass through EnumField's traits: a type alone (the zero value), a
+  value (exactly as named; another case is not a value), an undefined value (reported, no value), no type;
+- `element.builtin*`: built-in elements (not through a factory): text inputs (a text field, an integer
+  field) read `placeholder-text`, `hide-placeholder-on-focus`, `select-word-by-double-click` and
+  `select-line-by-triple-click`; a text element reads `selectable`, `double-click-selects-word` and
   `triple-click-selects-line` (also under their former names);
 - `control.*`: a text field's vertical scroller visibility through multiline and password changes;
 - `traits.*`: every built-in traits class's attribute descriptions in the order the Editor lists them
