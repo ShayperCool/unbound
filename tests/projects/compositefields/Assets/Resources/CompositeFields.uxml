@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Vector2Field name="v2" label="Offset" value="1.5,2" />
+    <ui:Vector3Field name="v3" value="1,2,3" />
+    <ui:Vector4Field name="v4" value="1,2,3,4" />
+    <ui:Vector2IntField name="v2i" value="3,4" />
+    <ui:Vector3IntField name="v3i" value="5,6,7" />
+    <ui:RectField name="rect" value="1,2,3,4" />
+    <ui:RectIntField name="recti" value="1,2,3,4" />
+    <ui:BoundsField name="bounds" value="1,2,3,4,5,6" />
+    <ui:BoundsIntField name="boundsi" value="1,2,3,4,5,6" />
+    <ui:Hash128Field name="hash" value="0123456789abcdef0123456789abcdef" />
+    <ui:Vector2Field name="legacy2" x="7" y="8" />
+    <ui:Vector3IntField name="legacy3i" x="1" z="3" />
+</ui:UXML>

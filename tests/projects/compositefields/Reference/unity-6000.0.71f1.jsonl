@@ -1,0 +1,140 @@
+{"key":"v2.tree","value":"Vector2Field(unity-base-field unity-composite-field unity-vector2-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector2-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] VisualElement(unity-composite-field__field-spacer)]]"}
+{"key":"v2.default","value":"value 0,0 texts 0|0 changes 0 "}
+{"key":"v2.set","value":"value 1.5,-2 texts 1.5|-2 changes 1 0,0>1.5,-2"}
+{"key":"v2.setSame","value":"value 1.5,-2 texts 1.5|-2 changes 0 "}
+{"key":"v2.withoutNotify","value":"value 0.333333343,4 texts 0.3333333|4 changes 0 "}
+{"key":"v2.typeFirst.typed","value":"value 5,4 texts 2+3|4 changes 2 2,4>5,4"}
+{"key":"v2.typeFirst.committed","value":"value 5,4 texts 5|4 changes 0 "}
+{"key":"v2.typeLast.typed","value":"value 5,-0.25 texts 5|-0.25 changes 3 5,-0.2>5,-0.25"}
+{"key":"v2.typeLast.committed","value":"value 5,-0.25 texts 5|-0.25 changes 0 "}
+{"key":"v2.labelDrag","value":"value 5.54,-0.25 texts 5.54|-0.25 changes 1 5,-0.25>5.54,-0.25"}
+{"key":"v2.mixed","value":"value 5.54,-0.25 texts —|— changes 0  subMixed True,True"}
+{"key":"v2.mixed.off","value":"value 5.54,-0.25 texts 5.54|-0.25 changes 0 "}
+{"key":"v3.tree","value":"Vector3Field(unity-base-field unity-composite-field unity-vector3-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)]]]"}
+{"key":"v3.default","value":"value 0,0,0 texts 0|0|0 changes 0 "}
+{"key":"v3.set","value":"value 1,2,3 texts 1|2|3 changes 1 0,0,0>1,2,3"}
+{"key":"v3.setSame","value":"value 1,2,3 texts 1|2|3 changes 0 "}
+{"key":"v3.withoutNotify","value":"value 0.1,0.2,0.3 texts 0.1|0.2|0.3 changes 0 "}
+{"key":"v3.typeFirst.typed","value":"value 2.5,0.2,0.3 texts 10/4|0.2|0.3 changes 3 10,0.2,0.3>2.5,0.2,0.3"}
+{"key":"v3.typeFirst.committed","value":"value 2.5,0.2,0.3 texts 2.5|0.2|0.3 changes 0 "}
+{"key":"v3.typeLast.typed","value":"value 2.5,0.2,3.40282347E+38 texts 2.5|0.2|1e39 changes 3 2.5,0.2,1000>2.5,0.2,3.40282347E+38"}
+{"key":"v3.typeLast.committed","value":"value 2.5,0.2,3.40282347E+38 texts 2.5|0.2|3.402823e+38 changes 0 "}
+{"key":"v3.labelDrag","value":"value 2.88,0.2,3.40282347E+38 texts 2.88|0.2|3.402823e+38 changes 1 2.5,0.2,3.40282347E+38>2.88,0.2,3.40282347E+38"}
+{"key":"v3.mixed","value":"value 2.88,0.2,3.40282347E+38 texts —|—|— changes 0  subMixed True,True,True"}
+{"key":"v3.mixed.off","value":"value 2.88,0.2,3.40282347E+38 texts 2.88|0.2|3.402823e+38 changes 0 "}
+{"key":"v4.tree","value":"Vector4Field(unity-base-field unity-composite-field unity-vector4-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector4-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-w-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)]]]"}
+{"key":"v4.default","value":"value 0,0,0,0 texts 0|0|0|0 changes 0 "}
+{"key":"v4.set","value":"value 1,2,3,4 texts 1|2|3|4 changes 1 0,0,0,0>1,2,3,4"}
+{"key":"v4.setSame","value":"value 1,2,3,4 texts 1|2|3|4 changes 0 "}
+{"key":"v4.withoutNotify","value":"value 0,0,0,0 texts 0|0|0|0 changes 0 "}
+{"key":"v4.typeFirst.typed","value":"value 7,0,0,0 texts 7|0|0|0 changes 1 0,0,0,0>7,0,0,0"}
+{"key":"v4.typeFirst.committed","value":"value 7,0,0,0 texts 7|0|0|0 changes 0 "}
+{"key":"v4.typeLast.typed","value":"value 7,0,0,0 texts 7|0|0|x*2 changes 0 "}
+{"key":"v4.typeLast.committed","value":"value 7,0,0,0 texts 7|0|0|0 changes 0 "}
+{"key":"v4.labelDrag","value":"value 7.63,0,0,0 texts 7.63|0|0|0 changes 1 7,0,0,0>7.63,0,0,0"}
+{"key":"v4.mixed","value":"value 7.63,0,0,0 texts —|—|—|— changes 0  subMixed True,True,True,True"}
+{"key":"v4.mixed.off","value":"value 7.63,0,0,0 texts 7.63|0|0|0 changes 0 "}
+{"key":"v2i.tree","value":"Vector2IntField(unity-base-field unity-composite-field unity-vector2-int-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector2-int-field__input)[IntegerField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] VisualElement(unity-composite-field__field-spacer)]]"}
+{"key":"v2i.default","value":"value (0, 0) texts 0|0 changes 0 "}
+{"key":"v2i.set","value":"value (1, 2) texts 1|2 changes 1 (0, 0)>(1, 2)"}
+{"key":"v2i.setSame","value":"value (1, 2) texts 1|2 changes 0 "}
+{"key":"v2i.withoutNotify","value":"value (-3, 4) texts -3|4 changes 0 "}
+{"key":"v2i.typeFirst.typed","value":"value (42, 4) texts 2*21|4 changes 3 (4, 4)>(42, 4)"}
+{"key":"v2i.typeFirst.committed","value":"value (42, 4) texts 42|4 changes 0 "}
+{"key":"v2i.typeLast.typed","value":"value (42, 2147483647) texts 42|3000000000 changes 10 (42, 300000000)>(42, 2147483647)"}
+{"key":"v2i.typeLast.committed","value":"value (42, 2147483647) texts 42|2147483647 changes 0 "}
+{"key":"v2i.labelDrag","value":"value (50, 2147483647) texts 50|2147483647 changes 1 (42, 2147483647)>(50, 2147483647)"}
+{"key":"v2i.mixed","value":"value (50, 2147483647) texts —|— changes 0  subMixed True,True"}
+{"key":"v2i.mixed.off","value":"value (50, 2147483647) texts 50|2147483647 changes 0 "}
+{"key":"v3i.tree","value":"Vector3IntField(unity-base-field unity-composite-field unity-vector3-int-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-int-field__input)[IntegerField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)]]]"}
+{"key":"v3i.default","value":"value (0, 0, 0) texts 0|0|0 changes 0 "}
+{"key":"v3i.set","value":"value (1, 2, 3) texts 1|2|3 changes 1 (0, 0, 0)>(1, 2, 3)"}
+{"key":"v3i.setSame","value":"value (1, 2, 3) texts 1|2|3 changes 0 "}
+{"key":"v3i.withoutNotify","value":"value (0, 0, 0) texts 0|0|0 changes 0 "}
+{"key":"v3i.typeFirst.typed","value":"value (5, 0, 0) texts 5|0|0 changes 1 (0, 0, 0)>(5, 0, 0)"}
+{"key":"v3i.typeFirst.committed","value":"value (5, 0, 0) texts 5|0|0 changes 0 "}
+{"key":"v3i.typeLast.typed","value":"value (5, 0, -7) texts 5|0|-7 changes 1 (5, 0, 0)>(5, 0, -7)"}
+{"key":"v3i.typeLast.committed","value":"value (5, 0, -7) texts 5|0|-7 changes 0 "}
+{"key":"v3i.labelDrag","value":"value (13, 0, -7) texts 13|0|-7 changes 1 (5, 0, -7)>(13, 0, -7)"}
+{"key":"v3i.mixed","value":"value (13, 0, -7) texts —|—|— changes 0  subMixed True,True,True"}
+{"key":"v3i.mixed.off","value":"value (13, 0, -7) texts 13|0|-7 changes 0 "}
+{"key":"rect.tree","value":"RectField(unity-base-field unity-composite-field unity-composite-field--multi-line unity-composite-field--two-lines unity-rect-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-rect-field__input)[VisualElement(unity-composite-field__field-group)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] VisualElement(unity-composite-field__field-spacer)] VisualElement(unity-composite-field__field-group)[FloatField#unity-width-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-height-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] VisualElement(unity-composite-field__field-spacer)]]]"}
+{"key":"rect.default","value":"value 0,0,0,0 texts 0|0|0|0 changes 0 "}
+{"key":"rect.set","value":"value 1,2,3,4 texts 1|2|3|4 changes 1 0,0,0,0>1,2,3,4"}
+{"key":"rect.setSame","value":"value 1,2,3,4 texts 1|2|3|4 changes 0 "}
+{"key":"rect.withoutNotify","value":"value 0.5,0.5,10,20 texts 0.5|0.5|10|20 changes 0 "}
+{"key":"rect.typeFirst.typed","value":"value 12,0.5,10,20 texts 12|0.5|10|20 changes 2 1,0.5,10,20>12,0.5,10,20"}
+{"key":"rect.typeFirst.committed","value":"value 12,0.5,10,20 texts 12|0.5|10|20 changes 0 "}
+{"key":"rect.typeLast.typed","value":"value 12,0.5,10,21 texts 12|0.5|10|+=1 changes 1 12,0.5,10,20>12,0.5,10,21"}
+{"key":"rect.typeLast.committed","value":"value 12,0.5,10,21 texts 12|0.5|10|21 changes 0 "}
+{"key":"rect.labelDrag","value":"value 12.8,0.5,10,21 texts 12.8|0.5|10|21 changes 1 12,0.5,10,21>12.8,0.5,10,21"}
+{"key":"rect.mixed","value":"value 12.8,0.5,10,21 texts —|—|—|— changes 0  subMixed True,True,True,True"}
+{"key":"rect.mixed.off","value":"value 12.8,0.5,10,21 texts 12.8|0.5|10|21 changes 0 "}
+{"key":"recti.tree","value":"RectIntField(unity-base-field unity-composite-field unity-composite-field--multi-line unity-composite-field--two-lines unity-rect-int-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-rect-int-field__input)[VisualElement(unity-composite-field__field-group)[IntegerField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] VisualElement(unity-composite-field__field-spacer)] VisualElement(unity-composite-field__field-group)[IntegerField#unity-width-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-height-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] VisualElement(unity-composite-field__field-spacer)]]]"}
+{"key":"recti.default","value":"value (x:0, y:0, width:0, height:0) texts 0|0|0|0 changes 0 "}
+{"key":"recti.set","value":"value (x:1, y:2, width:3, height:4) texts 1|2|3|4 changes 1 (x:0, y:0, width:0, height:0)>(x:1, y:2, width:3, height:4)"}
+{"key":"recti.setSame","value":"value (x:1, y:2, width:3, height:4) texts 1|2|3|4 changes 0 "}
+{"key":"recti.withoutNotify","value":"value (x:5, y:6, width:7, height:8) texts 5|6|7|8 changes 0 "}
+{"key":"recti.typeFirst.typed","value":"value (x:9, y:6, width:7, height:8) texts 9|6|7|8 changes 1 (x:5, y:6, width:7, height:8)>(x:9, y:6, width:7, height:8)"}
+{"key":"recti.typeFirst.committed","value":"value (x:9, y:6, width:7, height:8) texts 9|6|7|8 changes 0 "}
+{"key":"recti.typeLast.typed","value":"value (x:9, y:6, width:7, height:100) texts 9|6|7|100 changes 3 (x:9, y:6, width:7, height:10)>(x:9, y:6, width:7, height:100)"}
+{"key":"recti.typeLast.committed","value":"value (x:9, y:6, width:7, height:100) texts 9|6|7|100 changes 0 "}
+{"key":"recti.labelDrag","value":"value (x:17, y:6, width:7, height:100) texts 17|6|7|100 changes 1 (x:9, y:6, width:7, height:100)>(x:17, y:6, width:7, height:100)"}
+{"key":"recti.mixed","value":"value (x:17, y:6, width:7, height:100) texts —|—|—|— changes 0  subMixed True,True,True,True"}
+{"key":"recti.mixed.off","value":"value (x:17, y:6, width:7, height:100) texts 17|6|7|100 changes 0 "}
+{"key":"bounds.tree","value":"BoundsField(unity-base-field unity-bounds-field)[VisualElement(unity-base-field__input unity-bounds-field__input)[Vector3Field#unity-m_Center-input(unity-base-field unity-bounds-field__center-field unity-composite-field unity-vector3-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)]]] Vector3Field#unity-m_Extent-input(unity-base-field unity-bounds-field__extents-field unity-composite-field unity-vector3-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)]]]]]"}
+{"key":"bounds.default","value":"value 0,0,0/0,0,0 texts 0|0|0|0|0|0 changes 0 "}
+{"key":"bounds.set","value":"value 1,2,3/1,2,3 texts 1|2|3|1|2|3 changes 1 0,0,0/0,0,0>1,2,3/1,2,3"}
+{"key":"bounds.setSame","value":"value 1,2,3/1,2,3 texts 1|2|3|1|2|3 changes 0 "}
+{"key":"bounds.withoutNotify","value":"value 1,1,1/0.5,0.5,0.5 texts 1|1|1|0.5|0.5|0.5 changes 0 "}
+{"key":"bounds.typeFirst.typed","value":"value 4,1,1/0.5,0.5,0.5 texts 4|1|1|0.5|0.5|0.5 changes 1 1,1,1/0.5,0.5,0.5>4,1,1/0.5,0.5,0.5"}
+{"key":"bounds.typeFirst.committed","value":"value 4,1,1/0.5,0.5,0.5 texts 4|1|1|0.5|0.5|0.5 changes 0 "}
+{"key":"bounds.typeLast.typed","value":"value 4,1,1/0.5,0.5,0.5 texts 4|1|1|0.5|0.5|0.5 changes 2 4,1,1/0.5,0.5,0>4,1,1/0.5,0.5,0.5"}
+{"key":"bounds.typeLast.committed","value":"value 4,1,1/0.5,0.5,0.5 texts 4|1|1|0.5|0.5|0.5 changes 0 "}
+{"key":"bounds.labelDrag","value":"value 4.48,1,1/0.5,0.5,0.5 texts 4.48|1|1|0.5|0.5|0.5 changes 1 4,1,1/0.5,0.5,0.5>4.48,1,1/0.5,0.5,0.5"}
+{"key":"bounds.mixed","value":"value 4.48,1,1/0.5,0.5,0.5 texts —|—|—|—|—|— changes 0  subMixed True,True,True,True,True,True"}
+{"key":"bounds.mixed.off","value":"value 4.48,1,1/0.5,0.5,0.5 texts 4.48|1|1|0.5|0.5|0.5 changes 0 "}
+{"key":"boundsi.tree","value":"BoundsIntField(unity-base-field unity-bounds-int-field)[VisualElement(unity-base-field__input unity-bounds-int-field__input)[Vector3IntField#unity-m_Position-input(unity-base-field unity-bounds-int-field__position-field unity-composite-field unity-vector3-int-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-int-field__input)[IntegerField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)]]] Vector3IntField#unity-m_Size-input(unity-base-field unity-bounds-int-field__size-field unity-composite-field unity-vector3-int-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-int-field__input)[IntegerField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)] IntegerField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-integer-field)[IntegerInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input)]]]]]"}
+{"key":"boundsi.default","value":"value Position: (0, 0, 0), Size: (0, 0, 0) texts 0|0|0|0|0|0 changes 0 "}
+{"key":"boundsi.set","value":"value Position: (1, 2, 3), Size: (4, 5, 6) texts 1|2|3|4|5|6 changes 1 Position: (0, 0, 0), Size: (0, 0, 0)>Position: (1, 2, 3), Size: (4, 5, 6)"}
+{"key":"boundsi.setSame","value":"value Position: (1, 2, 3), Size: (4, 5, 6) texts 1|2|3|4|5|6 changes 0 "}
+{"key":"boundsi.withoutNotify","value":"value Position: (0, 0, 0), Size: (1, 1, 1) texts 0|0|0|1|1|1 changes 0 "}
+{"key":"boundsi.typeFirst.typed","value":"value Position: (8, 0, 0), Size: (1, 1, 1) texts 8|0|0|1|1|1 changes 1 Position: (0, 0, 0), Size: (1, 1, 1)>Position: (8, 0, 0), Size: (1, 1, 1)"}
+{"key":"boundsi.typeFirst.committed","value":"value Position: (8, 0, 0), Size: (1, 1, 1) texts 8|0|0|1|1|1 changes 0 "}
+{"key":"boundsi.typeLast.typed","value":"value Position: (8, 0, 0), Size: (1, 1, -2) texts 8|0|0|1|1|-2 changes 1 Position: (8, 0, 0), Size: (1, 1, 1)>Position: (8, 0, 0), Size: (1, 1, -2)"}
+{"key":"boundsi.typeLast.committed","value":"value Position: (8, 0, 0), Size: (1, 1, -2) texts 8|0|0|1|1|-2 changes 0 "}
+{"key":"boundsi.labelDrag","value":"value Position: (16, 0, 0), Size: (1, 1, -2) texts 16|0|0|1|1|-2 changes 1 Position: (8, 0, 0), Size: (1, 1, -2)>Position: (16, 0, 0), Size: (1, 1, -2)"}
+{"key":"boundsi.mixed","value":"value Position: (16, 0, 0), Size: (1, 1, -2) texts —|—|—|—|—|— changes 0  subMixed True,True,True,True,True,True"}
+{"key":"boundsi.mixed.off","value":"value Position: (16, 0, 0), Size: (1, 1, -2) texts 16|0|0|1|1|-2 changes 0 "}
+{"key":"plain.tree","value":"Vector3Field(unity-base-field unity-base-field--no-label unity-composite-field unity-vector3-field)[VisualElement(unity-base-field__input unity-composite-field__input unity-vector3-field__input)[FloatField#unity-x-input(unity-base-field unity-base-text-field unity-composite-field__field unity-composite-field__field--first unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-y-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)] FloatField#unity-z-input(unity-base-field unity-base-text-field unity-composite-field__field unity-float-field)[FloatInput#unity-text-input(unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-float-field__input)]]]"}
+{"key":"hash.default","value":"value 00000000000000000000000000000000 text 00000000000000000000000000000000 classes unity-base-field unity-base-text-field unity-hash128-field changes 0 "}
+{"key":"hash.set","value":"value 2c4a6ede710cc9137860bcfda457b8a1 text 2c4a6ede710cc9137860bcfda457b8a1 changes 1 00000000000000000000000000000000>2c4a6ede710cc9137860bcfda457b8a1"}
+{"key":"hash.ab.typed","value":"value ab000000000000000000000000000000 text ab changes 2 00000000000000000000000000000000>ab000000000000000000000000000000"}
+{"key":"hash.ab.committed","value":"value ab000000000000000000000000000000 text ab000000000000000000000000000000 changes 0 "}
+{"key":"hash.one.typed","value":"value 01000000000000000000000000000000 text 1 changes 1 ab000000000000000000000000000000>01000000000000000000000000000000"}
+{"key":"hash.one.committed","value":"value 01000000000000000000000000000000 text 01000000000000000000000000000000 changes 0 "}
+{"key":"hash.rejected.typed","value":"value 09000000000000000000000000000000 text 9 changes 1 01000000000000000000000000000000>09000000000000000000000000000000"}
+{"key":"hash.rejected.committed","value":"value 09000000000000000000000000000000 text 09000000000000000000000000000000 changes 0 "}
+{"key":"hash.long.typed","value":"value 0123456789abcdef0123456789abcdef text 0123456789abcdef0123456789abcdef01 changes 17 0123456789abcdef0123456789abcd00>0123456789abcdef0123456789abcdef"}
+{"key":"hash.long.committed","value":"value 0123456789abcdef0123456789abcdef text 0123456789abcdef0123456789abcdef changes 0 "}
+{"key":"hash.upper.typed","value":"value abcdef00000000000000000000000000 text ABCDEF changes 4 abcd0000000000000000000000000000>abcdef00000000000000000000000000"}
+{"key":"hash.upper.committed","value":"value abcdef00000000000000000000000000 text abcdef00000000000000000000000000 changes 0 "}
+{"key":"hash.emptied","value":"value abcdef00000000000000000000000000 text abcdef00000000000000000000000000 changes 0 "}
+{"key":"uxml.v2","value":"Vector2Field 1.5,2 texts 1.5|2"}
+{"key":"uxml.v3","value":"Vector3Field 1,2,3 texts 1|2|3"}
+{"key":"uxml.v4","value":"Vector4Field 1,2,3,4 texts 1|2|3|4"}
+{"key":"uxml.v2i","value":"Vector2IntField (3, 4) texts 3|4"}
+{"key":"uxml.v3i","value":"Vector3IntField (5, 6, 7) texts 5|6|7"}
+{"key":"uxml.rect","value":"RectField 1,2,3,4 texts 1|2|3|4"}
+{"key":"uxml.recti","value":"RectIntField (x:1, y:2, width:3, height:4) texts 1|2|3|4"}
+{"key":"uxml.bounds","value":"BoundsField 1,2,3/2,2.5,3 texts 1|2|3|2|2.5|3"}
+{"key":"uxml.boundsi","value":"BoundsIntField Position: (1, 2, 3), Size: (4, 5, 6) texts 1|2|3|4|5|6"}
+{"key":"uxml.hash","value":"Hash128Field 0123456789abcdef0123456789abcdef 0123456789abcdef0123456789abcdef texts "}
+{"key":"uxml.legacy2","value":"Vector2Field 7,8 texts 7|8"}
+{"key":"uxml.legacy3i","value":"Vector3IntField (1, 0, 3) texts 1|0|3"}
+{"key":"binding.initial","value":"value 1,2,3 texts 1|2|3 changes 1 0,0,0>1,2,3 source 1,2,3"}
+{"key":"binding.fromSource","value":"value 4,5,6 texts 4|5|6 changes 1 1,2,3>4,5,6 source 4,5,6"}
+{"key":"binding.typed.typed","value":"value 9,5,6 texts 9|5|6 changes 1 4,5,6>9,5,6"}
+{"key":"binding.typed.committed","value":"value 9,5,6 texts 9|5|6 changes 0 "}
+{"key":"binding.toSource","value":"value 9,5,6 texts 9|5|6 changes 0  source 9,5,6"}
+{"key":"complete","value":"1"}

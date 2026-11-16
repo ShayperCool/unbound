@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/compositefields/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/CompositeFields.cs",
+    "managed/UnityEngine/UIElements/Controls/NumericFields.cs",
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs",
+    "managed/UnityEngine/UIElements/Controls/TextField.cs",
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
+    "managed/UnityEngine/UIElements/Uxml/UxmlAttributeValues.cs",
+    "managed/UnityEngine/Core/Hash128.cs"
+  ]
+}
