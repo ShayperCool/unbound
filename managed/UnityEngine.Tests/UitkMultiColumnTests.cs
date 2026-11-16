@@ -212,6 +212,25 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ALingeringLayoutMakesRoomAgainstItsLastWidth()
+        {
+            var columns = new Columns { stretchMode = Columns.StretchMode.Grow };
+            columns.Add(new Column { name = "a", width = 150, maxWidth = 150, stretchable = true });
+            columns.Add(new Column { name = "b", width = 150, maxWidth = 150, stretchable = true });
+            columns.Add(new Column { name = "c", width = 200, visible = false });
+            var old = new MultiColumnCollectionHeader(columns, new SortColumnDescriptions(), new List<SortColumnDescription>());
+            old.columnLayout.DoLayout(400);
+            old.Dispose();
+            var current = new ColumnLayout(columns);
+            current.DoLayout(600);
+            columns["c"].visible = true;
+            current.DoLayout(600);
+            // tests/projects/columnlayout stale.show: 100, 100, 200.
+            Assert.Equal(100f, columns["a"].desiredWidth);
+            Assert.Equal(100f, columns["b"].desiredWidth);
+        }
+
+        [Fact]
         public void UxmlColumnObjectsAreReportedAndSkipped()
         {
             var asset = ScriptableObject.CreateInstance<VisualTreeAsset>();

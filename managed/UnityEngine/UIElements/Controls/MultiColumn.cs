@@ -2207,8 +2207,9 @@ namespace UnityEngine.UIElements.Internal
         {
             sortDescriptions.changed -= UpdateSortedColumns;
             // The layout stays subscribed to the columns, as the release's does: a disposed header
-            // stops hearing its requests, and a column change still dirties it (no effect on the
-            // widths, which the next header's layout sets).
+            // stops hearing its requests, while the layout still follows the columns with the width
+            // it last laid out (in Grow mode a column shown is made room for against that width;
+            // tests/projects/columnlayout stale.show).
             columnLayout.layoutRequested -= ScheduleDoLayout;
             columns.columnAdded -= OnColumnAdded;
             columns.columnRemoved -= OnColumnRemoved;
