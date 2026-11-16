@@ -990,6 +990,10 @@ namespace UnityEngine.Tests
                 tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 2), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } },
             };
             Assert.Null(VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
+            // A sort into the output's indices of another list than the one that counts them.
+            var sortingOther = sortingOne;
+            sortingOther.tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 5), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } };
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingOther, Indirect(2, 3), material));
             // A list longer than one pass sorts, without a scratch list to merge through.
             sortingOne.capacity = VFXSort.MaxSortedAtOnce + 1;
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
