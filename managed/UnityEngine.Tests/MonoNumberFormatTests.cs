@@ -56,6 +56,62 @@ namespace UnityEngine.Tests
             Assert.Equal("0.333333343", F(1f / 3f, "R"));
         }
 
+        // Values exactly halfway between two texts at the printed precision, as the Unity
+        // 6000.0.71f1 Editor prints them (tests/projects/floattext): away from zero, where .NET
+        // rounds to the even digit.
+        [Fact]
+        public void TiesRoundAwayFromZero()
+        {
+            float tie9 = 245f / 1024f; // 0.2392578125
+            Assert.Equal("0.239257813", F(tie9, "R"));
+            Assert.Equal("0.239257813", F(tie9, "G9"));
+            Assert.Equal("2.39257813E-001", F(tie9, "E8"));
+            Assert.Equal("-0.239257813", F(-tie9, "R"));
+            Assert.Equal("-2.39257813E-001", F(-tie9, "E8"));
+            Assert.Equal("0.0004882813", F(1f / 2048f)); // 0.00048828125, the default 7 digits
+            Assert.Equal("1.234567E+07", F(12345665f));
+            Assert.Equal("12345670.00", F(12345665f, "F2"));
+            Assert.Equal("2.38418579101563E-07", D(1.0 / (1 << 22))); // 15 of 16 digits
+            Assert.Equal("-2.38418579101563E-007", D(-1.0 / (1 << 22), "E14"));
+            Assert.Equal("2.9802322387695313E-08", D(1.0 / (1 << 25), "R")); // 17 of 18 digits
+            Assert.Equal("2.9802322387695313E-08", D(1.0 / (1 << 25), "G17"));
+        }
+
+        [Fact]
+        public void ValuesBesideATieRoundToTheNearestText()
+        {
+            float tie9 = 245f / 1024f;
+            Assert.Equal("0.23925781", F(tie9, "G8")); // 0.239257813, then 8 digits
+            Assert.Equal("0.2392578", F(tie9));
+            Assert.Equal("0.2392578", F(BitDecrement(tie9), "R")); // 7 digits read back
+            Assert.Equal("0.239257827", F(BitIncrement(tie9), "R"));
+            Assert.Equal("2.384185791015625E-07", D(1.0 / (1 << 22), "R")); // every digit fits in 17
+            Assert.Equal("0.125", D(0.125)); // exact in fewer digits than printed
+            Assert.Equal("0.5", F(0.5f, "G9"));
+        }
+
+        // The digits are taken at 7 or 15, or 9 or 17 when the format asks for more, and the format
+        // rounds them again (tests/projects/floattext).
+        [Fact]
+        public void FormatsRoundTheTakenDigitsAgain()
+        {
+            Assert.Equal("2047.9981", F(2047.998046875f, "G8")); // 2047.99805, then 8 digits
+            Assert.Equal("9.3132258e-010", F(9.313225746154785e-10f, "e7"));
+            Assert.Equal("9.3132258e-10", F(9.313225746154785e-10f, "g8"));
+            Assert.Equal("1.3877787807815E-17", D(1.0 / (1L << 56), "G14")); // ...781445676: 15 digits, then 14
+            Assert.Equal("2.37685E+29", F(2.37684487542793e+29f, "G6"));
+            Assert.Equal("1.250000E-001", D(0.125, "E"));
+        }
+
+        [Fact]
+        public void LowerCaseRoundTripPrintsAnUpperCaseExponent()
+        {
+            Assert.Equal("9.313226E-10", F(9.313225746154785e-10f, "r"));
+        }
+
+        static float BitDecrement(float value) => System.MathF.BitDecrement(value);
+        static float BitIncrement(float value) => System.MathF.BitIncrement(value);
+
         [Fact]
         public void LargeFixedPointValuesPrintAsInTheEditor()
         {
