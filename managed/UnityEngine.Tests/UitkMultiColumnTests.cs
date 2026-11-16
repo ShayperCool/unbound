@@ -195,18 +195,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ADisposedLayoutNoLongerFollowsItsColumns()
+        public void ADisposedHeaderLeavesItsLayoutFollowingTheColumns()
         {
             var columns = ThreeColumns();
-            var layout = new ColumnLayout(columns);
+            var header = new MultiColumnCollectionHeader(columns, new SortColumnDescriptions(), new List<SortColumnDescription>());
+            var layout = header.columnLayout;
             layout.DoLayout(256);
             int requests = 0;
             layout.layoutRequested += () => requests++;
-            layout.Dispose();
+            header.Dispose();
+            Assert.False(layout is IDisposable);
             columns["value"].visible = false;
             columns.Add(new Column { name = "extra", width = 30 });
-            Assert.Equal(0, requests);
-            Assert.False(layout.isDirty);
+            Assert.True(requests > 0);
+            Assert.True(layout.isDirty);
         }
 
         [Fact]

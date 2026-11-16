@@ -198,13 +198,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.ColumnLayout",
-    "Message": "type interfaces is System.IDisposable, Unity's is ",
-    "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.ColumnLayout needs the engine calls IDisposable for layout cleanup; move that internal cleanup dispatch before removing the extra interface. Remove the extra interface only after migrating its internal callers and proving existing cleanup or equality behavior with independent controls."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.PointerCaptureEventBase`1",
     "Message": "type interfaces is UnityEngine.UIElements.IPointerCaptureEvent, Unity's is UnityEngine.UIElements.IPointerCaptureEvent,UnityEngine.UIElements.IPointerCaptureEventInternal",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.PointerCaptureEventBase`1 needs internal capture and release target bookkeeping. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."

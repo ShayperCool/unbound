@@ -507,7 +507,7 @@ namespace UnityEngine.UIElements
     /// <summary>Widths of the visible columns for a header width: fixed and percentage columns take
     /// their width within their limits, stretchable ones share what is left; a change of header
     /// width is distributed over the stretchable columns, then the others, within their limits.</summary>
-    internal partial class ColumnLayout : IDisposable
+    internal partial class ColumnLayout
     {
         readonly List<Column> m_StretchableColumns = new List<Column>();
         readonly List<Column> m_FixedColumns = new List<Column>();
@@ -578,21 +578,6 @@ namespace UnityEngine.UIElements
             columns.columnAdded += OnColumnAdded;
             columns.columnRemoved += OnColumnRemoved;
             columns.columnReordered += OnColumnReordered;
-        }
-
-        /// <summary>Detaches the layout from its columns (a header that is disposed no longer lays
-        /// them out).</summary>
-        public void Dispose()
-        {
-            m_Columns.columnAdded -= OnColumnAdded;
-            m_Columns.columnRemoved -= OnColumnRemoved;
-            m_Columns.columnReordered -= OnColumnReordered;
-            for (int i = 0; i < m_Columns.Count; i++)
-            {
-                m_Columns[i].changed -= OnColumnChanged;
-                m_Columns[i].resized -= OnColumnResized;
-            }
-            layoutRequested = null;
         }
 
         void OnColumnReordered(Column column, int from, int to) => Dirty();
@@ -2221,8 +2206,10 @@ namespace UnityEngine.UIElements.Internal
         public void Dispose()
         {
             sortDescriptions.changed -= UpdateSortedColumns;
+            // The layout stays subscribed to the columns, as the release's does: a disposed header
+            // stops hearing its requests, and a column change still dirties it (no effect on the
+            // widths, which the next header's layout sets).
             columnLayout.layoutRequested -= ScheduleDoLayout;
-            columnLayout.Dispose();
             columns.columnAdded -= OnColumnAdded;
             columns.columnRemoved -= OnColumnRemoved;
             columns.columnChanged -= OnColumnChanged;
