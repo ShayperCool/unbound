@@ -630,7 +630,8 @@ The composite fields slice (Q528) adds `Vector2Field`, `Vector3Field`, `Vector4F
 handwritten inventory. The same two GPU Editor captures agree on all 504 of their rows, appended
 before the completion row; every earlier row and inventory entry is byte-identical (14305 rows).
 Hash128Field's cursor rows are queued as the other text inputs' are, and the event type numbers'
-queued actual values are refreshed again (MouseDownEvent now matches the release).
+queued actual values are refreshed again (MouseDownEvent now matches the release; GeometryChangedEvent
+is queued again).
 
 The group box slice (Q528) adds `GroupBox` to the handwritten inventory. The same two GPU Editor
 captures agree on all 45 of its rows, appended before the completion row; every earlier row and
