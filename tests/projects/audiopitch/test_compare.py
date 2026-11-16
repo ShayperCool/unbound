@@ -34,11 +34,6 @@ class SourceFloatBounds(unittest.TestCase):
                 self.assertEqual({row['key'] for row in rows if 'sample' in row},
                                  {'control.master', 'control.source_float'})
 
-
-if __name__ == '__main__':
-    unittest.main()
-
-
 class SixInputLayouts(unittest.TestCase):
     """The published six-layouts reference follows one balance stage and one matrix per layout."""
     MATRICES = {
@@ -65,6 +60,10 @@ class SixInputLayouts(unittest.TestCase):
                     record = meta[case+suffix]
                     values = samples(root, record)
                     width = record['channels']
+                    rows = {4096 + 2048 * channel: row for channel, row in enumerate(self.MATRICES[int(mode)])}
+                    # Nothing reaches the output outside the six impulse frames.
+                    stray = [i for i, value in enumerate(values) if value and i // width not in rows]
+                    self.assertEqual(stray, [], (rate, case+suffix))
                     for channel, row in enumerate(self.MATRICES[int(mode)]):
                         frame = 4096 + 2048 * channel
                         actual = values[frame * width:frame * width + len(row)]
@@ -73,3 +72,8 @@ class SixInputLayouts(unittest.TestCase):
                             # Device PCM may differ from the exact gain by one 16-bit step.
                             delta = 3.1e-5 if suffix == '' else 1e-6
                             self.assertAlmostEqual(got, want, delta=delta, msg=(rate, case+suffix, channel))
+
+
+if __name__ == '__main__':
+    unittest.main()
+
