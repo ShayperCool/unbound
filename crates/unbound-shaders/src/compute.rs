@@ -209,7 +209,7 @@ impl ShaderCompiler {
             "SHADER_STAGE_COMPUTE",
         );
         defines.extend(declared.defines.iter().cloned());
-        let source = self.preprocess(&p, &defines)?.text;
+        let source = typed_scalar_buffers_as_structured(&self.preprocess(&p, &defines)?.text);
         let opengl = self.settings.opengl_shading_language;
         let hash = kernel_cache_key(&source, kernel, &selected, storage_formats, opengl);
         let cached = self.cache_dir().map(|d| d.join(format!("k-{hash}.json")));
@@ -234,6 +234,62 @@ impl ShaderCompiler {
         }
         Ok(Arc::new(compiled))
     }
+}
+
+/// The element types a typed buffer (`Buffer<T>`, `RWBuffer<T>`) may have to be read and
+/// written as a structured buffer: one 32-bit scalar per element, whose bits a GraphicsBuffer
+/// holds as they are (an `R32_UINT`/`R32_SINT`/`R32_FLOAT` view of it).
+const TYPED_SCALARS: [&str; 7] = ["uint", "int", "float", "dword", "uint1", "int1", "float1"];
+
+/// A kernel's typed buffers of one 32-bit scalar per element as structured buffers of it:
+/// the shader translator takes no buffer-dimensioned images, and such a buffer's elements are
+/// the words of the GraphicsBuffer bound to it either way (the Visual Effect Graph package's
+/// indirect-argument kernel writes its arguments into a `RWBuffer<uint>`). Typed buffers of
+/// other elements (vectors, formats narrower than 32 bits) are left as they are and fail to
+/// translate, loudly.
+fn typed_scalar_buffers_as_structured(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let identifier = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
+    let mut out = String::with_capacity(source.len());
+    let mut copied = 0;
+    let mut at = 0;
+    while let Some(found) = source[at..].find("Buffer") {
+        let start = found + at;
+        at = start + "Buffer".len();
+        // `RWBuffer` or `Buffer`, as a whole word.
+        let word = if start >= 2 && &source[start - 2..start] == "RW" {
+            start - 2
+        } else {
+            start
+        };
+        if word > 0 && identifier(bytes[word - 1]) {
+            continue;
+        }
+        let rest = &source[at..];
+        let open = rest.len() - rest.trim_start().len();
+        if !rest[open..].starts_with('<') {
+            continue;
+        }
+        let Some(close) = rest[open..].find('>') else {
+            continue;
+        };
+        let element = rest[open + 1..open + close].trim();
+        if !TYPED_SCALARS.contains(&element) {
+            continue;
+        }
+        out.push_str(&source[copied..word]);
+        out.push_str(if word == start {
+            "StructuredBuffer<"
+        } else {
+            "RWStructuredBuffer<"
+        });
+        out.push_str(element);
+        out.push('>');
+        at += open + close + 1;
+        copied = at;
+    }
+    out.push_str(&source[copied..]);
+    out
 }
 
 fn storage_format(name: &str) -> Option<naga::StorageFormat> {
@@ -669,6 +725,41 @@ void Scale(uint3 id : SV_DispatchThreadID)
             file: PathBuf::from("Test.compute"),
             source: SOURCE.into(),
         }
+    }
+
+    #[test]
+    fn typed_scalar_buffers_become_structured_buffers_of_their_element() {
+        let source = "RWBuffer<uint> a; Buffer< float > b; RWBuffer<float4> c; StructuredBuffer<uint> d; \
+                      RWStructuredBuffer<int> e; ByteAddressBuffer f; MyBuffer<uint> g; Buffer<int>h;";
+        assert_eq!(
+            typed_scalar_buffers_as_structured(source),
+            "RWStructuredBuffer<uint> a; StructuredBuffer<float> b; RWBuffer<float4> c; StructuredBuffer<uint> d; \
+                      RWStructuredBuffer<int> e; ByteAddressBuffer f; MyBuffer<uint> g; StructuredBuffer<int>h;"
+        );
+    }
+
+    /// A kernel writing a `RWBuffer<uint>` and reading a `Buffer<uint>` translates: both are
+    /// the words of their buffers.
+    #[test]
+    fn a_kernel_with_typed_scalar_buffers_translates() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Typed.compute"),
+            source: "#pragma kernel K\nRWBuffer<uint> outArgs;\nBuffer<uint> counts;\n[numthreads(64,1,1)] void K(uint3 id : SV_DispatchThreadID) { outArgs[id.x * 10] = counts[id.x] + counts.Load(id.x + 1); }".into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let kernel = compiler.compile_kernel(&program, "K", &[], &[]).unwrap();
+        assert!(
+            kernel.wgsl.contains("outArgs") && kernel.wgsl.contains("counts"),
+            "{}",
+            kernel.wgsl
+        );
+        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
+        let storage = module
+            .global_variables
+            .iter()
+            .filter(|(_, v)| matches!(v.space, naga::AddressSpace::Storage { .. }))
+            .count();
+        assert_eq!(storage, 2);
     }
 
     #[test]
