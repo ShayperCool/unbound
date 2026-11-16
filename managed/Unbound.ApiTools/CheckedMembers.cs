@@ -24,6 +24,7 @@ public static class CheckedMembers
 
     const string ThrowHelper = "UnityEngine.Bindings.ThrowHelper";
     const string ThrowNullReference = "ThrowNullReferenceException";
+    const string Marshaller = "UnityEngine.Object/MarshalledUnityObject";
 
     const string EngineObject = "UnityEngine.Object";
 
@@ -92,13 +93,19 @@ public static class CheckedMembers
         }
     }
 
-    /// <summary>One pass over the body, following which stack slots hold the method's own
-    /// object (<c>ldarg.0</c>, also duplicated). Branch targets are not merged: the binding
-    /// pattern is straight-line, and an unknown slot only fails to count as the object.</summary>
+    /// <summary>One pass over the body from its entry, following which stack slots hold the
+    /// method's own object (<c>ldarg.0</c>, also duplicated). Only what happens first counts: the
+    /// binding pattern (the object marshalled, then the throw helper on the object, branches on
+    /// the marshalled pointer between them) or a call on the object itself before any branch,
+    /// throw, object creation or other engine call (framework helpers such as <c>typeof</c> may
+    /// come first). A member that decides something before it reaches its object (argument
+    /// checks, its own messages) is left out, so a check at its call never comes before Unity's
+    /// own earlier answer.</summary>
     static void Walk(MetadataReader md, TypeNames names, BlobReader il, string key,
         HashSet<string> direct, Dictionary<string, List<string>> callers)
     {
         var stack = new List<bool>();
+        bool marshalled = false;
         while (il.RemainingBytes > 0)
         {
             byte first = il.ReadByte();
@@ -109,17 +116,24 @@ public static class CheckedMembers
                 if (il.RemainingBytes < 4) return;
                 var handle = MetadataTokens.EntityHandle(il.ReadInt32());
                 var callee = Callee(md, names, handle);
-                if (callee == null) { stack.Clear(); continue; }
+                if (callee == null) return;
                 var (calleeKey, calleeType, calleeName, parameters, hasThis, returns) = callee.Value;
                 int popped = parameters + (hasThis && op != OpCodes.Newobj ? 1 : 0);
                 bool receiverIsThis = hasThis && op != OpCodes.Newobj && stack.Count >= popped && stack[stack.Count - popped];
                 bool argumentIsThis = !hasThis && parameters == 1 && stack.Count >= 1 && stack[^1];
-                if (calleeType == ThrowHelper && calleeName == ThrowNullReference && argumentIsThis) direct.Add(key);
-                if (receiverIsThis)
+                if (calleeType == ThrowHelper && calleeName == ThrowNullReference && argumentIsThis)
+                {
+                    if (marshalled) direct.Add(key);
+                    return;
+                }
+                if (calleeType == Marshaller && !hasThis) marshalled = true;
+                else if (receiverIsThis && !marshalled)
                 {
                     if (!callers.TryGetValue(calleeKey, out var list)) callers[calleeKey] = list = new List<string>();
                     list.Add(key);
+                    return;
                 }
+                else if (!calleeType.StartsWith("System.", StringComparison.Ordinal)) return;
                 Pop(stack, popped);
                 if (op == OpCodes.Newobj || returns) stack.Add(false);
                 continue;
@@ -127,9 +141,16 @@ public static class CheckedMembers
             if (!SkipOperand(ref il, op)) return;
             if (op == OpCodes.Ldarg_0) { stack.Add(true); continue; }
             if (op == OpCodes.Dup) { stack.Add(stack.Count > 0 && stack[^1]); continue; }
-            if (op.FlowControl is FlowControl.Branch or FlowControl.Return or FlowControl.Throw) { stack.Clear(); continue; }
+            if (op.FlowControl is FlowControl.Return or FlowControl.Throw) return;
+            if (op.FlowControl is FlowControl.Branch or FlowControl.Cond_Branch)
+            {
+                // Only the binding's own test of its marshalled pointer branches before the check.
+                if (!marshalled) return;
+                Pop(stack, Math.Max(0, Pops(op.StackBehaviourPop)));
+                continue;
+            }
             int pops = Pops(op.StackBehaviourPop), pushes = Pushes(op.StackBehaviourPush);
-            if (pops < 0 || pushes < 0) { stack.Clear(); continue; }
+            if (pops < 0 || pushes < 0) return;
             Pop(stack, pops);
             for (int i = 0; i < pushes; i++) stack.Add(false);
         }

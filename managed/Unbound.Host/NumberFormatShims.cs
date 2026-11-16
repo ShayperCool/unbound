@@ -258,7 +258,7 @@ static class NumberFormatShims
 
     /// <summary>Names of references across a baseline and its deltas (whose rows and heap offsets
     /// continue the generations before them).</summary>
-    sealed class AggregateView : ISignatureTypeProvider<string, object?>
+    internal sealed class AggregateView : ISignatureTypeProvider<string, object?>
     {
         readonly DeltaMetadata m_Metadata;
 

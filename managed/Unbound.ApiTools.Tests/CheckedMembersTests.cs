@@ -17,19 +17,25 @@ namespace UnityEngine.Bindings
 }
 namespace UnityEngine
 {
-    public class Object { }
+    public class Object
+    {
+        public static class MarshalledUnityObject { public static System.IntPtr MarshalNotNull<T>(T o) where T : class => System.IntPtr.Zero; }
+    }
     public class Body : Object
     {
-        static System.IntPtr Marshal(Body b) => System.IntPtr.Zero;
         static float get_mass_Injected(System.IntPtr p) => 0;
         // The binding pattern.
-        public float mass { get { var p = Marshal(this); if (p == System.IntPtr.Zero) UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException(this); return get_mass_Injected(p); } }
+        public float mass { get { var p = MarshalledUnityObject.MarshalNotNull(this); if (p == System.IntPtr.Zero) UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException(this); return get_mass_Injected(p); } }
+        // Decides something of its own before it reaches its object.
+        public float Guarded(Body other) { if (other == null) throw new System.ArgumentNullException(""other""); return mass; }
         // A managed overload reaching the binding through its own object.
         public float Twice() => mass * 2;
         public T Same<T>(T value) { _ = mass; return value; }
         public void Scale(float factor, System.Collections.Generic.List<int> list) { _ = Twice(); }
         // Managed members that do not touch the binding, and a call on another object.
         public float Plain() => 1;
+        // Parameter types as both sides write them (Unbound.Host's LifetimeChecks tests the same text).
+        public void Mixed(in int x, int[,] a, System.Collections.Generic.List<int>[] b, ref float f) { _ = mass; }
         public float Other(Body other) => other.mass;
         public static float Static(Body b) => b.mass;
     }
@@ -61,6 +67,8 @@ namespace UnityEngine
         Assert.Contains("UnityEngine.Body::Same`1(!!0)", list);
         Assert.Contains("UnityEngine.Body::Scale(System.Single,System.Collections.Generic.List`1<System.Int32>)", list);
         Assert.DoesNotContain("UnityEngine.Body::Plain()", list);
+        Assert.DoesNotContain("UnityEngine.Body::Guarded(UnityEngine.Body)", list);
+        Assert.Contains("UnityEngine.Body::Mixed(System.Int32&,System.Int32[,],System.Collections.Generic.List`1<System.Int32>[],System.Single&)", list);
         Assert.DoesNotContain("UnityEngine.Body::Other(UnityEngine.Body)", list);
         Assert.DoesNotContain(list, line => line.Contains("::Static("));
         Assert.DoesNotContain("UnityEngine.Handle::get_count()", list);
@@ -86,12 +94,14 @@ namespace UnityEngine
                  {
                      "UnityEngine.Object::get_name()", "UnityEngine.Object::get_hideFlags()", "UnityEngine.Component::get_transform()",
                      "UnityEngine.GameObject::GetComponent`1()", "UnityEngine.Transform::get_position()",
-                     "UnityEngine.Transform::Translate(UnityEngine.Vector3)", "UnityEngine.Rigidbody::get_mass()",
-                     "UnityEngine.Texture::get_width()",
+                     "UnityEngine.Rigidbody::get_mass()", "UnityEngine.Texture::get_width()",
                  })
             Assert.Contains(member, list);
         foreach (var member in new[] { "UnityEngine.Object::GetInstanceID()", "UnityEngine.Object::Equals(System.Object)", "UnityEngine.Object::ToString()",
-                     "UnityEditor.SerializedObject::FindProperty(System.String)" })
+                     "UnityEditor.SerializedObject::FindProperty(System.String)",
+                     // Unity's own answers come first: its message, the routine check, the name check.
+                     "UnityEngine.MonoBehaviour::get_destroyCancellationToken()",
+                     "UnityEngine.MonoBehaviour::StartCoroutine(System.Collections.IEnumerator)", "UnityEngine.Transform::Find(System.String)" })
             Assert.DoesNotContain(member, list);
     }
 }

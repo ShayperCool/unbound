@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Srm = System.Reflection.Metadata;
+using MetadataTokens = System.Reflection.Metadata.Ecma335.MetadataTokens;
 using System.Security.Cryptography;
 using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using Unbound.Runtime;
 
 namespace Unbound.Host;
@@ -27,6 +30,8 @@ static class LifetimeChecks
     const string ListFile = "checked-members.txt";
 
     static HashSet<string> s_Checked = new(StringComparer.Ordinal);
+    /// <summary>The listed members' declaring types and names, without parameters or arity.</summary>
+    static HashSet<string> s_Names = new(StringComparer.Ordinal);
 
     /// <summary>The loaded list's identity, part of the adapted images' cache key.</summary>
     internal static string Identity { get; private set; } = "none";
@@ -42,15 +47,107 @@ static class LifetimeChecks
             return;
         }
         var text = File.ReadAllText(path);
-        s_Checked = new HashSet<string>(text.Split('\n', StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
+        Use(text.Split('\n', StringSplitOptions.RemoveEmptyEntries));
         Identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)), 0, 8);
     }
 
     /// <summary>For tests: the members to check.</summary>
     internal static void Set(IEnumerable<string> members)
     {
-        s_Checked = new HashSet<string>(members, StringComparer.Ordinal);
+        Use(members);
         Identity = "set";
+    }
+
+    static void Use(IEnumerable<string> members)
+    {
+        s_Checked = new HashSet<string>(members, StringComparer.Ordinal);
+        s_Names = new HashSet<string>(s_Checked.Select(NameOf), StringComparer.Ordinal);
+    }
+
+    /// <summary>"Type::Name" of a key, without its arity and parameters.</summary>
+    static string NameOf(string key)
+    {
+        int end = key.IndexOf('(');
+        int arity = key.LastIndexOf('`', end);
+        int separator = key.IndexOf("::", StringComparison.Ordinal);
+        return key.Substring(0, arity > separator ? arity : end);
+    }
+
+    /// <summary>
+    /// An Edit and Continue delta's calls of listed members, redirected to the checked calls the
+    /// loaded image already has (a delta cannot add them): the patched IL, or null when an edited
+    /// body calls a listed member the image has no checked call for, or a generic method instance
+    /// of one (the edit then needs a restart, so that no edited call goes unchecked). Members are
+    /// matched by declaring type, name, parameter types and call kind.
+    /// </summary>
+    internal static byte[]? RedirectDelta(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il)
+    {
+        if (s_Checked.Count == 0) return il;
+        using var metadata = new DeltaMetadata(baseline, deltas);
+        var view = new NumberFormatShims.AggregateView(metadata);
+        var wrappers = Wrappers(metadata.Baseline, view);
+        var patched = (byte[])il.Clone();
+        foreach (var (_, offset, _) in metadata.Bodies())
+        {
+            var (start, end, _) = DeltaMetadata.Body(patched, offset);
+            int constrainedAt = -1;
+            foreach (var (opcode, at, operand) in DeltaMetadata.Instructions(patched, start, end))
+            {
+                if (opcode == 0xFE16) { constrainedAt = at; continue; } // constrained.
+                if (opcode is not (0x28 or 0x6F)) continue; // call, callvirt
+                if (constrainedAt >= 0 && constrainedAt + 6 == at) continue;
+                int token = BitConverter.ToInt32(patched, operand);
+                int table = token >> 24;
+                if (table == 0x2B) // a generic method instance: its method's name decides
+                {
+                    var reader = metadata.Reader(token, out var local);
+                    var method = reader.GetMethodSpecification((Srm.MethodSpecificationHandle)local).Method;
+                    if (method.Kind == Srm.HandleKind.MemberReference && Listed(view, MetadataTokens.GetToken(method))) return null;
+                    continue;
+                }
+                if (table != 0x0A || !Listed(view, token)) continue; // member references only
+                var (declaring, name, _, parameters) = view.Describe(token);
+                if (!wrappers.TryGetValue(WrapperKey(declaring, name, parameters, opcode == 0x6F), out int wrapper)) return null;
+                patched[at] = 0x28;
+                BitConverter.TryWriteBytes(patched.AsSpan(at + 1, 4), wrapper);
+            }
+        }
+        return patched;
+    }
+
+    static bool Listed(NumberFormatShims.AggregateView view, int token)
+    {
+        var (declaring, name, hasThis, _) = view.Describe(token);
+        int open = declaring.IndexOf('<');
+        return hasThis && s_Names.Contains((open < 0 ? declaring : declaring.Substring(0, open)) + "::" + name);
+    }
+
+    static string WrapperKey(string declaring, string name, IEnumerable<string> parameters, bool virtualCall) =>
+        declaring + "::" + name + (virtualCall ? "/v(" : "/c(") + string.Join(",", parameters) + ")";
+
+    /// <summary>The image's non-generic checked calls by member and call kind: their tokens.</summary>
+    static Dictionary<string, int> Wrappers(Srm.MetadataReader reader, NumberFormatShims.AggregateView view)
+    {
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var typeHandle in reader.TypeDefinitions)
+        {
+            var type = reader.GetTypeDefinition(typeHandle);
+            if (reader.GetString(type.Name) != Unbound.Runtime.Lifetime.CallsType) continue;
+            foreach (var methodHandle in type.GetMethods())
+            {
+                var method = reader.GetMethodDefinition(methodHandle);
+                if (method.GetGenericParameters().Count > 0) continue;
+                // Name: member, "_", call kind (v or c), number.
+                string name = reader.GetString(method.Name);
+                int split = name.LastIndexOf('_');
+                if (split <= 0 || split + 1 >= name.Length) continue;
+                var signature = method.DecodeSignature(view, null);
+                if (signature.ParameterTypes.Length == 0) continue;
+                result[WrapperKey(signature.ParameterTypes[0], name.Substring(0, split), signature.ParameterTypes.Skip(1), name[split + 1] == 'v')] =
+                    MetadataTokens.GetToken(methodHandle);
+            }
+        }
+        return result;
     }
 
     /// <summary><see cref="Instrument"/>, or the image as it is (reported) when it cannot be
@@ -80,6 +177,8 @@ static class LifetimeChecks
         var module = assembly.MainModule;
         if (module.GetType(Unbound.Runtime.Lifetime.CallsType) != null) return image;
         var calls = new Calls(module);
+        // A protected member cannot be called from the checked call's class: it stays as it is.
+        var callable = new Dictionary<string, bool>(StringComparer.Ordinal);
         foreach (var type in module.GetTypes().ToList())
         {
             foreach (var method in type.Methods)
@@ -93,7 +192,11 @@ static class LifetimeChecks
                         continue;
                     var element = target is GenericInstanceMethod generic ? generic.ElementMethod : target;
                     if (element.DeclaringType is GenericInstanceType || element.DeclaringType.IsArray) continue;
-                    if (!s_Checked.Contains(Key(element))) continue;
+                    var key = Key(element);
+                    if (!s_Checked.Contains(key)) continue;
+                    if (!callable.TryGetValue(key, out bool open))
+                        callable[key] = open = element.Resolve() is not { } resolved || !(resolved.IsFamily || resolved.IsFamilyAndAssembly || resolved.IsFamilyOrAssembly);
+                    if (!open) continue;
                     instruction.Operand = calls.For(target, instruction.OpCode);
                     instruction.OpCode = OpCodes.Call;
                 }
@@ -172,7 +275,8 @@ static class LifetimeChecks
                 m_Check = m_Module.ImportReference(typeof(Unbound.Runtime.Lifetime).GetMethod(nameof(Unbound.Runtime.Lifetime.Check))!);
                 m_Hidden = m_Module.ImportReference(typeof(System.Diagnostics.StackTraceHiddenAttribute).GetConstructor(Type.EmptyTypes)!);
             }
-            var wrapper = new MethodDefinition(element.Name + "_" + m_Made.Count,
+            // Named for the member and the call kind (see RedirectDelta).
+            var wrapper = new MethodDefinition(element.Name + "_" + (virtualCall ? "v" : "c") + m_Made.Count,
                 MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig, m_Module.TypeSystem.Void);
             m_Holder.Methods.Add(wrapper);
             // Its frame stays out of stack traces: the trace reads as the game's own call.
@@ -206,6 +310,9 @@ static class LifetimeChecks
             for (int i = 0; i < wrapper.Parameters.Count; i++) il.Emit(OpCodes.Ldarg, wrapper.Parameters[i]);
             il.Emit(virtualCall ? OpCodes.Callvirt : OpCodes.Call, inner);
             il.Emit(OpCodes.Ret);
+            // Short forms and inlining keep the call as cheap as the original where the JIT allows.
+            wrapper.Body.Optimize();
+            wrapper.ImplAttributes |= MethodImplAttributes.AggressiveInlining;
             return wrapper;
         }
 

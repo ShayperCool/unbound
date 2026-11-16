@@ -108,6 +108,9 @@ internal static class HotReload
                     if (Unbound.Runtime.Compat.ScriptFloatsWide
                         && WideFloats.DeltaNeedsWidening(image, applied.Append(delta.Metadata).ToList(), delta.IL, () => File.Exists(result.Dll) ? File.ReadAllBytes(result.Dll) : null))
                         return Restart(response, $"{spec.Name}: the edit changes float arithmetic, which Unbound converts when the assembly loads", watch);
+                    // Edited calls of listed engine members need checked calls the loaded image has.
+                    if (LifetimeChecks.RedirectDelta(image, applied.Append(delta.Metadata).ToList(), delta.IL) == null)
+                        return Restart(response, $"{spec.Name}: the edit calls an engine member whose dead-object check Unbound adds when the assembly loads", watch);
                     deltas.Add((assembly, delta));
                     response.Changes.AddRange(delta.Changed.Select(c => $"{spec.Name}: {c}"));
                 }
@@ -130,6 +133,9 @@ internal static class HotReload
                 // Edited code formats numbers as the loaded code does (see NumberFormatShims).
                 var (image, applied) = s_Applied[delta.Name];
                 var il = NumberFormatShims.RedirectDelta(image, applied.Append(delta.Metadata).ToList(), delta.IL);
+                // Edited calls of listed members check their receiver as the loaded code's do
+                // (each has a checked call in the image: tested above).
+                il = LifetimeChecks.RedirectDelta(image, applied.Append(delta.Metadata).ToList(), il)!;
                 MetadataUpdater.ApplyUpdate(assembly, delta.Metadata, il, delta.Pdb);
                 applied.Add(delta.Metadata);
                 response.Applied.Add(delta.Name);
