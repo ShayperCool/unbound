@@ -62,7 +62,7 @@ SUITE_REFERENCE_SECONDS = 900
 # into the validation runs are kept (suites name them through linked prefixes too).
 RUN_REFERENCE = re.compile(rb'/[^\s"\'<>|;&(),=]*/runs/[^\s"\'<>|;&(),]+')
 # The cache of suite references: its entries are dropped when this changes.
-SUITE_REFERENCE_FORMAT = 2
+SUITE_REFERENCE_FORMAT = 3
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
@@ -253,8 +253,14 @@ def suite_run_references(roots, runs, known, seconds):
                         continue
                     with open(path, 'rb') as stream:
                         named = {os.fsdecode(match) for match in RUN_REFERENCE.findall(stream.read())}
-                    values = sorted({resolved for value in named
-                                     if inside(resolved := os.path.realpath(value), runs)})
+                    values = set()
+                    for value in named:
+                        # The run named, and the one a link inside it leads to.
+                        prefix, rest = value.split('/runs/', 1)
+                        for resolved in (os.path.realpath(prefix+'/runs')+'/'+rest, os.path.realpath(value)):
+                            if inside(resolved, runs):
+                                values.add(resolved)
+                    values = sorted(values)
                     entry = [*identity, values]
                 files[path] = entry
                 found.update(entry[4])
@@ -1158,6 +1164,7 @@ class Janitor:
         cutoff = time.time()-hours*3600
         for key in sorted(self.sealed):
             if self.deadline is not None and time.monotonic() >= self.deadline:
+                self.partial = True
                 self.emit('keep', runs=len(self.sealed), reason='sealed runs not all checked for recent writes')
                 return False
             try:
@@ -1165,7 +1172,14 @@ class Janitor:
             except FileNotFoundError:
                 continue
             if newest >= cutoff:
-                self.unseal(Path(key), 'recently modified')
+                try:
+                    self.unseal(Path(key), 'recently modified')
+                except ReferenceChanged as error:
+                    return self.stop_batches(f'sealed run could not be walked: {error}')
+                except TimeoutError:
+                    self.partial = True
+                    self.emit('keep', runs=len(self.sealed), reason='sealed runs not all checked for recent writes')
+                    return False
         self.verified = True
         return True
 
@@ -1202,6 +1216,7 @@ class Janitor:
                 continue
             yield path, kind, hours
         if unread:
+            self.partial = True
             reason = ('sheriff suite references not read yet' if not self.sheriff_complete else
                       'sealed runs not all checked for recent writes')
             self.emit('keep', runs=unread, reason=reason)

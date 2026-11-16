@@ -172,8 +172,9 @@ class JanitorTests(unittest.TestCase):
         info = log.stat()
         state = self.cache/'agents/janitor/suite-references.json'
         state.parent.mkdir(parents=True)
-        # The earlier format, claiming the file names nothing.
-        state.write_text(json.dumps({str(log): [info.st_ino, info.st_size, info.st_mtime_ns, []]}))
+        # An earlier format, with this file's identity, claiming it names nothing.
+        state.write_text(json.dumps({'format': janitor.SUITE_REFERENCE_FORMAT-1, 'files': {
+            str(log): [info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns, []]}}))
         self.collect_applied()
         self.assertTrue(second.is_dir())
 
@@ -191,12 +192,31 @@ class JanitorTests(unittest.TestCase):
 
     def test_no_run_is_removed_before_every_sealed_run_is_checked(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
-        with patch.object(janitor.Janitor, 'verify_sealed',
-                          lambda janitor_: janitor_.emit('keep', reason='control') or False):
+        # The run budget ends after the first sealed run has been checked.
+        original = janitor.inventory
+        checked = []
+        def inventory(path, *args, **kwargs):
+            if not checked:
+                self.j.deadline = time.monotonic()
+            checked.append(path)
+            return original(path, *args, **kwargs)
+        with patch.object(janitor, 'inventory', inventory):
             self.collect_applied()
+        self.assertEqual(len(checked), 1)
         self.assertTrue(first.is_dir())
         self.assertTrue(second.is_dir())
         self.assertIn('sealed runs not all checked for recent writes', self.output.getvalue())
+        self.assertTrue(self.j.partial)
+
+    def test_a_suite_path_through_a_link_inside_a_run_keeps_both_runs(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (first/'latest').symlink_to(second)
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        (suite/'run.log').write_text(f'{first}/latest/output\n')
+        self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(second.is_dir())
 
     def test_folders_without_numbers_beside_runs_and_single_runs_stay(self):
         first, second = self.instances('probe', ['gate-1', 'gate-2'])
