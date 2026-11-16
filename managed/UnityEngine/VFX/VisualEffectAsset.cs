@@ -252,10 +252,13 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Gives each baked curve and gradient its place, in the order of the
-        /// expressions: first the ones every effect of the asset shares (their curve is a
-        /// value of the graph that is not exposed), then the ones an effect can have of its
-        /// own (an exposed curve, or one that is computed). The Editor's effects of an asset
-        /// share the first ones' rows; an effect here has them all.</summary>
+        /// expressions: first the ones whose curve is a value of the graph that is not
+        /// exposed (the same for every effect of the asset), then the ones an effect can have
+        /// of its own (an exposed curve, or one that is computed). The layout is Unbound's:
+        /// the programs read a place only through the words baked for it, and each effect
+        /// has a texture of its own, so any layout without two bakes in one place draws the
+        /// same. Only the sheet's own expressions are placed; a bake among the ones
+        /// evaluated per spawn event is refused (<see cref="UnplacedBake"/>).</summary>
         void PlaceBakes(int count)
         {
             BakePlaces = new int[count];
@@ -276,6 +279,17 @@ namespace Unbound.Runtime
                 if (own[i]) BakePlaces[i] += Operations[i] == VFXExpressionOperation.BakeCurve ? sharedCurves : sharedGradients;
             BakedCurves = sharedCurves + ownCurves;
             BakedGradients = sharedGradients + ownGradients;
+        }
+
+        /// <summary>Whether a bake has no place: the effect does not run then, and says so.</summary>
+        internal bool UnplacedBake
+        {
+            get
+            {
+                for (int i = 0; i < Operations.Length; i++)
+                    if ((Operations[i] == VFXExpressionOperation.BakeCurve || Operations[i] == VFXExpressionOperation.BakeGradient) && BakePlaces[i] < 0) return true;
+                return false;
+            }
         }
 
         bool IsExposed(int expression)

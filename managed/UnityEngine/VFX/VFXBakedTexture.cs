@@ -86,9 +86,13 @@ namespace Unbound.Runtime
                 for (int i = 0; i < Width; i++)
                 {
                     // A curve that loops both ways is sampled at texel centres (its end wraps
-                    // onto its start); any other from its first key to its last.
+                    // onto its start, and the generated code samples it without the half
+                    // texel it adds where it clamps); any other from its first key to its
+                    // last. A curve of one key has no range: every sample is its value, and
+                    // the words below are not numbers (the generated code then samples at
+                    // whatever its clamp of that gives; the texels are all the same).
                     float time = loops ? (i + 0.5f) * range * (1f / Width) : i * range / (Width - 1);
-                    float value = curve != null ? curve.Evaluate(time + start) : 0f;
+                    float value = curve != null ? curve.EvaluateCubic(time + start) : 0f;
                     m_Samples[i] = value;
                     largest = Math.Max(largest, Math.Abs(value));
                 }

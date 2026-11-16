@@ -304,6 +304,10 @@ namespace UnityEngine.Tests
             Assert.Null(VisualEffect.Unsupported(plain));
             var color = Data(new[] { Value(VFXValueType.Float3), Op(VFXExpressionOperation.RGBtoHSV, 0) }, new[] { Constant(0, Vector3.one) });
             Assert.Equal("the expression operation RGBtoHSV", VisualEffect.Unsupported(color));
+            // A bake has a place among the sheet's own expressions only.
+            var baked = Data(new[] { Value(VFXValueType.Curve), Op(VFXExpressionOperation.BakeCurve, 0) }, new[] { Constant(0, new AnimationCurve()) });
+            Assert.Null(VisualEffect.Unsupported(baked));
+            Assert.False(baked.UnplacedBake);
             var strips = Data(Array.Empty<VFXExpressionDesc>(), Array.Empty<VFXExpressionValueContainerDesc>(), new[]
             {
                 new VFXEditorSystemDesc { name = "Trail", type = VFXSystemType.Particle, layer = 0, flags = VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips, tasks = Array.Empty<VFXEditorTaskDesc>() },
@@ -471,6 +475,35 @@ namespace UnityEngine.Tests
                 Assert.Same(texture, state.Baked.Texture);
                 Assert.Equal(0.3f, texture.GetPixel(0, 0).b, 3);
                 Assert.Equal(pixelsBefore.r, texture.GetPixel(0, 0).r);
+                // A curve of one key: no range to divide by, every texel its value. One
+                // without keys, and none at all: zeros over one second from zero.
+                values.SetObject(0, new AnimationCurve(new Keyframe(0.5f, 0.25f)));
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                state.Baked.Apply();
+                Assert.Equal(new uint[] { 0xfc007c00, Bits(1f), Bits(row0), 2 | 4 | 8 }, Words(4, 4));
+                Assert.Equal((0.25f, 0.25f, 0.25f), (texture.GetPixel(0, 0).b, texture.GetPixel(64, 0).b, texture.GetPixel(127, 0).b));
+                foreach (var none in new[] { new AnimationCurve(), null })
+                {
+                    values.SetObject(0, none);
+                    VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                    state.Baked.Apply();
+                    Assert.Equal(new uint[] { 0x80003c00, Bits(1f), Bits(row0), 2 | 4 | 8 }, Words(4, 4));
+                    Assert.Equal((0f, 0f), (texture.GetPixel(0, 0).b, texture.GetPixel(127, 0).b));
+                }
+                // Keys that start before zero and end after one: the range and the start go
+                // into the words, the samples span the keys.
+                var wide = new AnimationCurve(new Keyframe(-0.5f, 1f), new Keyframe(1.5f, 3f));
+                values.SetObject(0, wide);
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                state.Baked.Apply();
+                Assert.Equal((uint)Mathf.FloatToHalf(0.5f) | (uint)Mathf.FloatToHalf(0.25f) << 16, Words(4, 4)[0]);
+                Assert.Equal((1f, 3f), (texture.GetPixel(0, 0).b, texture.GetPixel(127, 0).b));
+                // No gradient: a row of nothing, not fixed, no scale.
+                values.SetObject(3, null);
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                state.Baked.Apply();
+                Assert.Equal(new uint[] { Bits(row1), Bits(0f), Bits(1f) }, Words(7, 3));
+                Assert.Equal(default, texture.GetPixel(64, 1));
                 // A graph that bakes nothing has no texture.
                 Assert.Null(VFXBakedTexture.For(Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, 1f) })));
             }
@@ -480,18 +513,20 @@ namespace UnityEngine.Tests
         [Fact]
         public void CurvesAndGradientsAreSampledWhereExpressionsAreEvaluated()
         {
-            var curve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 2f));
+            // Keys whose cubic rounds another way than AnimationCurve.Evaluate: the operator's.
+            var curve = new AnimationCurve(new Keyframe(-1f, 3f), new Keyframe(0f, -1f), new Keyframe(2f, 5f));
+            Assert.NotEqual(Bits(curve.Evaluate(0.6f)), Bits(curve.EvaluateCubic(0.6f)));
             var ramp = new Gradient();
             ramp.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.blue, 1f) }, new[] { new GradientAlphaKey(0.5f, 0f), new GradientAlphaKey(0.5f, 1f) });
             var data = Data(new[]
             {
                 Value(VFXValueType.Curve), Value(VFXValueType.ColorGradient), Value(VFXValueType.Float),
                 Op(VFXExpressionOperation.SampleCurve, 0, 2), Op(VFXExpressionOperation.SampleGradient, 1, 2),
-            }, new[] { Constant(0, curve), Constant(1, ramp), Constant(2, 0.75f) });
+            }, new[] { Constant(0, curve), Constant(1, ramp), Constant(2, 0.6f) });
             var values = new VisualEffectValues(data);
             VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
-            Assert.Equal(Bits(curve.Evaluate(0.75f)), values.GetWord(3));
-            var color = ramp.Evaluate(0.75f);
+            Assert.Equal(Bits(curve.EvaluateCubic(0.6f)), values.GetWord(3));
+            var color = ramp.Evaluate(0.6f);
             int at = data.ValueOffsets[4];
             Assert.Equal(new[] { Bits(color.r), Bits(color.g), Bits(color.b), Bits(color.a) }, new[] { values.Words[at], values.Words[at + 1], values.Words[at + 2], values.Words[at + 3] });
             // Without a curve or a gradient: zeros.

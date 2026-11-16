@@ -175,7 +175,7 @@ namespace Unbound.Runtime
 
                     case VFXExpressionOperation.SampleCurve:
                         // A curve at a time; no curve gives zero.
-                        w[at] = Bits(values.GetObject(a0) is AnimationCurve sampled ? sampled.Evaluate(Float(w[p1])) : 0f);
+                        w[at] = Bits(values.GetObject(a0) is AnimationCurve sampled ? sampled.EvaluateCubic(Float(w[p1])) : 0f);
                         break;
                     case VFXExpressionOperation.SampleGradient:
                     {
