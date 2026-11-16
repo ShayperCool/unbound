@@ -19,7 +19,9 @@ exactly.
   older per-component attributes (`x`/`y`/`z`/`w`, `w`/`h` for rects, `cx`..`ez` for a bounds
   center and size, `px`..`sz` for integer bounds): the components given make the whole value, the
   others 0, replacing a `value` attribute in either order; a game's subclass of Vector3Field reads
-  them too, a MinMaxSlider (also holding a Vector2) does not.
+  them too, a MinMaxSlider (also holding a Vector2) does not. Unmeasured: a component whose text
+  does not read (Unbound reads 0), and elements made by a deprecated UxmlFactory over these fields'
+  traits.
 - `binding.*`: a two-way `DataBinding` of a Vector3Field's value, including a value typed into a
   sub-field reaching the source.
 
