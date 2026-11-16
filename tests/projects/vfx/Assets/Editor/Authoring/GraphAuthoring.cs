@@ -119,6 +119,33 @@ public static class GraphAuthoring
             Link(dim.outputSlots[0], colour.inputSlots[0][channel]);
         }
         Save(hdr);
+
+        // Curves that loop after their last key and not before their first, sampled just
+        // below their end, where the last of the texture's samples shows: twelve quads added
+        // to what is behind, their size from one curve and their alpha from another. The
+        // first curve's last sample falls on its last key; the second's keys are such that
+        // it falls just short of it.
+        var end = NewGraph("DrawLoopEnd", DrawFolder);
+        var (endSpawn, endInit, endUpdate, endOutput) = System(end, 16);
+        endOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        Burst(endSpawn, false, 12f, 0f);
+        SetRandom(endInit, "position", new Vector3(-1.2f, -1f, 0f), new Vector3(1.2f, 1f, 0f));
+        SetVector(endInit, "color", new Vector3(0.3f, 0.6f, 1f));
+        AtTime(endUpdate, "size", new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(1f, 0.5f)) { postWrapMode = WrapMode.Loop }, 0.997f);
+        AtTime(endUpdate, "alpha", new AnimationCurve(new Keyframe(0.3f, 0.2f), new Keyframe(1.4f, 1f)) { postWrapMode = WrapMode.Loop }, 0.3f + 0.997f * 1.1f);
+        Save(end);
+    }
+
+    /// <summary>A block that sets an attribute from a curve sampled at a time given.</summary>
+    static AttributeFromCurve AtTime(VFXContext context, string attribute, AnimationCurve curve, float time)
+    {
+        var block = Make<AttributeFromCurve>();
+        block.SetSettingValue("attribute", attribute);
+        block.SetSettingValue("SampleMode", AttributeFromCurve.CurveSampleMode.Custom);
+        context.AddChild(block);
+        block.inputSlots[0].value = curve;
+        Input(block, "SampleTime").value = time;
+        return block;
     }
 
     /// <summary>Where the probe finds the bundle (under StreamingAssets, so by a path of the

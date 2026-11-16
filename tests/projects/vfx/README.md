@@ -236,6 +236,13 @@ and the draw), the kind Unbound draws:
   shows two flat colours whose three channels are all inside what its 8 bits hold. A row
   stored unscaled, a scale left out or a gradient blended between its keys would each give
   other colours.
+- `loop end` (frame 20): twelve quads added to what is behind, their size and their alpha
+  from two curves that loop after their last key and clamp before their first, each sampled
+  at a time just below its end, where the last of the texture's samples of a curve shows.
+  The first curve's keys are at zero and one: its last sample's time is its last key's,
+  which on such a curve reads the first key's value. The second's keys (0.3 and 1.4) are
+  such that the last sample's time, computed in single precision, falls just short of the
+  last key and reads the value there.
 
 The images are compared pixel by pixel (`image_limits.json`: no difference where both ran, one
 machine with an NVIDIA driver; the quads' edges fall between pixel centres, so another GPU may
@@ -271,11 +278,11 @@ the ones the runtime does not do yet (matrices built from or split into rows, co
 angles and scales taken from a matrix, colour spaces, meshes, the main camera, noise, texture
 and buffer sizes). Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
-that ping-pongs, one whose two sides continue differently, one that loops both ways sampled
-outside zero to one, a curve or a gradient that is null, a gradient of one key, one blended
-perceptually and one whose alpha is over one. A curve the graph samples itself (`c00`) is not
-measured where it loops before its keys, with weighted or stepped keys, or with keys closer
-than a ten-thousandth; the curves baked into the texture are rounded the same way, which
+that ping-pongs, one that loops before its first key and clamps after its last, one that
+loops both ways sampled outside zero to one, a curve or a gradient that is null, a gradient
+of one key, one blended perceptually and one whose alpha is over one. A curve the graph
+samples itself (`c00`) is not measured where it loops before its keys or ping-pongs after
+them, with weighted or stepped keys, or with keys closer than a ten-thousandth; the curves baked into the texture are rounded the same way, which
 the images show only through the texture's half floats. A curve or gradient baked among the expressions of a spawn
 event is not done (Unbound says so and does not run the graph). The update modes that ignore the time scale are not
 compared: the Editor's unscaled delta time under a capture frame rate is the wall clock's.

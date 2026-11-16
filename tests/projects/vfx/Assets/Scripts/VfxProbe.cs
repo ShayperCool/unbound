@@ -166,6 +166,8 @@ public sealed class VfxProbe : MonoBehaviour
         // Over each particle's life by a curve and a gradient; the curve is another from frame 25.
         Draw("over life", "DrawOverLife", 12, 24, 40, 55, 70);
         Draw("hdr", "DrawHdr", 40);
+        // Curves that loop after their last key only, sampled just below their end.
+        Draw("loop end", "DrawLoopEnd", 20);
     }
 
     // ---------------------------------------------------------------------------- bundle
