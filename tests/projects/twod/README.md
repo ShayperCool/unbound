@@ -27,3 +27,11 @@ GPU, so run in a window, not `--headless`, where `ReadPixels` has nothing to rea
     python3 tests/projects/twod/compare.py tests/projects/twod/Reference/unity-6000.0.71f1.json /tmp/unbound.json
 
 `TWOD_PROBE_ONLY=<prefix>` runs only the scenarios whose name starts with it.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+Every scenario matches except `render.changes`: 26 of 25,600 pixels of the re-sorted image
+differ, where a tile switched to Individual mode ties with a SpriteRenderer on every
+documented sort key and the Editor draws the tile last (`docs/COMPATIBILITY_GAPS.md`, twod
+rows). Unity documents no order for such ties, so it stays a recorded residual. Image values
+need the Linux GPU reference; any other difference is a regression.

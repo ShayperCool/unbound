@@ -177,3 +177,12 @@ The re-record changes exactly `context.isBatchMode` from true to false. All othe
 The strict engine count decreases from 9/208 to 8/208 failing keys; the eight raw
 cross-object callback-order differences remain. Controls pass 233/233. No callback
 order or comparator rule changes. The Python runner creates no X server.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+The strict comparison fails 8 of 208 keys: the six `op.*` and two `wake.*` cross-object
+callback orders above, each with the same callbacks and payloads on both sides. They are
+recorded residuals (Unity documents no order between these objects; `docs/COMPATIBILITY_GAPS.md`
+"Order and text Unity's documentation leaves open"). A run on macOS also differs in the
+OS-decided `context.platform` and `context.graphicsDeviceType`. Any other failing key, or a
+change in these eight, is a regression.

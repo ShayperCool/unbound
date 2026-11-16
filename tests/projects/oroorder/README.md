@@ -162,3 +162,12 @@ exit normally and reproduce all 1171 canonical lines byte for byte, so no refere
 row changes. The strict engine comparison drops from 114 to 91 missing and extra
 lines; 24 of 34 order-window renders still differ. No ordering or numeric tolerance
 changes. The remaining raw differences stay in the report.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+The strict comparison has 1085/1171 lines with 86 missing and 86 extra, and 24 of 34
+order-window renders differ, all recorded residuals (`docs/COMPATIBILITY_GAPS.md`, oroorder
+row): OnRenderObject handler order 48 lines (the Editor calls RtCam's handler before
+ScreenCam's in every differing render; Unity documents no order), batch activation order 11,
+the shared CoreProbe rotation 21, exception text 4 and JSON number spelling 2 (see coreapis).
+Anything else is a regression.

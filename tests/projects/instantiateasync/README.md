@@ -82,9 +82,9 @@ sync 27, modified 1, held 4, wait 4 and errors 2. The held/wait groups also move
 Update Poll marker. Early pending Starts and Starts enabled by a coroutine retain their prior
 startup/LateUpdate paths.
 
-Eight events remain unmatched: the scene Template's startup frame, two exception messages,
-four deferred-Destroy callbacks and one pending-Destroy OnDisable position in the ordered
-sequence. No event is discarded or reordered by the comparator. The 38 transformed Start
+Eight events remained unmatched at that point: the scene Template's startup frame, two
+exception messages, four deferred-Destroy callbacks and one pending-Destroy OnDisable position
+in the ordered sequence. No event is discarded or reordered by the comparator. The 38 transformed Start
 entries preserve their own order and all other entries preserve theirs; the complete raw
 BEFORE/AFTER sequence is not equal merely by removing the phase field, because of the two Poll
 crossings. It differs at 40 row positions. The saved validator receipt's equality wording is
@@ -98,3 +98,12 @@ metadata. Custom loops without the delayed node, inserted callbacks and reentran
 unmeasured. Evidence: `validation/runs/start-texture-matching-validation-20261103-5/` and
 `validation/runs/start-texture-root-admission-20261103/`; runtime manifest `d4078b07`, Core
 `fb2a7180`. No new Native capture or change to async integration is claimed by this replay.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+The strict comparison has 774/777 lines with 3 missing and 3 extra, all recorded residuals
+(`docs/COMPATIBILITY_GAPS.md`, instantiateasync row): the scene Template's Start runs before
+the probe's own Start in the Editor and after it in Unbound (frame -1 versus 0; an order
+between objects Unity does not document), and two `integrationTimeMS` exception messages
+carry the parameter name in the runtime's own form. The deferred-Destroy differences above
+are closed. Any other difference is a regression.

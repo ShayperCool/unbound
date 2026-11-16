@@ -228,3 +228,13 @@ Error Pause, watchdog, fatal, no output), then checks positive captures and mock
 controls of every guard, the pair gate, launch admission, the preflight judgement and the
 comparator. Fake answers are not Unity's: the controls prove emission, schema and control flow
 only.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+11 of 1510 keys fail, the eleven retained above: ten `subshaderTag` exception messages
+(parameter name in the runtime's own form, `docs/COMPATIBILITY_GAPS.md` "Order and text
+Unity's documentation leaves open") and `context.isBatchMode`, which is a property of the
+capture: the reference was recorded in batch mode and Unbound runs as the interactive Editor.
+Closing that key needs a windowed Linux Editor re-record, as activationorder's did. A run on
+macOS also differs in the OS-decided `context.platform` and `context.graphicsDeviceType`.
+Anything else is a regression.

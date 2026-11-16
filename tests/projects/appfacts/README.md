@@ -129,3 +129,11 @@ the same newline protocol, including the empty and null URL cases.
 records. `test_recording.py NEW_CACHE_OUT` checks compatibility with the canonical protocol
 and runner/comparator refusal controls. A stressed capture may delay only the private
 recording stubs before their writes to reproduce the former process-start race.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+30 of 555 values differ, all recorded in `docs/COMPATIBILITY_GAPS.md` (appfacts row and the
+rows it names): stack-trace text and byte counts (10), component/GameObject memory (11),
+materials (2), sprites (1), one-sample clips (2) and texture size/creation values (4). Most
+values are facts of the Linux capture's machine; on macOS many more differ by design. Any
+change in these 30 on Linux is a regression.

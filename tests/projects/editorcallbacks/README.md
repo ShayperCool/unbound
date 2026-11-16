@@ -144,7 +144,8 @@ and [execution order](https://docs.unity3d.com/6000.0/Documentation/Manual/Execu
 do not guarantee an order between these instances. The raw sequences remain
 strictly compared; no global wake sort is added.
 
-The 21 prefab-field differences come from the SerializedObject property tree.
+The 21 prefab-field differences came from the SerializedObject property tree (all 6280
+prefab fields match on main e541da0ea).
 Its GameObject view omits components, icon, navigation layer and static editor
 flags. Its Transform view omits proportional-scale state, children and the
 Euler-angle hint, including that hint's default overrides. BoxCollider's own
@@ -156,3 +157,13 @@ The follow-up must bind real values and preserve authored metadata, with
 read/write and structural-array controls. A property-name-only patch would
 hide the missing behavior. This remains a functional gap, with all 21 strict
 field differences retained.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+The main comparison keeps its 24 missing and 24 extra receiver-order events (recorded above).
+The queued `LoadSceneAsync` loop (`scene_loop.py check --queue-only`) matches 0 of 9
+receiver/driver streams: an open functional gap (`docs/COMPATIBILITY_GAPS.md`, row "Queued
+`LoadSceneAsync` staging"); fresh Editor repeats complete those loads on different frames, so
+closing it needs new Linux Editor captures. The additive, single, forced, starts and three-load
+loops pass (their inter-object order differences are reported as deferred, not failures) and the
+four quit controls match. Anything else is a regression.

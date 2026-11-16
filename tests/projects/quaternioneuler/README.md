@@ -117,3 +117,9 @@ Paths are relative to `managed/UnityEngine`.
 Other releases keep the previous unmeasured arithmetic through Compat. The
 engine's existing, separate rotation mechanisms are unchanged. This audit does
 not establish that every engine path must use single precision in every release.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+7299 of 7300 controls match; the one failure is the recorded `raw/9/5 result.z` non-unit
+vector-rotation residual (one float step; `docs/COMPATIBILITY_GAPS.md`, quaternioneuler row).
+Any other failing control is a regression.

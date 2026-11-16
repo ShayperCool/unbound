@@ -306,3 +306,14 @@ rules deviation; no capture or comparator process was repeated to review it.
 Evidence: `validation/runs/coreapis-recorder-root-admission-20261104/` and
 `validation/runs/coreapis-recorder-engine-root-admission-20261104/`. Old raw captures and the
 canonical remain unchanged.
+
+## Sheriff status (main e541da0ea, 2026-11-16)
+
+The strict comparison has 620/682 lines in order with 62 missing and 62 extra, all recorded
+residuals: OnRenderObject handler order 24 and batch activation order 11 (orders Unity leaves
+open), GetTransformedBy rotation 21, exception text 4 and JSON number spelling 2. The scene-id
+sign pair counted above is closed. The rotation keys come from the Editor's Mono runtime
+evaluating `Quaternion` products with double intermediates: recomputing the probe's own products
+in float32 gives Unbound's bits and with double intermediates the Editor's. Unbound keeps script
+arithmetic in single precision by default (`docs/COMPATIBILITY_GAPS.md`, row "Script float
+arithmetic in single precision"). Anything beyond these 62 pairs is a regression.
