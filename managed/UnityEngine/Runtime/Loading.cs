@@ -870,6 +870,9 @@ namespace Unbound.Runtime
                     }
                 }
                 s_Files[guid] = file;
+                // As the Editor: a loaded file's materials are validated by their shaders' editors.
+                if (info.Kind == "prefab" || info.Kind == "model" || info.Kind == "yaml")
+                    MaterialValidation.ValidateLoaded(file);
                 // As the Editor: a loaded asset's behaviours and scriptable objects get OnValidate.
                 if (file != null && (info.Kind == "prefab" || info.Kind == "yaml"))
                     foreach (var o in new List<Object>(file.Objects.Values))
