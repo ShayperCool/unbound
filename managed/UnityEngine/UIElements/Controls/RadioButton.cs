@@ -114,11 +114,10 @@ namespace UnityEngine.UIElements
         readonly VisualElement m_ChoicesContainer;
         readonly VisualElement m_ContentContainer;
         readonly List<RadioButton> m_RegisteredRadioButtons = new List<RadioButton>();
-        readonly List<RadioButton> m_AllRadioButtons = new List<RadioButton>();
         readonly List<string> m_Choices = new List<string>();
         readonly EventCallback<ChangeEvent<bool>> m_RadioButtonValueChanged;
         RadioButton m_SelectedRadioButton;
-        bool m_UpdateScheduled;
+        IVisualElementScheduledItem m_ScheduledUpdate;
 
         /// <summary>The texts of the group's radio buttons; setting it renames the buttons made from
         /// choices, makes more or removes the extra ones.</summary>
@@ -127,7 +126,9 @@ namespace UnityEngine.UIElements
         {
             get
             {
-                foreach (var button in AllRadioButtons()) yield return button.text;
+                using var pooled = Pool.ListPool<RadioButton>.Get(out var buttons);
+                GetAllRadioButtons(buttons);
+                foreach (var button in buttons) yield return button.text;
             }
             set
             {
@@ -225,18 +226,25 @@ namespace UnityEngine.UIElements
 
         readonly List<RadioButton> m_MadeFromChoices = new List<RadioButton>();
 
-        /// <summary>The group's radio buttons in hierarchy order.</summary>
-        List<RadioButton> AllRadioButtons()
+        /// <summary>The group's radio buttons in hierarchy order, into a list of the caller's (a
+        /// change event sent while one is in use may need another).</summary>
+        void GetAllRadioButtons(List<RadioButton> buttons)
         {
-            m_AllRadioButtons.Clear();
-            this.Query<RadioButton>().ForEach(m_AllRadioButtons.Add);
-            return m_AllRadioButtons;
+            buttons.Clear();
+            this.Query<RadioButton>().ForEach(buttons.Add);
+        }
+
+        int IndexOf(RadioButton button)
+        {
+            using var pooled = Pool.ListPool<RadioButton>.Get(out var buttons);
+            GetAllRadioButtons(buttons);
+            return buttons.IndexOf(button);
         }
 
         void OnRadioButtonValueChanged(ChangeEvent<bool> evt)
         {
             if (!evt.newValue) return;
-            value = AllRadioButtons().IndexOf(evt.target as RadioButton);
+            value = IndexOf(evt.target as RadioButton);
             evt.StopPropagation();
         }
 
@@ -250,16 +258,16 @@ namespace UnityEngine.UIElements
         /// button, unchecks the registered ones. Only while the group is in a panel.</summary>
         void UpdateRadioButtons(bool notify)
         {
-            m_UpdateScheduled = false;
+            m_ScheduledUpdate?.Pause();
             if (panel == null) return;
-            var buttons = AllRadioButtons();
+            using var pooled = Pool.ListPool<RadioButton>.Get(out var buttons);
+            GetAllRadioButtons(buttons);
             if (value >= 0 && value < buttons.Count)
             {
                 m_SelectedRadioButton = buttons[value];
                 if (notify) m_SelectedRadioButton.value = true;
                 else m_SelectedRadioButton.SetValueWithoutNotify(true);
-                // Unchecking the others may re-enter through their change events: take a copy.
-                foreach (var button in buttons.ToArray())
+                foreach (var button in buttons)
                 {
                     if (button == m_SelectedRadioButton) continue;
                     if (notify) button.value = false;
@@ -268,7 +276,9 @@ namespace UnityEngine.UIElements
             }
             else
             {
-                foreach (var button in m_RegisteredRadioButtons.ToArray())
+                using var registered = Pool.ListPool<RadioButton>.Get(out var copy);
+                copy.AddRange(m_RegisteredRadioButtons);
+                foreach (var button in copy)
                 {
                     if (notify) button.value = false;
                     else button.SetValueWithoutNotify(false);
@@ -276,11 +286,11 @@ namespace UnityEngine.UIElements
             }
         }
 
+        /// <summary>Reconciles the buttons on the next scheduler update, once however often asked.</summary>
         void ScheduleRadioButtons()
         {
-            if (m_UpdateScheduled) return;
-            schedule.Execute(() => UpdateRadioButtons(false));
-            m_UpdateScheduled = true;
+            if (m_ScheduledUpdate == null) m_ScheduledUpdate = schedule.Execute(() => UpdateRadioButtons(false));
+            else if (!m_ScheduledUpdate.isActive) m_ScheduledUpdate.Resume();
         }
 
         void RegisterRadioButton(RadioButton button)
@@ -289,7 +299,7 @@ namespace UnityEngine.UIElements
             m_RegisteredRadioButtons.Add(button);
             button.RegisterValueChangedCallback(m_RadioButtonValueChanged);
             // A button checked before it joined sets the value of a group with none.
-            if (value == -1 && button.value) SetValueWithoutNotify(AllRadioButtons().IndexOf(button));
+            if (value == -1 && button.value) SetValueWithoutNotify(IndexOf(button));
             ScheduleRadioButtons();
         }
 

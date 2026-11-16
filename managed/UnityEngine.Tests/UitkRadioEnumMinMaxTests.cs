@@ -225,10 +225,10 @@ namespace UnityEngine.Tests
         }
 
         // [doc] The group sends ChangeEvent<int> (the Manual's example registers it).
-        // Measured (tests/projects/radiogroups): checking an option through value sends its own
-        // ChangeEvent<bool> first, then the previous one is unchecked through value; setting the
-        // group's value (also through SetValueWithoutNotify) checks and unchecks the options through
-        // their value.
+        // Measured (tests/projects/radiogroups panel.*, rbg3.*): checking an option through value
+        // sends its own ChangeEvent<bool> first, then the previous one is unchecked through value;
+        // setting the group's value, also through SetValueWithoutNotify, checks and unchecks the
+        // options through their value.
         // Red on 9dbe3085: no radio button exists (Assert.Equal(2, radios.Count) fails).
         [Fact]
         public void ChangeEventsOfGroupAndOptions()
@@ -291,7 +291,7 @@ namespace UnityEngine.Tests
         // a value keeps it until the group reconciles its buttons, which unchecks it.
         // Red on 9dbe3085: Add throws InvalidOperationException (the stub contentContainer is null).
         [Fact]
-        public void AddingACheckedRadioButtonSetsTheGroupValue()
+        public void AnAddedCheckedRadioButtonIsUncheckedByTheGroupsValue()
         {
             using var panel = NewPanel();
             var group = Attached(panel, new RadioButtonGroup("G", new List<string> { "A", "B" }));

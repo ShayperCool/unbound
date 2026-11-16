@@ -25,4 +25,8 @@
 {"key":"rbg.none","value":"value -1 radios 0000 changes 5 0>-1"}
 {"key":"rbg2.added","value":"value 0 radios 101"}
 {"key":"rbg2.settled","value":"value 0 radios 100"}
+{"key":"rbg3.value2","value":"value 2 radios 001 events [2:True group:-1>2]"}
+{"key":"rbg3.withoutNotify0","value":"value 0 radios 100 events [0:True 2:False]"}
+{"key":"rbg3.detached","value":"value -1 radios 100 events []"}
+{"key":"rbg3.reattached","value":"value 0 radios 100 events []"}
 {"key":"complete","value":"1"}

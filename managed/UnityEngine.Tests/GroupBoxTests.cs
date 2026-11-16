@@ -59,6 +59,34 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChoicesCanBeReadWhileTheValueChanges()
+        {
+            var group = new RadioButtonGroup("G", new List<string> { "a", "b", "c" });
+            m_Panel.visualTree.Add(group);
+            int i = 0;
+            foreach (var choice in group.choices)
+            {
+                group.value = i;
+                foreach (var _ in group.choices) { }
+                i++;
+            }
+            Assert.Equal(3, i);
+            Assert.Equal(2, group.value);
+        }
+
+        [Fact]
+        public void AGroupLeavingItsPanelForgetsItsValueUntilItsCheckedButtonReturns()
+        {
+            var group = new RadioButtonGroup("G", new List<string> { "a", "b" });
+            m_Panel.visualTree.Add(group);
+            group.value = 1;
+            group.RemoveFromHierarchy();
+            Assert.Equal(-1, group.value);
+            m_Panel.visualTree.Add(group);
+            Assert.Equal(1, group.value);
+        }
+
+        [Fact]
         public void ButtonsJoinTheirPanelsGroupOnlyWhileAttached()
         {
             var a = new RadioButton();

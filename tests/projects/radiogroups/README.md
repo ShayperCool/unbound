@@ -1,7 +1,7 @@
 # Radio button groups and GroupBox
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 28 rows (managed element state and change events
+byte-identical and the canonical reference has 32 rows (managed element state and change events
 in a runtime panel, independent of the OS and the graphics device). The gate compares every row
 exactly. Each row lists the checked buttons and the change events since the previous row, in order.
 
@@ -18,6 +18,9 @@ exactly. Each row lists the checked buttons and the change events since the prev
   hierarchy order.
 - `rbg.*`, `rbg2.*`: RadioButtonGroup: choices, value, a checked option, an added button (its
   index after the choices), value 0 and -1, and a checked button added to a group that has a value
-  (unchecked when the group next reconciles its buttons).
+  (unchecked when the group next reconciles its buttons); `rbg3.*`: `SetValueWithoutNotify` on a
+  group checks and unchecks its radios through their value (they send change events), and a group
+  with a value leaving its panel reads -1 (its checked radio left the group; no event outside the
+  panel) and takes the value back silently when it returns.
 
 Other releases are unmeasured.

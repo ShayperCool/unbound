@@ -191,5 +191,34 @@ public class RadioGroupProbe : MonoBehaviour
         Put("rbg2.added", "value " + second.value + " radios " + string.Join("", second.Query<RadioButton>().ToList().Select(r => r.value ? "1" : "0")));
         yield return Frames();
         Put("rbg2.settled", "value " + second.value + " radios " + string.Join("", second.Query<RadioButton>().ToList().Select(r => r.value ? "1" : "0")));
+
+        // SetValueWithoutNotify on a group, and a group with a value leaving its panel and coming back.
+        var third = new RadioButtonGroup("Third", new List<string> { "r", "s", "t" });
+        var thirdEvents = new List<string>();
+        third.RegisterValueChangedCallback(e => thirdEvents.Add("group:" + e.previousValue + ">" + e.newValue));
+        root.Add(third);
+        yield return Frames();
+        var thirdRadios = third.Query<RadioButton>().ToList();
+        for (int i = 0; i < thirdRadios.Count; i++)
+        {
+            int index = i;
+            thirdRadios[i].RegisterValueChangedCallback(e => { if (e.target == thirdRadios[index]) thirdEvents.Add(index + ":" + e.newValue); });
+        }
+        string Third()
+        {
+            var result = "value " + third.value + " radios " + string.Join("", thirdRadios.Select(r => r.value ? "1" : "0")) + " events [" + string.Join(" ", thirdEvents) + "]";
+            thirdEvents.Clear();
+            return result;
+        }
+        third.value = 2;
+        Put("rbg3.value2", Third());
+        third.SetValueWithoutNotify(0);
+        Put("rbg3.withoutNotify0", Third());
+        third.RemoveFromHierarchy();
+        yield return Frames();
+        Put("rbg3.detached", Third());
+        root.Add(third);
+        yield return Frames();
+        Put("rbg3.reattached", Third());
     }
 }
