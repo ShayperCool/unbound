@@ -90,7 +90,7 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
         /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
-        internal const string NotDrawn = "of Visual Effect Graph outputs, unlit quads that the output draws itself are drawn: sorted or indirect outputs, lit outputs, soft particles, motion vectors, Shader Graph outputs, strips, meshes and other primitives show nothing yet, and no effect casts shadows";
+        internal const string NotDrawn = "of Visual Effect Graph outputs, unlit quads that the output draws itself are drawn: sorted or indirect outputs, lit outputs, motion vectors, Shader Graph outputs, strips, meshes and other primitives show nothing yet, and no effect casts shadows";
 
         /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
         static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();

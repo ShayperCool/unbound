@@ -117,10 +117,11 @@ namespace Unbound.Runtime
             "UniversalForwardOnly", "DepthOnly", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D",
         };
 
-        /// <summary>The defines the graph compiler writes into an output's shader for what
-        /// the draw would need besides the system's buffers: the pipeline's lighting, and the
-        /// camera's depth for particles that fade against it.</summary>
-        const string LitDefine = "#define URP_LIT 1", SoftParticleDefine = "#define USE_SOFT_PARTICLE 1";
+        /// <summary>The define the graph compiler writes into an output's shader for what the
+        /// draw would need besides the system's buffers: the pipeline's lighting. (Particles
+        /// that fade against the camera's depth read the pipeline's own depth texture, as any
+        /// shader of the pipeline does: tests/projects/vfx, `draw-soft*`.)</summary>
+        const string LitDefine = "#define URP_LIT 1";
 
         /// <summary>Per system and task of a compiled graph: what each output's generated
         /// shader does that is not drawn yet (null for a task that is no output, has no shader
@@ -149,7 +150,6 @@ namespace Unbound.Runtime
         {
             if (string.IsNullOrEmpty(source)) return null;
             if (source.Contains(LitDefine, StringComparison.Ordinal)) return "it is lit, and lit outputs are not drawn yet";
-            if (source.Contains(SoftParticleDefine, StringComparison.Ordinal)) return "it fades against the camera's depth (soft particles), which is not done yet";
             const string Tag = "\"LightMode\"";
             for (int at = source.IndexOf(Tag, StringComparison.Ordinal); at >= 0; at = source.IndexOf(Tag, at + Tag.Length, StringComparison.Ordinal))
             {
