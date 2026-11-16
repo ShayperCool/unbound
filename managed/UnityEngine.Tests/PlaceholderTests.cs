@@ -125,8 +125,15 @@ MonoBehaviour:
             try
             {
                 Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go);
+                Lifetime.MissingComponent(null, go, typeof(ObjectErrorsTests.Probe));
+                Lifetime.MissingComponentNamed(null, go, "NoSuchComponent");
                 long before = GC.GetAllocatedBytesForCurrentThread();
-                for (int i = 0; i < 100; i++) Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go);
+                for (int i = 0; i < 100; i++)
+                {
+                    Lifetime.MissingComponent<ObjectErrorsTests.Probe>(null, go);
+                    Lifetime.MissingComponent(null, go, typeof(ObjectErrorsTests.Probe));
+                    Lifetime.MissingComponentNamed(null, go, "NoSuchComponent");
+                }
                 Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             }
             finally { Object.DestroyImmediate(go); }
