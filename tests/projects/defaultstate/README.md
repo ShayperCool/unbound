@@ -21,7 +21,7 @@ The read metrics slice adds 41 rows for the four AsyncReadManagerMetrics types (
 class excluded, the filters class with no readable member). Two independent GPU captures agree on
 them; they were added beside the existing rows, which remain byte-identical and in order (the two
 captures differed in an existing row, `ParticleSystem.colorBySpeed`, uninitialized in the
-Editor and without a variable policy, so the whole reference was not re-published).
+Editor and kept as the existing Q411 exact row, so the whole reference was not re-published).
 
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
