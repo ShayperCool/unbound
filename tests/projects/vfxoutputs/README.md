@@ -84,15 +84,20 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   captures (outside Git) with dots of 1.7 pixels at 256x256, systems of 64, 1024, 16385 and 20000
   particles drew what the compute-culled route draws in all six shots, one of 4096 drew it in five
   shots and 2941 lit pixels instead of 10680 in the sixth, and one of 16384 drew a few particles
-  differently in every shot. The other routes draw every particle in every shot. The package's
+  elsewhere than that route in all six shots, the same way each time (32434 lit pixels instead of
+  32460). The other routes draw every particle in every shot. The package's
   documentation (Visual Effect Graph 17.0, Shared Output Settings, Frustum Culling: "cull particles
   that are outside of the camera frustum in a compute pass") leaves particles inside the frustum
   drawn; Unbound draws every particle the kernel keeps. The per-camera controls here have 64
   particles at most, where every capture agreed.
-- URP 17 sets no frustum planes for the output-update kernel (`_FrustumPlanes`, read off the
-  pipeline's sources): frustum culling culls nothing there, which no image can tell (a particle
-  out of a camera's view is not seen either way). Culling by another pipeline's planes is not
-  measured.
+- Frustum planes: URP 17 declares the planes the output-update kernel culls with
+  (`_FrustumPlanes`) and never sets them (read off the pipeline's sources); Unbound gives the
+  kernel none, so it culls nothing. What the Editor's kernel reads is not measured: no image can
+  tell, as a particle out of a camera's view is not seen either way.
+- `late` makes the entries of indirect arguments outgrow their first buffer (16 entries: the
+  stages hold 15 before frame 6 and 18 after); a probe with more stages before frame 6 would no
+  longer show it.
+- Alpha-blended outputs with sorting off are drawn but not measured here (their order shows).
 - The order of an unsorted list: the package documents it as not deterministic (Shared Output
   Settings, Sort: an alpha-blended output with sorting off flickers), so no control blends
   overlapping quads whose order shows.
