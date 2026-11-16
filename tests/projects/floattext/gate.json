@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/floattext/run.py gate"],
+  "summary": "floattext: .*",
+  "engine_paths": ["managed/UnityEngine/Runtime/MonoNumberFormat.cs", "managed/Unbound.Host/NumberFormatShims.cs"]
+}

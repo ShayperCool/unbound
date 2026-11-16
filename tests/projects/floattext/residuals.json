@@ -1,0 +1,7 @@
+{
+  "round trip of three subnormal doubles: the Editor prints 17 digits where 15 read back as the same value (most subnormals in the probe print 15, as Unbound does); the Editor's reading of these texts is not modelled": [
+    "d 0000000000004000 R",
+    "d 00000000000000f5 R",
+    "d 00000000003d4000 R"
+  ]
+}
