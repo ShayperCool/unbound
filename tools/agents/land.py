@@ -100,7 +100,7 @@ from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree)
 from probe_schedule import parallel_groups
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json, release_reference
-from slot import hidden_index_paths, slot_root
+from slot import changed_paths, hidden_index_paths, inside_any, live_process_paths, slot_root
 
 
 def integration_root():

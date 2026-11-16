@@ -20,6 +20,7 @@ import re
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import land
+import land_train
 import probe_runtime
 import suite as suite_module
 
@@ -557,7 +558,12 @@ def event(value):
         stream.write(json.dumps(value)+'\n')
 def gate(root, base, probes, full, branch, **options):
     values = {path.name: path.read_text().strip() for path in root.glob('*.txt')}
-    event({'gate': values, 'probes': probes, 'crates': options['crates'],
+    if os.environ.get('TRAIN_MAKE_TARGET'):
+        import build  # what tools/build.py claims for this checkout
+        target = build.default_target(root, build.build_root(options['environment']))
+        target.mkdir(parents=True, exist_ok=True)
+        (target/'.unbound-source-root').write_text(str(Path(root).resolve())+'\n')
+    event({'gate': values, 'root': str(root), 'probes': probes, 'crates': options['crates'],
            'changed': options['changed'], 'priority': options['priority'],
            'automatic': options.get('automatic', []), 'postland': [list(row) for row in options.get('postland', [])],
            'probe_owners': options.get('probe_owners', [])})
@@ -597,6 +603,8 @@ if os.environ.get('TRAIN_LEGACY_REQUEST'):
     land_train.Queue.register = legacy_register
 land.run_gate = gate
 land.pin_main = lambda *args, **kwargs: None
+# Processes outside the fixture never use its checkouts; a control names the ones that do.
+land.live_process_paths = lambda: [path for path in os.environ.get('TRAIN_LIVE_PATHS', '').split(os.pathsep) if path]
 land.request_postland = lambda main: event({'postland_request': str(main)})
 if not os.environ.get('TRAIN_REAL_PUSH'):
     land.push_main = lambda *args: event({'push': True})
@@ -693,10 +701,10 @@ class TrainIntegrationTests(unittest.TestCase):
 
     def start(self, path, probes=(), *, crash=False, pause_lock=False, pause_leader=False,
               crash_final=False, crash_prefix=False, crash_after_final_record=False, probe_release=None, legacy=False,
-              real_push=False):
+              real_push=False, extra_env=None):
         log = self.root/(path.name+'.log')
         stream = log.open('w')
-        env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1')
+        env = dict(os.environ, UNBOUND_LAND_NO_PUSH='1', **(extra_env or {}))
         if real_push:
             env.pop('UNBOUND_LAND_NO_PUSH', None)
             env['TRAIN_REAL_PUSH'] = '1'
@@ -1213,6 +1221,87 @@ class TrainIntegrationTests(unittest.TestCase):
         results = self.finish(workers)
         self.assertEqual([code for code, _ in results], [0, 5, 5], results)
         self.assertEqual([row['branch'] for row in self.rows()], ['first'])
+
+    def land_train(self, name, **env):
+        """Land two branches in one train, which gates in an integration checkout; build targets
+        go to a private root. Returns that checkout."""
+        env = {'UNBOUND_BUILD_ROOT': str(self.root/'builds'), 'TRAIN_MAKE_TARGET': '1', **env}
+        paths = [self.branch(f'{name}-{index}', {f'{name}-{index}.txt': 'ok'}) for index in (1, 2)]
+        with self.hold():
+            workers = []
+            for count, path in enumerate(paths, 1):
+                workers.append(self.start(path, extra_env=env))
+                self.registered(count)
+        results = self.finish(workers)
+        self.assertEqual([code for code, _ in results], [0, 0], results)
+        self.assertEqual(self.git('rev-parse', 'main'), self.git('rev-parse', f'{name}-2'))
+        (self.state/'land-queue.json').unlink()
+        return Path(self.gates()[-1]['root']).resolve()
+
+    def integration_worktrees(self):
+        """{path: lock reason} of the registered integration checkouts."""
+        found, current = {}, None
+        for line in self.git('worktree', 'list', '--porcelain').splitlines():
+            if line.startswith('worktree '):
+                current = Path(line[len('worktree '):]).resolve()
+                if current.parent == (self.state/'integration').resolve():
+                    found[current] = None
+            elif current in found and line.startswith('locked'):
+                found[current] = line[len('locked '):]
+        return found
+
+    def targets(self):
+        """{checkout: target} of every target under the private build root."""
+        root = self.root/'builds/targets'
+        return {Path((target/'.unbound-source-root').read_text().strip()): target
+                for target in (root.iterdir() if root.is_dir() else [])}
+
+    def test_trains_reuse_one_locked_integration_worktree_and_its_build_target(self):
+        stable = self.land_train('first')
+        self.assertEqual(self.integration_worktrees(), {stable: land_train.IDLE_REASON})
+        self.assertEqual(set(self.targets()), {stable})
+        # A train that was interrupted leaves its clean checkout locked as active: still reused.
+        self.git('worktree', 'unlock', str(stable))
+        self.git('worktree', 'lock', '--reason', 'active land train interrupted', str(stable))
+        self.assertEqual(self.land_train('second'), stable)
+        self.assertEqual(self.integration_worktrees(), {stable: land_train.IDLE_REASON})
+        self.assertEqual(set(self.targets()), {stable})
+
+    def test_a_busy_integration_worktree_gives_a_transient_checkout_that_removes_its_target(self):
+        stable = self.land_train('first')
+        stable_target = self.targets()[stable]
+        # A child of an interrupted gate still works in the stable checkout.
+        transient = self.land_train('second', TRAIN_LIVE_PATHS=str(stable/'target/release/unbound'))
+        self.assertNotEqual(transient, stable)
+        self.assertTrue(transient.name.startswith(stable.name+'-'))
+        self.assertFalse(transient.exists())
+        self.assertEqual(self.integration_worktrees(), {stable: land_train.IDLE_REASON})
+        self.assertEqual(self.targets(), {stable: stable_target})
+
+    def test_a_train_reclaims_transient_checkouts_that_interrupted_trains_left(self):
+        stable = self.land_train('first')
+        import build
+        left = {}
+        for name in ('clean', 'changed', 'busy', 'deleted'):
+            path = stable.with_name(f'{stable.name}-{name}')
+            self.git('worktree', 'add', '-q', '--detach', str(path), 'main')
+            self.git('worktree', 'lock', '--reason', 'active land train interrupted', str(path))
+            target = build.default_target(path, self.root/'builds')
+            target.mkdir(parents=True)
+            (target/'.unbound-source-root').write_text(f'{path}\n')
+            left[name] = (path, target)
+        (left['changed'][0]/'keep.txt').write_text('inspect me\n')
+        shutil.rmtree(left['deleted'][0])  # removed by hand: only git's record and the target remain
+        busy = left['busy'][0]/'native'
+        self.assertEqual(self.land_train('second', TRAIN_LIVE_PATHS=str(busy)), stable)
+        for name in ('clean', 'deleted'):
+            self.assertFalse(left[name][0].exists() or left[name][1].exists(), name)
+            self.assertNotIn(left[name][0], self.integration_worktrees())
+        for name in ('changed', 'busy'):
+            path, target = left[name]
+            self.assertTrue(path.exists() and target.exists(), name)
+            self.assertEqual(self.integration_worktrees()[path], 'active land train interrupted')
+        self.assertEqual((left['changed'][0]/'keep.txt').read_text(), 'inspect me\n')
 
     def test_work_added_while_gating_is_retained_and_the_branch_is_rejected(self):
         first = self.branch('first', {'a.txt': 'ok'})

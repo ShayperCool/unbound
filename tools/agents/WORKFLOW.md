@@ -193,8 +193,12 @@ Use the current tooling: processes started before a tooling update retain their 
 Rebase and restart a waiting caller to adopt a new queue protocol.
 
 The lock holder takes all queued branches for one repository in registration order. A train
-with several branches rebases them in a temporary integration checkout beside the slots and
-build targets. A branch with a rebase conflict or a refused oracle change is rejected on its
+with several branches rebases them in an integration checkout beside the slots and build
+targets. Trains reuse one locked integration checkout at a stable path, so its build target stays
+warm; it stays registered and locked between trains. When it is changed or a live process still
+uses it (a child of an interrupted gate), the train uses a transient checkout and removes it and
+its build target when it finishes; the next train also removes clean, unused transient checkouts
+that interrupted trains left behind, with their targets. A branch with a rebase conflict or a refused oracle change is rejected on its
 own. Each branch gets its own oracle guard, so one branch's trailer cannot authorize another
 branch's changes.
 
@@ -261,7 +265,7 @@ Caller locks identify live requests without depending on reusable process IDs. A
 changes its head or authored files while queued is rejected without discarding its work.
 Prepared results and publication receipts are saved before main advances. Publication survives
 completed caller results, so a later lock holder can recover the log and launch a missed push.
-An interrupted push can be replayed safely. Temporary integration checkouts are locked while active.
+An interrupted push can be replayed safely. Integration checkouts are locked.
 An interrupted or changed checkout is retained, with its location reported. Inspect it before
 unlocking or removing it; normal cleanup never forces removal. Old callers cannot join a new
 train until restarted with the updated tooling.

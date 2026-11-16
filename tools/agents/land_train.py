@@ -14,6 +14,7 @@ import uuid
 
 POLL_SECONDS = 0.5
 BUILD_ENVIRONMENT = ('CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'UNBOUND_BUILD_ROOT')
+IDLE_REASON = 'land train integration worktree, idle'
 
 
 class Queue:
@@ -96,26 +97,132 @@ class Queue:
 
 
 class Workspace:
+    """The checkout a train builds and gates in.
+
+    Trains reuse one locked integration worktree at a stable path, so its build target
+    (tools/build.py: one per checkout path) and its ignored caches stay warm from train to train.
+    A train that cannot use it (changed, or still used by a live process such as a child of an
+    interrupted gate) gets a transient checkout, which it removes together with its target."""
+
     def __init__(self, train, repo, base, original=None):
         self.train, self.repo, self.base = train, repo, base
         self.original = original
         self.path = Path(original) if original else None
+        self.transient = False
         self.owned = set()
         self.refs = []
+        self.build_roots = set()
+        self.live = None
+
+    def stable_path(self):
+        key = hashlib.sha256(self.repo.encode()).hexdigest()[:12]
+        return self.train.api.integration_root().resolve()/f'train-worktree-{key}'
+
+    def registered(self):
+        """{path: lock reason or None} for every worktree of the repository."""
+        found, current = {}, None
+        for line in self.train.git('worktree', 'list', '--porcelain').splitlines():
+            if line.startswith('worktree '):
+                current = Path(line[len('worktree '):]).resolve()
+                found[current] = None
+            elif current is not None and (line == 'locked' or line.startswith('locked ')):
+                found[current] = line[len('locked '):] if line.startswith('locked ') else ''
+        return found
+
+    def in_use(self, path):
+        """Whether a live process holds a path inside `path`; unknown counts as in use."""
+        if self.live is None:
+            try:
+                self.live = set(self.train.api.live_process_paths())
+            except OSError as error:
+                print(f'land: cannot inspect live processes ({error}); not reusing integration worktrees',
+                      file=sys.stderr)
+                self.live = False
+        return self.live is False or self.train.api.inside_any(path, self.live)
+
+    def idle(self, path):
+        """A registered checkout without changes that no live process uses."""
+        api = self.train.api
+        try:
+            return (not self.in_use(path) and os.path.lexists(path/'.git') and not api.changed_paths(path)
+                    and not api.hidden_index_paths(path))
+        except SystemExit:
+            return False
+
+    def relock(self, path, reason, locked):
+        if locked is not None:
+            self.train.git('worktree', 'unlock', str(path))
+        self.train.git('worktree', 'lock', '--reason', reason, str(path))
 
     def create(self):
-        key = hashlib.sha256(self.repo.encode()).hexdigest()[:12]
-        root = self.train.api.integration_root().resolve()
-        root.mkdir(parents=True, exist_ok=True)
-        path = root/f'train-worktree-{key}'
-        if os.path.lexists(path):
-            # An interrupted gate can still own children or uncommitted work here.
-            # Leave it intact and give this train a fresh checkout.
-            path = path.with_name(path.name+'-'+uuid.uuid4().hex[:12])
-        self.train.git('worktree', 'add', '--quiet', '--detach', str(path), self.base)
-        self.path = path
-        self.train.git('worktree', 'lock', '--reason', 'active land train '+self.train.id, str(path))
+        stable = self.stable_path()
+        stable.parent.mkdir(parents=True, exist_ok=True)
+        worktrees = self.registered()
+        self.reclaim(stable, worktrees)
+        if stable in worktrees and self.idle(stable):
+            self.relock(stable, 'active land train '+self.train.id, worktrees[stable])
+            self.train.git('switch', '--quiet', '--detach', self.base, cwd=stable)
+            self.path, self.transient = stable, False
+        else:
+            path = stable
+            if os.path.lexists(path):
+                # An interrupted gate can still own children or uncommitted work here.
+                # Leave it intact and give this train a transient checkout.
+                print(f'land: integration worktree {stable} is changed or in use; '
+                      'this train builds in a transient checkout (a cold build)', file=sys.stderr)
+                path = path.with_name(path.name+'-'+uuid.uuid4().hex[:12])
+            self.train.git('worktree', 'add', '--quiet', '--detach', str(path), self.base)
+            self.train.git('worktree', 'lock', '--reason', 'active land train '+self.train.id, str(path))
+            self.path, self.transient = path, path != stable
         self.owned.add(self.base)
+
+    def reclaim(self, stable, worktrees):
+        """Remove transient checkouts that interrupted trains left behind, with their targets, and
+        records of integration checkouts whose directory is gone. The land lock is held, so no
+        other train uses them; a changed one stays for inspection."""
+        ours = [path for path in worktrees if path.parent == stable.parent
+                and (path == stable or path.name.startswith(stable.name+'-'))]
+        missing = [path for path in ours if not os.path.lexists(path)]
+        for path in missing:
+            if worktrees[path] is not None:
+                self.train.git('worktree', 'unlock', str(path))
+        if missing:
+            self.train.git('worktree', 'prune')
+        for path in ours:
+            if path in missing:
+                del worktrees[path]
+                if path != stable:
+                    self.remove_target(path)
+                continue
+            if path == stable:
+                continue
+            try:
+                if not self.idle(path):
+                    raise ValueError('changed or in use')
+                if worktrees[path] is not None:
+                    self.train.git('worktree', 'unlock', str(path))
+                self.train.git('worktree', 'remove', str(path))
+            except (SystemExit, ValueError) as error:
+                reason = error if isinstance(error, ValueError) else 'removal failed'
+                print(f'land: retaining integration worktree {path} ({reason})', file=sys.stderr)
+                continue
+            del worktrees[path]
+            self.remove_target(path)
+            print(f'land: removed transient integration worktree {path} and its build target', file=sys.stderr)
+
+    def remove_target(self, path):
+        """Delete the private build target of a removed checkout (tools/build.py)."""
+        import build
+        import shutil
+        for root in {*self.build_roots, build.build_root()}:
+            target = build.default_target(path, root)
+            marker = target/'.unbound-source-root'
+            try:
+                owner = marker.read_text().strip()
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            if owner == str(path):
+                shutil.rmtree(target)
 
     def checkout(self, revision):
         if self.path is None:
@@ -141,14 +248,18 @@ class Workspace:
         if not self.original and self.path is not None:
             from runtime_snapshot import finish_task
             finish_task(self.path, repo=self.repo)
-        if not self.original and self.path is not None:
             try:
                 self.train.api.require_clean(self.path, 'integration worktree')
                 head = self.train.git('rev-parse', 'HEAD', cwd=self.path)
                 if head not in self.owned:
                     raise ValueError('checkout acquired an independent commit')
                 self.train.git('worktree', 'unlock', str(self.path))
-                self.train.git('worktree', 'remove', str(self.path))
+                if self.transient:
+                    self.train.git('worktree', 'remove', str(self.path))
+                    self.remove_target(self.path)
+                else:
+                    # Stays registered and locked, so reap keeps it and its warm target.
+                    self.train.git('worktree', 'lock', '--reason', IDLE_REASON, str(self.path))
             except (SystemExit, ValueError):
                 print(f'land: retaining integration worktree {self.path}', file=sys.stderr)
         for ref in self.refs:
@@ -403,6 +514,8 @@ class LandTrain:
             for key in ('CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'UNBOUND_MANAGED_DIR',
                         'UNBOUND_RUNTIME', 'UNBOUND', 'UNBOUND_CLI'):
                 environment.pop(key, None)
+            import build
+            workspace.build_roots.add(build.build_root(environment))
         try:
             runtime = self.api.run_gate(workspace.path, base, [item[0] for item in probes],
                                         any(item['full'] for item in selected), 'train-'+self.id[:12],
