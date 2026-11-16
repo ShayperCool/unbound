@@ -55,7 +55,9 @@ namespace UnityEditor
         /// (no realtime GI from that bake). Unbound answers and sends the same then and writes no
         /// lighting data (which later sessions would use: said once). A bake in Edit mode (also
         /// from ExitingEditMode or while Play mode is requested) is not implemented: it warns and
-        /// answers false.
+        /// answers false. Entering Play mode from Edit mode without a domain reload (`unbound
+        /// test`), [InitializeOnEnterPlayMode] code runs with isPlaying already true and gets the
+        /// Play mode answer (the Editor's is not measured there).
         /// </summary>
         public static bool Bake()
         {

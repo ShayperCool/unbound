@@ -6,6 +6,39 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    /// <summary>Editor code that bakes from the domain load callbacks (only while a test asks).</summary>
+    static class BakeFromDomainLoad
+    {
+        internal static bool Active;
+        internal static readonly List<string> Results = new List<string>();
+
+        static void Bake(string from)
+        {
+            if (!Active) return;
+            var events = "";
+            Action started = () => events += "S", completed = () => events += "C";
+            Lightmapping.bakeStarted += started;
+            Lightmapping.bakeCompleted += completed;
+            try { Results.Add(from + ":" + Lightmapping.Bake() + ":" + events); }
+            finally
+            {
+                Lightmapping.bakeStarted -= started;
+                Lightmapping.bakeCompleted -= completed;
+            }
+        }
+
+        [InitializeOnLoadMethod]
+        static void OnLoad() => Bake("load");
+
+        [UnityEditor.Callbacks.DidReloadScripts]
+        static void OnReload() => Bake("reload");
+
+        internal static void OnPlayModeState(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.ExitingEditMode) Bake("exiting");
+        }
+    }
+
     /// <summary>Lightmapping.Bake and BakeAsync from scripts in each phase of the Editor (Scripting
     /// API 6000.0; measured in the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
     /// `script_bake.py`): refused with a warning in Play mode, a bake with its events as Play mode
@@ -128,6 +161,43 @@ namespace UnityEngine.Tests
                 finally { EditorSession.EndEnteringPlayMode(); }
             });
             Assert.Equal("", exiting.Events);
+            Assert.Contains(exiting.Logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
+        }
+
+        [Fact]
+        public void TheDomainLoadForPlayModeBakesAndExitingEditModeDoesNot()
+        {
+            // The domain loads for Play mode with this assembly's editor code: its load callbacks
+            // bake; ExitingEditMode, sent between them, is an Edit-mode bake (not made).
+            var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
+                .GetField("s_Assemblies", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+            var own = typeof(BakeFromDomainLoad).Assembly;
+            bool added = !assemblies.Contains(own);
+            bool wasPlaying = EditorSession.IsPlaying;
+            var logs = new Logs();
+            var handler = Debug.unityLogger.logHandler;
+            if (added) assemblies.Add(own);
+            BakeFromDomainLoad.Results.Clear();
+            BakeFromDomainLoad.Active = true;
+            EditorApplication.playModeStateChanged += BakeFromDomainLoad.OnPlayModeState;
+            try
+            {
+                Debug.unityLogger.logHandler = logs;
+                EditorSession.BeginEnteringPlayMode();
+                EditorInitialization.LoadEditorDomain(enteringPlayMode: true);
+            }
+            finally
+            {
+                EditorSession.EndEnteringPlayMode();
+                EditorSession.IsPlaying = wasPlaying;
+                Debug.unityLogger.logHandler = handler;
+                EditorApplication.playModeStateChanged -= BakeFromDomainLoad.OnPlayModeState;
+                BakeFromDomainLoad.Active = false;
+                if (added) assemblies.Remove(own);
+            }
+            Assert.Equal(new[] { "load:True:SC", "exiting:False:", "reload:True:SC" }, BakeFromDomainLoad.Results);
+            Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Edit mode is not implemented"));
+            Assert.False(EditorInitialization.PlayModeDomainLoading);
         }
 
         [Fact]
