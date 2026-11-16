@@ -257,7 +257,7 @@ fn typed_scalar_buffers_as_structured(source: &str) -> String {
         let start = found + at;
         at = start + "Buffer".len();
         // `RWBuffer` or `Buffer`, as a whole word.
-        let word = if start >= 2 && &source[start - 2..start] == "RW" {
+        let word = if start >= 2 && &bytes[start - 2..start] == b"RW" {
             start - 2
         } else {
             start
