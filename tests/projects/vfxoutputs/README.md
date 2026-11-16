@@ -96,9 +96,8 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
 - `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` made after it
   and two units farther from the camera): the farther drawn first, against the order they were
   made in.
-- `late` (frame 10): made in frame 6, after the others' draws began: its outputs take more entries
-  of indirect arguments than there were, which are made anew, and every effect's arguments with
-  them (the images of the others after frame 6 show it).
+- `late` (frame 10): made in frame 6, after the others' draws began: its outputs take entries of
+  indirect arguments of their own (see "Not covered" for a renewal of the entries' buffer).
 - `away` (frames 10, 19, 30): the camera looks away from the effect until frame 20, then at it: the
   effect is culled (its renderer is not visible, it does not simulate and asks for no alive count),
   then drawn. Its alive count is -1 until the first count read back after it is seen.
@@ -136,10 +135,14 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   here can tell, as a particle out of a camera's view is not seen either way. (Its shadow would
   be: an output of this kind that casts shadows is not measured, here or in
   `tests/projects/vfxlit`, whose casters draw themselves.)
-- `late` makes the entries of indirect arguments outgrow their first buffer (16 entries: the
-  stages hold 15 before frame 6 and 18 after); a probe with more stages before frame 6 would no
-  longer show it.
+- The arguments' buffer made anew while effects draw: the stages hold 27 entries before frame 6
+  (more than the first buffer's 16, made anew at the first fill, before any draw took it), and
+  `late` adds three, which fit: what is collected before such a renewal keeps the outgrown buffer
+  until a later frame, and the arguments are filled again, unmeasured here.
 - Alpha-blended outputs with sorting off are drawn but not measured here (their order shows).
+- Triangles and octagons sorted, through a list made at each step or for each camera, lit, or
+  through an indirect buffer beyond 8192 octagons; octagons cropped by more than one half; cull
+  modes other than the output's default.
 - An effect made while a camera collects its draws (its entries outgrow the arguments' buffer
   after other draws took it): Unbound keeps the outgrown buffer until the next frame; no control
   makes one.
