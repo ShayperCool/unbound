@@ -217,8 +217,10 @@ glows until it is made dark): `room-intensity` (point light intensity 4), `room-
 `room-albedo-call` (the red wall blue, with UpdateGIMaterials), `room-spot` (the spot light
 alone), `room-directional` (a directional light alone) and, with the panel dark, `room-sky-only`
 and `room-sky-only-intensity` (the procedural sky at ambient intensities 1 and 2) and
-`room-envdata` (a script's cube). These rows share the linear set's names but follow this
-sequence's own states. Recorded while the machine was building, two captures of this set
+`room-envdata` (a script's cube); then, the environment back to the flat ambient color,
+`RoomDirectional` as the linear sequence first records it: `roomdirectional-base`,
+`roomdirectional-moved` and `roomdirectional-dim`. These rows share the linear set's names but
+follow this sequence's own states. Recorded while the machine was building, two captures of this set
 differed from the two made on an idle machine: one in `room-gradient` (1607 values, up to 0.04;
 the reference holds that case since before), the other in `room-sky-only` (1988 values, up to
 0.001), `room-sky-only-intensity` (16, up to 0.0005) and `room-envdata` (1, 0.0001). The two
@@ -236,7 +238,13 @@ alone at intensity 30, the panel's emission black), `pipeline-spot-inner` (its i
 instead of 21.8), `pipeline-directional` (a directional light with shadows), then the
 environment alone: `pipeline-color` (an ambient
 color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its ambient intensity
-2). That set is its own reference, `Reference/unity-<version>/urp`.
+2); then, the environment back to the flat ambient color, `RoomDirectional`:
+`roomdirectional-base`, `roomdirectional-moved` and `roomdirectional-dim` (directional
+lightmaps under the pipeline). That set is its own reference, `Reference/unity-<version>/urp`.
+The directional cases of both sets come from two captures each that agree in them; the gamma
+pair's earlier cases differ from each other and from the reference by up to 0.002
+(`room-base`, `room-moved`, `room-sky-only`, `room-sky-only-intensity`, `room-envdata`; no
+value outside the comparator's tolerance), as earlier gamma captures did, and stay as they were.
 
 With `--bake` the capture opens `RoomBake` instead (`run.py setup-bake` adds it and
 `RoomBakeLoaded`: the Room saved without lighting data, its LightmapSettings asking for a bake

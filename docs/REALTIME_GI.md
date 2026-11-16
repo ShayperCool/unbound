@@ -205,9 +205,9 @@ in the sky cases, and no light probe or ambient probe value is outside it. Not m
 pipelines' delegates (the High Definition Render Pipeline's), falloff types other than the
 inverse-squared one under a pipeline (each is measured with a script's delegate in the built-in
 pipeline, below), area lights (baked only in the Universal Render Pipeline; a light the delegate
-gives as one adds nothing, with a warning), directional lightmaps and several systems under a
-pipeline. A delegate a script registers in the built-in pipeline is taken the same way
-(`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off; the spot
+gives as one adds nothing, with a warning) and several systems under a pipeline (its
+directional lightmaps are measured, [Directionality](#directionality)). A delegate a script
+registers in the built-in pipeline is taken the same way (`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off; the spot
 light is off in those cases, so a spot light's falloff types other than the legacy one are not
 measured). A delegate that throws leaves the frame without lights, with a warning.
 
@@ -281,8 +281,12 @@ the atlas has, one that stops being directional draws without directionality), a
 several systems or atlases (the probe's has one system), a renderer with a baked and a realtime
 lightmap of which only one has a direction (the other then reads a direction that leaves its
 light as it is: 1/2 in every channel), frames in which the directionality matters (none of the
-probe's materials has a normal map, so its frames show the lightmap alone), directionality under
-a scriptable render pipeline, and directionality in gamma-space projects.
+probe's materials has a normal map, so its frames show the lightmap alone), and directionality
+under other render pipelines than the Universal one. In a gamma-space project and under the
+Universal Render Pipeline the same rules hold (`--color-space gamma` and `--pipeline urp`,
+`roomdirectional-base`, `-moved` and `-dim` after their sequences: in gamma no value more than
+2.5/255 from the Editor's, 0.2/255 on average, and the frames 0.1 to 0.6/255 apart on average;
+under the pipeline 5 of `roomdirectional-base`'s values 3/255 off, none of the others').
 
 ## Light probes
 
@@ -1086,8 +1090,9 @@ measure):
   `room-gradient-intensity`, the light delegate cases (`room-delegate-*`, `lights-dilatedrange`),
   the baked light probes record (`room-lightprobes`), the cases without UpdateGIMaterials or
   UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
-  scenes), directionality, and a render pipeline; and a device other than the NVIDIA OpenGL Core
-  one both the Editor and Unbound ran on.
+  scenes but the directional one's first three cases), a render pipeline in a gamma-space
+  project; and a device other than the NVIDIA OpenGL Core one both the Editor and Unbound ran
+  on.
 - Realtime lightmap indices of lighting data whose scene's Lighting Settings turn realtime GI
   off, and a script's index on a renderer of a scene with realtime GI that points at another
   system's atlas: unmeasured (Unbound draws without a realtime lightmap and warns).
