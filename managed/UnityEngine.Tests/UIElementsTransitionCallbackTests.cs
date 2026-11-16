@@ -13,7 +13,7 @@ namespace UnityEngine.Tests
     [Collection("UXML custom controls")]
     public class UIElementsTransitionCallbackTests
     {
-        sealed class ClockPanel : IDisposable
+        internal sealed class ClockPanel : IDisposable
         {
             static readonly BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
             static readonly Type Type = typeof(VisualElement).Assembly.GetType("UnityEngine.UIElements.Panel");

@@ -8,8 +8,24 @@ namespace Unbound.UIElements
 {
     // Target values stay separate from the presented style. Restyling an ancestor must not restart
     // a child's transition, and interruption starts at the last presented value, not its old target.
+    // How each kind of value interpolates, which size a length converts its unit against and the
+    // usage hint a starting transition adds match the Unity 6000.0.71f1 Editor
+    // (tests/projects/uitransitionkinds).
     internal sealed class StyleTransitions
     {
+        /// <summary>What a length's percentage is of, when a transition goes between pixels and percent.</summary>
+        enum LengthBasis
+        {
+            /// <summary>The value never converts: a transition between units does not run.</summary>
+            None,
+            ParentWidth,
+            ParentHeight,
+            /// <summary>The parent's height when it lays out in a column, else its width (flex-basis).</summary>
+            ParentMainAxis,
+            OwnWidth,
+            /// <summary>The element's own width for x, its height for y (translate, transform-origin).</summary>
+            OwnSize,
+        }
         sealed class Property
         {
             internal StylePropertyId id;
@@ -18,6 +34,9 @@ namespace Unbound.UIElements
             internal Func<ComputedValues, object> get;
             internal Action<ComputedValues, object> set;
             internal Func<object, object, float, object> interpolate;
+            internal LengthBasis basis;
+            /// <summary>Added to the element's usage hints when a transition of this property starts.</summary>
+            internal UsageHints hint;
         }
         sealed class Animation
         {
@@ -38,8 +57,12 @@ namespace Unbound.UIElements
         internal bool active => running.Count > 0 || pending.Count > 0;
         internal StyleTransitions(VisualElement owner) { this.owner = owner; }
 
-        static Property P<T>(string name, Func<ComputedValues, T> get, Action<ComputedValues, T> set, Func<T, T, float, T> lerp)
-            => new Property { name = name, type = typeof(T), id = StyleProperties.IdOf(name), get = s => get(s), set = (s, v) => set(s, (T)v), interpolate = (a, b, t) => lerp((T)a, (T)b, t) };
+        static Property P<T>(string name, Func<ComputedValues, T> get, Action<ComputedValues, T> set, Func<T, T, float, T> lerp,
+            LengthBasis basis = LengthBasis.None, UsageHints hint = UsageHints.None)
+            => new Property { name = name, type = typeof(T), id = StyleProperties.IdOf(name), get = s => get(s), set = (s, v) => set(s, (T)v),
+                interpolate = (a, b, t) => lerp((T)a, (T)b, t), basis = basis, hint = hint };
+        const LengthBasis PW = LengthBasis.ParentWidth, PH = LengthBasis.ParentHeight, OW = LengthBasis.OwnWidth, OS = LengthBasis.OwnSize;
+        const UsageHints DynamicColor = UsageHints.DynamicColor, DynamicTransform = UsageHints.DynamicTransform;
         static float Lerp(float a, float b, float t) => a + (b - a) * t;
         static Length Lerp(Length a, Length b, float t) => new Length(Lerp(a.value, b.value, t), b.unit);
         static Color Lerp(Color a, Color b, float t) => new Color(Lerp(a.r, b.r, t), Lerp(a.g, b.g, t), Lerp(a.b, b.b, t), Lerp(a.a, b.a, t));
@@ -53,59 +76,60 @@ namespace Unbound.UIElements
             P<Align>("align-content", s => s.alignContent, (s, v) => s.alignContent = v, Discrete),
             P<Align>("align-items", s => s.alignItems, (s, v) => s.alignItems = v, Discrete),
             P<Align>("align-self", s => s.alignSelf, (s, v) => s.alignSelf = v, Discrete),
-            P<Color>("background-color", s => s.backgroundColor, (s, v) => s.backgroundColor = v, Lerp),
+            P<Color>("background-color", s => s.backgroundColor, (s, v) => s.backgroundColor = v, Lerp, hint: DynamicColor),
             P<Background>("background-image", s => s.backgroundImage, (s, v) => s.backgroundImage = v, Discrete),
-            P<BackgroundPosition>("background-position-x", s => s.backgroundPositionX, (s, v) => s.backgroundPositionX = v, (a, b, t) => new BackgroundPosition(t < .5f ? a.keyword : b.keyword, Lerp(a.offset, b.offset, t))),
-            P<BackgroundPosition>("background-position-y", s => s.backgroundPositionY, (s, v) => s.backgroundPositionY = v, (a, b, t) => new BackgroundPosition(t < .5f ? a.keyword : b.keyword, Lerp(a.offset, b.offset, t))),
+            P<BackgroundPosition>("background-position-x", s => s.backgroundPositionX, (s, v) => s.backgroundPositionX = v, Discrete),
+            P<BackgroundPosition>("background-position-y", s => s.backgroundPositionY, (s, v) => s.backgroundPositionY = v, Discrete),
             P<BackgroundRepeat>("background-repeat", s => s.backgroundRepeat, (s, v) => s.backgroundRepeat = v, Discrete),
             P<BackgroundSize>("background-size", s => s.backgroundSize, (s, v) => s.backgroundSize = v, (a, b, t) => new BackgroundSize(Lerp(a.x, b.x, t), Lerp(a.y, b.y, t))),
-            P<Color>("border-bottom-color", s => s.borderBottomColor, (s, v) => s.borderBottomColor = v, Lerp),
-            P<Length>("border-bottom-left-radius", s => s.borderBottomLeftRadius, (s, v) => s.borderBottomLeftRadius = v, Lerp),
-            P<Length>("border-bottom-right-radius", s => s.borderBottomRightRadius, (s, v) => s.borderBottomRightRadius = v, Lerp),
+            P<Color>("border-bottom-color", s => s.borderBottomColor, (s, v) => s.borderBottomColor = v, Lerp, hint: DynamicColor),
+            P<Length>("border-bottom-left-radius", s => s.borderBottomLeftRadius, (s, v) => s.borderBottomLeftRadius = v, Lerp, OW),
+            P<Length>("border-bottom-right-radius", s => s.borderBottomRightRadius, (s, v) => s.borderBottomRightRadius = v, Lerp, OW),
             P<float>("border-bottom-width", s => s.borderBottomWidth, (s, v) => s.borderBottomWidth = v, Lerp),
-            P<Color>("border-left-color", s => s.borderLeftColor, (s, v) => s.borderLeftColor = v, Lerp),
+            P<Color>("border-left-color", s => s.borderLeftColor, (s, v) => s.borderLeftColor = v, Lerp, hint: DynamicColor),
             P<float>("border-left-width", s => s.borderLeftWidth, (s, v) => s.borderLeftWidth = v, Lerp),
-            P<Color>("border-right-color", s => s.borderRightColor, (s, v) => s.borderRightColor = v, Lerp),
+            P<Color>("border-right-color", s => s.borderRightColor, (s, v) => s.borderRightColor = v, Lerp, hint: DynamicColor),
             P<float>("border-right-width", s => s.borderRightWidth, (s, v) => s.borderRightWidth = v, Lerp),
-            P<Color>("border-top-color", s => s.borderTopColor, (s, v) => s.borderTopColor = v, Lerp),
-            P<Length>("border-top-left-radius", s => s.borderTopLeftRadius, (s, v) => s.borderTopLeftRadius = v, Lerp),
-            P<Length>("border-top-right-radius", s => s.borderTopRightRadius, (s, v) => s.borderTopRightRadius = v, Lerp),
+            P<Color>("border-top-color", s => s.borderTopColor, (s, v) => s.borderTopColor = v, Lerp, hint: DynamicColor),
+            P<Length>("border-top-left-radius", s => s.borderTopLeftRadius, (s, v) => s.borderTopLeftRadius = v, Lerp, OW),
+            P<Length>("border-top-right-radius", s => s.borderTopRightRadius, (s, v) => s.borderTopRightRadius = v, Lerp, OW),
             P<float>("border-top-width", s => s.borderTopWidth, (s, v) => s.borderTopWidth = v, Lerp),
-            P<Length>("bottom", s => s.bottom, (s, v) => s.bottom = v, Lerp),
-            P<Color>("color", s => s.color, (s, v) => s.color = v, Lerp),
-            P<Length>("flex-basis", s => s.flexBasis, (s, v) => s.flexBasis = v, Lerp),
+            P<Length>("bottom", s => s.bottom, (s, v) => s.bottom = v, Lerp, PH),
+            P<Color>("color", s => s.color, (s, v) => s.color = v, Lerp, hint: DynamicColor),
+            P<Length>("flex-basis", s => s.flexBasis, (s, v) => s.flexBasis = v, Lerp, LengthBasis.ParentMainAxis),
             P<FlexDirection>("flex-direction", s => s.flexDirection, (s, v) => s.flexDirection = v, Discrete),
             P<float>("flex-grow", s => s.flexGrow, (s, v) => s.flexGrow = v, Lerp),
             P<float>("flex-shrink", s => s.flexShrink, (s, v) => s.flexShrink = v, Lerp),
             P<Wrap>("flex-wrap", s => s.flexWrap, (s, v) => s.flexWrap = v, Discrete),
             P<Length>("font-size", s => s.fontSize, (s, v) => s.fontSize = v, Lerp),
-            P<Length>("height", s => s.height, (s, v) => s.height = v, Lerp),
+            P<Length>("height", s => s.height, (s, v) => s.height = v, Lerp, PH),
             P<Justify>("justify-content", s => s.justifyContent, (s, v) => s.justifyContent = v, Discrete),
-            P<Length>("left", s => s.left, (s, v) => s.left = v, Lerp),
+            P<Length>("left", s => s.left, (s, v) => s.left = v, Lerp, PW),
             P<Length>("letter-spacing", s => s.letterSpacing, (s, v) => s.letterSpacing = v, Lerp),
-            P<Length>("margin-bottom", s => s.marginBottom, (s, v) => s.marginBottom = v, Lerp),
-            P<Length>("margin-left", s => s.marginLeft, (s, v) => s.marginLeft = v, Lerp),
-            P<Length>("margin-right", s => s.marginRight, (s, v) => s.marginRight = v, Lerp),
-            P<Length>("margin-top", s => s.marginTop, (s, v) => s.marginTop = v, Lerp),
-            P<Length>("max-height", s => s.maxHeight, (s, v) => s.maxHeight = v, Lerp),
-            P<Length>("max-width", s => s.maxWidth, (s, v) => s.maxWidth = v, Lerp),
-            P<Length>("min-height", s => s.minHeight, (s, v) => s.minHeight = v, Lerp),
-            P<Length>("min-width", s => s.minWidth, (s, v) => s.minWidth = v, Lerp),
+            P<Length>("margin-bottom", s => s.marginBottom, (s, v) => s.marginBottom = v, Lerp, PW),
+            P<Length>("margin-left", s => s.marginLeft, (s, v) => s.marginLeft = v, Lerp, PW),
+            P<Length>("margin-right", s => s.marginRight, (s, v) => s.marginRight = v, Lerp, PW),
+            P<Length>("margin-top", s => s.marginTop, (s, v) => s.marginTop = v, Lerp, PW),
+            P<Length>("max-height", s => s.maxHeight, (s, v) => s.maxHeight = v, Lerp, PH),
+            P<Length>("max-width", s => s.maxWidth, (s, v) => s.maxWidth = v, Lerp, PW),
+            P<Length>("min-height", s => s.minHeight, (s, v) => s.minHeight = v, Lerp, PH),
+            P<Length>("min-width", s => s.minWidth, (s, v) => s.minWidth = v, Lerp, PW),
             P<float>("opacity", s => s.opacity, (s, v) => s.opacity = v, Lerp),
             P<OverflowInternal>("overflow", s => s.overflow, (s, v) => s.overflow = v, Discrete),
-            P<Length>("padding-bottom", s => s.paddingBottom, (s, v) => s.paddingBottom = v, Lerp),
-            P<Length>("padding-left", s => s.paddingLeft, (s, v) => s.paddingLeft = v, Lerp),
-            P<Length>("padding-right", s => s.paddingRight, (s, v) => s.paddingRight = v, Lerp),
-            P<Length>("padding-top", s => s.paddingTop, (s, v) => s.paddingTop = v, Lerp),
+            P<Length>("padding-bottom", s => s.paddingBottom, (s, v) => s.paddingBottom = v, Lerp, PW),
+            P<Length>("padding-left", s => s.paddingLeft, (s, v) => s.paddingLeft = v, Lerp, PW),
+            P<Length>("padding-right", s => s.paddingRight, (s, v) => s.paddingRight = v, Lerp, PW),
+            P<Length>("padding-top", s => s.paddingTop, (s, v) => s.paddingTop = v, Lerp, PW),
             P<Position>("position", s => s.position, (s, v) => s.position = v, Discrete),
-            P<Length>("right", s => s.right, (s, v) => s.right = v, Lerp),
-            P<Rotate>("rotate", s => s.rotate, (s, v) => s.rotate = v, (a, b, t) => new Rotate(new Angle(Lerp(a.angle.ToDegrees(), b.angle.ToDegrees(), t)), Lerp(a.axis, b.axis, t))),
-            P<Scale>("scale", s => s.scale, (s, v) => s.scale = v, (a, b, t) => new Scale(Lerp(a.value, b.value, t))),
+            P<Length>("right", s => s.right, (s, v) => s.right = v, Lerp, PW),
+            P<Rotate>("rotate", s => s.rotate, (s, v) => s.rotate = v, (a, b, t) => new Rotate(new Angle(Lerp(a.angle.ToDegrees(), b.angle.ToDegrees(), t))), hint: DynamicTransform),
+            P<Scale>("scale", s => s.scale, (s, v) => s.scale = v, (a, b, t) => new Scale(Lerp(a.value, b.value, t)), hint: DynamicTransform),
             P<TextShadow>("text-shadow", s => s.textShadow, (s, v) => s.textShadow = v, (a, b, t) => new TextShadow { offset = Vector2.LerpUnclamped(a.offset, b.offset, t), blurRadius = Lerp(a.blurRadius, b.blurRadius, t), color = Lerp(a.color, b.color, t) }),
-            P<Length>("top", s => s.top, (s, v) => s.top = v, Lerp),
-            P<TransformOrigin>("transform-origin", s => s.transformOrigin, (s, v) => s.transformOrigin = v, (a, b, t) => new TransformOrigin(Lerp(a.x, b.x, t), Lerp(a.y, b.y, t), Lerp(a.z, b.z, t))),
-            P<Translate>("translate", s => s.translate, (s, v) => s.translate = v, (a, b, t) => new Translate(Lerp(a.x, b.x, t), Lerp(a.y, b.y, t), Lerp(a.z, b.z, t))),
-            P<Color>("-unity-background-image-tint-color", s => s.unityBackgroundImageTintColor, (s, v) => s.unityBackgroundImageTintColor = v, Lerp),
+            P<TextOverflow>("text-overflow", s => s.textOverflow, (s, v) => s.textOverflow = v, Discrete),
+            P<Length>("top", s => s.top, (s, v) => s.top = v, Lerp, PH),
+            P<TransformOrigin>("transform-origin", s => s.transformOrigin, (s, v) => s.transformOrigin = v, (a, b, t) => new TransformOrigin(Lerp(a.x, b.x, t), Lerp(a.y, b.y, t), Mathf.Lerp(a.z, b.z, t)), OS, DynamicTransform),
+            P<Translate>("translate", s => s.translate, (s, v) => s.translate = v, (a, b, t) => new Translate(Lerp(a.x, b.x, t), Lerp(a.y, b.y, t), Mathf.Lerp(a.z, b.z, t)), OS, DynamicTransform),
+            P<Color>("-unity-background-image-tint-color", s => s.unityBackgroundImageTintColor, (s, v) => s.unityBackgroundImageTintColor = v, Lerp, hint: DynamicColor),
             P<Font>("-unity-font", s => s.unityFont, (s, v) => s.unityFont = v, Discrete),
             P<FontDefinition>("-unity-font-definition", s => s.unityFontDefinition, (s, v) => s.unityFontDefinition = v, Discrete),
             P<FontStyle>("-unity-font-style", s => s.unityFontStyleAndWeight, (s, v) => s.unityFontStyleAndWeight = v, Discrete),
@@ -122,7 +146,8 @@ namespace Unbound.UIElements
             P<float>("-unity-text-outline-width", s => s.unityTextOutlineWidth, (s, v) => s.unityTextOutlineWidth = v, Lerp),
             P<TextOverflowPosition>("-unity-text-overflow-position", s => s.unityTextOverflowPosition, (s, v) => s.unityTextOverflowPosition = v, Discrete),
             P<Visibility>("visibility", s => s.visibility, (s, v) => s.visibility = v, Discrete),
-            P<Length>("width", s => s.width, (s, v) => s.width = v, Lerp),
+            P<WhiteSpace>("white-space", s => s.whiteSpace, (s, v) => s.whiteSpace = v, Discrete),
+            P<Length>("width", s => s.width, (s, v) => s.width = v, Lerp, PW),
             P<Length>("word-spacing", s => s.wordSpacing, (s, v) => s.wordSpacing = v, Lerp),
         };
             Array.Sort(result, (a, b) => a.id.CompareTo(b.id));
@@ -198,6 +223,7 @@ namespace Unbound.UIElements
                     a.reversingStart = previous.to;
                 }
                 running[p.id] = a;
+                owner.usageHints |= p.hint;
                 owner.elementPanel.UaRegisterTransition(this, p.type);
                 Queue<TransitionRunEvent>(a, Math.Min(Math.Max(-a.delay, 0), Math.Max(0, a.duration)) / 1000d);
                 p.set(next, start);
@@ -207,34 +233,74 @@ namespace Unbound.UIElements
                     if (pending.ContainsKey(p.id)) owner.elementPanel.UaRegisterTransition(this, p.type);
             return next;
         }
-        static bool ConvertLength(ref Length a, Length b, float size)
+        /// <summary>The size a percentage of <paramref name="basis"/> is of (component 1 is y for
+        /// translate and transform-origin), or null when there is none.</summary>
+        float? BasisSize(LengthBasis basis, int component)
         {
-            if (a.IsAuto() || a.IsNone() || b.IsAuto() || b.IsNone()) return false;
-            if (a.unit == b.unit) return true;
-            if (float.IsNaN(size) || size == 0 && a.value != 0) return false;
-            a = new Length(a.value == 0 ? 0 : b.unit == LengthUnit.Percent ? a.value / size * 100 : a.value * size / 100, b.unit);
+            var parent = owner.hierarchy.parent;
+            switch (basis)
+            {
+                case LengthBasis.ParentWidth: return parent?.resolvedStyle.width;
+                case LengthBasis.ParentHeight: return parent?.resolvedStyle.height;
+                case LengthBasis.ParentMainAxis:
+                    if (parent == null) return null;
+                    var direction = parent.resolvedStyle.flexDirection;
+                    return direction == FlexDirection.Column || direction == FlexDirection.ColumnReverse ? parent.resolvedStyle.height : parent.resolvedStyle.width;
+                case LengthBasis.OwnWidth: return owner.resolvedStyle.width;
+                case LengthBasis.OwnSize: return component == 0 ? owner.resolvedStyle.width : owner.resolvedStyle.height;
+                default: return null;
+            }
+        }
+
+        /// <summary>Gives <paramref name="from"/> the unit of <paramref name="to"/>; false when the
+        /// transition cannot run (auto, none, NaN, or no size to convert against).</summary>
+        bool ConvertLength(ref Length from, Length to, LengthBasis basis, int component = 0)
+        {
+            if (from.IsAuto() || from.IsNone() || to.IsAuto() || to.IsNone()) return false;
+            if (float.IsNaN(from.value) || float.IsNaN(to.value)) return false;
+            if (from.unit == to.unit) return true;
+            if (to.unit == LengthUnit.Pixel)
+            {
+                if (Mathf.Approximately(from.value, 0))
+                {
+                    from = new Length(0, LengthUnit.Pixel);
+                    return true;
+                }
+                var size = BasisSize(basis, component);
+                if (!size.HasValue || !(size.Value >= 0)) return false;
+                from = new Length(from.value * size.Value / 100, LengthUnit.Pixel);
+                return true;
+            }
+            var percentOf = BasisSize(basis, component);
+            if (!percentOf.HasValue || !(percentOf.Value > 0)) return false;
+            from = new Length(from.value * 100 / percentOf.Value, LengthUnit.Percent);
             return true;
         }
+
         bool ConvertUnits(Property p, ref object from, object to)
         {
             if (from is Length a && to is Length b)
             {
-                bool vertical = p.name.Contains("height") || p.id == StylePropertyId.Top || p.id == StylePropertyId.Bottom;
-                float size = vertical ? owner.hierarchy.parent?.resolvedStyle.height ?? 0 : owner.hierarchy.parent?.resolvedStyle.width ?? 0;
-                if (!ConvertLength(ref a, b, size)) return false;
+                if (!ConvertLength(ref a, b, p.basis)) return false;
                 from = a;
             }
             else if (from is Translate ta && to is Translate tb)
             {
                 var x = ta.x; var y = ta.y;
-                if (!ConvertLength(ref x, tb.x, owner.resolvedStyle.width) || !ConvertLength(ref y, tb.y, owner.resolvedStyle.height)) return false;
+                if (!ConvertLength(ref x, tb.x, p.basis, 0) || !ConvertLength(ref y, tb.y, p.basis, 1)) return false;
                 from = new Translate(x, y, ta.z);
             }
             else if (from is TransformOrigin oa && to is TransformOrigin ob)
             {
                 var x = oa.x; var y = oa.y;
-                if (!ConvertLength(ref x, ob.x, owner.resolvedStyle.width) || !ConvertLength(ref y, ob.y, owner.resolvedStyle.height)) return false;
+                if (!ConvertLength(ref x, ob.x, p.basis, 0) || !ConvertLength(ref y, ob.y, p.basis, 1)) return false;
                 from = new TransformOrigin(x, y, oa.z);
+            }
+            else if (from is BackgroundSize sa && to is BackgroundSize sb)
+            {
+                var x = sa.x; var y = sa.y;
+                if (!ConvertLength(ref x, sb.x, p.basis, 0) || !ConvertLength(ref y, sb.y, p.basis, 1)) return false;
+                from = new BackgroundSize(x, y);
             }
             return true;
         }
