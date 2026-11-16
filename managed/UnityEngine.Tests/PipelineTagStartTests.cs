@@ -49,9 +49,9 @@ namespace UnityEngine.Tests
         public void WithoutAConfiguredPipelineTheTagStaysAsItIs()
         {
             GraphicsSettings.defaultRenderPipeline = null;
-            Shader.globalRenderPipeline = "";
+            Shader.globalRenderPipeline = "Other";
             RenderPipelineManager.ActivateConfiguredPipelineTag();
-            Assert.Equal("", Shader.globalRenderPipeline);
+            Assert.Equal("Other", Shader.globalRenderPipeline);
         }
     }
 }
