@@ -187,6 +187,8 @@ namespace Unbound.Runtime
             {
                 if (pipeline != null ? PipelineAutodeskInteractive(d, m, pipeline) : LegacyAutodeskInteractive(d, m))
                     return;
+                Stubs.Ignored("Legacy model import of an Autodesk Interactive material without its shader",
+                    "converted like any other legacy material (unmeasured)");
             }
             var shader = pipeline != null ? pipeline.defaultShader : null;
             if (shader == null) shader = Shader.Find("Standard");

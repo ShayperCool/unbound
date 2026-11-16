@@ -95,7 +95,7 @@ namespace UnityEngine.Tests
 
         /// <summary>A model's material sub-asset as the engine writes it, made by the legacy
         /// importer. Each section is "name: value" entries; vectors and textures as block maps.</summary>
-        Material Import(string[] floats = null, (string Name, Vector4 Value)[] vectors = null, string[] strings = null, bool texture = false)
+        Material Import(string[] floats = null, (string Name, Vector4 Value)[] vectors = null, string[] strings = null, string[] textures = null)
         {
             var yaml = new System.Text.StringBuilder(@"Material:
   m_Name: M_Test
@@ -118,9 +118,9 @@ namespace UnityEngine.Tests
                 + "\n        z: " + v.Value.z.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
                 + "\n        w: " + v.Value.w.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\n"));
             Section("strings", Array.ConvertAll(strings ?? Array.Empty<string>(), t => "      " + t + "\n"));
-            Section("textures", texture ? new[] { "      DiffuseColor:\n        path: a.png\n        relativePath: a.png\n"
-                + "        texture: {fileID: 2800000, guid: " + TextureGuid + ", type: 3}\n"
-                + "        offset:\n          x: 0\n          y: 0\n        scale:\n          x: 1\n          y: 1\n" } : null);
+            Section("textures", Array.ConvertAll(textures ?? Array.Empty<string>(), name => "      " + name + ":\n        path: a.png\n"
+                + "        relativePath: a.png\n        texture: {fileID: 2800000, guid: " + TextureGuid + ", type: 3}\n"
+                + "        offset:\n          x: 0\n          y: 0\n        scale:\n          x: 1\n          y: 1\n"));
             var m = Own(new Material());
             m.ReadSerialized(TestYaml.DocumentBody(yaml.ToString()), new Resolver(new Dictionary<string, Object>
             {
@@ -163,11 +163,16 @@ namespace UnityEngine.Tests
         public void ATexturedOpaqueLegacyMaterialIsTaggedOpaqueAndAnUntexturedOneIsNot()
         {
             Use(Lit());
-            var textured = Import(texture: true);
+            // As measured: a diffuse texture with a normal map, and an emission texture alone.
+            var textured = Import(textures: new[] { "DiffuseColor", "Bump" });
             Assert.Same(m_Texture, textured.GetTexture("_BaseMap"));
             Assert.Same(m_Texture, textured.GetTexture("_MainTex"));
+            Assert.Same(m_Texture, textured.GetTexture("_BumpMap"));
             Assert.Equal("Opaque", textured.GetTag("RenderType", false));
             Assert.Equal(-1, textured.rawRenderQueue);
+            Assert.Equal("Opaque", Import(textures: new[] { "EmissiveColor" }).GetTag("RenderType", false));
+            // Unmeasured, Unbound's choice: a diffuse texture alone counts as textured too.
+            Assert.Equal("Opaque", Import(textures: new[] { "DiffuseColor" }).GetTag("RenderType", false));
             var plain = Import(vectors: Diffuse);
             // No override: the shader's own tag answers (URP's Lit reads none there).
             Assert.False(plain.m_Tags.ContainsKey("RenderType"));
@@ -227,8 +232,10 @@ namespace UnityEngine.Tests
             Assert.Equal(1f, plain.GetFloat("_Opacity"));
         }
 
+        /// <summary>Unmeasured, Unbound's choice (reported once): a pipeline without Autodesk
+        /// Interactive shaders gives such a material its default shader.</summary>
         [Fact]
-        public void APipelineWithoutAutodeskInteractiveShadersGivesItsDefaultShader()
+        public void UnmeasuredAPipelineWithoutAutodeskInteractiveShadersGivesItsDefaultShader()
         {
             var lit = Lit();
             var pipeline = Use(lit);
