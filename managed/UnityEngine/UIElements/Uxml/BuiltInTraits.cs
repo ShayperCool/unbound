@@ -979,9 +979,8 @@ namespace UnityEngine.UIElements
                     return;
                 }
                 container.templateSource = template;
-                // The enclosing document's slots are not passed on to the template (unmeasured): reported.
-                if (cc.slotInsertionPoints != null && cc.slotInsertionPoints.Count > 0)
-                    Unbound.Runtime.Stubs.Ignored("TemplateContainer.UxmlTraits.Init", "does not pass the document's slots on to the template");
+                // Unbound's documents carry no slots or attribute overrides into a creation context
+                // (COMPATIBILITY_GAPS), so there are none to pass on to the template.
                 template.CloneTree(container);
             }
         }

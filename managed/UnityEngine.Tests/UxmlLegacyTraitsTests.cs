@@ -131,9 +131,11 @@ namespace UnityEngine.Tests
         {
             var tree = new MultiColumnTreeView { sortingMode = ColumnSortingMode.Default };
             tree.columns.Add(new Column { name = "c" });
+            tree.sortColumnDescriptions.Add(new SortColumnDescription("c", SortDirection.Descending));
             Create<MultiColumnTreeView, MultiColumnTreeView.UxmlTraits>(tree);
             Assert.Equal(ColumnSortingMode.Default, tree.sortingMode);
             Assert.Equal(0, tree.columns.Count);
+            Assert.Equal(0, tree.sortColumnDescriptions.Count);
             Create<MultiColumnTreeView, MultiColumnTreeView.UxmlTraits>(tree, "sorting-enabled", "true");
             Assert.Equal(ColumnSortingMode.Custom, tree.sortingMode);
         }
