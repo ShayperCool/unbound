@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/graphqueue/run.py gate"
+  ],
+  "summary": "graphqueue: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "managed/UnityEngine/Editor/MaterialValidation.cs",
+    "managed/UnityEngine/Graphics/Shader.cs"
+  ]
+}

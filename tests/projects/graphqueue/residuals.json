@@ -1,0 +1,5 @@
+{
+  "In Play mode the Unity 6000.0.71f1 Editor keeps the saved queue, tag and passes of a material of this Shader Graph that Resources.Load reads (URP's editor does not validate it), while Unbound validates every loaded project material as measured for the Standard editor (tests/projects/materialvalidation); which materials the Editor validates on load is not resolved: follow-up": [
+    "NoOffsetStale.load", "NoOffsetStale.later", "OffsetStale.load", "OffsetStale.later", "StrayState.load", "StrayState.later"
+  ]
+}

@@ -1,0 +1,16 @@
+{"k":"early","v":"tag UniversalPipeline pipeline False terrain 1900 lit 2000 particles 2000"}
+{"k":"start","v":"tag UniversalPipeline pipeline False terrain 1900"}
+{"k":"shader","v":"Shader Graphs/Transparent queue 3000"}
+{"k":"scene.start","v":"queue 2950 raw 2950 tag Transparent depthOnly True motion False"}
+{"k":"OffsetStored.load","v":"queue 2950 raw 2950 tag Transparent depthOnly True motion False"}
+{"k":"OffsetStale.load","v":"queue 1950 raw 1950 tag Transparent depthOnly True motion False"}
+{"k":"NoOffsetStale.load","v":"queue 2000 raw 2000 tag Transparent depthOnly True motion False"}
+{"k":"UserQueue.load","v":"queue 2100 raw 2100 tag Transparent depthOnly True motion False"}
+{"k":"StrayState.load","v":"queue 2950 raw 2950 tag Opaque depthOnly False motion True"}
+{"k":"OffsetStored.later","v":"queue 2950 raw 2950 tag Transparent depthOnly True motion False"}
+{"k":"OffsetStale.later","v":"queue 1950 raw 1950 tag Transparent depthOnly True motion False"}
+{"k":"NoOffsetStale.later","v":"queue 2000 raw 2000 tag Transparent depthOnly True motion False"}
+{"k":"UserQueue.later","v":"queue 2100 raw 2100 tag Transparent depthOnly True motion False"}
+{"k":"StrayState.later","v":"queue 2950 raw 2950 tag Opaque depthOnly False motion True"}
+{"k":"scene.later","v":"queue 2950 raw 2950 tag Transparent depthOnly True motion False"}
+{"k":"complete","v":true}
