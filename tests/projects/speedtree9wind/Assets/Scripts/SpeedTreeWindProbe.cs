@@ -40,8 +40,11 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         425, 426, 427, 428, 429, 430, 432, 435, 440, 441, 442, 443, 445, 450, 460, 470, 471, 472, 474, 475, 476, 478,
         480, 481, 482, 485, 490, 491, 492, 493, 495, 500, 501, 502, 503, 505, 510, 520, 530, 540, 541, 542, 545, 550,
         560, 570, 580, 581, 582, 585, 590, 600, 620, 640, 650, 651, 652, 660, 700, 701, 702, 703, 705, 710, 720, 740, 780,
+        // A spherical zone reaching only the level a whole tree does not draw, and two spherical
+        // zones whose winds cancel exactly at another tree.
+        790, 791, 795, 800, 801, 802, 803, 805, 810, 811, 812, 813, 815, 820, 840, 860,
     };
-    const int LastFrame = 780;
+    const int LastFrame = 860;
 
     readonly StringBuilder m_Out = new StringBuilder();
     /// <summary>Each tree's camera and the constants it records: a renderer without per-object
@@ -55,7 +58,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
     Texture2D m_Read;
     GameObject m_Gusty, m_Calm;
     Material m_Dump;
-    WindZone m_A, m_B, m_Sphere, m_Still, m_Again, m_NearA, m_NearB, m_NearGroup, m_Rest;
+    WindZone m_A, m_B, m_Sphere, m_Still, m_Again, m_NearA, m_NearB, m_NearGroup, m_Rest, m_NearSplit;
     int m_Frame;
     bool m_Failed;
 
@@ -226,12 +229,32 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             Tree("LateHeld", "Calm", m_Calm, m_Dump, 23, new Vector3(800f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object, 5, 6);
         // A spherical zone reaching a tree whose asset's wind is at rest.
         if (m_Frame == 700) m_Rest = Zone("Rest", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(401f, 0.5f, -1f), 4f);
+        // A whole tree drawing its first level, its second level's renderer moved 6 units along x
+        // (so the levels' bounds differ), then a spherical zone that reaches only the second
+        // level's bounds: whether the drawn level gets a local wind tells which bounds a group's
+        // trees are reached by.
+        if (m_Frame == 790)
+        {
+            var split = Group("SplitGroup", m_Gusty, 22, new Vector3(900f, 0f, 0f), 0);
+            foreach (var renderer in split.GetComponent<LODGroup>().GetLODs()[1].renderers)
+                renderer.transform.position += new Vector3(6f, 0f, 0f);
+        }
+        if (m_Frame == 800) m_NearSplit = Zone("NearSplit", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(906f, 0.5f, -1f), 2f);
+        // A tree, then two spherical zones at one place reaching it whose main winds are 1 and -1:
+        // their winds at the tree cancel exactly.
+        if (m_Frame == 790)
+            Tree("Cancelled", "GustyB", m_Gusty, m_Dump, 21, new Vector3(1000f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+        if (m_Frame == 810)
+        {
+            Zone("CancelPlus", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(1001f, 0.5f, -1f), 4f);
+            Zone("CancelMinus", null, WindZoneMode.Spherical, -1f, Quaternion.identity, new Vector3(1001f, 0.5f, -1f), 4f);
+        }
     }
 
     /// <summary>An instance of a whole tree (its LOD group) whose levels draw quads with the dump
     /// material on a layer of its own, the group held at one level, and an orthographic camera
     /// that sees it.</summary>
-    void Group(string name, GameObject prefab, int layer, Vector3 at, int level)
+    GameObject Group(string name, GameObject prefab, int layer, Vector3 at, int level)
     {
         var copy = Instantiate(prefab, at, Quaternion.identity);
         copy.name = name;
@@ -246,6 +269,7 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         var recorded = new bool[k_Names.Length];
         for (int i = 0; i < recorded.Length; i++) recorded[i] = true;
         m_Trees.Add((name, MakeCamera(name, at, layer), recorded, null));
+        return copy;
     }
 
     static WindZone Zone(string name, Transform parent, WindZoneMode mode, float main, Quaternion rotation, Vector3 position, float radius = 10f)

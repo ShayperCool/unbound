@@ -49,7 +49,13 @@ level, and the drawn level joins it at its next draw), the zone out of reach (47
 while the trees return to the asset's wind (474) and out again (480); a tree that first draws
 (650) while no zone is active but trees still hold winds of their own (it gets its constants: those
 winds count as wind in the world); a spherical zone reaching `LateSettled` while its asset's wind
-is at rest (700: its local wind starts from rest). The earlier rows of the reference are unchanged.
+is at rest (700: its local wind starts from rest); a whole tree drawing its first level with its
+second level's renderer moved 6 units along x (`SplitGroup`, frame 790) and a spherical zone that
+reaches only that second level's bounds (800): the drawn level gets a local wind, so a group's trees
+are reached by their levels' bounds together, levels it does not draw included; beside it a tree
+(`Cancelled`, 790) that two spherical zones at one place with main winds 1 and -1 reach (810): their
+winds cancel exactly at the tree and it gets no local wind (it keeps its asset's wind). The earlier
+rows of the reference are unchanged (two identical captures, 16252 rows).
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)
