@@ -57,6 +57,25 @@ namespace UnityEngine
         /// stops answering; null is stored as "". Without a native host (unit tests) only the
         /// in-process copy is used.
         /// </summary>
+        /// <summary>The input method's composition, the IME mode and the IME window position: the
+        /// same state as <see cref="Input.compositionString"/>, <see cref="Input.imeCompositionMode"/>
+        /// and <see cref="Input.compositionCursorPos"/> (a focused UI Toolkit text field sets the mode
+        /// and Input reads it back, tests/projects/textcommands), without Input's warning when the
+        /// window reads no input method.</summary>
+        internal static string compositionString => Input.CompositionString;
+
+        internal static IMECompositionMode imeCompositionMode
+        {
+            get => Input.imeCompositionMode;
+            set => Input.SetImeCompositionMode(value, warn: false);
+        }
+
+        internal static Vector2 compositionCursorPos
+        {
+            get => Input.compositionCursorPos;
+            set => Input.SetCompositionCursorPos(value, warn: false);
+        }
+
         public static string systemCopyBuffer
         {
             get { MainThreadCheck.Check("get_systemCopyBuffer"); return ReadSystemCopyBuffer(); }

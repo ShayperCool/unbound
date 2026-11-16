@@ -41,6 +41,8 @@ namespace Unbound.UIElements
 
         internal UaTextSelecting(UaTextHandle handle) { m_Handle = handle; }
 
+        internal UaTextHandle handle => m_Handle;
+
         string text => m_Handle.layoutText;
 
         /// <summary>Characters a cursor can stand after: the laid out text without its trailing zero-width space.</summary>
@@ -667,8 +669,8 @@ namespace Unbound.UIElements
         }
     }
 
-    /// <summary>Edits of a text field's text at its cursor (Unity's TextEditingUtilities, standard
-    /// text mode, without IME composition).</summary>
+    /// <summary>Edits of a text field's text at its cursor and the input method's composition
+    /// preview (Unity's TextEditingUtilities, standard text mode).</summary>
     internal sealed class UaTextEditing
     {
         enum Op { MoveLeft, MoveRight, MoveUp, MoveDown, MoveLineStart, MoveLineEnd, MoveWordRight, MoveWordLeft, MoveToStartOfNextWord, MoveToEndOfPreviousWord, MoveTextStart, MoveTextEnd, MoveParagraphForward, MoveParagraphBackward, MoveGraphicalLineStart, MoveGraphicalLineEnd, Delete, Backspace, Cut, Paste, DeleteWordBack, DeleteLineBack, DeleteWordForward }
@@ -679,6 +681,12 @@ namespace Unbound.UIElements
 
         internal bool multiline;
         internal Action OnTextChanged;
+
+        /// <summary>The input method is composing: its text is previewed at the cursor.</summary>
+        internal bool isCompositionActive;
+        bool m_UpdateImeWindowPosition;
+        /// <summary>The cursor before it was moved to the end of the composition preview, or -1.</summary>
+        int m_CursorIndexSavedState = -1;
 
         internal UaTextEditing(UaTextSelecting selecting, string text)
         {
@@ -713,6 +721,7 @@ namespace Unbound.UIElements
 
         internal bool HandleKeyEvent(Event e)
         {
+            RestoreCursorState();
             InitKeyActions();
             var modifiers = e.modifiers;
             e.modifiers &= ~EventModifiers.CapsLock;
@@ -815,6 +824,7 @@ namespace Unbound.UIElements
 
         internal bool DeleteLineBack()
         {
+            RestoreCursorState();
             if (hasSelection)
             {
                 DeleteSelection();
@@ -830,6 +840,7 @@ namespace Unbound.UIElements
 
         internal bool DeleteWordBack()
         {
+            RestoreCursorState();
             if (hasSelection)
             {
                 DeleteSelection();
@@ -844,6 +855,7 @@ namespace Unbound.UIElements
 
         internal bool DeleteWordForward()
         {
+            RestoreCursorState();
             if (hasSelection)
             {
                 DeleteSelection();
@@ -857,6 +869,7 @@ namespace Unbound.UIElements
 
         internal bool Delete()
         {
+            RestoreCursorState();
             if (hasSelection)
             {
                 DeleteSelection();
@@ -869,6 +882,7 @@ namespace Unbound.UIElements
 
         internal bool Backspace()
         {
+            RestoreCursorState();
             if (hasSelection)
             {
                 DeleteSelection();
@@ -902,6 +916,7 @@ namespace Unbound.UIElements
 
         internal void ReplaceSelection(string replace)
         {
+            RestoreCursorState();
             DeleteSelection();
             text = m_Text.Insert(Math.Min(cursorIndex, m_Text.Length), replace);
             m_Selecting.selectIndexNoValidation = m_Selecting.cursorIndexNoValidation += new System.Globalization.StringInfo(replace).LengthInTextElements;
@@ -936,6 +951,7 @@ namespace Unbound.UIElements
 
         internal bool Paste()
         {
+            RestoreCursorState();
             var pasted = GUIUtility.systemCopyBuffer;
             if (pasted == "") return false;
             if (!multiline) pasted = pasted.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
@@ -946,7 +962,61 @@ namespace Unbound.UIElements
         internal void OnBlur()
         {
             m_Selecting.revealCursor = false;
+            isCompositionActive = false;
+            RestoreCursorState();
             m_Selecting.SelectNone();
+        }
+
+        /// <summary>Starts or ends the composition from the input method's current text; a new
+        /// composition replaces the selection. Returns whether it is composing.</summary>
+        internal bool UpdateImeState()
+        {
+            if (GUIUtility.compositionString.Length > 0)
+            {
+                if (!isCompositionActive)
+                {
+                    m_UpdateImeWindowPosition = true;
+                    ReplaceSelection(string.Empty);
+                }
+                isCompositionActive = true;
+            }
+            else
+            {
+                isCompositionActive = false;
+            }
+            return isCompositionActive;
+        }
+
+        internal bool ShouldUpdateImeWindowPosition() => m_UpdateImeWindowPosition;
+
+        /// <summary>Opens the input method's windows at the cursor of the text at <paramref name="worldPosition"/>.</summary>
+        internal void SetImeWindowPosition(Vector2 worldPosition) =>
+            GUIUtility.compositionCursorPos = worldPosition + m_Selecting.handle.GetCursorPositionFromStringIndexUsingCharacterHeight(cursorIndex);
+
+        /// <summary>The text with the composition inserted at the cursor (underlined with rich text).</summary>
+        internal string GeneratePreviewString(bool richText)
+        {
+            RestoreCursorState();
+            var composition = GUIUtility.compositionString;
+            if (!isCompositionActive) return text;
+            int at = Math.Min(cursorIndex, m_Text.Length);
+            return richText ? text.Insert(at, "<u>" + composition + "</u>") : text.Insert(at, composition);
+        }
+
+        /// <summary>Moves the cursor to the end of the composition preview until the next edit.</summary>
+        internal void EnableCursorPreviewState()
+        {
+            if (m_CursorIndexSavedState != -1) return;
+            m_CursorIndexSavedState = m_Selecting.cursorIndexNoValidation;
+            m_Selecting.cursorIndexNoValidation = m_Selecting.selectIndexNoValidation = m_CursorIndexSavedState + GUIUtility.compositionString.Length;
+        }
+
+        /// <summary>Puts the cursor back where it was before the composition preview moved it.</summary>
+        internal void RestoreCursorState()
+        {
+            if (m_CursorIndexSavedState == -1) return;
+            cursorIndex = selectIndex = m_CursorIndexSavedState;
+            m_CursorIndexSavedState = -1;
         }
     }
 }

@@ -104,6 +104,28 @@ namespace UnityEngine.UIElements
 
     public partial class ValidateCommandEvent : CommandEventBase<ValidateCommandEvent> { }
     public partial class ExecuteCommandEvent : CommandEventBase<ExecuteCommandEvent> { }
+
+    /// <summary>The input method's composition changed; sent to the focused element.</summary>
+    [EventCategory(EventCategory.Keyboard)]
+    internal partial class IMEEvent : EventBase<IMEEvent>
+    {
+        public string compositionString { get; protected set; }
+
+        public static IMEEvent GetPooled(string compositionString)
+        {
+            var e = GetPooled();
+            e.compositionString = compositionString;
+            return e;
+        }
+
+        protected override void Init() { base.Init(); LocalInit(); }
+        void LocalInit()
+        {
+            propagation = EventPropagation.BubblesOrTricklesDown | EventPropagation.SkipDisabledElements;
+            compositionString = null;
+        }
+        public IMEEvent() { LocalInit(); }
+    }
     public partial interface IDragAndDropEvent { }
 
     [EventCategory(EventCategory.DragAndDrop)]

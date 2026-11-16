@@ -99,13 +99,6 @@
   },
   {
     "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.UIElements.TextElement",
-    "Message": "M:HandleEventBubbleUp`0(UnityEngine.UIElements.EventBase):System.Void attributes is [], Unity's is [UnityEngine.UIElements.EventInterestAttribute:M:.ctor`0(System.Type[]):System.Void(System.Type[]:[System.Type:UnityEngine.UIElements.ContextualMenuPopulateEvent,System.Type:UnityEngine.UIElements.KeyDownEvent,System.Type:UnityEngine.UIElements.KeyUpEvent,System.Type:UnityEngine.UIElements.ValidateCommandEvent,System.Type:UnityEngine.UIElements.ExecuteCommandEvent,System.Type:UnityEngine.UIElements.FocusEvent,System.Type:UnityEngine.UIElements.BlurEvent,System.Type:UnityEngine.UIElements.FocusInEvent,System.Type:UnityEngine.UIElements.FocusOutEvent,System.Type:UnityEngine.UIElements.PointerDownEvent,System.Type:UnityEngine.UIElements.PointerUpEvent,System.Type:UnityEngine.UIElements.PointerMoveEvent,System.Type:UnityEngine.UIElements.NavigationMoveEvent,System.Type:UnityEngine.UIElements.NavigationSubmitEvent,System.Type:UnityEngine.UIElements.NavigationCancelEvent,System.Type:UnityEngine.UIElements.IMEEvent,System.Type:UnityEngine.UIElements.GeometryChangedEvent,System.Type:UnityEngine.UIElements.AttachToPanelEvent,System.Type:UnityEngine.UIElements.DetachFromPanelEvent]){}]",
-    "Reason": "Q410-UI-command-events: The exact EventInterest list includes ValidateCommandEvent, ExecuteCommandEvent and IMEEvent. Add their handwritten pooling/propagation behavior and independent dispatch controls before registering the complete list."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "interfaces",
     "Type": "UnityEditor.ConsoleWindow",
     "Message": "type interfaces is , Unity's is UnityEditor.IHasCustomMenu",

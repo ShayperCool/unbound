@@ -133,6 +133,11 @@ namespace Unbound.UIElements
                             ProcessNavigationEvent(ev.asNavigationEvent);
                             break;
                         case UnityEngine.InputForUI.Event.Type.IMECompositionEvent:
+                            sequence ??= m_System.UaFocusSequence();
+                            // Sent each time the composition changes, including its confirmation.
+                            m_System.SendFocusBasedEvent(composition => IMEEvent.GetPooled(composition), ev.asIMECompositionEvent.compositionString);
+                            break;
+                        // Command events are not part of the runtime input (as in the release).
                         case UnityEngine.InputForUI.Event.Type.CommandEvent:
                             sequence ??= m_System.UaFocusSequence();
                             break;

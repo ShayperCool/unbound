@@ -90,6 +90,12 @@ namespace Unbound.UIElements
             return handle.textInfo.characterCount == 0 ? Vector2.zero : handle.GetCursorPositionFromStringIndexUsingLineHeight(index);
         }
 
+        internal Vector2 GetCursorPositionFromStringIndexUsingCharacterHeight(int index)
+        {
+            EnsureTextInfo();
+            return handle.textInfo.characterCount == 0 ? Vector2.zero : handle.GetCursorPositionFromStringIndexUsingCharacterHeight(index);
+        }
+
         internal float GetLineHeightFromCharacterIndex(int index)
         {
             EnsureTextInfo();

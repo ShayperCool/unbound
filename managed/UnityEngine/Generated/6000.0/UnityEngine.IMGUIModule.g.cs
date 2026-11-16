@@ -41,33 +41,6 @@ namespace UnityEngine
         }
     }
     [global::Unbound.Stub]
-    internal unsafe static partial class EventCommandNames
-    {
-        public const string Cut = "Cut";
-        public const string Copy = "Copy";
-        public const string Paste = "Paste";
-        public const string SelectAll = "SelectAll";
-        public const string DeselectAll = "DeselectAll";
-        public const string InvertSelection = "InvertSelection";
-        public const string Duplicate = "Duplicate";
-        public const string Rename = "Rename";
-        public const string Delete = "Delete";
-        public const string SoftDelete = "SoftDelete";
-        public const string Find = "Find";
-        public const string SelectChildren = "SelectChildren";
-        public const string SelectPrefabRoot = "SelectPrefabRoot";
-        public const string UndoRedoPerformed = "UndoRedoPerformed";
-        public const string OnLostFocus = "OnLostFocus";
-        public const string NewKeyboardFocus = "NewKeyboardFocus";
-        public const string ModifierKeysChanged = "ModifierKeysChanged";
-        public const string EyeDropperUpdate = "EyeDropperUpdate";
-        public const string EyeDropperClicked = "EyeDropperClicked";
-        public const string EyeDropperCancelled = "EyeDropperCancelled";
-        public const string ColorPickerChanged = "ColorPickerChanged";
-        public const string FrameSelected = "FrameSelected";
-        public const string FrameSelectedWithLock = "FrameSelectedWithLock";
-    }
-    [global::Unbound.Stub]
     internal unsafe partial struct EventInterests
     {
         [global::Unbound.Stub] public bool WantsEvent(global::UnityEngine.EventType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.EventInterests.WantsEvent"); return default; }
@@ -352,9 +325,6 @@ namespace UnityEngine
         internal static global::UnityEngine.Vector2 s_EditorScreenPointOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.s_EditorScreenPointOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.s_EditorScreenPointOffset"); } }
         internal static bool textFieldInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.textFieldInput"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.textFieldInput"); } }
         internal static bool manualTex2SRGBEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.manualTex2SRGBEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.manualTex2SRGBEnabled"); } }
-        internal static string compositionString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.compositionString"); return default; } }
-        internal static global::UnityEngine.IMECompositionMode imeCompositionMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.imeCompositionMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.imeCompositionMode"); } }
-        internal static global::UnityEngine.Vector2 compositionCursorPos { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.compositionCursorPos"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GUIUtility.compositionCursorPos"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class IMGUITextHandle : global::UnityEngine.TextCore.Text.TextHandle

@@ -235,6 +235,7 @@ namespace UnityEngine.UIElements
         protected internal override Vector2 DoMeasure(float desiredWidth, MeasureMode widthMode, float desiredHeight, MeasureMode heightMode) =>
             uaText.Measure(renderedTextString, desiredWidth, widthMode, desiredHeight, heightMode);
 
+        [global::UnityEngine.UIElements.@EventInterestAttribute(new global::System.Type[] { typeof(global::UnityEngine.UIElements.ContextualMenuPopulateEvent), typeof(global::UnityEngine.UIElements.KeyDownEvent), typeof(global::UnityEngine.UIElements.KeyUpEvent), typeof(global::UnityEngine.UIElements.ValidateCommandEvent), typeof(global::UnityEngine.UIElements.ExecuteCommandEvent), typeof(global::UnityEngine.UIElements.FocusEvent), typeof(global::UnityEngine.UIElements.BlurEvent), typeof(global::UnityEngine.UIElements.FocusInEvent), typeof(global::UnityEngine.UIElements.FocusOutEvent), typeof(global::UnityEngine.UIElements.PointerDownEvent), typeof(global::UnityEngine.UIElements.PointerUpEvent), typeof(global::UnityEngine.UIElements.PointerMoveEvent), typeof(global::UnityEngine.UIElements.NavigationMoveEvent), typeof(global::UnityEngine.UIElements.NavigationSubmitEvent), typeof(global::UnityEngine.UIElements.NavigationCancelEvent), typeof(global::UnityEngine.UIElements.IMEEvent), typeof(global::UnityEngine.UIElements.GeometryChangedEvent), typeof(global::UnityEngine.UIElements.AttachToPanelEvent), typeof(global::UnityEngine.UIElements.DetachFromPanelEvent) })]
         protected override void HandleEventBubbleUp(EventBase evt)
         {
             base.HandleEventBubbleUp(evt);
@@ -629,6 +630,8 @@ namespace Unbound.UIElements
             {
                 case FocusEvent _: OnFocusEvent(); break;
                 case BlurEvent _: m_SelectAllOnMouseUp = m_TextElement.selection.selectAllOnMouseUp; break;
+                case ValidateCommandEvent validate: OnValidateCommandEvent(validate); break;
+                case ExecuteCommandEvent execute: OnExecuteCommandEvent(execute); break;
                 case KeyDownEvent key: OnKeyDown(key); break;
                 case PointerDownEvent down: OnPointerDownEvent(down); break;
                 case PointerMoveEvent move: OnPointerMoveEvent(move); break;
@@ -648,6 +651,44 @@ namespace Unbound.UIElements
             if (!m_TextElement.hasFocus) return;
             evt.GetEquivalentImguiEvent(m_ImguiEvent);
             if (selecting.HandleKeyEvent(m_ImguiEvent)) evt.StopPropagation();
+        }
+
+        /// <summary>A focused selectable text takes Copy (with a selection), SelectAll and every
+        /// command it does not know; the editing commands are left to the editable text.</summary>
+        void OnValidateCommandEvent(ValidateCommandEvent evt)
+        {
+            if (!m_TextElement.hasFocus) return;
+            switch (evt.commandName)
+            {
+                case EventCommandNames.Cut:
+                case EventCommandNames.Paste:
+                case EventCommandNames.Delete:
+                case EventCommandNames.UndoRedoPerformed:
+                    return;
+                case EventCommandNames.Copy:
+                    if (!selecting.hasSelection) return;
+                    break;
+            }
+            evt.StopPropagation();
+        }
+
+        void OnExecuteCommandEvent(ExecuteCommandEvent evt)
+        {
+            if (!m_TextElement.hasFocus) return;
+            switch (evt.commandName)
+            {
+                case EventCommandNames.OnLostFocus:
+                    evt.StopPropagation();
+                    return;
+                case EventCommandNames.Copy:
+                    selecting.Copy();
+                    evt.StopPropagation();
+                    return;
+                case EventCommandNames.SelectAll:
+                    selecting.SelectAll();
+                    evt.StopPropagation();
+                    return;
+            }
         }
 
         void OnPointerDownEvent(PointerDownEvent evt)
@@ -733,11 +774,80 @@ namespace Unbound.UIElements
             switch (evt)
             {
                 case KeyDownEvent key: OnKeyDown(key); break;
-                case FocusEvent _: m_TextElement.edition.SaveValueAndText(); break;
+                case ValidateCommandEvent validate: OnValidateCommandEvent(validate); break;
+                case ExecuteCommandEvent execute: OnExecuteCommandEvent(execute); break;
+                case FocusEvent _:
+                    GUIUtility.imeCompositionMode = IMECompositionMode.On;
+                    m_TextElement.edition.SaveValueAndText();
+                    break;
+                case BlurEvent _: GUIUtility.imeCompositionMode = IMECompositionMode.Auto; break;
                 case NavigationMoveEvent move: OnNavigationEvent(move, move.deviceType); break;
                 case NavigationSubmitEvent submit: OnNavigationEvent(submit, submit.deviceType); break;
                 case NavigationCancelEvent cancel: OnNavigationEvent(cancel, cancel.deviceType); break;
+                case IMEEvent _: OnIMEInput(); break;
             }
+        }
+
+        void OnIMEInput()
+        {
+            bool wasComposing = editing.isCompositionActive;
+            if (editing.UpdateImeState() || wasComposing != editing.isCompositionActive) UpdateLabel(true);
+        }
+
+        /// <summary>A focused editable text takes Cut (with a selection), Paste (with text on the
+        /// clipboard), Delete and every command it does not know except Copy and SelectAll, which
+        /// are the selectable text's.</summary>
+        void OnValidateCommandEvent(ValidateCommandEvent evt)
+        {
+            if (!m_TextElement.hasFocus) return;
+            switch (evt.commandName)
+            {
+                case EventCommandNames.Copy:
+                case EventCommandNames.SelectAll:
+                    return;
+                case EventCommandNames.Cut:
+                    if (!m_TextElement.selection.HasSelection()) return;
+                    break;
+                case EventCommandNames.Paste:
+                    if (!editing.CanPaste()) return;
+                    break;
+            }
+            evt.StopPropagation();
+        }
+
+        void OnExecuteCommandEvent(ExecuteCommandEvent evt)
+        {
+            if (!m_TextElement.hasFocus) return;
+            m_Changed = false;
+            bool mayHaveChanged = false;
+            string oldText = editing.text;
+            switch (evt.commandName)
+            {
+                case EventCommandNames.OnLostFocus:
+                    evt.StopPropagation();
+                    return;
+                case EventCommandNames.Cut:
+                    editing.Cut();
+                    mayHaveChanged = true;
+                    break;
+                case EventCommandNames.Paste:
+                    editing.Paste();
+                    mayHaveChanged = true;
+                    break;
+                case EventCommandNames.Delete:
+                    // Deletes the selection or the character after the cursor without copying (the
+                    // 6000.0 releases; tests/projects/textcommands execute.delete).
+                    editing.Delete();
+                    mayHaveChanged = true;
+                    break;
+            }
+            if (mayHaveChanged)
+            {
+                m_Changed = oldText != editing.text;
+                evt.StopPropagation();
+            }
+            if (m_Changed) UpdateLabel(true);
+            m_TextElement.edition.UpdateScrollOffset?.Invoke(false);
         }
 
         void OnFocusInEvent()
@@ -806,14 +916,25 @@ namespace Unbound.UIElements
                 ApplyTextIfNeeded();
                 return;
             }
+            bool generatePreview = false;
             if (c >= ' ' || evt.keyCode == KeyCode.Tab || (edition.multiline && !evt.altKey && newline))
+            {
                 m_Changed = editing.Insert(c);
-            Finish(evt);
+            }
+            else
+            {
+                // A key without a character: a composition may have started or ended, which
+                // replaces the selection.
+                bool wasComposing = editing.isCompositionActive;
+                generatePreview = true;
+                if (editing.UpdateImeState() || wasComposing != editing.isCompositionActive) m_Changed = true;
+            }
+            Finish(evt, generatePreview);
         }
 
-        void Finish(KeyDownEvent evt)
+        void Finish(KeyDownEvent evt, bool generatePreview = false)
         {
-            if (m_Changed || m_ShouldInvokeUpdateValue) UpdateLabel();
+            if (m_Changed || m_ShouldInvokeUpdateValue) UpdateLabel(generatePreview);
             m_TextElement.edition.UpdateScrollOffset?.Invoke(evt.keyCode == KeyCode.Backspace);
         }
 
@@ -824,14 +945,29 @@ namespace Unbound.UIElements
             m_ShouldInvokeUpdateValue = false;
         }
 
-        void UpdateLabel()
+        /// <summary>Shows the edited text, with the input method's composition at the cursor when
+        /// <paramref name="generatePreview"/>; the preview reaches the field's text and value, then
+        /// the edited text stays without it and the cursor shows after the composition.</summary>
+        void UpdateLabel(bool generatePreview)
         {
             var edition = m_TextElement.edition;
-            edition.UpdateText(editing.text);
+            string oldText = editing.text;
+            bool imeEnabled = editing.UpdateImeState();
+            if (imeEnabled && editing.ShouldUpdateImeWindowPosition())
+            {
+                var bound = m_TextElement.worldBound;
+                editing.SetImeWindowPosition(new Vector2(bound.x, bound.y));
+            }
+            edition.UpdateText(generatePreview ? editing.GeneratePreviewString(m_TextElement.enableRichText) : editing.text);
             if (!edition.isDelayed || m_ShouldInvokeUpdateValue)
             {
                 edition.UpdateValueFromText?.Invoke();
                 m_ShouldInvokeUpdateValue = false;
+            }
+            if (imeEnabled)
+            {
+                editing.text = oldText;
+                editing.EnableCursorPreviewState();
             }
         }
     }

@@ -1870,14 +1870,6 @@ namespace UnityEngine.UIElements
         bool enable { get; set; }
         global::UnityEngine.UIElements.LiveReloadTrackers enabledTrackers { get; set; }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class IMEEvent : global::UnityEngine.UIElements.EventBase<global::UnityEngine.UIElements.IMEEvent>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IMEEvent GetPooled(string compositionString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.Init"); }
-        [global::Unbound.Stub] public IMEEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.ctor"); }
-        public string compositionString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.compositionString"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMEEvent.compositionString"); } }
-    }
     unsafe partial class IMGUIContainer
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cullingEnabledProperty;

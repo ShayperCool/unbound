@@ -961,18 +961,22 @@ namespace UnityEngine
         internal static void UpdateImeVersion(ulong version) => s_ImeHostVersion = version;
 
         /// <summary>Unity: Auto (the default) enables IME input only while a text field is
-        /// selected, On enables it, Off disables it. Unbound sees no text field selection here, so
-        /// Auto asks for the input method off, as with no text field selected (Unbound's choice,
-        /// unmeasured).</summary>
+        /// selected, On enables it, Off disables it. A focused UI Toolkit text field sets On and its
+        /// blur sets Auto (tests/projects/textcommands); otherwise Unbound sees no text field
+        /// selection here, so Auto asks for the input method off, as with no text field selected
+        /// (Unbound's choice, unmeasured).</summary>
         public static IMECompositionMode imeCompositionMode
         {
             get => s_ImeCompositionMode;
-            set
-            {
-                if (s_ImeCompositionMode == value) return;
-                s_ImeCompositionMode = value;
-                SendImeRequest();
-            }
+            set => SetImeCompositionMode(value, warn: true);
+        }
+
+        /// <summary>The same mode as set by the engine's text fields (GUIUtility): no warning.</summary>
+        internal static void SetImeCompositionMode(IMECompositionMode value, bool warn)
+        {
+            if (s_ImeCompositionMode == value) return;
+            s_ImeCompositionMode = value;
+            SendImeRequest(warn);
         }
 
         public static string compositionString
@@ -1014,12 +1018,15 @@ namespace UnityEngine
         public static Vector2 compositionCursorPos
         {
             get => s_CompositionCursorPos;
-            set
-            {
-                if (s_CompositionCursorPos.x.Equals(value.x) && s_CompositionCursorPos.y.Equals(value.y)) return;
-                s_CompositionCursorPos = value;
-                SendImeRequest();
-            }
+            set => SetCompositionCursorPos(value, warn: true);
+        }
+
+        /// <summary>The same position as set by the engine's text fields (GUIUtility): no warning.</summary>
+        internal static void SetCompositionCursorPos(Vector2 value, bool warn)
+        {
+            if (s_CompositionCursorPos.x.Equals(value.x) && s_CompositionCursorPos.y.Equals(value.y)) return;
+            s_CompositionCursorPos = value;
+            SendImeRequest(warn);
         }
 
         /// <summary>Reads the host's IME state when its cached version changes.</summary>
@@ -1057,7 +1064,7 @@ namespace UnityEngine
         }
 
         /// <summary>Hands the game's IME mode and position to the window (applied after the frame).</summary>
-        static void SendImeRequest()
+        static void SendImeRequest(bool warn)
         {
             if (!s_ImeHostFailed)
             {
@@ -1078,7 +1085,7 @@ namespace UnityEngine
                 }
             }
             PollIme();
-            WarnIfImeUnavailable();
+            if (warn) WarnIfImeUnavailable();
         }
 
         /// <summary>A coordinate as a JSON number; a non-finite one goes as 0 (Unbound's choice,
