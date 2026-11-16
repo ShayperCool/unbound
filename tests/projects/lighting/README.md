@@ -55,4 +55,6 @@ VertexLit controls (`vertexlit_ambient`, `vertexlit_point`, `vertexlit_direction
 point lights with no pixel lights allowed; OpenGL Core references only, two identical captures of
 2026-11-16): the ambient alone is the flat ambient itself, so the fixed-function lighting takes the
 ambient at half (the ambient color halved, times the material's) like each light, and
-`Combine texture * primary DOUBLE` brings both back; `vertexlit_ambient` matches exactly.
+`Combine texture * primary DOUBLE` brings both back; `vertexlit_ambient` matches exactly. The
+Editor's `vertexlit_no_pixel_lights` equals its `vertexlit` byte for byte: VertexLit draws only
+Vertex passes, so the quality level's pixel light count does not change it.

@@ -1258,14 +1258,14 @@ const PRECISION_TYPES: &str = r#"
 #define Texture3D_float Texture3D
 "#;
 
+/// `fwidth` from coarse derivatives (see [`unbound_graphics::GraphicsDevice::coarse_derivatives`]).
+const COARSE_FWIDTH: &str = "fwidth(x) (abs(ddx_coarse(x)) + abs(ddy_coarse(x)))";
+
 /// Framebuffer inputs on devices where the render pipelines read them as subpass inputs
 /// (`GraphicsDevice::subpass_inputs`): Unbound reads each as its input attachment's texture,
 /// `_UnityFBInput<idx>` at the fragment's pixel, as the Core RP library declares them where
 /// there are no subpass inputs. The render pass binds input `idx` of a subpass there
 /// (`RenderPasses` on the managed side).
-/// `fwidth` from coarse derivatives (see [`unbound_graphics::GraphicsDevice::coarse_derivatives`]).
-const COARSE_FWIDTH: &str = "fwidth(x) (abs(ddx_coarse(x)) + abs(ddy_coarse(x)))";
-
 const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
     "FRAMEBUFFER_INPUT_FLOAT(idx) TEXTURE2D_FLOAT(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
     "FRAMEBUFFER_INPUT_HALF(idx) TEXTURE2D_HALF(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
