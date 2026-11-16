@@ -536,10 +536,11 @@ namespace Unbound.Runtime
 
         /// <summary>The sorting distance of a command without sorting positions: its
         /// sortingPosition cast to a float is "an approximate depth" (the Scripting API's
-        /// BatchDrawCommand.sortingPosition), which sorts as minus a squared camera distance:
-        /// a larger value is drawn later among transparent draws, and against an ordinary
-        /// renderer at distance d it sorts nearer above -d*d (measured: tests/projects/brg sorting,
-        /// a perspective camera; equal values keep the commands' order).</summary>
+        /// BatchDrawCommand.sortingPosition), which sorts as minus a value of the camera's
+        /// distance metric: a larger value is drawn later among transparent draws, and against an
+        /// ordinary renderer it sorts nearer above minus the renderer's squared distance through a
+        /// perspective camera, minus its view depth through an orthographic one (measured:
+        /// tests/projects/brg sorting, sorting_ortho; equal values keep the commands' order).</summary>
         static float ApproximateDistance(int sortingPosition) => -(float)sortingPosition;
 
         /// <summary>The sorting distance of an instance at <paramref name="at"/> of the culling's
