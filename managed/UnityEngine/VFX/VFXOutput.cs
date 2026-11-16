@@ -37,10 +37,13 @@ namespace Unbound.Runtime
     /// <summary>
     /// An output of a particle system: one draw of its particles with the shader the graph
     /// compiled to, whose vertex program finds each particle in the system's buffers by its
-    /// vertex id. Drawn here: quads the output draws itself, in the order the system keeps
-    /// them (no sorting, no culling per camera, no indirect buffer). An output of another kind
-    /// is not drawn and says so once (<see cref="Refusal"/>): the system is simulated all the
-    /// same. The draw matches the Unity 6000.0.71f1 Editor (tests/projects/vfx, `draw-*`).
+    /// vertex id. Drawn here: quads, unsorted, either all the system has room for (the vertex
+    /// program leaves out the dead ones) or through an indirect buffer: a list of the particles
+    /// to draw that the system's kernels make (the update kernel, an output-update kernel at each
+    /// step, or one for each camera that sees the effect), whose count gives the draw's
+    /// arguments (<see cref="VFXIndirectArgs"/>). An output of another kind is not drawn and says
+    /// so once (<see cref="Refusal"/>): the system is simulated all the same. The draws match the
+    /// Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs).
     /// </summary>
     internal sealed class VFXOutput
     {
@@ -67,6 +70,12 @@ namespace Unbound.Runtime
         readonly GraphicsBuffer[] m_Bound;
         readonly VFXTaskObjects m_Objects;
         Texture2D m_Baked;
+        /// <summary>Of an output drawn through an indirect buffer: the buffer whose first
+        /// element counts the particles to draw (of key and index pairs when sorted), and its
+        /// entry of arguments; -1 for one drawn directly.</summary>
+        readonly int m_CountBuffer = -1, m_ArgsEntry = -1;
+        readonly bool m_CountPairs;
+        int m_FilledGeneration = -1;
 
         internal VFXOutput(VFXParticleSystem system, in VFXEditorTaskDesc task, Material material)
         {
@@ -84,7 +93,26 @@ namespace Unbound.Runtime
             m_Block.SetVector(s_InstancingConstants, new Vector4(one, one, one, 0f));
             m_Block.SetFloat(s_InstanceIndex, 0f);
             m_Block.SetFloat(s_InstanceActiveIndex, 0f);
+            if (Parameter(task, IndirectDrawName) != 0)
+            {
+                var data = system.Effect.Data;
+                m_CountBuffer = Parameter(task, "indirectIndex");
+                m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == KeyIndexPairBytes;
+                m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
+            }
         }
+
+        const string IndirectDrawName = "indirectDraw";
+        /// <summary>The size of a sorted list's element: a key and a particle's index.</summary>
+        const int KeyIndexPairBytes = 8;
+
+        /// <summary>Whether the output draws through an indirect buffer.</summary>
+        internal bool Indirect => m_ArgsEntry >= 0;
+
+        /// <summary>The kind of indirect arguments of an output task's primitive.</summary>
+        internal static VFXIndirectArgs.Kind ArgumentsKind(VFXTaskType type) => (VFXIndirectArgs.Kind)(type - VFXTaskType.ParticlePointOutput);
+
+        internal void Release() => VFXIndirectArgs.Shared.Release(m_ArgsEntry);
 
         /// <summary>Whether a task draws particles (an output of any primitive).</summary>
         internal static bool IsOutput(VFXTaskType type) =>
@@ -97,8 +125,7 @@ namespace Unbound.Runtime
         {
             if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} is not drawn yet (quads are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
-            if (Parameter(task, "indirectDraw") != 0)
-                return "it draws through an indirect buffer (sorted, culled per camera or asked to), which is not done yet";
+            if (Parameter(task, IndirectDrawName) != 0 && Sorted(system, task)) return "its particles are sorted, which is not done yet";
             if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
             // An output with motion vectors keeps each particle's last frame in buffers of its own.
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
@@ -162,6 +189,23 @@ namespace Unbound.Runtime
             return null;
         }
 
+        /// <summary>Whether an output draws its particles in a sorted order: from a sorted copy
+        /// of its list (its indices are another buffer than the one that counts them), or in a
+        /// system that sorts a list for its outputs (any of its outputs is refused then).</summary>
+        static bool Sorted(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
+        {
+            foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
+                if (other.type == VFXTaskType.GlobalSort) return true;
+            return Buffer(task, "indirectBuffer") != Parameter(task, "indirectIndex");
+        }
+
+        static int Buffer(in VFXEditorTaskDesc task, string name)
+        {
+            foreach (var buffer in task.buffers ?? Array.Empty<VFXMapping>())
+                if (buffer.name == name) return buffer.index;
+            return -1;
+        }
+
         static int Parameter(in VFXEditorTaskDesc task, string name)
         {
             foreach (var parameter in task.parameters ?? Array.Empty<VFXMapping>())
@@ -196,11 +240,25 @@ namespace Unbound.Runtime
             ? IndexedDraws.Direct(indices, 0, (int)quads * IndicesPerQuad, 1)
             : IndexedDraws.Direct(indices, 0, QuadsPerInstance * IndicesPerQuad, (int)((quads + QuadsPerInstance - 1) / QuadsPerInstance));
 
-        /// <summary>Adds the output's draw for a camera that sees the effect's renderer.</summary>
+        /// <summary>Computes the arguments of an indirect draw from the count its list has now
+        /// (after the kernels that make the list for this camera). False when they cannot be.</summary>
+        internal bool FillArguments()
+        {
+            var arguments = VFXIndirectArgs.Shared;
+            if (!arguments.Fill(m_ArgsEntry, m_System.Effect.GpuBuffer(m_CountBuffer, 0), m_CountPairs)) return false;
+            m_FilledGeneration = arguments.Generation;
+            return true;
+        }
+
+        /// <summary>Adds the output's draw for a camera that sees the effect's renderer (an
+        /// indirect one's list made for that camera: <see cref="VFXParticleSystem.PrepareCamera"/>).</summary>
         internal void Collect(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             uint quads = m_System.DrawnParticles;
             if (quads == 0 || !m_Material) return;
+            var arguments = VFXIndirectArgs.Shared;
+            // Arguments made anew since this camera's were computed are computed again.
+            if (Indirect && m_FilledGeneration != arguments.Generation && !FillArguments()) return;
             var effect = m_System.Effect;
             for (int i = 0; i < m_BufferNames.Length; i++)
             {
@@ -223,7 +281,10 @@ namespace Unbound.Runtime
                 // A property without an object leaves the program what it has without one.
                 else m_Block.m_Values.Remove(name);
             }
-            FrameBuilder.AddProceduralDraw(renderer, m_Material, renderer.transform.localToWorldMatrix, QuadDraw(QuadIndices(), quads), m_Block.m_Values, camera, into);
+            var setup = Indirect
+                ? IndexedDraws.Indirect(QuadIndices(), arguments.Arguments.Handle, VFXIndirectArgs.Offset(m_ArgsEntry))
+                : QuadDraw(QuadIndices(), quads);
+            FrameBuilder.AddProceduralDraw(renderer, m_Material, renderer.transform.localToWorldMatrix, setup, m_Block.m_Values, camera, into);
         }
     }
 }

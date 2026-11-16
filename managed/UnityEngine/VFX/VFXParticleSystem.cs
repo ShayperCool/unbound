@@ -43,7 +43,22 @@ namespace Unbound.Runtime
         readonly VFXSpawnerSystem[] m_Spawners;
         readonly Kernel m_Initialize;
         readonly Kernel[] m_Updates;
+        /// <summary>The kernels that make outputs' lists of particles to draw for a camera
+        /// (frustum culling, sorting by the camera), run for each camera that sees the effect.</summary>
+        readonly Kernel[] m_PerCamera;
         readonly VFXOutput[] m_Outputs;
+        /// <summary>The buffers that count the particles of the lists of particles to draw:
+        /// those the step's kernels make (emptied before each step) and those the camera's do
+        /// (emptied for each camera).</summary>
+        readonly int[] m_StepLists, m_CameraLists;
+        readonly bool m_HasIndirect;
+        /// <summary>The camera (and its view) the per-camera lists were last made for, since the
+        /// last step; null: none.</summary>
+        Camera m_PreparedCamera;
+        Matrix4x4 m_PreparedView, m_PreparedProjection;
+        /// <summary>The threads and prefix sum offset of the last step's update kernels.</summary>
+        uint m_UpdatedThreads;
+        int m_UpdatedPrefix;
         /// <summary>Whether a step uploaded what the outputs' programs read.</summary>
         bool m_Stepped;
         /// <summary>Per source attribute: where an event has it (a word of the event attributes)
@@ -106,7 +121,17 @@ namespace Unbound.Runtime
             m_Spawners = spawners.ToArray();
             m_SourceLayout = SourceLayout(data, m_SourceBuffer);
 
+            // The lists of particles to draw: per camera when their name says so.
+            var stepLists = new List<int>();
+            var cameraLists = new List<int>();
+            foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
+                if (mapping.name.StartsWith(IndirectListName, StringComparison.Ordinal))
+                    (mapping.name.EndsWith(PerCameraSuffix, StringComparison.Ordinal) ? cameraLists : stepLists).Add(mapping.index);
+            m_StepLists = stepLists.ToArray();
+            m_CameraLists = cameraLists.ToArray();
+
             var updates = new List<Kernel>();
+            var perCamera = new List<Kernel>();
             var outputs = new List<VFXOutput>();
             var processors = index < data.Processors.Length ? data.Processors[index] : Array.Empty<UnityEngine.Object>();
             for (int i = 0; i < (Desc.tasks?.Length ?? 0); i++)
@@ -124,10 +149,17 @@ namespace Unbound.Runtime
                 if (!(processor is ComputeShader shader)) continue;
                 if (task.type == VFXTaskType.Initialize) m_Initialize = new Kernel(this, task, shader);
                 else if (task.type == VFXTaskType.Update) updates.Add(new Kernel(this, task, shader));
+                else if (task.type == VFXTaskType.PerCameraUpdate) perCamera.Add(new Kernel(this, task, shader));
             }
             m_Updates = updates.ToArray();
+            m_PerCamera = perCamera.ToArray();
             m_Outputs = outputs.ToArray();
+            foreach (var output in m_Outputs) m_HasIndirect |= output.Indirect;
         }
+
+        /// <summary>How the compiler names the system's buffers of lists of particles to draw
+        /// (`indirectBuffer0`, `indirectBuffer0_a`, ...), and those it makes for each camera.</summary>
+        const string IndirectListName = "indirectBuffer", PerCameraSuffix = "PerCamera";
 
         /// <summary>How an event's attributes map into the source buffer: by name, from the
         /// event attribute layout every spawner shares to the layout the kernels read.</summary>
@@ -217,6 +249,7 @@ namespace Unbound.Runtime
             m_ReadbackGeneration++;
             m_NextReadbackFrame = VFXManager.Frame + 1;
             m_PrefixWords[0] = m_PrefixWords[1] = 0;
+            m_PreparedCamera = null;
             if (Capacity == 0) return;
 
             // Every particle dead: the list holds the capacity as its count and the indices so
@@ -304,6 +337,7 @@ namespace Unbound.Runtime
             if (!m_HasRenderer) return true;
             if (m_Initialize != null) m_KernelsUsable = m_Initialize.Usable();
             foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
+            foreach (var kernel in m_PerCamera) m_KernelsUsable &= kernel.Usable();
             return m_KernelsUsable;
         }
 
@@ -360,7 +394,31 @@ namespace Unbound.Runtime
 
             bool fixedSize = HasKill || HasStrips;
             uint updated = fixedSize ? Math.Max(AlignThreadGroups(Capacity), ThreadsPerGroup) : maxParticles;
-            foreach (var update in m_Updates) update.Dispatch(updated, fixedSize ? 0 : 1);
+            // The step's lists of particles to draw start empty; the update kernels fill them.
+            if (m_HasRenderer)
+                foreach (var list in m_StepLists) VFXIndirectArgs.Shared.ResetCount(Effect.GpuBuffer(list, 0));
+            m_UpdatedThreads = updated;
+            m_UpdatedPrefix = fixedSize ? 0 : 1;
+            m_PreparedCamera = null;
+            foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
+        }
+
+        /// <summary>Before a camera's draws of the system: the lists of particles to draw made
+        /// for it (emptied, then filled by the per-camera kernels over the particles the last step
+        /// left) and the indirect outputs' arguments computed from them. Done once for a camera
+        /// and its view between two steps, however many of the camera's draw lists collect the
+        /// effect; another camera between makes them again.</summary>
+        internal void PrepareCamera(FrameBuilder.CameraContext camera)
+        {
+            var eye = camera.Camera;
+            if (ReferenceEquals(eye, m_PreparedCamera) && camera.View == m_PreparedView && camera.Projection == m_PreparedProjection) return;
+            m_PreparedCamera = eye;
+            m_PreparedView = camera.View;
+            m_PreparedProjection = camera.Projection;
+            foreach (var list in m_CameraLists) VFXIndirectArgs.Shared.ResetCount(Effect.GpuBuffer(list, 0));
+            foreach (var kernel in m_PerCamera) kernel.Dispatch(m_UpdatedThreads, m_UpdatedPrefix);
+            foreach (var output in m_Outputs)
+                if (output.Indirect) output.FillArguments();
         }
 
         /// <summary>The particles an output draws: the ones spawned so far of a system that
@@ -372,7 +430,12 @@ namespace Unbound.Runtime
         /// <summary>Adds the draws of the system's outputs, in the graph's order.</summary>
         internal void CollectDraws(Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            foreach (var output in m_Outputs) output.Collect(renderer, camera, into);
+            if (DrawnParticles == 0) return;
+            // Without a renderer (a headless run, a test) no list is made: only direct draws.
+            bool indirect = m_HasIndirect && m_HasRenderer;
+            if (indirect) PrepareCamera(camera);
+            foreach (var output in m_Outputs)
+                if (indirect || !output.Indirect) output.Collect(renderer, camera, into);
         }
 
         /// <summary>The words of the source buffer the step's events reach.</summary>
@@ -441,6 +504,7 @@ namespace Unbound.Runtime
             static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
             static readonly int s_InstancingBufferOffsets = Shader.PropertyToID("instancingBufferOffsets");
             static readonly int s_BakedTexture = Shader.PropertyToID(VFXOutput.BakedTextureName);
+            static readonly int s_CameraXRSettings = Shader.PropertyToID("cameraXRSettings");
 
             readonly VFXParticleSystem m_System;
             readonly VFXEditorTaskDesc m_Task;
@@ -472,6 +536,9 @@ namespace Unbound.Runtime
                 // kernels read them, the bits of unsigned integers.
                 float one = BitConverter.Int32BitsToSingle(1);
                 m_Shader.SetVector(s_InstancingConstants, new Vector4(one, one, one, 0f));
+                // A camera's views as an output-update kernel reads them: one view in all, one
+                // drawn at once, from the first (what a camera without XR has).
+                m_Shader.SetVector(s_CameraXRSettings, new Vector4(one, one, 0f, 0f));
             }
 
             /// <summary>Whether the kernel compiles here; said once when it does not (a system
@@ -534,6 +601,8 @@ namespace Unbound.Runtime
             m_ReadbackGeneration++;
             m_Initialize?.Release();
             foreach (var update in m_Updates) update.Release();
+            foreach (var kernel in m_PerCamera) kernel.Release();
+            foreach (var output in m_Outputs) output.Release();
         }
     }
 }

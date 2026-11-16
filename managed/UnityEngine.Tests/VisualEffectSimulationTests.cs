@@ -831,6 +831,61 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void IndirectArgumentEntriesAreReservedByKindAndGivenBack()
+        {
+            // The package's numbering of what arguments are for, from an output's primitive.
+            Assert.Equal(VFXIndirectArgs.Kind.Points, VFXOutput.ArgumentsKind(VFXTaskType.ParticlePointOutput));
+            Assert.Equal(VFXIndirectArgs.Kind.Quads, VFXOutput.ArgumentsKind(VFXTaskType.ParticleQuadOutput));
+            Assert.Equal(VFXIndirectArgs.Kind.Meshes, VFXOutput.ArgumentsKind(VFXTaskType.ParticleMeshOutput));
+            Assert.Equal(VFXIndirectArgs.Kind.Triangles, VFXOutput.ArgumentsKind(VFXTaskType.ParticleTriangleOutput));
+            Assert.Equal(VFXIndirectArgs.Kind.Octagons, VFXOutput.ArgumentsKind(VFXTaskType.ParticleOctagonOutput));
+            Assert.Equal(0xffffffffu, (uint)VFXIndirectArgs.Kind.Dispatch);
+
+            var arguments = new VFXIndirectArgs();
+            int quads = arguments.Reserve(VFXIndirectArgs.Kind.Quads);
+            int dispatch = arguments.Reserve(VFXIndirectArgs.Kind.Dispatch);
+            Assert.Equal((0, 1), (quads, dispatch));
+            // Ten words an entry: the arguments of one view, then of two.
+            Assert.Equal(40, VFXIndirectArgs.Offset(dispatch));
+            // An entry given back is the next one reserved; nothing is made before a fill.
+            arguments.Release(quads);
+            Assert.Equal(quads, arguments.Reserve(VFXIndirectArgs.Kind.Meshes, 36, 6, 4));
+            Assert.Equal(2, arguments.Reserve(VFXIndirectArgs.Kind.Points));
+            Assert.Null(arguments.Arguments);
+            Assert.Equal(0, arguments.Generation);
+        }
+
+        [Fact]
+        public void AnIndirectOutputIsNotDrawnWithoutARenderer()
+        {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxIndirect\" { SubShader { Pass { Tags { \"LightMode\"=\"UniversalForwardOnly\" } } } }");
+            var material = new Material(shader);
+            var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material, new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 0));
+            asset.m_Data.Systems[1].tasks[0].buffers = new[] { new VFXMapping("indirectBuffer", 0) };
+            var effect = Running(asset);
+            var eye = new GameObject("eye").AddComponent<Camera>();
+            try
+            {
+                using var warnings = new Warnings();
+                Assert.Equal(new[] { 1, 2 }, Counts(effect, 2));
+                // Its list is made on the GPU: without one the effect simulates, says nothing
+                // and has no draw.
+                var draws = new List<FrameBuilder.DrawItem>();
+                Assert.True(effect.TryGetComponent<VFXRenderer>(out var renderer));
+                renderer.CollectDraws(new FrameBuilder.CameraContext { Camera = eye, Position = new Vector3(0f, 0f, -10f), Forward = Vector3.forward }, draws);
+                Assert.Empty(draws);
+                Assert.Empty(warnings.Messages);
+            }
+            finally
+            {
+                Object.DestroyImmediate(effect.gameObject);
+                Object.DestroyImmediate(eye.gameObject);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
+        }
+
+        [Fact]
         public void MoreQuadsThanIndicesReachAreDrawnAsInstances()
         {
             var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, VFXOutput.MaxQuadsPerDraw * 6, 2);
@@ -863,8 +918,18 @@ namespace UnityEngine.Tests
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
             Assert.Equal("ParticleMeshOutput is not drawn yet (quads are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
-            var indirect = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("sortPriority", 0), new VFXMapping("indirectDraw", 1) } };
-            Assert.StartsWith("it draws through an indirect buffer", VFXOutput.Refusal(system, indirect, material));
+            // Through an indirect buffer: drawn from the list that counts its particles; one
+            // drawn from another (sorted) list, or in a system that sorts one, is not.
+            VFXEditorTaskDesc Indirect(int list, int read) => new VFXEditorTaskDesc
+            {
+                type = VFXTaskType.ParticleQuadOutput,
+                parameters = new[] { new VFXMapping("sortPriority", 0), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", list) },
+                buffers = new[] { new VFXMapping("graphValuesBuffer", 4), new VFXMapping("indirectBuffer", read) },
+            };
+            Assert.Null(VFXOutput.Refusal(system, Indirect(2, 2), material));
+            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(system, Indirect(2, 3), material));
+            var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
+            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));
             Assert.Equal("strips are not drawn yet", VFXOutput.Refusal(new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips }, quads, material));
             Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
@@ -913,7 +978,9 @@ namespace UnityEngine.Tests
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.Refusal(system, quads, material, "it is lit, and lit outputs are not drawn yet"));
 
-            var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material, new VFXMapping("indirectDraw", 1));
+            var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material);
+            asset.m_Data.Systems[1].tasks[0].parameters = Indirect(2, 3).parameters;
+            asset.m_Data.Systems[1].tasks[0].buffers = Indirect(2, 3).buffers;
             asset.m_Name = "Smoke";
             asset.m_Settings.Renderer.shadowCastingMode = ShadowCastingMode.On;
             VisualEffect first = null, second = null;
@@ -928,7 +995,7 @@ namespace UnityEngine.Tests
                 second = Running(asset);
                 var said = Assert.Single(warnings.Messages, m => m.Contains("not drawn"));
                 Assert.StartsWith("Unbound: VisualEffect '", said);
-                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: it draws through an indirect buffer", said);
+                Assert.Contains("(Smoke): an output of 'Particles' is not drawn: its particles are sorted", said);
                 // So are the shadows an asset asks its renderer to cast.
                 Assert.Single(warnings.Messages, m => m.Contains("(Smoke): its outputs cast shadows in the Editor"));
                 // The system runs all the same, and its renderer has no draw.
