@@ -200,6 +200,11 @@ namespace Unbound.Runtime
 
         /// <summary>How many words and object slots the values of all expressions take.</summary>
         internal int WordCount, ObjectCount;
+        /// <summary>Per expression: the place of a baked curve or gradient in the effect's
+        /// texture (<see cref="Unbound.Runtime.VFXBakedTexture"/>), -1 for any other.</summary>
+        internal int[] BakePlaces = Array.Empty<int>();
+        /// <summary>How many curves and gradients the graph bakes.</summary>
+        internal int BakedCurves, BakedGradients;
 
         /// <summary>The layout of the events' attributes: the first CPU buffer, by attribute name id.</summary>
         internal int[] EventAttributeIds = Array.Empty<int>();
@@ -239,10 +244,45 @@ namespace Unbound.Runtime
             }
             for (int i = 0; i < Values.Length; i++)
                 if (Values[i] != null && Values[i].expressionIndex < (uint)count) ConstantOf[Values[i].expressionIndex] = i;
+            PlaceBakes(count);
 
             var layout = CpuBuffers.Length > 0 ? CpuBuffers[0].layout : null;
             EventAttributeIds = new int[layout?.Length ?? 0];
             for (int i = 0; i < EventAttributeIds.Length; i++) EventAttributeIds[i] = Shader.PropertyToID(layout[i].name);
+        }
+
+        /// <summary>Gives each baked curve and gradient its place, in the order of the
+        /// expressions: first the ones every effect of the asset shares (their curve is a
+        /// value of the graph that is not exposed), then the ones an effect can have of its
+        /// own (an exposed curve, or one that is computed). The Editor's effects of an asset
+        /// share the first ones' rows; an effect here has them all.</summary>
+        void PlaceBakes(int count)
+        {
+            BakePlaces = new int[count];
+            Array.Fill(BakePlaces, -1);
+            var own = new bool[count];
+            int sharedCurves = 0, ownCurves = 0, sharedGradients = 0, ownGradients = 0;
+            // The sheet's own expressions; the ones evaluated per spawn event bake nothing.
+            int sheet = Math.Min(count, Expressions.Length);
+            for (int i = 0; i < sheet; i++)
+            {
+                bool curve = Operations[i] == VFXExpressionOperation.BakeCurve;
+                if (!curve && Operations[i] != VFXExpressionOperation.BakeGradient) continue;
+                int parent = Operands[i * 4];
+                own[i] = !((uint)parent < (uint)count && Operations[parent] == VFXExpressionOperation.Value) || IsExposed(parent);
+                BakePlaces[i] = curve ? (own[i] ? ownCurves++ : sharedCurves++) : (own[i] ? ownGradients++ : sharedGradients++);
+            }
+            for (int i = 0; i < sheet; i++)
+                if (own[i]) BakePlaces[i] += Operations[i] == VFXExpressionOperation.BakeCurve ? sharedCurves : sharedGradients;
+            BakedCurves = sharedCurves + ownCurves;
+            BakedGradients = sharedGradients + ownGradients;
+        }
+
+        bool IsExposed(int expression)
+        {
+            foreach (var exposed in Exposed)
+                if (exposed.mapping.index == expression) return true;
+            return false;
         }
 
         /// <summary>Whether a value of a type is an object (a texture, mesh, renderer, buffer,

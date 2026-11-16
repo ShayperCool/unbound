@@ -278,7 +278,10 @@ namespace Unbound.Runtime
                 if (m_Sleeping) return;
                 if (!m_ReadbackPending) m_Sleeping = m_ReadAlive == 0;
             }
-            else m_Sleeping = false;
+            // Without such an answer a system stays as it is, and wakes when it spawns: one
+            // that has spawned nothing yet sleeps on (tests/projects/vfx, `draw/over life`:
+            // its first count is asked for the frame after its first particle).
+            else if (m_Spawned != 0) m_Sleeping = false;
             if (wasSleeping && !m_Sleeping)
             {
                 // Awake again: the old count says nothing, and a new one is asked for next frame.
@@ -437,6 +440,7 @@ namespace Unbound.Runtime
             static readonly int s_DispatchWidth = Shader.PropertyToID("dispatchWidth");
             static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
             static readonly int s_InstancingBufferOffsets = Shader.PropertyToID("instancingBufferOffsets");
+            static readonly int s_BakedTexture = Shader.PropertyToID(VFXOutput.BakedTextureName);
 
             readonly VFXParticleSystem m_System;
             readonly VFXEditorTaskDesc m_Task;
@@ -449,6 +453,7 @@ namespace Unbound.Runtime
             /// effect, bound by name (again only once the value is another object).</summary>
             readonly VFXTaskObjects m_Objects;
             int m_DispatchWidth = -1, m_PrefixOffset = -1;
+            Texture2D m_Baked;
             bool m_Checked, m_Failed;
 
             internal Kernel(VFXParticleSystem system, in VFXEditorTaskDesc task, ComputeShader shader)
@@ -504,6 +509,8 @@ namespace Unbound.Runtime
                     // A property without an object leaves the kernel what it has without one.
                     else m_Shader.Unbind(m_Kernel, name);
                 }
+                var baked = effect.BakedTexture;
+                if (!ReferenceEquals(baked, m_Baked) && baked != null) m_Shader.SetTexture(m_Kernel, s_BakedTexture, m_Baked = baked);
                 for (int i = 0; i < m_BufferNames.Length; i++)
                 {
                     int index = m_Task.buffers[i].index;

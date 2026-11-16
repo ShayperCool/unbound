@@ -53,6 +53,9 @@ namespace Unbound.Runtime
         static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
         static readonly int s_InstanceIndex = Shader.PropertyToID("_InstanceIndex");
         static readonly int s_InstanceActiveIndex = Shader.PropertyToID("_InstanceActiveIndex");
+        /// <summary>The texture the generated programs sample curves and gradients from.</summary>
+        internal const string BakedTextureName = "bakedTexture";
+        static readonly int s_BakedTexture = Shader.PropertyToID(BakedTextureName);
 
         static GraphicsBuffer s_QuadIndices;
 
@@ -63,6 +66,7 @@ namespace Unbound.Runtime
         readonly int[] m_BufferNames;
         readonly GraphicsBuffer[] m_Bound;
         readonly VFXTaskObjects m_Objects;
+        Texture2D m_Baked;
 
         internal VFXOutput(VFXParticleSystem system, in VFXEditorTaskDesc task, Material material)
         {
@@ -207,6 +211,8 @@ namespace Unbound.Runtime
                 m_Bound[i] = buffer;
                 m_Block.SetBuffer(m_BufferNames[i], buffer);
             }
+            var baked = effect.BakedTexture;
+            if (!ReferenceEquals(baked, m_Baked) && baked != null) m_Block.SetTexture(s_BakedTexture, m_Baked = baked);
             var values = effect.Values;
             for (int i = 0; i < m_Objects.Slots.Length; i++)
             {

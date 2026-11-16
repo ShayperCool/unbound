@@ -74,6 +74,10 @@ namespace UnityEngine.VFX
         internal VisualEffectCompiledData Data => m_Data;
         internal VisualEffectValues Values => m_Values;
 
+        /// <summary>The texture the effect's programs sample its curves and gradients from, null
+        /// while the graph bakes none or nothing was baked yet.</summary>
+        internal Texture2D BakedTexture => m_State.Baked?.Texture;
+
         /// <summary>The effect's time: the sum of the steps it ran.</summary>
         internal float time => m_TotalTime;
 
@@ -148,6 +152,7 @@ namespace UnityEngine.VFX
             }
             if (m_Asset.m_Settings.Renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off) WarnShadowsNotCast();
             m_GpuBuffers = new GraphicsBuffer[m_Data.GpuBuffers.Length];
+            m_State.Baked = VFXBakedTexture.For(m_Data);
             var systems = new List<VFXSystem>(m_Data.Systems.Length);
             var particles = new List<VFXParticleSystem>();
             // Spawners first, as the compiler lists them: a particle system finds the ones that feed it.
@@ -171,6 +176,8 @@ namespace UnityEngine.VFX
         {
             foreach (var system in m_Systems) system.Release();
             foreach (var buffer in m_GpuBuffers) buffer?.Release();
+            m_State.Baked?.Release();
+            m_State.Baked = null;
             m_Systems = Array.Empty<VFXSystem>();
             m_ParticleSystems = Array.Empty<VFXParticleSystem>();
             m_GpuBuffers = Array.Empty<GraphicsBuffer>();
@@ -320,6 +327,8 @@ namespace UnityEngine.VFX
         {
             VFXExpressionEvaluator.Evaluate(m_Data, m_Values, 0, m_Data.Expressions.Length, m_State, null);
             m_State.NeedsEvaluation = false;
+            // What the evaluation baked reaches the GPU before the step's kernels read it.
+            m_State.Baked?.Apply();
         }
 
         void Step(StepFlags flags)

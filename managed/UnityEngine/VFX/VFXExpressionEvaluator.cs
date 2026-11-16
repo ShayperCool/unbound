@@ -18,6 +18,9 @@ namespace Unbound.Runtime
         internal UnityEngine.Random.State Random;
         /// <summary>Whether a step ran since the expressions were last evaluated.</summary>
         internal bool NeedsEvaluation = true;
+        /// <summary>Where the effect's curves and gradients are baked for its programs; null
+        /// for a graph that bakes none.</summary>
+        internal VFXBakedTexture Baked;
     }
 
     /// <summary>
@@ -50,10 +53,6 @@ namespace Unbound.Runtime
                 case VFXExpressionOperation.MatrixToRow:
                 case VFXExpressionOperation.MatrixToColumn:
                 case VFXExpressionOperation.MatrixToAxis:
-                case VFXExpressionOperation.SampleCurve:
-                case VFXExpressionOperation.SampleGradient:
-                case VFXExpressionOperation.BakeCurve:
-                case VFXExpressionOperation.BakeGradient:
                 case VFXExpressionOperation.RGBtoHSV:
                 case VFXExpressionOperation.HSVtoRGB:
                     return false;
@@ -173,6 +172,25 @@ namespace Unbound.Runtime
                         for (int i = 0; i < size; i++) w[at + i] = Bits(Binary(op, Float(w[p0 + i]), Float(w[p1 + i])));
                         break;
                     }
+
+                    case VFXExpressionOperation.SampleCurve:
+                        // A curve at a time; no curve gives zero.
+                        w[at] = Bits(values.GetObject(a0) is AnimationCurve sampled ? sampled.Evaluate(Float(w[p1])) : 0f);
+                        break;
+                    case VFXExpressionOperation.SampleGradient:
+                    {
+                        var color = values.GetObject(a0) is Gradient ramp ? ramp.Evaluate(Float(w[p1])) : default;
+                        (w[at], w[at + 1], w[at + 2], w[at + 3]) = (Bits(color.r), Bits(color.g), Bits(color.b), Bits(color.a));
+                        break;
+                    }
+                    // A curve or gradient at its place in the effect's texture, as what the
+                    // generated code samples it there with.
+                    case VFXExpressionOperation.BakeCurve:
+                        state.Baked?.BakeCurve(data.BakePlaces[e], values.GetObject(a0) as AnimationCurve, w, at);
+                        break;
+                    case VFXExpressionOperation.BakeGradient:
+                        state.Baked?.BakeGradient(data.BakePlaces[e], values.GetObject(a0) as Gradient, w, at);
+                        break;
 
                     case VFXExpressionOperation.TRSToMatrix:
                     {

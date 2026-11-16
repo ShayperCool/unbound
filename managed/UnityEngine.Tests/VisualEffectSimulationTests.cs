@@ -27,7 +27,7 @@ namespace UnityEngine.Tests
             new VFXExpressionValueContainerDesc<T> { expressionIndex = (uint)expression, value = value };
 
         static VisualEffectCompiledData Data(VFXExpressionDesc[] expressions, VFXExpressionValueContainerDesc[] values,
-            VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0)
+            VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0, VFXExposedMapping[] exposed = null)
         {
             var resource = new VisualEffectResource();
             // The event attributes (one per spawner after the asset's own): a spawn count of one.
@@ -42,7 +42,7 @@ namespace UnityEngine.Tests
                     layout = new[] { new VFXLayoutElementDesc { name = "spawnCount", type = VFXValueType.Float, offset = new VFXLayoutOffset { structure = 1 } } },
                 };
             }
-            resource.SetRuntimeData(new VFXExpressionSheet { expressions = expressions, values = values, exposed = Array.Empty<VFXExposedMapping>() },
+            resource.SetRuntimeData(new VFXExpressionSheet { expressions = expressions, values = values, exposed = exposed ?? Array.Empty<VFXExposedMapping>() },
                 systems ?? Array.Empty<VFXEditorSystemDesc>(), events ?? Array.Empty<VFXEventDesc>(), null, buffers, null, null,
                 ShadowCastingMode.Off, MotionVectorGenerationMode.Camera, VFXInstancingDisabledReason.None, 7);
             var data = resource.m_Data;
@@ -402,6 +402,123 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(texture);
                 Object.DestroyImmediate(shader);
             }
+        }
+
+        [Fact]
+        public void CurvesAndGradientsAreBakedAtTheirPlacesWithWhatSamplesThem()
+        {
+            var steady = new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(0.5f, 0.45f), new Keyframe(1f, 0.1f));
+            var looping = new AnimationCurve(new Keyframe(2f, 1f), new Keyframe(4f, 3f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.Loop };
+            var large = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 131008f));
+            var bright = new Gradient { mode = GradientMode.Fixed };
+            bright.SetKeys(new[] { new GradientColorKey(new Color(131008f, 2f, 1f), 0.5f), new GradientColorKey(new Color(1f, 2f, 4f), 1f) },
+                new[] { new GradientAlphaKey(0.25f, 0f), new GradientAlphaKey(0.25f, 1f) });
+            // Three curves and a gradient as values, the first curve exposed; each baked.
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Curve), Value(VFXValueType.Curve), Value(VFXValueType.Curve), Value(VFXValueType.ColorGradient),
+                Op(VFXExpressionOperation.BakeCurve, 0), Op(VFXExpressionOperation.BakeCurve, 1), Op(VFXExpressionOperation.BakeCurve, 2),
+                Op(VFXExpressionOperation.BakeGradient, 3),
+            }, new[] { Constant(0, steady), Constant(1, looping), Constant(2, large), Constant(3, bright) },
+                exposed: new[] { new VFXExposedMapping { mapping = new VFXMapping("Size", 0) } });
+            // The curves every effect shares come first, in order; the exposed one after them.
+            Assert.Equal(new[] { -1, -1, -1, -1, 2, 0, 1, 0 }, data.BakePlaces);
+            Assert.Equal((3, 1), (data.BakedCurves, data.BakedGradients));
+
+            var state = new VisualEffectState { Baked = VFXBakedTexture.For(data) };
+            var values = new VisualEffectValues(data);
+            try
+            {
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                state.Baked.Apply();
+                var texture = state.Baked.Texture;
+                // Three curves in one row, the gradient in the next: 128 half-float texels a row.
+                Assert.Equal((128, 2, TextureFormat.RGBAHalf, TextureWrapMode.Repeat), (texture.width, texture.height, texture.format, texture.wrapMode));
+                uint[] Words(int expression, int count)
+                {
+                    var words = new uint[count];
+                    for (int i = 0; i < count; i++) words[i] = values.Words[data.ValueOffsets[expression] + i];
+                    return words;
+                }
+                float row0 = 0.25f, row1 = 0.75f;
+                // The exposed curve, place 2: keys from 0 to 1 (one over the range, minus the
+                // start over it, as two half floats), no scale, its row, its channel with
+                // "clamps before and after".
+                Assert.Equal(new uint[] { 0x80003c00, Bits(1f), Bits(row0), 2 | 4 | 8 }, Words(4, 4));
+                Assert.Equal(0.05f, texture.GetPixel(0, 0).b, 4);
+                Assert.Equal(0.1f, texture.GetPixel(127, 0).b, 4);
+                Assert.Equal(steady.Evaluate(64f / 127f), texture.GetPixel(64, 0).b, 3);
+                // The looping curve, place 0: keys from 2 to 4; sampled at texel centres.
+                Assert.Equal(new uint[] { (uint)Mathf.FloatToHalf(0.5f) | (uint)Mathf.FloatToHalf(-1f) << 16, Bits(1f), Bits(row0), 0 }, Words(5, 4));
+                Assert.Equal(looping.Evaluate(2f + 0.5f * 2f / 128f), texture.GetPixel(0, 0).r, 3);
+                Assert.Equal(looping.Evaluate(2f + 127.5f * 2f / 128f), texture.GetPixel(127, 0).r, 3);
+                // The large curve, place 1: stored scaled to the largest half float, the scale beside it.
+                Assert.Equal(new uint[] { 0x80003c00, Bits(131008f / 65504f), Bits(row0), 1 | 4 | 8 }, Words(6, 4));
+                Assert.Equal(65504f, texture.GetPixel(127, 0).g);
+                Assert.Equal(0f, texture.GetPixel(0, 0).g);
+                // The gradient: its row, fixed between keys, its colours scaled and its alpha not.
+                Assert.Equal(new uint[] { Bits(row1), Bits(1f), Bits(131008f / 65504f) }, Words(7, 3));
+                var first = texture.GetPixel(0, 1);
+                Assert.Equal((65504f, 1f, 0.5f), (first.r, first.g, first.b));
+                Assert.Equal(0.25f, first.a, 3);
+                Assert.Equal(2f, texture.GetPixel(127, 1).b, 3);
+
+                // Another curve at the exposed place is baked; the same object again is not.
+                var pixelsBefore = texture.GetPixel(0, 0);
+                values.SetObject(0, new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(1f, 0.02f)));
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, state, null);
+                state.Baked.Apply();
+                Assert.Same(texture, state.Baked.Texture);
+                Assert.Equal(0.3f, texture.GetPixel(0, 0).b, 3);
+                Assert.Equal(pixelsBefore.r, texture.GetPixel(0, 0).r);
+                // A graph that bakes nothing has no texture.
+                Assert.Null(VFXBakedTexture.For(Data(new[] { Value(VFXValueType.Float) }, new[] { Constant(0, 1f) })));
+            }
+            finally { state.Baked.Release(); }
+        }
+
+        [Fact]
+        public void CurvesAndGradientsAreSampledWhereExpressionsAreEvaluated()
+        {
+            var curve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 2f));
+            var ramp = new Gradient();
+            ramp.SetKeys(new[] { new GradientColorKey(Color.red, 0f), new GradientColorKey(Color.blue, 1f) }, new[] { new GradientAlphaKey(0.5f, 0f), new GradientAlphaKey(0.5f, 1f) });
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Curve), Value(VFXValueType.ColorGradient), Value(VFXValueType.Float),
+                Op(VFXExpressionOperation.SampleCurve, 0, 2), Op(VFXExpressionOperation.SampleGradient, 1, 2),
+            }, new[] { Constant(0, curve), Constant(1, ramp), Constant(2, 0.75f) });
+            var values = new VisualEffectValues(data);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            Assert.Equal(Bits(curve.Evaluate(0.75f)), values.GetWord(3));
+            var color = ramp.Evaluate(0.75f);
+            int at = data.ValueOffsets[4];
+            Assert.Equal(new[] { Bits(color.r), Bits(color.g), Bits(color.b), Bits(color.a) }, new[] { values.Words[at], values.Words[at + 1], values.Words[at + 2], values.Words[at + 3] });
+            // Without a curve or a gradient: zeros.
+            values.SetObject(0, null);
+            values.SetObject(1, null);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            Assert.Equal((0u, 0u), (values.GetWord(3), values.Words[at + 3]));
+        }
+
+        [Fact]
+        public void ASystemThatKillsSleepsUntilItFirstSpawns()
+        {
+            // Ten a second in steps of a thirtieth: the first particle comes with the third step.
+            var asset = Counting(10f);
+            asset.m_Data.Systems[1].flags |= VFXSystemFlag.SystemHasKill;
+            var effect = Running(asset);
+            try
+            {
+                var awake = new bool[4];
+                for (int i = 0; i < awake.Length; i++)
+                {
+                    effect.UpdateEffect(Thirtieth);
+                    awake[i] = effect.HasAnySystemAwake();
+                }
+                Assert.Equal(new[] { false, false, true, true }, awake);
+            }
+            finally { Object.DestroyImmediate(effect.gameObject); }
         }
 
         [Fact]
