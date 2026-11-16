@@ -620,10 +620,11 @@ pub struct UnityRenderer {
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
-    /// The full-size allocations of dynamically scaled render textures while they are scaled:
-    /// the Editor keeps a scaled texture's full-resolution
-    /// target and draws into a portion of it, so a texture back at full size has the image it
-    /// had (tests/projects/nativegfx `dynres.content.back`).
+    /// The full-size allocations of dynamically scaled render textures while they are scaled,
+    /// taken again back at full size: the Manual (6000.0, Dynamic resolution) says render
+    /// targets are not reallocated, a scaled one using a portion of the full-resolution one;
+    /// measured: a full-size image is whole again (tests/projects/nativegfx `dynres.content.*`).
+    /// Scaled images are textures of their own here.
     full_resolution: HashMap<u64, FullResolution>,
     texture_mip_biases: HashMap<u64, f32>,
     defaults: HashMap<&'static str, GpuTexture>,
@@ -1103,8 +1104,10 @@ impl UnityRenderer {
                     && size != logical
                     && (full.width, full.height) == logical
                 {
-                    // Scaled from its full size: that allocation is kept, the scaled one new.
+                    // Scaled from its full size: that allocation is kept, the scaled one new,
+                    // its samples published first if it is still the bound target.
                     let gpu = old.take().expect("matched");
+                    self.publish_resolve_now(&gpu.texture);
                     let kept = FullResolution {
                         mips: self.pending_mips.get(&gpu.texture).copied(),
                         resolve: self.resolve_history.remove(&gpu.texture),

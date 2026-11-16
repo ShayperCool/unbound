@@ -216,6 +216,38 @@ impl UnityRenderer {
         })
     }
 
+    /// Publishes what a target's samples hold that its retained image does not yet, at once:
+    /// for a texture whose storage is set aside while it is still the bound target (the
+    /// commands before an upload have been submitted).
+    pub(super) fn publish_resolve_now(&mut self, source: &wgpu::Texture) {
+        let Some(copies) = self.resolve_msaa_source(source, false) else {
+            return;
+        };
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("unbound retained resolve"),
+            });
+        for c in copies {
+            encoder.copy_texture_to_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &c.source,
+                    mip_level: c.source_mip,
+                    origin: c.source_origin,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                wgpu::TexelCopyTextureInfo {
+                    texture: &c.destination,
+                    mip_level: c.destination_mip,
+                    origin: c.destination_origin,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                c.size,
+            );
+        }
+        self.queue.submit([encoder.finish()]);
+    }
+
     pub(super) fn resolve_msaa(&mut self, handle: u64) -> Option<ResolveCopies> {
         let (base, depth) = handle::split(handle);
         if depth {
