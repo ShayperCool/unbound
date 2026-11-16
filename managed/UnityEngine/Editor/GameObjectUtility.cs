@@ -9,7 +9,7 @@ namespace UnityEditor
         /// the flags its scene or prefab file gives it (m_StaticEditorFlags).</summary>
         public static StaticEditorFlags GetStaticEditorFlags(GameObject go)
         {
-            if (go is null) throw new ArgumentNullException(nameof(go));
+            if (go == null) throw new ArgumentNullException(nameof(go));
             return (StaticEditorFlags)go.m_StaticEditorFlags;
         }
     }

@@ -6,6 +6,12 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    /// <summary>A project's shader editor (outside Unbound's UnityEditor).</summary>
+    sealed class ValidationTestProjectGUI : ShaderGUI
+    {
+        public override void ValidateMaterial(Material material) => material.EnableKeyword("PROJECT_VALIDATED");
+    }
+
     /// <summary>The Editor's validation of a loaded material with its shader's editor
     /// (ShaderGUI.ValidateMaterial; the Standard shaders' as tests/projects/materialvalidation
     /// measures it), and what happens without a usable editor.</summary>
@@ -161,6 +167,23 @@ namespace UnityEngine.Tests
             }
             Assert.Empty(logs.Messages);
             Assert.Equal(MaterialGlobalIlluminationFlags.RealtimeEmissive | MaterialGlobalIlluminationFlags.EmissiveIsBlack, m.globalIlluminationFlags);
+            // Control: a project's editor still validates a model's material.
+            var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
+                .GetField("s_Assemblies", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+            var own = typeof(ValidationTestProjectGUI).Assembly;
+            bool added = !assemblies.Contains(own);
+            if (added) assemblies.Add(own);
+            try
+            {
+                var project = new Material(ShaderUtil.CreateShaderAsset("Shader \"Tests/Project Validation " + Guid.NewGuid().ToString("N")
+                    + "\"\n{\n    SubShader { Pass { } }\n    CustomEditor \"UnityEngine.Tests.ValidationTestProjectGUI\"\n}"));
+                MaterialValidation.Validate(project, editorsOfTheEditor: false);
+                Assert.True(project.IsKeywordEnabled("PROJECT_VALIDATED"));
+            }
+            finally
+            {
+                if (added) assemblies.Remove(own);
+            }
             // Control: loaded from a material file, the Standard editor validates it.
             Validate(m);
             Assert.Equal(MaterialGlobalIlluminationFlags.RealtimeEmissive, m.globalIlluminationFlags);

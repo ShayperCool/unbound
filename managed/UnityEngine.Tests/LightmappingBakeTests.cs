@@ -24,6 +24,10 @@ namespace UnityEngine.Tests
 
         enum Phase { Edit, Entering, Play }
 
+        static readonly System.Reflection.PropertyInfo s_PlayModeDomainLoading =
+            typeof(EditorInitialization).GetProperty(nameof(EditorInitialization.PlayModeDomainLoading),
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+
         /// <summary>Runs <paramref name="body"/> in <paramref name="phase"/> with the log captured
         /// and the bake events listed ("S" started, "C" completed).</summary>
         static (Logs Logs, string Events) Run(Phase phase, Action body)
@@ -37,6 +41,7 @@ namespace UnityEngine.Tests
             Lightmapping.bakeCompleted += completed;
             try
             {
+                if (phase == Phase.Entering) s_PlayModeDomainLoading.SetValue(null, true);
                 if (phase == Phase.Entering) EditorSession.BeginEnteringPlayMode();
                 else EditorSession.IsPlaying = phase == Phase.Play;
                 Debug.unityLogger.logHandler = logs;
@@ -46,6 +51,7 @@ namespace UnityEngine.Tests
             {
                 Debug.unityLogger.logHandler = handler;
                 if (phase == Phase.Entering) EditorSession.EndEnteringPlayMode();
+                if (phase == Phase.Entering) s_PlayModeDomainLoading.SetValue(null, false);
                 EditorSession.IsPlaying = wasPlaying;
                 Lightmapping.bakeStarted -= started;
                 Lightmapping.bakeCompleted -= completed;
@@ -94,6 +100,37 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EditCodeThatAsksForPlayModeOrRunsAsItIsLeftStillBakesInEditMode()
+        {
+            // Play mode requested in Edit mode, and ExitingEditMode (sent before the domain
+            // reloads): the bake would be an Edit-mode one, which Unbound does not make.
+            bool wasPlaying = EditorSession.IsPlaying, wasEditMode = EditorSession.StartedInEditMode;
+            try
+            {
+                EditorSession.StartedInEditMode = true;
+                EditorSession.IsPlaying = false;
+                EditorSession.Request(true);
+                Assert.True(EditorSession.WillChange);
+                var (logs, events) = Run(Phase.Edit, () => Assert.False(Lightmapping.Bake()));
+                Assert.Equal("", events);
+                Assert.Contains(logs.Messages, m => m.Message.Contains("Edit mode is not implemented"));
+            }
+            finally
+            {
+                EditorSession.Request(false);
+                EditorSession.StartedInEditMode = wasEditMode;
+                EditorSession.IsPlaying = wasPlaying;
+            }
+            var exiting = Run(Phase.Edit, () =>
+            {
+                EditorSession.BeginEnteringPlayMode();
+                try { Assert.False(Lightmapping.Bake()); }
+                finally { EditorSession.EndEnteringPlayMode(); }
+            });
+            Assert.Equal("", exiting.Events);
+        }
+
+        [Fact]
         public void StaticEditorFlagsAreTheGameObjectsOwn()
         {
             var go = new GameObject("flags");
@@ -108,6 +145,8 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(go);
             }
+            // A destroyed GameObject is null to Unity's check.
+            Assert.Throws<ArgumentNullException>(() => GameObjectUtility.GetStaticEditorFlags(go));
         }
     }
 }

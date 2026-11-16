@@ -42,18 +42,34 @@ namespace UnityEditor
         internal static void LoadEditorDomain(bool enteringPlayMode = false)
         {
             MainView.Open();
-            ForEachType(type =>
+            try
             {
-                if (!Has(type, InitializeOnLoad)) return;
-                try { RuntimeHelpers.RunClassConstructor(type.TypeHandle); }
-                catch (TypeInitializationException e) { Debug.LogException(e.InnerException ?? e); }
-                catch (Exception e) { Debug.LogException(e); }
-            });
-            if (enteringPlayMode) EnterPlayModeMethods();
-            ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
+                PlayModeDomainLoading = enteringPlayMode;
+                ForEachType(type =>
+                {
+                    if (!Has(type, InitializeOnLoad)) return;
+                    try { RuntimeHelpers.RunClassConstructor(type.TypeHandle); }
+                    catch (TypeInitializationException e) { Debug.LogException(e.InnerException ?? e); }
+                    catch (Exception e) { Debug.LogException(e); }
+                });
+                if (enteringPlayMode) EnterPlayModeMethods();
+                ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
+            }
+            finally { PlayModeDomainLoading = false; }
+            // The Editor sends it before the domain reloads, in Edit mode.
             if (enteringPlayMode) EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
-            DidReloadScriptsMethods();
+            try
+            {
+                PlayModeDomainLoading = enteringPlayMode;
+                DidReloadScriptsMethods();
+            }
+            finally { PlayModeDomainLoading = false; }
         }
+
+        /// <summary>The editor domain's load callbacks run as Play mode is entered (in the Editor,
+        /// in the domain reloaded for Play mode; not ExitingEditMode, which the Editor sends before
+        /// the reload).</summary>
+        internal static bool PlayModeDomainLoading { get; private set; }
 
         /// <summary>[InitializeOnEnterPlayMode] methods, as Play mode is entered.</summary>
         internal static void EnterPlayModeMethods()
