@@ -807,13 +807,7 @@ impl Echo {
             return Ok(());
         }
         if measured && self.crossfade != 0 {
-            // The delay waits; keep room for it so a reset can take it without allocating.
-            let capacity = Self::capacity(Self::frames(delay, rate)?, rate);
-            if capacity > self.history.capacity() {
-                self.history
-                    .try_reserve_exact(capacity - self.history.len())?;
-            }
-            return Ok(());
+            return self.reserve(delay);
         }
         let frames = Self::frames(delay, rate)?;
         if !measured {
@@ -871,6 +865,15 @@ impl Echo {
         // The headroom keeps the read position behind the write position.
         debug_assert!(delay > 0 && delay < frames);
         Ok(frames - delay)
+    }
+    /// Keeps room for the ring of a delay that waits, so a reset can take it without allocating.
+    fn reserve(&mut self, delay: f32) -> anyhow::Result<()> {
+        let capacity = Self::capacity(Self::frames(delay, self.rate)?, self.rate);
+        if capacity > self.history.capacity() {
+            self.history
+                .try_reserve_exact(capacity - self.history.len())?;
+        }
+        Ok(())
     }
     /// Empties the history as a new unit at `delay` has it: a delay still waiting, or a ring
     /// grown for a longer delay, is replaced within the ring's reserved memory (see
@@ -1234,6 +1237,9 @@ impl Effect {
         }
         let mut effect = Self::new(spec, rate, buffer)?;
         effect.spec.delay = self.spec.delay;
+        if effect.kind == Some(EffectKind::Echo) && effect.echo.delay != effect.spec.delay {
+            effect.echo.reserve(effect.spec.delay)?;
+        }
         // A crossfade still running here keeps delays waiting on the new pair too.
         effect.echo.crossfade = self.echo.crossfade;
         effect.echo.previous = effect.echo.read;
@@ -2905,6 +2911,18 @@ mod tests {
         effect.update(spec.clone(), 48000, 1024).unwrap();
         let lane = effect.mirror(48000, 1024).unwrap();
         assert_eq!(lane.echo.crossfade, effect.echo.crossfade);
+        // A delay still waiting when the lane is made is reserved there too, so a reset takes
+        // it on every pair without allocating.
+        spec.delay = 800.0;
+        effect.update(spec.clone(), 48000, 1024).unwrap();
+        let mut lane = effect.mirror(48000, 1024).unwrap();
+        assert_eq!((lane.echo.delay, lane.spec.delay), (37.0, 800.0));
+        let memory = lane.echo.history.as_ptr();
+        assert!(lane.echo.history.capacity() >= 48000);
+        lane.reset();
+        effect.reset();
+        assert_eq!(lane.echo.history.as_ptr(), memory);
+        assert_eq!((lane.echo.delay, effect.echo.delay), (800.0, 800.0));
     }
 
     #[test]
