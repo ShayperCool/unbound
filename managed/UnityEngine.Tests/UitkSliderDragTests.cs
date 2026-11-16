@@ -63,8 +63,8 @@ namespace UnityEngine.Tests
             Assert.Equal(10, reversed.value);
         }
 
-        /// <summary>The tracker paths are not in the probe (a tracker click depends on the element
-        /// under the Editor's real pointer); these pin the integer slider's own rules.</summary>
+        /// <summary>The integer slider's tracker rules without a panel (the probe's `track*` and
+        /// `drag.*` rows measure them through events).</summary>
         [Theory]
         [InlineData(0, 10, false, SliderDirection.Horizontal, true, 3)]
         [InlineData(0, 10, false, SliderDirection.Horizontal, false, 7)]
