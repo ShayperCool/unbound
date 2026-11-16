@@ -98,11 +98,22 @@ namespace UnityEngine
             return t == 0 ? TextureFormat.RGBA32 : t;
         }
 
+        /// <summary>The engine's size check of a texture being made or reinitialized: a side of
+        /// zero or less is refused with its error, after an assertion for a negative side (the
+        /// Unity 6000.0.71f1 Editor, tests/projects/apierrors `texture.new_*`, `texture.reinitialize_*`).</summary>
+        static bool SidesValid(int width, int height)
+        {
+            if (width > 0 && height > 0) return true;
+            if (width < 0 || height < 0)
+                Log.Engine(LogType.Assert, "Assertion failed on expression: '!((width >> minSizeLog2) < 1 && (height >> minSizeLog2) < 1 && (depth >> minSizeLog2) < 1)'", null);
+            Log.Engine(LogType.Error, width <= 0 ? "Texture must have width greater than 0." : "Texture must have height greater than 0.", null);
+            return false;
+        }
+
         void Init(int width, int height, TextureFormat format, int mipCount, bool linear)
         {
             CheckMainThreadCreation("SupportsTextureFormatNative");
-            if (width <= 0 || height <= 0)
-                throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
+            if (!SidesValid(width, height)) throw new UnityException("Failed to create texture because of invalid parameters.");
             // Block formats need block-sized sides (checked before anything changes).
             if (!BlockSized(format, width, height))
                 throw new UnityException("Failed to create texture because of invalid parameters.");
@@ -395,6 +406,7 @@ namespace UnityEngine
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
+            if (!SidesValid(width, height)) return false;
             // A block format refuses sides that are not block-sized, leaving the texture as it was
             // (tests/projects/texturecompression reinit.odd).
             if (!BlockSized(format, width, height)) return false;
@@ -405,6 +417,7 @@ namespace UnityEngine
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
+            if (!SidesValid(width, height)) return false;
             if (!BlockSized(TextureFormatOf(format), width, height)) return false;
             Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
             return true;

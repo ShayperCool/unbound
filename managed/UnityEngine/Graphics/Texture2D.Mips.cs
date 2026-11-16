@@ -16,9 +16,18 @@ namespace UnityEngine
         int MipHeight(int mip) => Math.Max(1, m_Height >> mip);
         bool ValidMip(int mip) => mip >= 0 && mip < m_MipCount;
 
-        void CheckMip(int mip)
+        void CheckMip(int mip, string api)
         {
-            if (!ValidMip(mip)) throw new ArgumentException("Texture mip level is out of range.");
+            if (!ValidMip(mip)) throw PixelDataTransfer.InvalidMip(api, name);
+        }
+
+        /// <summary>The single-texel accessors' mip check: logged, the access does nothing
+        /// (tests/projects/apierrors `texture.*_pixel*_bad_mip`).</summary>
+        bool TexelMip(int mip, string api)
+        {
+            if (ValidMip(mip)) return true;
+            Debug.LogError($"{api} called on an undefined mip (valid values are 0 - {m_MipCount - 1}");
+            return false;
         }
 
         Color32[] ByteLevel(int mip)
@@ -116,7 +125,7 @@ namespace UnityEngine
         public Color GetPixel(int x, int y, int mipLevel)
         {
             RequireReadable();
-            if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return Color.white; }
+            if (!TexelMip(mipLevel, "GetPixel")) return Color.white;
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
             return Read(mipLevel, Wrap(y, h, wrapModeV) * w + Wrap(x, w, wrapModeU));
         }
@@ -154,7 +163,7 @@ namespace UnityEngine
         public Color GetPixelBilinear(float u, float v, int mipLevel)
         {
             RequireReadable();
-            if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return Color.white; }
+            if (!TexelMip(mipLevel, "GetPixelBilinear")) return Color.white;
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
             float x = u * w, y = v * h;
             int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y);
@@ -175,7 +184,7 @@ namespace UnityEngine
             // A block-compressed texture's texels are not set one by one (no error in the Unity
             // 6000.0.71f1 Editor, tests/projects/texturecompression write.setpixel).
             if (SourceBlocks) return;
-            if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return; }
+            if (!TexelMip(mipLevel, "SetPixel")) return;
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
             // Outside the level, Unity clamps or repeats the coordinate by the texture's wrap
             // mode (SetPixel, 6000.0 Scripting API): U for x, V for y. Mirror and MirrorOnce
@@ -186,11 +195,11 @@ namespace UnityEngine
             CpuTexelsChanged();
         }
 
-        void CheckBlock(int x, int y, int w, int h, int mip)
+        void CheckBlock(int x, int y, int w, int h, int mip, string api)
         {
-            CheckMip(mip);
+            CheckMip(mip, api);
             if (x < 0 || y < 0 || w < 0 || h < 0 || (long)x + w > MipWidth(mip) || (long)y + h > MipHeight(mip))
-                throw new ArgumentException("Texture pixel block is out of bounds.");
+                throw PixelDataTransfer.OutsideLevel(api, name);
         }
 
         public Color[] GetPixels() => GetPixels(0);
@@ -201,7 +210,7 @@ namespace UnityEngine
             // tests/projects/texturecompression SmoothUnreadable, NoiseUnreadable).
             if (m_Width == 0 || !m_IsReadable) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
             RequireReadable(true);
-            CheckMip(miplevel);
+            CheckMip(miplevel, "Texture2D.GetPixels");
             return BlockPadded(GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel), miplevel);
         }
         /// <summary>Level zero with each stored byte as b / 255 (the Color32 conversion), for engine
@@ -219,7 +228,7 @@ namespace UnityEngine
         {
             ThrowIfCrunchPixels();
             RequireReadable(true);
-            CheckBlock(x, y, blockWidth, blockHeight, miplevel);
+            CheckBlock(x, y, blockWidth, blockHeight, miplevel, "Texture2D.GetPixels");
             var result = new Color[blockWidth * blockHeight];
             int width = MipWidth(miplevel);
             // GetPixels reads a stored byte b as b * (1 / 255) in single precision, which differs
@@ -238,7 +247,7 @@ namespace UnityEngine
         internal Color32[] GetPixels32Window(int x, int y, int blockWidth, int blockHeight)
         {
             RequireReadable(true);
-            CheckBlock(x, y, blockWidth, blockHeight, 0);
+            CheckBlock(x, y, blockWidth, blockHeight, 0, "Texture2D.GetPixels32");
             var result = new Color32[blockWidth * blockHeight];
             int width = MipWidth(0);
             for (int j = 0; j < blockHeight; j++)
@@ -255,7 +264,7 @@ namespace UnityEngine
         internal Color32[] EngineTexels32Window(int x, int y, int blockWidth, int blockHeight)
         {
             if (m_IsReadable) return GetPixels32Window(x, y, blockWidth, blockHeight);
-            CheckBlock(x, y, blockWidth, blockHeight, 0);
+            CheckBlock(x, y, blockWidth, blockHeight, 0, "Texture2D.GetPixels32");
             var level = EnginePixels32();
             var result = new Color32[blockWidth * blockHeight];
             for (int j = 0; j < blockHeight; j++)
@@ -267,7 +276,7 @@ namespace UnityEngine
         public Color32[] GetPixels32(int miplevel)
         {
             RequireReadable(true);
-            CheckMip(miplevel);
+            CheckMip(miplevel, "Texture2D.GetPixels32");
             var result = new Color32[MipWidth(miplevel) * MipHeight(miplevel)];
             // BC6H texels read as bytes truncate their decoded floats (the Unity 6000.0.71f1
             // Editor, tests/projects/texturecompression new.BC6H.pixels*).
@@ -287,7 +296,7 @@ namespace UnityEngine
         {
             RequireReadable();
             ThrowIfBlocks("Texture2D.SetPixels");
-            CheckMip(miplevel);
+            CheckMip(miplevel, "Texture2D.SetPixels");
             SetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), colors, miplevel);
         }
         public void SetPixels(int x, int y, int blockWidth, int blockHeight, Color[] colors) => SetPixels(x, y, blockWidth, blockHeight, colors, 0);
@@ -295,9 +304,9 @@ namespace UnityEngine
         {
             RequireReadable();
             ThrowIfBlocks("Texture2D.SetPixels");
-            CheckBlock(x, y, blockWidth, blockHeight, miplevel);
-            if (colors == null) throw new ArgumentNullException(nameof(colors));
-            if (colors.Length < (long)blockWidth * blockHeight) throw new ArgumentException("Not enough pixel data.");
+            CheckBlock(x, y, blockWidth, blockHeight, miplevel, "Texture2D.SetPixels");
+            // A missing array has no data (tests/projects/apierrors `texture.set_pixels_null`).
+            if (colors == null || colors.Length < (long)blockWidth * blockHeight) throw PixelDataTransfer.NotEnoughData("Texture2D.SetPixels", name);
             int width = MipWidth(miplevel);
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++) Write(miplevel, (y + j) * width + x + i, colors[j * blockWidth + i]);
@@ -309,7 +318,7 @@ namespace UnityEngine
         {
             RequireReadable(true);
             ThrowIfBlocks("Texture2D.SetPixels32");
-            CheckMip(miplevel);
+            CheckMip(miplevel, "Texture2D.SetPixels32");
             SetPixels32(0, 0, MipWidth(miplevel), MipHeight(miplevel), colors, miplevel);
         }
         public void SetPixels32(int x, int y, int blockWidth, int blockHeight, Color32[] colors) => SetPixels32(x, y, blockWidth, blockHeight, colors, 0);
@@ -317,9 +326,8 @@ namespace UnityEngine
         {
             RequireReadable(true);
             ThrowIfBlocks("Texture2D.SetPixels32");
-            CheckBlock(x, y, blockWidth, blockHeight, miplevel);
-            if (colors == null) throw new ArgumentNullException(nameof(colors));
-            if (colors.Length < (long)blockWidth * blockHeight) throw new ArgumentException("Not enough pixel data.");
+            CheckBlock(x, y, blockWidth, blockHeight, miplevel, "Texture2D.SetPixels32");
+            if (colors == null || colors.Length < (long)blockWidth * blockHeight) throw PixelDataTransfer.NotEnoughData("Texture2D.SetPixels32", name);
             int width = MipWidth(miplevel);
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++) Write(miplevel, (y + j) * width + x + i, colors[j * blockWidth + i]);

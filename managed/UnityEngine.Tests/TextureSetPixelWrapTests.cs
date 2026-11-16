@@ -256,7 +256,7 @@ namespace UnityEngine.Tests
             texture.wrapMode = TextureWrapMode.Repeat;
             var errors = Errors(() => texture.SetPixel(-1, 7, Ink, mip));
             // Unprefixed Unity message: Application.logMessageReceived sees it.
-            Assert.Equal("Texture mip level is out of range.", Assert.Single(errors));
+            Assert.Equal("SetPixel called on an undefined mip (valid values are 0 - 2", Assert.Single(errors));
             AssertOnly(texture, -1, -1);
         }
 

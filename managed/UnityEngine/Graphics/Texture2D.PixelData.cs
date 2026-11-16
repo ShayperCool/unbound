@@ -26,7 +26,7 @@ namespace UnityEngine
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct
         {
             RequireReadable(pixels: !SourceBlocks);
-            CheckMip(mipLevel);
+            if (!ValidMip(mipLevel)) throw PixelDataTransfer.InvalidMipLevel(mipLevel, m_MipCount);
             EnterStore();
             int size = UnsafeUtility.SizeOf<T>();
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(

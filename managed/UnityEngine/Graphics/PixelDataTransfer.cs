@@ -69,6 +69,18 @@ namespace UnityEngine
         internal static ArgumentException InvalidMip(string api, string name) =>
             new ArgumentException($"{api}: invalid mipmap level. (Texture '{name}')");
 
+        /// <summary>A pixel block outside the level (the Unity 6000.0.71f1 Editor's text for reads
+        /// and writes alike, tests/projects/apierrors `texture.*_block_*`).</summary>
+        internal static ArgumentException OutsideLevel(string api, string name) =>
+            new ArgumentException($"{api}: the size of data to be written is outside the target buffer bounds. (Texture '{name}')");
+
+        internal static ArgumentException NotEnoughData(string api, string name) =>
+            new ArgumentException($"{api}: size of data to be filled was larger than the size of data available in the source array. (Texture '{name}')");
+
+        /// <summary>GetPixelData's mip check (the release's reference assemblies).</summary>
+        internal static ArgumentException InvalidMipLevel(int mip, int mipCount) =>
+            new ArgumentException($"The passed in miplevel {mip} is invalid. It needs to be in the range 0 and {mipCount - 1}");
+
         internal static ArgumentException InvalidArgument(string api, string name) =>
             new ArgumentException($"{api}: one of the arguments is not valid. (Texture '{name}')");
 
@@ -103,7 +115,7 @@ namespace UnityEngine
             long offset = (long)start * elementSize;
             long provided = ((long)length - start) * elementSize;
             if (provided >= 0 && provided < levelBytes)
-                throw new ArgumentException($"{api}: size of data to be filled was larger than the size of data available in the source array. (Texture '{name}')");
+                throw NotEnoughData(api, name);
             // A start index past the end, or a marshaled element size larger than the array's own
             // stride, makes the reference read memory after the array, whose contents are undefined.
             if (offset + levelBytes > storage)
