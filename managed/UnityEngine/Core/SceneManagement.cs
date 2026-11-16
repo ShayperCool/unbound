@@ -806,7 +806,7 @@ namespace UnityEngine.SceneManagement
 
         /// <summary>The roots a Single load keeps: those that must not be saved
         /// (HideFlags.DontSave) leave their scene for none (measured: tests/projects/messages).</summary>
-        static bool KeptBySingleLoad(GameObject root) => (root.hideFlags & HideFlags.DontSaveInEditor) != 0;
+        static bool KeptBySingleLoad(GameObject root) => (root.HideFlagsNoThrow & HideFlags.DontSaveInEditor) != 0;
 
         /// <param name="activeThroughUnloaded">A SceneManager Single load: the scene, when active,
         /// stays the active one until its sceneUnloaded handlers have run, and it stays valid and

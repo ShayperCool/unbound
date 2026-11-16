@@ -611,11 +611,8 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("SetParent");
             ThrowIfDestroyed();
-            if (parent == this)
-            {
-                Debug.LogError("Cannot set the parent of the GameObject to itself.", this);
-                return;
-            }
+            // Itself as its parent: nothing changes and nothing is logged (tests/projects/objecterrors).
+            if (parent == this) return;
             if ((object)parent != null && parent.m_Destroyed) parent = null;
             if (parent == m_Parent) return;
             if (parent != null && parent.IsChildOf(this))

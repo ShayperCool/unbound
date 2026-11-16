@@ -756,7 +756,7 @@ namespace Unbound.Runtime
         /// AssetDatabase.LoadAllAssetsAtPath, not by Resources or LoadAllAssetRepresentationsAtPath
         /// (measured, tests/projects/modelclips).</summary>
         internal static bool IsTakePreview(Object o) =>
-            o is AnimationClip && (o.hideFlags & HideFlags.HideInHierarchy) != 0;
+            o is AnimationClip && (o.HideFlagsNoThrow & HideFlags.HideInHierarchy) != 0;
 
         /// <summary>Where a loaded asset object comes from.</summary>
         internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
@@ -1023,7 +1023,7 @@ namespace Unbound.Runtime
             foreach (var obj in s_Objects.Values)
             {
                 if (obj == null || obj.m_Destroyed || !obj.IsPersistentAsset || reached.Contains(obj)) continue;
-                if ((obj.hideFlags & HideFlags.DontUnloadUnusedAsset) != 0) continue;
+                if ((obj.HideFlagsNoThrow & HideFlags.DontUnloadUnusedAsset) != 0) continue;
                 if (listed.Add(obj)) candidates.Add(obj);
             }
             int unloaded = 0;
@@ -1092,7 +1092,7 @@ namespace Unbound.Runtime
                     if (seen.Add(value)) pending.Push(value);
                 }
                 foreach (var obj in ObjectRegistry.All(typeof(Object)))
-                    if (!obj.IsPersistentAsset || (obj.hideFlags & HideFlags.DontUnloadUnusedAsset) != 0) Push(obj);
+                    if (!obj.IsPersistentAsset || (obj.HideFlagsNoThrow & HideFlags.DontUnloadUnusedAsset) != 0) Push(obj);
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
                     foreach (var field in StaticsOf(assembly))
                     {

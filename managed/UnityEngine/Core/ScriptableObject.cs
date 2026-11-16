@@ -25,6 +25,12 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("CreateScriptableObjectInstanceFromName");
             var type = GameDomain.FindTypeByName(className);
+            if (type != null && typeof(MonoBehaviour).IsAssignableFrom(type))
+            {
+                // A behaviour script by name (tests/projects/objecterrors).
+                Log.Engine(LogType.Error, $"Instance of {className} couldn't be created. The script class needs to derive from ScriptableObject.", null);
+                return null;
+            }
             if (type == null || !typeof(ScriptableObject).IsAssignableFrom(type))
             {
                 Debug.LogError($"Instance of {className} couldn't be created because there is no script with that name.");
@@ -33,9 +39,27 @@ namespace UnityEngine
             return CreateInstance(type);
         }
 
+        /// <summary>No type gives none, quietly; a behaviour script type fails the cast to
+        /// ScriptableObject; a type outside the engine's object classes and an abstract script
+        /// class are refused with the engine's diagnostics (tests/projects/objecterrors).</summary>
         public static ScriptableObject CreateInstance(Type type)
         {
             MainThreadCheck.Check("CreateScriptableObjectInstanceFromType");
+            if (type == null) return null;
+            if (typeof(MonoBehaviour).IsAssignableFrom(type)) throw new InvalidCastException();
+            if (!typeof(Object).IsAssignableFrom(type))
+            {
+                Log.Engine(LogType.Assert, $"'{type.FullName}' is missing the class attribute 'ExtensionOfNativeClass'!", null);
+                Log.Engine(LogType.Warning, $"The class named '{type.FullName}' is not derived from MonoBehaviour or ScriptableObject!", null);
+                return null;
+            }
+            if (type.IsAbstract && typeof(ScriptableObject).IsAssignableFrom(type))
+            {
+                // The engine reports it twice.
+                for (int i = 0; i < 2; i++)
+                    Log.Engine(LogType.Warning, $"The class named '{type.FullName}' is abstract. The script class can't be abstract!", null);
+                return null;
+            }
             var instance = CreateInstanceWithoutCallbacks(type);
             instance?.RunCreationCallbacks();
             return instance;

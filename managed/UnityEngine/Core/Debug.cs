@@ -327,6 +327,17 @@ namespace Unbound.Runtime
     /// <summary>Where log messages go: Application's log events, then the native console.</summary>
     internal static class Log
     {
+        /// <summary>A diagnostic of Unity's engine side: it reaches the Application callbacks and
+        /// the console without passing through <c>Debug.unityLogger</c> (the route componentlogs
+        /// measured for component rejections, Unity 6000.0.71f1). A plain log carries a stack
+        /// trace only when its stack trace type asks for one.</summary>
+        internal static void Engine(UnityEngine.LogType type, string message, UnityEngine.Object context)
+        {
+            string trace = type == UnityEngine.LogType.Log && UnityEngine.Application.GetStackTraceLogType(type) == UnityEngine.StackTraceLogType.None
+                ? "" : new System.Diagnostics.StackTrace(1, true).ToString();
+            Write(type, message, trace, context);
+        }
+
         /// <summary>Unbound's own diagnostics (its gaps, data it cannot read) start so.</summary>
         internal const string DiagnosticPrefix = "Unbound: ";
 

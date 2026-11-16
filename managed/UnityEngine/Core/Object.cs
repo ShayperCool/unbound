@@ -51,7 +51,7 @@ namespace UnityEngine
         IntPtr m_CachedPtr = (IntPtr)1;
 #pragma warning disable CS0169, CS0649
         /// <summary>The Editor's message for a "fake null" object (read by plugins by reflection).</summary>
-        string m_UnityRuntimeErrorString;
+        internal string m_UnityRuntimeErrorString;
 #pragma warning restore CS0169, CS0649
 
         /// <summary>The engine side of the object is gone: destroyed, or never created.</summary>
@@ -104,6 +104,7 @@ namespace UnityEngine
             {
                 ThrowIfUncreated();
                 MainThreadCheck.Check("get_hideFlags");
+                ThrowIfDestroyed();
                 return m_SharedIdentity?.Flags ?? m_HideFlags;
             }
             set
@@ -118,6 +119,9 @@ namespace UnityEngine
         }
 
         internal virtual void OnHideFlagsChanged(HideFlags previous) { }
+
+        /// <summary>The flags for the engine's own reads, also of a destroyed object.</summary>
+        internal HideFlags HideFlagsNoThrow => m_SharedIdentity?.Flags ?? m_HideFlags;
 
         public int GetInstanceID()
         {
@@ -174,10 +178,7 @@ namespace UnityEngine
         /// instantiateasync: 'UnityEngine.GameObject').</summary>
         internal void ThrowIfDestroyed()
         {
-            if (m_Destroyed)
-                throw new MissingReferenceException(
-                    $"The object of type '{GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
-                    "Your script should either check if it is null or you should not destroy the object.");
+            if (m_Destroyed) throw ObjectErrors.Receiver(this);
         }
 
         /// <summary>What Unity's bindings throw for an object argument they require: an
@@ -186,11 +187,7 @@ namespace UnityEngine
         /// tests/projects/vfx <c>camera/api/*destroyed</c>).</summary>
         internal static void ThrowIfNullArgument(Object argument, string parameterName)
         {
-            if (ReferenceEquals(argument, null)) throw new ArgumentNullException(parameterName);
-            if (argument.m_Destroyed)
-                throw new MissingReferenceException(
-                    $"The object of type '{argument.GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
-                    "Your script should either check if it is null or you should not destroy the object. Parameter name: " + parameterName);
+            if (ReferenceEquals(argument, null) || argument.m_Destroyed) throw ObjectErrors.Argument(argument, parameterName);
         }
 
         // ------------------------------------------------------------------ Instantiate
@@ -300,6 +297,7 @@ namespace UnityEngine
         public static void DontDestroyOnLoad(Object target)
         {
             if ((object)target == null) return;
+            ThrowIfNullArgument(target, "target");
             GameObject go = target as GameObject ?? (target as Component)?.gameObject;
             if (go == null)
                 return;
@@ -331,15 +329,19 @@ namespace UnityEngine
         [global::System.@ObsoleteAttribute("Object.FindObjectsOfType has been deprecated. Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.", false)] public static Object[] FindObjectsOfType(Type type, bool includeInactive)
         {
             MainThreadCheck.Check("FindObjectsByType");
+            if (!ObjectErrors.FindTypeIsValid(type)) return null;
             return ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true));
         }
 
         public static Object[] FindObjectsByType(Type type, FindObjectsSortMode sortMode) =>
             FindObjectsByType(type, FindObjectsInactive.Exclude, sortMode);
 
+        /// <summary>A type that is not an engine object class is logged and finds no array
+        /// (tests/projects/objecterrors).</summary>
         public static Object[] FindObjectsByType(Type type, FindObjectsInactive findObjectsInactive, FindObjectsSortMode sortMode)
         {
             MainThreadCheck.Check("FindObjectsByType");
+            if (!ObjectErrors.FindTypeIsValid(type)) return null;
             return ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, findObjectsInactive == FindObjectsInactive.Include,
                 sorted: sortMode == FindObjectsSortMode.InstanceID));
         }
@@ -360,6 +362,9 @@ namespace UnityEngine
         [global::System.@ObsoleteAttribute("Object.FindObjectOfType has been deprecated. Use Object.FindFirstObjectByType instead or if finding any instance is acceptable the faster Object.FindAnyObjectByType", false)] public static Object FindObjectOfType(Type type, bool includeInactive)
         {
             MainThreadCheck.Check("FindObjectsByType");
+            // Unity's single-object finders read the length of the finder's array: no array is
+            // the Mono runtime's null reference (tests/projects/objecterrors).
+            if (!ObjectErrors.FindTypeIsValid(type)) throw new NullReferenceException(ObjectErrors.RuntimeNullReference);
             return ObjectRegistry.FindFirstSceneObject(type, includeInactive);
         }
 
@@ -402,10 +407,13 @@ namespace UnityEngine
             return result;
         }
 
+        /// <summary>Unity's check of a null reference (an object reference, not Unity's null): a
+        /// destroyed or placeholder object passes it and fails the engine's own argument check
+        /// (<see cref="ThrowIfNullArgument"/>) instead (tests/projects/objecterrors).</summary>
         static void CheckNullArgument(object arg, string message)
         {
-            if (arg == null || (arg is Object o && o.m_Destroyed))
-                throw new ArgumentException(message);
+            if (arg == null) throw new ArgumentException(message);
+            if (arg is Object o) ThrowIfNullArgument(o, "data");
         }
 
         /// <summary>A constructor off the main thread: Unity throws before the engine object exists,

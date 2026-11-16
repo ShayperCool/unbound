@@ -149,8 +149,14 @@ namespace UnityEngine
             set
             {
                 MainThreadCheck.Check("set_tag");
-                if (!TagManager.IsDefined(value))
-                    throw new UnityException($"Tag: {value} is not defined.");
+                // An undefined or empty tag is logged and leaves the tag as it was
+                // (tests/projects/objecterrors).
+                var error = ObjectErrors.TagError(value);
+                if (error != null)
+                {
+                    Log.Engine(LogType.Error, error, this);
+                    return;
+                }
                 m_Tag = value;
             }
         }
@@ -235,10 +241,16 @@ namespace UnityEngine
         [Obsolete("gameObject.SetActiveRecursively() is obsolete. Use GameObject.SetActive(), which is now inherited by children.")]
         public void SetActiveRecursively(bool state) => SetActive(state);
 
+        /// <summary>An undefined or empty tag is logged and compares false
+        /// (tests/projects/objecterrors).</summary>
         public bool CompareTag(string tag)
         {
             MainThreadCheck.Check("CompareTag_Internal");
-            return m_Tag == tag;
+            ThrowIfDestroyed();
+            if (m_Tag == tag && !string.IsNullOrEmpty(tag)) return true;
+            var error = ObjectErrors.TagError(tag);
+            if (error != null) Log.Engine(LogType.Error, error, this);
+            return false;
         }
 
         public bool CompareTag(TagHandle tag)
@@ -269,6 +281,7 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("GetComponent");
             ThrowIfDestroyed();
+            ObjectErrors.CheckComponentQuery(type);
             return FindComponent(type);
         }
 
@@ -276,6 +289,7 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("GetComponentFastPath");
             ThrowIfDestroyed();
+            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
             return FindComponent<T>();
         }
 
@@ -316,39 +330,46 @@ namespace UnityEngine
         // TryGetComponent on a destroyed GameObject is not measured: it keeps answering false.
         public bool TryGetComponent(Type type, out Component component)
         {
+            ObjectErrors.CheckComponentQuery(type);
             component = FindComponent(type);
             return component != null;
         }
 
         public bool TryGetComponent<T>(out T component)
         {
+            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
             component = FindComponent<T>();
             return component != null && !(component is Object o && o.m_Destroyed);
         }
 
         public Component GetComponentInChildren(Type type) => GetComponentInChildren(type, false);
 
-        public Component GetComponentInChildren(Type type, bool includeInactive) =>
-            ComponentQueries.InChildren(this, type, includeInactive);
+        public Component GetComponentInChildren(Type type, bool includeInactive)
+        {
+            ObjectErrors.CheckComponentQuery(type);
+            return ComponentQueries.InChildren(this, type, includeInactive);
+        }
 
         public T GetComponentInChildren<T>() => GetComponentInChildren<T>(false);
 
-        public T GetComponentInChildren<T>(bool includeInactive) =>
-            (T)(object)ComponentQueries.InChildren(this, typeof(T), includeInactive);
+        public T GetComponentInChildren<T>(bool includeInactive) => (T)(object)GetComponentInChildren(typeof(T), includeInactive);
 
         public Component GetComponentInParent(Type type) => GetComponentInParent(type, false);
 
-        public Component GetComponentInParent(Type type, bool includeInactive) =>
-            ComponentQueries.InParent(this, type, includeInactive);
+        public Component GetComponentInParent(Type type, bool includeInactive)
+        {
+            ObjectErrors.CheckComponentQuery(type);
+            return ComponentQueries.InParent(this, type, includeInactive);
+        }
 
         public T GetComponentInParent<T>() => GetComponentInParent<T>(false);
 
-        public T GetComponentInParent<T>(bool includeInactive) =>
-            (T)(object)ComponentQueries.InParent(this, typeof(T), includeInactive);
+        public T GetComponentInParent<T>(bool includeInactive) => (T)(object)GetComponentInParent(typeof(T), includeInactive);
 
         public Component[] GetComponents(Type type)
         {
             MainThreadCheck.Check("GetComponentsInternal");
+            ObjectErrors.CheckComponentQuery(type);
             var list = new List<Component>();
             ComponentQueries.OnSelf(this, type, list);
             return list.ToArray();
@@ -364,13 +385,18 @@ namespace UnityEngine
         public void GetComponents(Type type, List<Component> results)
         {
             MainThreadCheck.Check("GetComponentsInternal");
+            ObjectErrors.CheckComponentQuery(type);
+            if (results == null) return;
             results.Clear();
             ComponentQueries.OnSelf(this, type, results);
         }
 
+        /// <summary>No list is no answer, without an error (tests/projects/objecterrors).</summary>
         public void GetComponents<T>(List<T> results)
         {
             MainThreadCheck.Check("GetComponentsInternal");
+            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
+            if (results == null) return;
             results.Clear();
             foreach (var c in m_Components)
                 if (!c.m_Destroyed && c is T t)
@@ -381,6 +407,7 @@ namespace UnityEngine
 
         public Component[] GetComponentsInChildren(Type type, [UnityEngine.Internal.DefaultValue("false")] bool includeInactive)
         {
+            ObjectErrors.CheckComponentQuery(type);
             var list = new List<Component>();
             ComponentQueries.AllInChildren(this, type, includeInactive, list);
             return list.ToArray();
@@ -399,6 +426,7 @@ namespace UnityEngine
 
         public void GetComponentsInChildren<T>(bool includeInactive, List<T> results)
         {
+            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
             results.Clear();
             var list = new List<Component>();
             ComponentQueries.AllInChildren(this, typeof(T), includeInactive, list);
@@ -409,6 +437,7 @@ namespace UnityEngine
 
         public Component[] GetComponentsInParent(Type type, [UnityEngine.Internal.DefaultValue("false")] bool includeInactive)
         {
+            ObjectErrors.CheckComponentQuery(type);
             var list = new List<Component>();
             ComponentQueries.AllInParent(this, type, includeInactive, list);
             return list.ToArray();
@@ -425,6 +454,7 @@ namespace UnityEngine
 
         public void GetComponentsInParent<T>(bool includeInactive, List<T> results)
         {
+            if (ObjectErrors.ComponentQuery<T>.Error is { } error) throw error;
             results.Clear();
             var list = new List<Component>();
             ComponentQueries.AllInParent(this, typeof(T), includeInactive, list);
@@ -483,8 +513,7 @@ namespace UnityEngine
         public static GameObject FindGameObjectWithTag(string tag)
         {
             MainThreadCheck.Check("FindGameObjectWithTag");
-            if (!TagManager.IsDefined(tag))
-                throw new UnityException($"Tag: {tag} is not defined.");
+            ObjectErrors.CheckTagLookup(tag);
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
                 if (go.m_Tag == tag) return go;
             return null;
@@ -493,8 +522,7 @@ namespace UnityEngine
         public static GameObject[] FindGameObjectsWithTag(string tag)
         {
             MainThreadCheck.Check("FindGameObjectsWithTag");
-            if (!TagManager.IsDefined(tag))
-                throw new UnityException($"Tag: {tag} is not defined.");
+            ObjectErrors.CheckTagLookup(tag);
             var list = new List<GameObject>();
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
                 if (go.m_Tag == tag) list.Add(go);

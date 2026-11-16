@@ -242,7 +242,7 @@ namespace Unbound.Runtime
 
             internal void Header(Object o)
             {
-                Line(1, "m_ObjectHideFlags", ((uint)o.hideFlags).ToString(CultureInfo.InvariantCulture));
+                Line(1, "m_ObjectHideFlags", ((uint)o.HideFlagsNoThrow).ToString(CultureInfo.InvariantCulture));
                 Line(1, "m_CorrespondingSourceObject", "{fileID: 0}");
                 Line(1, "m_PrefabInstance", "{fileID: 0}");
                 Line(1, "m_PrefabAsset", "{fileID: 0}");

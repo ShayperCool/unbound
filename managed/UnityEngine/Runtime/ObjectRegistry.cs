@@ -120,7 +120,7 @@ namespace Unbound.Runtime
             {
                 foreach (var go in SceneRegistry.AllGameObjects(includeInactive))
                 {
-                    if ((go.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
+                    if ((go.HideFlagsNoThrow & HideFlags.DontSave) == HideFlags.DontSave) continue;
                     foreach (var c in go.m_Components)
                     {
                         if (!c.m_Destroyed && type.IsInstanceOfType(c))
@@ -132,7 +132,7 @@ namespace Unbound.Runtime
             {
                 foreach (var go in SceneRegistry.AllGameObjects(includeInactive))
                 {
-                    if ((go.hideFlags & HideFlags.DontSave) == HideFlags.DontSave) continue;
+                    if ((go.HideFlagsNoThrow & HideFlags.DontSave) == HideFlags.DontSave) continue;
                     result.Add(go);
                     if (type == typeof(Object))
                         foreach (var c in go.m_Components)

@@ -214,10 +214,7 @@ namespace UnityEngine
         /// <summary>A destroyed object passed where Unity's engine needs a live one.</summary>
         static void ThrowIfDestroyedArgument(Object original, string parameter)
         {
-            if (original.m_Destroyed)
-                throw new MissingReferenceException(
-                    $"The object of type '{original.GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
-                    $"Your script should either check if it is null or you should not destroy the object. Parameter name: {parameter}");
+            if (original.m_Destroyed) throw ObjectErrors.Argument(original, parameter);
         }
     }
 }

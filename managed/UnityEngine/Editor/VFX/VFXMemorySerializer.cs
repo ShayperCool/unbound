@@ -51,7 +51,7 @@ namespace UnityEditor.VFX
                     Id = o.GetInstanceID(),
                     Type = o.GetType().AssemblyQualifiedName,
                     Name = o.m_Name,
-                    HideFlags = (int)o.hideFlags,
+                    HideFlags = (int)o.HideFlagsNoThrow,
                     Json = JsonUtility.ToJson(o),
                 });
             }

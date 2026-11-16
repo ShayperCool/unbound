@@ -227,8 +227,8 @@ namespace UnityEngine.Tests
             Assert.Null(go.GetComponent<Absent>());
             Assert.Null(go.GetComponent(typeof(Absent)));
             Assert.Null(go.GetComponent(nameof(Absent)));
-            // Unmeasured preservation control: retain the current null-Type answer.
-            Assert.Null(go.GetComponent((Type)null));
+            // No type is refused (Unity 6000.0.71f1, tests/projects/objecterrors).
+            Assert.Equal("Type cannot be null.", Assert.Throws<ArgumentException>(() => go.GetComponent((Type)null)).Message);
             Assert.False(go.TryGetComponent<Absent>(out var found));
             Assert.Null(found);
         }

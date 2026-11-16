@@ -43,26 +43,49 @@ namespace Unbound.Runtime
             return c;
         }
 
-        /// <summary>GameObject.AddComponent.</summary>
+        /// <summary>GameObject.AddComponent. On the measured release (Unity 6000.0.71f1,
+        /// tests/projects/objecterrors and componentlogs) a type that cannot be added is refused
+        /// with the engine's diagnostic and no component; other releases keep the earlier,
+        /// unmeasured exceptions and error logs.</summary>
         internal static Component Add(GameObject go, Type type)
         {
+            bool measured = Compat.ComponentFactoryEligibilityMeasured;
             if (type == null)
-                throw new ArgumentNullException(nameof(type), "Type can not be null.");
+            {
+                if (!measured) throw new ArgumentNullException(nameof(type), "Type can not be null.");
+                Log.Engine(LogType.Warning, "AddComponent asking for invalid type", go);
+                return null;
+            }
             if (!typeof(Component).IsAssignableFrom(type))
-                throw new ArgumentException($"AddComponent asking for invalid type", nameof(type));
-            if (Compat.ComponentFactoryEligibilityMeasured && type == typeof(MonoBehaviour))
+            {
+                if (!measured) throw new ArgumentException($"AddComponent asking for invalid type", nameof(type));
+                if (!typeof(UnityEngine.Object).IsAssignableFrom(type))
+                    Log.Engine(LogType.Warning, $"AddComponent asking for \"{type.Name}\" which is not a Unity engine type.", go);
+                else if (type.Assembly != typeof(UnityEngine.Object).Assembly)
+                    Log.Engine(LogType.Warning, "AddComponent asking for invalid type using [ExtensionOfNativeClass] in its ancestor but cannot be found in the assembly", go);
+                else
+                    Log.Engine(LogType.Log, $"Can't add component because '{type.Name}' is not derived from Component.", go);
+                return null;
+            }
+            if (measured && type == typeof(MonoBehaviour))
             {
                 Debug.LogError("AddComponent with MonoBehaviour is not allowed. Create a class that derives from MonoBehaviour and add it instead.", go);
                 return null;
             }
-            if (Compat.ComponentFactoryEligibilityMeasured && type == typeof(Component) && go.FindComponent(type) != null)
+            // A base class the object already has a component of (Component, Behaviour, the
+            // Transform): measured for those three; the native abstract classes are taken to
+            // answer the same when the object has one of their components (unmeasured).
+            if (measured && (type == typeof(Component) || typeof(Transform).IsAssignableFrom(type) || Compat.NativeComponentIsAbstract(type))
+                && go.FindComponent(type) != null)
             {
-                Debug.LogError($"Can't add component 'Component' to {go.name} because such a component is already added to the game object!", go);
+                Log.Engine(LogType.Log, $"Can't add component '{type.Name}' to {go.name} because such a component is already added to the game object!", go);
                 return null;
             }
             if (type.IsAbstract || type.IsInterface || type.ContainsGenericParameters || Compat.NativeComponentIsAbstract(type))
             {
-                Debug.LogError($"Cannot add component of type '{type.Name}' because it is abstract. Add component of type that is derived from '{type.Name}' instead.", go);
+                string message = $"Cannot add component of type '{type.Name}' because it is abstract. Add component of type that is derived from '{type.Name}' instead.";
+                if (measured) Log.Engine(LogType.Log, message, go);
+                else Debug.LogError(message, go);
                 return null;
             }
             if (typeof(Transform).IsAssignableFrom(type))
@@ -78,8 +101,7 @@ namespace Unbound.Runtime
                 // Component rejection reaches Application callbacks independently of the public logger.
                 // Measured on 6000.0.71f1 by tests/projects/componentlogs.
                 if (Compat.ComponentFactoryEligibilityMeasured)
-                    Log.Write(LogType.Log, message, Application.GetStackTraceLogType(LogType.Log) == StackTraceLogType.None
-                        ? "" : new System.Diagnostics.StackTrace(1, true).ToString(), go);
+                    Log.Engine(LogType.Log, message, go);
                 else
                     Debug.LogError(message, go);
                 return null;
