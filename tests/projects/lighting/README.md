@@ -37,8 +37,8 @@ its shadow and is not drawn; `shadow_two_sided`: of two quads turned away from t
 `TwoSided` one shades the ground.
 
 `five_points` follows the forward lights' ranking and fades (tests/projects/builtinrp
-`light_rank_*`). What still differs: `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` (the default spot
-cookie is a fitted curve, within 2/255 on average).
+`light_rank_*`). `textures_spot` and the spot cone's edge in `spot`/`shadow_spot` differ (the default spot
+cookie is a fitted curve, within 2/255 on average); the gate below lists every other difference.
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): both devices' images are gated by `compare_images.py --gate`, OpenGL Core with
 `image-residuals.json` (25 of 27 images listed) and Vulkan with `image-residuals-vulkan.json` (24 of

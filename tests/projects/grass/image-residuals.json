@@ -22,7 +22,7 @@
  "Instanced": {
   "pixels": 63,
   "worst": 1,
-  "reason": "visually insignificant: up to 1/255 (rounding); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "small: 63 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Refusals": {
   "pixels": 2153,

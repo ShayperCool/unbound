@@ -85,8 +85,9 @@ Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): every sce
 image-residuals.json`: 32 of the 168 match pixel for pixel, 125 are recorded within 4/255, and the
 list records the rest with their reasons: `upscale_stp` (open, queued) and `upscale_auto_fractional`
 (the render scale's integer size without Mono's wider floats, an opt-in) from the gap rows, the
-lightmap scenarios' shadow edge above, and on Vulkan the screen-space decals' edge pixels (up to
-31/255 on 160 pixels, not traced). Any other difference fails.
+lightmap scenarios' shadow edge above, and on Vulkan the screen-space decals' edge pixels
+(`decal_screen_space_forward` 160 pixels up to 31/255, `decal_screen_space_deferred` 1205 up to 5,
+`decal_layers_forward` 133 up to 22; not traced). Any other difference fails.
 
 `texture-formats.jsonl` (compared by `compare_constants.py`) records the `format` of the cookie
 textures, of two Single Channel textures (Alpha and Red) and of the baked lightmaps, with each

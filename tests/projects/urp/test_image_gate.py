@@ -75,20 +75,30 @@ class CompareGateTests(unittest.TestCase):
 
 
 class CommittedListsTests(unittest.TestCase):
+    # The reference directory a directory comparison (compare_images.py) reads each list against;
+    # lists keyed by path (urp/compare.py) name their images themselves.
+    DIRECTORIES = {
+        "grass/image-residuals.json": "grass/Reference",
+        "video/image-residuals.json": "video/Reference",
+        "particles/image-residuals.json": "particles/Reference/images",
+        "lighting/image-residuals.json": "lighting/Reference/images",
+        "lighting/image-residuals-vulkan.json": "lighting/Reference/unity-6000.0.71f1/vulkan",
+    }
+
     def test_every_entry_names_a_reference_image(self):
         lists = glob.glob(os.path.join(PROJECTS, "*", "image-residuals*.json"))
         self.assertTrue(lists)
         for path in lists:
-            probe = os.path.dirname(path)
+            name = os.path.relpath(path, PROJECTS)
             with open(path) as handle:
                 entries = json.load(handle)
-            stems = {os.path.basename(p)[:-4] for p in glob.glob(os.path.join(probe, "Reference", "**", "*.png"), recursive=True)}
             for key, entry in entries.items():
-                with self.subTest(list=os.path.relpath(path, PROJECTS), key=key):
+                with self.subTest(list=name, key=key):
                     if key.endswith(".png"):
-                        self.assertTrue(os.path.isfile(os.path.join(probe, key)))
+                        self.assertTrue(os.path.isfile(os.path.join(os.path.dirname(path), key)))
                     else:
-                        self.assertIn(key, stems)
+                        self.assertIn(name, self.DIRECTORIES)
+                        self.assertTrue(os.path.isfile(os.path.join(PROJECTS, self.DIRECTORIES[name], key + ".png")))
                     self.assertTrue(entry["pixels"] > 0 and entry["worst"] > 0 and entry["reason"])
 
 
