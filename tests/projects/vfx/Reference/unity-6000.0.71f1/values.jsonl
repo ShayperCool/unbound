@@ -2098,7 +2098,6 @@
 {"k":"sim/override timing/f005 3 end of frame","v":"40e00000 41100000"}
 {"k":"draw/many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/textured/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
-{"k":"draw/hdr/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f006","v":"3d088889"}
 {"k":"sim/rate/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -3587,8 +3586,8 @@
 {"k":"sim/expressions others/inputs/play1/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play1/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play1/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play1/c00","v":"3e978d54"}
+{"k":"sim/expressions others/inputs/play1/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play1/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play1/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -3721,8 +3720,8 @@
 {"k":"sim/expressions others/inputs/play1update1/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update1/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update1/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play1update1/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play1update1/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play1update1/c00","v":"3e978d54"}
+{"k":"sim/expressions others/inputs/play1update1/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play1update1/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play1update1/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update1/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -3853,8 +3852,8 @@
 {"k":"sim/expressions others/inputs/play1update2/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update2/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update2/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play1update2/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play1update2/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play1update2/c00","v":"bd8db290"}
+{"k":"sim/expressions others/inputs/play1update2/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play1update2/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play1update2/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update2/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -3985,8 +3984,8 @@
 {"k":"sim/expressions others/inputs/play1update3/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update3/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update3/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play1update3/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play1update3/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play1update3/c00","v":"bf332e80"}
+{"k":"sim/expressions others/inputs/play1update3/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play1update3/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play1update3/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1update3/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4117,8 +4116,8 @@
 {"k":"sim/expressions others/inputs/play1stop/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1stop/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1stop/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play1stop/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play1stop/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play1stop/c00","v":"3e978d54"}
+{"k":"sim/expressions others/inputs/play1stop/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play1stop/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play1stop/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play1stop/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4249,8 +4248,8 @@
 {"k":"sim/expressions others/inputs/play2/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play2/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play2/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play2/c00","v":"40400000"}
+{"k":"sim/expressions others/inputs/play2/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play2/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play2/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4383,8 +4382,8 @@
 {"k":"sim/expressions others/inputs/play2update1/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update1/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update1/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play2update1/c00","v":"bec00000"}
-{"k":"sim/expressions others/inputs/play2update1/r00","v":"00000000,3f800000,00000000,3f800000"}
+{"k":"sim/expressions others/inputs/play2update1/c00","v":"40400000"}
+{"k":"sim/expressions others/inputs/play2update1/r00","v":"3f800000,3f6bebec,3c808081,3e800000"}
 {"k":"sim/expressions others/inputs/play2update1/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play2update1/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update1/m02","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4515,7 +4514,7 @@
 {"k":"sim/expressions others/inputs/play2update2/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update2/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update2/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play2update2/c00","v":"bec00000"}
+{"k":"sim/expressions others/inputs/play2update2/c00","v":"406c0d24"}
 {"k":"sim/expressions others/inputs/play2update2/r00","v":"00000000,3f800000,00000000,3f800000"}
 {"k":"sim/expressions others/inputs/play2update2/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play2update2/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4647,7 +4646,7 @@
 {"k":"sim/expressions others/inputs/play2update3/q01","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update3/q02","v":"00000000,00000000,00000000,00000000"}
 {"k":"sim/expressions others/inputs/play2update3/q03","v":"00000000,00000000,00000000,00000000"}
-{"k":"sim/expressions others/inputs/play2update3/c00","v":"bec00000"}
+{"k":"sim/expressions others/inputs/play2update3/c00","v":"406c0d24"}
 {"k":"sim/expressions others/inputs/play2update3/r00","v":"00000000,3f800000,00000000,3f800000"}
 {"k":"sim/expressions others/inputs/play2update3/m00","v":"33800000,00000000,bf7fffff,00000000,00000000,3f800000,00000000,00000000,00000000,00000000,00000000,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions others/inputs/play2update3/m01","v":"00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
@@ -4780,8 +4779,8 @@
 {"k":"sim/expressions scene/inputs/play1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play1/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play1/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -4914,8 +4913,8 @@
 {"k":"sim/expressions scene/inputs/play1update1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play1update1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play1update1/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play1update1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play1update1/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play1update1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play1update1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5046,8 +5045,8 @@
 {"k":"sim/expressions scene/inputs/play1update2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play1update2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play1update2/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play1update2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play1update2/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play1update2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play1update2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5178,8 +5177,8 @@
 {"k":"sim/expressions scene/inputs/play1update3/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update3/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play1update3/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play1update3/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play1update3/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play1update3/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play1update3/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play1update3/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update3/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play1update3/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5310,8 +5309,8 @@
 {"k":"sim/expressions scene/inputs/play1stop/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play1stop/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play1stop/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play1stop/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play1stop/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play1stop/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play1stop/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play1stop/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play1stop/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play1stop/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5442,8 +5441,8 @@
 {"k":"sim/expressions scene/inputs/play2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play2/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play2/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5576,8 +5575,8 @@
 {"k":"sim/expressions scene/inputs/play2update1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play2update1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play2update1/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play2update1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play2update1/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play2update1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play2update1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5708,8 +5707,8 @@
 {"k":"sim/expressions scene/inputs/play2update2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play2update2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play2update2/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play2update2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play2update2/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play2update2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play2update2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5840,8 +5839,8 @@
 {"k":"sim/expressions scene/inputs/play2update3/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update3/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions scene/inputs/play2update3/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions scene/inputs/play2update3/c00","v":"3f800000"}
-{"k":"sim/expressions scene/inputs/play2update3/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions scene/inputs/play2update3/c00","v":"3fd80000"}
+{"k":"sim/expressions scene/inputs/play2update3/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions scene/inputs/play2update3/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update3/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions scene/inputs/play2update3/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -5973,8 +5972,8 @@
 {"k":"sim/expressions copy/inputs/play1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play1/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play1/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6107,8 +6106,8 @@
 {"k":"sim/expressions copy/inputs/play1update1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play1update1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play1update1/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play1update1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play1update1/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play1update1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play1update1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6239,8 +6238,8 @@
 {"k":"sim/expressions copy/inputs/play1update2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play1update2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play1update2/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play1update2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play1update2/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play1update2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play1update2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6371,8 +6370,8 @@
 {"k":"sim/expressions copy/inputs/play1update3/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update3/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play1update3/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play1update3/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play1update3/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play1update3/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play1update3/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play1update3/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update3/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play1update3/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6503,8 +6502,8 @@
 {"k":"sim/expressions copy/inputs/play1stop/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play1stop/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play1stop/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play1stop/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play1stop/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play1stop/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play1stop/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play1stop/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play1stop/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play1stop/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6635,8 +6634,8 @@
 {"k":"sim/expressions copy/inputs/play2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play2/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play2/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6769,8 +6768,8 @@
 {"k":"sim/expressions copy/inputs/play2update1/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update1/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play2update1/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play2update1/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play2update1/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play2update1/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play2update1/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play2update1/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update1/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update1/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -6901,8 +6900,8 @@
 {"k":"sim/expressions copy/inputs/play2update2/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update2/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play2update2/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play2update2/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play2update2/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play2update2/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play2update2/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play2update2/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update2/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update2/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -7033,8 +7032,8 @@
 {"k":"sim/expressions copy/inputs/play2update3/q01","v":"c111451b,c1064c51,c050b9ff,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update3/q02","v":"3eff5c6f,3e93cd3c,3f7631a8,c21a7290"}
 {"k":"sim/expressions copy/inputs/play2update3/q03","v":"3f7ffff0,40000000,40400000,3f800000"}
-{"k":"sim/expressions copy/inputs/play2update3/c00","v":"3f800000"}
-{"k":"sim/expressions copy/inputs/play2update3/r00","v":"3f000000,00000000,3f000000,3f000000"}
+{"k":"sim/expressions copy/inputs/play2update3/c00","v":"3fd80000"}
+{"k":"sim/expressions copy/inputs/play2update3/r00","v":"3e800000,00000000,3f400000,3f000000"}
 {"k":"sim/expressions copy/inputs/play2update3/m00","v":"3fa8e4b2,3fbfffff,bdc20428,00000000,bfa744cc,3fa646e2,40178442,00000000,401cc470,bffffffe,401cc470,00000000,41200000,41a00000,41f00000,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update3/m01","v":"3ea8e4b3,be14aeef,3e1cc472,00000000,3ec00000,3e13cd3c,be000000,00000000,bcc20422,3e86ae74,3e1cc471,00000000,c121693a,c115385a,c067eb1b,3f800000"}
 {"k":"sim/expressions copy/inputs/play2update3/m02","v":"3ea8e4b3,3ec00000,bcc20422,c121693a,be14aeef,3e13cd3c,3e86ae74,c115385a,3e1cc472,be000000,3e1cc471,c067eb1b,00000000,00000000,00000000,3f800000"}
@@ -7916,6 +7915,7 @@
 {"k":"sim/loop random/f040","v":"alive=13 culled=0 | System: DelayingBeforeLoop playing=0 new=0 count=00000000 dt=3d4cccce t=00000000 before=3db49fa0 loop=3e72d790 after=3e090333 index=3 of=-1"}
 {"k":"sim/control/f040","v":"alive=1 culled=0 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=3dccccce before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"draw/over life/f040","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/hdr/f040","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f041","v":"3d088889"}
 {"k":"sim/rate/f041","v":"alive=10 culled=0 | System: Looping playing=1 new=0 count=3ebae149 dt=3d4cccce t=3fb11111 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f041","v":"alive=10 culled=0 | System: Looping playing=1 new=0 count=3ebae148 dt=3d4ccccd t=3fb11111 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7955,6 +7955,7 @@
 {"k":"sim/time/f053","v":"3d088889"}
 {"k":"sim/time/f054","v":"3d088889"}
 {"k":"sim/time/f055","v":"3d088889"}
+{"k":"draw/over life/f055","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f056","v":"3d088889"}
 {"k":"sim/time/f057","v":"3d088889"}
 {"k":"sim/time/f058","v":"3d088889"}
@@ -7970,6 +7971,7 @@
 {"k":"sim/time/f068","v":"3d088889"}
 {"k":"sim/time/f069","v":"3d088889"}
 {"k":"sim/time/f070","v":"3d088889"}
+{"k":"draw/over life/f070","v":"alive=19 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f071","v":"3d088889"}
 {"k":"sim/time/f072","v":"3d088889"}
 {"k":"sim/time/f073","v":"3d088889"}
