@@ -246,15 +246,17 @@ namespace UnityEngine
 
         static string FileName(string path) => path.Substring(path.LastIndexOf('/') + 1);
 
-        /// <summary>Lower case for ASCII letters only; other characters stay.</summary>
+        /// <summary>Lower case for ASCII letters only, independently of the current culture; other
+        /// characters stay (asset names: tests/projects/bundlenames; bundle names: manifestadapters).</summary>
+        internal static char AsciiLower(char c) => c >= 'A' && c <= 'Z' ? (char)(c + ('a' - 'A')) : c;
+
         static string AsciiLower(string s)
         {
             int i = 0;
-            while (i < s.Length && !(s[i] >= 'A' && s[i] <= 'Z')) i++;
+            while (i < s.Length && AsciiLower(s[i]) == s[i]) i++;
             if (i == s.Length) return s;
             var chars = s.ToCharArray();
-            for (; i < chars.Length; i++)
-                if (chars[i] >= 'A' && chars[i] <= 'Z') chars[i] = (char)(chars[i] + ('a' - 'A'));
+            for (; i < chars.Length; i++) chars[i] = AsciiLower(chars[i]);
             return new string(chars);
         }
 
@@ -525,11 +527,7 @@ namespace UnityEngine
             if (query == null) return stored.Length == 0;
             if (stored.Length != query.Length) return false;
             for (int i = 0; i < stored.Length; i++)
-            {
-                char value = query[i];
-                if (value >= 'A' && value <= 'Z') value = (char)(value + ('a' - 'A'));
-                if (stored[i] != value) return false;
-            }
+                if (stored[i] != AssetBundle.AsciiLower(query[i])) return false;
             return true;
         }
 

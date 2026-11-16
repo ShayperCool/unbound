@@ -44,7 +44,7 @@ namespace UnityEngine.Tests
             Assert.True(Bundle(6, "assets/a/data.asset").Contains("data.asset"));
             Assert.True(Bundle(5, "assets/a/data.asset").Contains("data"));
             Assert.False(Bundle(5, "assets/a/data.asset").Contains("data.asset"));
-            // Without lower case, file names compare as stored too (a control outside the probe).
+            // Unbound's choice, not measured: without lower case, file names compare as stored too.
             var mixed = Bundle(3, "Assets/A/RoomsData.asset");
             Assert.True(mixed.Contains("RoomsData"));
             Assert.False(mixed.Contains("roomsdata"));
@@ -53,7 +53,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnExactNameWinsOverFileNames()
         {
-            // "data" is both a stored name and another entry's file name: only the stored one is found.
+            // Unbound's choice, not measured: "data" is both a stored name and another entry's file
+            // name; the stored name is looked up first, so only that entry is found.
             var bundle = Bundle(7, "data", "assets/a/data.asset");
             Assert.Single(bundle.Lookup("data"));
             Assert.Empty(bundle.Lookup("x"));
@@ -62,6 +63,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ABundleWithoutTheFieldTakesEveryLookup()
         {
+            // Unbound's choice for older bundles without m_PathFlags, not measured.
             var bundle = new AssetBundle();
             bundle.m_Container.Add(("assets/a/data.asset", 0, 0, 0));
             Assert.True(bundle.Contains("Data"));
