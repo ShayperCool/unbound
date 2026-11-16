@@ -3756,9 +3756,6 @@ namespace UnityEngine.IO
 }
 namespace UnityEngine.Internal
 {
-    internal unsafe partial interface ISubAssetNotDuplicatable
-    {
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class InternalHDROutputFaking
     {

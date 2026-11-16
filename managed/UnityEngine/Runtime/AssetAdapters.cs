@@ -86,7 +86,9 @@ namespace Unbound.Runtime
             Read<UnityEngine.AI.NavMeshData>((a, b, r) => a.ReadSerialized(b, r));
             Read<AudioMixer>((a, b, r) => a.ReadSerialized(b, r));
             Read<AudioMixerGroup>((a, b, r) => a.ReadSerialized(b, r));
+            Clone<AudioMixerGroup>(a => a.CloneObject());
             Read<AudioMixerSnapshot>((a, b, r) => a.ReadSerialized(b, r));
+            Clone<AudioMixerSnapshot>(a => a.CloneObject());
             Read<Avatar>((a, b, r) => a.ReadSerialized(b, r));
             Read<AvatarMask>((a, b, r) => a.ReadSerialized(b, r));
             Read<BillboardAsset>((a, b, r) => a.ReadSerialized(b, r));

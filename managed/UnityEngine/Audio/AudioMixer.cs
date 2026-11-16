@@ -439,7 +439,7 @@ namespace UnityEngine.Audio
 
     /// <summary>A group of a mixer (AudioMixerGroupController in the asset).</summary>
     [ClassId(243)]
-    public partial class AudioMixerGroup : Object
+    public partial class AudioMixerGroup : Object, UnityEngine.Internal.ISubAssetNotDuplicatable
     {
         internal AudioMixer m_Mixer;
         internal AudioMixerGroup m_Parent;
@@ -457,7 +457,35 @@ namespace UnityEngine.Audio
 
         internal AudioMixerGroup() { }
 
+        /// <summary>Made by Object.Instantiate: not one of its mixer's groups.</summary>
+        bool m_Instantiated;
+        static bool s_InstantiatedRoutingWarned;
+
         public AudioMixer audioMixer => m_Mixer;
+
+        /// <summary>A copy that keeps its mixer (and parent and children) but is none of the mixer's
+        /// groups (Unity 6000.0.71f1: tests/projects/mixerclone).</summary>
+        internal Object CloneObject()
+        {
+            if (!Compat.AssetCloneResourcesMeasured)
+                throw new NotSupportedException("AudioMixerGroup instantiation is measured only for Unity 6000.0.71f1.");
+            var copy = new AudioMixerGroup
+            {
+                m_Mixer = m_Mixer,
+                m_Parent = m_Parent,
+                m_GroupId = m_GroupId,
+                m_VolumeGuid = m_VolumeGuid,
+                m_PitchGuid = m_PitchGuid,
+                m_Mute = m_Mute,
+                m_Solo = m_Solo,
+                m_BypassEffects = m_BypassEffects,
+                m_Instantiated = true,
+            };
+            copy.m_Children.AddRange(m_Children);
+            copy.m_EffectParameters.AddRange(m_EffectParameters);
+            copy.m_Effects.AddRange(m_Effects);
+            return copy;
+        }
 
         /// <summary>The group's mixer handle (sources route to it).</summary>
         internal ulong Handle
@@ -467,6 +495,11 @@ namespace UnityEngine.Audio
                 if (m_Handle == 0)
                 {
                     m_Mixer?.Build();
+                    if (m_Instantiated && !s_InstantiatedRoutingWarned)
+                    {
+                        s_InstantiatedRoutingWarned = true;
+                        Debug.LogWarning("Unbound: an audio source plays through an instantiated AudioMixerGroup; how Unity mixes such a group is not measured, Unbound mixes it as its own group with the original's volume and pitch.");
+                    }
                     if (m_Mixer != null && Compat.MixerGraphStartupMeasured && m_Mixer.m_Groups.Contains(this))
                         m_Mixer.ActivateGroups();
                     else
@@ -660,7 +693,7 @@ namespace UnityEngine.Audio
 
     /// <summary>A snapshot: stored parameter values (and per-parameter transition types).</summary>
     [ClassId(245)]
-    public partial class AudioMixerSnapshot : Object
+    public partial class AudioMixerSnapshot : Object, UnityEngine.Internal.ISubAssetNotDuplicatable
     {
         internal AudioMixer m_Mixer;
         internal string m_SnapshotId;
@@ -671,7 +704,21 @@ namespace UnityEngine.Audio
 
         public AudioMixer audioMixer => m_Mixer;
 
+        /// <summary>An instantiated snapshot transitions too (measured: no error), to the values it
+        /// copied, which no script can change.</summary>
         public void TransitionTo(float timeToReach) => audioMixer.TransitionToSnapshot(this, timeToReach);
+
+        /// <summary>A copy that keeps its mixer and values but is none of the mixer's snapshots
+        /// (Unity 6000.0.71f1: tests/projects/mixerclone).</summary>
+        internal Object CloneObject()
+        {
+            if (!Compat.AssetCloneResourcesMeasured)
+                throw new NotSupportedException("AudioMixerSnapshot instantiation is measured only for Unity 6000.0.71f1.");
+            var copy = new AudioMixerSnapshot { m_Mixer = m_Mixer, m_SnapshotId = m_SnapshotId };
+            foreach (var pair in m_Values) copy.m_Values[pair.Key] = pair.Value;
+            foreach (var pair in m_TransitionTypes) copy.m_TransitionTypes[pair.Key] = pair.Value;
+            return copy;
+        }
 
         internal float ValueOf(string guid, Dictionary<string, float> defaults) =>
             m_Values.TryGetValue(guid, out var v) ? v : defaults.TryGetValue(guid, out v) ? v : 0f;

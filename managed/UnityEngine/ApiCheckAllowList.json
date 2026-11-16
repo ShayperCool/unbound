@@ -163,20 +163,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "interfaces",
-    "Type": "UnityEngine.Audio.AudioMixerGroup",
-    "Message": "type interfaces is , Unity's is UnityEngine.Internal.ISubAssetNotDuplicatable",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerGroup reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker belongs to Editor duplication of mixer subassets, which is not implemented. Unbound also does not yet support Object.Instantiate of mixer groups and snapshots (it throws; Unity's Object.Instantiate is documented for any Object, unmeasured for these types here); implement both with clone-ownership controls before declaring the marker."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.Audio.AudioMixerSnapshot",
-    "Message": "type interfaces is , Unity's is UnityEngine.Internal.ISubAssetNotDuplicatable",
-    "Reason": "Q410-asset-interface-adapters: UnityEngine.Audio.AudioMixerSnapshot reads through the typed asset registry; the remaining UnityEngine.Internal.ISubAssetNotDuplicatable marker belongs to Editor duplication of mixer subassets, which is not implemented. Unbound also does not yet support Object.Instantiate of mixer groups and snapshots (it throws; Unity's Object.Instantiate is documented for any Object, unmeasured for these types here); implement both with clone-ownership controls before declaring the marker."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "interfaces",
     "Type": "UnityEngine.UIElements.BaseField`1",
     "Message": "type interfaces is UnityEngine.UIElements.INotifyValueChanged`1<!0>, Unity's is UnityEngine.UIElements.IEditableElement,UnityEngine.UIElements.IMixedValueSupport,UnityEngine.UIElements.INotifyValueChanged`1<!0>,UnityEngine.UIElements.IPrefixLabel",
     "Reason": "Q410-UI-interfaces: UnityEngine.UIElements.BaseField`1 needs editable text, mixed-value state and prefix-label integration. Add selected interface dispatch only with observable before/after state and independent-control coverage; retain existing operation until then."
