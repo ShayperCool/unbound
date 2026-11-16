@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Label name="uxmlPercent" text="Hg" style="font-size: 50%;" />
+    <ui:Label name="uxmlPixels" text="Hg" style="font-size: 50px;" />
+</ui:UXML>

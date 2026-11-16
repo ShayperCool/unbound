@@ -1,0 +1,189 @@
+{"key":"bgposX.before","value":"bgpos Left 0px hints 0"}
+{"key":"bgposX.0","value":"bgpos Left 0px hints 0 [run:background-position-x]"}
+{"key":"bgposX.250","value":"bgpos Left 0px hints 0 []"}
+{"key":"bgposX.500","value":"bgpos Left 100px hints 0 []"}
+{"key":"bgposX.750","value":"bgpos Left 100px hints 0 []"}
+{"key":"bgposX.1000","value":"bgpos Left 100px hints 0 [end:background-position-x]"}
+{"key":"bgposY.before","value":"bgpos Top 10% hints 0"}
+{"key":"bgposY.0","value":"bgpos Top 10% hints 0 [run:background-position-y]"}
+{"key":"bgposY.250","value":"bgpos Top 10% hints 0 []"}
+{"key":"bgposY.500","value":"bgpos Bottom 60% hints 0 []"}
+{"key":"bgposY.750","value":"bgpos Bottom 60% hints 0 []"}
+{"key":"bgposY.1000","value":"bgpos Bottom 60% hints 0 [end:background-position-y]"}
+{"key":"textOverflow.before","value":"textOverflow Clip hints 0"}
+{"key":"textOverflow.0","value":"textOverflow Clip hints 0 [run:text-overflow]"}
+{"key":"textOverflow.250","value":"textOverflow Clip hints 0 []"}
+{"key":"textOverflow.500","value":"textOverflow Ellipsis hints 0 []"}
+{"key":"textOverflow.750","value":"textOverflow Ellipsis hints 0 []"}
+{"key":"textOverflow.1000","value":"textOverflow Ellipsis hints 0 [end:text-overflow]"}
+{"key":"whiteSpace.before","value":"whiteSpace Normal hints 0"}
+{"key":"whiteSpace.0","value":"whiteSpace Normal hints 0 [run:white-space]"}
+{"key":"whiteSpace.250","value":"whiteSpace Normal hints 0 []"}
+{"key":"whiteSpace.500","value":"whiteSpace NoWrap hints 0 []"}
+{"key":"whiteSpace.750","value":"whiteSpace NoWrap hints 0 []"}
+{"key":"whiteSpace.1000","value":"whiteSpace NoWrap hints 0 [end:white-space]"}
+{"key":"sliceLeft.before","value":"slice 0 hints 0"}
+{"key":"sliceLeft.0","value":"slice 0 hints 0 [run:-unity-slice-left]"}
+{"key":"sliceLeft.250","value":"slice 1 hints 0 []"}
+{"key":"sliceLeft.500","value":"slice 2 hints 0 []"}
+{"key":"sliceLeft.750","value":"slice 2 hints 0 []"}
+{"key":"sliceLeft.1000","value":"slice 3 hints 0 [end:-unity-slice-left]"}
+{"key":"rotateTurn.before","value":"rotate 10 Degree hints 0"}
+{"key":"rotateTurn.0","value":"rotate 10 Degree hints 1 [run:rotate]"}
+{"key":"rotateTurn.250","value":"rotate 52.5 Degree hints 1 []"}
+{"key":"rotateTurn.500","value":"rotate 95 Degree hints 1 []"}
+{"key":"rotateTurn.750","value":"rotate 137.5 Degree hints 1 []"}
+{"key":"rotateTurn.1000","value":"rotate 0.5 Turn hints 1 [end:rotate]"}
+{"key":"translateBack.before","value":"translate 0,0,0 hints 0"}
+{"key":"translateBack.0","value":"translate 0,0,0 hints 1 [run:translate]"}
+{"key":"translateBack.250","value":"translate 81.74097,0,81.74097 hints 1 []"}
+{"key":"translateBack.500","value":"translate 108.769753,0,100 hints 1 []"}
+{"key":"translateBack.750","value":"translate 106.413651,0,100 hints 1 []"}
+{"key":"translateBack.1000","value":"translate 100,0,100 hints 1 [end:translate]"}
+{"key":"originBack.before","value":"origin 0,0,0 hints 0"}
+{"key":"originBack.0","value":"origin 0,0,0 hints 1 [run:transform-origin]"}
+{"key":"originBack.250","value":"origin -6.413656,-3.206828,0 hints 1 []"}
+{"key":"originBack.500","value":"origin -8.769751,-4.3848753,0 hints 1 []"}
+{"key":"originBack.750","value":"origin 18.2590313,9.129516,9.129516 hints 1 []"}
+{"key":"originBack.1000","value":"origin 100,50,50 hints 1 [end:transform-origin]"}
+{"key":"widthToPercent.before","value":"width 200 hints 0"}
+{"key":"widthToPercent.0","value":"width 200 hints 0 [run:width]"}
+{"key":"widthToPercent.250","value":"width 225 hints 0 []"}
+{"key":"widthToPercent.500","value":"width 250 hints 0 []"}
+{"key":"widthToPercent.750","value":"width 275 hints 0 []"}
+{"key":"widthToPercent.1000","value":"width 300 hints 0 [end:width]"}
+{"key":"widthToPixels.before","value":"width 100 hints 0"}
+{"key":"widthToPixels.0","value":"width 100 hints 0 [run:width]"}
+{"key":"widthToPixels.250","value":"width 150 hints 0 []"}
+{"key":"widthToPixels.500","value":"width 200 hints 0 []"}
+{"key":"widthToPixels.750","value":"width 250 hints 0 []"}
+{"key":"widthToPixels.1000","value":"width 300 hints 0 [end:width]"}
+{"key":"zeroParentToPixels.before","value":"width 0 hints 0"}
+{"key":"zeroParentToPixels.0","value":"width 0 hints 0 [run:width]"}
+{"key":"zeroParentToPixels.250","value":"width 25 hints 0 []"}
+{"key":"zeroParentToPixels.500","value":"width 50 hints 0 []"}
+{"key":"zeroParentToPixels.750","value":"width 75 hints 0 []"}
+{"key":"zeroParentToPixels.1000","value":"width 100 hints 0 [end:width]"}
+{"key":"zeroParentToPercent.before","value":"width 100 hints 0"}
+{"key":"zeroParentToPercent.0","value":"width 0 hints 0 []"}
+{"key":"zeroParentToPercent.250","value":"width 0 hints 0 []"}
+{"key":"zeroParentToPercent.500","value":"width 0 hints 0 []"}
+{"key":"zeroParentToPercent.750","value":"width 0 hints 0 []"}
+{"key":"zeroParentToPercent.1000","value":"width 0 hints 0 []"}
+{"key":"heightToPercent.before","value":"height 100 hints 0"}
+{"key":"heightToPercent.0","value":"height 100 hints 0 [run:height]"}
+{"key":"heightToPercent.250","value":"height 113 hints 0 []"}
+{"key":"heightToPercent.500","value":"height 125 hints 0 []"}
+{"key":"heightToPercent.750","value":"height 138 hints 0 []"}
+{"key":"heightToPercent.1000","value":"height 150 hints 0 [end:height]"}
+{"key":"marginTopToPercent.before","value":"marginTop 40 hints 0"}
+{"key":"marginTopToPercent.0","value":"marginTop 40 hints 0 [run:margin-top]"}
+{"key":"marginTopToPercent.250","value":"marginTop 50 hints 0 []"}
+{"key":"marginTopToPercent.500","value":"marginTop 60 hints 0 []"}
+{"key":"marginTopToPercent.750","value":"marginTop 70 hints 0 []"}
+{"key":"marginTopToPercent.1000","value":"marginTop 80 hints 0 [end:margin-top]"}
+{"key":"flexBasisColumn.before","value":"basis 60 height 60 hints 0"}
+{"key":"flexBasisColumn.0","value":"basis 60 height 60 hints 0 [run:flex-basis]"}
+{"key":"flexBasisColumn.250","value":"basis 82.5 height 83 hints 0 []"}
+{"key":"flexBasisColumn.500","value":"basis 105 height 105 hints 0 []"}
+{"key":"flexBasisColumn.750","value":"basis 127.5 height 128 hints 0 []"}
+{"key":"flexBasisColumn.1000","value":"basis 150 height 150 hints 0 [end:flex-basis]"}
+{"key":"flexBasisRow.before","value":"basis 60 width 60 hints 0"}
+{"key":"flexBasisRow.0","value":"basis 60 width 60 hints 0 [run:flex-basis]"}
+{"key":"flexBasisRow.250","value":"basis 95 width 95 hints 0 []"}
+{"key":"flexBasisRow.500","value":"basis 130 width 130 hints 0 []"}
+{"key":"flexBasisRow.750","value":"basis 165 width 165 hints 0 []"}
+{"key":"flexBasisRow.1000","value":"basis 200 width 200 hints 0 [end:flex-basis]"}
+{"key":"radiusToPercent.before","value":"radius 10 hints 0"}
+{"key":"radiusToPercent.0","value":"radius 5 hints 0 [run:border-top-left-radius]"}
+{"key":"radiusToPercent.250","value":"radius 10 hints 0 []"}
+{"key":"radiusToPercent.500","value":"radius 15 hints 0 []"}
+{"key":"radiusToPercent.750","value":"radius 20 hints 0 []"}
+{"key":"radiusToPercent.1000","value":"radius 25 hints 0 [end:border-top-left-radius]"}
+{"key":"fontSizeToPercent.before","value":"fontSize 10 hints 0"}
+{"key":"fontSizeToPercent.0","value":"fontSize 50 hints 0 []"}
+{"key":"fontSizeToPercent.250","value":"fontSize 50 hints 0 []"}
+{"key":"fontSizeToPercent.500","value":"fontSize 50 hints 0 []"}
+{"key":"fontSizeToPercent.750","value":"fontSize 50 hints 0 []"}
+{"key":"fontSizeToPercent.1000","value":"fontSize 50 hints 0 []"}
+{"key":"letterSpacingToPercent.before","value":"letterSpacing 2 hints 0"}
+{"key":"letterSpacingToPercent.0","value":"letterSpacing 10 hints 0 []"}
+{"key":"letterSpacingToPercent.250","value":"letterSpacing 10 hints 0 []"}
+{"key":"letterSpacingToPercent.500","value":"letterSpacing 10 hints 0 []"}
+{"key":"letterSpacingToPercent.750","value":"letterSpacing 10 hints 0 []"}
+{"key":"letterSpacingToPercent.1000","value":"letterSpacing 10 hints 0 []"}
+{"key":"translateToPercent.before","value":"translate 20,10 hints 0"}
+{"key":"translateToPercent.0","value":"translate 20,10 hints 1 [run:translate]"}
+{"key":"translateToPercent.250","value":"translate 40,20 hints 1 []"}
+{"key":"translateToPercent.500","value":"translate 60,30 hints 1 []"}
+{"key":"translateToPercent.750","value":"translate 80,40 hints 1 []"}
+{"key":"translateToPercent.1000","value":"translate 100,50 hints 1 [end:translate]"}
+{"key":"bgSizeToPercent.before","value":"bgsize Length 10px 10px hints 0"}
+{"key":"bgSizeToPercent.0","value":"bgsize Length 50% 50% hints 0 []"}
+{"key":"bgSizeToPercent.250","value":"bgsize Length 50% 50% hints 0 []"}
+{"key":"bgSizeToPercent.500","value":"bgsize Length 50% 50% hints 0 []"}
+{"key":"bgSizeToPercent.750","value":"bgsize Length 50% 50% hints 0 []"}
+{"key":"bgSizeToPercent.1000","value":"bgsize Length 50% 50% hints 0 []"}
+{"key":"bgSizeSameUnit.before","value":"bgsize Length 10px 10px hints 0"}
+{"key":"bgSizeSameUnit.0","value":"bgsize Length 10px 10px hints 0 [run:background-size]"}
+{"key":"bgSizeSameUnit.250","value":"bgsize Length 15px 20px hints 0 []"}
+{"key":"bgSizeSameUnit.500","value":"bgsize Length 20px 30px hints 0 []"}
+{"key":"bgSizeSameUnit.750","value":"bgsize Length 25px 40px hints 0 []"}
+{"key":"bgSizeSameUnit.1000","value":"bgsize Length 30px 50px hints 0 [end:background-size]"}
+{"key":"bgSizeFromAuto.before","value":"bgsize Length 100% 100% hints 0"}
+{"key":"bgSizeFromAuto.0","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeFromAuto.250","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeFromAuto.500","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeFromAuto.750","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeFromAuto.1000","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"fontPercent","value":"class 10 | inline 50 | uxml 50 | pixels 50 | uxmlPx 50"}
+{"key":"fontPercentChildren","value":"inline 25 | class 10 | classUnderInline 25"}
+{"key":"hintColor.before","value":"color 1 hints 0"}
+{"key":"hintColor.0","value":"color 1 hints 8 [run:color]"}
+{"key":"hintColor.250","value":"color 0.75 hints 8 []"}
+{"key":"hintColor.500","value":"color 0.5 hints 8 []"}
+{"key":"hintColor.750","value":"color 0.25 hints 8 []"}
+{"key":"hintColor.1000","value":"color 0 hints 8 [end:color]"}
+{"key":"hintBorderColor.before","value":"border 0 hints 0"}
+{"key":"hintBorderColor.0","value":"border 0 hints 8 [run:border-left-color]"}
+{"key":"hintBorderColor.250","value":"border 0.25 hints 8 []"}
+{"key":"hintBorderColor.500","value":"border 0.5 hints 8 []"}
+{"key":"hintBorderColor.750","value":"border 0.75 hints 8 []"}
+{"key":"hintBorderColor.1000","value":"border 1 hints 8 [end:border-left-color]"}
+{"key":"hintScale.before","value":"scale 1 hints 0"}
+{"key":"hintScale.0","value":"scale 1 hints 1 [run:scale]"}
+{"key":"hintScale.250","value":"scale 1.25 hints 1 []"}
+{"key":"hintScale.500","value":"scale 1.5 hints 1 []"}
+{"key":"hintScale.750","value":"scale 1.75 hints 1 []"}
+{"key":"hintScale.1000","value":"scale 2 hints 1 [end:scale]"}
+{"key":"hintWidth.before","value":"width 200 hints 0"}
+{"key":"hintWidth.0","value":"width 200 hints 0 [run:width]"}
+{"key":"hintWidth.250","value":"width 225 hints 0 []"}
+{"key":"hintWidth.500","value":"width 250 hints 0 []"}
+{"key":"hintWidth.750","value":"width 275 hints 0 []"}
+{"key":"hintWidth.1000","value":"width 300 hints 0 [end:width]"}
+{"key":"hintNoStart.before","value":"bg 1 hints 0"}
+{"key":"hintNoStart.0","value":"bg 1 hints 0 []"}
+{"key":"hintNoStart.250","value":"bg 1 hints 0 []"}
+{"key":"hintNoStart.500","value":"bg 1 hints 0 []"}
+{"key":"hintNoStart.750","value":"bg 1 hints 0 []"}
+{"key":"hintNoStart.1000","value":"bg 1 hints 0 []"}
+{"key":"hintPreset.before","value":"translate 0 hints 2"}
+{"key":"hintPreset.0","value":"translate 0 hints 3 [run:translate]"}
+{"key":"hintPreset.250","value":"translate 7.5 hints 3 []"}
+{"key":"hintPreset.500","value":"translate 15 hints 3 []"}
+{"key":"hintPreset.750","value":"translate 22.5 hints 3 []"}
+{"key":"hintPreset.1000","value":"translate 30 hints 3 [end:translate]"}
+{"key":"hintClass.before","value":"hints 0"}
+{"key":"hintClass.0","value":"bg 0 scale 1 hints 9 [run:scale run:background-color]"}
+{"key":"hintClass.250","value":"bg 0.25 scale 1.25 hints 9 []"}
+{"key":"hintClass.500","value":"bg 0.5 scale 1.5 hints 9 []"}
+{"key":"hintClass.750","value":"bg 0.75 scale 1.75 hints 9 []"}
+{"key":"hintClass.1000","value":"bg 1 scale 2 hints 9 [end:scale end:background-color]"}
+{"key":"hintAll.before","value":"hints 8"}
+{"key":"hintAll.0","value":"border 0 rotate 0 hints 9 [cancel:border-left-color run:border-left-color run:rotate]"}
+{"key":"hintAll.250","value":"border 0 rotate 11.25 hints 9 []"}
+{"key":"hintAll.500","value":"border 0 rotate 22.5 hints 9 []"}
+{"key":"hintAll.750","value":"border 0 rotate 33.75 hints 9 []"}
+{"key":"hintAll.1000","value":"border 0 rotate 45 hints 9 [end:border-left-color end:rotate]"}
+{"key":"complete","value":"1"}

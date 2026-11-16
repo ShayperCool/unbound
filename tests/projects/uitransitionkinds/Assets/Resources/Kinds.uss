@@ -1,0 +1,26 @@
+.kinds {
+    transition-property: background-color, scale;
+    transition-duration: 1s;
+    transition-timing-function: linear;
+}
+
+.kinds-target {
+    background-color: rgb(0, 0, 255);
+    scale: 2 2;
+}
+
+.kinds-all {
+    transition-property: all;
+    transition-duration: 1s;
+    transition-timing-function: linear;
+    border-left-color: rgb(255, 0, 0);
+}
+
+.kinds-all-target {
+    border-left-color: rgb(0, 0, 255);
+    rotate: 45deg;
+}
+
+.font-half {
+    font-size: 50%;
+}
