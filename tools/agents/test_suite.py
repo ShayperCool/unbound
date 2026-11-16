@@ -1006,10 +1006,23 @@ class PartialRecipeTests(unittest.TestCase):
                             {key: value for key, value in candidate.items() if key != 'scene/4/defaultHash'}]:
                 self.assertTrue(module.verify(reference, changed)[1])
             steps = suite.recipes('6000.0.71f1')['contactevents3d']
-            raw = next(s for s in steps if s.kind == 'compare' and 'controls-p0.json' in ' '.join(s.argv))
+            # The raw comparison is a record step: kept in full, deciding nothing (its exit code
+            # is 0 with the hash differences); verify_controls.py decides.
+            raw = next(s for s in steps if 'compare.py' in ' '.join(s.argv) and 'controls-p0.json' in ' '.join(s.argv))
             strict = next(s for s in steps if 'verify_controls.py' in ' '.join(s.argv))
-            self.assertEqual(raw.verdict, 'none')
+            self.assertEqual(raw.kind, 'driver')
+            self.assertEqual(strict.kind, 'compare')
             self.assertEqual(strict.verdict, 'exit')
+            with tempfile.TemporaryDirectory() as cache:
+                (Path(cache)/'unbound').mkdir()
+                ref, cand = Path(cache)/'reference.jsonl', Path(cache)/'candidate.jsonl'
+                ref.write_text(''.join(json.dumps({'key': k, 'value': v}) + '\n' for k, v in reference.items()))
+                cand.write_text(''.join(json.dumps({'key': k, 'value': v}) + '\n' for k, v in candidate.items()))
+                done = subprocess.run([sys.executable, str(folder/'compare.py'), str(ref), str(cand), '--output',
+                                       str(Path(cache)/'unbound'/'controls.json')],
+                                      env=dict(os.environ, XDG_CACHE_HOME=cache), capture_output=True, text=True)
+                self.assertEqual(done.returncode, 0, done.stderr)
+                self.assertIn("'differences': 2", done.stdout)
         finally:
             sys.path.pop(0)
 
