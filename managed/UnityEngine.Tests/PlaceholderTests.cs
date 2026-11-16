@@ -68,6 +68,48 @@ MonoBehaviour:
             finally { Object.DestroyImmediate(sample); }
         }
 
+        public sealed class Styled : ScriptableObject
+        {
+            public GUIStyle style;
+            public Rigidbody keyless;
+        }
+
+        [Fact]
+        public void EngineClassesKeepNullReferencesAndUnwrittenFieldsGetPlaceholders()
+        {
+            var styled = ScriptableObject.CreateInstance<Styled>();
+            try
+            {
+                new YamlReader(null).ReadScriptObject(styled, TestYaml.DocumentBody(@"
+MonoBehaviour:
+  style:
+    m_Name: s
+    m_Normal:
+      m_Background: {fileID: 0}
+    m_Font: {fileID: 0}
+"));
+                // GUIStyle's own data is the engine's: its references stay null.
+                Assert.True(ReferenceEquals(styled.style.normal.background, null));
+                Assert.True(ReferenceEquals(styled.style.font, null));
+                // A field the data does not name is unassigned all the same.
+                Assert.False(ReferenceEquals(styled.keyless, null));
+                Assert.Contains("The variable keyless of Styled", ObjectErrors.Receiver(styled.keyless).Message);
+            }
+            finally { Object.DestroyImmediate(styled); }
+        }
+
+        [Fact]
+        public void SerializedPropertiesReadAPlaceholderAsNoReference()
+        {
+            var sample = Read();
+            try
+            {
+                using var so = new SerializedObject(sample);
+                Assert.True(ReferenceEquals(so.FindProperty("go").objectReferenceValue, null));
+            }
+            finally { Object.DestroyImmediate(sample); }
+        }
+
         [Fact]
         public void AnObjectMadeAtRuntimeHasNullReferences()
         {

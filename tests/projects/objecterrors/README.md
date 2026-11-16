@@ -33,8 +33,10 @@ none of the values depends on the OS or the graphics device):
 Also measured: a ScriptableObject asset's unassigned references are placeholders too, an object
 made at runtime has null references, fields typed MonoBehaviour or ScriptableObject (or a
 subclass) stay null while Component and Behaviour fields get placeholders, the message names the
-script class without its namespace, and GetComponent of a missing abstract engine class
-(Collider, Renderer) answers a placeholder of that class.
+script class without its namespace, GetComponent of a missing base class (Collider, Renderer)
+answers a placeholder of that class, a field the scene does not write is a placeholder like a
+written one, and a GUIStyle's own references (its states' backgrounds, its font) stay null. Fields
+of classes C# declares abstract (unmeasured) keep null references in Unbound.
 
 Unbound gives all of these. The two `*.nested.instantiate` values remain (`residuals.json`):
 their ArgumentNullException carries the Editor's parameter name, but .NET then writes the name

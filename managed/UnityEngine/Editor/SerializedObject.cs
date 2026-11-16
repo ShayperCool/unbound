@@ -896,7 +896,10 @@ namespace UnityEditor
             get
             {
                 var n = N;
-                if (n.PropertyType == SerializedPropertyType.ObjectReference) return (Object)SerializedTree.GetValue(n);
+                // A dead object (a placeholder or a destroyed object) reads as no reference, as
+                // the Editor's native data does.
+                if (n.PropertyType == SerializedPropertyType.ObjectReference)
+                    return SerializedTree.GetValue(n) is Object value && value != null ? value : null;
                 Unsupported("pptr");
                 return null;
             }

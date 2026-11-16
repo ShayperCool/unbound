@@ -361,17 +361,28 @@ namespace Unbound.Runtime
 
         /// <summary>The script object being read (its class name) and its top-level field, for the
         /// placeholders of unassigned references (<see cref="Placeholders"/>); a reference of a
-        /// nested class gets one without a message.</summary>
+        /// nested class gets one without a message. The engine's own classes (GUIStyle's state,
+        /// a GUISkin, events) keep null references, as their data is the engine's in the Editor
+        /// (tests/projects/objecterrors `unassigned.style_*`).</summary>
         string m_Script, m_Field;
-        bool m_Nested;
+        bool m_Nested, m_EngineOwned;
+
+        /// <summary>The placeholder of an unassigned reference read now, or null.</summary>
+        Object Unassigned(Type type) =>
+            m_Script == null || m_EngineOwned ? null : Placeholders.Make(type, m_Nested ? "" : Placeholders.Unassigned(m_Field, m_Script));
 
         internal void ReadFields(object target, Type type, YNode map, int depth, bool guiStatePayload = false)
         {
             if (map == null || map.Kind != YKind.Map) return;
-            bool wasNested = m_Nested;
+            bool wasNested = m_Nested, wasEngineOwned = m_EngineOwned;
             m_Nested = depth > 0;
+            m_EngineOwned |= type.Assembly == typeof(Object).Assembly;
             try { ReadMembers(target, type, map, depth, guiStatePayload); }
-            finally { m_Nested = wasNested; }
+            finally
+            {
+                m_Nested = wasNested;
+                m_EngineOwned = wasEngineOwned;
+            }
         }
 
         void ReadMembers(object target, Type type, YNode map, int depth, bool guiStatePayload)
@@ -382,7 +393,12 @@ namespace Unbound.Runtime
                 var node = MemberNode(map, member);
                 if (node == null)
                 {
-                    FillMissing(target, member, depth);
+                    // A reference the data does not name is unassigned all the same
+                    // (tests/projects/objecterrors `unassigned.keyless`).
+                    if (member.Shape == Shape.UnityObject && Unassigned(member.Field.FieldType) is { } placeholder
+                        && ReferenceEquals(member.Field.GetValue(target), null))
+                        member.Field.SetValue(target, placeholder);
+                    else FillMissing(target, member, depth);
                     continue;
                 }
                 try
@@ -467,8 +483,7 @@ namespace Unbound.Runtime
                 case Shape.UnityObject:
                 {
                     var reference = node.AsRef();
-                    if (reference.IsNull)
-                        return m_Script == null ? null : Placeholders.Make(type, m_Nested ? "" : Placeholders.Unassigned(m_Field, m_Script));
+                    if (reference.IsNull) return Unassigned(type);
                     var obj = m_Resolver.Resolve(reference, type);
                     return obj != null && type.IsInstanceOfType(obj) ? obj : null;
                 }

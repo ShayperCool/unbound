@@ -105,7 +105,6 @@ static class LifetimeChecks
     /// </summary>
     internal static byte[]? RedirectDelta(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il)
     {
-        if (s_Checked.Count == 0) return il;
         using var metadata = new DeltaMetadata(baseline, deltas);
         var view = new NumberFormatShims.AggregateView(metadata);
         var wrappers = Wrappers(metadata.Baseline, view);
