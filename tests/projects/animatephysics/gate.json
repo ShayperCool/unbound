@@ -10,6 +10,10 @@
     "managed/UnityEngine/Physics/Rigidbody.cs",
     "managed/UnityEngine/Core/Transform.cs",
     "managed/UnityEngine/Animation/AnimationPose.cs",
-    "managed/UnityEngine/Animation/Human/AnimatorHuman.cs"
+    "managed/UnityEngine/Animation/Human/AnimatorHuman.cs",
+    "managed/UnityEngine/Playables/PlayableEngine.cs",
+    "managed/UnityEngine/Playables/PlayableTypes.cs",
+    "managed/UnityEngine/Animation/Playables/AnimationPlayableOutput.cs",
+    "managed/UnityEngine/Animation/Playables/AnimationOutputs.cs"
   ]
 }
