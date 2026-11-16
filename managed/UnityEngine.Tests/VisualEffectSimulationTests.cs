@@ -1067,7 +1067,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { null, null, Moving, null, null }, found[1]);
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal(Moving, VFXOutput.Refusal(system, quads, material, Moving));
-            Assert.Equal("its particles are sorted, which is not done yet", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
+            Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
             // A lit output through an indirect buffer: each is measured, the two together are not.
             VFXEditorTaskDesc From(VFXEditorTaskDesc task, int sourceIndex)
             {
