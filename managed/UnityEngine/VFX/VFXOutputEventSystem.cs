@@ -24,14 +24,7 @@ namespace Unbound.Runtime
         internal VFXOutputEventSystem(VisualEffect effect, int index, IReadOnlyList<VFXSystem> systems) : base(effect, index)
         {
             m_NameId = Shader.PropertyToID(Desc.name);
-            var inputs = new List<VFXSpawnerSystem>();
-            foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
-            {
-                if (mapping.name != Input) continue;
-                foreach (var system in systems)
-                    if (system is VFXSpawnerSystem spawner && spawner.OutputBufferIndex == mapping.index) inputs.Add(spawner);
-            }
-            m_Inputs = inputs.ToArray();
+            m_Inputs = VFXSpawnerSystem.Feeding(Desc.buffers, Input, systems);
         }
 
         internal override void Reset() { }

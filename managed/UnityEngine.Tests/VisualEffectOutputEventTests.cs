@@ -40,6 +40,7 @@ namespace UnityEngine.Tests
             return asset;
         }
 
+
         [Fact]
         public void EachStepHandsItsEventsInOrderWithTheAttributesThatRaisedThem()
         {
@@ -66,9 +67,11 @@ namespace UnityEngine.Tests
                 bool thrown = false;
                 Action<VFXOutputEventArgs> failing = args => { if (!thrown) { thrown = true; throw new InvalidOperationException("listener"); } };
                 effect.outputEventReceived = failing + effect.outputEventReceived;
-                Debug.unityLogger.logEnabled = false;
-                try { effect.UpdateEffect(Thirtieth); }
-                finally { Debug.unityLogger.logEnabled = true; }
+                using (var logs = new RecordedLogs())
+                {
+                    effect.UpdateEffect(Thirtieth);
+                    Assert.Equal(new[] { "Exception: listener" }, logs.Logged);
+                }
                 Assert.Equal(2, received.Count);
                 // Without a listener a step's events are not kept for later.
                 effect.outputEventReceived = null;

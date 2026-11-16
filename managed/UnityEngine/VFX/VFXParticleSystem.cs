@@ -113,14 +113,7 @@ namespace Unbound.Runtime
             m_GraphValueOffsets = GraphValueOffsets(data, m_GraphValueExpressions, out int graphWords);
             m_GraphWords = new uint[graphWords];
 
-            var spawners = new List<VFXSpawnerSystem>();
-            foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
-            {
-                if (mapping.name != "spawner_input") continue;
-                foreach (var system in systems)
-                    if (system is VFXSpawnerSystem spawner && spawner.OutputBufferIndex == mapping.index) spawners.Add(spawner);
-            }
-            m_Spawners = spawners.ToArray();
+            m_Spawners = VFXSpawnerSystem.Feeding(Desc.buffers, "spawner_input", systems);
             m_SourceLayout = SourceLayout(data, m_SourceBuffer);
 
             // The lists of particles to draw: per camera when their name says so (the compiler

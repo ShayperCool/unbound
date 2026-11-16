@@ -101,10 +101,14 @@ namespace Unbound.Runtime
             m_StoppedBy = Linked(systems, StopInput);
         }
 
-        VFXSpawnerSystem[] Linked(IReadOnlyList<VFXSystem> systems, string name)
+        VFXSpawnerSystem[] Linked(IReadOnlyList<VFXSystem> systems, string name) => Feeding(Desc.buffers, name, systems);
+
+        /// <summary>The spawn systems whose output buffer a system's buffer mappings of a name
+        /// point at, in the order of the mappings.</summary>
+        internal static VFXSpawnerSystem[] Feeding(VFXMapping[] buffers, string name, IReadOnlyList<VFXSystem> systems)
         {
             List<VFXSpawnerSystem> linked = null;
-            foreach (var mapping in Desc.buffers ?? Array.Empty<VFXMapping>())
+            foreach (var mapping in buffers ?? Array.Empty<VFXMapping>())
             {
                 if (mapping.name != name) continue;
                 foreach (var system in systems)

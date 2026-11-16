@@ -359,6 +359,8 @@ namespace UnityEngine.VFX
             if ((flags & StepFlags.Evaluate) != 0 && state.NeedsEvaluation) EvaluateExpressions();
             if ((flags & StepFlags.Bounds) != 0) UpdateBounds();
             if ((flags & StepFlags.Simulate) == 0) return;
+            // Only this step's events (a step a system failed in hands over none).
+            m_OutputEvents.Clear();
             foreach (var system in m_Systems) system.Update(state);
             SendOutputEvents();
             state.TotalTime += state.DeltaTime;
@@ -390,7 +392,9 @@ namespace UnityEngine.VFX
                 {
                     var (nameId, source) = m_OutputEvents[i];
                     attribute.CopyAllFrom(source);
-                    // A listener's exception is its own: the next events are still handed over.
+                    // A listener's exception is its own: the next events are still handed over
+                    // (tests/projects/vfx `events/listener logs`). The listener is read again for
+                    // each event, as Unity's own handing over does.
                     try { outputEventReceived(new VFXOutputEventArgs(nameId, attribute)); }
                     catch (Exception e) { Debug.LogException(e, this); }
                 }

@@ -9,6 +9,19 @@ using static UnityEngine.Tests.VisualEffectSimulationTests;
 
 namespace UnityEngine.Tests
 {
+    /// <summary>What Debug logs while it is in use: "type: message" each (an exception as
+    /// "Exception: message").</summary>
+    internal sealed class RecordedLogs : ILogHandler, IDisposable
+    {
+        readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
+        public readonly List<string> Logged = new List<string>();
+        public RecordedLogs() { Debug.unityLogger.logHandler = this; }
+        public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
+        public void LogException(Exception exception, Object context) => Logged.Add("Exception: " + exception.Message);
+        public void LogFormat(LogType type, Object context, string format, params object[] args) =>
+            Logged.Add(type + ": " + string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+    }
+
     /// <summary>The main camera as effects read it and the camera entry points a render
     /// pipeline calls (VFXManager), on compiled graphs made by hand.</summary>
     public class VisualEffectCameraTests
@@ -40,16 +53,6 @@ namespace UnityEngine.Tests
             return values;
         }
 
-        sealed class Logs : ILogHandler, IDisposable
-        {
-            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
-            public readonly List<string> Logged = new List<string>();
-            public Logs() { Debug.unityLogger.logHandler = this; }
-            public void Dispose() { Debug.unityLogger.logHandler = m_Previous; }
-            public void LogException(Exception exception, Object context) => Logged.Add("Exception: " + exception.Message);
-            public void LogFormat(LogType type, Object context, string format, params object[] args) =>
-                Logged.Add(type + ": " + string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
-        }
 
         [Fact]
         public void ASheetSaysWhetherItReadsTheMainCameraAndWhichOfItsBuffers()
@@ -133,7 +136,7 @@ namespace UnityEngine.Tests
 
                 // A value of no single kind is refused and one the effects do not read asserted,
                 // with the Editor's messages; the size given with the last call is read.
-                using (var logs = new Logs())
+                using (var logs = new RecordedLogs())
                 {
                     VFXManager.SetCameraBuffer(main, VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, colour, 0, 0, 10, 10);
                     VFXManager.SetCameraBuffer(main, VFXCameraBufferTypes.Normal, colour, 0, 0, 12, 9);
@@ -150,7 +153,7 @@ namespace UnityEngine.Tests
                 // Without a camera tagged as the main one: said once;
                 // the graph reads a new camera's lens, a 1920x1080 screen and no buffers.
                 eye.tag = "Untagged";
-                using (var logs = new Logs())
+                using (var logs = new RecordedLogs())
                 {
                     VFXManager.UpdateMainCamera();
                     VFXManager.UpdateMainCamera();
