@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/radiogroups/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/RadioButton.cs",
+    "managed/UnityEngine/UIElements/Controls/GroupBox.cs",
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs"
+  ]
+}

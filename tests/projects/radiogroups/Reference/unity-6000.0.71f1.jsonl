@@ -1,0 +1,28 @@
+{"key":"panel.a","value":"on [a] events [a:True]"}
+{"key":"panel.c","value":"on [c] events [c:True a:False]"}
+{"key":"panel.cOff","value":"on [] events [c:False]"}
+{"key":"panel.bWithoutNotify","value":"on [b] events []"}
+{"key":"panel.aAgain","value":"on [a] events [a:True b:False]"}
+{"key":"groupbox.tree","value":"g1 unity-group-box children Label(First,unity-group-box__label unity-label unity-text-element),RadioButton,RadioButton,GroupBox | g2 children 2 text <null>"}
+{"key":"groupbox.select","value":"on [a,g1a,g2b,in1] events [g1a:True g2b:True in1:True]"}
+{"key":"groupbox.g1b","value":"on [a,g1b,g2b,in1] events [g1b:True g1a:False]"}
+{"key":"groupbox.in2SetSelected","value":"on [a,g1b,g2b,in2] events [in2:True in1:False]"}
+{"key":"groupbox.in2Deselected","value":"on [a,g1b,g2b] events [in2:False]"}
+{"key":"groupbox.moved","value":"on [a,g1b,g2b] events []"}
+{"key":"groupbox.movedSelect","value":"on [a,g2a] events [g2a:True g2b:False g1b:False]"}
+{"key":"groupbox.titles","value":"g1 children RadioButton,GroupBox text <null> | g2 first Label text Second"}
+{"key":"detached.both","value":"on [a,d1,d2,g2a] events []"}
+{"key":"detached.attached","value":"on [a,d1,d2,g2a] events []"}
+{"key":"detached.reselect","value":"on [d1,g2a] events [d1:False d1:True a:False d2:False]"}
+{"key":"detached.removed","value":"on [d1,d2,g2a] events []"}
+{"key":"order.events","value":"on [d1,d2,g2a,o1] events [o2:True o3:True o2:False o1:True o3:False]"}
+{"key":"rbg.initial","value":"value -1 radios 000 changes 0 "}
+{"key":"rbg.value1","value":"value 1 radios 010 changes 1 -1>1"}
+{"key":"rbg.radio2","value":"value 2 radios 001 changes 2 1>2"}
+{"key":"rbg.extraAdded","value":"value 2 radios 0010 changes 2 1>2"}
+{"key":"rbg.extraChecked","value":"value 3 radios 0001 changes 3 2>3 on [d1,d2,extra,g2a,o1] events [extra:True]"}
+{"key":"rbg.value0","value":"value 0 radios 1000 changes 4 3>0 on [d1,d2,g2a,o1] events [extra:False]"}
+{"key":"rbg.none","value":"value -1 radios 0000 changes 5 0>-1"}
+{"key":"rbg2.added","value":"value 0 radios 101"}
+{"key":"rbg2.settled","value":"value 0 radios 100"}
+{"key":"complete","value":"1"}
