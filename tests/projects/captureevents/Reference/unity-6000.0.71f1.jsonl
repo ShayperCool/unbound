@@ -1,0 +1,11 @@
+{"key":"interfaces","value":"IPointerCaptureEvent,IPointerCaptureEventInternal"}
+{"key":"interfaces.out","value":"IPointerCaptureEvent,IPointerCaptureEventInternal"}
+{"key":"script.capture","value":"PointerCaptureEvent target A id 4 internal 4 related B at A"}
+{"key":"script.out","value":"PointerCaptureOutEvent target B id 0 internal 0 related A at B"}
+{"key":"reuse","value":"True PointerCaptureEvent target <null> id -1 internal -1 related <null>"}
+{"key":"panel.captureTouch","value":"PointerCaptureEvent target A id 4 internal 4 related <null> at A | has True"}
+{"key":"panel.moveTouch","value":"PointerCaptureOutEvent target A id 4 internal 4 related B at A; PointerCaptureEvent target B id 4 internal 4 related A at B | has False True"}
+{"key":"panel.releaseTouch","value":"PointerCaptureOutEvent target B id 4 internal 4 related <null> at B | has False"}
+{"key":"panel.captureMouse","value":"PointerCaptureEvent target A id 0 internal 0 related <null> at A"}
+{"key":"panel.releaseMouse","value":"PointerCaptureOutEvent target A id 0 internal 0 related <null> at A"}
+{"key":"complete","value":"1"}

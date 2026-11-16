@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/captureevents/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Events/Events.cs"
+  ]
+}
