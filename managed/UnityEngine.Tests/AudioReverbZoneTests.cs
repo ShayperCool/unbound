@@ -608,7 +608,7 @@ namespace UnityEngine.Tests
             source.clip = clip;
             source.Play();
             Assert.False(source.m_HasAudioFrame);
-            m_Backend.Frame(new AudioFramePacket { DeltaTime = 0.04 });
+            m_Backend.AdvanceClock(0.04);
             double position = m_Backend.State(source.Handle).Position;
             Assert.True(position > 0);
             double previousDelta = Time.s_RealDeltaTime;

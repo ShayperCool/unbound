@@ -462,7 +462,7 @@ namespace Unbound.Runtime
                 }
                 catch (Exception e) { Debug.LogException(e, listener); }
             }
-            if (submit) SubmitFrame(0f, 0, 0, fixedStep: true);
+            if (submit) SubmitFrame(0, 0, fixedStep: true);
         }
 
         // ------------------------------------------------------------------ the frame
@@ -565,7 +565,7 @@ namespace Unbound.Runtime
             }
 
             // The frame's real time was counted as it started (AdvanceClock).
-            SubmitFrame(0f, playing, motionDelta, fixedStep: false);
+            SubmitFrame(playing, motionDelta, fixedStep: false);
         }
 
         // Listener units retain their connection order independently of hearing poses.
@@ -588,11 +588,10 @@ namespace Unbound.Runtime
 
         // A fixed sample reaches the backend at the fixed node. Dynamic listener state remains
         // at its last frame sample; this submission neither samples it nor advances mixer time.
-        static void SubmitFrame(float realDelta, int playing, double motionDelta, bool fixedStep)
+        static void SubmitFrame(int playing, double motionDelta, bool fixedStep)
         {
             var frame = new AudioFramePacket
             {
-                DeltaTime = realDelta,
                 ListenerForward = Vector3.forward,
                 ListenerUp = Vector3.up,
                 ListenerVolume = ListenerVolume,

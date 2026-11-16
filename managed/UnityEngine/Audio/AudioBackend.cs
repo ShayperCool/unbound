@@ -545,7 +545,6 @@ namespace Unbound.Runtime
             LastFrame = frame;
             m_ListenerPaused = (frame.Flags & AudioFrameFlags.Paused) != 0;
             int rate = m_Configuration.sampleRate, buffer = Math.Max(1, m_Configuration.dspBufferSize);
-            AdvanceClock(frame.DeltaTime);
             return new AudioStatus { DspTime = DspTime, SampleRate = rate, BufferSize = buffer, SpeakerMode = (int)m_Configuration.speakerMode, RealVoices = m_Configuration.numRealVoices };
         }
 

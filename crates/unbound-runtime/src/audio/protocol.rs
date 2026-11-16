@@ -272,7 +272,8 @@ pub mod frame_flags {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct AudioFramePacket {
-    /// The frame's unscaled time; the virtual output device advances by it.
+    /// Unused since NativeApi 83, where the virtual device's time moves as the frame starts
+    /// (`audio_advance`); kept so that the packet's layout stays.
     pub delta_time: f64,
     pub listener_position: Vector3,
     pub listener_forward: Vector3,

@@ -201,6 +201,8 @@ namespace Unbound.Runtime
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct AudioFramePacket
     {
+        /// <summary>Unused since NativeApi 83 (the virtual device's time moves as the frame starts,
+        /// AudioBackend.AdvanceClock); kept so that the packet's layout stays.</summary>
         internal double DeltaTime;
         internal Vector3 ListenerPosition;
         internal Vector3 ListenerForward;

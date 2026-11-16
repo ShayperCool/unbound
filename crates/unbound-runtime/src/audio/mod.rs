@@ -635,18 +635,10 @@ impl Engine {
     /// scripts read a dsp clock that has already counted it, as the Editor's audio thread has
     /// (tests/projects/dspclock). A real device keeps its own time; capture stops the clock.
     pub fn advance(&self, delta_time: f64) {
-        if self.has_device() {
+        if self.has_device() || self.capturing.load(Ordering::Acquire) {
             return;
         }
         let mut mixer = self.mixer();
-        self.advance_virtual(&mut mixer, delta_time);
-        self.clock.store(&mixer);
-    }
-
-    fn advance_virtual(&self, mixer: &mut Mixer, delta_time: f64) {
-        if self.capturing.load(Ordering::Acquire) {
-            return;
-        }
         let rate = mixer.config.sample_rate as f64;
         let buffer = mixer.config.buffer_size.max(1) as usize;
         let mut owed = self.owed.lock().unwrap();
@@ -656,10 +648,10 @@ impl Engine {
             mixer.advance(buffers * buffer);
             *owed -= (buffers * buffer) as f64 / rate;
         }
+        self.clock.store(&mixer);
     }
 
-    /// Once per frame: the listener, and the virtual device's time (`delta_time`, which is 0
-    /// when [`Engine::advance`] already counted the frame).
+    /// Once per frame: the listener (the virtual device's time is [`Engine::advance`]'s).
     pub fn frame(&self, packet: &AudioFramePacket) -> AudioStatus {
         let virtual_device = !self.has_device();
         let mut mixer = self.mixer();
@@ -684,9 +676,6 @@ impl Engine {
         );
         mixer.update_zone(&packet.zone, packet.flags & frame_flags::ZONE_STARTUP != 0);
         mixer.update_suspension();
-        if virtual_device {
-            self.advance_virtual(&mut mixer, packet.delta_time);
-        }
         self.clock.store(&mixer);
         AudioStatus {
             dsp_time: mixer.dsp_time(),
@@ -1097,20 +1086,28 @@ mod tests {
             },
             false,
         );
-        let packet = |dt| AudioFramePacket {
-            delta_time: dt,
+        let packet = AudioFramePacket {
             listener_volume: 1.0,
             flags: frame_flags::HAS_LISTENER,
             ..Default::default()
         };
-        assert_eq!(engine.frame(&packet(0.15)).dsp_time, 0.1);
-        assert_eq!(engine.frame(&packet(0.06)).dsp_time, 0.2);
+        // Each frame's real time as it starts, in whole buffers, owing the rest to the next one.
+        engine.advance(0.15);
+        assert_eq!(engine.dsp_time(), 0.1);
+        engine.advance(0.06);
         assert_eq!(engine.dsp_time(), 0.2);
-        // Counted as a frame starts (Engine::advance), owing the same remainder; the frame's
-        // update with no time of its own then adds nothing.
+        // The frame's audio update adds nothing, whatever its packet says.
+        assert_eq!(
+            engine
+                .frame(&AudioFramePacket {
+                    delta_time: 5.0,
+                    ..packet
+                })
+                .dsp_time,
+            0.2
+        );
         engine.advance(0.25);
         assert_eq!(engine.dsp_time(), 0.4);
-        assert_eq!(engine.frame(&packet(0.0)).dsp_time, 0.4);
         engine.advance(0.06);
         assert_eq!(engine.dsp_time(), 0.5);
         engine.advance(-1.0);
@@ -1135,9 +1132,14 @@ mod tests {
                 },
             );
         }
-        engine.frame(&packet(0.2));
+        // Frames as the player loop runs them: the audio update of the frame that played it, then
+        // the clock as each next frame starts and its audio update at its end.
+        engine.frame(&packet);
+        engine.advance(0.2);
+        engine.frame(&packet);
         assert_eq!(engine.mixer().source_state(9).main, voice_state::PLAYING);
-        engine.frame(&packet(0.1));
+        engine.advance(0.1);
+        engine.frame(&packet);
         assert_eq!(engine.mixer().source_state(9).main, voice_state::NONE);
     }
 
@@ -1175,10 +1177,7 @@ mod tests {
             },
             false,
         );
-        engine.frame(&AudioFramePacket {
-            delta_time: 1.0,
-            ..Default::default()
-        });
+        engine.advance(1.0);
         let mut configuration = engine.configuration();
         assert_eq!(configuration.sample_rate, 1000);
         assert!(engine.capture_start());

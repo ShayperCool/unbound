@@ -18,7 +18,8 @@ started):
 - the clock never goes backwards and, over the frames from the 10th on, moves as real time does;
 - the frame after the 300 ms one reads a clock that has counted it, and the frame before it one
   that has not; the graph's time, read after `DirectorUpdate`, has counted it in that frame too;
-- the graph's time is not a whole number of buffers and moves in every frame from the second on:
+- the graph's time is not a whole number of buffers and moves in every frame after the one that
+  made it:
   between the audio clock's buffers it moves with the frames (an exploratory capture: by about
   each frame's real time, meeting the audio clock again where that one steps further).
 

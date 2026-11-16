@@ -33,6 +33,9 @@ namespace Unbound.Runtime.Playables
         {
             if (s_Registered) return;
             s_Registered = true;
+            // DirectorSampleTime samples the clock in every frame, graphs or not: the first graph
+            // moves by the clock from the start of the frame it was made in.
+            s_LastDsp = AudioSettings.dspTime;
             PlayerLoopDriver.Register(typeof(PL.Initialization.DirectorSampleTime), SampleTime);
             PlayerLoopDriver.Register(typeof(PL.Update.DirectorUpdate), PlayableGraphData.UpdateAll);
             // Animation outputs evaluate with the Animators (AnimationSystem, DirectorUpdateAnimationBegin).

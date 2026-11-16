@@ -93,10 +93,10 @@ public class DspClockProbe : MonoBehaviour
             graphWhole &= Math.Abs(buffers - Math.Round(buffers)) < 1e-6;
         }
         Put("graph.wholeBuffers", graphWhole);
-        // Between the audio clock's buffers the graph's time still moves, in every frame from the
-        // second on (the first sample starts it).
+        // Between the audio clock's buffers the graph's time still moves, in every frame after the
+        // one that made it (Start: its time is 0 in that frame's LateUpdate).
         bool everyFrame = true;
-        for (int i = 2; i < graphTime.Count; i++) everyFrame &= graphTime[i] > graphTime[i - 1];
+        for (int i = 1; i < graphTime.Count; i++) everyFrame &= graphTime[i] > graphTime[i - 1];
         Put("graph.movesEveryFrame", everyFrame);
         graph.Destroy();
         Put("complete", 1);

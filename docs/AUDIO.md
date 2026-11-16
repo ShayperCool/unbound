@@ -1094,8 +1094,12 @@ each frame starts (`AudioSystem.AdvanceClock` at `TimeUpdate.WaitForLastPresenta
 frame's scripts and its `DirectorSampleTime` therefore read a clock that has counted the frame before
 them (before, it counted it one frame later, at the frame's audio update, so a long frame showed up a
 frame late and in one jump). Graphs on the DSP clock move by the frame's real time, never more than a
-buffer above the audio clock nor below it (`PlayableSystem.SampleTime`). Under `--fixed-fps` the real
-time of a frame is the fixed one, so such runs stay deterministic.
+buffer above the audio clock nor below it (`PlayableSystem.SampleTime`), from the clock at the start
+of the frame the first graph is made in. Under `--fixed-fps` the real time of a frame is the fixed
+one, so such runs stay deterministic. The virtual device's voices move with its clock: they are mixed
+as the frame starts too (a virtual run's `OnAudioFilterRead` and `PCMReaderCallback` run then), so
+`AudioSource.time`, `timeSamples` and `isPlaying` read in a frame have counted that frame's real time,
+as the Editor's audio thread has by the time the frame's scripts run.
 
 Limits: the clock does not move within a frame (that needs an audio thread running in real time,
 which runs at a fixed frame rate would no longer reproduce); a project with audio disabled runs the
