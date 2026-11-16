@@ -41,6 +41,47 @@ namespace UnityEditor
             set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
         }
 
+        const string k_PlayMode = "Computing lightmaps is not available in play mode.";
+
+        /// <summary>
+        /// "Starts a synchronous bake job ... Returns true if the bake ran successfully. Will
+        /// return false and print a warning message if it's not possible to start the bake"
+        /// (Scripting API 6000.0). Measured (the Unity 6000.0.71f1 Editor, batch mode): in Play mode
+        /// it bakes nothing, warns and answers false; otherwise, also while the Editor enters Play
+        /// mode, it bakes the open scenes, sending <see cref="bakeStarted"/> and
+        /// <see cref="bakeCompleted"/> before it answers true, and the scene then plays with its
+        /// realtime GI. Unbound bakes a scene the Editor opens whose file is not read yet (the one
+        /// Play mode starts with, while editor code runs as Play mode is entered) as one that asks
+        /// for a bake on load: its realtime GI from Unbound's own precompute when it has no
+        /// lighting data (docs/REALTIME_GI.md). A scene already read is not baked again, nor is
+        /// one with lighting data (each said once).
+        /// </summary>
+        public static bool Bake()
+        {
+            if (EditorSession.IsPlaying)
+            {
+                Debug.LogWarning(k_PlayMode);
+                return false;
+            }
+            bakeStarted?.Invoke();
+            foreach (var scene in SceneRegistry.Loaded) RealtimeGI.RequestScriptBake(scene);
+            bakeCompleted?.Invoke();
+            return true;
+        }
+
+        /// <summary>In Play mode as <see cref="Bake"/> (measured: the same warning, false); an
+        /// asynchronous bake outside Play mode is not implemented.</summary>
+        public static bool BakeAsync()
+        {
+            if (EditorSession.IsPlaying)
+            {
+                Debug.LogWarning(k_PlayMode);
+                return false;
+            }
+            Stubs.NotImplemented("UnityEditor.Lightmapping.BakeAsync outside Play mode");
+            return false;
+        }
+
         public static LightingSettings lightingSettings
         {
             get => Of(SceneRegistry.Active) ?? throw new Exception(k_NoSettings);

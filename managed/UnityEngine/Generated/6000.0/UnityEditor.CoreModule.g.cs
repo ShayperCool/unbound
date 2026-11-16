@@ -14535,8 +14535,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int GetLightmapBakeGPUDeviceIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetLightmapBakeGPUDeviceIndex"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DeviceAndPlatform[] GetLightmappingGpuDevices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetLightmappingGpuDevices"); return global::System.Array.Empty<global::UnityEditor.DeviceAndPlatform>(); }
         [global::Unbound.Stub] internal static void PrintStateToConsole() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.PrintStateToConsole"); }
-        [global::Unbound.Stub] public static bool BakeAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.BakeAsync"); return default; }
-        [global::Unbound.Stub] public static bool Bake() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Bake"); return default; }
         [global::Unbound.Stub] public static void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Cancel"); }
         [global::System.Obsolete("ForceStop is no longer available, use Cancel instead to stop a bake.")] [global::Unbound.Stub] public static void ForceStop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.ForceStop"); }
         [global::Unbound.Stub] internal static void Internal_CallStartedRenderingFunctions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Internal_CallStartedRenderingFunctions"); }

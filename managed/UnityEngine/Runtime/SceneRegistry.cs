@@ -44,6 +44,9 @@ namespace Unbound.Runtime
         /// EditorSceneManager.OpenScene), as opposed to loading it at runtime (SceneManager):
         /// the Editor bakes an opened scene that asks for it (Lightmapping.bakeOnSceneLoad).</summary>
         internal bool OpenedInEditor;
+
+        /// <summary>The scene file's LightmapSettings have been read (its lighting is set up).</summary>
+        internal bool LightmapSettingsRead;
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>
