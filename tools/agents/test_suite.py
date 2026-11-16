@@ -824,7 +824,8 @@ class StubGateTests(unittest.TestCase):
         gate, cli = self.gate(script, compiled_from)
         try:
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-                gate.stubs(cli)
+                gate.generate_stubs(cli)
+                gate.api_checks(cli)
         except SystemExit as stop:
             return stop.code
         finally:

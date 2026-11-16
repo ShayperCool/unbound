@@ -1790,8 +1790,9 @@ class ApiGateTests(unittest.TestCase):
             with mock.patch.object(land, 'git', return_value=''), \
                  mock.patch.object(gate, 'step', side_effect=[0, 1]) as step, \
                  mock.patch.object(gate, 'fail', side_effect=SystemExit(5)):
+                gate.generate_stubs(cli)
                 with self.assertRaises(SystemExit):
-                    gate.stubs(cli)
+                    gate.api_checks(cli)
             self.assertEqual([call.args[0] for call in step.call_args_list],
                              ['generated stubs', 'API declarations and attribute lookups'])
             check = step.call_args_list[1]
@@ -1806,12 +1807,96 @@ class ApiGateTests(unittest.TestCase):
             gate = land.Gate(root, 'base', [], False, root/'gate.log', environment={})
             with mock.patch.object(land, 'git', return_value=''), \
                  mock.patch.object(gate, 'step', return_value=0) as step:
-                gate.stubs(cli)
+                gate.generate_stubs(cli)
+                gate.api_checks(cli)
             self.assertEqual([call.args[0] for call in step.call_args_list],
                              ['generated stubs', 'API declarations and attribute lookups', 'API tooling tests'])
             self.assertIn('managed/Unbound.ApiTools.Tests/Unbound.ApiTools.Tests.csproj',
                           step.call_args_list[-1].args[1])
 
+
+
+class GateLaneTests(unittest.TestCase):
+    """Rust tests run beside the .NET steps, after the runtime snapshot and gen-stubs."""
+    def gate(self, root, events, steps):
+        gate = land.Gate(root, 'base', [], False, root/'gate.log', environment={'UNBOUND': str(root/'unbound')})
+        record = lambda name: (lambda *a, **k: events.append(name))
+        gate.build = lambda: ([sys.executable, 'tools/build.py'], root/'target')
+        gate.prepare_probe_runtime = record('snapshot')
+        gate.generate_stubs = record('generated stubs')
+        gate.run_probes = record('probes')
+        gate.run_automatic_probes = record('automatic')
+        gate.automatic = []
+        gate.touched_crates = lambda changed: ['unbound-control']
+        gate.managed_tests = lambda target: gate.step('managed tests', steps['managed tests'])
+        gate.api_checks = lambda cli: gate.step('API declarations and attribute lookups', steps['api'])
+        return gate
+
+    def run_gate(self, gate, changed):
+        guard = subprocess.CompletedProcess([], 0)
+        with mock.patch.object(land, 'git', return_value=changed), \
+             mock.patch.object(land.subprocess, 'run', return_value=guard), \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            gate.run()
+
+    def test_rust_tests_overlap_the_dotnet_steps_after_the_snapshot_and_stub_generation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            events = []
+            # Each lane waits until the other has started: they finish only when they overlap.
+            wait = lambda mine, other: [sys.executable, '-c',
+                                        f'import pathlib,time; pathlib.Path({str(root/mine)!r}).touch(); end=time.time()+10\n'
+                                        f'while not pathlib.Path({str(root/other)!r}).exists():\n'
+                                        f'    assert time.time()<end, "no overlap"; time.sleep(.01)']
+            gate = self.gate(root, events, {'api': [sys.executable, '-c', 'pass'],
+                                            'managed tests': wait('dotnet', 'rust')})
+            step = gate.step
+            def recorded(name, command, **kwargs):
+                events.append(name)
+                if name == 'rust tests':
+                    command = wait('rust', 'dotnet')
+                return step(name, command, **kwargs)
+            gate.step = recorded
+            self.run_gate(gate, 'managed/UnityEngine/Core/Attributes.cs\ncrates/unbound-control/src/lib.rs')
+            self.assertEqual(events[:2], ['snapshot', 'generated stubs'])
+            self.assertEqual(set(events[2:5]), {'API declarations and attribute lookups', 'managed tests', 'rust tests'})
+            self.assertLess(events.index('API declarations and attribute lookups'), events.index('managed tests'))
+            self.assertEqual(events[5:], ['probes', 'automatic'])
+            log = (root/'gate.log').read_text()
+            self.assertRegex(log, r'land: rust tests: exit 0 after \d+s')
+            self.assertIn('-- test --release --locked -p unbound-control', log)
+            self.assertIn('no overlap', (root/'gate.rust-tests.log').read_text())  # the command ran there
+
+    def test_a_failing_rust_lane_stops_the_dotnet_lane_and_the_gate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            events = []
+            gate = self.gate(root, events, {'api': [sys.executable, '-c', 'pass'],
+                                            'managed tests': [sys.executable, '-c', 'import time; time.sleep(60)']})
+            step = gate.step
+            def recorded(name, command, **kwargs):
+                if name == 'rust tests':
+                    command = [sys.executable, '-c', 'import time; time.sleep(.5); print("rust failure"); raise SystemExit(101)']
+                return step(name, command, **kwargs)
+            gate.step = recorded
+            started = time.monotonic()
+            with self.assertRaises(SystemExit) as error:
+                self.run_gate(gate, 'crates/unbound-control/src/lib.rs')
+            self.assertEqual(error.exception.code, 5)
+            self.assertLess(time.monotonic()-started, 30)
+            self.assertNotIn('probes', events)
+            self.assertIn('rust failure', (root/'gate.rust-tests.log').read_text())
+
+    def test_without_touched_crates_only_the_dotnet_lane_runs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            events = []
+            gate = self.gate(root, events, {'api': [sys.executable, '-c', 'pass'],
+                                            'managed tests': [sys.executable, '-c', 'pass']})
+            gate.touched_crates = lambda changed: []
+            self.run_gate(gate, 'managed/Animation/Animator.cs')
+            self.assertEqual(events, ['snapshot', 'generated stubs', 'probes', 'automatic'])
+            self.assertFalse((root/'gate.rust-tests.log').exists())
 
 if __name__ == '__main__':
     unittest.main()

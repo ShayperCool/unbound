@@ -24,7 +24,10 @@ Gate:
     generator's output differs from the committed managed/UnityEngine/Generated/ (restored after);
   - API declarations, attribute lookups and API tooling tests in that managed step;
   - managed unit tests, where only failures not listed in known-test-failures.txt count;
-  - Rust tests of the touched crates;
+  - Rust tests of the touched crates, with their own log (<gate log>.rust-tests.log), at the same
+    time as the API checks and managed tests: after the build's runtime is frozen for the probes
+    and after gen-stubs, because `cargo test` may relink the build and build scripts watch
+    managed/. The first failing of the two lanes stops the other;
   - each --probe command, in a bounded parallel driver pool with exclusive recipe barriers,
     which must exit 0. $UNBOUND names the built CLI and
     $UNBOUND_PROBE_UNITY_VERSION the release: the exported value, else the release of the probe
@@ -486,9 +489,46 @@ class Gate:
         print(f'land: {name}: exit {code} after {time.time() - started:.0f}s', flush=True)
         return code
 
-    def fail(self, name):
-        print(tail(self.log), file=sys.stderr)
-        die(5, f'gate failed at {name}; full log: {self.log}')
+    def fail(self, name, log=None):
+        print(tail(log or self.log), file=sys.stderr)
+        die(5, f'gate failed at {name}; full log: {log or self.log}')
+
+    def run_lanes(self, lanes):
+        """Run independent gate lanes in threads. The first failure stops the other lanes'
+        running commands (later steps there do not start) and is raised here."""
+        errors, errors_lock = [], threading.Lock()
+
+        def stop_others():
+            with self.process_lock:
+                self.cancelled = True
+                running = list(self.processes)
+            for process in running:
+                stop_tree(process)
+
+        def run(lane):
+            try:
+                lane()
+            except BaseException as error:  # SystemExit from die() included
+                with errors_lock:
+                    errors.append(error)
+                    first = len(errors) == 1
+                if first:
+                    stop_others()
+
+        threads = [threading.Thread(target=run, args=(lane,), daemon=True) for lane in lanes]
+        for thread in threads:
+            thread.start()
+        try:
+            for thread in threads:
+                while thread.is_alive():
+                    thread.join(0.5)
+        except BaseException:
+            stop_others()
+            for thread in threads:
+                thread.join()
+            raise
+        if errors:
+            raise errors[0]
 
     def run(self):
         self.note('gate started')
@@ -502,28 +542,52 @@ class Gate:
             print('land: docs-only change, build and tests skipped', flush=True)
             return
         build_py, target = self.build()
-
-        if self.full or any(STUB_INPUTS.match(path) for path in changed):
-            self.stubs(Path(self.env['UNBOUND']))
-
-        self.managed_tests(target)
-
-        crates = (self.touched_crates(changed) if self.crates is None else
-                  sorted(set(self.crates) & set(self.touched_crates(['Cargo.toml']))))
-        if self.full or crates:
-            args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
-            if self.step('rust tests', [*build_py, '--', 'test', '--release', '--locked', *args]):
-                self.fail('rust tests')
-
+        # Freeze the build's runtime before any test: `cargo test` may relink target/release
+        # while the other lane runs, and probes must run what the build produced.
         self.note('probe runtime snapshot started')
         self.prepare_probe_runtime(target)
         self.note('probe runtime snapshot finished')
+
+        cli = Path(self.env['UNBOUND'])
+        stubs = self.full or any(STUB_INPUTS.match(path) for path in changed)
+        if stubs:
+            # gen-stubs rewrites managed/.../Generated/ until its drift check restores it; Cargo
+            # build scripts that watch managed/ must not see it change under a running `cargo test`.
+            self.generate_stubs(cli)
+
+        def dotnet_lane():
+            # The .NET steps share the checkout's managed build directory: one sequence.
+            if stubs:
+                self.api_checks(cli)
+            self.managed_tests(target)
+
+        lanes = [dotnet_lane]
+        crates = (self.touched_crates(changed) if self.crates is None else
+                  sorted(set(self.crates) & set(self.touched_crates(['Cargo.toml']))))
+        if self.full or crates:
+            # Rust tests use only the Cargo target, built above.
+            args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
+            lanes.append(lambda: self.rust_tests([*build_py, '--', 'test', '--release', '--locked', *args]))
+        self.run_lanes(lanes)
+
         self.run_probes()
         if self.automatic is None:
             self.note('automatic probe selection started')
             self.automatic = automatic_checks(self.worktree, changed, self.probes, full=self.full)
         self.run_automatic_probes()
         self.note('gate passed')
+
+    def rust_tests(self, command):
+        """Rust tests with their own log beside the .NET lane; their result line goes to the gate log."""
+        log = self.log.with_suffix('.rust-tests.log')
+        with self.log.open('a') as out:
+            out.write(f'\n=== rust tests: {shlex.join(command)}\nland: rust tests: started {stamp()}\nlog: {log}\n')
+        code = self.step('rust tests', command, log=log)
+        with self.log.open('a') as out:
+            out.write(f'\nland: rust tests: exit {code} after {self.durations.get(log, 0):.0f}s, '
+                      f'finished {stamp()}\n')
+        if code:
+            self.fail('rust tests', log)
 
     def build(self):
         """The release build of this checkout: (build command prefix, Cargo target)."""
@@ -740,7 +804,12 @@ class Gate:
         self.execute_probe_commands(commands, deadline=deadline, retry_time_limits=True,
                                     workers=self.automatic_workers, limit=AUTO_PROBE_TIMEOUT_SECONDS)
 
-    def stubs(self, cli):
+    def stub_env(self):
+        env = dict(self.env)
+        env.pop('UNBOUND_MANAGED_DIR', None)  # the build's own managed engine, next to the CLI
+        return env
+
+    def generate_stubs(self, cli):
         """gen-stubs with the gate's build: the hand-written code must build without stubs and the
         generator must reproduce the committed Generated/ tree. gen-stubs writes into the checkout
         the CLI was compiled from, so it runs only when that is this worktree; Generated/ is
@@ -754,8 +823,7 @@ class Gate:
         command = [str(cli), 'gen-stubs', '-p', STUB_PROJECT]
         if LAUNCHER.is_file():  # the launcher's kind for unbound subcommands other than run
             command = [str(LAUNCHER), '--kind', 'tool', *command]
-        env = dict(self.env)
-        env.pop('UNBOUND_MANAGED_DIR', None)  # the build's own managed engine, next to the CLI
+        env = self.stub_env()
         try:
             code = self.step('generated stubs', command, env=env)
             drift = git('status', '--porcelain', '--untracked-files=all', '--', GENERATED, cwd=self.worktree)
@@ -775,6 +843,9 @@ class Gate:
             die(5, f'gate failed at generated stubs: {GENERATED}/ is not what gen-stubs generates:\n  {listing}\n'
                    f'Run `$UNBOUND gen-stubs -p {STUB_PROJECT}`, commit the result, land again; full log: {self.log}')
 
+    def api_checks(self, cli):
+        """Declarations, attribute lookups and API tooling tests after a passing gen-stubs."""
+        env = self.stub_env()
         # gen-stubs built the hand-written assembly; the incremental declaration and lookup
         # check reuses that build.
         check = [str(cli), 'api-check', '-p', STUB_PROJECT]

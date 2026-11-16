@@ -336,8 +336,9 @@ spend Editor captures or research just to close such a residual.
 ## Post-land checks
 
 Under the land lock a train runs only the release build, gen-stubs with the API checks and
-tooling tests, the managed tests, the Rust tests of the touched crates, each branch's oracle
-guard and the requested `--probe` commands. The automatic checks the train selects for each
+tooling tests, the managed tests, the Rust tests of the touched crates (beside the API checks
+and managed tests, log `<gate log>.rust-tests.log`), each branch's oracle guard and the
+requested `--probe` commands. The automatic checks the train selects for each
 branch (the same selection as above) are written to that branch's `landed.jsonl` line, and the
 gate log names them. After main advances, `land.py` starts `tools/agents/postland.py` from the
 main checkout in the background (`systemd-run`, Nice=15; its jobs never carry the gate marker).
