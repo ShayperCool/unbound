@@ -228,22 +228,8 @@ impl UnityRenderer {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("unbound retained resolve"),
             });
-        for c in copies {
-            encoder.copy_texture_to_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &c.source,
-                    mip_level: c.source_mip,
-                    origin: c.source_origin,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyTextureInfo {
-                    texture: &c.destination,
-                    mip_level: c.destination_mip,
-                    origin: c.destination_origin,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                c.size,
-            );
+        for copy in copies {
+            copy.encode(&mut encoder);
         }
         self.queue.submit([encoder.finish()]);
     }

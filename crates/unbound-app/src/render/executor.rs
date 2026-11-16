@@ -247,6 +247,37 @@ struct Copy {
     channels: Option<ChannelCopy>,
 }
 
+impl Copy {
+    /// Encodes the copy of texels from its source, which needs no repacking.
+    fn encode(&self, encoder: &mut wgpu::CommandEncoder) {
+        self.encode_from(encoder, (&self.source, self.source_mip, self.source_origin));
+    }
+
+    /// Encodes the copy of texels from `source` (its own, or its texels repacked), its level and
+    /// origin.
+    fn encode_from(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        (source, mip_level, origin): (&wgpu::Texture, u32, wgpu::Origin3d),
+    ) {
+        encoder.copy_texture_to_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: source,
+                mip_level,
+                origin,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.destination,
+                mip_level: self.destination_mip,
+                origin: self.destination_origin,
+                aspect: wgpu::TextureAspect::All,
+            },
+            self.size,
+        );
+    }
+}
+
 /// A texture copied texel for texel into another of its size by a draw: a render target's depth
 /// into its float color copy (what sampling it reads), or a float texture's values as integer
 /// bits (what an integer slot reads of it).
@@ -5139,21 +5170,7 @@ impl UnityRenderer {
                         ),
                         None => (&c.source, c.source_mip, c.source_origin),
                     };
-                    encoder.copy_texture_to_texture(
-                        wgpu::TexelCopyTextureInfo {
-                            texture: source,
-                            mip_level: source_mip,
-                            origin: source_origin,
-                            aspect: wgpu::TextureAspect::All,
-                        },
-                        wgpu::TexelCopyTextureInfo {
-                            texture: &c.destination,
-                            mip_level: c.destination_mip,
-                            origin: c.destination_origin,
-                            aspect: wgpu::TextureAspect::All,
-                        },
-                        c.size,
-                    );
+                    c.encode_from(&mut encoder, (source, source_mip, source_origin));
                     continue;
                 }
             };
