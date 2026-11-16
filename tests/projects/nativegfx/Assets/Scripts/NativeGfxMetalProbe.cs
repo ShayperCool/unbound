@@ -596,6 +596,15 @@ public class NativeGfxMetalProbe : MonoBehaviour
         ScalableBufferManager.ResizeBuffers(1f, 1f);
         Value("dynres.content.msaa.sampled", Pixels(multisampled, 16, 16));
         Value("dynres.content.msaa", Read(multisampled, 16, 16));
+        // A multisampled one scaled right after it was drawn into (nothing else drawn between).
+        var direct = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "dyncontentdirect", useDynamicScale = true, antiAliasing = 4 });
+        direct.Create();
+        Graphics.Blit(quadrants, direct);
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        Pixels(direct, 8, 8);
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.content.msaa.direct", Pixels(direct, 16, 16));
         Value("dynres.content.logs", L(screenLogs));
         screenLogs = null;
     }
