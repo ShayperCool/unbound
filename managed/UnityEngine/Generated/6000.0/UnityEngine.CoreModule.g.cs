@@ -944,25 +944,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::System.IntPtr table;
         [global::Unbound.Stub] internal static global::UnityEngine.Object ResolveReferenceInternal(global::System.IntPtr ptr, global::UnityEngine.PropertyName name, out bool isValid) { isValid = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExposedPropertyResolver.ResolveReferenceInternal"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ExpressionEvaluator
-    {
-        [global::Unbound.Stub] public static bool Evaluate<T>(string expression, out T value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Evaluate"); return default; }
-        [global::Unbound.Stub] internal static bool Evaluate<T>(string expression, out T value, out global::UnityEngine.ExpressionEvaluator.Expression delayed) { value = default; delayed = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Evaluate"); return default; }
-        [global::Unbound.Stub] internal static void SetRandomState(uint state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.SetRandomState"); }
-        [global::Unbound.Stub] public ExpressionEvaluator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.ctor"); }
-        [global::Unbound.Stub]
-        internal unsafe partial class Expression
-        {
-            [global::Unbound.Stub] internal readonly string[] rpnTokens;
-            [global::Unbound.Stub] internal readonly bool hasVariables;
-            [global::Unbound.Stub] internal Expression(string expression) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Expression.ctor"); }
-            [global::Unbound.Stub] public bool Evaluate<T>(ref T value, int index = 0, int count = 1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Expression.Evaluate"); return default; }
-            [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Expression.Equals"); return default; }
-            [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Expression.GetHashCode"); return default; }
-            [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ExpressionEvaluator.Expression.ToString"); return default; }
-        }
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1028, Inherited = true)]
     [global::Unbound.Stub]
     internal unsafe sealed partial class ExtensionOfNativeClassAttribute : global::System.Attribute
@@ -1306,21 +1287,11 @@ namespace UnityEngine
     }
     unsafe partial struct Mathf
     {
-        internal const int kMaxDecimals = 15;
         [global::Unbound.Stub] internal static bool LineIntersection(global::UnityEngine.Vector2 p1, global::UnityEngine.Vector2 p2, global::UnityEngine.Vector2 p3, global::UnityEngine.Vector2 p4, ref global::UnityEngine.Vector2 result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.LineIntersection"); return default; }
         [global::Unbound.Stub] internal static bool LineSegmentIntersection(global::UnityEngine.Vector2 p1, global::UnityEngine.Vector2 p2, global::UnityEngine.Vector2 p3, global::UnityEngine.Vector2 p4, ref global::UnityEngine.Vector2 result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.LineSegmentIntersection"); return default; }
         [global::Unbound.Stub] internal static long RandomToLong(global::System.Random r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.RandomToLong"); return default; }
-        [global::Unbound.Stub] internal static float ClampToFloat(double value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.ClampToFloat"); return default; }
-        [global::Unbound.Stub] internal static int ClampToInt(long value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.ClampToInt"); return default; }
-        [global::Unbound.Stub] internal static uint ClampToUInt(long value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.ClampToUInt"); return default; }
         [global::Unbound.Stub] internal static float RoundToMultipleOf(float value, float roundingValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.RoundToMultipleOf"); return default; }
         [global::Unbound.Stub] internal static float GetClosestPowerOfTen(float positiveNumber) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.GetClosestPowerOfTen"); return default; }
-        [global::Unbound.Stub] internal static int GetNumberOfDecimalsForMinimumDifference(float minDifference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.GetNumberOfDecimalsForMinimumDifference"); return default; }
-        [global::Unbound.Stub] internal static int GetNumberOfDecimalsForMinimumDifference(double minDifference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.GetNumberOfDecimalsForMinimumDifference"); return default; }
-        [global::Unbound.Stub] internal static float RoundBasedOnMinimumDifference(float valueToRound, float minDifference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.RoundBasedOnMinimumDifference"); return default; }
-        [global::Unbound.Stub] internal static double RoundBasedOnMinimumDifference(double valueToRound, double minDifference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.RoundBasedOnMinimumDifference"); return default; }
-        [global::Unbound.Stub] internal static float DiscardLeastSignificantDecimal(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.DiscardLeastSignificantDecimal"); return default; }
-        [global::Unbound.Stub] internal static double DiscardLeastSignificantDecimal(double v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mathf.DiscardLeastSignificantDecimal"); return default; }
     }
     unsafe partial struct Matrix4x4
     {
@@ -2302,26 +2273,6 @@ namespace UnityEngine
     public unsafe static partial class Types
     {
         [global::System.Obsolete("This was an internal method which is no longer used")] [global::Unbound.Stub] public static global::System.Type GetType(string typeName, string assemblyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Types.GetType"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class UINumericFieldsUtils
-    {
-        [global::Unbound.Stub] public static readonly string k_AllowedCharactersForFloat;
-        [global::Unbound.Stub] public static readonly string k_AllowedCharactersForInt;
-        [global::Unbound.Stub] public static readonly string k_DoubleFieldFormatString;
-        [global::Unbound.Stub] public static readonly string k_FloatFieldFormatString;
-        [global::Unbound.Stub] public static readonly string k_IntFieldFormatString;
-        [global::Unbound.Stub] public static bool TryConvertStringToDouble(string str, out double value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToDouble"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToDouble(string str, out double value, out global::UnityEngine.ExpressionEvaluator.Expression expr) { value = default; expr = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToDouble"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToDouble(string str, string initialValueAsString, out double value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToDouble"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToFloat(string str, string initialValueAsString, out float value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToFloat"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToLong(string str, out long value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToLong"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToLong(string str, out long value, out global::UnityEngine.ExpressionEvaluator.Expression expr) { value = default; expr = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToLong"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToLong(string str, string initialValueAsString, out long value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToLong"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToULong(string str, out ulong value, out global::UnityEngine.ExpressionEvaluator.Expression expr) { value = default; expr = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToULong"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToULong(string str, string initialValueAsString, out ulong value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToULong"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToInt(string str, string initialValueAsString, out int value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToInt"); return default; }
-        [global::Unbound.Stub] public static bool TryConvertStringToUInt(string str, string initialValueAsString, out uint value, out global::UnityEngine.ExpressionEvaluator.Expression expression) { value = default; expression = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UINumericFieldsUtils.TryConvertStringToUInt"); return default; }
     }
     unsafe partial class UnassignedReferenceException
     {

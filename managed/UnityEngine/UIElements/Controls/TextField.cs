@@ -25,6 +25,9 @@ namespace UnityEngine.UIElements
         readonly TextInputBase m_TextInputBase;
         internal bool m_UpdateTextFromValue;
 
+        /// <summary>Told the expression each read of typed text leaves for later (null when there is none).</summary>
+        internal Action<ExpressionEvaluator.Expression> expressionEvaluated;
+
         /// <summary>The input element of a text field: the inner TextElement, single line or in a
         /// multiline container, scrolled to keep the cursor visible.</summary>
         protected internal abstract partial class TextInputBase : VisualElement

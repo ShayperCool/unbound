@@ -1177,19 +1177,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static void NotifyDisposedUsed(global::System.IDisposable disposable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DisposeHelper.NotifyDisposedUsed"); }
         [global::Unbound.Stub] public DisposeHelper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DisposeHelper.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DoubleField : global::UnityEngine.UIElements.TextValueField<double>
+    unsafe partial class DoubleField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(double v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override double StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.StringToValue"); return default; }
-        [global::Unbound.Stub] public DoubleField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<double>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.ctor"); }
-        [global::Unbound.Stub] public DoubleField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<double>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.ctor"); }
-        [global::Unbound.Stub] public DoubleField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<double>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, double startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<double>.UxmlSerializedData
@@ -1560,20 +1549,8 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public FixedItemHeightDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FixedItemHeightDecoratorAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class FloatField : global::UnityEngine.UIElements.TextValueField<float>
+    unsafe partial class FloatField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(float v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override float StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.StringToValue"); return default; }
-        [global::Unbound.Stub] internal override void UpdateValueFromText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.UpdateValueFromText"); }
-        [global::Unbound.Stub] public FloatField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<float>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.ctor"); }
-        [global::Unbound.Stub] public FloatField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<float>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.ctor"); }
-        [global::Unbound.Stub] public FloatField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<float>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, float startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<float>.UxmlSerializedData
@@ -2284,19 +2261,8 @@ namespace UnityEngine.UIElements
         public virtual bool touchSupported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputWrapper.touchSupported"); return default; } }
         public virtual int touchCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.InputWrapper.touchCount"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class IntegerField : global::UnityEngine.UIElements.TextValueField<int>
+    unsafe partial class IntegerField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(int v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override int StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.StringToValue"); return default; }
-        [global::Unbound.Stub] public IntegerField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<int>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.ctor"); }
-        [global::Unbound.Stub] public IntegerField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<int>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.ctor"); }
-        [global::Unbound.Stub] public IntegerField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<int>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, int startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<int>.UxmlSerializedData
@@ -2496,19 +2462,8 @@ namespace UnityEngine.UIElements
         Text = 2,
     }
     internal unsafe delegate global::UnityEngine.Object LoadResourceFunction(string pathName, global::System.Type type, float dpiScaling);
-    [global::Unbound.Stub]
-    public unsafe partial class LongField : global::UnityEngine.UIElements.TextValueField<long>
+    unsafe partial class LongField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(long v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override long StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.StringToValue"); return default; }
-        [global::Unbound.Stub] public LongField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<long>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.ctor"); }
-        [global::Unbound.Stub] public LongField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<long>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.ctor"); }
-        [global::Unbound.Stub] public LongField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<long>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, long startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<long>.UxmlSerializedData
@@ -4262,41 +4217,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueFieldTraits<TValueType, TValueUxmlAttributeType>.Init"); }
         [global::Unbound.Stub] public TextValueFieldTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueFieldTraits<TValueType, TValueUxmlAttributeType>.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class TextValueField<TValueType> : global::UnityEngine.UIElements.TextInputBaseField<TValueType>, global::UnityEngine.UIElements.IValueField<TValueType>
+    unsafe partial class TextValueField<TValueType>
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId formatStringProperty;
-        internal const int kMaxValueFieldLength = 1000;
-        [global::Unbound.Stub] protected TextValueField(int maxLength, global::UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput textValueInput) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.ctor"); }
-        [global::Unbound.Stub] protected TextValueField(string label, int maxLength, global::UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput textValueInput) : base(default(int), default(char), default(global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.ctor"); }
-        public abstract void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, TValueType startValue);
-        [global::Unbound.Stub] public void StartDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.StartDragging"); }
-        [global::Unbound.Stub] public void StopDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.StopDragging"); }
-        [global::Unbound.Stub] internal override void UpdateValueFromText() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.UpdateValueFromText"); }
-        [global::Unbound.Stub] internal override void UpdateTextFromValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.UpdateTextFromValue"); }
-        [global::Unbound.Stub] internal virtual bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.CanTryParse"); return default; }
-        [global::Unbound.Stub] protected void AddLabelDragger<TDraggerType>() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.AddLabelDragger"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(TValueType newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.SetValueWithoutNotify"); }
-        [global::Unbound.Stub] public void ClearValue() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.ClearValue"); }
-        [global::Unbound.Stub] protected override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.HandleEventBubbleUp"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.OnViewDataReady"); }
-        [global::Unbound.Stub] internal override void RegisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.RegisterEditingCallbacks"); }
-        [global::Unbound.Stub] internal override void UnregisterEditingCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.UnregisterEditingCallbacks"); }
-        internal bool forceUpdateDisplay { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.forceUpdateDisplay"); } }
-        public string formatString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.formatString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.formatString"); } }
-        [global::Unbound.Stub]
-        protected unsafe abstract partial class TextValueInput : global::UnityEngine.UIElements.TextInputBaseField<TValueType>.TextInputBase
-        {
-            [global::Unbound.Stub] protected TextValueInput() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.ctor"); }
-            [global::Unbound.Stub] internal override bool AcceptCharacter(char c) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.AcceptCharacter"); return default; }
-            public abstract void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, TValueType startValue);
-            [global::Unbound.Stub] public void StartDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.StartDragging"); }
-            [global::Unbound.Stub] public void StopDragging() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.StopDragging"); }
-            protected abstract string ValueToString(TValueType value);
-            [global::Unbound.Stub] protected override TValueType StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.StringToValue"); return default; }
-            protected abstract string allowedCharacters { get; }
-            public string formatString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.formatString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueField<TValueType>.TextValueInput.formatString"); } }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct TextVertex
@@ -4953,19 +4876,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void DrawGradientsInternal(global::Unity.Collections.NativeSlice<global::UnityEngine.UIElements.Vertex> vertices, global::Unity.Collections.NativeSlice<ushort> indices, global::UnityEngine.UIElements.VectorImage gradientsOwner) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsafeMeshGenerationNode.DrawGradientsInternal"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.UIR.Entry GetParentEntry() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsafeMeshGenerationNode.GetParentEntry"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class UnsignedIntegerField : global::UnityEngine.UIElements.TextValueField<uint>
+    unsafe partial class UnsignedIntegerField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(uint v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override uint StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.StringToValue"); return default; }
-        [global::Unbound.Stub] public UnsignedIntegerField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<uint>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.ctor"); }
-        [global::Unbound.Stub] public UnsignedIntegerField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<uint>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.ctor"); }
-        [global::Unbound.Stub] public UnsignedIntegerField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<uint>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, uint startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<uint>.UxmlSerializedData
@@ -4987,19 +4899,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.UxmlTraits.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class UnsignedLongField : global::UnityEngine.UIElements.TextValueField<ulong>
+    unsafe partial class UnsignedLongField
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string inputUssClassName;
-        [global::Unbound.Stub] protected override string ValueToString(ulong v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.ValueToString"); return default; }
-        [global::Unbound.Stub] protected override ulong StringToValue(string str) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.StringToValue"); return default; }
-        [global::Unbound.Stub] public UnsignedLongField() : base(default(int), default(global::UnityEngine.UIElements.TextValueField<ulong>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.ctor"); }
-        [global::Unbound.Stub] public UnsignedLongField(int maxLength) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<ulong>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.ctor"); }
-        [global::Unbound.Stub] public UnsignedLongField(string label, int maxLength = 1000) : base(default(int), default(global::UnityEngine.UIElements.TextValueField<ulong>.TextValueInput)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.ctor"); }
-        [global::Unbound.Stub] internal override bool CanTryParse(string textString) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.CanTryParse"); return default; }
-        [global::Unbound.Stub] public override void ApplyInputDeviceDelta(global::UnityEngine.Vector3 delta, global::UnityEngine.UIElements.DeltaSpeed speed, ulong startValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.ApplyInputDeviceDelta"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextInputBaseField<ulong>.UxmlSerializedData

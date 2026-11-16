@@ -926,10 +926,44 @@ namespace Unbound.UIElements
 
         static readonly Dictionary<(Type, string, bool), PropertyInfo> s_Properties = new Dictionary<(Type, string, bool), PropertyInfo>();
 
+        /// <summary>Attributes of engine elements whose UXML name is not their property's name in
+        /// kebab case (matches the Unity 6000.0.71f1 Editor, tests/projects/numericfields): the text
+        /// inputs read "readonly", "password" and "mask-character" (not their property names), and
+        /// the numeric text fields take no "format-string". A null property ignores the attribute.</summary>
+        static readonly (Type declaringType, string attribute, string property)[] s_AttributeNames =
+        {
+            (typeof(TextInputBaseField<>), "readonly", "isReadOnly"),
+            (typeof(TextInputBaseField<>), "is-read-only", null),
+            (typeof(TextInputBaseField<>), "password", "isPasswordField"),
+            (typeof(TextInputBaseField<>), "is-password-field", null),
+            (typeof(TextInputBaseField<>), "mask-character", "maskChar"),
+            (typeof(TextInputBaseField<>), "mask-char", null),
+            (typeof(TextValueField<>), "format-string", null),
+        };
+
+        /// <summary>The property an attribute names on <paramref name="type"/>: its entry in
+        /// <see cref="s_AttributeNames"/> when the type derives from the entry's declaring type, else
+        /// the attribute in camel case.</summary>
+        static string PropertyNameFor(Type type, string attribute)
+        {
+            foreach (var (declaringType, name, property) in s_AttributeNames)
+            {
+                if (name != attribute) continue;
+                for (var t = type; t != null; t = t.BaseType)
+                    if (t.IsGenericType && t.GetGenericTypeDefinition() == declaringType) return property;
+            }
+            return KebabToCamel(attribute);
+        }
+
         static PropertyInfo FindProperty(Type type, string attribute, bool engineDeclaredOnly)
         {
             if (s_Properties.TryGetValue((type, attribute, engineDeclaredOnly), out var cached)) return cached;
-            string camel = KebabToCamel(attribute);
+            string camel = PropertyNameFor(type, attribute);
+            if (camel == null)
+            {
+                s_Properties[(type, attribute, engineDeclaredOnly)] = null;
+                return null;
+            }
             PropertyInfo found = null;
             for (var t = type; t != null && found == null; t = t.BaseType)
             {
@@ -1002,6 +1036,18 @@ namespace Unbound.UIElements
             if (type == typeof(uint))
             {
                 if (uint.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var u)) { result = u; return true; }
+                return false;
+            }
+            if (type == typeof(char))
+            {
+                // A character attribute takes the text's first character.
+                if (string.IsNullOrEmpty(value)) return false;
+                result = value[0];
+                return true;
+            }
+            if (type == typeof(ulong))
+            {
+                if (ulong.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ul)) { result = ul; return true; }
                 return false;
             }
             if (type.IsEnum)
