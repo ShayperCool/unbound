@@ -133,6 +133,43 @@ class PostlandTests(unittest.TestCase):
                  mock.patch.object(land, 'retry_workers', return_value=3):
                 self.assertEqual(postland.background_workers(), expected)
 
+    def test_suite_checks_get_time_by_their_recorded_durations(self):
+        summary = self.root/'summary.json'
+        summary.write_text(json.dumps({'probes': {
+            'realtimegi': {'seconds': 1139.2}, 'quick': {'seconds': 12.0}, 'huge': {'seconds': 5000},
+            'classids': {'seconds': 900}, 'untimed': {'status': 'pass'}}}))
+        suite = 'python3 tools/agents/suite.py --only {} --jobs 1'
+        checks = [['realtimegi', suite.format('realtimegi'), 'changed files', '6000.0.71f1'],
+                  ['quick', suite.format('quick'), 'engine paths', '6000.0.71f1'],
+                  ['huge', suite.format('huge'), 'engine paths', '6000.0.71f1'],
+                  ['untimed', suite.format('untimed'), 'engine paths', '6000.0.71f1'],
+                  ['unknown', suite.format('unknown'), 'engine paths', '6000.0.71f1'],
+                  # A fast check is not the suite's run of the probe: the gate's limit stays.
+                  ['classids', 'python3 tests/projects/classids/run.py check', 'fast check', '6000.0.71f1']]
+        self.assertEqual(postland.recorded_limits(checks, summary),
+                         {'realtimegi': 2278, 'quick': land.AUTO_PROBE_TIMEOUT_SECONDS,
+                          'huge': postland.RECORDED_LIMIT_MAX_SECONDS})
+        self.assertEqual(postland.recorded_limits(checks, self.root/'missing.json'), {})
+        summary.write_text('{')
+        self.assertEqual(postland.recorded_limits(checks, summary), {})
+
+    def test_the_checker_gives_its_gate_the_recorded_limits(self):
+        (self.state/'baseline').mkdir(parents=True)
+        (self.state/'baseline/summary.json').write_text(json.dumps({'probes': {'probe': {'seconds': 400}}}))
+        checks = [['probe', 'python3 tools/agents/suite.py --only probe --jobs 1', 'changed files', '6000.0.71f1']]
+        checker = postland.Checker(self.repo)
+        gates = []
+        class Gate:
+            def __init__(self, *args, **kwargs):
+                gates.append(self)
+            def check_only(self):
+                pass
+        with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate), \
+             mock.patch.object(land, 'freeze_automatic_baseline', side_effect=lambda rows: rows):
+            self.assertEqual(checker.run(self.base, checks, 'control'), [])
+        self.assertEqual(gates[0].automatic_limits, {'probe': 800})
+        self.assertFalse(gates[0].automatic_budget)
+
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):
         check = ['old', 'old-check', 'fast check', 'r']
         self.land_branch('first', {'a.txt': '1'}, [check])

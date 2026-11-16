@@ -1562,6 +1562,22 @@ class AutomaticProbeTests(unittest.TestCase):
         logs = self.gate.log.with_suffix('.automatic')
         self.assertTrue((logs/'002.retry.log').is_file() and (logs/'003.retry.log').is_file())
 
+    def test_checks_without_the_shared_budget_keep_their_own_limits_when_run_again(self):
+        # The post-land checker: no shared budget, limits by probe from recorded durations.
+        self.gate.automatic_budget = False
+        self.gate.automatic_limits = {'long': 2278}
+        self.gate.automatic = [('long', 'first', 'changed files'), ('short', 'second', 'fast check')]
+        calls = []
+        def step(name, command, **kwargs):
+            calls.append((command, name.endswith('(retry)'), kwargs.get('timeout')))
+            return 0 if name.endswith('(retry)') else land.TIME_LIMIT_EXIT
+        with mock.patch.object(self.gate, 'step', side_effect=step), contextlib.redirect_stdout(io.StringIO()):
+            self.gate.run_automatic_probes()
+        self.assertEqual(sorted(calls), [('first', False, 2278), ('first', True, 2278),
+                                         ('second', False, land.AUTO_PROBE_TIMEOUT_SECONDS),
+                                         ('second', True, land.AUTO_PROBE_TIMEOUT_SECONDS)])
+        self.assertIn('with the same limit each', self.gate.log.read_text())
+
     def test_other_failures_fail_the_gate_without_running_time_limited_checks_again(self):
         self.gate.automatic = [('a', 'broken', 'fast check'), ('b', 'slow', 'fast check')]
         codes = {'broken': 1, 'slow': land.TIME_LIMIT_EXIT}

@@ -346,8 +346,9 @@ main checkout in the background (`systemd-run`, Nice=15; its jobs never carry th
 One checker runs at a time and checks every landing between the last checked main and the
 current main, so landings that arrive while it runs are checked in its next round. It builds main
 in its own locked worktree beside the land trains and runs the union of those checks with the
-gate's rules: the sheriff baseline frozen for suite checks (`--against`), the 300 s limit per
-check with one rerun of time-limited checks, and unchanged comparators. It holds no lock, so it
+gate's rules: the sheriff baseline frozen for suite checks (`--against`), one rerun of
+time-limited checks, and unchanged comparators. A suite check gets twice its duration in the
+sheriff baseline (at least 300 s, at most an hour); other checks keep 300 s. It holds no lock, so it
 has no shared 600 s budget, and it runs only as many checks at once as the machine's free
 hardware threads allow (two per check, at least one, at most the engine pool's slots).
 

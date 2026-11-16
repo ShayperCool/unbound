@@ -13,8 +13,9 @@ runs at a time; it covers every landing between the last checked main and the cu
 so landings that arrive while it runs are checked in its next round. It checks out main in its
 own locked worktree beside the land trains, builds it, freezes the runtime and runs the union
 of the landings' checks with the gate's rules: the same selection, the sheriff baseline frozen
-for suite checks (--against), the same 300 s limit per check with one rerun of time-limited
-checks, and the same strict comparisons. Holding no lock, it has no shared budget and runs as
+for suite checks (--against), one rerun of time-limited checks, and the same strict comparisons.
+A suite check's time limit follows its duration in the sheriff baseline (recorded_limits); other
+checks keep the gate's 300 s. Holding no lock, it has no shared budget and runs as
 many checks at once as the machine's free capacity allows (background_workers).
 
 A failing check is run once more alone at the same commit, so that a load timeout or a flake
@@ -62,6 +63,31 @@ def background_workers():
     load, parallel checks time each other out and then need reruns alone."""
     free = (os.cpu_count() or 1)-os.getloadavg()[0]
     return max(1, min(land.retry_workers(), int(free // THREADS_PER_CHECK)))
+
+
+# A suite check's limit is this multiple of its duration in the sheriff baseline, which ran
+# beside the whole suite: realtimegi took 1139 s there and 17-35 min after landings on the
+# loaded machine. At least the gate's per-check limit, at most an hour.
+RECORDED_LIMIT_FACTOR = 2
+RECORDED_LIMIT_MAX_SECONDS = 3600
+
+
+def recorded_limits(checks, summary=None):
+    """{probe: seconds} for suite checks whose probe the sheriff baseline timed."""
+    summary = summary or land.STATE/'baseline/summary.json'
+    try:
+        probes = json.loads(Path(summary).read_text()).get('probes', {})
+    except (OSError, ValueError):
+        return {}
+    limits = {}
+    for check in checks:
+        name, command = check[0], check[1]
+        seconds = probes.get(name, {}).get('seconds') if isinstance(probes.get(name), dict) else None
+        if land.suite_arguments(command) is None or not isinstance(seconds, (int, float)):
+            continue
+        limits[name] = int(min(RECORDED_LIMIT_MAX_SECONDS,
+                               max(land.AUTO_PROBE_TIMEOUT_SECONDS, RECORDED_LIMIT_FACTOR*seconds)))
+    return limits
 
 
 def root():
@@ -145,8 +171,10 @@ class Checker:
         frozen = land.freeze_automatic_baseline([tuple(check) for check in checks])
         gate = land.Gate(self.worktree, commit, [], False, log, environment=self.environment(),
                          automatic=frozen)
-        # No land lock is held: no shared wall-clock budget, the 300 s limit per check stays.
+        # No land lock is held: no shared wall-clock budget, and probes known to take longer
+        # than the gate's per-check limit get time by their recorded durations.
         gate.automatic_workers, gate.automatic_budget = background_workers(), False
+        gate.automatic_limits = recorded_limits(checks)
         print(f'postland: {len(checks)} checks at {commit[:10]}; log {log}', flush=True)
         try:
             gate.check_only()

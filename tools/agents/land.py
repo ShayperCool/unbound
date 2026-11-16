@@ -446,6 +446,9 @@ class Gate:
         # Driver count for automatic checks (None: EXPLICIT_PROBE_WORKERS) and whether they share
         # the gate's wall-clock budget; the post-land checker sets fewer drivers and no budget.
         self.automatic_workers, self.automatic_budget = None, True
+        # Per-check time limits by probe name for checks without the shared budget (the post-land
+        # checker's recorded durations); others keep AUTO_PROBE_TIMEOUT_SECONDS.
+        self.automatic_limits = {}
 
     def note(self, text):
         """A timestamped line in the gate log for phases that are not commands."""
@@ -717,8 +720,9 @@ class Gate:
         With retry_time_limits, checks stopped only by a time limit while sharing the machine
         with the batch run once more, at most retry_workers() (and at most `workers`) at a time and
         nothing else of this gate beside them, each with the same per-check limit; the retries add
-        at most (exclusive retries + ceil(other retries/that count))*AUTO_PROBE_TIMEOUT_SECONDS,
-        as exclusive checks run alone. Any other failure fails at once."""
+        at most (exclusive retries + ceil(other retries/that count)) per-check limits, as exclusive
+        checks run alone. Any other failure fails at once. limit is a number of seconds or a
+        function of a command's row."""
         if not commands:
             return
         require_process_watch()
@@ -729,16 +733,16 @@ class Gate:
         if retry_time_limits and limited and all(code in (0, TIME_LIMIT_EXIT) for _, code in results):
             batch = min(workers or EXPLICIT_PROBE_WORKERS, len(commands))
             workers = min(retry_workers(), workers or retry_workers())
+            each = 'with the same limit each' if callable(limit) else f'{limit or AUTO_PROBE_TIMEOUT_SECONDS}s each'
             message = (f'{len(limited)} automatic checks reached a time limit with up to {batch} checks '
-                       f'running at once; running each once more, at most {workers} at a time, '
-                       f'{AUTO_PROBE_TIMEOUT_SECONDS}s each')
+                       f'running at once; running each once more, at most {workers} at a time, {each}')
             print('land: '+message, flush=True)
             self.note(message)
             again = [(f'{name} (retry)', fresh_automatic_label(command), release,
                       log.with_name(log.stem+'.retry.log'), exclusive)
                      for name, command, release, log, exclusive in limited]
             self.announce(again)
-            outcomes = self.drive(again, limit=AUTO_PROBE_TIMEOUT_SECONDS, workers=workers)
+            outcomes = self.drive(again, limit=limit or AUTO_PROBE_TIMEOUT_SECONDS, workers=workers)
             self.report(outcomes)
             retried = {row[3]: code for row, (_, code) in zip(limited, outcomes)}
             results = [(row, retried.get(row[3], code)) for row, code in results]
@@ -779,7 +783,7 @@ class Gate:
                     return TIME_LIMIT_EXIT
                 options['timeout'] = min(remaining, AUTO_PROBE_TIMEOUT_SECONDS)
             elif limit is not None:
-                options['timeout'] = limit
+                options['timeout'] = limit(row) if callable(limit) else limit
             return self.step(name, command, shell=True,
                              env=dict(self.env, **{RELEASE_VARIABLE: release, NO_EDITOR: '1'}),
                              guard_editor=True, log=log, **options)
@@ -814,9 +818,10 @@ class Gate:
         specs = self.probe_specs()
         logs = self.log.with_suffix('.automatic')
         logs.mkdir(parents=True, exist_ok=True)
-        commands = []
+        commands, limits = [], {}
         for index, row in enumerate(self.automatic, 1):
             name, command, reason = row[:3]
+            limits[f'{index:03d}'] = self.automatic_limits.get(name, AUTO_PROBE_TIMEOUT_SECONDS)
             release = row[3] if len(row) > 3 else probe_release(f'tests/projects/{name}', self.worktree)
             exclusive = self.probe_exclusive(command, specs, (name,))
             argv = suite_arguments(command)
@@ -825,8 +830,11 @@ class Gate:
                                       '--label', f'land-{os.getpid()}-{time.time_ns()}-{name}'])
             commands.append((f'auto {name} ({reason}, {release})', command, release,
                              logs/f'{index:03d}.log', exclusive))
+        # A retry's log is <index>.retry.log beside <index>.log.
+        def limit(row):
+            return limits[row[3].name.split('.')[0]]
         self.execute_probe_commands(commands, deadline=deadline, retry_time_limits=True,
-                                    workers=self.automatic_workers, limit=AUTO_PROBE_TIMEOUT_SECONDS)
+                                    workers=self.automatic_workers, limit=limit)
 
     def stub_env(self):
         env = dict(self.env)
