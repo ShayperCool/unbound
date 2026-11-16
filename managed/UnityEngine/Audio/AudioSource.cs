@@ -177,7 +177,13 @@ namespace UnityEngine
         public AudioMixerGroup outputAudioMixerGroup
         {
             get { MainThreadCheck.Check("get_outputAudioMixerGroup"); return m_OutputGroup; }
-            set { MainThreadCheck.Check("set_outputAudioMixerGroup"); m_OutputGroup = value; m_Dirty = true; }
+            set
+            {
+                MainThreadCheck.Check("set_outputAudioMixerGroup");
+                value?.RefuseRouting();
+                m_OutputGroup = value;
+                m_Dirty = true;
+            }
         }
 
         public GamepadSpeakerOutputType gamepadSpeakerOutputType

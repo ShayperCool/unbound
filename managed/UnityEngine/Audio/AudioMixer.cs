@@ -458,8 +458,15 @@ namespace UnityEngine.Audio
         internal AudioMixerGroup() { }
 
         /// <summary>Made by Object.Instantiate: not one of its mixer's groups.</summary>
-        bool m_Instantiated;
-        static bool s_InstantiatedRoutingWarned;
+        internal bool m_Instantiated;
+
+        /// <summary>Audio routed through an instantiated group is refused: how Unity mixes a group
+        /// that is none of its mixer's (and shares its effects' sidechains) is not measured.</summary>
+        internal void RefuseRouting()
+        {
+            if (m_Instantiated)
+                throw new NotSupportedException("Unbound: routing audio through an instantiated AudioMixerGroup ('" + m_Name + "', none of its mixer's groups) is not supported: how Unity mixes it is not measured.");
+        }
 
         public AudioMixer audioMixer => m_Mixer;
 
@@ -469,6 +476,8 @@ namespace UnityEngine.Audio
         {
             if (!Compat.AssetCloneResourcesMeasured)
                 throw new NotSupportedException("AudioMixerGroup instantiation is measured only for Unity 6000.0.71f1.");
+            // A loaded group gets its parent when its mixer is built.
+            m_Mixer?.Build();
             var copy = new AudioMixerGroup
             {
                 m_Mixer = m_Mixer,
@@ -494,12 +503,8 @@ namespace UnityEngine.Audio
             {
                 if (m_Handle == 0)
                 {
+                    RefuseRouting();
                     m_Mixer?.Build();
-                    if (m_Instantiated && !s_InstantiatedRoutingWarned)
-                    {
-                        s_InstantiatedRoutingWarned = true;
-                        Debug.LogWarning("Unbound: an audio source plays through an instantiated AudioMixerGroup; how Unity mixes such a group is not measured, Unbound mixes it as its own group with the original's volume and pitch.");
-                    }
                     if (m_Mixer != null && Compat.MixerGraphStartupMeasured && m_Mixer.m_Groups.Contains(this))
                         m_Mixer.ActivateGroups();
                     else
@@ -704,8 +709,8 @@ namespace UnityEngine.Audio
 
         public AudioMixer audioMixer => m_Mixer;
 
-        /// <summary>An instantiated snapshot transitions too (measured: no error), to the values it
-        /// copied, which no script can change.</summary>
+        /// <summary>An instantiated snapshot transitions too (measured: no error; what it changes is
+        /// unmeasured), here to the values it copied, which no script can change.</summary>
         public void TransitionTo(float timeToReach) => audioMixer.TransitionToSnapshot(this, timeToReach);
 
         /// <summary>A copy that keeps its mixer and values but is none of the mixer's snapshots

@@ -26,6 +26,25 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RoutingThroughAnInstantiatedGroupIsRefused()
+        {
+            var mixer = new AudioMixer { name = "Mixer" };
+            var master = new AudioMixerGroup { name = "Master", m_Mixer = mixer };
+            mixer.m_Groups.Add(master);
+            var clone = Object.Instantiate(master);
+            var go = new GameObject("Source");
+            try
+            {
+                var source = go.AddComponent<AudioSource>();
+                var error = Assert.Throws<System.NotSupportedException>(() => source.outputAudioMixerGroup = clone);
+                Assert.Contains("instantiated AudioMixerGroup", error.Message);
+                Assert.Null(source.outputAudioMixerGroup);
+                Assert.Throws<System.NotSupportedException>(() => _ = clone.Handle);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
         public void AnInstantiatedSnapshotCopiesItsValues()
         {
             var mixer = new AudioMixer { name = "Mixer" };
