@@ -7148,6 +7148,7 @@
 {"k":"sim/expressions late/f020","v":"alive=0 culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | A=3fe00000"}
 {"k":"sim/late fresh/f020","v":"culled=1 | System: Finished playing=0 new=0 count=00000000 dt=00000000 t=00000000 before=00000000 loop=00000000 after=00000000 index=0 of=0 | Rate=41f00000"}
 {"k":"bundle/effect/f020","v":"culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/loop end/f020","v":"alive=12 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"sim/time/f021","v":"3d088889"}
 {"k":"sim/rate/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f021","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f2aaaad before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
