@@ -1,0 +1,160 @@
+{"key":"slider.valueField","value":"True"}
+{"key":"sliderInt.valueField","value":"True"}
+{"key":"minMax.valueField","value":"False"}
+{"key":"baseSlider.declares","value":"True"}
+{"key":"slider.labelDragClass","value":"True"}
+{"key":"unlabeled.labelDragClass","value":"True"}
+{"key":"start.value","value":"5"}
+{"key":"start.changes","value":"0 "}
+{"key":"start.captured","value":"False"}
+{"key":"down.value","value":"5"}
+{"key":"down.changes","value":"0 "}
+{"key":"down.captured","value":"True"}
+{"key":"right10.value","value":"5.03"}
+{"key":"right10.changes","value":"1 5>5.03"}
+{"key":"right10.captured","value":"True"}
+{"key":"left4.value","value":"5.018"}
+{"key":"left4.changes","value":"1 5.03>5.018"}
+{"key":"left4.captured","value":"True"}
+{"key":"up6.value","value":"5.03600025"}
+{"key":"up6.changes","value":"1 5.018>5.03600025"}
+{"key":"up6.captured","value":"True"}
+{"key":"down3.value","value":"5.02700043"}
+{"key":"down3.changes","value":"1 5.03600025>5.02700043"}
+{"key":"down3.captured","value":"True"}
+{"key":"diagonal.value","value":"5.01405859"}
+{"key":"diagonal.changes","value":"1 5.02700043>5.01405859"}
+{"key":"diagonal.captured","value":"True"}
+{"key":"shift5.value","value":"5.07405853"}
+{"key":"shift5.changes","value":"1 5.01405859>5.07405853"}
+{"key":"shift5.captured","value":"True"}
+{"key":"alt8.value","value":"5.08005857"}
+{"key":"alt8.changes","value":"1 5.07405853>5.08005857"}
+{"key":"alt8.captured","value":"True"}
+{"key":"zero.value","value":"5.08005857"}
+{"key":"zero.changes","value":"0 "}
+{"key":"zero.captured","value":"True"}
+{"key":"right500.value","value":"6.58005857"}
+{"key":"right500.changes","value":"1 5.08005857>6.58005857"}
+{"key":"right500.captured","value":"True"}
+{"key":"past.high.value","value":"10"}
+{"key":"past.high.changes","value":"1 6.58005857>10"}
+{"key":"past.high.captured","value":"True"}
+{"key":"past.high.more.value","value":"10"}
+{"key":"past.high.more.changes","value":"0 "}
+{"key":"past.high.more.captured","value":"True"}
+{"key":"past.low.value","value":"0"}
+{"key":"past.low.changes","value":"1 10>0"}
+{"key":"past.low.captured","value":"True"}
+{"key":"near.horizontal.value","value":"0.0212132037"}
+{"key":"near.horizontal.changes","value":"1 0>0.0212132037"}
+{"key":"near.horizontal.captured","value":"True"}
+{"key":"up.value","value":"0.0212132037"}
+{"key":"up.changes","value":"0 "}
+{"key":"up.captured","value":"False"}
+{"key":"move.after.up.value","value":"0.0212132037"}
+{"key":"move.after.up.changes","value":"0 "}
+{"key":"move.after.up.captured","value":"False"}
+{"key":"set4.value","value":"4"}
+{"key":"set4.changes","value":"1 0.0212132037>4"}
+{"key":"set4.captured","value":"False"}
+{"key":"escape.moved.value","value":"4.06"}
+{"key":"escape.moved.changes","value":"1 4>4.06"}
+{"key":"escape.moved.captured","value":"True"}
+{"key":"escape.value","value":"4"}
+{"key":"escape.changes","value":"1 4.06>4"}
+{"key":"escape.captured","value":"False"}
+{"key":"escape.move.value","value":"4"}
+{"key":"escape.move.changes","value":"0 "}
+{"key":"escape.move.captured","value":"False"}
+{"key":"escape.up.value","value":"4"}
+{"key":"escape.up.changes","value":"0 "}
+{"key":"escape.up.captured","value":"False"}
+{"key":"right.button.value","value":"4"}
+{"key":"right.button.changes","value":"0 "}
+{"key":"right.button.captured","value":"False"}
+{"key":"int.right10.value","value":"60"}
+{"key":"int.right10.changes","value":"1 50>60"}
+{"key":"int.right10.captured","value":"True"}
+{"key":"int.right0.4.value","value":"60"}
+{"key":"int.right0.4.changes","value":"0 "}
+{"key":"int.right0.4.captured","value":"True"}
+{"key":"int.right0.6.value","value":"61"}
+{"key":"int.right0.6.changes","value":"1 60>61"}
+{"key":"int.right0.6.captured","value":"True"}
+{"key":"int.shift.left3.value","value":"49"}
+{"key":"int.shift.left3.changes","value":"1 61>49"}
+{"key":"int.shift.left3.captured","value":"True"}
+{"key":"int.alt3.value","value":"50"}
+{"key":"int.alt3.changes","value":"1 49>50"}
+{"key":"int.alt3.captured","value":"True"}
+{"key":"int.alt1.value","value":"50"}
+{"key":"int.alt1.changes","value":"0 "}
+{"key":"int.alt1.captured","value":"True"}
+{"key":"int.alt2.value","value":"50"}
+{"key":"int.alt2.changes","value":"0 "}
+{"key":"int.alt2.captured","value":"True"}
+{"key":"int.past.high.value","value":"100"}
+{"key":"int.past.high.changes","value":"1 50>100"}
+{"key":"int.past.high.captured","value":"True"}
+{"key":"int.up.value","value":"100"}
+{"key":"int.up.changes","value":"0 "}
+{"key":"int.up.captured","value":"False"}
+{"key":"wide.right10.value","value":"6"}
+{"key":"wide.right10.changes","value":"1 0>6"}
+{"key":"wide.right10.captured","value":"True"}
+{"key":"wide.right1.value","value":"6.6"}
+{"key":"wide.right1.changes","value":"1 6>6.6"}
+{"key":"wide.right1.captured","value":"True"}
+{"key":"int.default","value":"0 10 0 0 10"}
+{"key":"int.classes","value":"unity-base-field unity-base-field--no-label unity-base-slider unity-base-slider--horizontal unity-slider-int"}
+{"key":"int.label.classes","value":"unity-text-element unity-label unity-base-field__label unity-base-slider__label unity-base-field__label--with-dragger unity-slider-int__label"}
+{"key":"int.pageSize.2.6","value":"3"}
+{"key":"int.pageSize.2.5","value":"2"}
+{"key":"int.key.right.value","value":"503"}
+{"key":"int.key.right.changes","value":"0 "}
+{"key":"int.key.right.captured","value":"False"}
+{"key":"int.key.right.again.value","value":"503"}
+{"key":"int.key.right.again.changes","value":"0 "}
+{"key":"int.key.right.again.captured","value":"False"}
+{"key":"int.key.left.value","value":"503"}
+{"key":"int.key.left.changes","value":"0 "}
+{"key":"int.key.left.captured","value":"False"}
+{"key":"int.key.shift.right.value","value":"503"}
+{"key":"int.key.shift.right.changes","value":"0 "}
+{"key":"int.key.shift.right.captured","value":"False"}
+{"key":"int.key.pageUp.value","value":"490"}
+{"key":"int.key.pageUp.changes","value":"1 503>490"}
+{"key":"int.key.pageUp.captured","value":"False"}
+{"key":"int.key.pageDown.value","value":"560"}
+{"key":"int.key.pageDown.changes","value":"1 490>560"}
+{"key":"int.key.pageDown.captured","value":"False"}
+{"key":"int.key.home.value","value":"0"}
+{"key":"int.key.home.changes","value":"1 560>0"}
+{"key":"int.key.home.captured","value":"False"}
+{"key":"int.key.end.value","value":"1000"}
+{"key":"int.key.end.changes","value":"1 0>1000"}
+{"key":"int.key.end.captured","value":"False"}
+{"key":"int.narrow.right","value":"7"}
+{"key":"int.narrow.shift.right","value":"7"}
+{"key":"int.reversed.range","value":"10"}
+{"key":"int.reversed.clamp","value":"10"}
+{"key":"direct.normal.value","value":"2.03"}
+{"key":"direct.normal.changes","value":"1 2>2.03"}
+{"key":"direct.normal.captured","value":"False"}
+{"key":"direct.fast.value","value":"2.14999986"}
+{"key":"direct.fast.changes","value":"1 2.03>2.14999986"}
+{"key":"direct.fast.captured","value":"False"}
+{"key":"direct.slow.value","value":"2.15749979"}
+{"key":"direct.slow.changes","value":"1 2.14999986>2.15749979"}
+{"key":"direct.slow.captured","value":"False"}
+{"key":"direct.z.value","value":"2.15749979"}
+{"key":"direct.z.changes","value":"0 "}
+{"key":"direct.z.captured","value":"False"}
+{"key":"direct.value.value","value":"7"}
+{"key":"direct.value.changes","value":"1 2.15749979>7"}
+{"key":"direct.value.captured","value":"False"}
+{"key":"direct.int.value","value":"88"}
+{"key":"direct.int.changes","value":"1 100>88"}
+{"key":"direct.int.captured","value":"False"}
+{"key":"complete","value":"1"}
