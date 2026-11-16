@@ -148,7 +148,68 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(second.is_dir())
         self.assertFalse(first.exists())
         known = json.loads((self.cache/'agents/janitor/suite-references.json').read_text())
-        self.assertEqual(known[str(suite/'probe'/'run.log')][3], [f'{second}/output'])
+        self.assertEqual(known['format'], janitor.SUITE_REFERENCE_FORMAT)
+        self.assertEqual(known['files'][str(suite/'probe'/'run.log')][4], [f'{second}/output'])
+
+    def test_runs_named_through_a_linked_prefix_are_kept(self):
+        # Suites write ~/.cache/unbound/validation/runs/...; validation links to the volume's.
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (self.cache/'validation').symlink_to(self.volume/'unbound-validation')
+        suite = self.cache/'agents/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        (suite/'summary.json').write_text(json.dumps(
+            {'command': f'python3 run.py --out {self.cache}/validation/runs/probe/gate-2/output'}))
+        self.collect_applied()
+        self.assertTrue(second.is_dir())
+        self.assertFalse(first.exists())
+
+    def test_references_cached_in_an_earlier_format_are_read_again(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        suite = self.volume/'unbound-validation/suite/sheriff-S9-abc'
+        suite.mkdir(parents=True)
+        log = suite/'run.log'
+        log.write_text(f'{second}/output\n')
+        info = log.stat()
+        state = self.cache/'agents/janitor/suite-references.json'
+        state.parent.mkdir(parents=True)
+        # The earlier format, claiming the file names nothing.
+        state.write_text(json.dumps({str(log): [info.st_ino, info.st_size, info.st_mtime_ns, []]}))
+        self.collect_applied()
+        self.assertTrue(second.is_dir())
+
+    def test_a_recently_written_run_protects_older_runs_it_names(self):
+        # The run that names another is newer, so a removal in age order would reach the named
+        # run first: every sealed run is checked for recent writes before any run is removed.
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        (third/'link').symlink_to(first/'output')
+        os.utime(third/'output', (self.future, self.future))
+        self.collect_applied()
+        self.assertTrue(third.is_dir())
+        self.assertTrue(first.is_dir())
+        self.assertFalse(second.exists())
+        self.assertNotIn('links into a removed run', self.output.getvalue())
+
+    def test_no_run_is_removed_before_every_sealed_run_is_checked(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        with patch.object(janitor.Janitor, 'verify_sealed',
+                          lambda janitor_: janitor_.emit('keep', reason='control') or False):
+            self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(second.is_dir())
+        self.assertIn('sealed runs not all checked for recent writes', self.output.getvalue())
+
+    def test_folders_without_numbers_beside_runs_and_single_runs_stay(self):
+        first, second = self.instances('probe', ['gate-1', 'gate-2'])
+        logs = self.directory('unbound-validation/runs/probe/logs')
+        single = self.directory('unbound-validation/runs/a-single-run')
+        (single/'capture').mkdir()
+        (single/'command.json').write_text('{}')
+        os.utime(logs, (2_000_000, 2_000_000))  # newer than every run of the probe
+        self.collect_applied()
+        self.assertTrue(logs.is_dir())
+        self.assertTrue(second.is_dir())  # the newest run, not the newer logs folder
+        self.assertFalse(first.exists())
+        self.assertTrue((single/'capture').is_dir())
 
     def test_no_run_is_removed_until_every_sheriff_suite_file_is_read(self):
         first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])

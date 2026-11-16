@@ -58,8 +58,11 @@ MAX_REDISCOVERIES = 2
 # Time per run for reading sheriff suites' JSON and log files that are new or changed since an
 # earlier run read them (a finished suite holds about 2,000 such files, 250 MB; 57 suites).
 SUITE_REFERENCE_SECONDS = 900
-# An absolute path to a validation run in suite logs and JSON (any prefix: links lead there).
-RUN_REFERENCE = re.compile(rb'/[^\s"\'<>|;&(),=]*/unbound-validation/runs/[^\s"\'<>|;&(),]+')
+# An absolute path through a runs/ directory in suite logs and JSON; resolved, those that lead
+# into the validation runs are kept (suites name them through linked prefixes too).
+RUN_REFERENCE = re.compile(rb'/[^\s"\'<>|;&(),=]*/runs/[^\s"\'<>|;&(),]+')
+# The cache of suite references: its entries are dropped when this changes.
+SUITE_REFERENCE_FORMAT = 2
 # Keep land's lock independent of a service manager or a historical backlog.
 GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
@@ -215,45 +218,47 @@ def promoted_suite_paths(cache):
     return {p.resolve() for p in protected} | protected, {p.resolve() for p in roots}
 
 
-def suite_run_references(roots, known, seconds):
-    """Validation-run paths named by the JSON and log files under roots (sheriff suites), with
-    the files read before (known: {file: [inode, size, mtime_ns, [references]]}) read again only
-    when they changed. Returns (references, files now known, complete). Stops reading at the
-    time budget; an incomplete read names only part of the references."""
+def suite_run_references(roots, runs, known, seconds):
+    """Runs (paths under runs, resolved) named by the JSON and log files under roots (sheriff
+    suites, followed through links), with the files read before (known: {file: [inode, size,
+    mtime_ns, ctime_ns, [references]]}) read again only when they changed. Returns (references,
+    files now known, complete). Stops reading at the time budget; an incomplete read names only
+    part of the references."""
     deadline = time.monotonic()+seconds
+    runs = os.path.realpath(runs)
     files, found, complete = {}, set(), True
     def walk_error(error):
         if not gone(error):
             raise error
     for root in roots:
-        for directory, directories, names in os.walk(root, followlinks=False, onerror=walk_error):
+        for directory, directories, names in os.walk(os.path.realpath(root), followlinks=False,
+                                                     onerror=walk_error):
             for name in names:
                 if not name.endswith(('.json', '.log')):
                     continue
                 path = os.path.join(directory, name)
                 try:
-                    info = os.lstat(path)
+                    info = os.stat(path)  # a linked file is read through its link
                 except OSError as error:
                     if gone(error):
                         continue
                     raise
                 if not stat.S_ISREG(info.st_mode):
                     continue
-                identity = [info.st_ino, info.st_size, info.st_mtime_ns]
+                identity = [info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns]
                 entry = known.get(path)
-                if entry is None or entry[:3] != identity:
+                if entry is None or entry[:4] != identity:
                     if time.monotonic() > deadline:
                         complete = False
                         continue
                     with open(path, 'rb') as stream:
-                        values = sorted({os.fsdecode(match) for match in RUN_REFERENCE.findall(stream.read())})
+                        named = {os.fsdecode(match) for match in RUN_REFERENCE.findall(stream.read())}
+                    values = sorted({resolved for value in named
+                                     if inside(resolved := os.path.realpath(value), runs)})
                     entry = [*identity, values]
                 files[path] = entry
-                found.update(entry[3])
-    references = set()
-    for value in found:
-        references.update((Path(value), Path(os.path.realpath(value))))
-    return references, files, complete
+                found.update(entry[4])
+    return {Path(value) for value in found}, files, complete
 
 
 def ancestors(path):
@@ -1033,7 +1038,7 @@ class Janitor:
         # Run candidates whose inside the reference walk skips, the links already checked
         # against them, and what this run removed (see unseal).
         self.sealed, self.sealed_links, self.removed_paths = set(), set(), []
-        self.sealed_rules_changed = False
+        self.sealed_rules_changed, self.unsealed, self.verified = False, set(), False
 
     def emit(self, action, **fields):
         line = json.dumps({'time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -1082,17 +1087,18 @@ class Janitor:
         """Validation runs named by any sheriff suite's JSON and logs (the promoted one is read
         in full by promoted_suite_paths). Until every file has been read once, no run is removed."""
         roots = sorted({path for base in (self.cache/'agents/suite', self.volume/'unbound-validation/suite')
-                        for path in base.glob('sheriff-*') if path.is_dir() and not path.is_symlink()})
+                        for path in base.glob('sheriff-*') if path.is_dir()})
         state = self.cache/'agents/janitor/suite-references.json'
         try:
-            known = json.loads(state.read_text())
+            saved = json.loads(state.read_text())
         except FileNotFoundError:
-            known = {}
-        references, files, complete = suite_run_references(roots, known, min(SUITE_REFERENCE_SECONDS,
-                                                                             self.scan_budget()))
+            saved = {}
+        known = saved.get('files', {}) if saved.get('format') == SUITE_REFERENCE_FORMAT else {}
+        references, files, complete = suite_run_references(
+            roots, self.volume/'unbound-validation/runs', known, min(SUITE_REFERENCE_SECONDS, self.scan_budget()))
         state.parent.mkdir(parents=True, exist_ok=True)
         temporary = state.with_name(state.name+f'.{os.getpid()}')
-        temporary.write_text(json.dumps(files))
+        temporary.write_text(json.dumps({'format': SUITE_REFERENCE_FORMAT, 'files': files}))
         os.replace(temporary, state)
         self.sheriff_paths, self.sheriff_complete = references, complete
         self.emit('sheriff_references', suites=len(roots), files=len(files), runs=len(references),
@@ -1104,6 +1110,8 @@ class Janitor:
         by their own timestamps, no name-level protection, every sheriff suite read); one that
         turns out protected or kept is walked then (unseal), and its links protect from then on."""
         self.sealed = set()
+        self.sealed_links = set()
+        self.verified = False
         if not self.sheriff_complete:
             return
         cutoff = time.time()-max(self.idle_hours, self.run_days*24)*3600
@@ -1112,7 +1120,7 @@ class Janitor:
                 info = path.lstat()
             except FileNotFoundError:
                 continue
-            if max(info.st_mtime, info.st_ctime) < cutoff:
+            if max(info.st_mtime, info.st_ctime) < cutoff and str(path) not in self.unsealed:
                 self.sealed.add(str(path))
         self.sealed -= self.named_protected(self.sealed)
         self.emit('sealed', runs=len(self.sealed))
@@ -1130,6 +1138,7 @@ class Janitor:
         if key not in self.sealed:
             return
         self.sealed.discard(key)
+        self.unsealed.add(key)
         self.emit('unseal', path=key, reason=reason)
         links = reference_paths([path], excluded=self.excluded, seconds=self.scan_budget(), watcher=self.watch,
                                 index_root=self.cache, prune=False, sealed=self.sealed)
@@ -1140,6 +1149,25 @@ class Janitor:
                 # Removed earlier in this run while this run looked removable too.
                 self.emit('error', path=key, reason='a kept run links into a removed run', link=str(link))
         self.unseal_protected()
+
+    def verify_sealed(self):
+        """Before any run is removed, find the sealed runs that were written inside lately (their
+        own timestamps are old) and walk them, so that their links protect from the first removal
+        on. Until every sealed run has been checked, no run is removed (see candidates)."""
+        hours = max(self.idle_hours, self.run_days*24)
+        cutoff = time.time()-hours*3600
+        for key in sorted(self.sealed):
+            if self.deadline is not None and time.monotonic() >= self.deadline:
+                self.emit('keep', runs=len(self.sealed), reason='sealed runs not all checked for recent writes')
+                return False
+            try:
+                newest, _, _ = inventory(Path(key))
+            except FileNotFoundError:
+                continue
+            if newest >= cutoff:
+                self.unseal(Path(key), 'recently modified')
+        self.verified = True
+        return True
 
     def unseal_protected(self):
         """Walk every sealed run that a link, a live process or a name-level rule now protects."""
@@ -1169,20 +1197,24 @@ class Janitor:
             if any(overlaps(path, p) for p in self.suite_paths):
                 self.emit('keep', path=str(path), reason='promoted sheriff suite reference')
                 continue
-            if kind == 'run' and not self.sheriff_complete:
+            if kind == 'run' and not (self.sheriff_complete and self.verified):
                 unread += 1
                 continue
             yield path, kind, hours
         if unread:
-            self.emit('keep', runs=unread, reason='sheriff suite references not read yet')
+            reason = ('sheriff suite references not read yet' if not self.sheriff_complete else
+                      'sealed runs not all checked for recent writes')
+            self.emit('keep', runs=unread, reason=reason)
 
     def unprotected_candidates(self):
-        yield from self.run_candidates()
+        yield from self.run_candidates(newest=lambda path: self.keep(path, 'newest run of its probe'))
         yield from self.other_candidates()
 
-    def run_candidates(self):
-        """Dated runs under runs/, and the instances inside probe-named runs/<probe>/ except the
-        newest of each probe (a probe can reuse its last run)."""
+    def run_candidates(self, newest=None):
+        """Runs under runs/: a dated folder is one run; in another (a probe's) folder, the numbered
+        folders are its runs, except the newest (a probe can reuse its last run), which is passed
+        to newest when given. Folders without numbers there (logs, tools, a single run's capture
+        and project) and the files beside them stay."""
         root = self.volume/'unbound-validation/runs'
         if not root.is_dir():
             return
@@ -1193,19 +1225,21 @@ class Janitor:
                 yield path, 'run', self.run_days*24
                 continue
             instances = []
-            for instance in children(path):
+            for child in children(path):
                 try:
-                    info = instance.lstat()
+                    info = child.lstat()
                 except FileNotFoundError:
                     continue
-                if stat.S_ISDIR(info.st_mode):
-                    instances.append((info.st_mtime, instance))
-            if instances:
-                newest = max(instances)[1]
-                self.emit('keep', path=str(newest), reason='newest run of its probe')
-                for _, instance in sorted(instances):
-                    if instance != newest:
-                        yield instance, 'run', self.run_days*24
+                if stat.S_ISDIR(info.st_mode) and re.search(r'\d', child.name):
+                    instances.append((info.st_mtime, child))
+            if not instances:
+                continue
+            latest = max(instances)[1]
+            if newest:
+                newest(latest)
+            for _, instance in sorted(instances):
+                if instance != latest:
+                    yield instance, 'run', self.run_days*24
 
     def other_candidates(self):
         for root in dict.fromkeys([self.volume, self.cache.resolve()]):
@@ -1504,6 +1538,7 @@ class Janitor:
         self.deadline = time.monotonic()+self.run_seconds
         try:
             if self.ensure_discovery():
+                self.verify_sealed()
                 self.collect_candidates()
                 if not self.stopped:
                     runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,
