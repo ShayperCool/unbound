@@ -92,6 +92,7 @@ fn main() -> Result<()> {
         .unwrap_or_default();
     let streaming = dir.join("StreamingAssets");
     let mut files = Vec::new();
+    let mut trees = Vec::new();
     let mut skipped_streaming = 0;
     let walker = walkdir::WalkDir::new(&dir)
         .follow_links(true)
@@ -100,6 +101,9 @@ fn main() -> Result<()> {
     for entry in walker.flatten() {
         if !entry.file_type().is_file() {
             continue;
+        }
+        if entry.path().extension().is_some_and(|e| e == "st9") {
+            trees.push(entry.path().to_path_buf());
         }
         let Some(kind) = AssetKind::from_path(entry.path()) else {
             continue;
@@ -118,10 +122,25 @@ fn main() -> Result<()> {
         cache_dir.display()
     );
 
+    // The maps of SpeedTree 9 trees import with the trees' settings, as in the runtime.
+    let tree_textures =
+        std::sync::Arc::new(unbound_assets::speedtree9_textures::TreeTextures::read(
+            trees
+                .iter()
+                .map(|file| (file.to_str().unwrap_or(""), file.as_path())),
+        ));
     for pass in ["first pass", "second pass (fresh cache instance)"] {
         let cache = AssetCache::new(&cache_dir);
         let start = Instant::now();
-        let stats = run(&cache, &files, &target, &project, gamma, lighting);
+        let stats = run(
+            &cache,
+            &files,
+            &target,
+            &project,
+            gamma,
+            lighting,
+            &tree_textures,
+        );
         cache.save()?;
         let elapsed = start.elapsed();
         println!("\n== {pass}: {:.2?}", elapsed);
@@ -170,6 +189,7 @@ fn run(
     project: &unbound_assets::texture::ProjectCompression,
     gamma: bool,
     lighting: unbound_compat::LightingEncodings,
+    tree_textures: &std::sync::Arc<unbound_assets::speedtree9_textures::TreeTextures>,
 ) -> Stats {
     let textures = TextureImporter {
         build_target: target.to_string(),
@@ -178,6 +198,7 @@ fn run(
         normal_maps_xyz: target == "Android",
         project: project.clone(),
         lighting,
+        tree_textures: tree_textures.clone(),
     };
     let audio = AudioImporter {
         build_target: target.to_string(),
