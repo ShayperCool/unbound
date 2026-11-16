@@ -929,14 +929,27 @@ named), and what the Editor's bake also makes: baked
 lightmaps and the light probes' baked lighting (with baked global illumination on), and the
 environment lighting it makes from a sky (the ambient probe and the default reflection; zero
 and black without lighting data) and baked reflection probes, each said once for every scene
-that asks for the bake, also when realtime GI is off. The Editor also sets a Standard material's
-keywords from its properties when it loads it (its emission's `_EMISSION`), Unbound takes the
-keywords the file has: a material saved without that keyword emits for realtime GI in the
-Editor, not in Unbound (the probe's setup saves its keyword). Not measured: data the Editor finds invalid (moved geometry,
+that asks for the bake, also when realtime GI is off. A material's emission reaches realtime
+GI as its shader's editor validates it when it loads (a Standard material saved without
+`_EMISSION` gets it from its emission colour and GI flags, as in the Editor:
+tests/projects/materialvalidation; the probe's setup saves the keyword all the same).
+
+A script's request to bake ([`Lightmapping.Bake`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.Bake.html):
+"Starts a synchronous bake job", answering whether it ran) is measured in the Unity 6000.0.71f1
+Editor (batch mode): in Play mode `Bake` and `BakeAsync` bake nothing, warn "Computing lightmaps
+is not available in play mode." and answer false; otherwise, also from editor code that runs
+while the Editor enters Play mode, `Bake` bakes the open scenes, sends `bakeStarted` and then
+`bakeCompleted` and answers true, and the scene plays with that realtime GI. Unbound does the
+same for the scene Play mode starts with when editor code bakes it as Play mode is entered: the
+scene is baked as it is read, as one that asks for a bake on load (above), with the events sent
+and true answered at once; right after the call the Editor's scene already has its data and
+realtime lightmap indices, Unbound's only once the scene is read. A scene already read (`unbound
+test` in Edit mode) is not baked again, and a scene with lighting data keeps it (the Editor makes
+it again), each said once; `BakeAsync` outside Play mode is not implemented (it says so). Not
+measured: data the Editor finds invalid (moved geometry,
 changed settings; Unbound bakes only for missing data), a scene that references the built-in
 default lighting data, a scene saved by an earlier release with Auto Generate on (it has no
-bake-on-load setting of its own), additive opens of several scenes, and requests to bake from
-scripts (`Lightmapping.Bake`, `BakeAsync`: not implemented, they say so). A scene that does
+bake-on-load setting of its own), and additive opens of several scenes. A scene that does
 not ask for the bake keeps the realtime GI of its lighting data as measured for settings
 changed after the bake: enabling realtime GI then changes nothing drawn
 (tests/projects/lightingassets `Lit`); moved geometry is not measured.
@@ -1078,4 +1091,4 @@ measure):
   engine uses it for a scene the Editor would bake when it opens it
   (`Lightmapping.bakeOnSceneLoad`, no lighting data), cached by a content hash and format
   version ([When the engine uses it](#when-the-engine-uses-it)). Open: lighting that matches the
-  Editor's, the automatic charts still open, and requests to bake from scripts.
+  Editor's, the automatic charts still open, and script bakes of scenes already loaded.
