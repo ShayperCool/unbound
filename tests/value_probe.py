@@ -46,12 +46,27 @@ VALUES = 'values.jsonl'
 COMPLETE = {'k': 'complete', 'v': True}
 
 
-def assemble(probe, out):
+PARTS = ('Assets', 'Packages', 'ProjectSettings')
+
+
+def assemble(probe, out, base=None):
+    """The probe's project in out/project. `base` is (another probe's directory, the paths of
+    its project to take): those first, then the probe's own parts over them (where it has them)."""
     target = out/'project'
     if target.exists():
         raise SystemExit(f'refusing to overwrite {target}')
-    for part in ('Assets', 'Packages', 'ProjectSettings'):
-        shutil.copytree(probe/part, target/part)
+    if base:
+        directory, paths = base
+        for path in paths:
+            source = directory/path
+            if source.is_dir():
+                shutil.copytree(source, target/path, dirs_exist_ok=True)
+            else:
+                (target/path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target/path)
+    for part in PARTS:
+        if (probe/part).exists() or not base:
+            shutil.copytree(probe/part, target/part, dirs_exist_ok=True)
     (target/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
     return target
 
@@ -191,9 +206,9 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
-def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT):
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None):
     out = run_root(probe, label)
-    project = assemble(probe, out)
+    project = assemble(probe, out, base)
     capture = out/'capture'
     capture.mkdir(parents=True)
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
@@ -228,13 +243,13 @@ def publish(probe, labels):
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
-def gate(probe, variable, label, tolerance, engine_args, authored=None):
+def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None):
     out = run_root(probe, label)
     if authored:
         project = out/'project'
         authored_project.assemble(probe.name, unity_version(), authored, project)
     else:
-        project = assemble(probe, out)
+        project = assemble(probe, out, base)
     capture = out/'engine'
     capture.mkdir(parents=True)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
@@ -280,13 +295,14 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None):
     return 1 if failures or code else 0
 
 
-def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT):
+def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
     the gate assembles it instead of the bare fixture. record_timeout is how many seconds an
     Editor capture may take before it is stopped (a probe whose capture authors and builds much
-    gives itself more)."""
+    gives itself more). base is (another probe's directory, paths in it): parts of that probe's
+    project (scenes, bakes, settings) this probe's own files are laid over."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
@@ -294,11 +310,11 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
-        return record(probe, method, variable, label, batch, record_timeout)
+        return record(probe, method, variable, label, batch, record_timeout, base)
     if args.mode == 'publish':
         code = publish(probe, args.labels)
         if authored and not code:
             authored_project.record(probe.name, unity_version(), authored, run_root(probe, args.labels[0])/'project',
                                     f'python3 tests/projects/{probe.name}/run.py record')
         return code
-    return gate(probe, variable, label, tolerance, engine_args, authored)
+    return gate(probe, variable, label, tolerance, engine_args, authored, base)
