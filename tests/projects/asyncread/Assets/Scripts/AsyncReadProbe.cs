@@ -433,6 +433,14 @@ public unsafe class AsyncReadProbe : MonoBehaviour
         Try("metrics.canceledFilterGet", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(ProcessingState.Canceled), none).Length.ToString());
         // ClearCompletedMetrics clears failed and canceled requests too (the Scripting API).
         Try("metrics.clearWithCanceled", () => { AsyncReadManagerMetrics.ClearCompletedMetrics(); return DescribeAll(All()); });
+        // ClearOnRead with a filter: which finished records go.
+        MetricsRead("metrics.f1", new[] { (0L, 8L) });
+        MetricsRead("metrics.f2", new[] { (8L, 8L) }, null, "M", 43, AssetLoadingSubsystem.Mesh);
+        Try("metrics.filteredClearOnRead", () => AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Mesh), AsyncReadManagerMetrics.Flags.ClearOnRead).Length.ToString());
+        Try("metrics.afterFilteredClearOnRead", () => DescribeAll(All()));
+        MetricsRead("metrics.f3", new[] { (16L, 8L) }, null, "M", 43, AssetLoadingSubsystem.Mesh);
+        Try("metrics.filteredSummaryClearOnRead", () => DescribeSummary(AsyncReadManagerMetrics.GetCurrentSummaryMetrics(new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Mesh), AsyncReadManagerMetrics.Flags.ClearOnRead)));
+        Try("metrics.afterFilteredSummaryClearOnRead", () => DescribeAll(All()));
     }
 
 

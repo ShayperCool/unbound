@@ -30,7 +30,7 @@ OpenGLCore). `Assets/Scripts/AsyncReadProbe.cs` writes a 4096-byte file under th
   through a file handle, deferred while their dependency holds them and canceled, and of
   `GetFileInfo`; filters of each category alone and together, empty and null; summaries of the
   current records, of arrays and with filters, with requests finished, failed, queued and
-  canceled; `ClearOnRead`, `ClearCompletedMetrics` (with a canceled record), stopping and
+  canceled; `ClearOnRead` (also with a filter), `ClearCompletedMetrics` (with a canceled record), stopping and
   starting again. Durations are recorded as zero or positive only.
 * **Logs** (`log.*`): the messages game code receives per section (none: the Editor writes its
   file errors to its own log only).
@@ -75,7 +75,8 @@ records; each command is a record (its batch is the request's command count), fa
 asked for bytes and got none; a file that does not open spends no time queued, a directory does;
 file handle reads name no file; `GetFileInfo` is a record of subsystem FileInfo without offset,
 size or batch; a deferred read is recorded `InQueue` with its array's commands while its
-dependency holds it, and `ClearCompletedMetrics` keeps it; stopping keeps the records and
+dependency holds it, and `ClearCompletedMetrics` keeps it; `ClearOnRead`, with a filter too,
+clears every finished record as `ClearCompletedMetrics` does; stopping keeps the records and
 starting again does not clear them. Summaries count finished, failed, queued and reading
 requests, not canceled ones: `TotalBytesRead` is the sizes asked for by finished and failed
 requests, `AverageReadSizeInBytes` that over their count; the longest read's and wait's asset

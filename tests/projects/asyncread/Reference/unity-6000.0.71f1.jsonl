@@ -416,6 +416,13 @@
 {"k":"metrics.canceledFilter","v":"bytes=0 bw=0 avgSize=0 wait=0 readTime=0 totalTime=0 tp=0 longestWait=0 longestRead=0 readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=0 failed=0 waiting=0 canceled=0 total=0 cached=0 async=0 sync=0"}
 {"k":"metrics.canceledFilterGet","v":"1"}
 {"k":"metrics.clearWithCanceled","v":"0: "}
+{"k":"metrics.f1","v":"Complete"}
+{"k":"metrics.f2","v":"Complete"}
+{"k":"metrics.filteredClearOnRead","v":"1"}
+{"k":"metrics.afterFilteredClearOnRead","v":"0: "}
+{"k":"metrics.f3","v":"Complete"}
+{"k":"metrics.filteredSummaryClearOnRead","v":"bytes=8 bw=positive avgSize=8 wait=positive readTime=positive totalTime=positive tp=positive longestWait=positive longestRead=positive readAsset=0 waitAsset=0 readSub=Other waitSub=Other inProgress=0 completed=1 failed=0 waiting=0 canceled=0 total=1 cached=0 async=0 sync=0"}
+{"k":"metrics.afterFilteredSummaryClearOnRead","v":"0: "}
 {"k":"log.metrics","v":""}
 {"k":"timing.captureNoEffect","v":true}
 {"k":"timing.growsAtMostOnePerFrame","v":true}
