@@ -7,9 +7,7 @@ import json, os, sys
 TOLERANCE = 1e-4
 # Known differences: (case, name) -> why. Clip samples are compared within CLIP_TOLERANCE (Unity
 # reduces the imported keys; Unbound interpolates ufbx's baked keys).
-EXPECTED = {
-    ("misuse", "vertices change"): "Unbound accepts a vertex array smaller than the triangles reference (Unity logs an error and ignores it)",
-}
+EXPECTED = {}
 CLIP_TOLERANCE = 0.1
 
 

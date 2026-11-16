@@ -177,8 +177,9 @@ namespace UnityEngine.Tests
                         foreach (var ps in systems) Draw(ps);
                 }, unloadAssembly));
                 Assert.Equal(100, mesh.m_StreamVertexCount);
-                // An edit through the API makes its arrays the mesh again.
-                mesh.vertices = new Vector3[3];
+                // An edit through the API makes its arrays the mesh again (as many vertices as the
+                // arrays hold: fewer than the indices reach is refused, as in Unity).
+                mesh.vertices = new Vector3[mesh.m_Vertices.Length];
                 Assert.Equal(-1, mesh.m_StreamVertexCount);
             }
             finally

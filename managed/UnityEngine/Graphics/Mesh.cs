@@ -228,7 +228,31 @@ namespace UnityEngine
                 }
                 return (Vector3[])m_Vertices.Clone();
             }
-            set => AdoptVertices(value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>());
+            set
+            {
+                // Fewer vertices than the indices reference (null counts as none): an error, and the
+                // mesh keeps everything it had (6000.0.71f1, tests/projects/blendshapes misuse
+                // "vertices change"; the macOS Editor: the vertices setter and SetVertices alike,
+                // whatever the submeshes' topology). Only a shorter array needs the indices read.
+                int length = value?.Length ?? 0;
+                if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
+                {
+                    Debug.LogError("Mesh.vertices is too small. The supplied vertex array has less vertices than are referenced by the triangles array.");
+                    return;
+                }
+                AdoptVertices(value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>());
+            }
+        }
+
+        /// <summary>The highest vertex the submeshes' indices reach (their base vertex added), -1
+        /// without indices.</summary>
+        int HighestIndexedVertex()
+        {
+            int highest = -1;
+            foreach (var s in m_SubMeshes)
+                foreach (int i in s.Indices)
+                    highest = Math.Max(highest, i + s.BaseVertex);
+            return highest;
         }
 
         /// <summary>Mesh.vertices with an array the mesh keeps as it is (not a copy): the caller
@@ -360,7 +384,7 @@ namespace UnityEngine
             Changed(indices: false);
         }
 
-        public void SetVertices(List<Vector3> inVertices) => vertices = inVertices.ToArray();
+        public void SetVertices(List<Vector3> inVertices) => vertices = inVertices?.ToArray();
         public void SetVertices(Vector3[] inVertices) => vertices = inVertices;
         public void SetVertices(List<Vector3> inVertices, int start, int length, [Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags ) =>
             vertices = inVertices.GetRange(start, length).ToArray();

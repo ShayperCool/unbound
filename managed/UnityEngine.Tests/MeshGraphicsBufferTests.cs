@@ -358,6 +358,8 @@ namespace UnityEngine.Tests
                 var clone = Object.Instantiate(mesh);
                 try { Assert.Equal(colorBytes, Stream(clone, 1)); }
                 finally { Object.DestroyImmediate(clone); }
+                // Fewer vertices than the indices reach is refused (MeshVertexCountGuardTests).
+                mesh.SetIndices(new[] {0}, MeshTopology.Points, 0);
                 mesh.vertices = new Vector3[1];
                 mesh.vertices = new Vector3[2];
                 Array.Clear(colorBytes, 16, 16);
