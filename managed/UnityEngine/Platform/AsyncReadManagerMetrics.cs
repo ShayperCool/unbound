@@ -351,8 +351,23 @@ namespace Unity.IO.LowLevel.Unsafe
                 count = commands == null ? 0 : Math.Max(count, 0);
                 lock (s_Lock)
                 {
+                    if (count == m_Records.Length)
+                    {
+                        // The same number of commands: the records take the new ones in place.
+                        for (int i = 0; i < count; i++)
+                        {
+                            m_Records[i].Offset = (ulong)commands[i].Offset;
+                            m_Records[i].Size = (ulong)commands[i].Size;
+                        }
+                        return;
+                    }
+                    // A request's records sit together in the store, in command order (they are
+                    // added together, and none is cleared before the request finishes).
                     int at = m_Records.Length > 0 ? s_Records.IndexOf(m_Records[0]) : -1;
-                    foreach (var record in m_Records) s_Records.Remove(record);
+                    if (at >= 0 && at + m_Records.Length <= s_Records.Count && s_Records[at + m_Records.Length - 1] == m_Records[^1])
+                        s_Records.RemoveRange(at, m_Records.Length);
+                    else
+                        foreach (var record in m_Records) s_Records.Remove(record);
                     var records = new Record[count];
                     for (int i = 0; i < count; i++)
                     {
@@ -438,22 +453,26 @@ namespace Unity.IO.LowLevel.Unsafe
         }
 
         /// <summary>Fills <paramref name="into"/> (when given) with the records the filters keep,
-        /// in request order; <paramref name="clear"/> drops the finished ones among them (requests
-        /// still queued or reading stay, asyncread metrics.pending.afterClear).</summary>
+        /// in request order; <paramref name="clear"/> then drops every finished record, whatever
+        /// the filters keep, as ClearCompletedMetrics does (requests still queued or reading stay:
+        /// asyncread metrics.pending.afterClear, metrics.afterFilteredClearOnRead).</summary>
         internal static void Take(AsyncReadManagerMetricsFilters filters, bool clear, List<AsyncReadManagerRequestMetric> into)
         {
             into?.Clear();
             lock (s_Lock)
             {
                 double now = Now();
+                int kept = 0;
                 for (int i = 0; i < s_Records.Count; i++)
                 {
                     var record = s_Records[i];
                     var metric = record.ToMetric(now);
-                    if (filters != null && !filters.Keeps(metric)) continue;
-                    into?.Add(metric);
-                    if (clear && record.Done) s_Records.RemoveAt(i--);
+                    if (filters == null || filters.Keeps(metric)) into?.Add(metric);
+                    // Compacted in one pass: the kept records move down in order.
+                    if (clear && record.Done) continue;
+                    s_Records[kept++] = record;
                 }
+                s_Records.RemoveRange(kept, s_Records.Count - kept);
             }
         }
 

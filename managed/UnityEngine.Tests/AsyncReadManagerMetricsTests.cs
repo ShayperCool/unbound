@@ -265,6 +265,9 @@ namespace UnityEngine.Tests
             Assert.Empty(AsyncReadManagerMetrics.GetMetrics(filters, none));
             filters.ClearFilters();
             Assert.Equal(3, AsyncReadManagerMetrics.GetMetrics(filters, none).Length);
+            // ClearOnRead with a filter returns what it keeps and clears every finished record.
+            Assert.Equal(2, AsyncReadManagerMetrics.GetMetrics(new AsyncReadManagerMetricsFilters(AssetLoadingSubsystem.Mesh), AsyncReadManagerMetrics.Flags.ClearOnRead).Length);
+            Assert.Empty(AsyncReadManagerMetrics.GetMetrics(none));
             var e = Assert.Throws<NullReferenceException>(() => AsyncReadManagerMetrics.GetMetrics((AsyncReadManagerMetricsFilters)null, none));
             Assert.Equal("(null)", e.Message);
             Assert.Throws<NullReferenceException>(() => AsyncReadManagerMetrics.GetCurrentSummaryMetrics(null, none));
