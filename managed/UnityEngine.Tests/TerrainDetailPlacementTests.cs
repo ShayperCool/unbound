@@ -494,6 +494,22 @@ namespace UnityEngine.Tests
             var level2 = atlas.GetPixels32(2);
             Assert.Equal(255, level2[3].a);
             for (int x = 4; x < 8; x++) Assert.Equal(0, level2[x].a);
+
+            // Two textures: side by side, transparent texels after the second.
+            var second = Own(new Texture2D(8, 8, TextureFormat.RGBA32, true));
+            var opaque = new Color32[8 * 8];
+            for (int i = 0; i < opaque.Length; i++) opaque[i] = new Color32(200, 40, 60, 255);
+            second.SetPixels32(opaque);
+            second.Apply();
+            data.detailPrototypes = new[] { new DetailPrototype { prototypeTexture = texture }, new DetailPrototype { prototypeTexture = second } };
+            terrain.Renderer.BuildDetailsForTest(terrain, data, terrain.GetPosition());
+            atlas = terrain.Renderer.DetailAtlasForTest;
+            Assert.Equal((32, 32), (atlas.width, atlas.height));
+            var level0 = atlas.GetPixels32(0);
+            Assert.Equal(new Color32(40, 200, 60, 255), level0[15]);
+            Assert.Equal(new Color32(200, 40, 60, 255), level0[16]);
+            Assert.Equal(new Color32(200, 40, 60, 255), level0[23]);
+            for (int x = 24; x < 32; x++) Assert.Equal(0, level0[x].a);
         }
 
         /// <summary>Drawn details are rebuilt when the detail density changes, the terrain's or the

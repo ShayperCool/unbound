@@ -129,11 +129,11 @@ namespace UnityEngine
 
         /// <summary>The prototypes' textures side by side from the left, the rest of the atlas
         /// transparent black, in the smallest power-of-two texture that holds their widths plus 4
-        /// (the Editor's atlas for one 16 × 32 texture is 32 × 32); the rects inset by half a
-        /// texel, as the Editor's uvs. The atlas samples with clamped edges and without blending
-        /// mip levels, as the Editor's: a texture at the atlas's edge or beside empty texels keeps
-        /// its own texels in the lower mips (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/grass).</summary>
+        /// (the Editor's atlas for one 16 × 32 texture is 32 × 32; the sizing rule beyond that one
+        /// case is not measured); the rects inset by half a texel, as the Editor's uvs. The atlas
+        /// samples with clamped edges (measured along v) and without blending mip levels, as the
+        /// Editor's: a texture at the atlas's edge or beside empty texels keeps its own texels in
+        /// the lower mips (matches the Unity 6000.0.71f1 Editor, tests/projects/grass).</summary>
         Rect[] BuildDetailAtlas(DetailPrototype[] prototypes)
         {
             var textures = new List<Texture2D>();
