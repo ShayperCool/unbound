@@ -157,6 +157,12 @@ record the diagnostic without replacing a reference, run the existing editor and
 unbound modes with `UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1` and
 `NAVMESH_PROBE_STEER=250`; keep the added steering records in the run cache.
 
+Expected failures (Q525, main on Linux and on macOS arm64, the same set on both): 212
+frame scenarios, each failing only on the agents above: walker on frames 33 to 250 (211
+frames, the tie), blocked on 191 to 250 (60), climber's three rounding records (frames 21
+to 88) and left's `hasPath` at 222. Any other failing agent or frame is not one of these
+recorded residuals.
+
 
 Q462 adds an optional corridor diagnostic with its own reference. It records frames
 190 to 196 of the blocked agent, including its live path, a fresh agent path query,
