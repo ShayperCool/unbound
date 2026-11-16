@@ -506,7 +506,8 @@ namespace Unbound.Runtime
 
         /// <summary>Adds the draws of an effect's systems' outputs, by their priority (each
         /// output's `sortPriority`, the lowest first; outputs of equal priority in the order of
-        /// their systems, then of the graph): tests/projects/vfxoutputs, `Priority`.</summary>
+        /// their systems, then of each system's): tests/projects/vfxoutputs, `Priority`,
+        /// `PriorityTies`.</summary>
         internal static void CollectDraws(VFXParticleSystem[] systems, Renderer renderer, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (systems.Length == 0) return;

@@ -77,7 +77,7 @@ namespace Unbound.Runtime
         /// element counts the particles to draw (of key and index pairs when sorted), and its
         /// entry of arguments; -1 for one drawn directly.</summary>
         readonly int m_CountBuffer = -1, m_ArgsEntry = -1;
-        readonly bool m_CountPairs;
+        readonly bool m_CountPairs, m_Sorted;
         int m_FilledGeneration = -1;
 
         internal VFXOutput(VFXParticleSystem system, in VFXEditorTaskDesc task, Material material)
@@ -104,6 +104,7 @@ namespace Unbound.Runtime
                 m_CountBuffer = Parameter(task, "indirectIndex");
                 m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == VFXIndirectArgs.KeyIndexPairBytes;
                 m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
+                m_Sorted = Buffer(task, "indirectBuffer") != m_CountBuffer;
             }
         }
 
@@ -257,12 +258,12 @@ namespace Unbound.Runtime
             if (read == Parameter(task, "indirectIndex")) return true;
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
                 if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read)
-                    return VFXSort.Plan(system.capacity, Buffer(other, "scratchBuffer") >= 0) != null;
+                    return Buffer(other, "srcBuffer") == Parameter(task, "indirectIndex") && VFXSort.Plan(system.capacity, Buffer(other, "scratchBuffer") >= 0) != null;
             return false;
         }
 
         /// <summary>Whether the output draws a sorted copy of its list.</summary>
-        internal bool Sorted => Indirect && Buffer(m_Task, "indirectBuffer") != m_CountBuffer;
+        internal bool Sorted => m_Sorted;
 
         internal static int Buffer(in VFXEditorTaskDesc task, string name)
         {
