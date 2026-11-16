@@ -937,7 +937,8 @@ def reference_paths(roots, *, excluded=(), seconds=300, watcher=None, index_root
                            if not watcher.add(directory, wait_for_events=directory not in waited)]
                 waited.update(waiting)
                 if waiting:
-                    batch = [directory for directory in batch if directory not in set(waiting)]
+                    deferred = set(waiting)
+                    batch = [directory for directory in batch if directory not in deferred]
             listed = []
             for directory, info in zip(batch, index.stat_many(batch)):
                 if isinstance(info, OSError):

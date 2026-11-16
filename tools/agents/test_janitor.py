@@ -1938,6 +1938,38 @@ class JanitorTests(unittest.TestCase):
             self.assertTrue(self.j.watch.add(cache/'b', wait_for_events=True))
             self.assertTrue(self.j.watch.add(cache/'b'/'b', wait_for_events=True))
 
+    def test_a_directory_recreated_before_its_removal_is_read_is_not_listed_unwatched(self):
+        # Listed without a watch, it would count as visited and a link made in it before the
+        # queue is read would never be seen.
+        target = self.directory('q1/target')
+        cache = self.directory('cache')
+        (cache/'03').mkdir()
+        with self.guards():
+            self.j.discover()
+            self.addCleanup(self.j.watch.close)
+            original = janitor.ReferenceWatch.poll
+            polls = []
+            def poll(watch):
+                polls.append(None)
+                if len(polls) == 2:
+                    (cache/'03'/'link').symlink_to(target/'output')
+                pending = original(watch)
+                if len(polls) == 1:
+                    shutil.rmtree(cache/'03')
+                    (cache/'03').mkdir()
+                return pending
+            added = []
+            original_add = janitor.ReferenceWatch.add
+            def add(watch, directory, **options):
+                result = original_add(watch, directory, **options)
+                added.append((os.fspath(directory), result))
+                return result
+            with patch.object(janitor.ReferenceWatch, 'poll', poll), \
+                 patch.object(janitor.ReferenceWatch, 'add', add):
+                found = janitor.reference_paths([cache], watcher=self.j.watch, index_root=self.cache, prune=False)
+        self.assertIn((str(cache/'03'), False), added)
+        self.assertIn(target/'output', found)
+
     def test_a_replaced_directory_is_watched_once_its_events_are_read(self):
         cache = self.directory('cache')
         (cache/'02').mkdir()
