@@ -119,17 +119,18 @@ Editor and collection-validation methods.
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 61 |
-| Interfaces | 65 | 15 |
+| Interfaces | 65 | 13 |
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 107 |
+| Total | 1,332 | 105 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
 extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry and its column
-layout slice ColumnLayout's IDisposable entry. With the one pipeline-restriction lookup entry
-outside Q410, the allow-list holds 108 entries.
+layout slice ColumnLayout's IDisposable entry, and its mixer slice the two mixer sub-asset marker
+entries. With the one pipeline-restriction lookup entry outside Q410, the allow-list holds 106
+entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
