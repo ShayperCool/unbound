@@ -72,6 +72,8 @@ namespace UnityEngine.Tests
         [InlineData(10, 0, false, SliderDirection.Horizontal, true, 7)]
         [InlineData(0, 10, false, SliderDirection.Vertical, true, 7)]
         [InlineData(0, 10, true, SliderDirection.Vertical, true, 3)]
+        [InlineData(10, 0, true, SliderDirection.Horizontal, true, 7)]
+        [InlineData(10, 0, true, SliderDirection.Vertical, true, 7)]
         public void ATrackerClickStepsByThePageSize(int low, int high, bool inverted, SliderDirection direction, bool beforeDragger, int expected)
         {
             var slider = new SliderInt(null, low, high, direction, 2f) { value = 5, inverted = inverted };
