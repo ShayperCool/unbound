@@ -1071,3 +1071,34 @@ effect kinds remain outside this measurement.
 
 The [Q373 scope table and queue work](../tests/projects/audiopitch/CLOSURE.md)
 collect the landed profiles and the remaining measurement limits.
+
+## The dsp clock
+
+[AudioSettings.dspTime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings-dspTime.html)
+is "the current time of the audio system ... based on the actual number of samples processed by the
+audio system"; the Scripting API says nothing of when a script sees it move. Measured with the
+macOS Editor 6000.0.71f1 (tests/projects/dspclock, and exploratory captures outside the reference):
+
+- it moves in whole dsp buffers (`GetDSPBufferSize` over `outputSampleRate`: 1024 / 48000 s there),
+  as real time does, and never back;
+- the audio thread moves it while a frame runs: the frame after a 300 ms one reads a clock that has
+  counted those 300 ms, and a 30 ms busy wait in `Update` moves it by a buffer or two;
+- a playable graph on its default clock (`DirectorUpdateMode.DSPClock`) moves every frame, between
+  the audio clock's buffers, and meets it again where the audio clock steps further;
+- with Disable Unity Audio set it stays at 0, with `outputSampleRate`, the buffer size and the
+  configuration's values 0 and its speaker mode Raw (exploratory only).
+
+Unbound, without an output device (the virtual device, every run but `--remote`), moves the clock as
+each frame starts (`AudioSystem.AdvanceClock` at `TimeUpdate.WaitForLastPresentationAndUpdateTime`,
+`Engine::advance`): by the frame's real time in whole buffers, owing the rest to the next frame. A
+frame's scripts and its `DirectorSampleTime` therefore read a clock that has counted the frame before
+them (before, it counted it one frame later, at the frame's audio update, so a long frame showed up a
+frame late and in one jump). Graphs on the DSP clock move by the frame's real time, never more than a
+buffer above the audio clock nor below it (`PlayableSystem.SampleTime`). Under `--fixed-fps` the real
+time of a frame is the fixed one, so such runs stay deterministic.
+
+Limits: the clock does not move within a frame (that needs an audio thread running in real time,
+which runs at a fixed frame rate would no longer reproduce); a project with audio disabled runs the
+clock and its voices as any other; the clock starts at 0 when the game starts (the Editor's counts
+from when its audio started, about 9.6 s at Play); the Linux Editor is not measured (the gate's
+machine may have no output device, which would leave the clock at 0).
