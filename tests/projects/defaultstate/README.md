@@ -17,6 +17,12 @@ The Editor service slice adds seven rows for five newly implemented types. Two i
 The consent struct has two zero-valued intents, and the four service classes are excluded
 as static or nonconstructible.
 
+The read metrics slice adds 41 rows for the four AsyncReadManagerMetrics types (the static
+class excluded, the filters class with no readable member). Two independent GPU captures agree on
+them; they were added beside the existing rows, which remain byte-identical and in order (the two
+captures differed in an existing row, `ParticleSystem.colorBySpeed`, uninitialized in the
+Editor and without a variable policy, so the whole reference was not re-published).
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.

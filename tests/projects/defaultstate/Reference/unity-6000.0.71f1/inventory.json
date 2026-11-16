@@ -409,6 +409,30 @@
       "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManager"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
