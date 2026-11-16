@@ -26,4 +26,8 @@ PhysicsScene hash measurements, in `controls-p0.json`. `verify_controls.py` addi
 gates every stable control, requires both hashes to be signed 32-bit integers, and checks
 that the two equal scene values have equal hashes. It writes `controls-verdict.json` with
 both the raw differences and all failed assertions; cross-process hash literals remain
-visible without being treated as stable values.
+visible without being treated as stable values. The raw comparison therefore decides nothing
+in the suite (it runs as a record step); `verify_controls.py` and the numeric comparisons of
+the other suites decide, so the probe passes or fails as a whole (Q526: every comparison
+passes on the Linux main, the raw controls showing only `scene/0/hash` and
+`scene/4/defaultHash`).

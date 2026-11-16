@@ -40,7 +40,9 @@ Everything matches. What the probe established:
   minus the imported normal. Tangents: MikkTSpace on the shaped mesh, minus the base tangents.
 - The renderer's weights start at the file's DeformPercent; clips animate `blendShape.<name>`.
 
-Known differences: Unity logs an error and ignores a `vertices` assignment smaller than the
-triangles reference; Unbound takes it. The clip's samples are within 0.06 of the Editor's (Unity
-reduces the imported keys). The image is within 1.7/255 on average: the shading of the default
-reflection differs a little; the shape is the same.
+A `vertices` assignment smaller than the triangles reference logs Unity's error and leaves the
+mesh as it was (`misuse` `vertices change`; the macOS Editor gives the same for `SetVertices`, a
+null array and point indices, managed MeshVertexCountGuardTests). Known differences: the clip's
+samples are within 0.06 of the Editor's (Unity reduces the imported keys). The image (`blob.png`)
+matches the reference pixel for pixel on the Linux GPU (Q526), and the suite gates it so
+(`compare_images.py --gate`).

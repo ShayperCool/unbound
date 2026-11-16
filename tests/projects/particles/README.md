@@ -20,7 +20,14 @@ Run Unbound (in a window: the images need a GPU) and compare:
     PARTICLES_PROBE_OUT=/tmp/particles.jsonl PARTICLES_IMAGE_DIR=/tmp/particles \
         unbound run -p tests/projects/particles --frames 60 --size 320x180 --no-watch
     python3 tests/projects/particles/compare.py tests/projects/particles/Reference/unity-6000.0.71f1.jsonl /tmp/particles.jsonl
-    python3 tests/projects/particles/compare_images.py tests/projects/particles/Reference/images /tmp/particles
+    python3 tests/projects/particles/compare_images.py tests/projects/particles/Reference/images /tmp/particles \
+        --gate tests/projects/particles/image-residuals.json
+
+With `--gate` (the suite's recipe) every image must match its reference pixel for pixel, except
+the residuals `image-residuals.json` lists with their pixel count, largest difference and reason:
+on the Linux GPU (Q526, two runs identical) 15 of the 17 images are exact, `lights` differs in
+1120 pixels by up to 4/255 (the lights module below) and `stretched` in 24 pixels by 1/255.
+`test_compare_images.py` tests the gate.
 
 Values match within 1e-3 (colors within 1/255). Lifetimes and rates are chosen off the 0.025 s
 step grid where they could otherwise land exactly on a step boundary, where which side of it

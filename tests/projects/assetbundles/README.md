@@ -26,4 +26,5 @@ Run Unbound and compare:
     python3 tests/projects/assetbundles/compare.py tests/projects/assetbundles/Reference /tmp/bundles
     python3 tests/projects/particles/compare_images.py tests/projects/assetbundles/Reference /tmp/bundles
 
-Everything the probe records matches; the image is within 1/255 on average.
+Everything the probe records matches; the image matches the reference pixel for pixel on the
+Linux GPU (Q526), and the suite gates it so (`compare_images.py --gate`).
