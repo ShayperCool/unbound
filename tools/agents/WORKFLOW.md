@@ -268,7 +268,7 @@ changes its head or authored files while queued is rejected without discarding i
 Prepared results and publication receipts are saved before main advances. Publication survives
 completed caller results, so a later lock holder can recover the log and launch a missed push.
 An interrupted push can be replayed safely. Integration checkouts are locked.
-An interrupted or changed checkout is retained, with its location reported. Inspect it before
+A changed or in-use integration checkout is retained, with its location reported. Inspect it before
 unlocking or removing it; normal cleanup never forces removal. Old callers cannot join a new
 train until restarted with the updated tooling.
 
