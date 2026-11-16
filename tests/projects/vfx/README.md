@@ -330,9 +330,11 @@ asset (`Assets/Settings/ProbeURP.asset`), which is why the authored set holds a 
 the asset (an object of its own, not the project's), its events and exposed properties, and an
 effect that uses it (its systems, and at frames 3 and 20 whether it is culled and awake).
 
-Known residuals (`residuals.json`): Unbound loads the built asset as a live object with its
-name, but does not read its compiled graph yet, so its events and exposed properties, the
-effect's systems and the effect's state differ; the load says so.
+Unbound reads the built asset's compiled graph from the bundle. Its programs are built for the
+Editor's graphics device, so Unbound runs it with the programs of the project's graph of the
+same name that compiles to the same graph (here `Bundled.vfx` itself); a built asset without
+such a graph in the project does not run and says so (a unit test holds that case, not this
+probe).
 
 ## Not covered yet
 
