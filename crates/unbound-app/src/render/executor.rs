@@ -568,6 +568,14 @@ const INSTANCING_KEYWORD: &str = "INSTANCING_ON";
 /// The draw property (and byte address buffer) of a BatchRendererGroup batch's instance data.
 const DOTS_INSTANCE_DATA: &str = "unity_DOTSInstanceData";
 
+/// A dynamically scaled render texture's full-size allocation, kept while it is scaled, with what
+/// the renderer holds beside it: its pending automatic mips and its retained resolve.
+struct FullResolution {
+    gpu: GpuTexture,
+    mips: Option<wgpu::TextureFormat>,
+    resolve: Option<msaa::ResolveHistory>,
+}
+
 pub struct UnityRenderer {
     /// The adapter the device was opened on (its formats as the backend stores them).
     adapter: wgpu::Adapter,
@@ -612,11 +620,11 @@ pub struct UnityRenderer {
     /// Zeros standing in for channels 4..7 of meshes without them.
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
-    /// The full-size allocations of dynamically scaled render textures while they are scaled,
-    /// with their pending automatic mips: the Editor keeps a scaled texture's full-resolution
+    /// The full-size allocations of dynamically scaled render textures while they are scaled:
+    /// the Editor keeps a scaled texture's full-resolution
     /// target and draws into a portion of it, so a texture back at full size has the image it
     /// had (tests/projects/nativegfx `dynres.content.back`).
-    full_resolution: HashMap<u64, (GpuTexture, Option<wgpu::TextureFormat>)>,
+    full_resolution: HashMap<u64, FullResolution>,
     texture_mip_biases: HashMap<u64, f32>,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
@@ -1089,30 +1097,44 @@ impl UnityRenderer {
                 let previous = old
                     .as_ref()
                     .map(|gpu| (gpu.texture.clone(), gpu.sampler_key));
-                let mut pending = None;
-                match (&old, texture.logical) {
+                let size = (texture.width.max(1) as u32, texture.height.max(1) as u32);
+                let mut restored = None;
+                if let (Some(logical), Some(full)) = (texture.logical, &old)
+                    && size != logical
+                    && (full.width, full.height) == logical
+                {
                     // Scaled from its full size: that allocation is kept, the scaled one new.
-                    (Some(full), Some(logical))
-                        if full.logical.is_none() && (full.width, full.height) == logical =>
-                    {
-                        let full = old.take().expect("matched");
-                        let mips = self.pending_mips.get(&full.texture).copied();
-                        self.full_resolution.insert(handle, (full, mips));
+                    let gpu = old.take().expect("matched");
+                    let kept = FullResolution {
+                        mips: self.pending_mips.get(&gpu.texture).copied(),
+                        resolve: self.resolve_history.remove(&gpu.texture),
+                        gpu,
+                    };
+                    self.full_resolution.insert(handle, kept);
+                } else if let Some(full) = self.full_resolution.remove(&handle) {
+                    if (full.gpu.width, full.gpu.height) == size {
+                        // At its full size again (the factors may still round up to it): the
+                        // kept allocation, whose shape the upload checks.
+                        restored = Some((full.gpu.texture.clone(), full.mips, full.resolve));
+                        old = Some(full.gpu);
+                    } else if texture.logical.is_some() {
+                        // Scaled to another size: still kept.
+                        self.full_resolution.insert(handle, full);
                     }
-                    // Back at its full size: the kept allocation, whose shape the upload checks.
-                    (_, None) => {
-                        if let Some((full, mips)) = self.full_resolution.remove(&handle) {
-                            pending = mips.map(|format| (full.texture.clone(), format));
-                            old = Some(full);
-                        }
-                    }
-                    _ => {}
                 }
                 let gpu =
                     resources::upload_texture(&device, &self.queue, old, &texture, self.generation);
-                // Its automatic mips still pending when it was scaled, if it is the one kept.
-                if let Some((kept, format)) = pending.filter(|(kept, _)| *kept == gpu.texture) {
-                    self.pending_mips.insert(kept, format);
+                // What it had when it was scaled, if it is the one kept: its pending automatic
+                // mips and its retained resolve (a multisampled texture's published image).
+                if let Some((_, mips, resolve)) =
+                    restored.filter(|(kept, _, _)| *kept == gpu.texture)
+                {
+                    if let Some(format) = mips {
+                        self.pending_mips.insert(gpu.texture.clone(), format);
+                    }
+                    if let Some(resolve) = resolve {
+                        self.resolve_history.insert(gpu.texture.clone(), resolve);
+                    }
                 }
                 self.install_texture(handle, gpu, previous, &texture);
             }
