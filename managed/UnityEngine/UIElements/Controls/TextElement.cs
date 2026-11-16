@@ -835,8 +835,8 @@ namespace Unbound.UIElements
                     mayHaveChanged = true;
                     break;
                 case EventCommandNames.Delete:
-                    // Deletes the selection or the character after the cursor without copying (the
-                    // 6000.0 releases; tests/projects/textcommands execute.delete).
+                    // Deletes the selection or the character after the cursor without copying
+                    // (matches the Unity 6000.0.71f1 Editor, tests/projects/textcommands execute.delete*).
                     editing.Delete();
                     mayHaveChanged = true;
                     break;
