@@ -549,6 +549,8 @@ class Gate:
             print('land: docs-only change, build and tests skipped', flush=True)
             return
         build_py, target = self.build()
+        crates = (self.touched_crates(changed) if self.crates is None else
+                  sorted(set(self.crates) & set(self.touched_crates(['Cargo.toml']))))
         # Freeze the build's runtime before any test: `cargo test` may relink target/release
         # while the other lane runs, and probes must run what the build produced. The tests keep
         # the build's own environment; the probes switch to the frozen runtime afterwards.
@@ -566,8 +568,6 @@ class Gate:
             self.managed_tests(target)
 
         lanes = [dotnet_lane]
-        crates = (self.touched_crates(changed) if self.crates is None else
-                  sorted(set(self.crates) & set(self.touched_crates(['Cargo.toml']))))
         if self.full or crates:
             # Rust tests use only the Cargo target, built above.
             args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
@@ -582,7 +582,7 @@ class Gate:
             # No probe will run on the frozen runtime: let runtime cleanup retire it.
             try:
                 release_reference(self.log.with_suffix('.runtime'), automatic=True)
-            except OSError as error:
+            except (OSError, ValueError) as error:
                 print(f'land: runtime release deferred: {error}', file=sys.stderr)
             raise
         self.use_probe_runtime()
