@@ -19,7 +19,7 @@ namespace Unbound.Runtime
     /// name instance zero. What scripts observe of a system (how many particles it took and has
     /// alive, whether it sleeps) matches the Unity 6000.0.71f1 Editor (tests/projects/vfx).
     /// </summary>
-    internal sealed class VFXParticleSystem : VFXSystem
+    internal sealed partial class VFXParticleSystem : VFXSystem
     {
         /// <summary>The thread group size of every kernel the graph compiler writes.</summary>
         const int ThreadsPerGroup = 64;
@@ -165,6 +165,7 @@ namespace Unbound.Runtime
             m_Updates = KeepDrawn(updates, true, stepLists);
             cameraLists.RemoveAll(list => !Drawn(list));
             m_StepLists = stepLists.ToArray();
+            SetUpEvents(systems);
             m_CameraLists = cameraLists.ToArray();
             var stepSorts = new List<SortTask>();
             var cameraSorts = new List<SortTask>();
@@ -264,7 +265,7 @@ namespace Unbound.Runtime
         /// <summary>The system's particles as the effect counts them: the particles spawned so
         /// far when none dies, else the count last read back from the GPU (-1 before the first
         /// answer arrives).</summary>
-        internal int AliveCount => HasKill ? m_ReadAlive : (int)m_Total;
+        internal int AliveCount => CountedOnGpu ? m_ReadAlive : (int)m_Total;
 
         internal bool Sleeping => m_Sleeping;
 
@@ -295,6 +296,7 @@ namespace Unbound.Runtime
             m_NextReadbackFrame = VFXManager.Frame + 1;
             m_PrefixWords[0] = m_PrefixWords[1] = 0;
             m_PreparedCamera = null;
+            ResetEvents();
             if (Capacity == 0) return;
 
             // Every particle dead: the list holds the capacity as its count and the indices so
@@ -346,9 +348,12 @@ namespace Unbound.Runtime
 
         void UpdateSleepState(uint frame)
         {
-            if (m_Spawned != 0) m_LastActiveFrame = frame;
+            // A system spawned by GPU events is as active as the system whose kernels spawn
+            // into it: what that one's particles spawned this step is counted on the GPU.
+            bool spawning = m_Spawned != 0 || ParentAwake;
+            if (spawning) m_LastActiveFrame = frame;
             bool wasSleeping = m_Sleeping;
-            if (!HasKill) m_Sleeping = m_Total == 0;
+            if (!CountedOnGpu) m_Sleeping = m_Total == 0;
             else if (m_LastActiveFrame < m_ReadbackFrame)
             {
                 // An answer newer than the last spawn says whether anything is left alive; a
@@ -359,7 +364,7 @@ namespace Unbound.Runtime
             // Without such an answer a system stays as it is, and wakes when it spawns: one
             // that has spawned nothing yet sleeps on (tests/projects/vfx, `draw/over life`:
             // its first count is asked for the frame after its first particle).
-            else if (m_Spawned != 0) m_Sleeping = false;
+            else if (spawning) m_Sleeping = false;
             if (wasSleeping && !m_Sleeping)
             {
                 // Awake again: the old count says nothing, and a new one is asked for next frame.
@@ -417,7 +422,10 @@ namespace Unbound.Runtime
             m_PrefixWords[1] = maxParticles;
             if (m_PrefixSum >= 0) Effect.GpuBuffer(m_PrefixSum, 2).SetData(m_PrefixWords, 0, 0, 2);
 
-            if (spawned != 0 && m_Initialize != null)
+            // The step's GPU events start uncounted; the kernels below append them.
+            ResetEventCounts();
+            if (ReceivesGpuEvents) InitializeFromEvents();
+            else if (spawned != 0 && m_Initialize != null)
             {
                 int events = m_SpawnPrefix.Count;
                 if (events + 1 > m_SpawnWords.Length) Array.Resize(ref m_SpawnWords, Math.Max(events + 1, m_SpawnWords.Length * 2));
@@ -449,6 +457,7 @@ namespace Unbound.Runtime
             foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
             if (m_HasRenderer)
                 foreach (var sort in m_StepSorts) sort.Run(Effect);
+            FillEventArguments();
         }
 
         /// <summary>The sort of an output's list (a task of the compiled graph): the list of key
@@ -557,14 +566,24 @@ namespace Unbound.Runtime
         /// of its simulation asks nothing: tests/projects/vfxoutputs `away`).</summary>
         internal void UpdateReadback()
         {
-            if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0 || !m_HasRenderer) return;
+            if (!CountedOnGpu || HasStrips || Capacity == 0 || !m_HasRenderer) return;
+            // The particles left of a system that kills: its room less its dead ones. Of a
+            // system that kills none and is spawned into by GPU events: the particles spawned
+            // so far, the count its list keeps.
+            bool dead = HasKill && m_DeadList >= 0;
+            if (!dead && m_EventList < 0) return;
             uint frame = VFXManager.Frame;
             if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping || m_UpdatedFrame != frame) return;
             m_ReadbackPending = true;
             m_ReadbackFrame = frame;
             m_RequestGeneration = m_ReadbackGeneration;
-            AsyncGPUReadback.Request(Effect.GpuBuffer(m_DeadList, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
+            m_ReadsDead = dead;
+            if (dead) AsyncGPUReadback.Request(Effect.GpuBuffer(m_DeadList, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
+            else AsyncGPUReadback.Request(Effect.GpuBuffer(m_EventList, 0), sizeof(uint), sizeof(uint), m_OnReadback ??= OnReadback);
         }
+
+        /// <summary>Whether the count asked for is the dead particles' (else the spawned ones').</summary>
+        bool m_ReadsDead;
 
         void OnReadback(AsyncGPUReadbackRequest request)
         {
@@ -573,7 +592,8 @@ namespace Unbound.Runtime
             m_ReadbackPending = false;
             m_NextReadbackFrame += ReadbackPeriod;
             if (request.hasError) return;
-            m_ReadAlive = (int)(Capacity - Math.Min(Capacity, request.GetData<uint>()[0]));
+            uint counted = Math.Min(Capacity, request.GetData<uint>()[0]);
+            m_ReadAlive = (int)(m_ReadsDead ? Capacity - counted : counted);
         }
 
         /// <summary>A count rounded up to whole thread groups.</summary>
@@ -686,6 +706,28 @@ namespace Unbound.Runtime
             internal void Dispatch(uint count, int prefixOffset)
             {
                 if (count == 0 || m_Failed) return;
+                Bind();
+                ThreadGroups(count, out int x, out int y);
+                if (x != m_DispatchWidth) m_Shader.SetInt(s_DispatchWidth, m_DispatchWidth = x);
+                if (prefixOffset != m_PrefixOffset) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = prefixOffset, 0f, 0f));
+                m_Shader.Dispatch(m_Kernel, x, y, 1);
+            }
+
+            /// <summary>Runs the kernel over the thread groups that <paramref name="arguments"/>
+            /// hold at <paramref name="offset"/> bytes, counted on the GPU (a row of groups:
+            /// such a kernel numbers its threads along one dimension).</summary>
+            internal void DispatchIndirect(GraphicsBuffer arguments, int offset)
+            {
+                if (m_Failed) return;
+                Bind();
+                if (m_PrefixOffset != 0) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = 0, 0f, 0f));
+                m_Shader.DispatchIndirect(m_Kernel, arguments, (uint)offset);
+            }
+
+            /// <summary>Gives the kernel the textures and buffers it reads, the ones that
+            /// changed since it last ran.</summary>
+            void Bind()
+            {
                 var effect = m_System.Effect;
                 var values = effect.Values;
                 for (int i = 0; i < m_Objects.Slots.Length; i++)
@@ -708,10 +750,6 @@ namespace Unbound.Runtime
                     m_Bound[i] = buffer;
                     m_Shader.SetBuffer(m_Kernel, m_BufferNames[i], buffer);
                 }
-                ThreadGroups(count, out int x, out int y);
-                if (x != m_DispatchWidth) m_Shader.SetInt(s_DispatchWidth, m_DispatchWidth = x);
-                if (prefixOffset != m_PrefixOffset) m_Shader.SetVector(s_InstancingBufferOffsets, new Vector4(0f, m_PrefixOffset = prefixOffset, 0f, 0f));
-                m_Shader.Dispatch(m_Kernel, x, y, 1);
             }
 
             /// <summary>The camera a per-camera kernel runs for.</summary>
@@ -734,6 +772,7 @@ namespace Unbound.Runtime
         internal override void Release()
         {
             m_ReadbackGeneration++;
+            ReleaseEvents();
             m_Initialize?.Release();
             foreach (var update in m_Updates) update.Release();
             foreach (var kernel in m_PerCamera) kernel.Release();

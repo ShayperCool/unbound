@@ -144,7 +144,7 @@ namespace UnityEngine.VFX
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
                 if (system.type != VFXSystemType.Particle) continue;
-                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasStrips | VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasDirectLink
+                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasStrips | VFXSystemFlag.SystemHasDirectLink
                     | VFXSystemFlag.SystemNeedsComputeBounds | VFXSystemFlag.SystemAutomaticBounds | VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
             }
@@ -239,6 +239,14 @@ namespace UnityEngine.VFX
             buffer?.Release();
             var target = desc.target == GraphicsBuffer.Target.Raw ? GraphicsBuffer.Target.Raw : GraphicsBuffer.Target.Structured;
             return m_GpuBuffers[index] = new GraphicsBuffer(target, count, (int)Math.Max(desc.stride, sizeof(uint)));
+        }
+
+        /// <summary>The effect's system of an index of the asset's, null when it has none.</summary>
+        internal VFXSystem SystemAt(int index)
+        {
+            foreach (var system in m_Systems)
+                if (system.Index == index) return system;
+            return null;
         }
 
         // ---------------------------------------------------------------------- the events
