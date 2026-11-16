@@ -117,4 +117,31 @@ namespace Unbound.Runtime
             if (!TagManager.IsDefined(tag)) throw new UnityException(TagNotDefined(tag));
         }
     }
+
+    /// <summary>
+    /// The receiver check of game code's calls to engine members whose Unity binding refuses a
+    /// dead object (Unbound.Host's lifetime checks call it before such a member): a null
+    /// reference fails as the Mono runtime's own null reference does, a destroyed or placeholder
+    /// object with its <see cref="ObjectErrors.Receiver"/> exception.
+    /// </summary>
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+    public static class Lifetime
+    {
+        /// <summary>The name of the type holding a game assembly's checked calls; stack traces
+        /// leave its frames out.</summary>
+        public const string CallsType = "<UnboundLifetimeChecks>";
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining), System.Diagnostics.StackTraceHidden]
+        public static void Check(Object receiver)
+        {
+            if (receiver is null) ThrowNull();
+            if (receiver.m_Destroyed) ThrowDead(receiver);
+        }
+
+        [System.Diagnostics.StackTraceHidden]
+        static void ThrowNull() => throw new NullReferenceException(ObjectErrors.RuntimeNullReference);
+
+        [System.Diagnostics.StackTraceHidden]
+        static void ThrowDead(Object receiver) => throw ObjectErrors.Receiver(receiver);
+    }
 }

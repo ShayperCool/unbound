@@ -358,6 +358,7 @@ public static unsafe class Game
             {
                 var filtered = NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
                 if (Unbound.Runtime.Compat.ScriptFloatsWide) filtered = WideFloats.TryWiden(filtered);
+                filtered = LifetimeChecks.TryInstrument(filtered);
                 return (filtered, AccessChecks.Symbols);
             }
             finally
@@ -366,9 +367,11 @@ public static unsafe class Game
             }
         };
         // The filters' code and the engine they redirect to: a rebuild of either adapts again.
+        LifetimeChecks.Load(c.FacadeDir);
         GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"
             + typeof(UnityEngine.Object).Assembly.ManifestModule.ModuleVersionId
-            + (Unbound.Runtime.Compat.ScriptFloatsWide ? "|wide-floats" : "");
+            + (Unbound.Runtime.Compat.ScriptFloatsWide ? "|wide-floats" : "")
+            + "|lifetime-" + LifetimeChecks.Identity;
         // Converted game assemblies call the converted math in this generated assembly.
         GameDomain.GeneratedAssemblies.Clear();
         if (Unbound.Runtime.Compat.ScriptFloatsWide) GameDomain.GeneratedAssemblies[WideFloats.EngineMathAssembly] = WideFloats.EngineMathImage;

@@ -223,8 +223,5 @@
   "unassigned.transform.to_string",
   "unassigned.transform.transform",
   "unassigned.transform.type"
- ],
- "Members of destroyed objects outside the checked set answer instead of throwing MissingReferenceException (Q530 slice 2, member checks)": [
-  "destroyed.texture.width"
  ]
 }

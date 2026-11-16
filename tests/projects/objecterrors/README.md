@@ -30,9 +30,9 @@ none of the values depends on the OS or the graphics device):
 * A destroyed object's members throw MissingReferenceException; as an argument the message
   ends " Parameter name: <name>".
 
-Unbound gives the measured argument errors, tags, finders and destroyed-object messages. The
-placeholder objects and member checks of every dead-object member are open
-(`residuals.json`, Q530 slice 2).
+Unbound gives the measured argument errors, tags, finders and destroyed-object messages, and
+game code's calls of members whose binding refuses a dead object check their receiver as the
+binding does. The placeholder objects are open (`residuals.json`, Q530 slice 2b).
 
     export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
     python3 tests/projects/objecterrors/run.py record --label A     # macOS: batch-mode Editor

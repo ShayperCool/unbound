@@ -43,7 +43,7 @@ namespace Unbound.Runtime
 
         static bool IsGameMethod(MethodBase method)
         {
-            if (method.DeclaringType == null) return false;
+            if (method.DeclaringType == null || method.DeclaringType.Name == Unbound.Runtime.Lifetime.CallsType) return false;
             var assembly = method.DeclaringType?.Assembly ?? method.Module.Assembly;
             if (assembly == s_Engine || assembly == s_CoreLib) return false;
             string name = assembly.GetName().Name ?? "";
