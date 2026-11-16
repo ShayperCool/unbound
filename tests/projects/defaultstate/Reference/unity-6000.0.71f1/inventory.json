@@ -1315,6 +1315,12 @@
       "type": "UnityEditor.GameObjectInspector"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.GameObjectUtility"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -8795,6 +8801,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.UnityException"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.VFXModule",
+      "status": "candidate",
+      "type": "UnityEngine.VFX.VFXCameraXRSettings"
     },
     {
       "category": "class",

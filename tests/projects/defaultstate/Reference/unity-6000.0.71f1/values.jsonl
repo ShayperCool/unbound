@@ -13359,4 +13359,9 @@
 {"key":"UnityEngine.UIElements.SliderInt/Property/UnityEngine.UIElements.VisualElement/visualTreeAssetSource","status":"value","value":"null"}
 {"key":"UnityEngine.UIElements.SliderInt/Property/UnityEngine.UIElements.VisualElement/worldBound","status":"value","value":"UnityEngine.Rect{bottom=NaN;center=UnityEngine.Vector2{x=NaN;y=NaN};height=NaN;left=0;max=UnityEngine.Vector2{x=NaN;y=NaN};min=UnityEngine.Vector2{x=0;y=0};position=UnityEngine.Vector2{x=0;y=0};right=NaN;size=UnityEngine.Vector2{x=NaN;y=NaN};top=0;width=NaN;x=0;xMax=NaN;xMin=0;y=0;yMax=NaN;yMin=0}"}
 {"key":"UnityEngine.UIElements.SliderInt/Property/UnityEngine.UIElements.VisualElement/worldTransform","status":"value","value":"UnityEngine.Matrix4x4{m00=1;m10=0;m20=0;m30=0;m01=0;m11=1;m21=0;m31=0;m02=0;m12=0;m22=1;m32=0;m03=0;m13=0;m23=0;m33=1}"}
+{"key":"UnityEditor.GameObjectUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.VFX.VFXCameraXRSettings/@factory","status":"value","value":"struct"}
+{"key":"UnityEngine.VFX.VFXCameraXRSettings/Field/UnityEngine.VFX.VFXCameraXRSettings/viewCount","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXCameraXRSettings/Field/UnityEngine.VFX.VFXCameraXRSettings/viewOffset","status":"value","value":"0"}
+{"key":"UnityEngine.VFX.VFXCameraXRSettings/Field/UnityEngine.VFX.VFXCameraXRSettings/viewTotal","status":"value","value":"0"}
 {"key":"complete","status":"value","value":"1"}
