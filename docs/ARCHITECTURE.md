@@ -137,7 +137,8 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   file IO, as Mono's path remapping makes it in the Editor.
 * **Number formatting**: Mono formats floating point by .NET Framework rules, which .NET Core 3.0
   changed (default and "G" print 7/15 significant digits, not the shortest round-trip string, so
-  `1849.9999f` shows "1850"; other formats round those digits again; zero prints no sign). Game and
+  `1849.9999f` shows "1850"; 9/17 digits when the format asks for more; exact ties round away from
+  zero; other formats round those digits again; zero prints no sign). Game and
   plugin assemblies have their `float`/`double` `ToString`, `string.Format`/`Concat`,
   `StringBuilder.Append*`, `Convert.ToString` and virtual `ToString` calls redirected to
   `Unbound.MonoNumberFormat` when they load (Cecil, keeping every IL offset so their PDBs still
