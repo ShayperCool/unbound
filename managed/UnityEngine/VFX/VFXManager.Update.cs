@@ -110,15 +110,9 @@ namespace UnityEngine.VFX
         {
             if (s_CopyBuffer == null && !s_CopyBufferMissing)
             {
-                const string Path = "Packages/com.unity.visualeffectgraph/Shaders/VFXCopyBuffer.compute";
-                s_CopyBuffer = UnityEditor.AssetDatabase.LoadAssetAtPath<ComputeShader>(Path);
+                s_CopyBuffer = VFXPackageShaders.Load(VFXPackageShaders.CopyBuffer, "particle systems that kill particles cannot spawn");
                 s_CopyBufferMissing = s_CopyBuffer == null;
-                if (s_CopyBufferMissing)
-                {
-                    Debug.LogError($"Unbound: the Visual Effect Graph package's {Path} was not found; particle systems that kill particles cannot spawn");
-                    return;
-                }
-                s_CopyBuffer = Object.Instantiate(s_CopyBuffer);
+                if (s_CopyBufferMissing) return;
                 s_CopySelfKernel = s_CopyBuffer.FindKernel("CSVFXCopyStructBufferSelf");
                 // One instance: its count at word zero, the copy right after.
                 s_CopyBuffer.SetInt("srcOffset", 0);
