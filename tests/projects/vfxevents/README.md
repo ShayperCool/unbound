@@ -1,0 +1,82 @@
+# vfxevents probe
+
+GPU events of Visual Effect Graph (com.unity.visualeffectgraph 17.0.4 under URP 17, the Editor's
+built-in packages, unmodified): systems whose particles are spawned by the kernels of another
+system (`Trigger Event` blocks and `GPU Event` contexts). Small graphs of the probe's own, each
+drawn in front of a camera of its own, recorded by the same script in the Unity Editor and in
+Unbound. The outputs are opaque unlit quads that draw themselves, so the images show the
+simulation alone; the import, the API and the simulation of systems spawned from the CPU are
+`tests/projects/vfx`, outputs `tests/projects/vfxoutputs` and `tests/projects/vfxlit`.
+
+The Editor records in a window (not in batch mode), after letting five editor updates pass
+(`Assets/Editor/ProbeRunner.cs`): see `tests/projects/vfx/README.md`.
+
+## Graphs
+
+`Assets/Editor/Authoring/EventAuthoring.cs` builds them in the Editor through the package's own
+models (its assembly carries the name of a friend assembly of the package). In each, the
+spawned systems take their particles' position from the particle that spawned them.
+
+- `EventOnDie`: six particles a second rising for half a second; each that dies spawns four
+  sparks with velocities drawn at random.
+- `EventAlways`: four particles that each spawn one a step, into a system of 32 whose
+  particles live three tenths of a second: more are asked for than it has room for.
+- `EventRate`: three particles that each spawn twenty a second (`Over Time`).
+- `EventDistance`: two particles that each spawn five for every unit they travel
+  (`Over Distance`).
+- `EventAtBirth`: the trigger in the initialize context: each particle spawns three as it is
+  born, which take its colour too.
+- `EventTwo`: two triggers in one system, each into a system of its own: on death and at every
+  step.
+- `EventChain`: three systems in a chain: what an event spawned spawns in turn when it dies.
+- `EventKeep`, `EventKeepRoom`: what the events spawn never dies: a system of 24 that fills up
+  and one of 96 that does not.
+
+## What is recorded
+
+`Assets/Scripts/EventProbe.cs` gives each control an effect of a graph (seed 11) and an
+orthographic camera rendering into a 64x64 texture. At the frames named it saves the image
+`draw-<control>-f<frame>.png`; at a fixed list of frames (the first ones, around frame 30 and
+around the alive counts' second answer, frame 63) a row `sim/<control>/f<frame>`: the effect's
+alive count, whether it is culled and awake, and each particle system's alive count, capacity
+and whether it sleeps. `systems/<control>` lists the systems' names.
+
+- One control per graph, named as the graph (`on die`, `always`, `rate`, `distance`,
+  `at birth`, `two`, `chain`, `keep`, `keep room`).
+- `reinit`: `EventOnDie` with `Reinit()` called at frame 30. Its sparks after that (frame 66)
+  are not the ones a new effect draws: the numbers the spawned particles are given, which seed
+  what they draw at random, go on counting through the reinitialisation.
+- `stopped`: `EventRate` with `Stop()` called at frame 30: the spawner stops, the particles
+  that spawn go on living and spawning.
+
+What the rows show of systems spawned by GPU events: such a system is awake while the system
+that spawns into it is; its alive count is read back from the GPU like that of any system that
+kills particles (-1 in the effect's sum before the first answer, then an answer every sixty
+frames), also when its own particles never die: then it is the number spawned so far, at most
+its capacity (`keep`: 24 at the second answer; `keep room`: the number spawned by then).
+
+Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/README.md`).
+`capture/graphs imported while playing` must be empty.
+
+## Image limits
+
+Every image is the Editor's pixel for pixel on the machine both ran on (an NVIDIA driver, the
+Linux Editor on OpenGL Core).
+
+## Not covered
+
+- Strips, and systems spawned by GPU events that are strips: not run yet (the effect says so).
+- `On Collide` triggers; a spawned system that reads the count of its event (`spawnCount`);
+  events of a system that spawns from the CPU as well.
+- An effect whose spawning system sleeps or is culled while the spawned one still has
+  particles; several effects of one graph; an effect paused or with another play rate.
+- More events in a step than one dispatch's thread groups reach, and systems of more than a
+  few dozen particles.
+- Other devices than OpenGL Core in the Editor.
+
+## Running
+
+    python3 tests/projects/vfxevents/run.py record --label a     # one Editor capture (GPU display)
+    python3 tests/projects/vfxevents/run.py record --label b
+    python3 tests/projects/vfxevents/run.py publish a b          # identical captures -> Reference/ and Authored/
+    python3 tests/projects/vfxevents/run.py gate                 # the engine on the authored project

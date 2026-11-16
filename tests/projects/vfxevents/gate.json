@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/vfxevents/run.py gate"
+  ],
+  "summary": "vfxevents: .*",
+  "engine_paths": [
+    "managed/UnityEngine/VFX/",
+    "managed/UnityEngine/Graphics/ComputeShader.cs",
+    "managed/UnityEngine/Graphics/AsyncReadback.cs"
+  ]
+}
