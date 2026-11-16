@@ -17,13 +17,36 @@ public class ColumnLayoutProbe : MonoBehaviour
     [Serializable] class Row { public string key; public string value; }
     StreamWriter output;
     void Put(string key, object value) => output.WriteLine(JsonUtility.ToJson(new Row { key = key, value = Convert.ToString(value, CultureInfo.InvariantCulture) }));
-    MultiColumnListView view;
-
-    string Widths()
+    static string Widths(MultiColumnListView view)
     {
         var cols = view.Query(className: "unity-multi-column-header__column").ToList();
         return string.Join(" ", cols.Select(c => c.name + ":" + c.resolvedStyle.display + ":" + c.layout.width.ToString("R", CultureInfo.InvariantCulture)));
     }
+
+    static MultiColumnListView View(VisualElement root, float width, float? maxWidth, float hiddenWidth)
+    {
+        var view = new MultiColumnListView();
+        view.style.width = width; view.style.height = 120;
+        view.columns.stretchMode = Columns.StretchMode.Grow;
+        var a = new Column { name = "a", title = "A", width = 150, stretchable = true };
+        var b = new Column { name = "b", title = "B", width = 150, stretchable = true };
+        if (maxWidth.HasValue) { a.maxWidth = maxWidth.Value; b.maxWidth = maxWidth.Value; }
+        view.columns.Add(a);
+        view.columns.Add(b);
+        view.columns.Add(new Column { name = "c", title = "C", width = hiddenWidth, visible = false });
+        foreach (var c in view.columns) { c.makeCell = () => new Label(); c.bindCell = (e, i) => ((Label)e).text = i.ToString(); }
+        view.itemsSource = new List<int> { 1, 2, 3 };
+        root.Add(view);
+        return view;
+    }
+
+    static void Replace(MultiColumnListView view)
+    {
+        view.SetViewController(new MultiColumnListViewController(view.columns, view.sortColumnDescriptions, new List<SortColumnDescription>()));
+        view.Rebuild();
+    }
+
+    IEnumerator Frames() { for (int i = 0; i < 5; i++) yield return null; }
 
     IEnumerator Start()
     {
@@ -33,42 +56,44 @@ public class ColumnLayoutProbe : MonoBehaviour
         if (Screen.dpi > 0) settings.scale = 96f / Screen.dpi;
         var doc = new GameObject("Doc").AddComponent<UIDocument>();
         doc.panelSettings = settings;
-        view = new MultiColumnListView();
-        view.style.width = 400; view.style.height = 200;
-        view.columns.stretchMode = Columns.StretchMode.Grow;
-        view.columns.Add(new Column { name = "a", title = "A", width = 150, stretchable = true });
-        view.columns.Add(new Column { name = "b", title = "B", width = 150, stretchable = true });
-        view.columns.Add(new Column { name = "c", title = "C", width = 120, visible = false });
-        foreach (var c in view.columns) { c.makeCell = () => new Label(); c.bindCell = (e, i) => ((Label)e).text = i.ToString(); }
-        view.itemsSource = new List<int> { 1, 2, 3 };
-        doc.rootVisualElement.Add(view);
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("start", Widths());
+
+        // Shown and hidden before and after the controller is replaced, at one width.
+        var view = View(doc.rootVisualElement, 400, null, 120);
+        yield return Frames();
+        Put("start", Widths(view));
         view.columns["c"].visible = true;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("show1", Widths());
+        yield return Frames();
+        Put("show1", Widths(view));
         view.columns["c"].visible = false;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("hide1", Widths());
-        view.SetViewController(new MultiColumnListViewController(view.columns, view.sortColumnDescriptions, new List<SortColumnDescription>()));
-        view.Rebuild();
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("replaced", Widths());
-        view.columns["a"].width = 150; view.columns["b"].width = 150;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("reset", Widths());
+        yield return Frames();
+        Put("hide1", Widths(view));
+        Replace(view);
+        yield return Frames();
+        Put("replaced", Widths(view));
         view.columns["c"].visible = true;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("show2", Widths());
+        yield return Frames();
+        Put("show2", Widths(view));
         view.columns["c"].visible = false;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("hide2", Widths());
-        view.columns["a"].width = 150; view.columns["b"].width = 150;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("reset2", Widths());
-        view.columns["c"].visible = true;
-        for (int i = 0; i < 5; i++) yield return null;
-        Put("show3", Widths());
+        yield return Frames();
+        Put("hide2", Widths(view));
+        view.RemoveFromHierarchy();
+
+        // The replaced controller's layout keeps the width it last laid out (400): after the view
+        // is widened to 600, a column shown is made room for against 400 by a layout that still
+        // follows the columns, though the current one has room for it.
+        var stale = View(doc.rootVisualElement, 400, 150, 200);
+        yield return Frames();
+        Put("stale.start", Widths(stale));
+        Replace(stale);
+        yield return Frames();
+        Put("stale.replaced", Widths(stale));
+        stale.style.width = 600;
+        yield return Frames();
+        Put("stale.widened", Widths(stale));
+        stale.columns["c"].visible = true;
+        yield return Frames();
+        Put("stale.show", Widths(stale));
+
         Put("complete", 1);
         output.Dispose();
         EditorApplication.Exit(0);

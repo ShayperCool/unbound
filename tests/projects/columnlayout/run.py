@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Record independent Editor captures or replay the multi-column layout lifetime controls.
+"""Record independent Editor captures or replay the multi-column layout lifetime controls (header column widths).
 
-The controls compare managed values and notifications only. The reference was recorded with
+The controls compare header column widths only. The reference was recorded with
 the macOS Editor in batch mode (it does not depend on the OS or the graphics device); on Linux
 `native` uses the shared GPU Editor runner."""
 import argparse

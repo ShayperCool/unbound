@@ -1,19 +1,22 @@
 # Multi-column layout lifetime
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 10 rows (header column widths, laid out in a
+byte-identical and the canonical reference has 11 rows (header column widths, laid out in a
 runtime panel whose scale is `96 / Screen.dpi`, so a point is a pixel on every display). The gate
 compares every row exactly.
 
-A MultiColumnListView 400 points wide in Grow mode has two stretchable 150-point columns and a
-hidden 120-point column. The probe shows and hides the third column, replaces the view controller
-(`SetViewController` with a new `MultiColumnListViewController`, which disposes the old header),
-then shows and hides it again, and records the header columns' widths after each step.
+The release's header does not dispose its column layout when it is disposed (a replaced view
+controller disposes its header): the layout stays subscribed to the columns. Unbound detached it,
+through a `ColumnLayout.Dispose` the release does not declare.
 
-The release's header does not dispose its column layout, which stays subscribed to the columns;
-Unbound did, through a `ColumnLayout.Dispose` the release does not declare. These controls give the
-same widths either way (a lingering layout only marks itself dirty; the current header's layout sets
-the widths), on the runtime before and after the change. They guard the widths around the
-controller replacement; they do not tell the two lifetimes apart, which no control found here does.
+- A MultiColumnListView 400 points wide in Grow mode with two stretchable 150-point columns and a
+  hidden 120-point column: the third column is shown and hidden before and after
+  `SetViewController` replaces the controller (`start` .. `hide2`). The widths are the same either
+  way.
+- `stale.*` tells the two apart. The two stretchable columns are limited to 150 points and the
+  hidden column is 200; the controller is replaced at 400 points and the view is then widened to
+  600. Showing the column, the replaced controller's layout, still following the columns with the
+  width it last laid out (400), makes room for it: both stretchable columns shrink to 100
+  (`stale.show`), though the current layout has room. Detaching gave 150, 150, 200.
 
 Other releases are unmeasured.

@@ -2,9 +2,10 @@
 {"key":"show1","value":"a:Flex:140 b:Flex:140 c:Flex:120"}
 {"key":"hide1","value":"a:Flex:140 b:Flex:140"}
 {"key":"replaced","value":"a:Flex:140 b:Flex:140"}
-{"key":"reset","value":"a:Flex:140 b:Flex:140"}
 {"key":"show2","value":"a:Flex:140 b:Flex:140 c:Flex:120"}
 {"key":"hide2","value":"a:Flex:140 b:Flex:140"}
-{"key":"reset2","value":"a:Flex:140 b:Flex:140"}
-{"key":"show3","value":"a:Flex:140 b:Flex:140 c:Flex:120"}
+{"key":"stale.start","value":"a:Flex:150 b:Flex:150"}
+{"key":"stale.replaced","value":"a:Flex:150 b:Flex:150"}
+{"key":"stale.widened","value":"a:Flex:150 b:Flex:150"}
+{"key":"stale.show","value":"a:Flex:100 b:Flex:100 c:Flex:200"}
 {"key":"complete","value":"1"}
