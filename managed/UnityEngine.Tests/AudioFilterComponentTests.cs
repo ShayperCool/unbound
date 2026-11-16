@@ -60,15 +60,15 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(clip); }
         }
 
-        [Theory]
-        [InlineData(AudioSpeakerMode.Mono)]
-        [InlineData(AudioSpeakerMode.Quad)]
-        [InlineData(AudioSpeakerMode.Mode7point1)]
-        public void SixInputPlaybackIsAdmittedInEveryLayout(AudioSpeakerMode mode)
+        // The virtual driver is stereo, so Mono is the only layout outside Stereo/Prologic it
+        // activates; the mixer's own tests cover the wider layouts.
+        [Fact]
+        public void SixInputPlaybackIsAdmittedOutsideStereo()
         {
             var config = AudioSettings.GetConfiguration();
-            config.speakerMode = mode;
+            config.speakerMode = AudioSpeakerMode.Mono;
             Assert.True(AudioSettings.Reset(config));
+            Assert.Equal(AudioSpeakerMode.Mono, m_Backend.ActiveSpeakerMode);
             var source = Source("Six input layout");
             source.playOnAwake = false;
             var clip = AudioClip.Create("Six input", 1024, 6, 48000, false);
