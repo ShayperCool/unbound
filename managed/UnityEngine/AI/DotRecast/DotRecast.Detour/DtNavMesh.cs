@@ -888,17 +888,17 @@ namespace DotRecast.Detour
             }
         }
 
-        /// Unbound: connects the off-mesh connections of a newly added tile to the tiles their ends
-        /// lie over, and the connections of other tiles whose ends lie over it.
-        /// Unbound: whether a connection's end may land in this tile (a bound end lands in its tile
-        /// only).
         /// Unbound: how far up or down a connection's ends attach: its own reach when bound (the
         /// agent type's climb), else the tile's.
         static float ClimbOf(DtOffMeshConnection con, DtMeshTile tile) => con.climb > 0f ? con.climb : tile.data.header.walkableClimb;
 
+        /// Unbound: whether a connection's end may land in this tile (a bound end lands in the
+        /// tiles of its data only).
         static bool LandsIn(DtOffMeshConnection con, DtMeshTile land) =>
-            con.landKey == 0 || con.landKey == land.data.ownerKey >> DtMeshData.OwnerDataShift;
+            con.landData == 0 || con.landData == land.data.ownerData;
 
+        /// Unbound: connects the off-mesh connections of a newly added tile to the tiles their ends
+        /// lie over, and the connections of other tiles whose ends lie over it.
         void ConnectOffMeshEnds(DtMeshTile tile)
         {
             for (int c = 0; c < tile.data.header.offMeshConCount; ++c)
@@ -1701,6 +1701,11 @@ namespace DotRecast.Detour
         public void ClosestPointOnPoly(long refs, RcVec3f pos, out RcVec3f closest, out bool posOverPoly)
         {
             GetTileAndPolyByRefUnsafe(refs, out var tile, out var poly);
+            ClosestPointOnPoly(tile, poly, pos, out closest, out posOverPoly);
+        }
+
+        void ClosestPointOnPoly(DtMeshTile tile, DtPoly poly, RcVec3f pos, out RcVec3f closest, out bool posOverPoly)
+        {
             closest = pos;
 
             if (GetPolyHeight(tile, poly, pos, out var h))
@@ -1731,6 +1736,32 @@ namespace DotRecast.Detour
         /// Find nearest polygon within a tile.
         private long FindNearestPolyInTile(DtMeshTile tile, RcVec3f center, RcVec3f halfExtents, out RcVec3f nearestPt)
         {
+            long nearest = NearestPolyInTile(tile, center, halfExtents, out nearestPt, out _);
+            return nearest < 0 ? 0 : nearest;
+        }
+
+        /// Unbound: where an off-mesh connection end at <paramref name="p"/> would attach in a tile
+        /// not yet added to the mesh, by the same search and checks as ConnectOffMeshEnd (the
+        /// nearest polygon within <paramref name="rad"/> across and <paramref name="climb"/> up and
+        /// down). <paramref name="rank"/> is that polygon's FindNearestPolyInTile ranking.
+        public bool AttachesInData(DtMeshData data, RcVec3f p, float rad, float climb, out float rank)
+        {
+            rank = float.MaxValue;
+            var tile = new DtMeshTile(0) { data = data };
+            var ext = new RcVec3f(rad, climb, rad);
+            if (NearestPolyInTile(tile, p, ext, out var nearestPt, out float d) < 0)
+                return false;
+            if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(rad))
+                return false;
+            if (MathF.Abs(nearestPt.Y - p.Y) > climb)
+                return false;
+            rank = d;
+            return true;
+        }
+
+        /// The nearest polygon's index within the tile (-1: none) and its ranking.
+        long NearestPolyInTile(DtMeshTile tile, RcVec3f center, RcVec3f halfExtents, out RcVec3f nearestPt, out float rank)
+        {
             nearestPt = RcVec3f.Zero;
 
             RcVec3f bmin = RcVec3f.Subtract(center, halfExtents);
@@ -1743,13 +1774,13 @@ namespace DotRecast.Detour
             int polyCount = QueryPolygonsInTile(tile, bmin, bmax, polys, polys.Length);
 
             // Find nearest polygon amongst the nearby polygons.
-            long nearest = 0;
+            long nearest = -1;
             float nearestDistanceSqr = float.MaxValue;
             for (int i = 0; i < polyCount; ++i)
             {
                 long refs = polys[i];
                 float d;
-                ClosestPointOnPoly(refs, center, out var closestPtPoly, out var posOverPoly);
+                ClosestPointOnPoly(tile, tile.data.polys[DecodePolyIdPoly(refs)], center, out var closestPtPoly, out var posOverPoly);
 
                 // If a point is directly over a polygon and closer than
                 // climb height, favor that instead of straight line nearest point.
@@ -1774,6 +1805,7 @@ namespace DotRecast.Detour
                 }
             }
 
+            rank = nearestDistanceSqr;
             return nearest;
         }
 

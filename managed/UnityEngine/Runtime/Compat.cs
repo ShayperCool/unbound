@@ -129,15 +129,15 @@ namespace Unbound.Runtime
         /// unmeasured immediate stop.</summary>
         internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Straight paths keep points that are not exactly equal (a path's end 1e-7 m from
-        /// its start is a second corner), measured by tests/projects/navarrival `query.*` on
-        /// 6000.0.71f1. Other releases retain Detour's colocation threshold, unmeasured.</summary>
-        /// <summary>A point link's start and end each attach to the one polygon nearest to them among
-        /// all the agent type's NavMesh data (within the agent type's climb), measured by
+        /// <summary>A runtime point link's start and end each attach to the one polygon nearest to
+        /// them among all the agent type's NavMesh data (within the agent type's climb), measured by
         /// tests/projects/navpath `--profile layers` on 6000.0.71f1. Other releases keep attaching
         /// to every tile over them, unmeasured.</summary>
         internal static bool NavMeshLinkBindingMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Straight paths keep points that are not exactly equal (a path's end 1e-7 m from
+        /// its start is a second corner), measured by tests/projects/navarrival `query.*` on
+        /// 6000.0.71f1. Other releases retain Detour's colocation threshold, unmeasured.</summary>
         internal static bool NavMeshStraightPathExactMergeMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>A braking agent arrives on the step that leaves at most

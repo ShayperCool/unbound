@@ -12,12 +12,16 @@ namespace UnityEngine.Tests
     [Collection("Frames")]
     public sealed class NavMeshLinkBindingTests
     {
+        static NavMeshBuildSource FloorSource(float x) =>
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(4f, 1f, 8f), transform = Matrix4x4.Translate(new Vector3(x + 90f, -0.5f, 0f)) };
+
+        static readonly Bounds s_Bounds = new Bounds(new Vector3(90f, 0f, 0f), new Vector3(16f, 4f, 12f));
+
         static NavMeshData Floor(float x, float climb = -1f)
         {
-            var source = new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(4f, 1f, 8f), transform = Matrix4x4.Translate(new Vector3(x + 90f, -0.5f, 0f)) };
             var settings = NavMesh.GetSettingsByID(0);
             if (climb >= 0f) settings.agentClimb = climb;
-            return NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { source }, new Bounds(new Vector3(90f, 0f, 0f), new Vector3(16f, 4f, 12f)), Vector3.zero, Quaternion.identity);
+            return NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { FloorSource(x) }, s_Bounds, Vector3.zero, Quaternion.identity);
         }
 
         static Vector3 At(float x, float y) => new Vector3(x + 90f, y, 0f);
@@ -110,6 +114,112 @@ namespace UnityEngine.Tests
             var right = NavMesh.AddNavMeshData(Floor(4f, dataClimb));
             var link = Link(0.0833f + above);
             try { Assert.Equal(status, Path(0.0833f, 0.0833f)); }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
+
+        [Fact]
+        public void AStartRebindsWhenItsDataIsReplacedBeforeAnyQuery() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            // As NavMeshSurface.BuildNavMesh does: the old data removed and the new added at once.
+            var leftData = Floor(-4f);
+            var left = NavMesh.AddNavMeshData(leftData);
+            var right = NavMesh.AddNavMeshData(Floor(4f));
+            var link = Link(0.0833f);
+            try
+            {
+                Assert.Equal(NavMeshPathStatus.PathComplete, Path(0.0833f, 0.0833f));
+                NavMesh.RemoveNavMeshData(left);
+                left = NavMesh.AddNavMeshData(Floor(-4f));
+                Assert.Equal(NavMeshPathStatus.PathComplete, Path(0.0833f, 0.0833f));
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
+
+        [Fact]
+        public void AWaitingStartIgnoresUnrelatedDataAdded() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            var left = Floor(-4f);
+            var right = Floor(4f);
+            var highLeft = NavMesh.AddNavMeshData(left, new Vector3(0f, 0.3f, 0f), Quaternion.identity);
+            var highRight = NavMesh.AddNavMeshData(right, new Vector3(0f, 0.3f, 0f), Quaternion.identity);
+            var lowLeft = NavMesh.AddNavMeshData(left);
+            var lowRight = NavMesh.AddNavMeshData(right);
+            var link = Link(0.0833f);
+            var far = default(NavMeshDataInstance);
+            try
+            {
+                Assert.Equal(NavMeshPathStatus.PathComplete, Path(0.0833f, 0.0833f));
+                NavMesh.RemoveNavMeshData(lowLeft);
+                NavMesh.RemoveNavMeshData(lowRight);
+                Assert.Equal(NavMeshPathStatus.PathPartial, Path(0.3833f, 0.3833f));
+                // Data far away does not hand the waiting start to the upper floor.
+                far = NavMesh.AddNavMeshData(left, new Vector3(0f, 0f, 40f), Quaternion.identity);
+                Assert.Equal(NavMeshPathStatus.PathPartial, Path(0.3833f, 0.3833f));
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                foreach (var d in new[] { highLeft, highRight, far }) NavMesh.RemoveNavMeshData(d);
+            }
+        });
+
+        [Fact]
+        public void AWaitingStartBindsToDataUpdatedInPlace() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            var settings = NavMesh.GetSettingsByID(0);
+            var leftData = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource>(), s_Bounds, Vector3.zero, Quaternion.identity);
+            var left = NavMesh.AddNavMeshData(leftData);
+            var right = NavMesh.AddNavMeshData(Floor(4f));
+            var link = Link(0.0833f);
+            try
+            {
+                Path(0.0833f, 0.0833f); // the bindings made while the left data is empty
+                Assert.True(NavMeshBuilder.UpdateNavMeshData(leftData, settings, new List<NavMeshBuildSource> { FloorSource(-4f) }, s_Bounds));
+                Assert.Equal(NavMeshPathStatus.PathComplete, Path(0.0833f, 0.0833f));
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
+
+        [Fact]
+        public void AnEndAboveASlopeAttachesStraightBelow() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            // Agent radius 0.2: an end 0.6 above a 30 degree slope is over a polygon within the
+            // climb, though the slope's nearest point is 0.26 away across (Detour projects down).
+            // Away from the tile edges (z 0, x 94), where an end lands in one tile only.
+            var settings = NavMesh.GetSettingsByID(0);
+            settings.agentRadius = 0.2f;
+            var ramp = new NavMeshBuildSource
+            {
+                shape = NavMeshBuildSourceShape.Box, size = new Vector3(4f, 1f, 8f),
+                transform = Matrix4x4.TRS(new Vector3(94f, 0.5f, 0f), Quaternion.Euler(0f, 0f, 30f), Vector3.one),
+            };
+            var left = NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { FloorSource(-4f) }, s_Bounds, Vector3.zero, Quaternion.identity));
+            var right = NavMesh.AddNavMeshData(NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { ramp }, s_Bounds, Vector3.zero, Quaternion.identity));
+            var link = default(NavMeshLinkInstance);
+            try
+            {
+                Assert.True(NavMesh.SamplePosition(At(3.5f, 5f) + Vector3.forward, out var hit, 6f, NavMesh.AllAreas));
+                var end = hit.position + new Vector3(0f, 0.6f, 0f);
+                link = NavMesh.AddLink(new NavMeshLinkData { startPosition = At(-2.7f, 0.0833f), endPosition = end, bidirectional = true, costModifier = -1f });
+                var path = new NavMeshPath();
+                NavMesh.CalculatePath(At(-3.7f, 0.0833f), hit.position, NavMesh.AllAreas, path);
+                Assert.Equal(NavMeshPathStatus.PathComplete, path.status);
+            }
             finally
             {
                 NavMesh.RemoveLink(link);

@@ -46,9 +46,9 @@ namespace DotRecast.Detour
         /// The id of the offmesh connection. (User assigned when the navigation mesh is built.)
         public int userId;
 
-        /// Unbound: the data instance (owner key's data part) whose tiles the connection's end lands
+        /// Unbound: the data instance (DtMeshData.ownerData) whose tiles the connection's end lands
         /// in (0: any tile over it, as Detour does; -1: none).
-        public long landKey;
+        public int landData;
 
         /// Unbound: how far up or down the connection's ends attach (0: the tile's walkable climb).
         public float climb;
