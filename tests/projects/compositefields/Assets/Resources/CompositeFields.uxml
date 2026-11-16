@@ -1,4 +1,4 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:probe="CompositeProbes" editor-extension-mode="False">
     <ui:Vector2Field name="v2" label="Offset" value="1.5,2" />
     <ui:Vector3Field name="v3" value="1,2,3" />
     <ui:Vector4Field name="v4" value="1,2,3,4" />
@@ -11,4 +11,12 @@
     <ui:Hash128Field name="hash" value="0123456789abcdef0123456789abcdef" />
     <ui:Vector2Field name="legacy2" x="7" y="8" />
     <ui:Vector3IntField name="legacy3i" x="1" z="3" />
+    <ui:Vector3Field name="valueThenX" value="1,2,3" x="5" />
+    <ui:Vector4Field name="wThenValue" w="0.5" value="1,2,3,4" />
+    <ui:RectField name="legacyRect" x="1" w="3" h="4" />
+    <ui:RectIntField name="legacyRectInt" y="2" h="9" />
+    <ui:BoundsField name="legacyBounds" cx="1" cy="2" ex="4" />
+    <ui:BoundsIntField name="legacyBoundsInt" px="1" sy="5" />
+    <ui:MinMaxSlider name="minMaxXY" low-limit="0" high-limit="10" x="3" y="7" />
+    <probe:ProbeVector3Field name="subclass" x="1" y="2" />
 </ui:UXML>

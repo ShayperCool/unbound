@@ -8,6 +8,13 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+namespace CompositeProbes
+{
+    // A game's own Vector3Field, read from UXML with the field's attributes.
+    [UxmlElement]
+    public partial class ProbeVector3Field : Vector3Field { }
+}
+
 // The composite fields of a runtime panel (Vector2/3/4Field, Vector2Int/3IntField, RectField,
 // RectIntField, BoundsField, BoundsIntField) and Hash128Field: hierarchy and classes, values set
 // with and without notification and how they reach the sub-fields, values typed into a sub-field
@@ -228,6 +235,7 @@ public class CompositeFieldProbe : MonoBehaviour
                 case BoundsField f: value = V(f.value); break;
                 case BoundsIntField f: value = V(f.value); break;
                 case Hash128Field f: value = f.value + " " + f.text; break;
+                case MinMaxSlider f: value = V(f.value); break;
                 default: value = "?"; break;
             }
             Put("uxml." + e.name, e.GetType().Name + " " + value + " texts " + Texts(e));

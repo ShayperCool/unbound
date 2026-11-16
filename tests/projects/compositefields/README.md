@@ -1,7 +1,7 @@
 # Composite fields and Hash128Field
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 140 rows (managed values, texts and element trees in
+byte-identical and the canonical reference has 148 rows (managed values, texts and element trees in
 a runtime panel, independent of the OS and the graphics device). The gate compares every row
 exactly.
 
@@ -16,7 +16,10 @@ exactly.
   rejected; one digit reads as that number; longer text reads its first 32 digits), upper case, and an
   emptied field leaving focus.
 - `uxml.*`: the `value` attribute of every type (bounds take a center and a size) and the
-  older per-component attributes (`x`, `y`, `z` set those components; the others stay 0).
+  older per-component attributes (`x`/`y`/`z`/`w`, `w`/`h` for rects, `cx`..`ez` for a bounds
+  center and size, `px`..`sz` for integer bounds): the components given make the whole value, the
+  others 0, replacing a `value` attribute in either order; a game's subclass of Vector3Field reads
+  them too, a MinMaxSlider (also holding a Vector2) does not.
 - `binding.*`: a two-way `DataBinding` of a Vector3Field's value, including a value typed into a
   sub-field reaching the source.
 

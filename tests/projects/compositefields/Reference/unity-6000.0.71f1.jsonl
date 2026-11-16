@@ -132,6 +132,14 @@
 {"key":"uxml.hash","value":"Hash128Field 0123456789abcdef0123456789abcdef 0123456789abcdef0123456789abcdef texts "}
 {"key":"uxml.legacy2","value":"Vector2Field 7,8 texts 7|8"}
 {"key":"uxml.legacy3i","value":"Vector3IntField (1, 0, 3) texts 1|0|3"}
+{"key":"uxml.valueThenX","value":"Vector3Field 5,0,0 texts 5|0|0"}
+{"key":"uxml.wThenValue","value":"Vector4Field 0,0,0,0.5 texts 0|0|0|0.5"}
+{"key":"uxml.legacyRect","value":"RectField 1,0,3,4 texts 1|0|3|4"}
+{"key":"uxml.legacyRectInt","value":"RectIntField (x:0, y:2, width:0, height:9) texts 0|2|0|9"}
+{"key":"uxml.legacyBounds","value":"BoundsField 1,2,0/2,0,0 texts 1|2|0|2|0|0"}
+{"key":"uxml.legacyBoundsInt","value":"BoundsIntField Position: (1, 0, 0), Size: (0, 5, 0) texts 1|0|0|0|5|0"}
+{"key":"uxml.minMaxXY","value":"MinMaxSlider 0,10 texts "}
+{"key":"uxml.subclass","value":"ProbeVector3Field 1,2,0 texts 1|2|0"}
 {"key":"binding.initial","value":"value 1,2,3 texts 1|2|3 changes 1 0,0,0>1,2,3 source 1,2,3"}
 {"key":"binding.fromSource","value":"value 4,5,6 texts 4|5|6 changes 1 1,2,3>4,5,6 source 4,5,6"}
 {"key":"binding.typed.typed","value":"value 9,5,6 texts 9|5|6 changes 1 4,5,6>9,5,6"}
