@@ -45,11 +45,16 @@ Run Unbound and compare:
 
 Instance counts and coverage match exactly (positions, sizes, turns, bounds). The Editor draws grass, billboards
 and meshes drawn without instancing at other places than ComputeDetailInstanceTransforms reports
-(its patch meshes have their own placement), and Unbound draws them the same way. The images of the
-first two terrains differ mostly in the layerless terrains' checker, which the Editor draws darker
-and with more contrast than Unbound.
+(its patch meshes have their own placement), and Unbound draws them the same way. The detail
+textures' atlas samples as the Editor's (measured by rendering the Editor's atlas into a grass
+quad): clamped at its edges, without blending mip levels, nothing but transparent texels beside
+the textures. Before Q533 Unbound's atlas repeated at its edges and held a white block beside the
+first texture, so distant blades lost their edges (the differences once taken for the layerless
+terrains' checker, which matches).
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): `compare_images.py --gate image-residuals.json` holds each of the seven images to
-its recorded pixel count and largest difference: six are the checker difference above (2153 to
-11249 pixels, up to 169/255; open in docs/COMPATIBILITY_GAPS.md, checker of terrains without
-layers), one is within 4/255. Any other difference fails.
+its recorded pixel count and largest difference: five texture-grass images differ by one level
+over most of their blades and in isolated pixels at the edges of distant blades (4215 to 10523
+pixels, up to 139/255; not traced), `Refusals` in its slab meshes drawn in the Grass render mode
+(2153 pixels, up to 133/255; open in docs/COMPATIBILITY_GAPS.md), `Instanced` within 1/255. Any
+other difference fails.
