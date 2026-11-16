@@ -99,7 +99,7 @@ CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR, probe_path,
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree)
 from probe_schedule import parallel_groups
-from runtime_snapshot import snapshot_runtime, pin_main, atomic_json
+from runtime_snapshot import snapshot_runtime, pin_main, atomic_json, release_reference
 from slot import hidden_index_paths, slot_root
 
 
@@ -422,6 +422,10 @@ def freeze_automatic_baseline(checks):
     return selected
 
 
+class LaneStopped(Exception):
+    """A gate lane whose commands were stopped because another lane failed: not a failure."""
+
+
 class Gate:
     def __init__(self, worktree, base, probes, full, log, priority=False, *,
                  changed=None, crates=None, releases=None, environment=None, automatic=None, probe_owners=None):
@@ -490,6 +494,9 @@ class Gate:
         return code
 
     def fail(self, name, log=None):
+        if self.cancelled:
+            # Another lane failed and stopped this one; that lane reports the failure.
+            raise LaneStopped(name)
         print(tail(log or self.log), file=sys.stderr)
         die(5, f'gate failed at {name}; full log: {log or self.log}')
 
@@ -528,7 +535,7 @@ class Gate:
                 thread.join()
             raise
         if errors:
-            raise errors[0]
+            raise next((error for error in errors if not isinstance(error, LaneStopped)), errors[0])
 
     def run(self):
         self.note('gate started')
@@ -543,9 +550,10 @@ class Gate:
             return
         build_py, target = self.build()
         # Freeze the build's runtime before any test: `cargo test` may relink target/release
-        # while the other lane runs, and probes must run what the build produced.
+        # while the other lane runs, and probes must run what the build produced. The tests keep
+        # the build's own environment; the probes switch to the frozen runtime afterwards.
         self.note('probe runtime snapshot started')
-        self.prepare_probe_runtime(target)
+        self.freeze_runtime(target)
         self.note('probe runtime snapshot finished')
 
         cli = Path(self.env['UNBOUND'])
@@ -568,7 +576,13 @@ class Gate:
             # Rust tests use only the Cargo target, built above.
             args = ['--workspace'] if self.full else [arg for crate in crates for arg in ('-p', crate)]
             lanes.append(lambda: self.rust_tests([*build_py, '--', 'test', '--release', '--locked', *args]))
-        self.run_lanes(lanes)
+        try:
+            self.run_lanes(lanes)
+        except BaseException:
+            # No probe will run on the frozen runtime: let runtime cleanup retire it.
+            release_reference(self.log.with_suffix('.runtime'), automatic=True)
+            raise
+        self.use_probe_runtime()
 
         self.run_probes()
         if self.automatic is None:
@@ -619,8 +633,15 @@ class Gate:
 
     def prepare_probe_runtime(self, target):
         """Freeze matching build outputs before any probe, retaining their run reference."""
+        self.freeze_runtime(target)
+        self.use_probe_runtime()
+
+    def freeze_runtime(self, target):
         self.probe_runtime = snapshot_runtime(Path(self.env['UNBOUND']), target/'managed',
                                               self.log.with_suffix('.runtime'))
+
+    def use_probe_runtime(self):
+        """Point the gate's environment (probes and later steps) at the frozen runtime."""
         runtime = self.probe_runtime
         libraries = str(runtime/'managed')
         if self.env.get('LD_LIBRARY_PATH'):
@@ -872,6 +893,8 @@ class Gate:
         if LAUNCHER.is_file():
             command = [str(LAUNCHER), '--kind', 'test', *command]
         code = self.step('managed tests', command)
+        if self.cancelled:
+            raise LaneStopped('managed tests')
         if not trx.is_file():
             self.fail('managed tests (no results: build error?)')
         failed = set()
