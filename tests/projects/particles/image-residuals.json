@@ -1,0 +1,4 @@
+{
+ "lights": {"pixels": 1120, "worst": 4, "reason": "the lights module: the particle lights are created, but the built-in pipeline does not draw them as additional lights (README, Known differences); Linux GPU run, 2026-11-16"},
+ "stretched": {"pixels": 24, "worst": 1, "reason": "stretched billboards: 24 pixels one level apart, scattered over the image (rounding of the stretched quads' edges, not traced); Linux GPU run, 2026-11-16"}
+}
