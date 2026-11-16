@@ -32,4 +32,5 @@
 {"key":"reattached.blur","value":"started 2 ended 2"}
 {"key":"replaced","value":"started 2 ended 2 replaced 1"}
 {"key":"cleared","value":"started 2 ended 3 replaced 1"}
+{"key":"focusedDetach","value":"started 2 ended 3 focused <none>"}
 {"key":"complete","value":"1"}

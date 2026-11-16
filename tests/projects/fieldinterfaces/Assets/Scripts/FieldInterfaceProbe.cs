@@ -204,5 +204,12 @@ public class FieldInterfaceProbe : MonoBehaviour
         text.Focus();
         yield return Settle();
         Put("cleared", Counts(text) + " replaced " + replaced);
+
+        // The focused field detached: whether the edit ends as it leaves the panel.
+        var focusController = other.focusController;
+        text.RemoveFromHierarchy();
+        yield return Settle();
+        var focused = focusController.focusedElement as VisualElement;
+        Put("focusedDetach", Counts(text) + " focused " + (focused == null ? "<none>" : focused.GetType().Name));
     }
 }

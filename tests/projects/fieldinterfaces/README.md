@@ -1,7 +1,7 @@
 # Field interfaces
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 35 rows (managed field state and notifications in a
+byte-identical and the canonical reference has 36 rows (managed field state and notifications in a
 runtime panel, independent of the OS and the graphics device). The gate compares every row exactly.
 
 - `interfaces.*`: every BaseField (TextField, Toggle, Slider, SliderInt, MinMaxSlider, EnumField,
@@ -18,7 +18,9 @@ runtime panel, independent of the OS and the graphics device). The gate compares
   drag area and ends on a release over the drag area, not on focus; a min-max slider starts on a
   press on its input and ends on the release.
 - `detached`, `reattached.*`: a field removed from the panel and added back twice raises one
-  notification per focus change, none while detached.
+  notification per focus change (its callbacks are not registered twice).
+- `focusedDetach`: removing the focused field from the panel leaves nothing focused and raises no
+  editingEnded (its callbacks are unregistered as it leaves).
 - `replaced`, `cleared`: a replaced handler alone is told; a cleared one stops the notifications.
 
 Other releases are unmeasured.
