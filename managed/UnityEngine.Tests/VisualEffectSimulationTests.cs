@@ -17,16 +17,16 @@ namespace UnityEngine.Tests
 
         static uint Bits(float f) => BitConverter.SingleToUInt32Bits(f);
 
-        static VFXExpressionDesc Value(VFXValueType type) =>
+        internal static VFXExpressionDesc Value(VFXValueType type) =>
             new VFXExpressionDesc { op = VFXExpressionOperation.Value, data = new[] { -1, -1, -1, (int)type } };
 
-        static VFXExpressionDesc Op(VFXExpressionOperation op, int a = -1, int b = -1, int c = -1, int d = -1) =>
+        internal static VFXExpressionDesc Op(VFXExpressionOperation op, int a = -1, int b = -1, int c = -1, int d = -1) =>
             new VFXExpressionDesc { op = op, data = new[] { a, b, c, d } };
 
-        static VFXExpressionValueContainerDesc Constant<T>(int expression, T value) =>
+        internal static VFXExpressionValueContainerDesc Constant<T>(int expression, T value) =>
             new VFXExpressionValueContainerDesc<T> { expressionIndex = (uint)expression, value = value };
 
-        static VisualEffectCompiledData Data(VFXExpressionDesc[] expressions, VFXExpressionValueContainerDesc[] values,
+        internal static VisualEffectCompiledData Data(VFXExpressionDesc[] expressions, VFXExpressionValueContainerDesc[] values,
             VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0, VFXExposedMapping[] exposed = null,
             VFXExpressionDesc[] perSpawnEvent = null)
         {
@@ -877,9 +877,10 @@ namespace UnityEngine.Tests
                 + "Pass { Tags { \"LightMode\"=\"Universal2D\" } } Pass { Tags { \"LightMode\"=\"ShadowCaster\" } } } }";
             Assert.Null(VFXOutput.SourceRefusal(unlit));
             Assert.Null(VFXOutput.SourceRefusal(null));
-            // ... a lit one, one that reads the camera's depth and one with another pass are not.
+            // ... and so is one that fades against the camera's depth (soft particles: the
+            // pipeline's depth texture); a lit one and one with another pass are not.
+            Assert.Null(VFXOutput.SourceRefusal(unlit.Replace("#define USE_SOFT_PARTICLE 0", "#define USE_SOFT_PARTICLE 1")));
             Assert.Equal("it is lit, and lit outputs are not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("#define VFX_PRIMITIVE_QUAD 1", "#define URP_LIT 1")));
-            Assert.StartsWith("it fades against the camera's depth (soft particles)", VFXOutput.SourceRefusal(unlit.Replace("#define USE_SOFT_PARTICLE 0", "#define USE_SOFT_PARTICLE 1")));
             Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'UniversalGBuffer' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"UniversalGBuffer\"")));
             // Read for each output task of a compiled graph from the shader source it names:

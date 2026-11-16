@@ -84,6 +84,7 @@ namespace UnityEngine.VFX
         static void Update()
         {
             int count = s_Effects.Count;
+            UpdateMainCamera();
             if (count == 0) return;
             s_Frame++;
             var time = CurrentFrameTime();

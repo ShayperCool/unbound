@@ -35,6 +35,10 @@ namespace Unbound.Runtime
     {
         const int Int32Type = (int)VFXValueType.Int32, Uint32Type = (int)VFXValueType.Uint32;
 
+        /// <summary>What a graph reads of the main camera while there is none: a new camera's
+        /// lens (Unity 6000.0.71f1, tests/projects/vfx <c>camera/values</c> from frame 8).</summary>
+        const float NoCameraFieldOfView = 60f, NoCameraNearPlane = 0.3f, NoCameraFarPlane = 1000f, NoCameraOrthographicSize = 5f;
+
         /// <summary>Whether <see cref="Evaluate"/> computes the operation.</summary>
         internal static bool Supported(VFXExpressionOperation op)
         {
@@ -58,7 +62,6 @@ namespace Unbound.Runtime
                     return false;
             }
             if (op >= VFXExpressionOperation.SampleMeshVertexFloat && op <= VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer) return false;
-            if (op >= VFXExpressionOperation.ExtractMatrixFromMainCamera && op <= VFXExpressionOperation.GetOrthographicSizeFromMainCamera) return false;
             if (op >= VFXExpressionOperation.ValueNoise1D && op <= VFXExpressionOperation.TextureFormat) return false;
             return op >= VFXExpressionOperation.None && op <= VFXExpressionOperation.SpawnerStateLoopCount;
         }
@@ -313,6 +316,32 @@ namespace Unbound.Runtime
                     case VFXExpressionOperation.LogicalAnd: w[at] = (w[p0] & 0xff) != 0 && (w[p1] & 0xff) != 0 ? 1u : 0u; break;
                     case VFXExpressionOperation.LogicalOr: w[at] = (w[p0] & 0xff) != 0 || (w[p1] & 0xff) != 0 ? 1u : 0u; break;
                     case VFXExpressionOperation.LogicalNot: w[at] = (w[p0] & 0xff) != 0 ? 0u : 1u; break;
+
+                    // The main camera as the manager's update took it (VFXManager.MainCamera), and
+                    // what a graph reads while there is none.
+                    case VFXExpressionOperation.ExtractMatrixFromMainCamera: Store(w, at, VFXManager.MainCameraMatrix); break;
+                    case VFXExpressionOperation.ExtractFOVFromMainCamera:
+                        w[at] = Bits((VFXManager.MainCamera is Camera fovCamera ? fovCamera.GetGateFittedFieldOfView() : NoCameraFieldOfView) * Mathf.Deg2Rad);
+                        break;
+                    case VFXExpressionOperation.ExtractNearPlaneFromMainCamera: w[at] = Bits(VFXManager.MainCamera is Camera near ? near.nearClipPlane : NoCameraNearPlane); break;
+                    case VFXExpressionOperation.ExtractFarPlaneFromMainCamera: w[at] = Bits(VFXManager.MainCamera is Camera far ? far.farClipPlane : NoCameraFarPlane); break;
+                    case VFXExpressionOperation.ExtractAspectRatioFromMainCamera: w[at] = Bits(VFXManager.MainCamera is Camera aspect ? aspect.aspect : 1f); break;
+                    case VFXExpressionOperation.ExtractPixelDimensionsFromMainCamera:
+                        (w[at], w[at + 1]) = (Bits(VFXManager.MainCameraViewport.width), Bits(VFXManager.MainCameraViewport.height));
+                        break;
+                    case VFXExpressionOperation.ExtractScaledPixelDimensionsFromMainCamera:
+                        (w[at], w[at + 1]) = (Bits(VFXManager.MainCameraScaledSize.x), Bits(VFXManager.MainCameraScaledSize.y));
+                        break;
+                    case VFXExpressionOperation.ExtractLensShiftFromMainCamera:
+                    {
+                        var shift = VFXManager.MainCamera is Camera shifted ? shifted.GetGateFittedLensShift() : Vector2.zero;
+                        (w[at], w[at + 1]) = (Bits(shift.x), Bits(shift.y));
+                        break;
+                    }
+                    // The buffer of the kind the fourth operand names.
+                    case VFXExpressionOperation.GetBufferFromMainCamera: values.SetObject(e, VFXManager.MainCameraBuffer((uint)operands[d + 3])); break;
+                    case VFXExpressionOperation.IsMainCameraOrthographic: w[at] = VFXManager.MainCamera is Camera ortho && ortho.orthographic ? 1u : 0u; break;
+                    case VFXExpressionOperation.GetOrthographicSizeFromMainCamera: w[at] = Bits(VFXManager.MainCamera is Camera sized ? sized.orthographicSize : NoCameraOrthographicSize); break;
 
                     case VFXExpressionOperation.GenerateRandom: w[at] = Bits(state.Random.NextValue()); break;
                     case VFXExpressionOperation.GenerateFixedRandom: w[at] = Bits(FixedRandom(w[p0])); break;

@@ -206,6 +206,10 @@ namespace Unbound.Runtime
         /// <summary>How many curves and gradients the graph bakes.</summary>
         internal int BakedCurves, BakedGradients;
 
+        /// <summary>Whether the sheet reads the main camera, and which of its buffers.</summary>
+        internal bool ReadsMainCamera;
+        internal VFXCameraBufferTypes CameraBuffers;
+
         /// <summary>The layout of the events' attributes: the first CPU buffer, by attribute name id.</summary>
         internal int[] EventAttributeIds = Array.Empty<int>();
 
@@ -245,6 +249,16 @@ namespace Unbound.Runtime
             for (int i = 0; i < Values.Length; i++)
                 if (Values[i] != null && Values[i].expressionIndex < (uint)count) ConstantOf[Values[i].expressionIndex] = i;
             PlaceBakes(count);
+            ReadsMainCamera = false;
+            CameraBuffers = VFXCameraBufferTypes.None;
+            for (int i = 0; i < Expressions.Length; i++)
+            {
+                var op = Operations[i];
+                if (op < VFXExpressionOperation.ExtractMatrixFromMainCamera || op > VFXExpressionOperation.GetOrthographicSizeFromMainCamera) continue;
+                ReadsMainCamera = true;
+                // The kind of buffer is the operation's fourth operand.
+                if (op == VFXExpressionOperation.GetBufferFromMainCamera) CameraBuffers |= (VFXCameraBufferTypes)Operands[i * 4 + 3];
+            }
 
             var layout = CpuBuffers.Length > 0 ? CpuBuffers[0].layout : null;
             EventAttributeIds = new int[layout?.Length ?? 0];

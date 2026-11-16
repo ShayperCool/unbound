@@ -729,11 +729,7 @@ namespace UnityEngine.Profiling
         /// render textures, meshes, created audio clips and game objects; other kinds warn and answer 0.</summary>
         public static long GetRuntimeMemorySizeLong(Object o)
         {
-            if (ReferenceEquals(o, null)) throw new ArgumentNullException("o");
-            if (o.m_Destroyed)
-                throw new MissingReferenceException(
-                    $"The object of type '{o.GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
-                    "Your script should either check if it is null or you should not destroy the object. Parameter name: o");
+            Object.ThrowIfNullArgument(o, "o");
             var size = Unbound.Runtime.MemorySizes.RuntimeSize(o);
             if (size == null)
             {

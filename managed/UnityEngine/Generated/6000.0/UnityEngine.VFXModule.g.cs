@@ -33,13 +33,6 @@ namespace UnityEngine.VFX
         [global::Unbound.Stub] public ulong totalGPUSizeInBytes;
         [global::Unbound.Stub] public ulong totalCPUSizeInBytes;
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct VFXCameraXRSettings
-    {
-        [global::Unbound.Stub] public uint viewTotal;
-        [global::Unbound.Stub] public uint viewCount;
-        [global::Unbound.Stub] public uint viewOffset;
-    }
     unsafe partial class VFXEventAttribute
     {
         [global::Unbound.Stub] internal static global::UnityEngine.VFX.VFXEventAttribute CreateEventAttributeWrapper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXEventAttribute.CreateEventAttributeWrapper"); return default; }
@@ -71,15 +64,6 @@ namespace UnityEngine.VFX
         [global::Unbound.Stub] public static global::UnityEngine.VFX.VFXBatchedEffectInfo GetBatchedEffectInfo(global::UnityEngine.VFX.VisualEffectAsset vfx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetBatchedEffectInfo"); return default; }
         [global::Unbound.Stub] public static void GetBatchedEffectInfos(global::System.Collections.Generic.List<global::UnityEngine.VFX.VFXBatchedEffectInfo> infos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetBatchedEffectInfos"); }
         [global::Unbound.Stub] internal static global::UnityEngine.VFX.VFXBatchInfo GetBatchInfo(global::UnityEngine.VFX.VisualEffectAsset vfx, uint batchIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.GetBatchInfo"); return default; }
-        [global::System.Obsolete("Use explicit PrepareCamera and ProcessCameraCommand instead")] [global::Unbound.Stub] public static void ProcessCamera(global::UnityEngine.Camera cam) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ProcessCamera"); }
-        [global::Unbound.Stub] public static void PrepareCamera(global::UnityEngine.Camera cam) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.PrepareCamera"); }
-        [global::Unbound.Stub] public static void PrepareCamera(global::UnityEngine.Camera cam, global::UnityEngine.VFX.VFXCameraXRSettings camXRSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.PrepareCamera"); }
-        [global::System.Obsolete("Use ProcessCameraCommand with CullingResults to allow culling of VFX per camera")] [global::Unbound.Stub] public static void ProcessCameraCommand(global::UnityEngine.Camera cam, global::UnityEngine.Rendering.CommandBuffer cmd) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ProcessCameraCommand"); }
-        [global::System.Obsolete("Use ProcessCameraCommand with CullingResults to allow culling of VFX per camera")] [global::Unbound.Stub] public static void ProcessCameraCommand(global::UnityEngine.Camera cam, global::UnityEngine.Rendering.CommandBuffer cmd, global::UnityEngine.VFX.VFXCameraXRSettings camXRSettings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ProcessCameraCommand"); }
-        [global::Unbound.Stub] public static void ProcessCameraCommand(global::UnityEngine.Camera cam, global::UnityEngine.Rendering.CommandBuffer cmd, global::UnityEngine.VFX.VFXCameraXRSettings camXRSettings, global::UnityEngine.Rendering.CullingResults results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ProcessCameraCommand"); }
-        [global::Unbound.Stub] public static void ProcessCameraCommand(global::UnityEngine.Camera cam, global::UnityEngine.Rendering.CommandBuffer cmd, global::UnityEngine.VFX.VFXCameraXRSettings camXRSettings, global::UnityEngine.Rendering.CullingResults results, global::UnityEngine.Rendering.CullingResults customPassResults) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.ProcessCameraCommand"); }
-        [global::Unbound.Stub] public static global::UnityEngine.VFX.VFXCameraBufferTypes IsCameraBufferNeeded(global::UnityEngine.Camera cam) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.IsCameraBufferNeeded"); return default; }
-        [global::Unbound.Stub] public static void SetCameraBuffer(global::UnityEngine.Camera cam, global::UnityEngine.VFX.VFXCameraBufferTypes type, global::UnityEngine.Texture buffer, int x, int y, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.SetCameraBuffer"); }
         [global::Unbound.Stub] public static void SetRayTracingEnabled(bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.SetRayTracingEnabled"); }
         [global::Unbound.Stub] public static void RequestRtasAabbConstruction() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.RequestRtasAabbConstruction"); }
         internal static global::UnityEngine.ScriptableObject runtimeResources { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.runtimeResources"); return default; } }
@@ -88,7 +72,6 @@ namespace UnityEngine.VFX
         internal static string renderPipeSettingsPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.renderPipeSettingsPath"); return default; } }
         internal static uint batchEmptyLifetime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.batchEmptyLifetime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.batchEmptyLifetime"); } }
         internal static bool renderInSceneView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.renderInSceneView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.renderInSceneView"); } }
-        internal static bool activateVFX { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.activateVFX"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VFXManager.activateVFX"); } }
     }
     unsafe partial class VFXSpawnerState
     {

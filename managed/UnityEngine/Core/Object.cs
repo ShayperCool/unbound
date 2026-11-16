@@ -180,6 +180,19 @@ namespace UnityEngine
                     "Your script should either check if it is null or you should not destroy the object.");
         }
 
+        /// <summary>What Unity's bindings throw for an object argument they require: an
+        /// ArgumentNullException for none, and for a destroyed object the message of
+        /// <see cref="ThrowIfDestroyed"/> with the parameter's name after it (6000.0.71f1,
+        /// tests/projects/vfx <c>camera/api/*destroyed</c>).</summary>
+        internal static void ThrowIfNullArgument(Object argument, string parameterName)
+        {
+            if (ReferenceEquals(argument, null)) throw new ArgumentNullException(parameterName);
+            if (argument.m_Destroyed)
+                throw new MissingReferenceException(
+                    $"The object of type '{argument.GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
+                    "Your script should either check if it is null or you should not destroy the object. Parameter name: " + parameterName);
+        }
+
         // ------------------------------------------------------------------ Instantiate
 
         public static Object Instantiate(Object original)
