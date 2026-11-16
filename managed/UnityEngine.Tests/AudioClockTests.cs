@@ -54,18 +54,19 @@ namespace UnityEngine.Tests
             Assert.Equal(counted, AudioSettings.dspTime);
         }
 
-        [Fact]
-        public void AGraphsDspClockMovesEveryFrameWithinABufferOfTheAudioClock()
+        /// <summary>One frame as the player loop runs it: the audio clock, DirectorSampleTime, and
+        /// the audio update at the frame's end (whose status gives the buffer).</summary>
+        static void Sample(double realDelta)
         {
-            // Frames as the player loop runs them: the audio clock, DirectorSampleTime, and the
-            // audio update at the frame's end (whose status gives the buffer).
-            void Sample(double realDelta)
-            {
-                Time.s_RealDeltaTime = realDelta;
-                AudioSystem.AdvanceClock();
-                PlayableSystem.SampleTime();
-                AudioSystem.Update();
-            }
+            Time.s_RealDeltaTime = realDelta;
+            AudioSystem.AdvanceClock();
+            PlayableSystem.SampleTime();
+            AudioSystem.Update();
+        }
+
+        [Fact]
+        public void AGraphsDspClockMovesEveryFrameByItsRealTime()
+        {
             Sample(0.0);
             Assert.Equal(0, PlayableSystem.DspDelta);
             double start = PlayableSystem.GraphDspTime;
@@ -73,7 +74,7 @@ namespace UnityEngine.Tests
             {
                 Sample(1.0 / 120);
                 // Every frame moves the graphs by the frame's real time, though the audio clock
-                // moves only in whole buffers, and stays within a buffer of it.
+                // moves only in whole buffers (here never behind it: they started together).
                 Assert.Equal(1.0 / 120, PlayableSystem.DspDelta, 9);
                 Assert.InRange(PlayableSystem.GraphDspTime, AudioSettings.dspTime, AudioSettings.dspTime + Step);
             }
@@ -82,15 +83,65 @@ namespace UnityEngine.Tests
             double before = PlayableSystem.GraphDspTime;
             Sample(0.3);
             Assert.Equal(0.3, PlayableSystem.GraphDspTime - before, 9);
-            // An audio clock that moved further than the frame's real time (a device's own
-            // clock) takes the graphs along to a buffer below it; one left behind holds them at a
-            // buffer above it.
+        }
+
+        [Theory]
+        // Made with 1/120 s of real time the clock still owes: left that far behind it.
+        [InlineData(1.0 / 120, false)]
+        // Made with 15 ms owed, more than half a buffer: pulled up to it as the clock steps.
+        [InlineData(0.015, true)]
+        public void AGraphMadeWhileTheClockOwesTimeIsPulledUpOnlyFromHalfABufferBehind(double owed, bool pulled)
+        {
+            Sample(0.0);
+            Sample(owed);
+            PlayableSystem.ResetClockForTests();
+            Time.s_RealDeltaTime = 0;
+            PlayableSystem.SampleTime();
+            double made = PlayableSystem.GraphDspTime;
+            Assert.Equal(AudioSettings.dspTime, made);
+            // Frames of 1 ms until the audio clock steps a buffer.
+            double dsp = AudioSettings.dspTime;
+            int frames = 0;
+            while (AudioSettings.dspTime == dsp)
+            {
+                Sample(0.001);
+                frames++;
+            }
+            double behind = AudioSettings.dspTime - PlayableSystem.GraphDspTime;
+            if (pulled) Assert.Equal(0, behind, 12);
+            else
+            {
+                Assert.Equal(made + frames * 0.001, PlayableSystem.GraphDspTime, 9);
+                Assert.InRange(behind, 0.008, 0.5 * Step);
+            }
+        }
+
+        [Fact]
+        public void AGraphFollowsADeviceClockThatRunsAheadOrStops()
+        {
+            Sample(0.0);
+            Sample(0.0);
+            // A clock that moved much further than real time takes the graphs along to it; one
+            // that stops holds them a buffer above it.
             m_Backend.AdvanceClock(1.0);
             Sample(0.0);
-            Assert.Equal(AudioSettings.dspTime - Step, PlayableSystem.GraphDspTime, 12);
+            Assert.Equal(AudioSettings.dspTime, PlayableSystem.GraphDspTime, 12);
+            double clock = AudioSettings.dspTime;
             Time.s_RealDeltaTime = 0.5;
             PlayableSystem.SampleTime();
-            Assert.Equal(AudioSettings.dspTime + Step, PlayableSystem.GraphDspTime, 12);
+            Assert.Equal(clock + Step, PlayableSystem.GraphDspTime, 12);
+        }
+
+        [Fact]
+        public void BeforeAnyAudioUpdateAGraphKeepsToTheClock()
+        {
+            // No audio update yet: no buffer known, the graphs take the audio clock as it is.
+            Time.s_RealDeltaTime = 0;
+            PlayableSystem.SampleTime();
+            Time.s_RealDeltaTime = 0.3;
+            AudioSystem.AdvanceClock();
+            PlayableSystem.SampleTime();
+            Assert.Equal(AudioSettings.dspTime, PlayableSystem.GraphDspTime, 12);
         }
 
         [Fact]

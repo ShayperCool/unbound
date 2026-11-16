@@ -1083,9 +1083,10 @@ macOS Editor 6000.0.71f1 (tests/projects/dspclock, and exploratory captures outs
   as real time does, and never back;
 - the audio thread moves it while a frame runs: the frame after a 300 ms one reads a clock that has
   counted those 300 ms, and a 30 ms busy wait in `Update` moves it by a buffer or two;
-- a playable graph on its default clock (`DirectorUpdateMode.DSPClock`) moves every frame, between
-  the audio clock's buffers, by about each frame's real time (a graph a little ahead of the audio
-  clock is left a little behind it when that one steps a buffer);
+- a playable graph on its default clock (`DirectorUpdateMode.DSPClock`) moves every frame by about
+  the frame's real time, between the audio clock's buffers: one 18 ms ahead of the audio clock is
+  not pulled back, one left 2.8 ms behind when the audio clock steps stays behind, one that would be
+  12 ms behind is pulled up to it;
 - with Disable Unity Audio set it stays at 0, with `outputSampleRate`, the buffer size and the
   configuration's values 0 and its speaker mode Raw (exploratory only).
 
@@ -1095,9 +1096,10 @@ each frame starts (`AudioSystem.AdvanceClock` at `TimeUpdate.WaitForLastPresenta
 frame's scripts and its `DirectorSampleTime` therefore read a clock that has counted the frame before
 them (before, it counted it one frame later, at the frame's audio update, so a long frame showed up a
 frame late and in one jump). Graphs on the DSP clock move by the frame's real time from the clock at the
-start of the frame the first graph is made in (`PlayableSystem.SampleTime`); Unbound holds them within
-a buffer of the audio clock either way (its choice, unmeasured), so that they follow a device clock
-that drifts from real time. Under `--fixed-fps` the real time of a frame is the fixed
+start of the frame the first graph is made in (`PlayableSystem.SampleTime`) and are pulled up to the
+audio clock when that would leave them more than half a buffer behind (Unbound's choice inside the
+measured 2.8 to 12 ms); Unbound also holds them at most a buffer ahead (unmeasured), so that they
+follow a device clock that drifts from real time. Under `--fixed-fps` the real time of a frame is the fixed
 one, so such runs stay deterministic. The virtual device's voices move with its clock: they are mixed
 as the frame starts too (a virtual run's `OnAudioFilterRead` and `PCMReaderCallback` run then), so
 `AudioSource.time`, `timeSamples` and `isPlaying` read in a frame have counted that frame's real time,

@@ -680,6 +680,7 @@ namespace Unbound.Runtime
             s_Mixers.Clear();
             s_Groups.Clear();
             s_Loading.Clear();
+            s_Status = default;
             s_ListenerVolume = float.NaN;
             s_ListenerPaused = false;
             s_WarnedListeners = 1;
