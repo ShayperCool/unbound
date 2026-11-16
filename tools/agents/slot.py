@@ -400,7 +400,7 @@ def live_process_paths(proc=Path('/proc'), *, uid=None, exclude_pid=None, privil
             if not process.exists():
                 continue
             if isinstance(error, PermissionError) and privileged:
-                command = ['sudo', '-n', sys.executable, str(Path(__file__).resolve()), 'live-paths',
+                command = ['sudo', '-n', sys.executable, '-B', str(Path(__file__).resolve()), 'live-paths',
                            '--uid', str(uid), '--exclude-process', str(os.getpid())]
                 result = subprocess.run(command, capture_output=True, text=True, timeout=60,
                                         stdin=subprocess.DEVNULL)
@@ -427,7 +427,7 @@ def reap_orphaned_targets(cache, checkouts, dry_run):
         return 0
     try:
         used = live_process_paths()
-    except OSError as error:
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f'keep {len(orphans)} orphaned targets: cannot inspect live processes: {error}')
         return 0
     removed = 0

@@ -77,8 +77,9 @@ tools/validation/README.md for why that is unsafe).
 - Before that walk, and independently of it, reap prunes git's records of worktrees whose
   directory or `.git` is gone and removes orphaned build targets: a target whose checkout is
   neither a registered worktree nor a directory holding `.git` (a clone elsewhere keeps its
-  target), and that no live process uses (cwd, executable, open or mapped file, argument or
-  environment value inside it; when processes cannot be inspected, every orphan stays). So it
+  target), and that no live process uses (working directory, executable, open or mapped file
+  inside it; the compiler cache's daemon does not count; when processes cannot be inspected,
+  every orphan stays). So it
   frees orphaned targets even while busy workers keep the walk from completing.
 
 ## Worker
@@ -196,7 +197,8 @@ The lock holder takes all queued branches for one repository in registration ord
 with several branches rebases them in an integration checkout beside the slots and build
 targets. Trains reuse one locked integration checkout at a stable path, so its build target stays
 warm; it stays registered and locked between trains. When it is changed or a live process still
-uses it (a child of an interrupted gate), the train uses a transient checkout and removes it and
+uses it (a child of an interrupted gate), or an interrupted rebase or merge is pending in it,
+the train uses a transient checkout and removes it and
 its build target when it finishes; the next train also removes clean, unused transient checkouts
 that interrupted trains left behind, with their targets. A branch with a rebase conflict or a refused oracle change is rejected on its
 own. Each branch gets its own oracle guard, so one branch's trailer cannot authorize another

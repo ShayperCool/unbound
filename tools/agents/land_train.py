@@ -15,6 +15,9 @@ import uuid
 POLL_SECONDS = 0.5
 BUILD_ENVIRONMENT = ('CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'UNBOUND_BUILD_ROOT')
 IDLE_REASON = 'land train integration worktree, idle'
+# A train interrupted inside one of these leaves a checkout that cannot switch commits.
+PENDING_OPERATIONS = ('rebase-merge', 'rebase-apply', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD',
+                      'BISECT_LOG')
 
 
 class Queue:
@@ -134,18 +137,22 @@ class Workspace:
         if self.live is None:
             try:
                 self.live = set(self.train.api.live_process_paths())
-            except OSError as error:
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
                 print(f'land: cannot inspect live processes ({error}); not reusing integration worktrees',
                       file=sys.stderr)
                 self.live = False
         return self.live is False or self.train.api.inside_any(path, self.live)
 
     def idle(self, path):
-        """A registered checkout without changes that no live process uses."""
+        """A registered checkout without changes or a stopped git operation that no live process uses."""
         api = self.train.api
         try:
-            return (not self.in_use(path) and os.path.lexists(path/'.git') and not api.changed_paths(path)
-                    and not api.hidden_index_paths(path))
+            if self.in_use(path) or not os.path.lexists(path/'.git'):
+                return False
+            git_dir = Path(self.train.git('rev-parse', '--absolute-git-dir', cwd=path))
+            if any(os.path.lexists(git_dir/name) for name in PENDING_OPERATIONS):
+                return False
+            return not api.changed_paths(path) and not api.hidden_index_paths(path)
         except SystemExit:
             return False
 
@@ -159,11 +166,15 @@ class Workspace:
         stable.parent.mkdir(parents=True, exist_ok=True)
         worktrees = self.registered()
         self.reclaim(stable, worktrees)
+        reused = False
         if stable in worktrees and self.idle(stable):
-            self.relock(stable, 'active land train '+self.train.id, worktrees[stable])
-            self.train.git('switch', '--quiet', '--detach', self.base, cwd=stable)
-            self.path, self.transient = stable, False
-        else:
+            try:
+                self.relock(stable, 'active land train '+self.train.id, worktrees[stable])
+                self.train.git('switch', '--quiet', '--detach', self.base, cwd=stable)
+                self.path, self.transient, reused = stable, False, True
+            except SystemExit:
+                pass  # kept as it is; a transient checkout follows
+        if not reused:
             path = stable
             if os.path.lexists(path):
                 # An interrupted gate can still own children or uncommitted work here.

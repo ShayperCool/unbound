@@ -1267,6 +1267,19 @@ class TrainIntegrationTests(unittest.TestCase):
         self.assertEqual(self.integration_worktrees(), {stable: land_train.IDLE_REASON})
         self.assertEqual(set(self.targets()), {stable})
 
+    def test_a_rebase_left_stopped_in_the_integration_worktree_gives_a_transient_checkout(self):
+        stable = self.land_train('first')
+        # A train killed inside a rebase: status is clean, but the checkout cannot switch commits.
+        stopped = subprocess.run(['git', 'rebase', '--exec', 'false', 'HEAD~1'], cwd=stable, capture_output=True)
+        self.assertNotEqual(stopped.returncode, 0)
+        git_dir = Path(self.git('rev-parse', '--absolute-git-dir', cwd=stable))
+        self.assertTrue((git_dir/'rebase-merge').exists())
+        self.assertEqual(self.git('status', '--porcelain', cwd=stable), '')
+        transient = self.land_train('second')
+        self.assertNotEqual(transient, stable)
+        self.assertFalse(transient.exists())
+        self.assertEqual(set(self.targets()), {stable})
+
     def test_a_busy_integration_worktree_gives_a_transient_checkout_that_removes_its_target(self):
         stable = self.land_train('first')
         stable_target = self.targets()[stable]

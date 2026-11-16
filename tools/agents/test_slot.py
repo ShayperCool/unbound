@@ -623,6 +623,7 @@ class LiveProcessTests(unittest.TestCase):
                 for process in processes:
                     process.kill()
                     process.wait()
+                    process.stdin.close()
 
 
 if __name__ == '__main__':
