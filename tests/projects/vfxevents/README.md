@@ -22,6 +22,8 @@ spawned systems take their particles' position from the particle that spawned th
 - `EventAlways`: four particles that each spawn one a step, into a system of 32 whose
   particles live three tenths of a second: more are asked for than it has room for.
 - `EventRate`: three particles that each spawn twenty a second (`Over Time`).
+  `EventRateFast`: a hundred and fifty a second each, with the block's `Clamp To One` off:
+  several events of one particle in a step.
 - `EventDistance`: two particles that each spawn five for every unit they travel
   (`Over Distance`).
 - `EventAtBirth`: the trigger in the initialize context: each particle spawns three as it is
@@ -29,8 +31,9 @@ spawned systems take their particles' position from the particle that spawned th
 - `EventTwo`: two triggers in one system, each into a system of its own: on death and at every
   step.
 - `EventChain`: three systems in a chain: what an event spawned spawns in turn when it dies.
-- `EventKeep`, `EventKeepRoom`: what the events spawn never dies: a system of 24 that fills up
-  and one of 96 that does not.
+- `EventKeep`, `EventKeepRoom`: what the events spawn is given no lifetime and never dies: a
+  system of 24 that fills up and one of 96 that does not. (The graph compiler gives a system
+  spawned by GPU events particles that can die and a list of the dead all the same.)
 
 ## What is recorded
 
@@ -42,18 +45,25 @@ alive count, whether it is culled and awake, and each particle system's alive co
 and whether it sleeps. `systems/<control>` lists the systems' names.
 
 - One control per graph, named as the graph (`on die`, `always`, `rate`, `distance`,
-  `at birth`, `two`, `chain`, `keep`, `keep room`).
+  `at birth`, `two`, `chain`, `keep`, `keep room`, and `unclamped` for `EventRateFast`).
 - `reinit`: `EventOnDie` with `Reinit()` called at frame 30. Its sparks after that (frame 66)
   are not the ones a new effect draws: the numbers the spawned particles are given, which seed
   what they draw at random, go on counting through the reinitialisation.
+- `toggled`: `EventOnDie` whose object is inactive from frame 30 to frame 34: the effect starts
+  over when it is active again, and its sparks after that (frame 66) are numbered on as after
+  a reinitialisation.
+- `keep reinit`, `keep toggled`: `EventKeep` reinitialized at frame 45, and inactive from
+  frame 45 to 48, once its spawned system has filled: the system empties and fills again.
 - `stopped`: `EventRate` with `Stop()` called at frame 30: the spawner stops, the particles
   that spawn go on living and spawning.
+- `paused`: `EventAlways` paused from frame 20 to frame 36: while paused nothing is spawned
+  and nothing ages (frames 19, 30 and 35 show the same).
 
 What the rows show of systems spawned by GPU events: such a system is awake while the system
 that spawns into it is; its alive count is read back from the GPU like that of any system that
 kills particles (-1 in the effect's sum before the first answer, then an answer every sixty
-frames), also when its own particles never die: then it is the number spawned so far, at most
-its capacity (`keep`: 24 at the second answer; `keep room`: the number spawned by then).
+frames), also when no block gives its particles a lifetime: its room less its dead ones (`keep`:
+24 at the second answer; `keep room`: the 40 spawned by then).
 
 Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/README.md`).
 `capture/graphs imported while playing` must be empty.
@@ -69,7 +79,9 @@ Linux Editor on OpenGL Core).
 - `On Collide` triggers; a spawned system that reads the count of its event (`spawnCount`);
   events of a system that spawns from the CPU as well.
 - An effect whose spawning system sleeps or is culled while the spawned one still has
-  particles; several effects of one graph; an effect paused or with another play rate.
+  particles; several effects of one graph; another play rate; a time scale of zero.
+- Several steps in a frame (the asset's exact fixed time step, a prewarm, `Simulate`).
+- Events into a system whose outputs draw through an indirect buffer, are lit or are meshes.
 - More events in a step than one dispatch's thread groups reach, and systems of more than a
   few dozen particles.
 - Other devices than OpenGL Core in the Editor.

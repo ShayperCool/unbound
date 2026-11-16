@@ -18,13 +18,13 @@ public sealed class EventProbe : MonoBehaviour
 {
     const int k_LastFrame = 72;
     /// <summary>The frames whose rows are recorded: the first ones, and around the alive counts' second answer.</summary>
-    static readonly int[] k_RowFrames = { 2, 3, 4, 5, 6, 10, 20, 30, 31, 32, 33, 34, 40, 60, 62, 63, 64, 65, 66, 70 };
+    static readonly int[] k_RowFrames = { 2, 3, 4, 5, 6, 10, 20, 30, 31, 32, 33, 34, 35, 36, 40, 45, 46, 48, 49, 50, 60, 62, 63, 64, 65, 66, 70 };
 
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<Stage> m_Stages = new List<Stage>();
     readonly List<string> m_Names = new List<string>();
     Texture2D m_Shot;
-    Stage m_Reinit, m_Stopped;
+    Stage m_Reinit, m_Stopped, m_KeepReinit, m_Toggled, m_KeepToggled, m_Paused;
     int m_Frame;
     bool m_Done;
 
@@ -71,10 +71,19 @@ public sealed class EventProbe : MonoBehaviour
             Draw("chain", "EventChain", 10, 20, 40, 66);
             Draw("keep", "EventKeep", 10, 20, 40, 66);
             Draw("keep room", "EventKeepRoom", 10, 20, 40, 66);
-            // The same graph started over at frame 30: its counts start over with it.
+            Draw("unclamped", "EventRateFast", 4, 10, 20, 40);
+            // The same graph started over at frame 30.
             m_Reinit = Draw("reinit", "EventOnDie", 20, 29, 32, 40, 66);
-            // And one stopped at frame 30: what was spawned lives on, nothing more is.
+            // One whose spawner is stopped at frame 30.
             m_Stopped = Draw("stopped", "EventRate", 20, 29, 32, 40, 66);
+            // What never dies, started over at frame 45, once its system has filled.
+            m_KeepReinit = Draw("keep reinit", "EventKeep", 40, 44, 50, 60, 66);
+            // Effects whose object is made inactive and active again: one whose spawned
+            // particles die (frames 30 to 34) and one whose never do (frames 45 to 48).
+            m_Toggled = Draw("toggled", "EventOnDie", 20, 29, 36, 50, 66);
+            m_KeepToggled = Draw("keep toggled", "EventKeep", 40, 44, 50, 60, 66);
+            // One paused from frame 20 to frame 36, whose particles spawn one a step each.
+            m_Paused = Draw("paused", "EventAlways", 10, 19, 30, 35, 40, 50);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();
@@ -169,10 +178,21 @@ public sealed class EventProbe : MonoBehaviour
     {
         if (m_Done) return;
         m_Frame++;
-        if (m_Frame == 30)
+        switch (m_Frame)
         {
-            m_Reinit.Effect.Reinit();
-            m_Stopped.Effect.Stop();
+            case 20: m_Paused.Effect.pause = true; break;
+            case 30:
+                m_Reinit.Effect.Reinit();
+                m_Stopped.Effect.Stop();
+                m_Toggled.Effect.gameObject.SetActive(false);
+                break;
+            case 34: m_Toggled.Effect.gameObject.SetActive(true); break;
+            case 36: m_Paused.Effect.pause = false; break;
+            case 45:
+                m_KeepReinit.Effect.Reinit();
+                m_KeepToggled.Effect.gameObject.SetActive(false);
+                break;
+            case 48: m_KeepToggled.Effect.gameObject.SetActive(true); break;
         }
         if (m_Frame < k_LastFrame) return;
         Finish();

@@ -19,7 +19,6 @@ using UnityEngine.VFX;
 public static class EventAuthoring
 {
     public const string GraphFolder = "Assets/Graphs";
-    const string ObjectFolder = "Assets/Objects";
     public const string Scene = "Assets/Scenes/Probe.unity";
 
     public static void Author()
@@ -147,6 +146,23 @@ public static class EventAuthoring
         Set(marks.Init, "size", 0.06f);
         SetVector(marks.Init, "color", new Vector3(0.3f, 0.9f, 1f));
         Save(distance);
+
+        // Three that each spawn a hundred and fifty a second, not limited to one a step.
+        var fast = NewGraph("EventRateFast");
+        var sprayers = Quads(fast, 4, 0.2f, new Vector3(0.6f, 1f, 0.6f));
+        Burst(sprayers.Spawn, 3f);
+        SetRandom(sprayers.Init, "position", new Vector3(-1.2f, -1.2f, 0f), new Vector3(-0.8f, 1.2f, 0f));
+        SetRandom(sprayers.Init, "velocity", new Vector3(1f, -0.5f, 0f), new Vector3(1.5f, 0.5f, 0f));
+        var spraying = Trigger(sprayers.Update, TriggerEvent.Mode.OverTime, 150f);
+        spraying.SetSettingValue("clampToOne", false);
+        var spray = Child<VFXPlanarPrimitiveOutput>(fast, spraying, 128);
+        spray.Output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Inherit(spray.Init, "position");
+        SetRandom(spray.Init, "velocity", new Vector3(-1f, -1f, 0f), new Vector3(1f, 1f, 0f));
+        Set(spray.Init, "lifetime", 0.2f);
+        Set(spray.Init, "size", 0.05f);
+        SetVector(spray.Init, "color", new Vector3(1f, 0.4f, 0.8f));
+        Save(fast);
 
         // The trigger in the initialize context: each particle spawns three as it is born,
         // which take its colour as well as its place.
@@ -279,16 +295,6 @@ public static class EventAuthoring
         return slot;
     }
 
-    static VFXParameter Parameter(VFXGraph graph, Type type, string name, object value)
-    {
-        var parameter = VFXLibrary.GetParameters().First(d => d.modelType == type).CreateInstance();
-        parameter.SetSettingValue("m_ExposedName", name);
-        parameter.SetSettingValue("m_Exposed", true);
-        parameter.value = value;
-        graph.AddChild(parameter);
-        return parameter;
-    }
-
     static void Link(VFXSlot from, VFXSlot to)
     {
         if (!from.Link(to)) throw new InvalidOperationException("cannot link " + from.property.type.Name + " '" + from.name + "' to " + to.property.type.Name + " '" + to.name + "'");
@@ -299,17 +305,6 @@ public static class EventAuthoring
         var block = Make<VFXSpawnerConstantRate>();
         spawn.AddChild(block);
         block.inputSlots[0].value = rate;
-    }
-
-    /// <summary>Moves what an output draws towards the camera (the systems are in the
-    /// effect's space, the cameras look along its z).</summary>
-    static void Nearer(VFXContext output, float by)
-    {
-        var block = Make<SetAttribute>();
-        block.SetSettingValue("attribute", "position");
-        block.SetSettingValue("Composition", AttributeCompositionMode.Add);
-        output.AddChild(block);
-        block.inputSlots[0].value = Spaced(block.inputSlots[0], new Vector3(0f, 0f, -by));
     }
 
     /// <summary>One burst at the start.</summary>

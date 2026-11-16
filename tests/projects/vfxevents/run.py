@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GPU events and strips of Visual Effect Graph systems; see README.md."""
+"""GPU events of Visual Effect Graph systems; see README.md."""
 from pathlib import Path
 import sys
 
