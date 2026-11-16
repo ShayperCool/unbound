@@ -285,6 +285,10 @@ without it the pipeline keeps no history of the camera and hands an effect none 
   particles fade away). The probe's renderer copies the depth after the opaque objects; copied
   after the transparent ones, the texture is not this camera's while the particles draw.
 
+Known residual (`image_limits.json`): through the orthographic camera, 212 pixels inside the
+particles that fade near the boards differ by 1 to 3 of 255 (the perspective images are exact);
+the cause is not found.
+
 Not shown by these: what the graph's GPU programs read in the depth and colour buffers (the
 particles' colours are not recorded: in this setup the depth the pipeline hands over reads as
 nothing in the Editor too, which is not explained), the scene view's camera as the main camera

@@ -71,6 +71,42 @@
   "over8": 0,
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
+ "draw-soft no depth-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-soft no depth-f020.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-soft ortho-f010.png": {
+  "mean": 0.06,
+  "worst": 3,
+  "over8": 0,
+  "reason": "Residual: inside the particles that fade near the boards, 212 pixels differ by 1 to 3 of 255 from the Editor's (both signs, no edge pixels); the same particles seen by the perspective camera match exactly. Seen through an orthographic camera the fade compares the depth texture's depth with the fragment's own depth (not its clip-space w); where that rounds differently is not found. Measured on one machine (NVIDIA driver, the Linux Editor on OpenGL Core)."
+ },
+ "draw-soft ortho-f020.png": {
+  "mean": 0.06,
+  "worst": 3,
+  "over8": 0,
+  "reason": "Residual: inside the particles that fade near the boards, 212 pixels differ by 1 to 3 of 255 from the Editor's (both signs, no edge pixels); the same particles seen by the perspective camera match exactly. Seen through an orthographic camera the fade compares the depth texture's depth with the fragment's own depth (not its clip-space w); where that rounds differently is not found. Measured on one machine (NVIDIA driver, the Linux Editor on OpenGL Core)."
+ },
+ "draw-soft-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-soft-f020.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
  "draw-textured-f005.png": {
   "mean": 0,
   "worst": 0,
