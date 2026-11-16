@@ -175,7 +175,9 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                GC.KeepAlive(documents);
                 BundleFiles.Unregister(File, true);
+                Object.DestroyImmediate(bundle);
             }
         }
 
