@@ -287,6 +287,8 @@ class OracleGuardTests(unittest.TestCase):
             self.assertEqual(self.guard().returncode, 0, free)
         self.commit('not an object', [entry], file=residuals)
         self.assertEqual(self.guard().returncode, 4)
+        self.commit('a truth value', {'a': dict(entry, pixels=True)}, file=residuals)
+        self.assertEqual(self.guard().returncode, 4)
         self.commit('not a number', {'a': dict(entry, pixels='100')}, file=residuals)
         refused = self.guard()
         self.assertEqual(refused.returncode, 4, refused.stderr)

@@ -68,7 +68,7 @@ def raised_residuals(before, after):
     raised = []
     for key, entry in after.items():
         old = before.get(key)
-        if not isinstance(entry, dict) or not all(isinstance(entry.get(field), int) for field in ('pixels', 'worst')):
+        if not isinstance(entry, dict) or not all(type(entry.get(field)) is int for field in ('pixels', 'worst')):
             raised.append(f'{key}: not an object with integer pixels and worst')
         elif not isinstance(old, dict) or any(entry.get(field, 0) > old.get(field, 0) for field in ('pixels', 'worst')):
             raised.append(f'{key}: {entry.get("pixels")} pixels up to {entry.get("worst")}'
