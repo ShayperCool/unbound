@@ -352,7 +352,7 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    unsafe partial class BaseVisualElementPanel : global::UnityEngine.UIElements.IGroupBox
+    unsafe partial class BaseVisualElementPanel
     {
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.Layout.LayoutConfig layoutConfig;
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.IPanelRenderer panelRenderer;
@@ -373,8 +373,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected void InvokeAtlasChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeAtlasChanged"); }
         [global::Unbound.Stub] internal void InvokeHierarchyChanged(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.HierarchyChangeType changeType, global::System.Collections.Generic.IReadOnlyList<global::UnityEngine.UIElements.VisualElement> additionalContext = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeHierarchyChanged"); }
         [global::Unbound.Stub] internal void InvokeBeforeUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.InvokeBeforeUpdate"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionAdded(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.OnOptionAdded"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionRemoved(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.OnOptionRemoved"); }
         [global::Unbound.Stub] internal virtual global::UnityEngine.UIElements.IGenericMenu CreateMenu() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.CreateMenu"); return default; }
         public virtual global::UnityEngine.EventInterests IMGUIEventInterests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIEventInterests"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.IMGUIEventInterests"); } }
         public virtual global::UnityEngine.UIElements.SavePersistentViewData saveViewData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.saveViewData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.saveViewData"); } }
@@ -1115,16 +1113,6 @@ namespace UnityEngine.UIElements
         }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class DefaultGroupManager : global::UnityEngine.UIElements.IGroupManager
-    {
-        [global::Unbound.Stub] public void Init(global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.Init"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.IGroupBoxOption GetSelectedOption() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.GetSelectedOption"); return default; }
-        [global::Unbound.Stub] public void OnOptionSelectionChanged(global::UnityEngine.UIElements.IGroupBoxOption selectedOption) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.OnOptionSelectionChanged"); }
-        [global::Unbound.Stub] public void RegisterOption(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.RegisterOption"); }
-        [global::Unbound.Stub] public void UnregisterOption(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.UnregisterOption"); }
-        [global::Unbound.Stub] public DefaultGroupManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DefaultGroupManager.ctor"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class DisposeHelper
     {
         [global::Unbound.Stub] public static void NotifyMissingDispose(global::System.IDisposable disposable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DisposeHelper.NotifyMissingDispose"); }
@@ -1577,18 +1565,8 @@ namespace UnityEngine.UIElements
         }
     }
     internal unsafe delegate global::UnityEngine.UIElements.ISerializableJsonDictionary GetViewDataDictionary();
-    [global::Unbound.Stub]
-    public unsafe partial class GroupBox : global::UnityEngine.UIElements.BindableElement, global::UnityEngine.UIElements.IGroupBox
+    unsafe partial class GroupBox
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public GroupBox() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.ctor"); }
-        [global::Unbound.Stub] public GroupBox(string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.ctor"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionAdded(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.OnOptionAdded"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionRemoved(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.OnOptionRemoved"); }
-        internal global::UnityEngine.UIElements.Label titleLabel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.titleLabel"); return default; } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.text"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
@@ -1611,15 +1589,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.UxmlTraits.Init"); }
             [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.UxmlTraits.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class GroupBoxUtility
-    {
-        [global::Unbound.Stub] public static void RegisterGroupBoxOption<T>(this T option) where T : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.IGroupBoxOption { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.RegisterGroupBoxOption"); }
-        [global::Unbound.Stub] public static void UnregisterGroupBoxOption<T>(this T option) where T : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.IGroupBoxOption { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.UnregisterGroupBoxOption"); }
-        [global::Unbound.Stub] public static void OnOptionSelected<T>(this T selectedOption) where T : global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.IGroupBoxOption { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.OnOptionSelected"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IGroupBoxOption GetSelectedOption(this global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.GetSelectedOption"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.IGroupManager GetGroupManager(this global::UnityEngine.UIElements.IGroupBox groupBox) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBoxUtility.GetGroupManager"); return default; }
     }
     unsafe partial class Hash128Field
     {
@@ -1732,26 +1701,6 @@ namespace UnityEngine.UIElements
     {
         bool InterceptEvent(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.UIElements.EventBase ev);
         void OnContextClick(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.UIElements.ContextClickEvent ev);
-    }
-    unsafe partial interface IGroupBox
-    {
-        [global::Unbound.Stub] void OnOptionAdded(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IGroupBox.OnOptionAdded"); }
-        [global::Unbound.Stub] void OnOptionRemoved(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IGroupBox.OnOptionRemoved"); }
-    }
-    unsafe partial interface IGroupBoxOption
-    {
-        [global::Unbound.Stub] void SetSelected(bool selected) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IGroupBoxOption.SetSelected"); }
-    }
-    internal unsafe partial interface IGroupBox<T> : global::UnityEngine.UIElements.IGroupBox where T : global::UnityEngine.UIElements.IGroupManager
-    {
-    }
-    internal unsafe partial interface IGroupManager
-    {
-        void Init(global::UnityEngine.UIElements.IGroupBox groupBox);
-        global::UnityEngine.UIElements.IGroupBoxOption GetSelectedOption();
-        void OnOptionSelectionChanged(global::UnityEngine.UIElements.IGroupBoxOption selectedOption);
-        void RegisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
-        void UnregisterOption(global::UnityEngine.UIElements.IGroupBoxOption option);
     }
     internal unsafe partial interface ILiveReloadAssetTracker<T> where T : global::UnityEngine.ScriptableObject
     {
@@ -2958,7 +2907,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class RadioButton
     {
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBoxOption.SetSelected(bool selected) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButton.SetSelected"); }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseBoolField.UxmlSerializedData
@@ -2984,12 +2932,6 @@ namespace UnityEngine.UIElements
     }
     unsafe partial class RadioButtonGroup
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId choicesProperty;
-        [global::Unbound.Stub] internal static readonly string containerName;
-        [global::Unbound.Stub] internal static readonly string choicesContainerName;
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionAdded(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.OnOptionAdded"); }
-        [global::Unbound.Stub] void global::UnityEngine.UIElements.IGroupBox.OnOptionRemoved(global::UnityEngine.UIElements.IGroupBoxOption option) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.OnOptionRemoved"); }
-        internal global::System.Collections.Generic.List<string> choicesList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.choicesList"); return new global::System.Collections.Generic.List<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.choicesList"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<int>.UxmlSerializedData
