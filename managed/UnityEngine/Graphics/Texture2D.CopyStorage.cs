@@ -8,7 +8,7 @@ namespace UnityEngine
         // CopyTexture propagates that storage; subsequent Instantiate/GetRawTextureData see it.
         internal void CopyRetainedPixels(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)
         {
-            // Graphics.CopyTexture has checked that the regions fit both textures.
+            // Graphics.CopyTexture has fitted the regions to both textures.
             if (!EnsureRetainedPixels() || !destination.EnsureRetainedPixels()) return;
             var pixels = new Color[width * height];
             for (int row = 0; row < height; row++)

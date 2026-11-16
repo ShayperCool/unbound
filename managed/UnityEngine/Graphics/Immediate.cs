@@ -573,6 +573,13 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            // A whole copy between 2D textures of other sizes copies nothing (the Unity 6000.0.71f1
+            // Editor, tests/projects/apierrors `texture.copy_whole_*`; other kinds unmeasured).
+            if (src is Texture2D && dst is Texture2D && (src.width != dst.width || src.height != dst.height))
+            {
+                Debug.LogError($"Graphics.CopyTexture called with mismatching texture sizes (src {src.width}x{src.height}x1 (array length 0), dst {dst.width}x{dst.height}x1 (array length 0))");
+                return;
+            }
             if (src is Texture2D b1 && dst is Texture2D b2
                 && (BlockFormats.BlockBytes(b1.format) > 0 || BlockFormats.BlockBytes(b2.format) > 0))
             {
@@ -639,7 +646,9 @@ namespace UnityEngine
             }
             if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
-                int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;
+                // A whole level copies what both levels hold (the element copy between other
+                // sizes copies, tests/projects/apierrors `texture.copy_element_size_mismatch*`).
+                int w = srcWidth < 0 ? Math.Min(s2.width, d2.width) : srcWidth, h = srcHeight < 0 ? Math.Min(s2.height, d2.height) : srcHeight;
                 s2.CopyRetainedPixels(d2, srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h, dstX, dstY);
             }
             ulong source = TextureHandles.Of(src), destination = TextureHandles.Of(dst);
