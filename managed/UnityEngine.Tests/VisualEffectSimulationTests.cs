@@ -941,6 +941,35 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TrianglesAndOctagonsAreDrawnByTheirIndices()
+        {
+            // An octagon: six triangles over its eight points; up to 8192 in one draw, else
+            // instances of 1024 (the vertex programs find (vertexID >> 3) + instanceID * 1024).
+            var octagons = Primitive.Octagon.Indices(1);
+            (uint, uint) Octagons(uint count)
+            {
+                var setup = Primitive.Octagon.Draw(octagons, count);
+                return (setup.IndexCount, setup.Instances);
+            }
+            Assert.Equal(8192 * 18, octagons.count);
+            Assert.Equal((18u, 1u), Octagons(1));
+            Assert.Equal((8192u * 18, 1u), Octagons(8192));
+            Assert.Equal((1024u * 18, 9u), Octagons(8193));
+            Assert.Equal(new ushort[] { 0, 1, 7, 1, 2, 7, 2, 6, 7, 2, 3, 6, 3, 5, 6, 3, 4, 5, 8, 9, 15, 9, 10, 15, 10, 14, 15, 10, 11, 14, 11, 13, 14, 11, 12, 13 }, Primitive.Octagon.Data(2));
+            // Triangles: one draw of 32-bit indices however many (their programs read no
+            // instance), made for as many as asked and kept while they reach.
+            var triangles = Primitive.Triangle.Indices(30000);
+            Assert.Equal(4, triangles.stride);
+            Assert.True(triangles.count >= 90000);
+            var setup = Primitive.Triangle.Draw(triangles, 30000);
+            Assert.Equal((90000u, 1u), (setup.IndexCount, setup.Instances));
+            Assert.Same(triangles, Primitive.Triangle.Indices(20000));
+            var data = (uint[])Primitive.Triangle.Data(30000);
+            Assert.Equal(new uint[] { 89994, 89995, 89996, 89997, 89998, 89999 }, data[89994..]);
+            Assert.Equal(new ushort[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 }, Primitive.Quad.Data(2));
+        }
+
+        [Fact]
         public void MoreQuadsThanIndicesReachAreDrawnAsInstances()
         {
             var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, VFXOutput.MaxQuadsPerDraw * 6, 2);
@@ -972,7 +1001,9 @@ namespace UnityEngine.Tests
             // What is drawn, and each thing that is not.
             Assert.Null(VFXOutput.Refusal(system, quads, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, quads, null));
-            Assert.Equal("ParticlePointOutput is not drawn yet (quads and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
+            Assert.Equal("ParticlePointOutput is not drawn yet (quads, triangles, octagons and meshes are)", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticlePointOutput }, material));
+            Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
+            Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleOctagonOutput }, material));
             // Through an indirect buffer: drawn from the list that counts its particles, or from
             // the sorted copy a sort task of its system makes; not from a list no task makes, nor
             // in a system that sorts one list for all its outputs.

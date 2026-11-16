@@ -37,8 +37,9 @@ namespace Unbound.Runtime
     /// <summary>
     /// An output of a particle system: one draw of its particles with the shader the graph
     /// compiled to, whose vertex program finds each particle in the system's buffers by its
-    /// vertex id (or, of a mesh, by its instance). Drawn here: quads, either all the system has
-    /// room for (the vertex program leaves out the dead ones) or through an indirect buffer: a
+    /// vertex id (or, of a mesh, by its instance). Drawn here: planar primitives (quads,
+    /// triangles, octagons: <see cref="Primitive"/>), either all the system has room for (the
+    /// vertex program leaves out the dead ones) or through an indirect buffer: a
     /// list of the particles to draw that the system's kernels make (the update kernel, an
     /// output-update kernel at each step, or one for each camera that sees the effect), sorted
     /// when the output sorts (<see cref="VFXSort"/>), whose count gives the draw's arguments
@@ -54,7 +55,6 @@ namespace Unbound.Runtime
         /// quads of each instance of a draw of more: the generated vertex programs find a
         /// quad's particle as <c>(vertexID >> 2) + instanceID * 2048</c>.</summary>
         internal const int MaxQuadsPerDraw = 16384, QuadsPerInstance = 2048;
-        const int IndicesPerQuad = 6;
 
         static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
         static readonly int s_InstanceIndex = Shader.PropertyToID("_InstanceIndex");
@@ -63,7 +63,6 @@ namespace Unbound.Runtime
         internal const string BakedTextureName = "bakedTexture";
         static readonly int s_BakedTexture = Shader.PropertyToID(BakedTextureName);
 
-        static GraphicsBuffer s_QuadIndices;
 
         readonly VFXParticleSystem m_System;
         readonly VFXEditorTaskDesc m_Task;
@@ -137,7 +136,7 @@ namespace Unbound.Runtime
         /// (<see cref="SourceRefusal"/>).</summary>
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
-            if (task.type != VFXTaskType.ParticleQuadOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads and meshes are)";
+            if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons and meshes are)";
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
             if (Parameter(task, IndirectDrawName) != 0)
             {
@@ -281,32 +280,17 @@ namespace Unbound.Runtime
             return missing;
         }
 
-        /// <summary>The indices of <see cref="MaxQuadsPerDraw"/> quads: two triangles over each
-        /// four vertices.</summary>
-        static GraphicsBuffer QuadIndices()
-        {
-            if (s_QuadIndices != null && s_QuadIndices.IsValid()) return s_QuadIndices;
-            var indices = new ushort[MaxQuadsPerDraw * IndicesPerQuad];
-            for (int quad = 0, at = 0; quad < MaxQuadsPerDraw; quad++)
-            {
-                int first = quad * 4;
-                indices[at++] = (ushort)first;
-                indices[at++] = (ushort)(first + 2);
-                indices[at++] = (ushort)(first + 1);
-                indices[at++] = (ushort)(first + 1);
-                indices[at++] = (ushort)(first + 2);
-                indices[at++] = (ushort)(first + 3);
-            }
-            s_QuadIndices = new GraphicsBuffer(GraphicsBuffer.Target.Index, indices.Length, sizeof(ushort));
-            s_QuadIndices.SetData(indices);
-            return s_QuadIndices;
-        }
+        /// <summary>Whether a task draws a planar primitive (a triangle, a quad or an octagon
+        /// for each particle).</summary>
+        internal static bool IsPlanar(VFXTaskType type) =>
+            type == VFXTaskType.ParticleQuadOutput || type == VFXTaskType.ParticleTriangleOutput || type == VFXTaskType.ParticleOctagonOutput;
 
-        /// <summary>The draw of <paramref name="quads"/> quads: all in one while the indices
-        /// reach, else instances of <see cref="QuadsPerInstance"/>.</summary>
-        internal static DrawSetup QuadDraw(GraphicsBuffer indices, uint quads) => quads <= MaxQuadsPerDraw
-            ? IndexedDraws.Direct(indices, 0, (int)quads * IndicesPerQuad, 1)
-            : IndexedDraws.Direct(indices, 0, QuadsPerInstance * IndicesPerQuad, (int)((quads + QuadsPerInstance - 1) / QuadsPerInstance));
+        /// <summary>The planar primitive an output task draws.</summary>
+        internal static Primitive PrimitiveOf(VFXTaskType type) =>
+            type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon : Primitive.Quad;
+
+        /// <summary>The draw of <paramref name="quads"/> quads (<see cref="Primitive.Draw"/>).</summary>
+        internal static DrawSetup QuadDraw(GraphicsBuffer indices, uint quads) => Primitive.Quad.Draw(indices, quads);
 
         /// <summary>Computes the arguments of an indirect draw from the count its list has now
         /// (after the kernels that make the list for this camera). False when they cannot be.</summary>
@@ -358,9 +342,12 @@ namespace Unbound.Runtime
                 CollectMeshes(renderer, quads, camera, into);
                 return;
             }
+            var primitive = PrimitiveOf(m_Task.type);
+            // Indices for as many as the system has room for: made once (triangles grow them).
+            var indices = primitive.Indices(m_System.Capacity);
             var setup = Indirect
-                ? IndexedDraws.Indirect(QuadIndices(), arguments.Arguments.Handle, VFXIndirectArgs.Offset(m_ArgsEntry))
-                : QuadDraw(QuadIndices(), quads);
+                ? IndexedDraws.Indirect(indices, arguments.Arguments.Handle, VFXIndirectArgs.Offset(m_ArgsEntry))
+                : primitive.Draw(indices, quads);
             FrameBuilder.AddProceduralDraw(renderer, m_Material, renderer.transform.localToWorldMatrix, setup, m_Block.m_Values, camera, into);
         }
     }

@@ -1,0 +1,81 @@
+using System;
+using UnityEngine;
+
+namespace Unbound.Runtime
+{
+    /// <summary>
+    /// A planar primitive outputs draw for each particle, as the generated vertex programs find
+    /// a particle by their vertex id: its vertices, the triangles over them (the indices of one
+    /// primitive), and how many primitives one draw's 16-bit indices reach, beyond which a draw
+    /// is made of instances of <see cref="PerInstance"/> (the programs add the instance's place).
+    /// A triangle's program reads no instance: triangles are drawn in one draw, with 32-bit
+    /// indices. Matches the Unity 6000.0.71f1 Editor (tests/projects/vfx `draw-*`,
+    /// tests/projects/vfxoutputs `Triangle*`, `Octagon*`).
+    /// </summary>
+    internal sealed class Primitive
+    {
+        /// <summary>Two triangles over a quad's four corners.</summary>
+        internal static readonly Primitive Quad = new Primitive(4, new ushort[] { 0, 2, 1, 1, 2, 3 }, (uint)VFXOutput.MaxQuadsPerDraw, (uint)VFXOutput.QuadsPerInstance);
+        /// <summary>Six triangles over an octagon's eight points, in order around it.</summary>
+        internal static readonly Primitive Octagon = new Primitive(8, new ushort[] { 0, 1, 7, 1, 2, 7, 2, 6, 7, 2, 3, 6, 3, 5, 6, 3, 4, 5 }, 8192, 1024);
+        /// <summary>One triangle: its three vertices.</summary>
+        internal static readonly Primitive Triangle = new Primitive(3, new ushort[] { 0, 1, 2 }, 0, 0);
+
+        internal readonly int Vertices;
+        readonly ushort[] m_Pattern;
+        /// <summary>The primitives one draw takes, and of each instance beyond; 0: no limit,
+        /// no instances (32-bit indices made for as many as asked).</summary>
+        internal readonly uint MaxPerDraw, PerInstance;
+        GraphicsBuffer m_Indices;
+        uint m_Made;
+
+        Primitive(int vertices, ushort[] pattern, uint maxPerDraw, uint perInstance)
+        {
+            Vertices = vertices;
+            m_Pattern = pattern;
+            MaxPerDraw = maxPerDraw;
+            PerInstance = perInstance;
+        }
+
+        internal int IndicesPerPrimitive => m_Pattern.Length;
+
+        /// <summary>The indices of the primitives a draw of <paramref name="count"/> takes: the
+        /// most one draw reaches, or (triangles) at least <paramref name="count"/>, made anew
+        /// only when more are asked for than there are.</summary>
+        internal GraphicsBuffer Indices(uint count)
+        {
+            uint needed = MaxPerDraw != 0 ? MaxPerDraw : Math.Max(count, 1u);
+            if (m_Indices != null && m_Indices.IsValid() && m_Made >= needed) return m_Indices;
+            if (MaxPerDraw == 0) needed = Math.Max(needed, m_Made + m_Made / 2); // grown by halves again: few buffers
+            var data = Data(needed);
+            m_Indices?.Release();
+            m_Indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, data.Length, MaxPerDraw == 0 ? sizeof(uint) : sizeof(ushort));
+            m_Indices.SetData(data);
+            m_Made = needed;
+            return m_Indices;
+        }
+
+        /// <summary>The indices of <paramref name="count"/> primitives, one after another: 16-bit
+        /// for primitives with a most per draw, else 32-bit.</summary>
+        internal Array Data(uint count)
+        {
+            if (MaxPerDraw == 0)
+            {
+                var wide = new uint[count * m_Pattern.Length];
+                for (uint primitive = 0, at = 0; primitive < count; primitive++)
+                    foreach (var corner in m_Pattern) wide[at++] = primitive * (uint)Vertices + corner;
+                return wide;
+            }
+            var indices = new ushort[count * m_Pattern.Length];
+            for (uint primitive = 0, at = 0; primitive < count; primitive++)
+                foreach (var corner in m_Pattern) indices[at++] = (ushort)(primitive * Vertices + corner);
+            return indices;
+        }
+
+        /// <summary>The direct draw of <paramref name="count"/> primitives: all in one while the
+        /// indices reach, else instances of <see cref="PerInstance"/>.</summary>
+        internal DrawSetup Draw(GraphicsBuffer indices, uint count) => MaxPerDraw == 0 || count <= MaxPerDraw
+            ? IndexedDraws.Direct(indices, 0, (int)count * m_Pattern.Length, 1)
+            : IndexedDraws.Direct(indices, 0, (int)PerInstance * m_Pattern.Length, (int)((count + PerInstance - 1) / PerInstance));
+    }
+}
