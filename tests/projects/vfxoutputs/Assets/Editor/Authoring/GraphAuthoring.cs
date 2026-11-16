@@ -31,6 +31,7 @@ public static class GraphAuthoring
         Indirect();
         Sorted();
         Prioritized();
+        Primitives();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -351,6 +352,46 @@ public static class GraphAuthoring
                     color++;
                 }
         Save(graph);
+    }
+
+    /// <summary>The graphs of the other planar primitives (README.md, "Primitives"): triangles
+    /// and octagons, drawn directly or from the update kernel's list, and more than one draw's
+    /// indices reach.</summary>
+    static void Primitives()
+    {
+        foreach (var primitive in new[] { VFXPrimitiveType.Triangle, VFXPrimitiveType.Octagon })
+        {
+            string name = primitive.ToString();
+            foreach (var listed in new[] { false, true })
+            {
+                // Forty opaque primitives at once, each with a place, a depth, a colour and an
+                // angle of its own; octagons cropped to a third of their corners.
+                var still = NewGraph(name + (listed ? "List" : "Still"));
+                var (spawn, init, output) = System(still, 64);
+                output.SetSettingValue("primitiveType", primitive);
+                output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+                if (listed) output.SetSettingValue("indirectDraw", true);
+                if (primitive == VFXPrimitiveType.Octagon) Input(output, "cropFactor").value = 0.3f;
+                Burst(spawn, 40f);
+                SetRandom(init, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+                Set(init, "size", 0.4f);
+                SetRandom(init, "angleZ", 0f, 90f);
+                SetRandom(init, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+                Save(still);
+            }
+
+            // More than one draw's 16-bit indices reach (octagons: 8192, triangles: 21845),
+            // added to what is behind.
+            var many = NewGraph(name + "Many");
+            var (manySpawn, manyInit, manyOutput) = System(many, 30000);
+            manyOutput.SetSettingValue("primitiveType", primitive);
+            manyOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+            Burst(manySpawn, 30000f);
+            SetRandom(manyInit, "position", new Vector3(-1.4f, -1.4f, 0f), new Vector3(1.4f, 1.4f, 0f));
+            Set(manyInit, "size", 0.05f);
+            SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
+            Save(many);
+        }
     }
 
     /// <summary>The probe scene: a camera that sees none of the stages (the probe builds them).</summary>

@@ -4,8 +4,8 @@ Visual Effect Graph (com.unity.visualeffectgraph 17.0.4, the Editor's built-in p
 under URP 17: how the outputs of the probe's own small graphs are drawn, recorded by the same
 script in the Unity Editor and in Unbound. The `vfx` probe covers the import, the API and the
 simulation, and the outputs that draw every particle a system has room for; this one covers the
-outputs that draw through an indirect buffer, sorted outputs and the order of an effect's
-outputs.
+outputs that draw through an indirect buffer, sorted outputs, the order of an effect's
+outputs, and triangle and octagon outputs.
 
 The Editor records in a window (not in batch mode): in batch mode no camera ever sees an effect.
 
@@ -51,6 +51,13 @@ front: dead particles' places are taken again, so age is not the order of places
 (6000 quads sorted for each camera: values only, see "Not covered") and `SortKeyedMany` (20000 quads sorted at each step by a key of their own: merged
 three times, through the scratch list and the list itself).
 
+Triangles and octagons (`Assets/OutputGraphs/Triangle*.vfx`, `Octagon*.vfx`): `TriangleStill`,
+`OctagonStill` (forty opaque primitives, each with a place, a depth, a colour and a turn of its
+own; octagons with a crop factor of 0.3, which pulls their odd corners in), `TriangleList`,
+`OctagonList` (the same through the update kernel's list) and `TriangleMany`, `OctagonMany`
+(30000 additive primitives: more than one draw's 16-bit indices reach for octagons, drawn as
+instances of 1024; triangles in one draw).
+
 `Priority`: two systems over the same particles (one seed), the first with two outputs and the
 second with one, unsorted and alpha blended, each output of a colour of its own and a label of its
 own, with output priorities (`sortPriority`, the asset's output render order) of 2 and 0, then 1.
@@ -82,6 +89,8 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
   otherwise) in each frame.
 - `SortKeyed` as the four above; `SortYoungest` (frames 30 and 45); `SortKeyedMany` (frame 5);
   `SortMany` (frame 5, values only).
+- `TriangleStill`, `TriangleList`, `TriangleMany`, `OctagonStill`, `OctagonList`, `OctagonMany`
+  (frame 3).
 - `Priority` (frame 3): the outputs drawn by their priority, the lowest first, across systems;
   `PriorityTies` (frame 3): equal ones in their systems' order, then each system's.
 - `Effects` (frame 3): two effects over each other (`SortKeyed`, and `SortDistance` made after it
