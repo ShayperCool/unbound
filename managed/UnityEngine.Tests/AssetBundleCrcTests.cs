@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,7 +28,7 @@ namespace UnityEngine.Tests
         static readonly List<ulong> s_Closes = new List<ulong>();
         static ulong s_NextId;
         readonly object previousApi, previousReady;
-        readonly string file;
+        readonly string file, offsetFile;
         readonly byte[] bytes = { 0x55, 0x6e, 0x69, 0x74, 0x79, 0x46, 0x53, 0x00, 1, 2, 3 };
         readonly List<string> errors = new List<string>();
 
@@ -42,6 +43,9 @@ namespace UnityEngine.Tests
             s_NextId = 9000;
             file = Path.Combine(Path.GetTempPath(), $"unbound-crc-{Guid.NewGuid():N}.bundle");
             File.WriteAllBytes(file, bytes);
+            // The same archive three bytes into a file, for the offset routes (its header is read there).
+            offsetFile = file + ".offset";
+            File.WriteAllBytes(offsetFile, new byte[] { 7, 7, 7 }.Concat(bytes).ToArray());
             Application.logMessageReceivedThreaded += Capture;
         }
 
@@ -53,6 +57,7 @@ namespace UnityEngine.Tests
             Api.SetValue(null, previousApi);
             Ready.SetValue(null, previousReady);
             File.Delete(file);
+            File.Delete(offsetFile);
         }
 
         void Capture(string message, string stack, LogType type)
@@ -124,7 +129,7 @@ namespace UnityEngine.Tests
             Assert.True(request.TryGetProperty("crc", out var sentCrc), "bundle-open must include its CRC");
             Assert.Equal(0U, sentCrc.GetUInt32());
 
-            Unload(AssetBundle.LoadFromFile(file, Good, 3));
+            Unload(AssetBundle.LoadFromFile(offsetFile, Good, 3));
             request = LastOpen();
             Assert.Equal(3UL, request.GetProperty("offset").GetUInt64());
             Assert.Equal(Good, request.GetProperty("crc").GetUInt32());
@@ -147,7 +152,7 @@ namespace UnityEngine.Tests
         {
             var loaded = AssetBundle.GetAllLoadedAssetBundles_Native().Length;
             Assert.Null(AssetBundle.LoadFromFile(file, Bad));
-            Assert.Null(AssetBundle.LoadFromFile(file, Bad, 3));
+            Assert.Null(AssetBundle.LoadFromFile(offsetFile, Bad, 3));
             Assert.Null(AssetBundle.LoadFromMemory(bytes, Bad));
             Assert.Null(AssetBundle.LoadFromStream(new MemoryStream(bytes), Bad));
             Assert.Null(AssetBundle.LoadFromStream(new MemoryStream(bytes), Bad, 4096));
@@ -155,7 +160,8 @@ namespace UnityEngine.Tests
             Assert.Equal(5, errors.Count);
             Assert.All(errors, e => Assert.Contains("CRC mismatch", e));
             Assert.Contains(errors, e => e.Contains(file));
-            Assert.Contains(errors, e => e.Contains("<memory>"));
+            Assert.Contains(errors, e => e.Contains("'Memory'"));
+            Assert.Contains(errors, e => e.Contains("'IO.Stream'"));
             // Nothing was registered on either side: no bundle to close, none loaded.
             Assert.Empty(s_Closes);
             Assert.Equal(loaded, AssetBundle.GetAllLoadedAssetBundles_Native().Length);
@@ -167,7 +173,7 @@ namespace UnityEngine.Tests
             var requests = new[]
             {
                 AssetBundle.LoadFromFileAsync(file, Bad),
-                AssetBundle.LoadFromFileAsync(file, Bad, 3),
+                AssetBundle.LoadFromFileAsync(offsetFile, Bad, 3),
                 AssetBundle.LoadFromMemoryAsync(bytes, Bad),
                 AssetBundle.LoadFromStreamAsync(new MemoryStream(bytes), Bad),
                 AssetBundle.LoadFromStreamAsync(new MemoryStream(bytes), Bad, 4096),

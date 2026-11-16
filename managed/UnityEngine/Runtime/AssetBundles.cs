@@ -53,7 +53,12 @@ namespace UnityEngine
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                Debug.LogError($"Unable to open archive file: {path}");
+                LoadErrors.Unreadable($"Unable to open archive file: {path}", Path.GetFileName(path ?? ""));
+                return null;
+            }
+            if (!LoadErrors.IsArchive(path, offset))
+            {
+                LoadErrors.Unreadable($"Unable to read header from archive file: {path}", Path.GetFileName(path));
                 return null;
             }
             return Open(JsonSerializer.Serialize(new { path = Path.GetFullPath(path), offset, crc }), path);
@@ -64,9 +69,17 @@ namespace UnityEngine
 
         internal static AssetBundle LoadFromMemory_Internal(byte[] binary, uint crc)
         {
-            if (binary == null) throw new NullReferenceException();
-            return Open(JsonSerializer.Serialize(new { data = Convert.ToBase64String(binary), crc }), "<memory>");
+            if (binary == null) return null;
+            if (!LoadErrors.IsArchive(binary))
+            {
+                Debug.LogError($"Failed to decompress data for the AssetBundle '{LoadErrors.Memory}'.");
+                return null;
+            }
+            return OpenBytes(binary, crc, LoadErrors.Memory);
         }
+
+        static AssetBundle OpenBytes(byte[] binary, uint crc, string description) =>
+            Open(JsonSerializer.Serialize(new { data = Convert.ToBase64String(binary), crc }), description);
 
         public static AssetBundle LoadFromStream(Stream stream) => LoadFromStream(stream, 0, 0);
         public static AssetBundle LoadFromStream(Stream stream, uint crc) => LoadFromStream(stream, crc, 0);
@@ -74,9 +87,10 @@ namespace UnityEngine
 
         internal static void ValidateLoadFromStream(Stream stream)
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream), "ManagedStream object must be non-null");
-            if (!stream.CanRead) throw new ArgumentException("ManagedStream object must be readable (stream.CanRead must return true)");
-            if (!stream.CanSeek) throw new ArgumentException("ManagedStream object must be seekable (stream.CanSeek must return true)");
+            // The release's reference assemblies pass the message as the parameter name here.
+            if (stream == null) throw new ArgumentNullException("ManagedStream object must be non-null", nameof(stream));
+            if (!stream.CanRead) throw new ArgumentException("ManagedStream object must be readable (stream.CanRead must return true)", nameof(stream));
+            if (!stream.CanSeek) throw new ArgumentException("ManagedStream object must be seekable (stream.CanSeek must return true)", nameof(stream));
         }
 
         internal static AssetBundle LoadFromStreamInternal(Stream stream, uint crc, uint managedReadBufferSize)
@@ -84,7 +98,54 @@ namespace UnityEngine
             ValidateLoadFromStream(stream);
             using var memory = new MemoryStream();
             stream.CopyTo(memory);
-            return LoadFromMemory(memory.ToArray(), crc);
+            var binary = memory.ToArray();
+            if (!LoadErrors.IsArchive(binary))
+            {
+                // A stream is read as an archive file without a path.
+                LoadErrors.Unreadable("Unable to read header from archive file: ", LoadErrors.Stream);
+                return null;
+            }
+            return OpenBytes(binary, crc, LoadErrors.Stream);
+        }
+
+        /// <summary>The errors of a load that finds no archive, as the Unity 6000.0.71f1 Editor
+        /// logs them (tests/projects/apierrors `bundle.*`): a file or a stream fails to read, with
+        /// the bundle named after the file; bytes in memory fail to decompress.</summary>
+        static class LoadErrors
+        {
+            internal const string Memory = "Memory";
+            internal const string Stream = "IO.Stream";
+
+            static readonly byte[][] s_Signatures =
+                { "UnityFS\0"u8.ToArray(), "UnityWeb\0"u8.ToArray(), "UnityRaw\0"u8.ToArray(), "UnityArchive\0"u8.ToArray() };
+
+            /// <summary>Whether the data starts with an archive signature; what follows is the
+            /// native side's to read and report.</summary>
+            internal static bool IsArchive(ReadOnlySpan<byte> head)
+            {
+                foreach (var signature in s_Signatures)
+                    if (head.StartsWith(signature)) return true;
+                return false;
+            }
+
+            internal static bool IsArchive(string path, ulong offset)
+            {
+                Span<byte> head = stackalloc byte[16];
+                try
+                {
+                    using var file = File.OpenRead(path);
+                    if (offset > (ulong)file.Length) return false;
+                    file.Position = (long)offset;
+                    return IsArchive(head[..file.Read(head)]);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { return false; }
+            }
+
+            internal static void Unreadable(string error, string name)
+            {
+                Debug.LogError(error);
+                Debug.LogError($"Failed to read data for the AssetBundle '{name}'.");
+            }
         }
 
         public static AssetBundleCreateRequest LoadFromFileAsync(string path) => LoadFromFileAsync(path, 0, 0);
@@ -94,7 +155,8 @@ namespace UnityEngine
 
         public static AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary) => LoadFromMemoryAsync(binary, 0);
         public static AssetBundleCreateRequest LoadFromMemoryAsync(byte[] binary, uint crc) => LoadFromMemoryAsync_Internal(binary, crc);
-        internal static AssetBundleCreateRequest LoadFromMemoryAsync_Internal(byte[] binary, uint crc) => Request(LoadFromMemory(binary, crc));
+        internal static AssetBundleCreateRequest LoadFromMemoryAsync_Internal(byte[] binary, uint crc) =>
+            Request(LoadFromMemory(binary ?? throw new NullReferenceException(ObjectErrors.RuntimeNullReference), crc));
 
         public static AssetBundleCreateRequest LoadFromStreamAsync(Stream stream) => LoadFromStreamAsync(stream, 0, 0);
         public static AssetBundleCreateRequest LoadFromStreamAsync(Stream stream, uint crc) => LoadFromStreamAsync(stream, crc, 0);
