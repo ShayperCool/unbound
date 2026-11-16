@@ -192,12 +192,12 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
 there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Then `RoomHoles`
-(`roomholes-base`). Then the Room loaded four more times with a script's light delegate
+(`roomholes-base`). Then the Room loaded five more times with a script's light delegate
 (`GlobalIllumination.Lightmapping.SetDelegate`, set before the load) that extracts the lights as
 `LightmapperUtils` does but gives the point and spot lights one falloff type each:
 `room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
 `room-delegate-inversesquared` and `room-delegate-norange` (InverseSquaredNoRangeAttenuation)
-with its range 4. Last, `lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a
+with its range 4, and `room-delegate-linear` (Linear) at its own range. Last, `lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a
 rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7, 4 by 0.3), and a
 point, spot, directional, pyramid, box and tube light of `areaSize` 2 x 1, and the range
 `LightmapperUtils.Extract` gives the 2 x 1 rectangle and the first disc.
@@ -380,6 +380,10 @@ Observations (not documented guarantees):
 - A script's delegate in the built-in pipeline: the `Undefined` falloff lights as the legacy one
   (the two lightmaps are byte-identical), and InverseSquaredNoRangeAttenuation is the
   inverse-squared falloff without its window (brighter toward the range, nothing from it on).
+  The `Linear` falloff grows with the range: at the point light's own range 10 the lightmaps
+  are about five times the legacy falloff's (two byte-identical captures, every earlier file of
+  the reference byte-identical in both; a first pair with range 4 stays outside the reference,
+  docs/REALTIME_GI.md).
   `Light.dilatedRange` is a rectangle light's range plus half its diagonal (6.118034 for 2 x 1),
   a disc light's plus half its `areaSize.x` (5.75 and 7, whatever `areaSize.y`), any other
   light's range (every other light type); `LightmapperUtils` gives area lights that range.

@@ -168,7 +168,14 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   legacy one (tests/projects/realtimegi `room-delegate-*`: a script's delegate in the built-in
   pipeline gives the Room's point light each falloff type; the Editor's `undefined` lightmap
   equals its `legacy` one byte for byte, and `norange` differs from `inversesquared` at range
-  4). `Linear` is not supported and fails the scene's realtime GI loudly.
+  4). `Linear` is a table even in the table position rather than in the distance: the range
+  times (p - 1) / 13 at position p from 2 to 14 (so the range itself at the innermost sample),
+  then 1 at the light. The light therefore grows with its range: at the point light's own range
+  10 the Room's lightmaps are about five times the legacy falloff's (`room-delegate-linear`:
+  2 isolated values outside the comparator's tolerance; two higher-band light probe
+  coefficients of this brightest case reported, as in `room-bounce`). At range 4 the floor's
+  texels next to the left wall show the short-range residual below (a capture outside the
+  reference: texels (8,10) to (8,12) 11-20% above the Editor's).
 - **Spot lights**: the cone of step 1 with the inner angle the delegate gives
   (`pipeline-spot` and `pipeline-spot-inner`, the bright spot light alone with inner angles
   21.8 and 5: 139 of their 5070 values differ by more than the comparator's tolerance); the
@@ -186,8 +193,7 @@ the light cases (one value of one case outside the comparator's tolerance) and 0
 in the sky cases, and no light probe or ambient probe value is outside it. Not measured: other
 pipelines' delegates (the High Definition Render Pipeline's), the other falloff types, area
 lights (baked only in the Universal Render Pipeline; a light the delegate gives as one adds
-nothing, with a warning), directional lightmaps and several systems under a pipeline, and the
-`Linear` falloff. A delegate a script registers in the built-in pipeline is taken the same way
+nothing, with a warning), directional lightmaps and several systems under a pipeline. A delegate a script registers in the built-in pipeline is taken the same way
 (`room-delegate-*`: within the comparator's tolerance, 2 to 4 isolated values off). A delegate
 that throws leaves the frame without lights, with a warning.
 
@@ -201,8 +207,9 @@ A short range brings out a residual of a few texels: with the Room's point light
 and the legacy falloff, 10 values of the floor's texels next to the left wall are 10-12% above
 the Editor's (more than the gate allows; a capture outside the reference), where the same
 texels are 2-4% above it at the light's own range 10 and 8-10% with an inverse-squared falloff
-at range 4 (within the gate). Its cause is not found ([Open](#open)); the probe's legacy cases
-use the light's own range.
+at range 4 (within the gate); with the linear falloff at range 4 texels (8,10) to (8,12) are
+11-20% above it. Its cause is not found ([Open](#open)); the probe's legacy and linear
+cases use the light's own range.
 
 ## Directionality
 
@@ -1048,7 +1055,7 @@ measure):
 - Packing: what giving a region up changes for later charts, the count of the region open to
   the rows above every chart, the order of equal regions made by different placements, and the
   block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
-- Lights: render pipelines other than the Universal Render Pipeline, the `Linear` falloff,
+- Lights: render pipelines other than the Universal Render Pipeline,
   light types other than point, spot and directional (area lights are baked only), linear light
   intensity in the built-in pipeline, and the edge texels' residual a short range brings out
   ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
