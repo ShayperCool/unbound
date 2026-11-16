@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine.AI;
 using Xunit;
 
@@ -148,6 +149,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AWaitingStartIgnoresUnrelatedDataAdded() => NavigationTestRelease.At("6000.0.71f1", () =>
         {
+            // Pins this implementation's choice (rebinding among data added since the removal);
+            // a start rebinding to other data is unmeasured in Unity.
             var left = Floor(-4f);
             var right = Floor(4f);
             var highLeft = NavMesh.AddNavMeshData(left, new Vector3(0f, 0.3f, 0f), Quaternion.identity);
@@ -176,6 +179,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AWaitingStartBindsToDataUpdatedInPlace() => NavigationTestRelease.At("6000.0.71f1", () =>
         {
+            // Pins this implementation's choice (data updated in place counts as added); unmeasured
+            // in Unity.
             var settings = NavMesh.GetSettingsByID(0);
             var leftData = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource>(), s_Bounds, Vector3.zero, Quaternion.identity);
             var left = NavMesh.AddNavMeshData(leftData);
@@ -223,6 +228,41 @@ namespace UnityEngine.Tests
             finally
             {
                 NavMesh.RemoveLink(link);
+                NavMesh.RemoveNavMeshData(left);
+                NavMesh.RemoveNavMeshData(right);
+            }
+        });
+
+        [Fact]
+        public void AnEndOnACarvedTileOfMovedDataAttaches() => NavigationTestRelease.At("6000.0.71f1", () =>
+        {
+            // The right floor's data is placed 1 m along x (a moved surface), and a carving
+            // obstacle cuts the tile its link end is on, away from the end.
+            ObstacleSystem.ResetCarving();
+            var left = NavMesh.AddNavMeshData(Floor(-4f));
+            var right = NavMesh.AddNavMeshData(Floor(3f), Vector3.right, Quaternion.identity);
+            var go = new GameObject("obstacle");
+            go.transform.position = new Vector3(95f, 0.5f, 2.5f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = new Vector3(0.5f, 1f, 0.5f);
+            obstacle.carveOnlyStationary = false;
+            obstacle.carving = true;
+            var link = NavMesh.AddLink(new NavMeshLinkData { startPosition = At(-2.7f, 0.0833f) + Vector3.forward, endPosition = At(2.7f, 0.0833f) + Vector3.forward, bidirectional = true, costModifier = -1f });
+            try
+            {
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                Assert.False(NavMesh.SamplePosition(new Vector3(95f, 0.0833f, 2.5f), out _, 0.05f, NavMesh.AllAreas));
+                var path = new NavMeshPath();
+                NavMesh.CalculatePath(At(-3.7f, 0.0833f) + Vector3.forward, At(3.7f, 0.0833f) + Vector3.forward, NavMesh.AllAreas, path);
+                Assert.Equal(NavMeshPathStatus.PathComplete, path.status);
+            }
+            finally
+            {
+                NavMesh.RemoveLink(link);
+                Object.DestroyImmediate(go);
+                ObstacleSystem.ResetCarving();
                 NavMesh.RemoveNavMeshData(left);
                 NavMesh.RemoveNavMeshData(right);
             }

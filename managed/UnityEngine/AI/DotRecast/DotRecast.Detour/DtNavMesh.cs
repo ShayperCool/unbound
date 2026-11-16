@@ -1747,16 +1747,29 @@ namespace DotRecast.Detour
         public bool AttachesInData(DtMeshData data, RcVec3f p, float rad, float climb, out float rank)
         {
             rank = float.MaxValue;
-            var tile = new DtMeshTile(0) { data = data };
-            var ext = new RcVec3f(rad, climb, rad);
-            if (NearestPolyInTile(tile, p, ext, out var nearestPt, out float d) < 0)
-                return false;
-            if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(rad))
-                return false;
-            if (MathF.Abs(nearestPt.Y - p.Y) > climb)
-                return false;
-            rank = d;
-            return true;
+            // A carved tile of a moved surface gets its frame's vertices only when added (AddTile),
+            // after its links: until then they are made for this search and dropped again.
+            bool local = data.surface != null && data.surface.moved && data.localVerts == null;
+            if (local)
+                data.surface.SetLocalVerts(data);
+            try
+            {
+                var tile = new DtMeshTile(0) { data = data };
+                var ext = new RcVec3f(rad, climb, rad);
+                if (NearestPolyInTile(tile, p, ext, out var nearestPt, out float d) < 0)
+                    return false;
+                if (RcMath.Sqr(nearestPt.X - p.X) + RcMath.Sqr(nearestPt.Z - p.Z) > RcMath.Sqr(rad))
+                    return false;
+                if (MathF.Abs(nearestPt.Y - p.Y) > climb)
+                    return false;
+                rank = d;
+                return true;
+            }
+            finally
+            {
+                if (local)
+                    data.localVerts = null;
+            }
         }
 
         /// The nearest polygon's index within the tile (-1: none) and its ranking.
