@@ -38,6 +38,7 @@ own models; its assembly carries the name of one of the package's friend assembl
   (`Assets/DrawGraphs`): the drawing controls' graphs (below).
 - `CamValues`, `CamDepth`, `SoftAdditive` (`Assets/CameraGraphs`): the camera controls' graphs
   (below).
+- `OutEvents` (`Assets/EventGraphs`): the output event controls' graph (below).
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -296,6 +297,24 @@ so), whether the size handed over with a value of no single kind is taken, a mai
 a scaled parent, the scene view's camera as the main camera
 (an Editor preference; Unbound has no scene view), and the work an effect does per camera.
 
+## Output events
+
+`OutEvents` has three spawn contexts, stepped at a fixed time step each (two steps a frame): ten
+particles a second with three event attributes set by its blocks (it also spawns particles, so
+that the camera sees the effect), three every 0.2 s with another attribute set, and half a
+particle once. Two output event contexts named `Tick` take the first two (one event fed by
+both), one named `Burst` the second, one named `Never` the third (a spawn count under one raises
+nothing). `events/names` is what `GetOutputEventNames` lists. `events/<effect>/f<frame>/<n>` is
+each event the probe's listener took in frames 1 to 20, in order: where in the frame (after the
+scripts' `LateUpdate`, before the end of the frame), its name, the attributes it carries and
+whether it is the same attribute set as the effect's event before. The effects: `events` in
+front of the camera; `events behind`, culled (nothing); `events paused`, paused from frame 5 to
+frame 12; `events late`, listened to from frame 10 only (no event of the frames before is kept
+for it); `events throwing`, whose first listener throws once, at the first of the two events of
+a step of frame 7 (`events/listener logs`: what is logged; the second event of that step still
+reaches the probe's listener). `events/kept attribute` reads the last attribute set handed over,
+a frame later.
+
 ## A built asset
 
 The authoring step builds an AssetBundle with the asset of a graph of its own
@@ -317,7 +336,7 @@ effect's systems and the effect's state differ; the load says so.
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
 of the simulation controls), drawn through an indirect buffer, lit outputs,
 motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
-(Unbound draws none of these and says so); output events, GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and an
+(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and an
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
 angles and scales taken from a matrix, colour spaces, meshes, noise, texture

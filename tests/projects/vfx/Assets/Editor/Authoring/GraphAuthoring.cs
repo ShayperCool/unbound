@@ -43,6 +43,7 @@ public static class GraphAuthoring
         Drawn();
         DrawnOverLife();
         Cameras();
+        OutputEvents();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -192,6 +193,61 @@ public static class GraphAuthoring
         Set(softInit, "size", 0.9f);
         SetVector(softInit, "color", new Vector3(0.6f, 0.4f, 0.2f));
         Save(soft);
+    }
+
+    const string EventFolder = "Assets/EventGraphs";
+
+    /// <summary>A spawn context of its own in a graph.</summary>
+    static VFXBasicSpawner Spawner(VFXGraph graph)
+    {
+        var spawner = Make<VFXBasicSpawner>();
+        graph.AddChild(spawner);
+        return spawner;
+    }
+
+    /// <summary>A block of a spawn context that sets an event attribute.</summary>
+    static void SpawnSet(VFXBasicSpawner spawner, string attribute, object value)
+    {
+        var block = Make<VFXSpawnerSetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        spawner.AddChild(block);
+        block.inputSlots[0].value = value;
+    }
+
+    /// <summary>An output event context of a name, fed by spawn contexts.</summary>
+    static void OutputEvent(VFXGraph graph, string name, params VFXBasicSpawner[] from)
+    {
+        var output = Make<VFXOutputEvent>();
+        output.SetSettingValue("eventName", name);
+        graph.AddChild(output);
+        foreach (var spawner in from) spawner.LinkTo(output);
+    }
+
+    /// <summary>The output event controls' graph (README.md, "Output events"): three spawn
+    /// contexts, each step of a fixed time step (two a frame).</summary>
+    static void OutputEvents()
+    {
+        Directory.CreateDirectory(EventFolder);
+        AssetDatabase.Refresh();
+        var graph = NewGraph("OutEvents", EventFolder);
+        // Ten a second with three event attributes set, also spawning particles (so that a
+        // camera sees the effect); three every 0.2 s; half a particle once.
+        var (rate, _, _, _) = System(graph, 64);
+        ConstantRate(rate, 10f);
+        SpawnSet(rate, "color", new Vector3(0.25f, 0.5f, 0.75f));
+        SpawnSet(rate, "lifetime", 2f);
+        var burst = Spawner(graph);
+        Burst(burst, true, 3f, 0.2f);
+        SpawnSet(burst, "size", 0.125f);
+        var half = Spawner(graph);
+        Burst(half, false, 0.5f, 0.1f);
+        // Two contexts of one name make one event fed by both.
+        OutputEvent(graph, "Tick", rate);
+        OutputEvent(graph, "Tick", burst);
+        OutputEvent(graph, "Burst", burst);
+        OutputEvent(graph, "Never", half);
+        graph.GetResource().updateMode = VFXUpdateMode.ExactFixedTimeStep;
+        Save(graph);
     }
 
     /// <summary>A block that sets an attribute from a curve sampled at a time given.</summary>

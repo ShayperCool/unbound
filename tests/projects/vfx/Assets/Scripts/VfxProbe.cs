@@ -88,6 +88,7 @@ public sealed class VfxProbe : MonoBehaviour
             BeginDrawing();
             BeginCameras();
             BeginSoftParticles();
+            BeginOutputEvents();
             Bundled();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
@@ -110,7 +111,11 @@ public sealed class VfxProbe : MonoBehaviour
         Rec("sim/override timing/f" + m_Frame.ToString("000") + " " + where, F(m_Timed.GetFloat("A")) + " " + (m_TimedLater != null ? F(m_TimedLater.GetFloat("A")) : "none"));
     }
 
-    void LateUpdate() => ReadTimed("2 late update");
+    void LateUpdate()
+    {
+        ReadTimed("2 late update");
+        m_Phase = "after late update";
+    }
 
     System.Collections.IEnumerator EndOfFrames()
     {
@@ -118,6 +123,7 @@ public sealed class VfxProbe : MonoBehaviour
         while (m_Running.Count != 0)
         {
             yield return wait;
+            m_Phase = "end of frame";
             ReadTimed("3 end of frame");
             Shoot();
         }
@@ -340,6 +346,86 @@ public sealed class VfxProbe : MonoBehaviour
         Seen("soft no depth", new Vector3(-0.5f, -0.3f, -6f), false);
     }
 
+    // ---------------------------------------------------------------------- output events
+
+    /// <summary>Where in the frame the probe is (an output event says where it arrives).</summary>
+    string m_Phase = "start";
+    readonly Dictionary<VisualEffect, VFXEventAttribute> m_LastEventAttribute = new Dictionary<VisualEffect, VFXEventAttribute>();
+    readonly Dictionary<string, int> m_EventsThisFrame = new Dictionary<string, int>();
+    VisualEffect m_EventsPaused, m_EventsLate, m_EventsSeen;
+    VFXEventAttribute m_KeptEventAttribute;
+    readonly List<string> m_ListenerLogs = new List<string>();
+
+    static string EventName(int id) =>
+        id == Shader.PropertyToID("Tick") ? "Tick" : id == Shader.PropertyToID("Burst") ? "Burst" : id == Shader.PropertyToID("Never") ? "Never" : "id " + id;
+
+    void Listen(VisualEffect effect) => effect.outputEventReceived += args => OutputEventReceived(effect, args);
+
+    /// <summary>Each event an effect raises in frames 1 to 20: where in the frame, its name, the
+    /// attributes it carries (with which of them its layout has) and whether it is the same
+    /// attribute set as the effect's previous event.</summary>
+    void OutputEventReceived(VisualEffect effect, VFXOutputEventArgs args)
+    {
+        if (m_Frame > 20) return;
+        var a = args.eventAttribute;
+        string key = effect.name + "/f" + m_Frame.ToString("000");
+        m_EventsThisFrame.TryGetValue(key, out int index);
+        m_EventsThisFrame[key] = index + 1;
+        m_LastEventAttribute.TryGetValue(effect, out var previous);
+        m_LastEventAttribute[effect] = a;
+        string Value(string name, Func<string> read) => a.HasFloat(name) || a.HasVector3(name) ? read() : "none";
+        Rec("events/" + key + "/" + index, m_Phase + " " + EventName(args.nameId)
+            + " spawnCount=" + Value("spawnCount", () => F(a.GetFloat("spawnCount")))
+            + " color=" + Value("color", () => V(a.GetVector3("color")))
+            + " size=" + Value("size", () => F(a.GetFloat("size")))
+            + " lifetime=" + Value("lifetime", () => F(a.GetFloat("lifetime")))
+            + (previous == null ? " first" : ReferenceEquals(previous, a) ? " same" : " other"));
+        if (effect == m_EventsSeen) m_KeptEventAttribute = a;
+    }
+
+    /// <summary>Output events (README.md, "Output events"): an effect seen by the camera, one
+    /// behind it, one paused from frame 5 to frame 12, one listened to from frame 10 only, one
+    /// whose first listener throws once.</summary>
+    void BeginOutputEvents()
+    {
+        const string Graph = "Assets/EventGraphs/OutEvents.vfx";
+        m_EventsSeen = Effect("events", Graph, new Vector3(0f, -2f, 0f));
+        var behind = Effect("events behind", Graph, new Vector3(0f, 0f, -20f));
+        m_EventsPaused = Effect("events paused", Graph, new Vector3(1.5f, -2f, 0f));
+        m_EventsLate = Effect("events late", Graph, new Vector3(-1.5f, -2f, 0f));
+        // A listener that throws at the first event of frame 7 (whose step raises two), before
+        // the probe's own listener of the same effect.
+        var throwing = Effect("events throwing", Graph, new Vector3(3f, -2f, 0f));
+        bool thrown = false;
+        throwing.outputEventReceived += args =>
+        {
+            if (m_Frame != 7 || thrown) return;
+            thrown = true;
+            throw new InvalidOperationException("probe listener");
+        };
+        Application.logMessageReceived += (text, stack, type) =>
+        {
+            if (text.Contains("probe listener") && m_Frame <= 20) m_ListenerLogs.Add("f" + m_Frame.ToString("000") + " " + m_Phase + " " + type + ": " + text.Split('\n')[0]);
+        };
+        Listen(m_EventsSeen);
+        Listen(behind);
+        Listen(m_EventsPaused);
+        Listen(throwing);
+        var names = new List<string>();
+        m_EventsSeen.GetOutputEventNames(names);
+        Rec("events/names", string.Join(", ", names));
+    }
+
+    void OutputEventFrame()
+    {
+        if (m_Frame == 5) m_EventsPaused.pause = true;
+        if (m_Frame == 12) m_EventsPaused.pause = false;
+        if (m_Frame == 10) Listen(m_EventsLate);
+        if (m_Frame == 21) Rec("events/listener logs", string.Join(" | ", m_ListenerLogs));
+        if (m_Frame == 21 && m_KeptEventAttribute != null)
+            Rec("events/kept attribute", "spawnCount=" + F(m_KeptEventAttribute.GetFloat("spawnCount")) + " color=" + V(m_KeptEventAttribute.GetVector3("color")));
+    }
+
     // ---------------------------------------------------------------------------- bundle
 
     VisualEffect m_Bundled;
@@ -414,7 +500,9 @@ public sealed class VfxProbe : MonoBehaviour
         {
             m_Frame++;
             CameraInputs.Frame = m_Frame;
+            m_Phase = "update";
             CameraFrame();
+            OutputEventFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }
