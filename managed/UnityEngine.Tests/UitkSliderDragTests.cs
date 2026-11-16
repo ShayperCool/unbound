@@ -62,5 +62,42 @@ namespace UnityEngine.Tests
             reversed.value = 15;
             Assert.Equal(10, reversed.value);
         }
+
+        /// <summary>The tracker paths are not in the probe (a tracker click depends on the element
+        /// under the Editor's real pointer); these pin the integer slider's own rules.</summary>
+        [Theory]
+        [InlineData(0, 10, false, SliderDirection.Horizontal, true, 3)]
+        [InlineData(0, 10, false, SliderDirection.Horizontal, false, 7)]
+        [InlineData(0, 10, true, SliderDirection.Horizontal, true, 3)]
+        [InlineData(10, 0, false, SliderDirection.Horizontal, true, 7)]
+        [InlineData(0, 10, false, SliderDirection.Vertical, true, 7)]
+        [InlineData(0, 10, true, SliderDirection.Vertical, true, 3)]
+        public void ATrackerClickStepsByThePageSize(int low, int high, bool inverted, SliderDirection direction, bool beforeDragger, int expected)
+        {
+            var slider = new SliderInt(null, low, high, direction, 2f) { value = 5, inverted = inverted };
+            slider.clampedDragger.dragDirection = ClampedDragger<int>.DragDirection.None;
+            slider.ComputeValueAndDirectionFromClick(300f, 20f, 140f, beforeDragger ? 10f : 290f);
+            Assert.Equal(expected, slider.value);
+        }
+
+        [Fact]
+        public void ATrackerWithoutRoomOrPageSizeLeavesTheValue()
+        {
+            var slider = new SliderInt(null, 0, 10, SliderDirection.Horizontal, 2f) { value = 5 };
+            slider.clampedDragger.dragDirection = ClampedDragger<int>.DragDirection.None;
+            slider.ComputeValueAndDirectionFromClick(20f, 20f, 0f, 10f);
+            Assert.Equal(5, slider.value);
+        }
+
+        [Fact]
+        public void DraggerPositionsRoundToWholeValues()
+        {
+            var slider = new SliderInt(null, 0, 10);
+            Assert.Equal(4, slider.SliderLerpUnclamped(0, 10, 0.45f));
+            Assert.Equal(6, slider.SliderLerpUnclamped(0, 10, 0.55f));
+            Assert.Equal(-2, slider.SliderLerpUnclamped(0, 10, -0.2f));
+            Assert.Equal(1f, slider.SliderNormalizeValue(3, 4, 4));
+            Assert.Equal(0.25f, slider.SliderNormalizeValue(3, 2, 6));
+        }
     }
 }
