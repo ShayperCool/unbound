@@ -269,6 +269,25 @@ class OracleGuardTests(unittest.TestCase):
         self.git('commit', '-q', '-m', 'withdraw all')
         self.assertEqual(self.guard().returncode, 0)
 
+    def test_image_residuals_added_or_raised_need_the_trailer(self):
+        residuals = 'tests/projects/p/image-residuals.json'
+        entry = {'pixels': 5, 'worst': 3, 'reason': 'r'}
+        self.commit('add', {'a': entry}, file=residuals)
+        refused = self.guard()
+        self.assertEqual(refused.returncode, 4, refused.stdout)
+        self.assertIn('image residual added or raised: a: 5 pixels up to 3 (new)', refused.stdout)
+        self.git('checkout', '-q', 'main')
+        self.commit('landed', {'a': entry}, file=residuals)
+        self.git('checkout', '-q', '-B', 'work')
+        for raised in ({'pixels': 6}, {'worst': 4}):
+            self.commit('raise', {'a': dict(entry, **raised)}, file=residuals)
+            self.assertEqual(self.guard().returncode, 4, raised)
+        for free in ({'a': dict(entry, pixels=4, reason='other')}, {}):
+            self.commit('lower or withdraw', free, file=residuals)
+            self.assertEqual(self.guard().returncode, 0, free)
+        self.commit('not an object', [entry], file=residuals)
+        self.assertEqual(self.guard().returncode, 4)
+
 
 class ImageTests(unittest.TestCase):
     """Image measurements as run_probe records them, from stand-in comparator scripts."""

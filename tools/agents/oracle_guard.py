@@ -5,9 +5,11 @@ and removed tests.
 Usage: oracle_guard.py BASE HEAD
 
 A change in BASE..HEAD that edits or deletes an existing file under
-tests/projects/<probe>/Reference/, that changes a tolerance in a comparator, or that
+tests/projects/<probe>/Reference/, that changes a tolerance in a comparator, that
 declares an accepted failure count in tests/projects/<probe>/gate-accepted.json
-(see tools/agents/suite.py; withdrawing one is free), needs a commit trailer in the range:
+(see tools/agents/suite.py; withdrawing one is free), or that adds or raises an image residual in
+tests/projects/<probe>/image-residuals*.json (tests/projects/urp/image_gate.py; lowering or
+withdrawing one is free), needs a commit trailer in the range:
 
     Oracle-Change: <why; the new reference was recorded twice in the Editor and matched>
 
@@ -25,6 +27,7 @@ import sys
 REFERENCE = re.compile(r'^tests/projects/[^/]+/Reference/')
 COMPARATOR = re.compile(r'^tests/.*(compare|verif|check|regress)[^/]*\.py$', re.I)
 ACCEPTED = re.compile(r'^tests/projects/[^/]+/gate-accepted\.json$')
+IMAGE_RESIDUALS = re.compile(r'^tests/projects/[^/]+/image-residuals[^/]*\.json$')
 TOLERANCE = re.compile(r'\b\w*(tol|tolerance|eps|epsilon|atol|rtol|threshold|max_?diff|allowed?_?diff|margin)\w*\b', re.I)
 TEST_FILE = re.compile(r'(^managed/.*Tests?/.*\.cs$)|(^crates/.*\.rs$)|(^tests/.*test[^/]*\.py$)|(^tools/.*test[^/]*\.py$)')
 TEST_MARKER = re.compile(r'\[(Test|TestCase|UnityTest|TestCaseSource)\b|#\[test\]|^\s*def test_')
@@ -45,6 +48,32 @@ def accepted_failures(revision, path):
     except ValueError:
         return None
     return entries if isinstance(entries, list) else None
+
+
+def image_residuals(revision, path):
+    """The image residuals listed at a revision: a dict (empty when the file is not there), or None
+    when what is there is not an object in JSON."""
+    shown = subprocess.run(['git', 'show', f'{revision}:{path}'], capture_output=True, text=True)
+    if shown.returncode:
+        return {}
+    try:
+        entries = json.loads(shown.stdout)
+    except ValueError:
+        return None
+    return entries if isinstance(entries, dict) else None
+
+
+def raised_residuals(before, after):
+    """Image residual entries added or allowing more (pixels or worst) than before."""
+    raised = []
+    for key, entry in after.items():
+        old = before.get(key)
+        if not isinstance(entry, dict):
+            raised.append(f'{key}: not an object')
+        elif not isinstance(old, dict) or any(entry.get(field, 0) > old.get(field, 0) for field in ('pixels', 'worst')):
+            raised.append(f'{key}: {entry.get("pixels")} pixels up to {entry.get("worst")}'
+                          + (f' (was {old.get("pixels")} up to {old.get("worst")})' if isinstance(old, dict) else ' (new)'))
+    return raised
 
 
 def main():
@@ -70,6 +99,12 @@ def main():
                 if entry not in before:
                     oracle.append(f'{path}: accepted failure count declared: '
                                   f'{json.dumps(entry, ensure_ascii=False)[:160]}')
+        if IMAGE_RESIDUALS.match(path) and status[0] != 'D':
+            before, after = image_residuals(fork, path) or {}, image_residuals(head, path)
+            if after is None:
+                oracle.append(f'{path}: image residuals are not a JSON object')
+            for item in raised_residuals(before, after or {}):
+                oracle.append(f'{path}: image residual added or raised: {item}'[:200])
         if COMPARATOR.match(path) and status[0] == 'M':
             for diff_line in git('diff', '-U0', f'{base}...{head}', '--', path).splitlines():
                 if diff_line.startswith('-') and not diff_line.startswith('---') and TOLERANCE.search(diff_line):
