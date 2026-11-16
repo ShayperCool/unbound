@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/fieldinterfaces/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs",
+    "managed/UnityEngine/UIElements/Controls/FieldInterfaces.cs",
+    "managed/UnityEngine/UIElements/Controls/Slider.cs",
+    "managed/UnityEngine/UIElements/Controls/MinMaxSlider.cs"
+  ]
+}

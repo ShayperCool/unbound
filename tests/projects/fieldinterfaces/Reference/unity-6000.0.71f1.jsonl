@@ -1,0 +1,35 @@
+{"key":"interfaces.TextField","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.Toggle","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.Slider","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.SliderInt","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.MinMaxSlider","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.EnumField","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.RadioButtonGroup","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.DropdownField","value":"IEditableElement,IMixedValueSupport,IPrefixLabel"}
+{"key":"interfaces.Label","value":""}
+{"key":"interfaces.Foldout","value":""}
+{"key":"mixed.text","value":"True — True"}
+{"key":"mixed.text.off","value":"False abc"}
+{"key":"mixed.toggle","value":"True False"}
+{"key":"prefix.text","value":"Name True"}
+{"key":"prefix.text.renamed","value":"Renamed Renamed"}
+{"key":"prefix.plain","value":" True True"}
+{"key":"editable.initial","value":"True True"}
+{"key":"text.focus","value":"started 1 ended 0"}
+{"key":"text.blur","value":"started 1 ended 1 other started 1 ended 0"}
+{"key":"other.blur","value":"started 1 ended 1"}
+{"key":"toggle.focus","value":"started 0 ended 0"}
+{"key":"toggle.click","value":"started 1 ended 0 value True"}
+{"key":"toggle.blur","value":"started 1 ended 1"}
+{"key":"slider.focus","value":"started 0 ended 0"}
+{"key":"slider.label","value":"started 1 ended 0"}
+{"key":"slider.dragDown","value":"started 2 ended 0"}
+{"key":"slider.dragUp","value":"started 2 ended 1 value 2"}
+{"key":"range.down","value":"started 1 ended 0"}
+{"key":"range.up","value":"started 1 ended 1"}
+{"key":"detached","value":"started 1 ended 1 panel False"}
+{"key":"reattached.focus","value":"started 2 ended 1"}
+{"key":"reattached.blur","value":"started 2 ended 2"}
+{"key":"replaced","value":"started 2 ended 2 replaced 1"}
+{"key":"cleared","value":"started 2 ended 3 replaced 1"}
+{"key":"complete","value":"1"}
