@@ -65,7 +65,13 @@ def verify(root, release, rate, contexts=False, selected=None, device_channels=8
             assert meta[case+'.mode'] == requested_mode, case
             assert meta[case+'.render_channels'] == 2, case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
-        if case.startswith('context_encoding_') or (case.startswith('context_voiceinput_') and case+'.input' in meta):
+        if case.startswith('context_sixlayout_'):
+            # Each speaker mode renders its own width; the device stays the private 7.1 sink.
+            requested_mode = int(case.split('_')[2])
+            assert meta[case+'.mode'] == requested_mode, case
+            assert meta[case+'.render_channels'] == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[requested_mode], case
+            assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
+        if case.startswith(('context_encoding_', 'context_sixlayout_')) or (case.startswith('context_voiceinput_') and case+'.input' in meta):
             assert meta[case+'.input_channels'] == 6, case
             assert meta[case+'.input_frames'] == 32768, case
             assert meta[case+'.input_roundtrip'] is True, case
@@ -74,7 +80,7 @@ def verify(root, release, rate, contexts=False, selected=None, device_channels=8
             assert record == dict(file=case+'.input.f32', frames=32768, channels=6), case
             values = samples(root, record)
             assert len(values) == 32768*6 and all(map(math.isfinite, values)), case
-            if case.endswith('_impulses'):
+            if case.endswith('_impulses') or case.startswith('context_sixlayout_'):
                 assert [(i, value) for i, value in enumerate(values) if value] == [
                     ((4096+2048*channel)*6+channel, 0.25) for channel in range(6)], case
             else:

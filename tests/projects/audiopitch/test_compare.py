@@ -37,3 +37,39 @@ class SourceFloatBounds(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SixInputLayouts(unittest.TestCase):
+    """The published six-layouts reference follows one balance stage and one matrix per layout."""
+    MATRICES = {
+        1: [[1], [1], [1], [1], [1], [1]],
+        2: [[1, 0], [0, 1], [.5, .5], [.5, .5], [.5, 0], [0, .5]],
+        3: [[1, 0, 0, 0], [0, 1, 0, 0], [.5, .5, 0, 0], [.25, .25, 0, 0], [0] * 4, [0] * 4],
+        4: [[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0] * 5, [0] * 5, [0, 0, 0, 1, 0]],
+        5: [[1 if i == o else 0 for o in range(6)] for i in range(6)],
+        6: [[1 if o == i or (i >= 4 and o == i + 2) else 0 for o in range(8)] for i in range(6)],
+    }
+
+    def test_reference_rows_match_the_balance_and_layout_matrix(self):
+        from common import FIXTURE, header, samples
+        for rate in (48000, 44100):
+            root = FIXTURE/'Reference/unity-6000.0.71f1/six-layouts'/f'rate-{rate}'
+            meta = header(root)
+            cases = [key[:-len('.master')] for key in meta if key.startswith('context_sixlayout_') and key.endswith('.master')]
+            self.assertEqual(len(cases), 17)
+            for case in cases:
+                _, _, mode, variant = case.split('_', 3)
+                pan = {'impulses': 0.0, 'pan_left': -0.65, 'pan_right': 0.65}[variant]
+                balance = [min(1, 1 - pan), min(1, 1 + pan), 1, 1, min(1, 1 - pan), min(1, 1 + pan)]
+                for suffix in ('.master', ''):
+                    record = meta[case+suffix]
+                    values = samples(root, record)
+                    width = record['channels']
+                    for channel, row in enumerate(self.MATRICES[int(mode)]):
+                        frame = 4096 + 2048 * channel
+                        actual = values[frame * width:frame * width + len(row)]
+                        expected = [0.25 * balance[channel] * gain for gain in row]
+                        for got, want in zip(actual, expected):
+                            # Device PCM may differ from the exact gain by one 16-bit step.
+                            delta = 3.1e-5 if suffix == '' else 1e-6
+                            self.assertAlmostEqual(got, want, delta=delta, msg=(rate, case+suffix, channel))

@@ -47,7 +47,9 @@ layouts and streamed clips remain Q416-R5a. Starting those voices on the measure
 release fails clearly; live context changes stop only unsupported six-input voices
 and report an error on the control thread. Other releases retain their previous
 unqualified first-two-input path. Physical drivers and encoded output
-outside the measured PulseAudio contexts remain unmeasured.
+outside the measured PulseAudio contexts remain unmeasured. The separate
+[six-layouts](SIX_LAYOUTS.md) diagnostic records the same clip through every other output
+layout and with balance.
 
 Record two fresh projects with `native.py --release 6000.0.71f1 --rate RATE
 --set encoding --work FRESH_CACHE_DIRECTORY`, then publish with `publish.py
