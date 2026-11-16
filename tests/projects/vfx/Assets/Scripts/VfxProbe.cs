@@ -11,6 +11,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 
 /// <summary>
@@ -85,6 +86,8 @@ public sealed class VfxProbe : MonoBehaviour
             Rec("manager/maxDeltaTime", F(VFXManager.maxDeltaTime));
             BeginSimulation();
             BeginDrawing();
+            BeginCameras();
+            BeginSoftParticles();
             Bundled();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
@@ -170,6 +173,173 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("loop end", "DrawLoopEnd", 20);
     }
 
+
+    // --------------------------------------------------------------------------- cameras
+
+    /// <summary>A camera that renders into a texture of its own, cleared to the stages' grey.</summary>
+    static Camera Eye(string name, Vector3 position, Quaternion rotation, int width, int height)
+    {
+        var eye = new GameObject(name);
+        eye.transform.SetPositionAndRotation(position, rotation);
+        var camera = eye.AddComponent<Camera>();
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+        camera.targetTexture = new RenderTexture(width, height, 24);
+        return camera;
+    }
+
+    /// <summary>An opaque, unlit board of a colour (a quad without a collider).</summary>
+    static void Board(Vector3 position, Quaternion rotation, Vector3 scale, Color color)
+    {
+        var board = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        DestroyImmediate(board.GetComponent<Collider>());
+        board.transform.SetPositionAndRotation(position, rotation);
+        board.transform.localScale = scale;
+        var material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        material.SetColor("_BaseColor", color);
+        board.GetComponent<MeshRenderer>().sharedMaterial = material;
+    }
+
+    static VisualEffect Effect(string name, string path, Vector3 position)
+    {
+        var go = new GameObject(name);
+        go.transform.position = position;
+        var effect = go.AddComponent<VisualEffect>();
+        effect.resetSeedOnPlay = false;
+        effect.startSeed = 11;
+        effect.visualEffectAsset = AssetDatabase.LoadAssetAtPath<VisualEffectAsset>(path);
+        return effect;
+    }
+
+    void AddStage(string key, VisualEffect effect, Camera camera, params int[] frames) =>
+        m_Stages.Add(new Stage { Key = key, Effect = effect, Camera = camera, Frames = frames });
+
+    /// <summary>The cameras the camera controls look through: the main camera (the scene's
+    /// camera gives up its tag), an orthographic one that becomes the main camera for a while,
+    /// and the scene's.</summary>
+    Camera m_MainEye, m_OrthoEye, m_SceneEye;
+    readonly List<string> m_ManagerLogs = new List<string>();
+
+    void ManagerLog(string text, string stack, LogType type)
+    {
+        if (text.Contains("main camera") || text.Contains("bufferType")) m_ManagerLogs.Add("f" + m_Frame.ToString("000") + " " + type + ": " + text);
+    }
+
+    /// <summary>The camera controls (README.md, "Cameras"): what an effect's graph reads of the
+    /// main camera, which buffers of which camera the module asks for, what the camera entry
+    /// points answer.</summary>
+    void BeginCameras()
+    {
+        Rec("camera/activateVFX", typeof(VFXManager).GetProperty("activateVFX", Any).GetValue(null).ToString());
+        var origin = new Vector3(3000f, 0f, 0f);
+        m_SceneEye = GameObject.Find("Main Camera").GetComponent<Camera>();
+        m_MainEye = Eye("camera main", origin + new Vector3(0f, 0f, -10f), Quaternion.identity, 64, 48);
+        m_MainEye.fieldOfView = 40f;
+        m_MainEye.nearClipPlane = 0.5f;
+        m_MainEye.farClipPlane = 30f;
+        m_SceneEye.tag = "Untagged";
+        m_MainEye.tag = "MainCamera";
+        m_OrthoEye = Eye("camera ortho", origin + new Vector3(1f, 2f, -12f), Quaternion.Euler(5f, -3f, 0f), 40, 40);
+        m_OrthoEye.orthographic = true;
+        m_OrthoEye.orthographicSize = 3.5f;
+        m_OrthoEye.nearClipPlane = 1f;
+        m_OrthoEye.farClipPlane = 40f;
+        // The pipeline hands an effect the buffers of a camera that keeps a history (one with
+        // the pipeline's camera data).
+        m_MainEye.GetUniversalAdditionalCameraData();
+        m_OrthoEye.GetUniversalAdditionalCameraData();
+        // A board the main camera sees slanted.
+        Board(origin + new Vector3(0f, 0f, 2f), Quaternion.Euler(0f, 30f, 0f), new Vector3(14f, 10f, 1f), new Color(0.25f, 0.3f, 0.35f, 1f));
+        Effect("camera values", "Assets/CameraGraphs/CamValues.vfx", origin);
+        Effect("camera depth", "Assets/CameraGraphs/CamDepth.vfx", origin);
+        Application.logMessageReceived += ManagerLog;
+
+        var other = Eye("camera destroyed", origin, Quaternion.identity, 8, 8);
+        DestroyImmediate(other.gameObject);
+        Logged("camera/api/IsCameraBufferNeeded null", () => VFXManager.IsCameraBufferNeeded(null));
+        Logged("camera/api/IsCameraBufferNeeded destroyed", () => VFXManager.IsCameraBufferNeeded(other));
+        Logged("camera/api/SetCameraBuffer null", () => VFXManager.SetCameraBuffer(null, VFXCameraBufferTypes.Depth, null, 0, 0, 1, 1));
+        Logged("camera/api/PrepareCamera null", () => VFXManager.PrepareCamera(null));
+        Logged("camera/api/PrepareCamera destroyed", () => VFXManager.PrepareCamera(other));
+        Logged("camera/api/ProcessCameraCommand null", () => VFXManager.ProcessCameraCommand(null, null, new VFXCameraXRSettings { viewTotal = 1, viewCount = 1 }, default(CullingResults)));
+        Logged("camera/api/PrepareCamera", () => VFXManager.PrepareCamera(m_OrthoEye));
+        Logged("camera/api/ProcessCameraCommand", () => VFXManager.ProcessCameraCommand(m_OrthoEye, null, new VFXCameraXRSettings { viewTotal = 1, viewCount = 1 }, default(CullingResults)));
+    }
+
+    /// <summary>Each frame: which buffers each camera is asked for; the main camera changes
+    /// (its lens at frame 6, none from frame 8, the orthographic one from frame 10, the first
+    /// again from frame 12); buffers handed over the wrong way at frame 4.</summary>
+    void CameraFrame()
+    {
+        if (m_Frame <= 20)
+            Rec("camera/needed/f" + m_Frame.ToString("000"), "main " + VFXManager.IsCameraBufferNeeded(m_MainEye) + ", ortho " + VFXManager.IsCameraBufferNeeded(m_OrthoEye)
+                + ", scene " + VFXManager.IsCameraBufferNeeded(m_SceneEye));
+        if (m_Frame == 4)
+        {
+            var buffer = new RenderTexture(16, 16, 0);
+            Logged("camera/api/SetCameraBuffer two types", () => VFXManager.SetCameraBuffer(m_MainEye, VFXCameraBufferTypes.Depth | VFXCameraBufferTypes.Color, buffer, 0, 0, 10, 10));
+            Logged("camera/api/SetCameraBuffer none", () => VFXManager.SetCameraBuffer(m_MainEye, VFXCameraBufferTypes.None, buffer, 0, 0, 11, 11));
+            Logged("camera/api/SetCameraBuffer not asked for", () => VFXManager.SetCameraBuffer(m_MainEye, VFXCameraBufferTypes.Color, buffer, 1, 2, 12, 9));
+            Logged("camera/api/SetCameraBuffer other camera", () => VFXManager.SetCameraBuffer(m_OrthoEye, VFXCameraBufferTypes.Depth, buffer, 0, 0, 13, 13));
+        }
+        if (m_Frame == 6)
+        {
+            m_MainEye.fieldOfView = 55f;
+            m_MainEye.nearClipPlane = 0.7f;
+            m_MainEye.farClipPlane = 25f;
+            m_MainEye.aspect = 1.25f;
+            m_MainEye.transform.SetPositionAndRotation(new Vector3(3000.5f, 0.25f, -9f), Quaternion.Euler(2f, -3f, 1f));
+        }
+        if (m_Frame == 8) m_MainEye.tag = "Untagged";
+        if (m_Frame == 10) m_OrthoEye.tag = "MainCamera";
+        if (m_Frame == 12)
+        {
+            m_OrthoEye.tag = "Untagged";
+            m_MainEye.tag = "MainCamera";
+        }
+        if (m_Frame == 21)
+        {
+            // What the script's block read when the spawn context played and in its first
+            // updates; what the module logged about the main camera and its buffers.
+            foreach (var line in CameraInputs.Logs.TryGetValue("camera values", out var log) ? log : new List<string>())
+            {
+                var parts = line.Split(' ');
+                foreach (var part in parts)
+                    if (part.Contains("=")) Rec("camera/values/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
+            }
+            Rec("camera/values/lines", CameraInputs.Logs.TryGetValue("camera values", out var all) ? all.Count : -1);
+            Rec("camera/manager logs", string.Join(" | ", m_ManagerLogs));
+            Application.logMessageReceived -= ManagerLog;
+        }
+    }
+
+    /// <summary>Particles added to what is behind that fade where they come near what is
+    /// opaque behind them (soft particles), among boards at several depths: seen by a camera
+    /// with a depth texture, an orthographic one with a depth texture, and one without.</summary>
+    void BeginSoftParticles()
+    {
+        var origin = new Vector3(4000f, 0f, 0f);
+        var effect = Effect("soft", "Assets/CameraGraphs/SoftAdditive.vfx", origin);
+        Board(origin + new Vector3(-0.9f, 0f, 0.1f), Quaternion.Euler(0f, 60f, 0f), new Vector3(1.6f, 2.4f, 1f), new Color(0.5f, 0.1f, 0.1f, 1f));
+        Board(origin + new Vector3(0.8f, -0.2f, -0.1f), Quaternion.Euler(-50f, 0f, 20f), new Vector3(2f, 1.6f, 1f), new Color(0.1f, 0.1f, 0.5f, 1f));
+        Board(origin + new Vector3(0f, 0.9f, 0.4f), Quaternion.identity, new Vector3(4f, 0.6f, 1f), new Color(0.1f, 0.4f, 0.1f, 1f));
+        Camera Seen(string key, Vector3 position, bool depthTexture)
+        {
+            var camera = Eye("eye " + key, origin + position, Quaternion.LookRotation(-position), 64, 64);
+            camera.fieldOfView = 35f;
+            camera.nearClipPlane = 0.5f;
+            camera.farClipPlane = 20f;
+            camera.GetUniversalAdditionalCameraData().requiresDepthOption = depthTexture ? CameraOverrideOption.On : CameraOverrideOption.Off;
+            AddStage(key, effect, camera, 10, 20);
+            return camera;
+        }
+        Seen("soft", new Vector3(0f, 0f, -6f), true);
+        var ortho = Seen("soft ortho", new Vector3(2.5f, 1.5f, -6f), true);
+        ortho.orthographic = true;
+        ortho.orthographicSize = 1.6f;
+        Seen("soft no depth", new Vector3(-0.5f, -0.3f, -6f), false);
+    }
+
     // ---------------------------------------------------------------------------- bundle
 
     VisualEffect m_Bundled;
@@ -243,6 +413,8 @@ public sealed class VfxProbe : MonoBehaviour
         try
         {
             m_Frame++;
+            CameraInputs.Frame = m_Frame;
+            CameraFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }

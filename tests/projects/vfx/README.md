@@ -36,6 +36,8 @@ own models; its assembly carries the name of one of the package's friend assembl
   `Assets/SimGraphs` apart from the graphs the import rows list.
 - `DrawOpaque`, `DrawAdditive`, `DrawMany`, `DrawTextured`, `DrawOverLife`, `DrawHdr`
   (`Assets/DrawGraphs`): the drawing controls' graphs (below).
+- `CamValues`, `CamDepth`, `SoftAdditive` (`Assets/CameraGraphs`): the camera controls' graphs
+  (below).
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -250,6 +252,44 @@ decide an edge pixel differently). Not shown by them: quads turned to face a cam
 cameras here look straight at them), and where a draw of many quads is split into instances
 (the image is the same either way; a unit test holds the split).
 
+## Cameras
+
+The camera controls (`camera/*`) use a camera of the probe's as the main camera (the scene's
+camera gives up its tag at the start): `camera main`, perspective, rendering into a 64x48 texture
+(so its size is the same in the Editor and in Unbound), and `camera ortho`, orthographic. Both
+have the render pipeline's camera data, which a camera made from script gets only when asked for:
+without it the pipeline keeps no history of the camera and hands an effect none of its buffers.
+
+- `CamValues`: a spawn context with a block written as a script (`Assets/Callbacks/CameraInputs.cs`)
+  whose inputs are fed by the graph's Main Camera operator; `camera/values/<update>/*` is what it
+  read when the context played and in its first sixteen updates, with the probe's frame: the
+  camera's transform, field of view, near and far planes, orthographic size, aspect ratio,
+  whether it is orthographic, its pixel size, the size the render pipeline handed over with its
+  buffers, and its lens shift. At frame 6 the camera's lens, aspect and place change; from frame
+  8 no camera has the tag (the graph reads a new camera's lens and a 1920x1080 screen, and the
+  module warns once: `camera/manager logs`); from frame 10 the orthographic camera is the main
+  one, from frame 12 the first again.
+- `CamDepth`: particles whose colour is a texel of the main camera's depth buffer, read on the GPU:
+  the graph reads that buffer. `camera/needed/f<frame>` is what `VFXManager.IsCameraBufferNeeded`
+  answers for the main camera, the orthographic one and the scene's, each frame: the depth
+  buffer, for the main camera of the last update only.
+- `camera/api/*`: the camera entry points with no camera, a destroyed one, a camera that is not
+  the main one, and buffers handed over the wrong way at frame 4 (of two kinds at once, of none,
+  of a kind no graph reads: logged, and the size given is taken all the same: the inputs read it
+  from frame 4 on).
+- `SoftAdditive` (`draw-soft*`): eight quads added to what is behind that fade over 0.6 where
+  they come near what is opaque behind them (soft particles), among three boards at several
+  depths, seen at frames 10 and 20 by a perspective camera with the pipeline's depth texture
+  (`soft`), an orthographic one with it (`soft ortho`) and a perspective one without it (`soft no
+  depth`: the texture the render pipeline leaves bound after each camera is black, so the
+  particles fade away). The probe's renderer copies the depth after the opaque objects; copied
+  after the transparent ones, the texture is not this camera's while the particles draw.
+
+Not shown by these: what the graph's GPU programs read in the depth and colour buffers (the
+particles' colours are not recorded: in this setup the depth the pipeline hands over reads as
+nothing in the Editor too, which is not explained), the scene view's camera as the main camera
+(an Editor preference; Unbound has no scene view), and the work an effect does per camera.
+
 ## A built asset
 
 The authoring step builds an AssetBundle with the asset of a graph of its own
@@ -269,13 +309,12 @@ effect's systems and the effect's state differ; the load says so.
 ## Not covered yet
 
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
-of the simulation controls), drawn through an indirect buffer, lit outputs, soft particles,
+of the simulation controls), drawn through an indirect buffer, lit outputs,
 motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
-(Unbound draws none of these and says so); output events, GPU events, bounds computed on the GPU and the `VFXManager`
-camera hooks. Expression operations without a control: the inverse of a general matrix and an
+(Unbound draws none of these and says so); output events, GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and an
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
-angles and scales taken from a matrix, colour spaces, meshes, the main camera, noise, texture
+angles and scales taken from a matrix, colour spaces, meshes, noise, texture
 and buffer sizes). Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
 that ping-pongs, one that loops before its first key and clamps after its last, one that

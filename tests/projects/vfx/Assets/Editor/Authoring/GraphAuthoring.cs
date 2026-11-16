@@ -42,6 +42,7 @@ public static class GraphAuthoring
         Chained();
         Drawn();
         DrawnOverLife();
+        Cameras();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -134,6 +135,63 @@ public static class GraphAuthoring
         AtTime(endUpdate, "size", new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(1f, 0.5f)) { postWrapMode = WrapMode.Loop }, 0.997f);
         AtTime(endUpdate, "alpha", new AnimationCurve(new Keyframe(0.3f, 0.2f), new Keyframe(1.4f, 1f)) { postWrapMode = WrapMode.Loop }, 0.3f + 0.997f * 1.1f);
         Save(end);
+    }
+
+    const string CameraFolder = "Assets/CameraGraphs";
+
+    /// <summary>The camera controls' graphs (README.md, "Cameras").</summary>
+    static void Cameras()
+    {
+        Directory.CreateDirectory(CameraFolder);
+        AssetDatabase.Refresh();
+
+        // What the main camera's values evaluate to, read by a script block of a spawn context.
+        var values = NewGraph("CamValues", CameraFolder);
+        var (valuesSpawn, _, _, _) = System(values, 8);
+        ConstantRate(valuesSpawn, 1f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(CameraInputs)));
+        valuesSpawn.AddChild(block);
+        var main = Make<MainCamera>();
+        values.AddChild(main);
+        foreach (var (output, input) in new[]
+                 {
+                     ("transform", "m00"), ("fieldOfView", "f00"), ("nearPlane", "f01"), ("farPlane", "f02"), ("orthographicSize", "f03"),
+                     ("aspectRatio", "f04"), ("orthographic", "b00"), ("pixelDimensions", "p00"), ("scaledPixelDimensions", "p01"), ("lensShift", "p02"),
+                 })
+            Link(main.outputSlots[0].children.First(s => s.name == output), Input(block, input));
+        Save(values);
+
+        // Particles whose colour is a texel of the main camera's depth buffer, read on the GPU
+        // when they are made: the graph reads the main camera's depth.
+        var depth = NewGraph("CamDepth", CameraFolder);
+        var (depthSpawn, depthInit, _, _) = System(depth, 8);
+        ConstantRate(depthSpawn, 2f);
+        var buffer = Make<MainCamera>();
+        depth.AddChild(buffer);
+        var load = Make<LoadCameraBuffer>();
+        depth.AddChild(load);
+        Link(buffer.outputSlots[0].children.First(s => s.name == "depthBuffer"), load.inputSlots[0]);
+        load.inputSlots[1].value = 32u;
+        load.inputSlots[2].value = 24u;
+        var colour = Make<SetAttribute>();
+        colour.SetSettingValue("attribute", "color");
+        depthInit.AddChild(colour);
+        for (int channel = 0; channel < 3; channel++) Link(load.outputSlots[0][channel], colour.inputSlots[0][channel]);
+        Save(depth);
+
+        // Eight quads added to what is behind, fading over 0.6 where they near what is opaque
+        // behind them (soft particles); nothing sorts them.
+        var soft = NewGraph("SoftAdditive", CameraFolder);
+        var (softSpawn, softInit, _, softOutput) = System(soft, 16);
+        softOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
+        softOutput.SetSettingValue("useSoftParticle", true);
+        Input(softOutput, "softParticleFadeDistance").value = 0.6f;
+        Burst(softSpawn, false, 8f, 0f);
+        SetRandom(softInit, "position", new Vector3(-1.2f, -0.8f, 0f), new Vector3(1.2f, 0.8f, 0f));
+        Set(softInit, "size", 0.9f);
+        SetVector(softInit, "color", new Vector3(0.6f, 0.4f, 0.2f));
+        Save(soft);
     }
 
     /// <summary>A block that sets an attribute from a curve sampled at a time given.</summary>
