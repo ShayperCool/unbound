@@ -12,23 +12,17 @@ match its reference pixel for pixel, except those RESIDUALS.json lists, each as
 It exits 1 when an image is missing or goes beyond that, and names a listed image that now matches
 exactly (NOW MATCHES) so that its entry can be withdrawn.
 """
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "urp"))
 exec(open(os.path.join(os.path.dirname(__file__), "..", "urp", "compare.py")).read().split("\nw1, h1, a = read_png")[0])
 
+import image_gate
+
 args = sys.argv[1:]
-gate = "--gate" in args
-residuals = {}
-if gate:
-    at = args.index("--gate")
-    if at + 1 < len(args) and args[at + 1].endswith(".json"):
-        with open(args[at + 1]) as handle:
-            residuals = json.load(handle)
-        del args[at + 1]
-    del args[at]
+gate, residual_path = image_gate.take_gate(args)
+residuals = image_gate.load(residual_path)
 ref_dir, cand_dir = args[0], args[1]
 worst_mean = 0.0
 exact = recorded = 0
@@ -63,17 +57,14 @@ for name in sorted(os.listdir(ref_dir)):
     print(f"{key}: mean {mean:.2f}, worst {worst}, over 8: {over}")
     if not gate:
         continue
-    allowed = residuals.get(key)
-    if differing == 0:
-        exact += 1
-        if allowed is not None:
-            print(f"NOW MATCHES {key}: its recorded residual can be withdrawn")
-    elif allowed is not None and differing <= allowed["pixels"] and worst <= allowed["worst"]:
-        recorded += 1
-        print(f"recorded {key}: {differing} pixels differ by up to {worst} ({allowed['reason']})")
-    else:
-        bound = f"recorded {allowed['pixels']} pixels up to {allowed['worst']}" if allowed else "not recorded"
-        failed.append(f"{key}: {differing} pixels differ by up to {worst} ({bound})")
+    passes, line = image_gate.judge(key, differing, worst, residuals)
+    if not passes:
+        failed.append(line[len("FAIL "):])
+        continue
+    if line:
+        print(line)
+    exact += differing == 0
+    recorded += differing > 0
 for key in sorted(set(residuals) - {n[:-4] for n in os.listdir(ref_dir) if n.endswith(".png")}):
     failed.append(f"{key}: a recorded residual for an image the reference does not have")
 print(f"worst mean {worst_mean:.2f}")

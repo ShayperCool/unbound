@@ -2,7 +2,10 @@
 """Compares Unbound's URP probe image with Unity's: per-channel differences over the image and at a
 few points (the cube, the sphere, the ground, the sky).
 
-    python3 tests/projects/urp/compare.py tests/projects/urp/Reference/unity-6000.0.71f1.png /tmp/urp.png
+    python3 tests/projects/urp/compare.py tests/projects/urp/Reference/unity-6000.0.71f1.png /tmp/urp.png \
+        [--gate [RESIDUALS.json]]
+
+Without --gate it measures and exits 0; with it, see image_gate.py.
 """
 import struct
 import sys
@@ -53,13 +56,33 @@ def read_png(path):
 w1, h1, a = read_png(sys.argv[1])
 w2, h2, b = read_png(sys.argv[2])
 assert (w1, h1) == (w2, h2), ((w1, h1), (w2, h2))
-total, worst, over = 0, 0, 0
+total, worst, over, differing = 0, 0, 0, 0
 for y in range(h1):
     for x in range(w1):
         d = max(abs(p - q) for p, q in zip(a[y][x], b[y][x]))
         total += d
         worst = max(worst, d)
         over += d > 8
+        differing += d > 0
 print(f"mean max-channel difference {total / (w1 * h1):.2f}, worst {worst}, pixels over 8: {over} of {w1 * h1}")
 for name, (x, y) in {"cube": (128, 90), "sphere": (190, 88), "ground": (160, 150), "sky": (160, 20)}.items():
-    print(f"  {name:7} unity {a[y][x]}  unbound {b[y][x]}")
+    if x < w1 and y < h1:
+        print(f"  {name:7} unity {a[y][x]}  unbound {b[y][x]}")
+
+# --gate [RESIDUALS.json] after the two images: the image must match its reference pixel for
+# pixel unless the list records it (image_gate.py), keyed by the reference's path relative to the
+# list's directory.
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import image_gate
+
+gate, residual_path = image_gate.take_gate(sys.argv[3:])
+if gate:
+    residuals = image_gate.load(residual_path)
+    key = os.path.relpath(os.path.abspath(sys.argv[1]),
+                          os.path.dirname(os.path.abspath(residual_path)) if residual_path else os.getcwd())
+    passes, line = image_gate.judge(key, differing, worst, residuals)
+    if line:
+        print(line)
+    print(f"gate: {'exact' if differing == 0 else 'within recorded residuals' if passes else 'failed'}")
+    sys.exit(0 if passes else 1)
