@@ -34,9 +34,10 @@ namespace UnityEngine.Tests
         readonly string m_Release = ProjectInfo.UnityVersion;
 
         [Theory]
-        [InlineData(AudioSpeakerMode.Mono, 0f, false)]
+        [InlineData(AudioSpeakerMode.Mono, 0.5f, false)]
         [InlineData(AudioSpeakerMode.Stereo, 1f, false)]
         [InlineData(AudioSpeakerMode.Stereo, 0f, true)]
+        [InlineData(AudioSpeakerMode.Mono, 0f, true)]
         public void SixInputPlaybackRefusesUnmeasuredContexts(AudioSpeakerMode mode, float blend, bool stream)
         {
             var config = AudioSettings.GetConfiguration();
@@ -59,14 +60,16 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(clip); }
         }
 
-        [Fact]
-        public void SixInputAdmissionUsesTheActiveDriverLayout()
+        [Theory]
+        [InlineData(AudioSpeakerMode.Mono)]
+        [InlineData(AudioSpeakerMode.Quad)]
+        [InlineData(AudioSpeakerMode.Mode7point1)]
+        public void SixInputPlaybackIsAdmittedInEveryLayout(AudioSpeakerMode mode)
         {
             var config = AudioSettings.GetConfiguration();
-            config.speakerMode = AudioSpeakerMode.Quad;
+            config.speakerMode = mode;
             Assert.True(AudioSettings.Reset(config));
-            Assert.Equal(AudioSpeakerMode.Stereo, m_Backend.ActiveSpeakerMode);
-            var source = Source("Clamped six input layout");
+            var source = Source("Six input layout");
             source.playOnAwake = false;
             var clip = AudioClip.Create("Six input", 1024, 6, 48000, false);
             try
