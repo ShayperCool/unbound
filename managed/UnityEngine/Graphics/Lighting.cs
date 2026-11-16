@@ -844,6 +844,7 @@ namespace Unbound.Runtime
             var main = MainLight();
             into.Add(("_WorldSpaceLightPos0", MainLightPosition(main)));
             into.Add(("_LightColor0", main != null ? (Vector4)main.FinalColor(linear) : Vector4.zero));
+            into.Add(("unity_OcclusionMaskSelector", (Vector4)ForwardLights.OcclusionMaskSelector(main)));
 
             // Ambient: ShadeSH9's constants from the ambient probe (linear; gamma projects convert
             // the result back). The ambient colors go as the lighting settings hold them: the

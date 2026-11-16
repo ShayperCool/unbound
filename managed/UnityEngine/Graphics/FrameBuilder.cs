@@ -2202,6 +2202,7 @@ namespace Unbound.Runtime
         static readonly ForwardLights.ObjectLights s_ObjectLights = new ForwardLights.ObjectLights();
         static readonly int s_WorldSpaceLightPos0Id = Shader.PropertyToID("_WorldSpaceLightPos0");
         static readonly int s_LightColor0Id = Shader.PropertyToID("_LightColor0");
+        static readonly int s_OcclusionMaskSelectorId = Shader.PropertyToID("unity_OcclusionMaskSelector");
         static readonly Dictionary<string, int> s_ForwardAddPass = new Dictionary<string, int>();
 
         static readonly Dictionary<string, bool> s_VertexLit = new Dictionary<string, bool>();
@@ -2289,6 +2290,7 @@ namespace Unbound.Runtime
                 if (otherBase)
                 {
                     extra = new Dictionary<int, object>();
+                    extra[s_OcclusionMaskSelectorId] = ForwardLights.OcclusionMaskSelector(baseLight);
                     if (baseLight != null)
                     {
                         var forward = baseLight.transform.forward;
