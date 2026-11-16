@@ -538,7 +538,7 @@ public class NativeGfxMetalProbe : MonoBehaviour
     /// <summary>A dynamically scaled texture's content across changes of scale: a pattern (left
     /// half red, right half green) blitted into it at 0.5 then read at 1 (ReadPixels), and blitted
     /// at 1 then read at 0.5 (sampled by a Blit, ReadPixels reading zeros there), then read back
-    /// at 1; and two controls of an image kept across scales with nothing written there.</summary>
+    /// at 1; and controls of an image kept across scales with nothing written there.</summary>
     void DynamicContent()
     {
         screenLogs = new List<string>();
@@ -581,6 +581,21 @@ public class NativeGfxMetalProbe : MonoBehaviour
         ScalableBufferManager.ResizeBuffers(1f, 1f);
         explicitContent.ApplyDynamicScale();
         Value("dynres.content.explicit", Read(explicitContent, 16, 16));
+        // A multisampled one (4 samples), and one back through factors of 0.99, which round its
+        // scaled size up to the full one (sampled there: ReadPixels of a scaled one reads zeros).
+        var multisampled = Keep(new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+            { name = "dyncontentmsaa", useDynamicScale = true, antiAliasing = 4 });
+        multisampled.Create();
+        Graphics.Blit(quadrants, multisampled);
+        Graphics.Blit(quadrants, content);
+        ScalableBufferManager.ResizeBuffers(0.5f, 0.5f);
+        Pixels(multisampled, 8, 8);
+        Pixels(content, 8, 8);
+        ScalableBufferManager.ResizeBuffers(0.99f, 0.99f);
+        Value("dynres.content.near", Pixels(content, 16, 16));
+        ScalableBufferManager.ResizeBuffers(1f, 1f);
+        Value("dynres.content.msaa.sampled", Pixels(multisampled, 16, 16));
+        Value("dynres.content.msaa", Read(multisampled, 16, 16));
         Value("dynres.content.logs", L(screenLogs));
         screenLogs = null;
     }
