@@ -5,6 +5,8 @@
   "summary": "warmupbuiltin: .*",
   "engine_paths": [
     "managed/UnityEngine/Graphics/ShaderWarmup.cs",
-    "managed/UnityEngine/Graphics/ShaderVariantCollection.cs"
+    "managed/UnityEngine/Graphics/ShaderVariantCollection.cs",
+    "managed/UnityEngine/Graphics/ShaderPasses.cs",
+    "crates/unbound-app/src/materials.rs"
   ]
 }

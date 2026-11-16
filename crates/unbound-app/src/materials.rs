@@ -284,10 +284,12 @@ impl Resolver {
                     ));
                 }
                 // Drawing ends a fallback chain at a shader it lacks; so does warm-up.
-                tracing::warn!(
-                    "shader `{}`: its fallback `{current}` has no readable source; global warm-up stops there",
-                    material.shader
-                );
+                let root = material.shader.clone();
+                self.log_once(format!("warm-up fallback {root}>{current}"), || {
+                    format!(
+                        "shader `{root}`: its fallback `{current}` has no readable source; global warm-up stops there"
+                    )
+                });
                 break;
             };
             sources.extend(labs.into_iter().map(|lab| self.resolve_lab(material, lab)));
