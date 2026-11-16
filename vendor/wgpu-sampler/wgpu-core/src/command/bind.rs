@@ -226,7 +226,10 @@ mod compat {
                 let (must_set, must_rebind) = match (&mut e.expected, new_expected_bgl) {
                     (None, None) => (false, false),
                     (None, Some(_)) => (true, true),
-                    (Some(_), None) => (true, false),
+                    // A group the new layout leaves out: the sets after it are disturbed where
+                    // layouts are compatible only up to the first set that differs (Vulkan), so
+                    // the later groups bound are set again.
+                    (Some(_), None) => (true, true),
                     (Some(old_expected_bgl), Some(new_expected_bgl)) => {
                         let is_different = !old_expected_bgl.is_equal(new_expected_bgl);
                         (is_different, is_different)

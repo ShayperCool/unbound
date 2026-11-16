@@ -10,7 +10,8 @@ The SHA-256 values below identify the published `.crate` archives and are checke
 | wgpu-core | `14c018fce9b6270aa203c2fdd56f3cce996713534bd757e4ea58c8560b121f14` |
 | wgpu-hal | `b6b7fb58561a792bc237628ba0792e332de418fefe145f13b5ed8201e6d52f58` |
 
-`reproduce.py` finishes with `native-vulkan-depth-pass.patch` and then `gl-present-wait.patch` after applying
+`reproduce.py` finishes with `native-vulkan-depth-pass.patch`, then `gl-present-wait.patch`
+and `native-layout-gap-rebind.patch`, after applying
 `native-lod-bias.patch`, `gl-device.patch`,
 `native-mirror-clamp.patch`, `native-depth-state.patch`,
 `native-external-texture.patch`, `native-gl-mirror-clamp.patch`,
@@ -246,3 +247,21 @@ instrumented probe runs were 509 to 546 s with the wait (5 runs) and 434 to 545 
 (5 runs), at a load average of 40 to 50: the ranges overlap and no clear difference could be
 measured under that load (the medians, 529 and 490 s, lean toward the wait being slower). The
 cost on an idle machine is unmeasured.
+
+## Groups after a layout's gap (`native-layout-gap-rebind.patch`)
+
+A pipeline layout may leave a bind group out (`None`). When the pass switches from a pipeline
+whose layout has a group at an index to one whose layout leaves it out, Core's binder now sets
+the groups bound after that index again at the next draw, as it already did when a group's
+layout changed or a left-out group came back. Before, it kept them, and redundant
+`set_bind_group` calls are dropped while recording, so nothing set them again; but Vulkan keeps
+descriptor sets bound only up to the first set whose layout differs, so the next draw read
+undefined sets. Groups after the gap that are not bound stay unset, as before.
+
+Measured: `crates/unbound-app/src/render/layout_gpu_tests.rs` draws a program whose layout has
+group 2 and then, in the same pass with the same groups bound, one that leaves group 2 out. On
+Linux (NVIDIA) the second draw read group 3 as zero on Vulkan without the patch and reads its
+storage buffer with it; OpenGL read it either way, and Metal on the Mac (Apple M2 Pro) reads it
+with the patch. The [Vulkan pipeline layout compatibility
+rules](https://docs.vulkan.org/spec/latest/chapters/descriptorsets.html#descriptorsets-compatibility)
+leave sets after the first incompatible one disturbed.
