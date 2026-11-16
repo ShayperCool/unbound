@@ -14,7 +14,8 @@ IPointerCaptureEventInternal interface (reflection), and its related target.
   that pointer id (touch 4, mouse 0) through both; a reused pooled event is reset (no target, pointer
   id -1).
 - `panel.*`: after `CapturePointer`/`ReleasePointer`, the panel sends the capture events when it
-  next processes that pointer's events (a pointer move here): a capture, a capture moved from A to B
-  (out on A related to B, then in on B related to A) and a release, for a touch and for the mouse.
+  next processes a pointer event (here a move of the same pointer): a capture, a capture moved from
+  A to B (out on A related to B, then in on B related to A) and a release, for a touch and for the
+  mouse.
 
 Other releases are unmeasured.

@@ -4,6 +4,7 @@
   ],
   "summary": "\\d+/\\d+ records match; \\d+ differ",
   "engine_paths": [
-    "managed/UnityEngine/UIElements/Events/Events.cs"
+    "managed/UnityEngine/UIElements/Events/Events.cs",
+    "managed/UnityEngine/UIElements/Core/Panel.cs"
   ]
 }

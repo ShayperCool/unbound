@@ -1434,7 +1434,8 @@ namespace UnityEngine.UIElements
 
     public partial interface IPointerCaptureEvent { }
 
-    /// <summary>The pointer a capture event is about, for the engine's own code.</summary>
+    /// <summary>The pointer a capture event is about; declared as in the release, where nothing
+    /// reads it.</summary>
     internal partial interface IPointerCaptureEventInternal
     {
         int pointerId { get; }
