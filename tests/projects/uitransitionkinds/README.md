@@ -1,7 +1,7 @@
 # Transition value kinds
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 189 rows (managed style state of a runtime panel
+byte-identical and the canonical reference has 207 rows (managed style state of a runtime panel
 driven by an explicit millisecond clock, as in `uitransitions`; independent of the OS and the
 graphics device). The gate compares every row exactly.
 
@@ -18,8 +18,11 @@ the transition events since the previous row.
   start against the parent's width or height (margins: width), flex-basis against the parent's
   main axis, border radii against the element's own width, translate against its own size; a
   start near 0 becomes 0px; a parent of no width still converts to pixels, never to percent.
-- `fontSizeToPercent`, `letterSpacingToPercent`, `bgSize*`: text lengths and background sizes
-  never convert, so a change of unit (or from `auto`) does not run; the same unit runs.
+- `fontSizeToPercent`, `letterSpacingToPercent`, `bgSizeToPercent`, `bgSizeInitialToPixels`: text
+  lengths and background sizes never convert, so a change of unit does not run (the initial
+  background size is 100% 100%); `bgSizeSameUnit`: the same unit runs; `bgSizeCover*`: a keyword
+  size (cover, contain) has 0px components and runs from them, to pixels and to another keyword
+  (which it takes at the end); `bgSizeAutoComponent`: a size with an `auto` component does not run.
 - `fontPercent*`: a percent font size from a USS rule is a share of the parent's font size; an
   inline one (from code or a UXML `style` attribute) keeps its number, and a child inheriting it
   takes its own share of that number.

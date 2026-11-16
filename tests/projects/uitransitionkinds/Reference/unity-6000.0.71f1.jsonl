@@ -130,12 +130,30 @@
 {"key":"bgSizeSameUnit.500","value":"bgsize Length 20px 30px hints 0 []"}
 {"key":"bgSizeSameUnit.750","value":"bgsize Length 25px 40px hints 0 []"}
 {"key":"bgSizeSameUnit.1000","value":"bgsize Length 30px 50px hints 0 [end:background-size]"}
-{"key":"bgSizeFromAuto.before","value":"bgsize Length 100% 100% hints 0"}
-{"key":"bgSizeFromAuto.0","value":"bgsize Length 100px 50px hints 0 []"}
-{"key":"bgSizeFromAuto.250","value":"bgsize Length 100px 50px hints 0 []"}
-{"key":"bgSizeFromAuto.500","value":"bgsize Length 100px 50px hints 0 []"}
-{"key":"bgSizeFromAuto.750","value":"bgsize Length 100px 50px hints 0 []"}
-{"key":"bgSizeFromAuto.1000","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeInitialToPixels.before","value":"bgsize Length 100% 100% hints 0"}
+{"key":"bgSizeInitialToPixels.0","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeInitialToPixels.250","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeInitialToPixels.500","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeInitialToPixels.750","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeInitialToPixels.1000","value":"bgsize Length 100px 50px hints 0 []"}
+{"key":"bgSizeCoverToPixels.before","value":"bgsize Cover 0px 0px hints 0"}
+{"key":"bgSizeCoverToPixels.0","value":"bgsize Length 0px 0px hints 0 [run:background-size]"}
+{"key":"bgSizeCoverToPixels.250","value":"bgsize Length 10px 5px hints 0 []"}
+{"key":"bgSizeCoverToPixels.500","value":"bgsize Length 20px 10px hints 0 []"}
+{"key":"bgSizeCoverToPixels.750","value":"bgsize Length 30px 15px hints 0 []"}
+{"key":"bgSizeCoverToPixels.1000","value":"bgsize Length 40px 20px hints 0 [end:background-size]"}
+{"key":"bgSizeCoverToContain.before","value":"bgsize Cover 0px 0px hints 0"}
+{"key":"bgSizeCoverToContain.0","value":"bgsize Length 0px 0px hints 0 [run:background-size]"}
+{"key":"bgSizeCoverToContain.250","value":"bgsize Length 0px 0px hints 0 []"}
+{"key":"bgSizeCoverToContain.500","value":"bgsize Length 0px 0px hints 0 []"}
+{"key":"bgSizeCoverToContain.750","value":"bgsize Length 0px 0px hints 0 []"}
+{"key":"bgSizeCoverToContain.1000","value":"bgsize Contain 0px 0px hints 0 [end:background-size]"}
+{"key":"bgSizeAutoComponent.before","value":"bgsize Length 40px 0px hints 0"}
+{"key":"bgSizeAutoComponent.0","value":"bgsize Length 80px 0px hints 0 []"}
+{"key":"bgSizeAutoComponent.250","value":"bgsize Length 80px 0px hints 0 []"}
+{"key":"bgSizeAutoComponent.500","value":"bgsize Length 80px 0px hints 0 []"}
+{"key":"bgSizeAutoComponent.750","value":"bgsize Length 80px 0px hints 0 []"}
+{"key":"bgSizeAutoComponent.1000","value":"bgsize Length 80px 0px hints 0 []"}
 {"key":"fontPercent","value":"class 10 | inline 50 | uxml 50 | pixels 50 | uxmlPx 50"}
 {"key":"fontPercentChildren","value":"inline 25 | class 10 | classUnderInline 25"}
 {"key":"hintColor.before","value":"color 1 hints 0"}

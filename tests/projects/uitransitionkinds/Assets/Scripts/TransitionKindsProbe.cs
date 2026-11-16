@@ -197,7 +197,10 @@ public class TransitionKindsProbe : MonoBehaviour
         Func<string> size = () => { var s = box.resolvedStyle.backgroundSize; return "bgsize " + s.sizeType + " " + L(s.x) + " " + L(s.y); };
         Case("bgSizeToPercent", "background-size", () => box.style.backgroundSize = new BackgroundSize(10, 10), () => box.style.backgroundSize = new BackgroundSize(Length.Percent(50), Length.Percent(50)), size);
         Case("bgSizeSameUnit", "background-size", () => box.style.backgroundSize = new BackgroundSize(10, 10), () => box.style.backgroundSize = new BackgroundSize(30, 50), size);
-        Case("bgSizeFromAuto", "background-size", null, () => box.style.backgroundSize = new BackgroundSize(100, 50), size);
+        Case("bgSizeInitialToPixels", "background-size", null, () => box.style.backgroundSize = new BackgroundSize(100, 50), size);
+        Case("bgSizeCoverToPixels", "background-size", () => box.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover), () => box.style.backgroundSize = new BackgroundSize(40, 20), size);
+        Case("bgSizeCoverToContain", "background-size", () => box.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover), () => box.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain), size);
+        Case("bgSizeAutoComponent", "background-size", () => box.style.backgroundSize = new BackgroundSize(40, Length.Auto()), () => box.style.backgroundSize = new BackgroundSize(80, Length.Auto()), size);
 
         // Percent font sizes: a USS rule's is a share of the parent's font size; an inline one (from
         // code or a UXML style attribute) keeps its number.
