@@ -180,12 +180,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.Init"); }
         [global::Unbound.Stub] public BaseFieldTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.ctor"); }
     }
-    unsafe partial class BaseField<TValueType> : global::UnityEngine.UIElements.IMixedValueSupport, global::UnityEngine.UIElements.IPrefixLabel, global::UnityEngine.UIElements.IEditableElement
+    unsafe partial class BaseField<TValueType>
     {
         [global::Unbound.Stub] protected internal static readonly global::UnityEngine.PropertyName serializedPropertyCopyName;
         [global::Unbound.Stub] internal global::System.Action<global::UnityEngine.ExpressionEvaluator.Expression> expressionEvaluated;
-        global::System.Action global::UnityEngine.UIElements.IEditableElement.editingStarted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingStarted"); } }
-        global::System.Action global::UnityEngine.UIElements.IEditableElement.editingEnded { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.editingEnded"); } }
         [global::Unbound.Stub] internal override global::UnityEngine.Rect GetTooltipRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.GetTooltipRect"); return default; }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.OnViewDataReady"); }
         internal event global::System.Action viewDataRestored { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.viewDataRestored"); } [global::Unbound.Stub] remove { } }
@@ -1806,11 +1804,6 @@ namespace UnityEngine.UIElements
     {
         void OnVisualElementChange(global::UnityEngine.UIElements.VisualElement element, global::UnityEngine.UIElements.VersionChangeType changeType);
     }
-    internal unsafe partial interface IEditableElement
-    {
-        internal global::System.Action editingStarted { get; set; }
-        internal global::System.Action editingEnded { get; set; }
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class IEnumerableExtensions
     {
@@ -1912,10 +1905,6 @@ namespace UnityEngine.UIElements
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
-    public unsafe partial interface IMixedValueSupport
-    {
-        bool showMixedValue { get; set; }
-    }
     internal unsafe partial interface IPanelDebug
     {
         void AttachDebugger(global::UnityEngine.UIElements.IPanelDebugger debugger);
@@ -1953,11 +1942,6 @@ namespace UnityEngine.UIElements
     internal unsafe partial interface IPointerCaptureEventInternal
     {
         int pointerId { get; }
-    }
-    internal unsafe partial interface IPrefixLabel
-    {
-        string label { get; }
-        global::UnityEngine.UIElements.Label labelElement { get; }
     }
     internal unsafe partial interface IScheduler
     {

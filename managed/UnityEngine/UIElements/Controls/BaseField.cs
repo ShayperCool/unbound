@@ -6,7 +6,7 @@ namespace UnityEngine.UIElements
 {
     /// <summary>A labelled field holding a value: a Label then an input element, as a composite
     /// focus root delegating focus to its input.</summary>
-    public abstract partial class BaseField<TValueType> : BindableElement, INotifyValueChanged<TValueType>
+    public abstract partial class BaseField<TValueType> : BindableElement, INotifyValueChanged<TValueType>, IMixedValueSupport, IPrefixLabel, IEditableElement
     {
         public static readonly string ussClassName = "unity-base-field";
         public static readonly string labelUssClassName = ussClassName + "__label";
@@ -171,9 +171,12 @@ namespace UnityEngine.UIElements
             UnregisterCallback<FocusOutEvent>(EndEditing);
         }
 
-        internal void StartEditing(EventBase e) { }
+        System.Action IEditableElement.editingStarted { get; set; }
+        System.Action IEditableElement.editingEnded { get; set; }
 
-        internal void EndEditing(EventBase e) { }
+        internal void StartEditing(EventBase e) => ((IEditableElement)this).editingStarted?.Invoke();
+
+        internal void EndEditing(EventBase e) => ((IEditableElement)this).editingEnded?.Invoke();
 
         internal TValueType ValidatedValue(TValueType value) => onValidateValue != null ? onValidateValue(value) : value;
 
