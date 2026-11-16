@@ -314,7 +314,8 @@ red, right green pattern): blitted at 0.5 it reads uniform red at 1; blitted at 
 garbled when sampled at 0.5 and whole again back at 1 (`back`). With quadrants (red, green
 below blue, white), sampled at 0.5 then at 0.25x0.5 and written at neither, it is whole again at
 1 (`twice`), as is one marked `useDynamicScaleExplicit` scaled and back by `ApplyDynamicScale`
-(`explicit`), a multisampled one (4 samples), sampled and read (`msaa.sampled`, `msaa`), and one
+(`explicit`), a multisampled one (4 samples), sampled and read (`msaa.sampled`, `msaa`), one
+scaled right after it was drawn into (`msaa.direct`), and one
 sampled at factors of 0.99, which round its size up to the full one (`near`).
 
 Windowed (`run.py native --device metal --windowed`, the Editor with its windows, Play mode in
@@ -329,7 +330,7 @@ drawing left). Plugin events run later there, on the Editor's render thread: `ca
 `executed.pixels` show colors the scripts set after the events. The engine run is compared with
 the batch-mode reference only.
 
-Unbound matches 345/391 records with 46 declared residuals, the four `outside.*` rows among them
+Unbound matches 346/392 records with 46 declared residuals, the four `outside.*` rows among them
 since Q515 (rerun on macOS) (`residuals-metal.json`, each with its
 reason): the textures' memory (the Editor's colors are shared, the renderer's private; its depth
 textures have pixel format views), the descriptor's load action over a render texture (the
