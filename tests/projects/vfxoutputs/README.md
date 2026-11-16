@@ -98,6 +98,9 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   stages hold 15 before frame 6 and 18 after); a probe with more stages before frame 6 would no
   longer show it.
 - Alpha-blended outputs with sorting off are drawn but not measured here (their order shows).
+- An effect made while a camera collects its draws (its entries outgrow the arguments' buffer
+  after other draws took it): Unbound keeps the outgrown buffer until the next frame; no control
+  makes one.
 - The order of an unsorted list: the package documents it as not deterministic (Shared Output
   Settings, Sort: an alpha-blended output with sorting off flickers), so no control blends
   overlapping quads whose order shows.
