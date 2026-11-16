@@ -137,8 +137,8 @@ namespace Unbound.Tests
             // ShaderVariantCollection, LightingSettings, VisualEffect and VFXRenderer read their data now.
             Assert.DoesNotContain(unread, e => e.ClassId == 200 || e.ClassId == 850595691);
             Assert.DoesNotContain(unread, e => e.ClassId == 2083052967 || e.ClassId == 73398921);
-            // A VisualEffectAsset is what a graph file imports to: a serialized one (a built bundle's) is not read.
-            Assert.Contains(unread, e => e.ClassId == 2058629509);
+            // A VisualEffectAsset is what a graph file imports to; a serialized one (a built bundle's) is read too.
+            Assert.DoesNotContain(unread, e => e.ClassId == 2058629509);
             Assert.DoesNotContain(unread, e => e.ClassId == 5 || e.ClassId == 100000);
         }
     }
