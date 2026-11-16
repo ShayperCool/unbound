@@ -1215,7 +1215,7 @@ class Janitor:
         unread = 0
         for path, kind, hours in self.unprotected_candidates():
             if any(overlaps(path, p) for p in self.suite_paths):
-                self.emit('keep', path=str(path), reason='promoted sheriff suite reference')
+                self.keep(path, 'promoted sheriff suite reference')
                 continue
             if kind == 'run' and not self.sheriff_complete:
                 unread += 1
@@ -1550,6 +1550,9 @@ class Janitor:
         except TimeoutError as problem:
             # Retain the unsafe remainder of this batch. Later batches require a
             # complete fresh scan; previously discovered destinations stay kept.
+            # The candidates retained are not offered again in this run: the fresh
+            # scan walks them (never sealed again), so their links protect.
+            self.unsealed.update(str(path) for path, _, _ in candidates)
             self.partial = self.needs_discovery = True
             status, error = 'deferred', str(problem)
         except BaseException as problem:

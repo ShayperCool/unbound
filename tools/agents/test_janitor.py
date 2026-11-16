@@ -315,24 +315,48 @@ class JanitorTests(unittest.TestCase):
         self.assertNotIn(str(second), unsealed)
 
     def test_runs_sealed_again_by_a_rediscovery_are_checked_before_removals(self):
-        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
-        task = self.directory('q1')
-        (first/'link').symlink_to(task/'output')
+        alpha = self.instances('alpha', ['gate-1', 'gate-2', 'gate-3'])
+        beta = self.instances('beta', ['gate-1', 'gate-2'])
+        self.aged = alpha+beta
+        (beta[0]/'link').symlink_to(alpha[1]/'output')
         original = janitor.Janitor.remove_batch
         calls = []
         def remove_batch(janitor_, candidates):
-            calls.append(candidates)
+            calls.append(list(candidates))
             if len(calls) == 1:
-                # gate-1 is written to while its batch runs out of time; it is sealed again.
-                os.utime(first/'output', (self.future, self.future))
+                # beta/gate-1 is written to while the first batch runs out of time.
+                os.utime(beta[0]/'output', (self.future, self.future))
                 raise TimeoutError('janitor scan budget exhausted')
             return original(janitor_, candidates)
         with patch.object(janitor, 'REMOVAL_BATCH_SIZE', 1), \
              patch.object(janitor.Janitor, 'remove_batch', remove_batch):
             self.collect_applied()
         self.assertEqual(self.output.getvalue().count('"discovery_start"'), 2)
+        self.assertTrue(alpha[0].is_dir())  # retained by the batch that ran out of time
+        self.assertTrue(beta[0].is_dir())
+        self.assertTrue(alpha[1].is_dir())  # named from beta/gate-1, checked after the rediscovery
+        self.assertNotIn('links into a removed run', self.output.getvalue())
+
+    def test_runs_retained_by_a_batch_out_of_time_are_walked(self):
+        # Not offered again in this run, so the fresh scan reads their links.
+        first, second, third, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3', 'gate-4'])
+        task = self.directory('q1')
+        (first/'link').symlink_to(task/'output')
+        (first/'run').symlink_to(third/'output')
+        original = janitor.Janitor.remove_batch
+        calls = []
+        def remove_batch(janitor_, candidates):
+            calls.append(list(candidates))
+            if len(calls) == 1:
+                raise TimeoutError('janitor scan budget exhausted')
+            return original(janitor_, candidates)
+        with patch.object(janitor, 'REMOVAL_BATCH_SIZE', 1), \
+             patch.object(janitor.Janitor, 'remove_batch', remove_batch):
+            self.collect_applied()
+        self.assertEqual(calls[0], [(first, 'run', 72)])
         self.assertTrue(first.is_dir())
-        self.assertTrue((task/'output').is_file())  # named from gate-1, walked after the rediscovery
+        self.assertTrue(third.is_dir())
+        self.assertTrue((task/'output').is_file())
         self.assertFalse(second.exists())
 
     def test_a_suite_path_through_a_link_inside_a_run_keeps_both_runs(self):
