@@ -17,6 +17,9 @@ once with them:
   scroller visibility, the former focus attribute;
 - `element.*Full`, `element.*Obsolete`: the attributes, under their names and former names;
   `vectorValue`: a composite field's traits read its components, not `value`;
+- `element.multiColumn*`: a multi-column list view subclass with its own sorting mode, column and sort
+  description: without the attribute the sorting mode is kept, the former boolean attribute reads true as
+  Custom and false as None, and the columns and sort descriptions are cleared;
 - `element.custom*`: a game traits class over Button's, its own attribute read after the base's;
 - `element.enum*`: an EnumField subclass through EnumField's traits: a type alone (the zero value), a
   value (exactly as named; another case is not a value), an undefined value (reported, no value), no type;

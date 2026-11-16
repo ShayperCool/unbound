@@ -22,6 +22,10 @@
 {"key":"element.listEmpty","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True height 40 reorderable False border False selection Single alternating None foldout False title \"\" footer False horizontal False virtualization FixedHeight reorderMode Simple binding <null>"}
 {"key":"element.listFull","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True height 30 reorderable False border False selection Single alternating None foldout False title \"H\" footer False horizontal False virtualization FixedHeight reorderMode Simple binding <null>"}
 {"key":"element.listObsolete","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True height 25 reorderable False border False selection Single alternating None foldout False title \"\" footer False horizontal False virtualization FixedHeight reorderMode Simple binding <null>"}
+{"key":"element.multiColumnEmpty","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True sorting Custom columns 0 sorts 0"}
+{"key":"element.multiColumnEnabled","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True sorting Custom columns 0 sorts 0"}
+{"key":"element.multiColumnDisabled","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True sorting None columns 0 sorts 0"}
+{"key":"element.multiColumnDefault","value":"name \"\" key \"\" tip \"\" picking Ignore hints None focusable True tab 0 enabled True sorting Default columns 0 sorts 0"}
 {"key":"element.foldoutEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True text \"\" value True"}
 {"key":"element.foldoutFull","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True text \"F\" value True"}
 {"key":"element.labelEmpty","value":"name \"\" key \"\" tip \"\" picking Position hints None focusable False tab 0 enabled True text \"\" rich True elided False escape False selectable False word False line False"}

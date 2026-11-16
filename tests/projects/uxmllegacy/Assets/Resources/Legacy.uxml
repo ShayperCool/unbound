@@ -23,6 +23,10 @@
     <p:OldListView class="case listEmpty" />
     <p:OldListView class="case listFull" fixed-item-height="30" reorderable="false" show-border="false" selection-type="Single" header-title="H" />
     <p:OldListView class="case listObsolete" item-height="25" />
+    <p:OldMultiColumn class="case multiColumnEmpty" />
+    <p:OldMultiColumn class="case multiColumnEnabled" sorting-enabled="true" />
+    <p:OldMultiColumn class="case multiColumnDisabled" sorting-enabled="false" />
+    <p:OldMultiColumn class="case multiColumnDefault" sorting-mode="Default" />
     <p:OldFoldout class="case foldoutEmpty" />
     <p:OldFoldout class="case foldoutFull" text="F" value="true" />
     <p:OldLabel class="case labelEmpty" />

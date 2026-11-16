@@ -135,6 +135,17 @@ namespace LegacyProbe
         }
     }
 
+    public class OldMultiColumn : MultiColumnListView
+    {
+        public new class UxmlFactory : UxmlFactory<OldMultiColumn, UxmlTraits> { }
+        public OldMultiColumn()
+        {
+            sortingMode = ColumnSortingMode.Custom;
+            columns.Add(new Column { name = "c", title = "C" });
+            sortColumnDescriptions.Add(new SortColumnDescription("c", SortDirection.Ascending));
+        }
+    }
+
     public class OldFoldout : Foldout
     {
         public new class UxmlFactory : UxmlFactory<OldFoldout, UxmlTraits> { }
@@ -218,6 +229,7 @@ public class UxmlLegacyProbe : MonoBehaviour
             case ScrollView v: s += " mode " + v.mode + " h " + v.horizontalScrollerVisibility + " v " + v.verticalScrollerVisibility + " elasticity " + F(v.elasticity)
                 + " deceleration " + F(v.scrollDecelerationRate) + " touch " + v.touchScrollBehavior + " hPage " + F(v.horizontalPageSize) + " vPage " + F(v.verticalPageSize)
                 + " wheel " + F(v.mouseWheelScrollSize) + " nested " + v.nestedInteractionKind; break;
+            case MultiColumnListView m: s += " sorting " + m.sortingMode + " columns " + m.columns.Count + " sorts " + m.sortColumnDescriptions.Count; break;
             case ListView l: s += " height " + F(l.fixedItemHeight) + " reorderable " + l.reorderable + " border " + l.showBorder + " selection " + l.selectionType
                 + " alternating " + l.showAlternatingRowBackgrounds + " foldout " + l.showFoldoutHeader + " title " + S(l.headerTitle) + " footer " + l.showAddRemoveFooter
                 + " horizontal " + l.horizontalScrollingEnabled + " virtualization " + l.virtualizationMethod + " reorderMode " + l.reorderMode + " binding " + S(l.bindingPath); break;
