@@ -183,7 +183,7 @@ namespace Unity.IO.LowLevel.Unsafe
     public static unsafe partial class AsyncReadManager
     {
         public static ReadHandle Read(string filename, ReadCommand* readCmds, uint readCmdCount, string assetName = "", ulong typeID = 0UL, AssetLoadingSubsystem subsystem = AssetLoadingSubsystem.Scripts) =>
-            AsyncFileIO.ReadByName(filename, readCmds, readCmdCount);
+            AsyncFileIO.ReadByName(filename, readCmds, readCmdCount, assetName, typeID, subsystem);
 
         public static ReadHandle GetFileInfo(string filename, FileInfoResult* result)
         {
@@ -309,6 +309,9 @@ namespace Unbound.Runtime
             internal long ReadCount;
             int m_Status = (int)ReadStatus.InProgress;
             internal JobHandle Job;
+            /// <summary>The request's records when it was made while AsyncReadManagerMetrics
+            /// collected; null otherwise.</summary>
+            internal AsyncReadMetrics.Recording Metrics;
 
             internal ReadStatus Status => (ReadStatus)Volatile.Read(ref m_Status);
 
@@ -319,7 +322,10 @@ namespace Unbound.Runtime
 
             /// <summary>A pending request turns Canceled at once and does not read; a settled one
             /// keeps its outcome (asyncread: cancel.*, *.cancelAfterCompletion).</summary>
-            internal void Cancel() => Settle(ReadStatus.Canceled);
+            internal void Cancel()
+            {
+                if (Settle(ReadStatus.Canceled)) Metrics?.Cancel();
+            }
 
             /// <summary>The bytes read so far: each command's count is written when the command
             /// finishes, so a read in progress reports its progress.</summary>
@@ -345,18 +351,30 @@ namespace Unbound.Runtime
             {
                 lock (this)
                 {
-                    if (Status != ReadStatus.InProgress) return;
-                    if (Kind == Kind.FileInfo) RunFileInfo();
-                    else RunReads();
+                    if (Status == ReadStatus.InProgress)
+                    {
+                        if (Kind == Kind.FileInfo) RunFileInfo();
+                        else RunReads();
+                    }
+                    // A cancel that came while the request ran, or before its deferred commands
+                    // were taken, leaves the records it did not reach canceled.
+                    if (Status == ReadStatus.Canceled) Metrics?.Cancel();
                 }
             }
 
             void RunReads()
             {
-                if (Deferred != null) TakeCommands(Deferred->ReadCommands, Deferred->CommandCount);
+                if (Deferred != null)
+                {
+                    TakeCommands(Deferred->ReadCommands, Deferred->CommandCount);
+                    Metrics?.Commands(Commands, CommandCount);
+                }
                 SafeFileHandle owned = Kind == Kind.ReadByName ? OpenForRead(Path) : null;
                 SafeFileHandle handle = Kind == Kind.ReadByName ? owned : File.Handle;
                 bool readable = handle != null && (Kind == Kind.ReadByName || (File.Status == FileStatus.Open && !File.Directory));
+                // A directory opens (its reads fail); a missing file does not, and its commands
+                // spent no time queued (asyncread metrics.directory.all, metrics.all).
+                bool opened = Kind == Kind.ReadByName ? owned != null || (!string.IsNullOrEmpty(Path) && Directory.Exists(Path)) : File.Status == FileStatus.Open;
                 try
                 {
                     var outcome = ReadStatus.Complete;
@@ -364,8 +382,10 @@ namespace Unbound.Runtime
                     {
                         if (Status != ReadStatus.InProgress) return;
                         var command = Commands[i];
+                        if (opened) Metrics?.Start(i);
                         long read = readable ? ReadOne(handle, command) : 0;
                         Volatile.Write(ref BytesRead[i], (ulong)read);
+                        Metrics?.Finish(i, command.Size, read, opened);
                         Interlocked.Increment(ref ReadCount);
                         // Unity 6000.0.71f1 (asyncread name.*, open.*): a command that reads
                         // nothing fails the request, one cut short by the end of the file
@@ -401,6 +421,7 @@ namespace Unbound.Runtime
                 }
                 InfoResult->FileSize = size;
                 InfoResult->FileState = state;
+                Metrics?.Finish(0, 0, 0, true);
                 Settle(ReadStatus.Complete);
             }
 
@@ -590,10 +611,12 @@ namespace Unbound.Runtime
                 return slot >= 0 && slot < s_Files.Count && s_FileVersions[slot] == handle.version ? s_Files[slot] : null;
         }
 
-        internal static ReadHandle ReadByName(string path, ReadCommand* commands, uint count)
+        internal static ReadHandle ReadByName(string path, ReadCommand* commands, uint count, string assetName, ulong typeId, AssetLoadingSubsystem subsystem)
         {
             var request = new ReadRequest { Kind = Kind.ReadByName, Path = path };
             request.TakeCommands(commands, (int)Math.Min(count, int.MaxValue));
+            request.Metrics = AsyncReadMetrics.Begin(path, assetName, typeId, subsystem);
+            request.Metrics?.Commands(request.Commands, request.CommandCount);
             var handle = Start(request, default);
             Own(request.Job, null);
             return handle;
@@ -602,6 +625,8 @@ namespace Unbound.Runtime
         internal static ReadHandle GetFileInfo(string path, FileInfoResult* result)
         {
             var request = new ReadRequest { Kind = Kind.FileInfo, Path = path, InfoResult = result };
+            request.Metrics = AsyncReadMetrics.Begin(path, "", 0, AssetLoadingSubsystem.FileInfo);
+            request.Metrics?.FileInfo();
             var handle = Start(request, default);
             Own(request.Job, null);
             return handle;
@@ -611,6 +636,9 @@ namespace Unbound.Runtime
         {
             var request = new ReadRequest { Kind = Kind.ReadFile, File = file, Deferred = deferred };
             if (deferred == null) request.TakeCommands(commands.ReadCommands, commands.CommandCount);
+            request.Metrics = AsyncReadMetrics.Begin("", "", 0, AssetLoadingSubsystem.Scripts);
+            if (deferred == null) request.Metrics?.Commands(request.Commands, request.CommandCount);
+            else request.Metrics?.Commands(deferred->ReadCommands, deferred->CommandCount);
             // The read waits for the open (Unity: "The read will automatically wait for the
             // FileHandle.JobHandle to be complete").
             var handle = Start(request, JobHandle.CombineDependencies(dependency, file.OpenJob));

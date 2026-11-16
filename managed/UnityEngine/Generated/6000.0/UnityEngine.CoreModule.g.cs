@@ -66,142 +66,18 @@ namespace Unity.IO.Archive
 }
 namespace Unity.IO.LowLevel.Unsafe
 {
-    [global::Unbound.Stub]
-    public unsafe static partial class AsyncReadManagerMetrics
+    unsafe static partial class AsyncReadManagerMetrics
     {
-        [global::Unbound.Stub] public static bool IsEnabled() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.IsEnabled"); return default; }
-        [global::Unbound.Stub] public static void ClearCompletedMetrics() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.ClearCompletedMetrics"); }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] GetMetrics_Internal(bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics_Internal"); return global::System.Array.Empty<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric>(); }
         [global::Unbound.Stub] internal static void GetMetrics_NoAlloc_Internal(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics, bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics_NoAlloc_Internal"); }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] GetMetrics_Filtered_Internal(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters filters, bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics_Filtered_Internal"); return global::System.Array.Empty<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric>(); }
         [global::Unbound.Stub] internal static void GetMetrics_NoAlloc_Filtered_Internal(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters filters, bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics_NoAlloc_Filtered_Internal"); }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] GetMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters filters, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics"); return global::System.Array.Empty<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric>(); }
-        [global::Unbound.Stub] public static void GetMetrics(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> outMetrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters filters, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics"); }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] GetMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics"); return global::System.Array.Empty<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric>(); }
-        [global::Unbound.Stub] public static void GetMetrics(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> outMetrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetMetrics"); }
-        [global::Unbound.Stub] public static void StartCollectingMetrics() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.StartCollectingMetrics"); }
-        [global::Unbound.Stub] public static void StopCollectingMetrics() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.StopCollectingMetrics"); }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryMetrics_Internal(bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryMetrics_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetCurrentSummaryMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetCurrentSummaryMetrics"); return default; }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryMetricsWithFilters_Internal(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters, bool clear) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryMetricsWithFilters_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetCurrentSummaryMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.Flags flags) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetCurrentSummaryMetrics"); return default; }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics_Internal(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] metrics) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] metrics) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics"); return default; }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics_FromContainer_Internal(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics_FromContainer_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics"); return default; }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetricsWithFilters_Internal(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] metrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetricsWithFilters_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics(global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric[] metrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics"); return default; }
         [global::Unbound.Stub] internal static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetricsWithFilters_FromContainer_Internal(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetricsWithFilters_FromContainer_Internal"); return default; }
-        [global::Unbound.Stub] public static global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics GetSummaryOfMetrics(global::System.Collections.Generic.List<global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric> metrics, global::Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters metricsFilters) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetSummaryOfMetrics"); return default; }
-        [global::Unbound.Stub] public static ulong GetTotalSizeOfNonASRMReadsBytes(bool emptyAfterRead) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics.GetTotalSizeOfNonASRMReadsBytes"); return default; }
-        [global::System.Flags]
-        public enum Flags
-        {
-            None = 0,
-            ClearOnRead = 1,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AsyncReadManagerMetricsFilters
-    {
-        [global::Unbound.Stub] internal ulong[] TypeIDs;
-        [global::Unbound.Stub] internal global::Unity.IO.LowLevel.Unsafe.ProcessingState[] States;
-        [global::Unbound.Stub] internal global::Unity.IO.LowLevel.Unsafe.FileReadType[] ReadTypes;
-        [global::Unbound.Stub] internal global::Unity.IO.LowLevel.Unsafe.Priority[] PriorityLevels;
-        [global::Unbound.Stub] internal global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem[] Subsystems;
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(ulong typeID) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.ProcessingState state) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.FileReadType readType) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.Priority priorityLevel) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(ulong[] typeIDs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.ProcessingState[] states) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.FileReadType[] readTypes) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.Priority[] priorityLevels) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem[] subsystems) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public AsyncReadManagerMetricsFilters(ulong[] typeIDs, global::Unity.IO.LowLevel.Unsafe.ProcessingState[] states, global::Unity.IO.LowLevel.Unsafe.FileReadType[] readTypes, global::Unity.IO.LowLevel.Unsafe.Priority[] priorityLevels, global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem[] subsystems) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ctor"); }
-        [global::Unbound.Stub] public void SetTypeIDFilter(ulong[] _typeIDs) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetTypeIDFilter"); }
-        [global::Unbound.Stub] public void SetStateFilter(global::Unity.IO.LowLevel.Unsafe.ProcessingState[] _states) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetStateFilter"); }
-        [global::Unbound.Stub] public void SetReadTypeFilter(global::Unity.IO.LowLevel.Unsafe.FileReadType[] _readTypes) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetReadTypeFilter"); }
-        [global::Unbound.Stub] public void SetPriorityFilter(global::Unity.IO.LowLevel.Unsafe.Priority[] _priorityLevels) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetPriorityFilter"); }
-        [global::Unbound.Stub] public void SetSubsystemFilter(global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem[] _subsystems) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetSubsystemFilter"); }
-        [global::Unbound.Stub] public void SetTypeIDFilter(ulong _typeID) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetTypeIDFilter"); }
-        [global::Unbound.Stub] public void SetStateFilter(global::Unity.IO.LowLevel.Unsafe.ProcessingState _state) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetStateFilter"); }
-        [global::Unbound.Stub] public void SetReadTypeFilter(global::Unity.IO.LowLevel.Unsafe.FileReadType _readType) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetReadTypeFilter"); }
-        [global::Unbound.Stub] public void SetPriorityFilter(global::Unity.IO.LowLevel.Unsafe.Priority _priorityLevel) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetPriorityFilter"); }
-        [global::Unbound.Stub] public void SetSubsystemFilter(global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem _subsystem) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.SetSubsystemFilter"); }
-        [global::Unbound.Stub] public void RemoveTypeIDFilter() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.RemoveTypeIDFilter"); }
-        [global::Unbound.Stub] public void RemoveStateFilter() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.RemoveStateFilter"); }
-        [global::Unbound.Stub] public void RemoveReadTypeFilter() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.RemoveReadTypeFilter"); }
-        [global::Unbound.Stub] public void RemovePriorityFilter() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.RemovePriorityFilter"); }
-        [global::Unbound.Stub] public void RemoveSubsystemFilter() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.RemoveSubsystemFilter"); }
-        [global::Unbound.Stub] public void ClearFilters() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters.ClearFilters"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct AsyncReadManagerRequestMetric
-    {
-        public string AssetName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.AssetName"); return default; } }
-        public string FileName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.FileName"); return default; } }
-        public ulong OffsetBytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.OffsetBytes"); return default; } }
-        public ulong SizeBytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.SizeBytes"); return default; } }
-        public ulong AssetTypeId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.AssetTypeId"); return default; } }
-        public ulong CurrentBytesRead { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.CurrentBytesRead"); return default; } }
-        public uint BatchReadCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.BatchReadCount"); return default; } }
-        public bool IsBatchRead { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.IsBatchRead"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.ProcessingState State { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.State"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.FileReadType ReadType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.ReadType"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.Priority PriorityLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.PriorityLevel"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem Subsystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.Subsystem"); return default; } }
-        public double RequestTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.RequestTimeMicroseconds"); return default; } }
-        public double TimeInQueueMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.TimeInQueueMicroseconds"); return default; } }
-        public double TotalTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric.TotalTimeMicroseconds"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AsyncReadManagerSummaryMetrics
-    {
-        [global::Unbound.Stub] public AsyncReadManagerSummaryMetrics() { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.ctor"); }
-        public ulong TotalBytesRead { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.TotalBytesRead"); return default; } }
-        public float AverageBandwidthMBPerSecond { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageBandwidthMBPerSecond"); return default; } }
-        public float AverageReadSizeInBytes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageReadSizeInBytes"); return default; } }
-        public float AverageWaitTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageWaitTimeMicroseconds"); return default; } }
-        public float AverageReadTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageReadTimeMicroseconds"); return default; } }
-        public float AverageTotalRequestTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageTotalRequestTimeMicroseconds"); return default; } }
-        public float AverageThroughputMBPerSecond { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.AverageThroughputMBPerSecond"); return default; } }
-        public float LongestWaitTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestWaitTimeMicroseconds"); return default; } }
-        public float LongestReadTimeMicroseconds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestReadTimeMicroseconds"); return default; } }
-        public ulong LongestReadAssetType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestReadAssetType"); return default; } }
-        public ulong LongestWaitAssetType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestWaitAssetType"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem LongestReadSubsystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestReadSubsystem"); return default; } }
-        public global::Unity.IO.LowLevel.Unsafe.AssetLoadingSubsystem LongestWaitSubsystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.LongestWaitSubsystem"); return default; } }
-        public int NumberOfInProgressRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfInProgressRequests"); return default; } }
-        public int NumberOfCompletedRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfCompletedRequests"); return default; } }
-        public int NumberOfFailedRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfFailedRequests"); return default; } }
-        public int NumberOfWaitingRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfWaitingRequests"); return default; } }
-        public int NumberOfCanceledRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfCanceledRequests"); return default; } }
-        public int TotalNumberOfRequests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.TotalNumberOfRequests"); return default; } }
-        public int NumberOfCachedReads { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfCachedReads"); return default; } }
-        public int NumberOfAsyncReads { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfAsyncReads"); return default; } }
-        public int NumberOfSyncReads { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics.NumberOfSyncReads"); return default; } }
-    }
-    public enum FileReadType
-    {
-        Sync = 0,
-        Async = 1,
-    }
-    public enum Priority
-    {
-        PriorityLow = 0,
-        PriorityHigh = 1,
-    }
-    public enum ProcessingState
-    {
-        Unknown = 0,
-        InQueue = 1,
-        Reading = 2,
-        Completed = 3,
-        Failed = 4,
-        Canceled = 5,
     }
     [global::Unbound.Stub]
     public unsafe static partial class VirtualFileSystem
