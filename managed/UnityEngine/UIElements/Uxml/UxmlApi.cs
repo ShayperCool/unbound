@@ -157,6 +157,9 @@ namespace UnityEngine.UIElements
 
         public UxmlAttributeDescription.Use use { get; set; }
 
+        /// <summary>The values the attribute may take (an enum description lists its values), or null.</summary>
+        public UxmlTypeRestriction restriction { get; set; }
+
         public enum Use
         {
             None = 0,
@@ -384,6 +387,9 @@ namespace UnityEngine.UIElements
         {
             type = "string";
             typeNamespace = xmlSchemaNamespace;
+            var values = new List<string>();
+            foreach (T value in Enum.GetValues(typeof(T))) values.Add(value.ToString(CultureInfo.InvariantCulture));
+            restriction = new UxmlEnumeration { values = values };
         }
 
         public override string defaultValueAsString => defaultValue.ToString();
@@ -438,6 +444,37 @@ namespace UnityEngine.UIElements
             if (!TryGetValueFromBagAsString(bag, cc, out var text)) return false;
             value = UxmlAttributeValues.ReadAsset(this, text, cc.visualTreeAsset, typeof(T)) as T;
             return true;
+        }
+    }
+
+    /// <summary>A restriction on an attribute's values.</summary>
+    public abstract partial class UxmlTypeRestriction : IEquatable<UxmlTypeRestriction>
+    {
+        protected UxmlTypeRestriction() { }
+
+        public virtual bool Equals(UxmlTypeRestriction other) => ReferenceEquals(this, other);
+    }
+
+    /// <summary>The values an attribute may take; two enumerations are equal when they hold the same
+    /// values in any order.</summary>
+    public partial class UxmlEnumeration : UxmlTypeRestriction
+    {
+        List<string> m_Values = new List<string>();
+
+        public UxmlEnumeration() { }
+
+        public IEnumerable<string> values
+        {
+            get => m_Values;
+            set => m_Values = new List<string>(value);
+        }
+
+        public override bool Equals(UxmlTypeRestriction other)
+        {
+            if (!(other is UxmlEnumeration enumeration)) return false;
+            foreach (var value in m_Values)
+                if (!enumeration.m_Values.Contains(value)) return false;
+            return m_Values.Count == enumeration.m_Values.Count;
         }
     }
 

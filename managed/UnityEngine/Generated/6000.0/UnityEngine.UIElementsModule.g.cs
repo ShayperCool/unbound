@@ -4520,7 +4520,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool TryGetAttributeOverrideValueFromBagAsString(global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc, out string value, out global::UnityEngine.UIElements.VisualTreeAsset sourceAsset) { value = default; sourceAsset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.TryGetAttributeOverrideValueFromBagAsString"); return default; }
         [global::Unbound.Stub] internal bool ValidateName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.ValidateName"); return default; }
         [global::Unbound.Stub] internal bool TryGetValueFromBagAsString(global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc, out string value, out global::UnityEngine.UIElements.VisualTreeAsset sourceAsset) { value = default; sourceAsset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.TryGetValueFromBagAsString"); return default; }
-        public global::UnityEngine.UIElements.UxmlTypeRestriction restriction { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.restriction"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.restriction"); } }
     }
     [global::Unbound.Stub]
     public unsafe readonly partial struct UxmlAttributeNames
@@ -4572,13 +4571,6 @@ namespace UnityEngine.UIElements
     unsafe partial class UxmlElementAttribute
     {
         [global::Unbound.Stub] public global::UnityEngine.UIElements.LibraryVisibility visibility;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlEnumeration : global::UnityEngine.UIElements.UxmlTypeRestriction
-    {
-        [global::Unbound.Stub] public override bool Equals(global::UnityEngine.UIElements.UxmlTypeRestriction other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlEnumeration.Equals"); return default; }
-        [global::Unbound.Stub] public UxmlEnumeration() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlEnumeration.ctor"); }
-        public global::System.Collections.Generic.IEnumerable<string> values { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlEnumeration.values"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlEnumeration.values"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UxmlGenericAttributeNames
@@ -4755,12 +4747,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public readonly global::System.Collections.Generic.Dictionary<string, int> cSharpNameToIndex;
         [global::Unbound.Stub] public UxmlTypeDescription(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeDescription.ctor"); }
         [global::Unbound.Stub] internal static global::System.ValueTuple<bool, string, string[]> GetUxmlNames(global::System.Reflection.FieldInfo fieldInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeDescription.GetUxmlNames"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class UxmlTypeRestriction : global::System.IEquatable<global::UnityEngine.UIElements.UxmlTypeRestriction>
-    {
-        [global::Unbound.Stub] public virtual bool Equals(global::UnityEngine.UIElements.UxmlTypeRestriction other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeRestriction.Equals"); return default; }
-        [global::Unbound.Stub] protected UxmlTypeRestriction() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeRestriction.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UxmlUtility
