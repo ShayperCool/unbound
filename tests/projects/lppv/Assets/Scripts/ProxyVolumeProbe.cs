@@ -322,11 +322,52 @@ public class ProxyVolumeProbe : MonoBehaviour
         }
     }
 
+    /// <summary>unity_OcclusionMaskSelector and _LightColor0 of a ForwardBase draw (the shaders
+    /// built with proxy volumes weigh baked occlusion with the selector).</summary>
+    void Selector(string key)
+    {
+        var material = Keep(new Material(Shader.Find("Hidden/SelectorDump")));
+        var go = new GameObject("selector " + key) { layer = DumpLayer };
+        made.Add(go);
+        go.transform.position = new Vector3(0f, -50f, 0f);
+        go.AddComponent<MeshFilter>().sharedMesh = quad;
+        go.AddComponent<MeshRenderer>().sharedMaterial = material;
+        var target = Keep(new RenderTexture(2, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear));
+        target.Create();
+        var camera = new GameObject("selector camera").AddComponent<Camera>();
+        made.Add(camera.gameObject);
+        camera.enabled = false;
+        camera.transform.position = new Vector3(0f, -50f, -2f);
+        camera.cullingMask = 1 << DumpLayer;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(-4f, -4f, -4f, -4f);
+        camera.targetTexture = target;
+        camera.Render();
+        var cpu = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
+        var previous = RenderTexture.active;
+        RenderTexture.active = target;
+        cpu.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+        RenderTexture.active = previous;
+        var pixels = cpu.GetPixels();
+        DestroyImmediate(cpu);
+        go.SetActive(false);
+        Value(key, "[" + V(pixels[0]) + "," + V(pixels[1]) + "]");
+    }
+
     void Measure()
     {
         foreach (var (key, volume) in volumes) Dump(key, volume);
-        // The lit box through its volume, then with Blend Probes (lights off: probes only).
         foreach (var (key, volume) in volumes) if (volume.gameObject != lit) volume.gameObject.SetActive(false);
+        // The main light (Sun, mixed, shadowmask channel 0); on channel 2; realtime.
+        var sun = FindObjectsByType<Light>(FindObjectsSortMode.InstanceID).First(l => l.type == LightType.Directional);
+        var baked = sun.bakingOutput;
+        Selector("selector.scene");
+        sun.bakingOutput = new LightBakingOutput { isBaked = true, lightmapBakeType = LightmapBakeType.Mixed, mixedLightingMode = MixedLightingMode.Shadowmask, occlusionMaskChannel = 2, probeOcclusionLightIndex = 2 };
+        Selector("selector.channel2");
+        sun.bakingOutput = new LightBakingOutput { isBaked = false, lightmapBakeType = LightmapBakeType.Realtime, occlusionMaskChannel = -1, probeOcclusionLightIndex = -1 };
+        Selector("selector.realtime");
+        sun.bakingOutput = baked;
+        // The lit box through its volume, then with Blend Probes (lights off: probes only).
         foreach (var light in FindObjectsByType<Light>(FindObjectsSortMode.InstanceID)) light.enabled = false;
         lit.layer = ImageLayer;
         var camera = new GameObject("image camera").AddComponent<Camera>();
