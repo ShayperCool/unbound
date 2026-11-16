@@ -88,10 +88,12 @@ impl TreeTextures {
             .unwrap_or_default()
     }
 
-    /// The texture's `.meta` as the trees' postprocessing leaves it: `None` when no tree uses it.
+    /// The texture's `.meta` as the trees' postprocessing leaves it: `None` when no tree uses it,
+    /// or when another importer (a scripted one) imports the file, whose settings the
+    /// postprocessing leaves alone.
     pub fn apply(&self, file: &Path, meta: &Value) -> Option<Value> {
         let roles = self.roles(file);
-        if roles == TreeMapRoles::default() {
+        if roles == TreeMapRoles::default() || other_importer(meta) {
             return None;
         }
         let mut meta = meta.clone();
@@ -116,6 +118,14 @@ impl TreeTextures {
     }
 }
 
+/// Whether the `.meta` names an importer other than the texture importer.
+fn other_importer(meta: &Value) -> bool {
+    let Value::Map(map) = meta else { return false };
+    map.0
+        .iter()
+        .any(|(key, _)| key.ends_with("Importer") && key != "TextureImporter")
+}
+
 /// The mapping at `key` of `value` (made a mapping if it is not one), created when missing.
 fn child<'v>(value: &'v mut Value, key: &str) -> &'v mut Value {
     if !matches!(value, Value::Map(_)) {
@@ -137,7 +147,8 @@ fn set(value: &mut Value, key: &str, scalar: &str) {
 }
 
 /// The first three maps (colour, normal, extra) of each material of a SpeedTree 9 file: a map's
-/// file name when it is used and names one. `None` when the file is not a readable SpeedTree 9
+/// file name when it is used and names one (the format as `Unbound.SpeedTree.SpeedTree9File`
+/// in the managed engine reads it for the tree's import). `None` when the file is not a readable SpeedTree 9
 /// file. Tables are a uint32 count and that many uint32 offsets, relative to the table, to their
 /// entries; a string is a uint32 length counting a terminating zero, then its bytes;
 /// little-endian.
@@ -194,6 +205,20 @@ fn string(bytes: &[u8], at: usize) -> Option<String> {
     Some(String::from_utf8_lossy(&bytes[at + 4..at + 4 + length - 1]).into_owned())
 }
 
+/// A SpeedTree 9 file with only materials, each with its maps `(used, path)` (tests).
+#[cfg(test)]
+pub(crate) fn test_tree(materials: &[Vec<(bool, &str)>]) -> Vec<u8> {
+    let materials: Vec<Vec<Vec<u8>>> = materials
+        .iter()
+        .map(|maps| {
+            maps.iter()
+                .map(|(used, path)| tests::map(*used, path))
+                .collect()
+        })
+        .collect();
+    tests::tree(&materials)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,7 +245,7 @@ mod tests {
         out
     }
 
-    fn map(used: bool, path: &str) -> Vec<u8> {
+    pub(super) fn map(used: bool, path: &str) -> Vec<u8> {
         table(&[
             (used as u32).to_le_bytes().to_vec(),
             string_entry(path),
@@ -228,7 +253,7 @@ mod tests {
         ])
     }
 
-    fn tree(materials: &[Vec<Vec<u8>>]) -> Vec<u8> {
+    pub(super) fn tree(materials: &[Vec<Vec<u8>>]) -> Vec<u8> {
         let materials: Vec<Vec<u8>> = materials
             .iter()
             .map(|maps| {
@@ -338,5 +363,9 @@ mod tests {
             Some(&Value::Scalar("1".into()))
         );
         assert!(textures.apply(&dir.join("Other.png"), &meta).is_none());
+        // A file a scripted importer imports keeps its settings.
+        let scripted =
+            unbound_yaml::parse_value("ScriptedImporter:\n  script: {fileID: 1}\n").unwrap();
+        assert!(textures.apply(&dir.join("Extra.png"), &scripted).is_none());
     }
 }

@@ -2201,3 +2201,86 @@ fn a_bc6h_imports_pixels_are_its_decoded_blocks() {
     assert!(red(7) > 4.0, "{}", red(7));
     assert_eq!(&tex.mips[0].data[12..16], &1.0f32.to_le_bytes());
 }
+
+/// The trees using a texture are inputs of its cache entry: a texture a tree uses as its extra
+/// map imports without sRGB, served from the cache until the tree changes; once the tree no
+/// longer uses it, it imports with its own settings again. A texture no tree uses has no such
+/// inputs.
+#[test]
+fn tree_maps_join_the_texture_cache_key() {
+    use crate::speedtree9_textures::{TreeTextures, test_tree};
+    use std::sync::Arc;
+    let dir = std::env::temp_dir().join(format!("unbound-tree-maps-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (extra, other, tree) = (
+        dir.join("Extra.png"),
+        dir.join("Other.png"),
+        dir.join("Tree.st9"),
+    );
+    let pixels = png(4, 4, |x, y| [x as u8 * 60, y as u8 * 60, 128, 255]);
+    std::fs::write(&extra, &pixels).unwrap();
+    std::fs::write(&other, &pixels).unwrap();
+    let meta = dir.join("Extra.png.meta");
+    std::fs::write(&meta, "TextureImporter:\n  mipmaps:\n    sRGBTexture: 1\n").unwrap();
+    let importer_for = |tree: &Path| TextureImporter {
+        tree_textures: Arc::new(TreeTextures::read([("Assets/Tree.st9", tree)])),
+        ..TextureImporter::default()
+    };
+    std::fs::write(
+        &tree,
+        test_tree(&[vec![
+            (true, "Color.png"),
+            (true, "Normal.png"),
+            (true, "Extra.png"),
+        ]]),
+    )
+    .unwrap();
+    let cache = crate::AssetCache::new(dir.join("cache"));
+    let importer = importer_for(&tree);
+    assert_eq!(importer.dependencies(&extra).unwrap(), vec![tree.clone()]);
+    assert!(importer.dependencies(&other).unwrap().is_empty());
+    let (texture, outcome) = cache
+        .get_or_import_traced(&importer, &extra, &meta)
+        .unwrap();
+    assert_eq!(outcome, crate::Outcome::Imported);
+    assert!(!texture.settings.srgb);
+    let (_, outcome) = cache
+        .get_or_import_traced(&importer, &extra, &meta)
+        .unwrap();
+    assert_eq!(outcome, crate::Outcome::Hit);
+    // The tree changes but still uses the texture: imported again, still without sRGB.
+    std::fs::write(
+        &tree,
+        test_tree(&[vec![
+            (true, "Leaf.png"),
+            (true, "Normal.png"),
+            (true, "Extra.png"),
+        ]]),
+    )
+    .unwrap();
+    let importer = importer_for(&tree);
+    let (texture, outcome) = cache
+        .get_or_import_traced(&importer, &extra, &meta)
+        .unwrap();
+    assert_eq!(outcome, crate::Outcome::Imported);
+    assert!(!texture.settings.srgb);
+    // The tree no longer uses it: its own settings.
+    std::fs::write(
+        &tree,
+        test_tree(&[vec![
+            (true, "Leaf.png"),
+            (true, "Normal.png"),
+            (true, "Mask.png"),
+        ]]),
+    )
+    .unwrap();
+    let importer = importer_for(&tree);
+    assert!(importer.dependencies(&extra).unwrap().is_empty());
+    let (texture, outcome) = cache
+        .get_or_import_traced(&importer, &extra, &meta)
+        .unwrap();
+    assert_eq!(outcome, crate::Outcome::Imported);
+    assert!(texture.settings.srgb);
+    let _ = std::fs::remove_dir_all(&dir);
+}
