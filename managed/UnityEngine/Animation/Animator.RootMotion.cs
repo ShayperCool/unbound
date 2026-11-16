@@ -94,6 +94,12 @@ namespace UnityEngine
                 var rotation = inverse * m_MotionRootRotation;
                 t.SetLocalPositionAndRotation(position, rotation);
             }
+            // The rotation as reading the Transform back gives it (normalized there), as the next
+            // step would read it had the Transform changed otherwise: the product left as it was
+            // would keep its rounding and build up over a play, tilting later steps' motion
+            // (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph, whose root curves alone
+            // write nothing else to the Transform: the Editor's root moves in its plane).
+            m_MotionRootRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
             m_RootPoseVersion = t.m_Version;
             m_RootPosition = m_MotionRootPosition;
             m_RootRotation = m_MotionRootRotation;
