@@ -31,6 +31,10 @@ namespace UnityEngine.UIElements
 
         public IEnumerable<VisualTreeAsset> templateDependencies => m_UaTemplates.Values;
 
+        /// <summary>The template this document imports under <paramref name="templateName"/>, or null.</summary>
+        internal VisualTreeAsset ResolveTemplate(string templateName) =>
+            templateName != null && m_UaTemplates.TryGetValue(templateName, out var template) ? template : null;
+
         public IEnumerable<StyleSheet> stylesheets
         {
             get
@@ -105,6 +109,8 @@ namespace UnityEngine.UIElements
 
         [CreateProperty(ReadOnly = true)]
         public string templateId { get; private set; }
+
+        internal void SetTemplateId(string id) => templateId = id;
 
         [CreateProperty(ReadOnly = true)]
         public VisualTreeAsset templateSource { get => m_TemplateSource; internal set => m_TemplateSource = value; }
@@ -722,47 +728,7 @@ namespace Unbound.UIElements
                 Debug.LogError($"{Describe(asset, node)}: {chosen.GetType().FullName}.Create returned no element.");
                 return null;
             }
-            ApplyBuiltInTraitAttributes(asset, chosen, element, node);
             return element;
-        }
-
-        /// <summary>A game traits class may derive from the traits of a built-in control whose Init
-        /// Unbound has not written (a generated stub, which warns when called and reads nothing). The
-        /// attributes the game's own traits do not describe are then applied as on built-in elements,
-        /// so the built-in base's attributes (`text`, `value`, ...) still take effect.</summary>
-        static void ApplyBuiltInTraitAttributes(VisualTreeAsset asset, IUxmlFactory factory, VisualElement element, UxmlNode node)
-        {
-            UxmlTraits traits = null;
-            for (var t = factory.GetType(); t != null && traits == null; t = t.BaseType)
-            {
-                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(BaseUxmlFactory<,>))
-                    traits = t.GetField("m_Traits", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(factory) as UxmlTraits;
-            }
-            if (traits == null) return;
-            Type stub = null;
-            var initParameters = new[] { typeof(VisualElement), typeof(IUxmlAttributes), typeof(CreationContext) };
-            for (var t = traits.GetType(); t != null && t != typeof(UxmlTraits) && stub == null; t = t.BaseType)
-            {
-                var init = t.GetMethod("Init", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly, null, initParameters, null);
-                if (init != null && init.IsDefined(typeof(global::Unbound.StubAttribute), false)) stub = t;
-            }
-            if (stub == null) return;
-            var described = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var description in UxmlAttributeValues.DescriptionsOf(traits, stub))
-            {
-                if (!string.IsNullOrEmpty(description.name)) described.Add(description.name);
-                if (description.obsoleteNames != null)
-                    foreach (var obsolete in description.obsoleteNames)
-                        if (!string.IsNullOrEmpty(obsolete)) described.Add(obsolete);
-            }
-            List<KeyValuePair<string, string>> enumAttributes = null, componentAttributes = null;
-            foreach (var a in Ordered(node))
-            {
-                if (described.Contains(a.Key)) continue;
-                if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
-            }
-            ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
-            ApplyComponentAttributes(element, componentAttributes);
         }
 
         /// <summary>Applies one attribute as on built-in elements. With <paramref name="engineDeclaredOnly"/>
@@ -930,7 +896,8 @@ namespace Unbound.UIElements
         /// kebab case (matches the Unity 6000.0.71f1 Editor, tests/projects/numericfields): the text
         /// inputs read "readonly", "password" and "mask-character" (also under its former name
         /// "maskCharacter") but not their property names, and
-        /// the numeric text fields take no "format-string". A null property ignores the attribute.</summary>
+        /// the numeric text fields take no "format-string"; text elements read their internal selection
+        /// options (tests/projects/uxmllegacy). A null property ignores the attribute.</summary>
         static readonly (Type declaringType, string attribute, string property)[] s_AttributeNames =
         {
             (typeof(TextInputBaseField<>), "readonly", "isReadOnly"),
@@ -941,26 +908,36 @@ namespace Unbound.UIElements
             (typeof(TextInputBaseField<>), "maskCharacter", "maskChar"),
             (typeof(TextInputBaseField<>), "mask-char", null),
             (typeof(TextValueField<>), "format-string", null),
+            // Text elements' selection options (internal properties) under their names and former names.
+            (typeof(TextElement), "selectable", "isSelectable"),
+            (typeof(TextElement), "double-click-selects-word", "doubleClickSelectsWord"),
+            (typeof(TextElement), "selectWordByDoubleClick", "doubleClickSelectsWord"),
+            (typeof(TextElement), "select-word-by-double-click", "doubleClickSelectsWord"),
+            (typeof(TextElement), "triple-click-selects-line", "tripleClickSelectsLine"),
+            (typeof(TextElement), "selectLineByTripleClick", "tripleClickSelectsLine"),
+            (typeof(TextElement), "select-line-by-triple-click", "tripleClickSelectsLine"),
         };
 
         /// <summary>The property an attribute names on <paramref name="type"/>: its entry in
-        /// <see cref="s_AttributeNames"/> when the type derives from the entry's declaring type, else
-        /// the attribute in camel case.</summary>
-        static string PropertyNameFor(Type type, string attribute)
+        /// <see cref="s_AttributeNames"/> when the type derives from the entry's declaring type (such
+        /// a property may be internal, <paramref name="listed"/>), else the attribute in camel case.</summary>
+        static string PropertyNameFor(Type type, string attribute, out bool listed)
         {
+            listed = true;
             foreach (var (declaringType, name, property) in s_AttributeNames)
             {
                 if (name != attribute) continue;
                 for (var t = type; t != null; t = t.BaseType)
-                    if (t.IsGenericType && t.GetGenericTypeDefinition() == declaringType) return property;
+                    if (t == declaringType || t.IsGenericType && t.GetGenericTypeDefinition() == declaringType) return property;
             }
+            listed = false;
             return KebabToCamel(attribute);
         }
 
         static PropertyInfo FindProperty(Type type, string attribute, bool engineDeclaredOnly)
         {
             if (s_Properties.TryGetValue((type, attribute, engineDeclaredOnly), out var cached)) return cached;
-            string camel = PropertyNameFor(type, attribute);
+            string camel = PropertyNameFor(type, attribute, out bool listed);
             if (camel == null)
             {
                 s_Properties[(type, attribute, engineDeclaredOnly)] = null;
@@ -970,9 +947,10 @@ namespace Unbound.UIElements
             for (var t = type; t != null && found == null; t = t.BaseType)
             {
                 if (engineDeclaredOnly && !UxmlTypeIndex.IsEngineType(t)) continue;
-                foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                var visibility = listed ? BindingFlags.Public | BindingFlags.NonPublic : BindingFlags.Public;
+                foreach (var p in t.GetProperties(visibility | BindingFlags.Instance | BindingFlags.DeclaredOnly))
                 {
-                    if (string.Equals(p.Name, camel, StringComparison.OrdinalIgnoreCase) && p.CanWrite && p.GetSetMethod() != null && p.GetIndexParameters().Length == 0)
+                    if (string.Equals(p.Name, camel, StringComparison.OrdinalIgnoreCase) && p.CanWrite && p.GetSetMethod(listed) != null && p.GetIndexParameters().Length == 0)
                     {
                         found = p;
                         break;

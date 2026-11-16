@@ -145,6 +145,15 @@ namespace UnityEngine.UIElements
             menu.DropDown(visualInput.worldBound, this, true);
         }
 
+        /// <summary>The field's enum type without a value (null for none): the deprecated traits'
+        /// path for a type with no value of it.</summary>
+        internal void SetTypeWithoutValue(Type enumType)
+        {
+            if (enumType != null) SetType(enumType);
+            else m_EnumType = null;
+            value = null;
+        }
+
         void SetType(Type enumType)
         {
             m_EnumType = enumType;

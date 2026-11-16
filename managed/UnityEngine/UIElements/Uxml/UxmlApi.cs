@@ -231,7 +231,7 @@ namespace UnityEngine.UIElements
             typeNamespace = xmlSchemaNamespace;
         }
 
-        public override string defaultValueAsString => defaultValue.ToString(CultureInfo.InvariantCulture);
+        public override string defaultValueAsString => Unbound.MonoNumberFormat.Format(defaultValue, "G", CultureInfo.InvariantCulture);
 
         public override float GetValueFromBag(IUxmlAttributes bag, CreationContext cc) => GetValueFromBag(bag, cc, Read, defaultValue);
 
@@ -248,7 +248,7 @@ namespace UnityEngine.UIElements
             typeNamespace = xmlSchemaNamespace;
         }
 
-        public override string defaultValueAsString => defaultValue.ToString(CultureInfo.InvariantCulture);
+        public override string defaultValueAsString => Unbound.MonoNumberFormat.Format(defaultValue, "G", CultureInfo.InvariantCulture);
 
         public override double GetValueFromBag(IUxmlAttributes bag, CreationContext cc) => GetValueFromBag(bag, cc, Read, defaultValue);
 
@@ -469,7 +469,7 @@ namespace UnityEngine.UIElements
 
         /// <summary>The descriptions held by this traits object's fields and properties, base classes
         /// included (Unbound reads them by reflection).</summary>
-        public virtual IEnumerable<UxmlAttributeDescription> uxmlAttributesDescription => UxmlAttributeValues.DescriptionsOf(this, null);
+        public virtual IEnumerable<UxmlAttributeDescription> uxmlAttributesDescription => UxmlAttributeValues.DescriptionsOf(this);
 
         [Unbound.EditorFaithful("Base traits describe no children; Unity 6000.0.71f1, tests/projects/uxmlbaseapi")]
         public virtual IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription => Array.Empty<UxmlChildElementDescription>();
@@ -545,27 +545,40 @@ namespace UnityEngine.UIElements
             public UxmlFactory() { }
         }
 
-        /// <summary>The attributes every element reads. The values are applied as Unbound's builder
-        /// applies them to built-in elements.</summary>
+        /// <summary>
+        /// The attributes every element reads through the deprecated factory path. As in the Unity
+        /// 6000.0.71f1 Editor (tests/projects/uxmllegacy), Init sets each property from its attribute
+        /// or, when the attribute is absent, from the description's default: an element's own
+        /// constructor state does not survive it. Traits of derived elements change the focus
+        /// defaults. `class`, `content-container` and `style` are described here and applied by the
+        /// UXML builder.
+        /// </summary>
         [global::System.@ObsoleteAttribute("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlTraits : UnityEngine.UIElements.UxmlTraits
         {
             protected UxmlStringAttributeDescription m_Name = new UxmlStringAttributeDescription { name = "name" };
-            protected UxmlEnumAttributeDescription<PickingMode> m_PickingMode = new UxmlEnumAttributeDescription<PickingMode> { name = "picking-mode" };
-            readonly UxmlStringAttributeDescription viewDataKeyDescription = new UxmlStringAttributeDescription { name = "view-data-key" };
-            readonly UxmlStringAttributeDescription tooltipDescription = new UxmlStringAttributeDescription { name = "tooltip" };
-            readonly UxmlBoolAttributeDescription enabledDescription = new UxmlBoolAttributeDescription { name = "enabled" };
+            readonly UxmlBoolAttributeDescription m_EnabledSelf = new UxmlBoolAttributeDescription { name = "enabled", defaultValue = true };
+            readonly UxmlStringAttributeDescription m_ViewDataKey = new UxmlStringAttributeDescription { name = "view-data-key" };
+            protected UxmlEnumAttributeDescription<PickingMode> m_PickingMode = new UxmlEnumAttributeDescription<PickingMode> { name = "picking-mode", obsoleteNames = new[] { "pickingMode" } };
+            readonly UxmlStringAttributeDescription m_Tooltip = new UxmlStringAttributeDescription { name = "tooltip" };
+            readonly UxmlEnumAttributeDescription<UsageHints> m_UsageHints = new UxmlEnumAttributeDescription<UsageHints> { name = "usage-hints" };
 
-            public UxmlTraits()
-            {
-                // Unbound's names, the ones its builder reads for built-in elements.
-                focusIndex = new UxmlIntAttributeDescription { name = "tabindex", obsoleteNames = new[] { "tab-index" } };
-                focusable = new UxmlBoolAttributeDescription { name = "focusable" };
-            }
+            // The former focus attribute: when present it sets the tab index and focusability,
+            // which the attributes below then set again.
+            protected UxmlIntAttributeDescription focusIndex { get; set; } = new UxmlIntAttributeDescription { name = null, obsoleteNames = new[] { "focus-index", "focusIndex" }, defaultValue = -1 };
 
-            protected UxmlIntAttributeDescription focusIndex { get; set; }
+            readonly UxmlIntAttributeDescription m_TabIndex = new UxmlIntAttributeDescription { name = "tabindex", defaultValue = 0 };
 
-            protected UxmlBoolAttributeDescription focusable { get; set; }
+            protected UxmlBoolAttributeDescription focusable { get; set; } = new UxmlBoolAttributeDescription { name = "focusable", defaultValue = false };
+
+            readonly UxmlStringAttributeDescription m_Class = new UxmlStringAttributeDescription { name = "class" };
+            readonly UxmlStringAttributeDescription m_ContentContainer = new UxmlStringAttributeDescription { name = "content-container", obsoleteNames = new[] { "contentContainer" } };
+            readonly UxmlStringAttributeDescription m_Style = new UxmlStringAttributeDescription { name = "style" };
+            readonly UxmlAssetAttributeDescription<Object> m_DataSource = new UxmlAssetAttributeDescription<Object> { name = "data-source" };
+            readonly UxmlStringAttributeDescription m_DataSourcePath = new UxmlStringAttributeDescription { name = "data-source-path" };
+            readonly UxmlTypeAttributeDescription<object> m_DataSourceType = new UxmlTypeAttributeDescription<object> { name = "data-source-type" };
+
+            public UxmlTraits() { }
 
             public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
             {
@@ -576,21 +589,23 @@ namespace UnityEngine.UIElements
             {
                 base.Init(ve, bag, cc);
                 if (ve == null) throw new ArgumentNullException(nameof(ve));
-                Apply(ve, bag, cc, m_Name);
-                Apply(ve, bag, cc, viewDataKeyDescription);
-                Apply(ve, bag, cc, m_PickingMode);
-                Apply(ve, bag, cc, tooltipDescription);
-                Apply(ve, bag, cc, focusIndex);
-                Apply(ve, bag, cc, focusable);
-                Apply(ve, bag, cc, enabledDescription);
-            }
-
-            /// <summary>Applies a present attribute under its description's name, so that the value
-            /// is read exactly as the builder reads it on built-in elements.</summary>
-            internal static void Apply(VisualElement ve, IUxmlAttributes bag, CreationContext cc, UxmlAttributeDescription description)
-            {
-                if (description != null && description.TryGetValueFromBagAsString(bag, cc, out var value))
-                    UxmlBuilder.ApplyAttribute(ve, description.name, value);
+                ve.name = m_Name.GetValueFromBag(bag, cc);
+                ve.SetEnabled(m_EnabledSelf.GetValueFromBag(bag, cc));
+                ve.viewDataKey = m_ViewDataKey.GetValueFromBag(bag, cc);
+                ve.pickingMode = m_PickingMode.GetValueFromBag(bag, cc);
+                ve.usageHints = m_UsageHints.GetValueFromBag(bag, cc);
+                ve.tooltip = m_Tooltip.GetValueFromBag(bag, cc);
+                int index = 0;
+                if (focusIndex.TryGetValueFromBag(bag, cc, ref index))
+                {
+                    ve.tabIndex = index >= 0 ? index : 0;
+                    ve.focusable = index >= 0;
+                }
+                ve.tabIndex = m_TabIndex.GetValueFromBag(bag, cc);
+                ve.focusable = focusable.GetValueFromBag(bag, cc);
+                ve.dataSource = m_DataSource.GetValueFromBag(bag, cc);
+                ve.dataSourcePath = new Unity.Properties.PropertyPath(m_DataSourcePath.GetValueFromBag(bag, cc));
+                ve.dataSourceType = m_DataSourceType.GetValueFromBag(bag, cc);
             }
         }
     }
@@ -606,14 +621,16 @@ namespace UnityEngine.UIElements
         [global::System.@ObsoleteAttribute("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
         public partial class UxmlTraits : VisualElement.UxmlTraits
         {
-            readonly UxmlStringAttributeDescription bindingPathDescription = new UxmlStringAttributeDescription { name = "binding-path" };
+            readonly UxmlStringAttributeDescription m_PropertyPath = new UxmlStringAttributeDescription { name = "binding-path" };
 
             public UxmlTraits() { }
 
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
                 base.Init(ve, bag, cc);
-                Apply(ve, bag, cc, bindingPathDescription);
+                // An empty path leaves the element's own (tests/projects/uxmllegacy, bindable*).
+                var path = m_PropertyPath.GetValueFromBag(bag, cc);
+                if (!string.IsNullOrEmpty(path) && ve is IBindable bindable) bindable.bindingPath = path;
             }
         }
     }

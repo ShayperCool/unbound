@@ -933,25 +933,21 @@ namespace Unbound.UIElements
             return null;
         }
 
-        /// <summary>The attribute descriptions held by a traits object's fields and properties,
-        /// declared on its class and on base classes up to (excluding) <paramref name="stopAt"/>.</summary>
-        internal static IEnumerable<UxmlAttributeDescription> DescriptionsOf(object traits, Type stopAt)
+        /// <summary>The attribute descriptions held by a traits object's fields (the backing fields
+        /// of auto-properties included), base classes first and each class's fields in declaration
+        /// order, as the Unity 6000.0.71f1 Editor lists them (tests/projects/uxmllegacy).</summary>
+        internal static IEnumerable<UxmlAttributeDescription> DescriptionsOf(object traits)
         {
+            var hierarchy = new List<Type>();
+            for (var t = traits.GetType(); t != null && t != typeof(object); t = t.BaseType) hierarchy.Add(t);
             var seen = new HashSet<UxmlAttributeDescription>();
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
-            for (var t = traits.GetType(); t != null && t != stopAt && t != typeof(object); t = t.BaseType)
+            for (int i = hierarchy.Count - 1; i >= 0; i--)
             {
-                foreach (var field in t.GetFields(flags))
+                foreach (var field in hierarchy[i].GetFields(flags))
                 {
                     if (!typeof(UxmlAttributeDescription).IsAssignableFrom(field.FieldType)) continue;
                     if (field.GetValue(traits) is UxmlAttributeDescription d && seen.Add(d)) yield return d;
-                }
-                foreach (var property in t.GetProperties(flags))
-                {
-                    if (!typeof(UxmlAttributeDescription).IsAssignableFrom(property.PropertyType) || property.GetIndexParameters().Length > 0) continue;
-                    var getter = property.GetGetMethod(true);
-                    if (getter == null) continue;
-                    if (getter.Invoke(traits, null) is UxmlAttributeDescription d && seen.Add(d)) yield return d;
                 }
             }
         }

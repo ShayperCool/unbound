@@ -41,13 +41,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.AbstractProgressBar.UxmlTraits.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class AdvanceTextGeneratorDecoratorAttribute : global::UnityEngine.PropertyAttribute
@@ -148,13 +141,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseCompositeField<TValueType, TField, TFieldValue>.UxmlSerializedData.ctor"); }
         }
     }
-    [global::System.Obsolete("BaseFieldTraits<TValueType, TValueUxmlAttributeType> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class BaseFieldTraits<TValueType, TValueUxmlAttributeType> : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits where TValueUxmlAttributeType : global::UnityEngine.UIElements.TypedUxmlAttributeDescription<TValueType>, new()
-    {
-        [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.Init"); }
-        [global::Unbound.Stub] public BaseFieldTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType>.ctor"); }
-    }
     unsafe partial class BaseField<TValueType>
     {
         [global::Unbound.Stub] protected internal static readonly global::UnityEngine.PropertyName serializedPropertyCopyName;
@@ -169,13 +155,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.ctor"); }
             internal TValueType Value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Value"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlSerializedData.Value"); } }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits.ctor"); }
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits.Init"); }
         }
     }
     unsafe partial class BaseListView
@@ -203,12 +182,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits
+        unsafe partial class UxmlTraits
         {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] protected UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlTraits.ctor"); }
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseListView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
@@ -262,18 +237,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<TValueType>.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UxmlTraits.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits<TValueUxmlAttributeType> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits<TValueUxmlAttributeType> : global::UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType> where TValueUxmlAttributeType : global::UnityEngine.UIElements.TypedUxmlAttributeDescription<TValueType>, new()
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseSlider<TValueType>.UxmlTraits<TValueUxmlAttributeType>.ctor"); }
-        }
     }
     unsafe partial class BaseTreeView
     {
@@ -289,12 +252,8 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits
+        unsafe partial class UxmlTraits
         {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.UxmlTraits.ctor"); }
             public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseTreeView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
@@ -340,14 +299,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData.Register"); }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits.ctor"); }
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits.Init"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVerticalCollectionView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
     unsafe partial class BaseVisualElementPanel
@@ -507,13 +458,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Bounds>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsField.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class BoundsIntField
     {
@@ -531,13 +475,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.BoundsIntField, global::UnityEngine.UIElements.BoundsIntField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.BoundsInt>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BoundsIntField.UxmlTraits.ctor"); }
         }
     }
     unsafe partial class Box
@@ -573,13 +510,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Button, global::UnityEngine.UIElements.Button.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlTraits.ctor"); }
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Button.UxmlTraits.Init"); }
         }
     }
     [global::Unbound.Stub]
@@ -1133,12 +1063,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<double, global::UnityEngine.UIElements.UxmlDoubleAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DoubleField.UxmlTraits.ctor"); }
-        }
     }
     unsafe static partial class DragAndDropUtility
     {
@@ -1164,13 +1088,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.DropdownField, global::UnityEngine.UIElements.DropdownField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<string>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DropdownField.UxmlTraits.ctor"); }
         }
     }
     unsafe partial class DropdownMenuAction
@@ -1327,13 +1244,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.EnumField, global::UnityEngine.UIElements.EnumField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::System.Enum>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.EnumField.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -1505,12 +1415,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<float, global::UnityEngine.UIElements.UxmlFloatAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.FloatField.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class FocusController
     {
@@ -1545,13 +1449,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Foldout.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial struct FontDefinition
     {
@@ -1580,13 +1477,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.GroupBox.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class Hash128Field
     {
@@ -1603,12 +1493,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Hash128Field, global::UnityEngine.UIElements.Hash128Field.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<global::UnityEngine.Hash128, global::UnityEngine.UIElements.UxmlHash128AttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Hash128Field.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -1760,13 +1644,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.IMGUIContainer, global::UnityEngine.UIElements.IMGUIContainer.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IMGUIContainer.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
     internal unsafe partial interface IPanelDebug
@@ -1950,13 +1827,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Image, global::UnityEngine.UIElements.Image.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
     [global::Unbound.Stub]
@@ -2164,12 +2034,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<int, global::UnityEngine.UIElements.UxmlIntAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IntegerField.UxmlTraits.ctor"); }
-        }
     }
     [global::System.Flags]
     internal enum InvokePolicy
@@ -2334,13 +2198,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseListView.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ListView.UxmlTraits.ctor"); }
-        }
     }
     [global::System.Flags]
     internal enum LiveReloadTrackers
@@ -2364,12 +2221,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.LongField, global::UnityEngine.UIElements.LongField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<long, global::UnityEngine.UIElements.UxmlLongAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.LongField.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -2552,13 +2403,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MinMaxSlider.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector2>.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MinMaxSlider.UxmlTraits.ctor"); }
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MinMaxSlider.UxmlTraits.Init"); }
-        }
     }
     unsafe partial class MouseDownEvent
     {
@@ -2601,13 +2445,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseListView.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnListView.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class MultiColumnTreeView
     {
@@ -2625,13 +2462,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.MultiColumnTreeView, global::UnityEngine.UIElements.MultiColumnTreeView.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseTreeView.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultiColumnTreeView.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -2920,13 +2750,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButton.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseFieldTraits<bool, global::UnityEngine.UIElements.UxmlBoolAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButton.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButton.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class RadioButtonGroup
     {
@@ -2944,13 +2767,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.RadioButtonGroup, global::UnityEngine.UIElements.RadioButtonGroup.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseFieldTraits<int, global::UnityEngine.UIElements.UxmlIntAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RadioButtonGroup.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -3012,13 +2828,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Rect>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectField.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class RectIntField
     {
@@ -3036,13 +2845,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.RectIntField, global::UnityEngine.UIElements.RectIntField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.RectInt>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.UxmlTraits.ctor"); }
         }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
@@ -3093,13 +2895,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.RepeatButton, global::UnityEngine.UIElements.RepeatButton.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RepeatButton.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -3292,13 +3087,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ScrollView.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class Scroller
     {
@@ -3320,14 +3108,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Scroller, global::UnityEngine.UIElements.Scroller.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Scroller.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
     [global::Unbound.Stub]
@@ -3357,13 +3137,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseSlider<float>.UxmlTraits<global::UnityEngine.UIElements.UxmlFloatAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Slider.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class SliderInt
     {
@@ -3381,13 +3154,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.SliderInt, global::UnityEngine.UIElements.SliderInt.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseSlider<int>.UxmlTraits<global::UnityEngine.UIElements.UxmlIntAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.SliderInt.UxmlTraits.ctor"); }
         }
     }
     unsafe partial class SortColumnDescription
@@ -3728,13 +3494,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Tab.UxmlTraits.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TabDragPreview : global::UnityEngine.UIElements.VisualElement
@@ -3770,13 +3529,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.TabView, global::UnityEngine.UIElements.TabView.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -3843,15 +3595,6 @@ namespace UnityEngine.UIElements
             public override string uxmlName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.UxmlFactory.uxmlName"); return default; } }
             public override string uxmlQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.UxmlFactory.uxmlQualifiedName"); return default; } }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            internal const string k_TemplateAttributeName = "template";
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TemplateContainer.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextEditingManipulator
@@ -3914,14 +3657,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BindableElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextEventHandler
@@ -3955,13 +3690,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.TextField, global::UnityEngine.UIElements.TextField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextInputBaseField<string>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextField.UxmlTraits.ctor"); }
         }
     }
     unsafe partial class TextInputBaseField<TValueType>
@@ -3997,13 +3725,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseFieldTraits<string, global::UnityEngine.UIElements.UxmlStringAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextInputBaseField<TValueType>.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -4075,13 +3796,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.TextCore.WhiteSpace toTextCore(this global::UnityEngine.UIElements.WhiteSpace whiteSpace, bool isInputField) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextUtilities.toTextCore"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.TextCore.TextOverflow toTextCore(this global::UnityEngine.UIElements.TextOverflow textOverflow, global::UnityEngine.UIElements.OverflowInternal overflow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextUtilities.toTextCore"); return default; }
         public static global::UnityEngine.TextCore.Text.TextSettings textSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextUtilities.textSettings"); return default; } }
-    }
-    [global::System.Obsolete("TextValueFieldTraits<TValueType, TValueUxmlAttributeType> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class TextValueFieldTraits<TValueType, TValueUxmlAttributeType> : global::UnityEngine.UIElements.BaseFieldTraits<TValueType, TValueUxmlAttributeType> where TValueUxmlAttributeType : global::UnityEngine.UIElements.TypedUxmlAttributeDescription<TValueType>, new()
-    {
-        [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueFieldTraits<TValueType, TValueUxmlAttributeType>.Init"); }
-        [global::Unbound.Stub] public TextValueFieldTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextValueFieldTraits<TValueType, TValueUxmlAttributeType>.ctor"); }
     }
     unsafe partial class TextValueField<TValueType>
     {
@@ -4170,13 +3884,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Toggle, global::UnityEngine.UIElements.Toggle.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseFieldTraits<bool, global::UnityEngine.UIElements.UxmlBoolAttributeDescription>
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -4353,13 +4060,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.TreeView, global::UnityEngine.UIElements.TreeView.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseTreeView.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeView.UxmlTraits.ctor"); }
         }
     }
     unsafe readonly partial struct TreeViewItemData<T>
@@ -4758,12 +4458,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<uint, global::UnityEngine.UIElements.UxmlUnsignedIntAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedIntegerField.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class UnsignedLongField
     {
@@ -4780,12 +4474,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.UnsignedLongField, global::UnityEngine.UIElements.UnsignedLongField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextValueFieldTraits<ulong, global::UnityEngine.UIElements.UxmlUnsignedLongAttributeDescription>
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UnsignedLongField.UxmlTraits.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -4856,14 +4544,6 @@ namespace UnityEngine.UIElements
         public override string substituteForTypeNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeOverridesFactory.substituteForTypeNamespace"); return default; } }
         public override string substituteForTypeQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeOverridesFactory.substituteForTypeQualifiedName"); return default; } }
     }
-    [global::System.Obsolete("UxmlAttributeOverridesTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlAttributeOverridesTraits : global::UnityEngine.UIElements.UxmlTraits
-    {
-        internal const string k_ElementNameAttributeName = "element-name";
-        [global::Unbound.Stub] public UxmlAttributeOverridesTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeOverridesTraits.ctor"); }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeOverridesTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-    }
     [global::Unbound.Stub]
     internal unsafe readonly partial struct UxmlDescription
     {
@@ -4913,15 +4593,6 @@ namespace UnityEngine.UIElements
     public unsafe partial class UxmlIgnoreAttribute : global::System.Attribute
     {
         [global::Unbound.Stub] public UxmlIgnoreAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlIgnoreAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class UxmlImageAttributeDescription : global::UnityEngine.UIElements.UxmlAttributeDescription, global::UnityEngine.UIElements.IUxmlAssetAttributeDescription
-    {
-        [global::Unbound.Stub] public UxmlImageAttributeDescription() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.UIElements.Background GetValueFromBag(global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.GetValueFromBag"); return default; }
-        global::System.Type global::UnityEngine.UIElements.IUxmlAssetAttributeDescription.assetType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.assetType"); return default; } }
-        public global::UnityEngine.UIElements.Background defaultValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.defaultValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.defaultValue"); } }
-        public override string defaultValueAsString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlImageAttributeDescription.defaultValueAsString"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -5004,14 +4675,6 @@ namespace UnityEngine.UIElements
         public override string substituteForTypeNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementFactory.substituteForTypeNamespace"); return default; } }
         public override string substituteForTypeQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementFactory.substituteForTypeQualifiedName"); return default; } }
     }
-    [global::System.Obsolete("UxmlRootElementTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlRootElementTraits : global::UnityEngine.UIElements.UxmlTraits
-    {
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.UxmlStringAttributeDescription m_Name;
-        [global::Unbound.Stub] public UxmlRootElementTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementTraits.ctor"); }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-    }
     [global::Unbound.Stub]
     internal unsafe abstract partial class UxmlSerializableAdapterBase
     {
@@ -5070,13 +4733,6 @@ namespace UnityEngine.UIElements
         public override string substituteForTypeNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlStyleFactory.substituteForTypeNamespace"); return default; } }
         public override string substituteForTypeQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlStyleFactory.substituteForTypeQualifiedName"); return default; } }
     }
-    [global::System.Obsolete("UxmlStyleTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlStyleTraits : global::UnityEngine.UIElements.UxmlTraits
-    {
-        [global::Unbound.Stub] public UxmlStyleTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlStyleTraits.ctor"); }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlStyleTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-    }
     [global::System.Obsolete("UxmlTemplateFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
     public unsafe partial class UxmlTemplateFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.VisualElement, global::UnityEngine.UIElements.UxmlTemplateTraits>
@@ -5089,13 +4745,6 @@ namespace UnityEngine.UIElements
         public override string substituteForTypeName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTemplateFactory.substituteForTypeName"); return default; } }
         public override string substituteForTypeNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTemplateFactory.substituteForTypeNamespace"); return default; } }
         public override string substituteForTypeQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTemplateFactory.substituteForTypeQualifiedName"); return default; } }
-    }
-    [global::System.Obsolete("UxmlTemplateTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlTemplateTraits : global::UnityEngine.UIElements.UxmlTraits
-    {
-        [global::Unbound.Stub] public UxmlTemplateTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTemplateTraits.ctor"); }
-        public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTemplateTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe readonly partial struct UxmlTypeDescription
@@ -5175,13 +4824,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector2>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2Field.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class Vector2IntField
     {
@@ -5199,13 +4841,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Vector2IntField, global::UnityEngine.UIElements.Vector2IntField.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector2Int>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector2IntField.UxmlTraits.ctor"); }
         }
     }
     unsafe partial class Vector3Field
@@ -5225,13 +4860,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector3>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3Field.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class Vector3IntField
     {
@@ -5250,13 +4878,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.UxmlFactory.ctor"); }
         }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector3Int>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector3IntField.UxmlTraits.ctor"); }
-        }
     }
     unsafe partial class Vector4Field
     {
@@ -5274,13 +4895,6 @@ namespace UnityEngine.UIElements
         public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.Vector4Field, global::UnityEngine.UIElements.Vector4Field.UxmlTraits>
         {
             [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.Vector4>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Vector4Field.UxmlTraits.ctor"); }
         }
     }
     internal unsafe delegate void VersionChangedDelegate(global::UnityEngine.UIElements.VisualManager manager, in global::UnityEngine.UIElements.VisualNodeHandle handle, global::UnityEngine.UIElements.VersionChangeType type);
@@ -6234,7 +5848,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void FindElementsByNameInTemplate(global::UnityEngine.UIElements.TemplateAsset templateAsset, string visualElementName, global::System.Collections.Generic.List<global::UnityEngine.UIElements.VisualElementAsset> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.FindElementsByNameInTemplate"); }
         [global::Unbound.Stub] internal bool TryGetSlotInsertionPoint(int insertionPointId, out string slotName) { slotName = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.TryGetSlotInsertionPoint"); return default; }
         [global::Unbound.Stub] internal bool TryGetUsingEntry(string templateName, out global::UnityEngine.UIElements.VisualTreeAsset.UsingEntry entry) { entry = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.TryGetUsingEntry"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.VisualTreeAsset ResolveTemplate(string templateName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.ResolveTemplate"); return default; }
         [global::Unbound.Stub] internal bool TemplateExists(string templateName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.TemplateExists"); return default; }
         [global::Unbound.Stub] internal void RegisterTemplate(string templateName, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.RegisterTemplate"); }
         [global::Unbound.Stub] internal void RegisterTemplate(string templateName, global::UnityEngine.UIElements.VisualTreeAsset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualTreeAsset.RegisterTemplate"); }
