@@ -139,11 +139,20 @@ the alive count is the particles spawned so far, exactly, each frame:
   product; `m*` those matrices; `g*` whether the game's time as the graph reads it is
   `Time`'s; `b17` to `b20` a bool from an unsigned number and from a float, each from one that
   is not zero and from one that is; `c00`, `r00` an exposed curve and an exposed gradient
-  sampled at a time (the `others` control gives the effect another curve, and a gradient that
-  is fixed between its keys). An input the block does not have, and an input read as
+  sampled at an exposed time, `When` (the `others` control gives the effect another curve,
+  a gradient that is fixed between its keys and a time between that gradient's keys). An input the block does not have, and an input read as
   another type, are recorded too. The same effect's rows record two event attributes a block of the context sets.
 - `expressions others`: the same graph with other values (a NaN, a divisor of zero, other
-  signs, a frame of no depth), set in the frame the effect is made and again at frame 4.
+  signs, a frame of no depth), set in the frame the effect is made and again at frame 4. In
+  the frames between and after, the curve it samples is one with slopes at its keys, keys no
+  power of two apart, a ping-pong before them and a loop after them, sampled between two
+  keys (frame 2), past the last key (frame 3), on the last key (frame 6: the first key's
+  value, where it loops) and before the first key (frame 8). The values tell how the curve is
+  rounded: between the keys and where it loops, each segment as a cubic in the time from its
+  first key; where it ping-pongs, as the sum of the segment's Hermite terms with the second
+  key's value added last. Both differ in the last bits from what Unbound's
+  `AnimationCurve.Evaluate` computes (whether a script's `Evaluate` rounds as the graph does
+  in the Editor is not recorded here).
   `expressions scene`, `expressions copy`: the scene's effect of that graph (saved with one
   override) and a copy of it made in the first frame, each given another value at once.
   `expressions late`: one made at frame 20 and given a value at once. `override timing/*`,
@@ -213,14 +222,20 @@ and the draw), the kind Unbound draws:
   (`Assets/Objects/ImageC.png`, whose four quarters differ: a texture drawn turned or mirrored
   would show).
 
-- `over life` (frames 12, 24, 40): twenty a second living a second, their size from an exposed
-  curve, their colour from an exposed gradient and their alpha from a curve that loops both
-  ways, all sampled by the update kernel from the texture the effect bakes its curves and
-  gradients into; at frame 25 the probe gives the effect another size curve.
-- `hdr` (frame 5): nine quads whose colour is a gradient, fixed between its keys, with a red
-  and a blue brighter than a half float holds: the texture keeps such a row scaled, with its
-  scale. The image's 8-bit target clamps the bright channel; the other two show whether the
-  scale is applied.
+- `over life` (frames 12, 24, 40, 55, 70): twenty a second living a second, their size from
+  an exposed curve, their colour from an exposed gradient and their alpha from a curve that
+  loops both ways, all sampled by the update kernel from the texture the effect bakes its
+  curves and gradients into. The probe gives the effect another size curve at frame 25, one
+  of a single key at frame 45 (it has no range to sample over: every particle has its value)
+  and at frame 60 one whose keys start before zero and end after one (the particles' ages
+  fall inside its keys, so its start and range are what is sampled with).
+- `hdr` (frame 40): twenty opaque quads a second living a second, their colour a gradient
+  sampled at their age: fixed between its keys, with channels brighter than a half float
+  holds (131008, 65504 and 32752, in the other order after the middle). The texture keeps
+  such a row scaled, with its scale; the graph divides the colour by 262016, so the image
+  shows two flat colours whose three channels are all inside what its 8 bits hold. A row
+  stored unscaled, a scale left out or a gradient blended between its keys would each give
+  other colours.
 
 The images are compared pixel by pixel (`image_limits.json`: no difference where both ran, one
 machine with an NVIDIA driver; the quads' edges fall between pixel centres, so another GPU may
@@ -254,8 +269,15 @@ camera hooks. Expression operations without a control: the inverse of a general 
 event attribute read in a spawn context (no operator of the package gives either here), and
 the ones the runtime does not do yet (matrices built from or split into rows, columns and axes,
 angles and scales taken from a matrix, colour spaces, meshes, the main camera, noise, texture
-and buffer sizes). Of baked curves: one whose values are larger than a half float holds has no
-image (its scale is held by a unit test, as a gradient's is by `hdr`). The update modes that ignore the time scale are not
+and buffer sizes). Of baked curves and gradients, not measured: a curve whose values are larger than a
+half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
+that ping-pongs, one whose two sides continue differently, one that loops both ways sampled
+outside zero to one, a curve or a gradient that is null, a gradient of one key, one blended
+perceptually and one whose alpha is over one. A curve the graph samples itself (`c00`) is not
+measured where it loops before its keys, with weighted or stepped keys, or with keys closer
+than a ten-thousandth; the curves baked into the texture are rounded the same way, which
+the images show only through the texture's half floats. A curve or gradient baked among the expressions of a spawn
+event is not done (Unbound says so and does not run the graph). The update modes that ignore the time scale are not
 compared: the Editor's unscaled delta time under a capture frame rate is the wall clock's.
 One attribute name with different
 types in two graphs (a custom attribute) is not measured for `CopyValuesFrom`.

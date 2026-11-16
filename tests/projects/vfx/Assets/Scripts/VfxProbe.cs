@@ -164,8 +164,8 @@ public sealed class VfxProbe : MonoBehaviour
         Draw("many", "DrawMany", 5);
         Draw("textured", "DrawTextured", 5);
         // Over each particle's life by a curve and a gradient; the curve is another from frame 25.
-        Draw("over life", "DrawOverLife", 12, 24, 40);
-        Draw("hdr", "DrawHdr", 5);
+        Draw("over life", "DrawOverLife", 12, 24, 40, 55, 70);
+        Draw("hdr", "DrawHdr", 40);
     }
 
     // ---------------------------------------------------------------------------- bundle
@@ -206,9 +206,15 @@ public sealed class VfxProbe : MonoBehaviour
     /// effect says of itself.</summary>
     void Shoot()
     {
-        if (m_Frame == 25)
-            foreach (var stage in m_Stages)
-                if (stage.Key == "over life") stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(1f, 0.02f)));
+        // The size curve of `over life` is another from frame 25, one of a single key from
+        // frame 45, and from frame 60 one whose keys start before zero and end after one.
+        foreach (var stage in m_Stages)
+        {
+            if (stage.Key != "over life") continue;
+            if (m_Frame == 25) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0f, 0.3f), new Keyframe(1f, 0.02f)));
+            if (m_Frame == 45) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(0.5f, 0.25f)));
+            if (m_Frame == 60) stage.Effect.SetAnimationCurve("Size", new AnimationCurve(new Keyframe(-0.37f, 0.05f), new Keyframe(1.3f, 0.4f)));
+        }
         if (m_Bundled != null && (m_Frame == 3 || m_Frame == 20))
             Rec("bundle/effect/f" + m_Frame.ToString("000"), "culled=" + (m_Bundled.culled ? 1 : 0) + " awake=" + (m_Bundled.HasAnySystemAwake() ? 1 : 0) + " renderer " + RendererState(m_Bundled));
         foreach (var stage in m_Stages)
@@ -374,10 +380,17 @@ public sealed class VfxProbe : MonoBehaviour
             if (frame == 7) effect.Play();
         };
         Run("expressions", "SimExpressions", 12, act: again).Attributes = new[] { "lifetime", "color", "spawnCount" };
-        // With other values, set in the frame the effect is made and again at frame 4.
+        // With other values, set in the frame the effect is made and again at frame 4. In the
+        // frames between and after, the curve the graph samples has slopes at its keys, and is
+        // sampled between two keys, past its last key (where it loops), on its last key and
+        // before its first one (where it ping-pongs).
         var others = Run("expressions others", "SimExpressions", 12, act: (frame, effect) =>
         {
+            if (frame == 2) Sloped(effect, 1.04f);
+            if (frame == 3) Sloped(effect, 3.87f);
             if (frame == 4) OtherValues(effect);
+            if (frame == 6) Sloped(effect, 2f);
+            if (frame == 8) Sloped(effect, -3.7f);
             again(frame, effect);
         });
         others.Attributes = new[] { "lifetime", "color" };
@@ -484,6 +497,18 @@ public sealed class VfxProbe : MonoBehaviour
         Rec(key, row.ToString());
     }
 
+    /// <summary>Gives the graph a curve with slopes at its keys, that ping-pongs before them and
+    /// loops after them, and the time it samples it at.</summary>
+    static void Sloped(VisualEffect effect, float when)
+    {
+        var curve = new AnimationCurve(new Keyframe(-1f, 3f, 0f, -2.5f), new Keyframe(0.7f, -1f, 1.25f, 0.6f), new Keyframe(2f, 5f, 3f, 0f))
+        {
+            preWrapMode = WrapMode.PingPong, postWrapMode = WrapMode.Loop,
+        };
+        effect.SetAnimationCurve("Curve", curve);
+        effect.SetFloat("When", when);
+    }
+
     /// <summary>Other values for the expression graph's properties: a NaN, zero divisors, other signs.</summary>
     static void OtherValues(VisualEffect effect)
     {
@@ -502,6 +527,8 @@ public sealed class VfxProbe : MonoBehaviour
         var ramp = new Gradient { mode = GradientMode.Fixed };
         ramp.SetKeys(new[] { new GradientColorKey(Color.green, 0.25f), new GradientColorKey(Color.yellow, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.25f, 1f) });
         effect.SetGradient("Ramp", ramp);
+        // A time between the gradient's keys, where a fixed one and a blended one differ.
+        effect.SetFloat("When", 0.6f);
         effect.SetBool("P", false);
         effect.SetBool("Q", false);
         effect.SetVector3("T", new Vector3(-1f, 0f, 2.5f));

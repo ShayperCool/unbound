@@ -87,17 +87,37 @@ public static class GraphAuthoring
         OverLife(update, "alpha", new AnimationCurve(new Keyframe(0f, 0.2f), new Keyframe(0.5f, 1f), new Keyframe(1f, 0.2f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.Loop });
         Save(graph);
 
-        // Colours whose red or blue is brighter than a half float holds: the texture keeps
-        // such a row scaled, with its scale. The image's target clamps the bright channel;
-        // the other two show whether the scale is applied. Fixed between their keys.
+        // Colours brighter than a half float holds, in a gradient that is fixed between its
+        // keys: the texture keeps such a row scaled, with its scale. Twenty quads a second
+        // living a second, so their ages span the key in the middle; each samples the
+        // gradient at its age and takes the colour divided back into what an image shows, so
+        // that a row stored unscaled, or its scale left out, would show in every channel.
         var hdr = NewGraph("DrawHdr", DrawFolder);
-        var (hdrSpawn, hdrInit, hdrUpdate, hdrOutput) = System(hdr, 16);
-        hdrOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Additive);
-        Burst(hdrSpawn, false, 9f, 0f);
-        SetRandom(hdrInit, "position", new Vector3(-1f, -1f, 0f), new Vector3(1f, 1f, 0f));
-        Set(hdrInit, "size", 0.5f);
-        Set(hdrInit, "lifetime", 100f);
-        OverLife(hdrUpdate, "color", Ramp(GradientMode.Fixed, 1f, (0.5f, new Color(131008f, 0.5f, 0.25f)), (1f, new Color(0.25f, 0.5f, 131008f))));
+        var (hdrSpawn, hdrInit, hdrUpdate, hdrOutput) = System(hdr, 64);
+        hdrOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        ConstantRate(hdrSpawn, 20f);
+        SetRandom(hdrInit, "position", new Vector3(-1.2f, -1f, -1f), new Vector3(1.2f, 1f, 1f));
+        Set(hdrInit, "size", 0.3f);
+        Set(hdrInit, "lifetime", 1f);
+        var age = Make<AgeOverLifetime>();
+        hdr.AddChild(age);
+        var bright = Make<SampleGradient>();
+        hdr.AddChild(bright);
+        bright.inputSlots[0].value = Ramp(GradientMode.Fixed, 1f, (0.5f, new Color(131008f, 65504f, 32752f)), (1f, new Color(32752f, 65504f, 131008f)));
+        Link(age.outputSlots[0], bright.inputSlots[1]);
+        var colour = Make<SetAttribute>();
+        colour.SetSettingValue("attribute", "color");
+        hdrUpdate.AddChild(colour);
+        for (int channel = 0; channel < 3; channel++)
+        {
+            var dim = Make<Multiply>();
+            hdr.AddChild(dim);
+            dim.SetOperandType(0, typeof(float));
+            dim.SetOperandType(1, typeof(float));
+            Link(bright.outputSlots[0][channel], dim.inputSlots[0]);
+            dim.inputSlots[1].value = 1f / 262016f;
+            Link(dim.outputSlots[0], colour.inputSlots[0][channel]);
+        }
         Save(hdr);
     }
 
@@ -631,13 +651,14 @@ public static class GraphAuthoring
         var ramp = Exposed(typeof(Gradient), "Ramp", Ramp(GradientMode.Blend, 0.5f, (0f, Color.red), (1f, Color.blue)));
         var sampledCurve = Make<SampleCurve>();
         graph.AddChild(sampledCurve);
+        VFXSlot when = Exposed(typeof(float), "When", 0.75f);
         Link(curve, sampledCurve.inputSlots[0]);
-        Link(C, sampledCurve.inputSlots[1]);
+        Link(when, sampledCurve.inputSlots[1]);
         Link(sampledCurve.outputSlots[0], Input(block, "c00"));
         var sampledRamp = Make<SampleGradient>();
         graph.AddChild(sampledRamp);
         Link(ramp, sampledRamp.inputSlots[0]);
-        Link(C, sampledRamp.inputSlots[1]);
+        Link(when, sampledRamp.inputSlots[1]);
         Link(sampledRamp.outputSlots[0], Input(block, "r00"));
         // The same to a bool from numbers that are zero (W, and Z until the probe sets it).
         Bools(W);
