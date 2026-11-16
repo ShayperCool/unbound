@@ -49,6 +49,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AddComponentRefusesWhatCannotBeAddedWithTheEnginesDiagnostic()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = Make("Holder");
             go.AddComponent<Probe>();
             Assert.Equal(new[] { "Warning: AddComponent asking for invalid type" }, Logs(() => Assert.Null(go.AddComponent((Type)null))));
