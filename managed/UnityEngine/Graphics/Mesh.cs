@@ -195,14 +195,23 @@ namespace UnityEngine
                 Changed(false);
             }
         }
-        public MeshTopology GetTopology(int submesh) => m_SubMeshes[submesh].Topology;
+        public MeshTopology GetTopology(int submesh)
+        {
+            if (submesh >= 0 && submesh < m_SubMeshes.Count) return m_SubMeshes[submesh].Topology;
+            Debug.LogError("Failed getting topology. Submesh index is out of bounds.", this);
+            return MeshTopology.Triangles;
+        }
 
         public int subMeshCount
         {
             get => m_SubMeshes.Count;
             set
             {
-                if (value < 0) throw new ArgumentException("subMeshCount can't be set to negative value");
+                if (value < 0)
+                {
+                    Debug.LogError("subMeshCount can't be set to negative value");
+                    return;
+                }
                 while (m_SubMeshes.Count < value) m_SubMeshes.Add(new SubMesh());
                 while (m_SubMeshes.Count > value) m_SubMeshes.RemoveAt(m_SubMeshes.Count - 1);
                 Changed(false);
@@ -422,14 +431,16 @@ namespace UnityEngine
             if (m_Tangents != null) tangents.AddRange(m_Tangents);
         }
 
-        public void SetColors(List<Color> inColors) => colors = inColors.ToArray();
+        // A null list or array is an empty one: the channel is cleared
+        // (tests/projects/apierrors `mesh.set_colors_null`).
+        public void SetColors(List<Color> inColors) => colors = inColors?.ToArray();
         public void SetColors(Color[] inColors) => colors = inColors;
-        public void SetColors(List<Color32> inColors) => colors32 = inColors.ToArray();
+        public void SetColors(List<Color32> inColors) => colors32 = inColors?.ToArray();
         public void SetColors(Color32[] inColors) => colors32 = inColors;
-        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors.GetRange(start, length).ToArray();
-        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags ) => colors = new ArraySegment<Color>(inColors, start, length).ToArray();
-        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors.GetRange(start, length).ToArray();
-        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = new ArraySegment<Color32>(inColors, start, length).ToArray();
+        public void SetColors(List<Color> inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors?.GetRange(start, length).ToArray();
+        public void SetColors(Color[] inColors, int start, int length, MeshUpdateFlags flags ) => colors = inColors == null ? null : new ArraySegment<Color>(inColors, start, length).ToArray();
+        public void SetColors(List<Color32> inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors?.GetRange(start, length).ToArray();
+        public void SetColors(Color32[] inColors, int start, int length, MeshUpdateFlags flags ) => colors32 = inColors == null ? null : new ArraySegment<Color32>(inColors, start, length).ToArray();
 
         public void GetColors(List<Color> colors)
         {
@@ -443,11 +454,20 @@ namespace UnityEngine
             if (m_Colors != null) colors.AddRange(m_Colors);
         }
 
+        const string InvalidUVChannel = "The uv index is invalid. Must be in the range 0 to 7.";
+
+        static bool IsUVChannel(int channel) => channel >= 0 && channel <= 7;
+
+        /// <summary>The array setters' channel check (the release's reference assemblies throw
+        /// where the list setters log).</summary>
+        static int CheckedUVChannel(int channel) =>
+            IsUVChannel(channel) ? channel : throw new ArgumentOutOfRangeException("uvIndex", channel, InvalidUVChannel);
+
         void SetUVsInternal(int channel, Vector4[] values, int dimension)
         {
-            if (channel < 0 || channel > 7)
+            if (!IsUVChannel(channel))
             {
-                Debug.LogError("The uv index is invalid. Must be in the range 0 to 7.");
+                Debug.LogError(InvalidUVChannel);
                 return;
             }
             if (values == null || values.Length == 0)
@@ -493,32 +513,43 @@ namespace UnityEngine
         public void SetUVs(int channel, List<Vector2> uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Count), 2);
         public void SetUVs(int channel, List<Vector3> uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Count), 3);
         public void SetUVs(int channel, List<Vector4> uvs) => SetUVsInternal(channel, Copy(uvs, 0, uvs.Count), 4);
-        public void SetUVs(int channel, Vector2[] uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Length), 2);
-        public void SetUVs(int channel, Vector3[] uvs) => SetUVsInternal(channel, Widen(uvs, 0, uvs.Length), 3);
-        public void SetUVs(int channel, Vector4[] uvs) => SetUVsInternal(channel, Copy(uvs, 0, uvs.Length), 4);
+        public void SetUVs(int channel, Vector2[] uvs) => SetUVsInternal(CheckedUVChannel(channel), Widen(uvs, 0, uvs.Length), 2);
+        public void SetUVs(int channel, Vector3[] uvs) => SetUVsInternal(CheckedUVChannel(channel), Widen(uvs, 0, uvs.Length), 3);
+        public void SetUVs(int channel, Vector4[] uvs) => SetUVsInternal(CheckedUVChannel(channel), Copy(uvs, 0, uvs.Length), 4);
         public void SetUVs(int channel, List<Vector2> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
         public void SetUVs(int channel, List<Vector3> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
         public void SetUVs(int channel, List<Vector4> uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
-        public void SetUVs(int channel, Vector2[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 2);
-        public void SetUVs(int channel, Vector3[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Widen(uvs, start, length), 3);
-        public void SetUVs(int channel, Vector4[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(channel, Copy(uvs, start, length), 4);
+        public void SetUVs(int channel, Vector2[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(CheckedUVChannel(channel), Widen(uvs, start, length), 2);
+        public void SetUVs(int channel, Vector3[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(CheckedUVChannel(channel), Widen(uvs, start, length), 3);
+        public void SetUVs(int channel, Vector4[] uvs, int start, int length, MeshUpdateFlags flags ) => SetUVsInternal(CheckedUVChannel(channel), Copy(uvs, start, length), 4);
+
+        /// <summary>The list getters' checks, as the release's reference assemblies make them.</summary>
+        Vector4[] UVsFor(int channel, object uvs)
+        {
+            if (uvs == null) throw new ArgumentNullException(nameof(uvs), "The result uvs list cannot be null.");
+            if (!IsUVChannel(channel)) throw new IndexOutOfRangeException(InvalidUVChannel);
+            return m_UVs[channel];
+        }
 
         public void GetUVs(int channel, List<Vector2> uvs)
         {
+            var values = UVsFor(channel, uvs);
             uvs.Clear();
-            if (m_UVs[channel] != null) foreach (var v in m_UVs[channel]) uvs.Add(v);
+            if (values != null) foreach (var v in values) uvs.Add(v);
         }
 
         public void GetUVs(int channel, List<Vector3> uvs)
         {
+            var values = UVsFor(channel, uvs);
             uvs.Clear();
-            if (m_UVs[channel] != null) foreach (var v in m_UVs[channel]) uvs.Add(v);
+            if (values != null) foreach (var v in values) uvs.Add(v);
         }
 
         public void GetUVs(int channel, List<Vector4> uvs)
         {
+            var values = UVsFor(channel, uvs);
             uvs.Clear();
-            if (m_UVs[channel] != null) uvs.AddRange(m_UVs[channel]);
+            if (values != null) uvs.AddRange(values);
         }
 
         // ------------------------------------------------------------------ indices
@@ -535,6 +566,8 @@ namespace UnityEngine
             }
             set
             {
+                // The mesh becomes one submesh even when the triangles are then refused
+                // (tests/projects/apierrors `mesh.triangles_not_multiple_submeshes`).
                 subMeshCount = 1;
                 SetTriangles(value, 0);
             }
@@ -544,7 +577,7 @@ namespace UnityEngine
 
         public int[] GetTriangles(int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
-            CheckSubmesh(submesh);
+            if (!CanAccessSubmesh(submesh, triangles: true)) return Array.Empty<int>();
             var s = m_SubMeshes[submesh];
             if (s.Topology != MeshTopology.Triangles) return Array.Empty<int>();
             var r = (int[])s.Indices.Clone();
@@ -556,6 +589,8 @@ namespace UnityEngine
 
         public void GetTriangles(List<int> triangles, int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
+            if (triangles == null) throw new ArgumentNullException(nameof(triangles), "The result triangles list cannot be null.");
+            CheckSubmesh(submesh);
             triangles.Clear();
             triangles.AddRange(GetTriangles(submesh, applyBaseVertex));
         }
@@ -564,7 +599,7 @@ namespace UnityEngine
 
         public int[] GetIndices(int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
-            CheckSubmesh(submesh);
+            if (!CanAccessSubmesh(submesh, triangles: false)) return Array.Empty<int>();
             var s = m_SubMeshes[submesh];
             var r = (int[])s.Indices.Clone();
             if (applyBaseVertex && s.BaseVertex != 0) for (int i = 0; i < r.Length; i++) r[i] += s.BaseVertex;
@@ -575,36 +610,82 @@ namespace UnityEngine
 
         public void GetIndices(List<int> indices, int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
+            if (indices == null) throw new ArgumentNullException(nameof(indices), "The result indices list cannot be null.");
+            CheckSubmesh(submesh);
             indices.Clear();
             indices.AddRange(GetIndices(submesh, applyBaseVertex));
         }
 
         public uint GetIndexStart(int submesh)
         {
+            CheckSubmesh(submesh);
             if (m_SubMeshes[submesh].IndexStart >= 0) return (uint)m_SubMeshes[submesh].IndexStart;
             uint start = 0;
             for (int i = 0; i < submesh; i++) start += (uint)m_SubMeshes[i].Indices.Length;
             return start;
         }
 
-        public uint GetIndexCount(int submesh) => (uint)m_SubMeshes[submesh].Indices.Length;
+        public uint GetIndexCount(int submesh)
+        {
+            CheckSubmesh(submesh);
+            return (uint)m_SubMeshes[submesh].Indices.Length;
+        }
 
-        public uint GetBaseVertex(int submesh) => (uint)m_SubMeshes[submesh].BaseVertex;
+        public uint GetBaseVertex(int submesh)
+        {
+            CheckSubmesh(submesh);
+            return (uint)m_SubMeshes[submesh].BaseVertex;
+        }
+
+        // The submesh checks of the index accessors, as the release's reference assemblies make
+        // them: the array getters and the setters log and do nothing, the others throw.
+        const string SubmeshOutOfRange = "Specified sub mesh is out of range. Must be greater or equal to 0 and less than subMeshCount.";
 
         void CheckSubmesh(int submesh)
         {
-            if (submesh < 0 || submesh >= m_SubMeshes.Count)
-                throw new IndexOutOfRangeException($"Specified sub mesh ({submesh}) is out of range. Must be greater or equal to 0 and less than subMeshCount ({m_SubMeshes.Count}).");
+            if (submesh < 0 || submesh >= m_SubMeshes.Count) throw new IndexOutOfRangeException(SubmeshOutOfRange);
+        }
+
+        bool CanAccessSubmesh(int submesh, bool triangles)
+        {
+            if (submesh >= 0 && submesh < m_SubMeshes.Count) return true;
+            Debug.LogError(triangles ? "Failed getting triangles. Submesh index is out of bounds." : "Failed getting indices. Submesh index is out of bounds.", this);
+            return false;
+        }
+
+        /// <summary>The engine's checks of indices being set: whole triangles, and vertices the
+        /// mesh has (tests/projects/apierrors `mesh.triangles_*`, `mesh.set_indices_bad_count`).</summary>
+        bool AcceptsIndices(int[] indices, MeshTopology topology, int baseVertex)
+        {
+            if (topology == MeshTopology.Triangles && indices.Length % 3 != 0)
+            {
+                Debug.LogError("Failed setting triangles. The number of supplied triangle indices must be a multiple of 3.");
+                return false;
+            }
+            foreach (var i in indices)
+            {
+                if (i + baseVertex < 0 || i + baseVertex >= m_Vertices.Length)
+                {
+                    Debug.LogError($"Failed setting triangles. Some indices are referencing out of bounds vertices. IndexCount: {indices.Length}, VertexCount: {m_Vertices.Length}");
+                    return false;
+                }
+            }
+            return true;
         }
 
         public void SetTriangles(int[] triangles, int submesh) => SetTriangles(triangles, submesh, true, 0);
         public void SetTriangles(int[] triangles, int submesh, [Internal.DefaultValue("true")] bool calculateBounds) => SetTriangles(triangles, submesh, calculateBounds, 0);
 
-        public void SetTriangles(int[] triangles, int submesh, [Internal.DefaultValue("true")] bool calculateBounds, [Internal.DefaultValue("0")] int baseVertex) =>
-            SetIndices(triangles, MeshTopology.Triangles, submesh, calculateBounds, baseVertex);
+        public void SetTriangles(int[] triangles, int submesh, [Internal.DefaultValue("true")] bool calculateBounds, [Internal.DefaultValue("0")] int baseVertex)
+        {
+            if (CanAccessSubmesh(submesh, triangles: true)) SetIndicesOf(submesh, triangles, MeshTopology.Triangles, calculateBounds, baseVertex);
+        }
 
-        public void SetTriangles(int[] triangles, int trianglesStart, int trianglesLength, int submesh, bool calculateBounds = true, int baseVertex = 0) =>
-            SetIndices(new ArraySegment<int>(triangles, trianglesStart, trianglesLength).ToArray(), MeshTopology.Triangles, submesh, calculateBounds, baseVertex);
+        public void SetTriangles(int[] triangles, int trianglesStart, int trianglesLength, int submesh, bool calculateBounds = true, int baseVertex = 0)
+        {
+            if (CanAccessSubmesh(submesh, triangles: true))
+                SetIndicesOf(submesh, new ArraySegment<int>(triangles, trianglesStart, trianglesLength).ToArray(), MeshTopology.Triangles, calculateBounds, baseVertex);
+        }
 
         public void SetTriangles(List<int> triangles, int submesh) => SetTriangles(triangles.ToArray(), submesh, true, 0);
         public void SetTriangles(List<int> triangles, int submesh, [Internal.DefaultValue("true")] bool calculateBounds) => SetTriangles(triangles.ToArray(), submesh, calculateBounds, 0);
@@ -626,16 +707,13 @@ namespace UnityEngine
 
         public void SetIndices(int[] indices, MeshTopology topology, int submesh, [Internal.DefaultValue("true")] bool calculateBounds, [Internal.DefaultValue("0")] int baseVertex)
         {
-            CheckSubmesh(submesh);
+            if (CanAccessSubmesh(submesh, triangles: false)) SetIndicesOf(submesh, indices, topology, calculateBounds, baseVertex);
+        }
+
+        void SetIndicesOf(int submesh, int[] indices, MeshTopology topology, bool calculateBounds, int baseVertex)
+        {
             if (indices == null) throw new ArgumentNullException(nameof(indices), "indices can't be null");
-            foreach (var i in indices)
-            {
-                if (i + baseVertex < 0 || i + baseVertex >= m_Vertices.Length)
-                {
-                    Debug.LogError("Failed setting triangles. Some indices are referencing out of bounds vertices.");
-                    return;
-                }
-            }
+            if (!AcceptsIndices(indices, topology, baseVertex)) return;
             var s = m_SubMeshes[submesh];
             s.Indices = (int[])indices.Clone();
             s.Topology = topology;
@@ -663,7 +741,8 @@ namespace UnityEngine
 
         public SubMeshDescriptor GetSubMesh(int index)
         {
-            CheckSubmesh(index);
+            if (index < 0 || index >= m_SubMeshes.Count)
+                throw new ArgumentException($"Invalid submesh index - got {index}, should be [0,{m_SubMeshes.Count})");
             var s = m_SubMeshes[index];
             return new SubMeshDescriptor((int)GetIndexStart(index), s.Indices.Length, s.Topology)
             {
