@@ -160,6 +160,14 @@ public static class Game
             var (redirected, original) = Edit("Other(Texture2D t) => 0", "Other(Texture2D t) => t.width + 1");
             Assert.NotNull(redirected);
             Assert.NotEqual(original, redirected);
+            var loaded = LifetimeChecks.Instrument(WideFloatsTests.Emit(WideFloatsTests.Compilation(Edited, OptimizationLevel.Debug, "EditedGame", engine: true)).Image);
+            using (var module = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(loaded)))
+            {
+                var check = module.GetType(Unbound.Runtime.Lifetime.CallsType)!.Methods.Single(m => m.Name.StartsWith("get_width_v"));
+                // The edited body's call now names that checked call (call, its token).
+                var token = BitConverter.GetBytes(check.MetadataToken.ToInt32());
+                Assert.Contains(Enumerable.Range(0, redirected!.Length - 4), at => redirected[at] == 0x28 && redirected.AsSpan(at + 1, 4).SequenceEqual(token));
+            }
             // A listed member without a checked call in the image: a restart.
             Assert.Null(Edit("Other(Texture2D t) => 0", "Other(Texture2D t) => t.height").Redirected);
             // An unlisted member: the delta as it is.

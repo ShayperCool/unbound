@@ -27,7 +27,7 @@ namespace Unbound.ApiTools;
 public static class FacadeGenerator
 {
     /// <summary>Bump when the facades generated from the same inputs would differ.</summary>
-    public const string FormatVersion = "unbound-facades-3";
+    public const string FormatVersion = "unbound-facades-4";
 
     const string StampFile = "facades.stamp.json";
 

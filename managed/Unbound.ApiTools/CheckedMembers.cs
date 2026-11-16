@@ -21,6 +21,7 @@ namespace Unbound.ApiTools;
 public static class CheckedMembers
 {
     public const string FileName = "checked-members.txt";
+    // The list is published with the facades: a change of its output bumps FacadeGenerator.FormatVersion.
 
     const string ThrowHelper = "UnityEngine.Bindings.ThrowHelper";
     const string ThrowNullReference = "ThrowNullReferenceException";

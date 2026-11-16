@@ -30,8 +30,11 @@ static class LifetimeChecks
     const string ListFile = "checked-members.txt";
 
     static HashSet<string> s_Checked = new(StringComparer.Ordinal);
-    /// <summary>The listed members' declaring types and names, without parameters or arity.</summary>
-    static HashSet<string> s_Names = new(StringComparer.Ordinal);
+    /// <summary>"Type::Name" of listed members with a nested type in their key: a delta's reference
+    /// names nested types without their outer type, so these match by name alone.</summary>
+    static HashSet<string> s_NestedNames = new(StringComparer.Ordinal);
+    /// <summary>"Type::Name" of listed generic methods.</summary>
+    static HashSet<string> s_GenericNames = new(StringComparer.Ordinal);
 
     /// <summary>The loaded list's identity, part of the adapted images' cache key.</summary>
     internal static string Identity { get; private set; } = "none";
@@ -42,7 +45,7 @@ static class LifetimeChecks
         var path = string.IsNullOrEmpty(facadeDir) ? null : Path.Combine(facadeDir, ListFile);
         if (path == null || !File.Exists(path))
         {
-            s_Checked = new HashSet<string>(StringComparer.Ordinal);
+            Use(Array.Empty<string>());
             Identity = "none";
             return;
         }
@@ -61,7 +64,15 @@ static class LifetimeChecks
     static void Use(IEnumerable<string> members)
     {
         s_Checked = new HashSet<string>(members, StringComparer.Ordinal);
-        s_Names = new HashSet<string>(s_Checked.Select(NameOf), StringComparer.Ordinal);
+        s_NestedNames = new HashSet<string>(s_Checked.Where(key => key.Contains('/')).Select(NameOf), StringComparer.Ordinal);
+        s_GenericNames = new HashSet<string>(s_Checked.Where(IsGenericMethod).Select(NameOf), StringComparer.Ordinal);
+    }
+
+    static bool IsGenericMethod(string key)
+    {
+        int separator = key.IndexOf("::", StringComparison.Ordinal);
+        int arity = key.IndexOf('`', separator);
+        return arity >= 0 && arity < key.IndexOf('(');
     }
 
     /// <summary>"Type::Name" of a key, without its arity and parameters.</summary>
@@ -76,9 +87,9 @@ static class LifetimeChecks
     /// <summary>
     /// An Edit and Continue delta's calls of listed members, redirected to the checked calls the
     /// loaded image already has (a delta cannot add them): the patched IL, or null when an edited
-    /// body calls a listed member the image has no checked call for, or a generic method instance
-    /// of one (the edit then needs a restart, so that no edited call goes unchecked). Members are
-    /// matched by declaring type, name, parameter types and call kind.
+    /// body calls a listed member the image has no checked call for, or any generic method
+    /// instance of one (the edit then needs a restart, so that no edited call goes unchecked).
+    /// Members are matched by declaring type, name, parameter types and call kind.
     /// </summary>
     internal static byte[]? RedirectDelta(byte[] baseline, IReadOnlyList<byte[]> deltas, byte[] il)
     {
@@ -117,9 +128,14 @@ static class LifetimeChecks
 
     static bool Listed(NumberFormatShims.AggregateView view, int token)
     {
-        var (declaring, name, hasThis, _) = view.Describe(token);
+        var (declaring, name, hasThis, parameters) = view.Describe(token);
+        if (!hasThis) return false;
         int open = declaring.IndexOf('<');
-        return hasThis && s_Names.Contains((open < 0 ? declaring : declaring.Substring(0, open)) + "::" + name);
+        string type = open < 0 ? declaring : declaring.Substring(0, open);
+        string member = type + "::" + name;
+        if (s_Checked.Contains(member + "(" + string.Join(",", parameters) + ")")) return true;
+        // A generic method's arity is not described here: any listed generic method of the name.
+        return s_GenericNames.Contains(member) || s_NestedNames.Contains(member);
     }
 
     static string WrapperKey(string declaring, string name, IEnumerable<string> parameters, bool virtualCall) =>
