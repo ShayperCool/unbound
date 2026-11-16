@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/UIElements/Style/StyleTransitions.cs",
     "managed/UnityEngine/UIElements/Style/StyleResolver.cs",
+    "managed/UnityEngine/UIElements/StyleValues.cs",
     "managed/UnityEngine/UIElements/Core/VisualElement.cs"
   ]
 }

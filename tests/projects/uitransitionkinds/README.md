@@ -26,9 +26,9 @@ the transition events since the previous row.
 - `fontPercent*`: a percent font size from a USS rule is a share of the parent's font size; an
   inline one (from code or a UXML `style` attribute) keeps its number, and a child inheriting it
   takes its own share of that number.
-- `hint*`: a starting transition of a colour (background, border, text, image tint) adds
+- `hint*`: a starting transition of a colour (background, border, text) adds
   `UsageHints.DynamicColor`, of rotate, scale, translate or transform-origin `DynamicTransform`,
   inline, from USS classes and through `all`, keeping hints already set; one that does not start
-  adds nothing.
+  adds nothing. The background image tint takes DynamicColor by the same rule (unmeasured).
 
 Other releases are unmeasured.
