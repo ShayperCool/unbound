@@ -1,0 +1,470 @@
+using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEditor.VFX;
+using UnityEditor.VFX.Block;
+using UnityEditor.VFX.URP;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.VFX;
+
+/// <summary>
+/// Authors the probe's graphs, objects and scene in the Editor, through the graph package's
+/// own models (this assembly carries the name of a friend assembly of the graph package and
+/// of the render pipeline's editor assembly). The files it writes are kept under Authored/
+/// (tests/authored_project.py) and replayed by the engine.
+/// </summary>
+public static class LitAuthoring
+{
+    public const string GraphFolder = "Assets/Graphs";
+    const string ObjectFolder = "Assets/Objects";
+    public const string Scene = "Assets/Scenes/Probe.unity";
+
+    public static void Author()
+    {
+        Directory.CreateDirectory(GraphFolder);
+        Directory.CreateDirectory(ObjectFolder);
+        AssetDatabase.Refresh();
+        Objects();
+        LitQuads();
+        Meshes();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        BuildScene();
+    }
+
+    // ---------------------------------------------------------------------------- objects
+
+    /// <summary>An image whose four quarters differ (a texture drawn turned or mirrored
+    /// shows), and a mesh of the probe's own: a wedge whose faces all point differently, with
+    /// normals and texture coordinates, in two submeshes.</summary>
+    static void Objects()
+    {
+        var quarters = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                quarters.SetPixel(x, y, y < 4 ? (x < 4 ? Color.red : Color.green) : (x < 4 ? Color.blue : Color.yellow));
+        File.WriteAllBytes(ObjectFolder + "/Quarters.png", quarters.EncodeToPNG());
+
+        // A wedge: a right triangle in the plane z = -0.5 drawn out to z = 0.5.
+        Vector3 a = new Vector3(-0.5f, -0.5f, -0.5f), b = new Vector3(0.5f, -0.5f, -0.5f), c = new Vector3(-0.5f, 0.5f, -0.5f);
+        Vector3 back = new Vector3(0f, 0f, 1f);
+        var corners = new[]
+        {
+            // The front and the back triangle, then the three sides as quads.
+            new[] { a, c, b }, new[] { a + back, b + back, c + back },
+            new[] { a, b, b + back, a + back }, new[] { b, c, c + back, b + back }, new[] { c, a, a + back, c + back },
+        };
+        var vertices = new System.Collections.Generic.List<Vector3>();
+        var normals = new System.Collections.Generic.List<Vector3>();
+        var uvs = new System.Collections.Generic.List<Vector2>();
+        var first = new System.Collections.Generic.List<int>();
+        var second = new System.Collections.Generic.List<int>();
+        for (int face = 0; face < corners.Length; face++)
+        {
+            var points = corners[face];
+            var normal = Vector3.Cross(points[1] - points[0], points[2] - points[0]).normalized;
+            int at = vertices.Count;
+            var triangles = face < 2 ? first : second;
+            for (int i = 0; i < points.Length; i++)
+            {
+                vertices.Add(points[i]);
+                normals.Add(normal);
+                uvs.Add(new Vector2(i == 1 || i == 2 ? 1f : 0f, i >= 2 ? 1f : 0f));
+            }
+            triangles.AddRange(new[] { at, at + 1, at + 2 });
+            if (points.Length == 4) triangles.AddRange(new[] { at, at + 2, at + 3 });
+        }
+        var mesh = new Mesh { subMeshCount = 2 };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        mesh.SetTriangles(first, 0);
+        mesh.SetTriangles(second, 1);
+        mesh.RecalculateBounds();
+        AssetDatabase.CreateAsset(mesh, ObjectFolder + "/Wedge.asset");
+
+        // A spike: four faces from a square base up to a point, in one submesh, without a base.
+        Vector3 top = new Vector3(0f, 0.6f, 0f);
+        var foot = new[] { new Vector3(-0.5f, -0.4f, -0.5f), new Vector3(0.5f, -0.4f, -0.5f), new Vector3(0.5f, -0.4f, 0.5f), new Vector3(-0.5f, -0.4f, 0.5f) };
+        vertices.Clear();
+        normals.Clear();
+        uvs.Clear();
+        first.Clear();
+        for (int face = 0; face < 4; face++)
+        {
+            Vector3 p = foot[face], q = foot[(face + 1) % 4];
+            var normal = Vector3.Cross(top - p, q - p).normalized;
+            int at = vertices.Count;
+            vertices.AddRange(new[] { p, top, q });
+            normals.AddRange(new[] { normal, normal, normal });
+            uvs.AddRange(new[] { new Vector2(0f, 0f), new Vector2(0.5f, 1f), new Vector2(1f, 0f) });
+            first.AddRange(new[] { at, at + 1, at + 2 });
+        }
+        var spike = new Mesh();
+        spike.SetVertices(vertices);
+        spike.SetNormals(normals);
+        spike.SetUVs(0, uvs);
+        spike.SetTriangles(first, 0);
+        spike.RecalculateBounds();
+        AssetDatabase.CreateAsset(spike, ObjectFolder + "/Spike.asset");
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+
+    static Texture2D Quarters => AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectFolder + "/Quarters.png");
+    static Mesh Wedge => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Wedge.asset");
+
+    // ----------------------------------------------------------------------------- graphs
+
+    /// <summary>Lit quads, drawn by the output itself in the system's order (opaque, or
+    /// added to what is behind): turned every way, so that each takes the lights
+    /// differently.</summary>
+    static void LitQuads()
+    {
+        (VFXGraph, VFXBasicInitialize, VFXURPLitPlanarPrimitiveOutput) Lit(string name, VFXAbstractRenderedOutput.BlendMode blend = VFXAbstractRenderedOutput.BlendMode.Opaque)
+        {
+            var graph = NewGraph(name);
+            var (spawn, init, _, output) = System<VFXURPLitPlanarPrimitiveOutput>(graph, 16);
+            output.SetSettingValue("blendMode", blend);
+            // No base colour map: the default one is the package's.
+            output.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+            Burst(spawn, 9f);
+            SetRandom(init, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+            SetRandom(init, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+            Set(init, "size", 0.7f);
+            return (graph, init, output);
+        }
+
+        // Rough and not metallic, each quad a colour of its own.
+        var (matte, matteInit, matteOutput) = Lit("LitMatte");
+        SetRandom(matteInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Input(matteOutput, "smoothness").value = 0.1f;
+        Input(matteOutput, "metallic").value = 0f;
+        Save(matte);
+
+        // Smooth: highlights of the lights.
+        var (smooth, smoothInit, smoothOutput) = Lit("LitSmooth");
+        SetVector(smoothInit, "color", new Vector3(0.8f, 0.3f, 0.2f));
+        Input(smoothOutput, "smoothness").value = 0.8f;
+        Input(smoothOutput, "metallic").value = 0f;
+        Save(smooth);
+
+        // Metallic.
+        var (metal, metalInit, metalOutput) = Lit("LitMetal");
+        SetVector(metalInit, "color", new Vector3(0.9f, 0.7f, 0.3f));
+        Input(metalOutput, "smoothness").value = 0.6f;
+        Input(metalOutput, "metallic").value = 1f;
+        Save(metal);
+
+        // Added to what is behind.
+        var (added, addedInit, addedOutput) = Lit("LitAdditive", VFXAbstractRenderedOutput.BlendMode.Additive);
+        SetVector(addedInit, "color", new Vector3(0.2f, 0.5f, 0.9f));
+        Input(addedOutput, "smoothness").value = 0.4f;
+        Input(addedOutput, "metallic").value = 0f;
+        Save(added);
+
+        // With a base colour map (the image whose quarters differ) and a colour of its own
+        // that it emits.
+        var mapped = NewGraph("LitMapped");
+        var (mappedSpawn, mappedInit, _, mappedOutput) = System<VFXURPLitPlanarPrimitiveOutput>(mapped, 16);
+        mappedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        mappedOutput.SetSettingValue("useEmissive", true);
+        Burst(mappedSpawn, 9f);
+        SetRandom(mappedInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(mappedInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+        Set(mappedInit, "size", 0.7f);
+        Input(mappedOutput, "baseColorMap").value = Quarters;
+        Input(mappedOutput, "emissiveColor").value = new Color(0.05f, 0.2f, 0.3f, 1f);
+        Input(mappedOutput, "smoothness").value = 0.3f;
+        Input(mappedOutput, "metallic").value = 0f;
+        Save(mapped);
+
+        // Three outputs of one system, in this order in the graph: lit quads, small unlit
+        // quads before them and smaller unlit meshes before those. The lit output's and the
+        // mesh output's sort priority is 1, the unlit quads' 0: among the effect's outputs the
+        // unlit quads come first although the graph lists them second, and the two of one
+        // priority keep the graph's order.
+        var (outputs, outputsInit, outputsLit) = Lit("LitOutputs");
+        outputsLit.SetSettingValue("vfxSystemSortPriority", 1);
+        SetVector(outputsInit, "color", new Vector3(0.4f, 0.8f, 0.5f));
+        Input(outputsLit, "smoothness").value = 0.3f;
+        Input(outputsLit, "metallic").value = 0f;
+        var update = outputsLit.inputFlowSlot[0].link[0].context;
+        var outputsQuads = Make<VFXPlanarPrimitiveOutput>();
+        outputs.AddChild(outputsQuads);
+        update.LinkTo(outputsQuads);
+        outputsQuads.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Set(outputsQuads, "size", 0.25f);
+        Nearer(outputsQuads, 0.8f);
+        var outputsMeshes = Make<VFXMeshOutput>();
+        outputs.AddChild(outputsMeshes);
+        update.LinkTo(outputsMeshes);
+        outputsMeshes.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        outputsMeshes.SetSettingValue("vfxSystemSortPriority", 1);
+        Input(outputsMeshes, "mesh").value = Wedge;
+        Input(outputsMeshes, "mainTexture").value = Quarters;
+        Set(outputsMeshes, "size", 0.12f);
+        Nearer(outputsMeshes, 1.6f);
+        Save(outputs);
+
+        // Unlit quads that cast shadows.
+        var unlitCaster = NewGraph("UnlitCaster");
+        var (unlitSpawn, unlitInit, _, unlitOutput) = System<VFXPlanarPrimitiveOutput>(unlitCaster, 16);
+        unlitOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        unlitOutput.SetSettingValue("castShadows", true);
+        Burst(unlitSpawn, 9f);
+        SetRandom(unlitInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(unlitInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+        Set(unlitInit, "size", 0.7f);
+        SetVector(unlitInit, "color", new Vector3(0.9f, 0.5f, 0.2f));
+        Save(unlitCaster);
+
+        // An output that writes motion vectors: not drawn here, what its asset asks of the
+        // effect's renderer is recorded.
+        var (moving, movingInit, movingOutput) = Lit("LitMoving");
+        movingOutput.SetSettingValue("generateMotionVector", true);
+        SetVector(movingInit, "color", new Vector3(0.5f, 0.5f, 0.5f));
+        Save(moving);
+
+        // An asset saved with renderer settings of its own: it receives shadows, and the two
+        // settings the graph's compilation decides are saved as what it does not decide.
+        var (receiving, receivingInit, _) = Lit("LitReceiving");
+        SetVector(receivingInit, "color", new Vector3(0.5f, 0.5f, 0.5f));
+        var saved = receiving.GetResource().rendererSettings;
+        saved.receiveShadows = true;
+        saved.shadowCastingMode = ShadowCastingMode.TwoSided;
+        saved.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+        receiving.GetResource().rendererSettings = saved;
+        Save(receiving);
+
+        // Casting shadows: on what is behind, and on each other.
+        var (caster, casterInit, casterOutput) = Lit("LitCaster");
+        casterOutput.SetSettingValue("castShadows", true);
+        SetVector(casterInit, "color", new Vector3(0.9f, 0.9f, 0.5f));
+        Input(casterOutput, "smoothness").value = 0.2f;
+        Input(casterOutput, "metallic").value = 0f;
+        Save(caster);
+    }
+
+    /// <summary>Particles drawn as a mesh of the probe's own, unlit and lit, turned every
+    /// way.</summary>
+    static void Meshes()
+    {
+        (VFXGraph, VFXBasicInitialize, TOutput) Shapes<TOutput>(string name) where TOutput : VFXAbstractParticleOutput
+        {
+            var graph = NewGraph(name);
+            var (spawn, init, _, output) = System<TOutput>(graph, 16);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            Input(output, "mesh").value = Wedge;
+            Burst(spawn, 9f);
+            SetRandom(init, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+            SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(360f, 360f, 360f));
+            Set(init, "size", 0.6f);
+            return (graph, init, output);
+        }
+
+        // Unlit, textured with the image whose quarters differ.
+        var (plain, plainInit, plainOutput) = Shapes<VFXMeshOutput>("MeshUnlit");
+        SetRandom(plainInit, "color", new Vector3(0.5f, 0.5f, 0.5f), new Vector3(1f, 1f, 1f));
+        Input(plainOutput, "mainTexture").value = Quarters;
+        Save(plain);
+
+        // Lit.
+        var (lit, litInit, litOutput) = Shapes<VFXURPLitMeshOutput>("MeshLit");
+        litOutput.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+        SetRandom(litInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Input(litOutput, "smoothness").value = 0.5f;
+        Input(litOutput, "metallic").value = 0f;
+        Save(lit);
+
+        // The mesh and the mask of its submeshes drawn are exposed: the probe changes them.
+        var (exposed, exposedInit, exposedOutput) = Shapes<VFXMeshOutput>("MeshExposed");
+        SetRandom(exposedInit, "color", new Vector3(0.5f, 0.5f, 0.5f), new Vector3(1f, 1f, 1f));
+        Input(exposedOutput, "mainTexture").value = Quarters;
+        Link(Parameter(exposed, typeof(Mesh), "Shape", Wedge).outputSlots[0], Input(exposedOutput, "mesh"));
+        Link(Parameter(exposed, typeof(uint), "Mask", 3u).outputSlots[0], Input(exposedOutput, "subMeshMask"));
+        Save(exposed);
+
+        // No mesh at all.
+        var (none, noneInit, noneOutput) = Shapes<VFXMeshOutput>("MeshNone");
+        SetRandom(noneInit, "color", new Vector3(0.5f, 0.5f, 0.5f), new Vector3(1f, 1f, 1f));
+        Input(noneOutput, "mesh").value = null;
+        Save(none);
+
+        // Lit meshes that cast shadows.
+        var (casting, castingInit, castingOutput) = Shapes<VFXURPLitMeshOutput>("MeshCaster");
+        castingOutput.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+        castingOutput.SetSettingValue("castShadows", true);
+        SetVector(castingInit, "color", new Vector3(0.6f, 0.9f, 0.6f));
+        Input(castingOutput, "smoothness").value = 0.2f;
+        Input(castingOutput, "metallic").value = 0f;
+        Save(casting);
+
+        // Ten a second rising and living two fifths of a second: particles die between ones
+        // that live, in a system that draws every particle it has room for.
+        var dying = NewGraph("MeshDying");
+        var (dyingSpawn, dyingInit, _, dyingOutput) = System<VFXMeshOutput>(dying, 16);
+        dyingOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Input(dyingOutput, "mesh").value = Wedge;
+        Input(dyingOutput, "mainTexture").value = Quarters;
+        ConstantRate(dyingSpawn, 10f);
+        SetRandom(dyingInit, "position", new Vector3(-1.2f, -1.2f, 0f), new Vector3(1.2f, -0.6f, 0f));
+        SetVector(dyingInit, "velocity", new Vector3(0f, 4f, 0f));
+        SetRandom(dyingInit, "angle", new Vector3(0f, 0f, 0f), new Vector3(360f, 360f, 360f));
+        Set(dyingInit, "lifetime", 0.4f);
+        Set(dyingInit, "size", 0.5f);
+        Save(dying);
+    }
+
+    // ---------------------------------------------------------------------------- helpers
+
+    static T Make<T>() where T : VFXModel => ScriptableObject.CreateInstance<T>();
+
+    static VFXGraph NewGraph(string name)
+    {
+        var asset = VisualEffectAssetEditorUtility.CreateNewAsset(GraphFolder + "/" + name + ".vfx");
+        return asset.GetResource().GetOrCreateGraph();
+    }
+
+    static void Save(VFXGraph graph)
+    {
+        var resource = graph.GetResource();
+        resource.WriteAssetWithSubAssets();
+        AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(resource), ImportAssetOptions.ForceUpdate);
+    }
+
+    /// <summary>A spawner, an initialize, an update and an output of the kind asked for,
+    /// linked; returns them.</summary>
+    static (VFXBasicSpawner Spawn, VFXBasicInitialize Init, VFXBasicUpdate Update, TOutput Output) System<TOutput>(VFXGraph graph, uint capacity) where TOutput : VFXContext
+    {
+        var spawn = Make<VFXBasicSpawner>();
+        var init = Make<VFXBasicInitialize>();
+        var update = Make<VFXBasicUpdate>();
+        var output = Make<TOutput>();
+        graph.AddChild(spawn);
+        graph.AddChild(init);
+        graph.AddChild(update);
+        graph.AddChild(output);
+        spawn.LinkTo(init);
+        init.LinkTo(update);
+        update.LinkTo(output);
+        init.GetData().SetSettingValue("capacity", capacity);
+        return (spawn, init, update, output);
+    }
+
+    /// <summary>An input of a model by its name; the names it has are said when it has
+    /// none of that name.</summary>
+    static VFXSlot Input(VFXModel model, string name)
+    {
+        var slots = ((IVFXSlotContainer)model).inputSlots;
+        var slot = slots.FirstOrDefault(s => s.name == name);
+        if (slot == null) throw new InvalidOperationException(model.GetType().Name + " has no input '" + name + "': " + string.Join(", ", slots.Select(s => s.name)));
+        return slot;
+    }
+
+    static VFXParameter Parameter(VFXGraph graph, Type type, string name, object value)
+    {
+        var parameter = VFXLibrary.GetParameters().First(d => d.modelType == type).CreateInstance();
+        parameter.SetSettingValue("m_ExposedName", name);
+        parameter.SetSettingValue("m_Exposed", true);
+        parameter.value = value;
+        graph.AddChild(parameter);
+        return parameter;
+    }
+
+    static void Link(VFXSlot from, VFXSlot to)
+    {
+        if (!from.Link(to)) throw new InvalidOperationException("cannot link " + from.property.type.Name + " '" + from.name + "' to " + to.property.type.Name + " '" + to.name + "'");
+    }
+
+    static void ConstantRate(VFXBasicSpawner spawn, float rate)
+    {
+        var block = Make<VFXSpawnerConstantRate>();
+        spawn.AddChild(block);
+        block.inputSlots[0].value = rate;
+    }
+
+    /// <summary>Moves what an output draws towards the camera (the systems are in the
+    /// effect's space, the cameras look along its z).</summary>
+    static void Nearer(VFXContext output, float by)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", "position");
+        block.SetSettingValue("Composition", AttributeCompositionMode.Add);
+        output.AddChild(block);
+        block.inputSlots[0].value = Spaced(block.inputSlots[0], new Vector3(0f, 0f, -by));
+    }
+
+    /// <summary>One burst at the start.</summary>
+    static void Burst(VFXBasicSpawner spawn, float count)
+    {
+        var block = Make<VFXSpawnerBurst>();
+        spawn.AddChild(block);
+        block.SetSettingValue("repeat", VFXSpawnerBurst.RepeatMode.Single);
+        Input(block, "Count").value = count;
+        Input(block, "Delay").value = 0f;
+    }
+
+    static SetAttribute Set(VFXContext context, string attribute, object value)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        context.AddChild(block);
+        block.inputSlots[0].value = value;
+        return block;
+    }
+
+    /// <summary>A vector as the type a slot holds it in (the package's own spaced types).</summary>
+    static object Spaced(VFXSlot slot, Vector3 value)
+    {
+        var type = slot.property.type;
+        if (type == typeof(Position)) return (Position)value;
+        if (type == typeof(Vector)) return (Vector)value;
+        if (type == typeof(DirectionType)) return (DirectionType)value;
+        return value;
+    }
+
+    static SetAttribute SetVector(VFXContext context, string attribute, Vector3 value)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        context.AddChild(block);
+        block.inputSlots[0].value = Spaced(block.inputSlots[0], value);
+        return block;
+    }
+
+    /// <summary>A block that draws an attribute for each particle, component by component,
+    /// between two vectors.</summary>
+    static SetAttribute SetRandom(VFXContext context, string attribute, Vector3 from, Vector3 to)
+    {
+        var block = Make<SetAttribute>();
+        block.SetSettingValue("attribute", attribute);
+        block.SetSettingValue("Random", RandomMode.PerComponent);
+        context.AddChild(block);
+        block.inputSlots[0].value = Spaced(block.inputSlots[0], from);
+        block.inputSlots[1].value = Spaced(block.inputSlots[1], to);
+        return block;
+    }
+
+    // ------------------------------------------------------------------------------ scene
+
+    /// <summary>The probe scene: a camera, one flat ambient colour and no reflection, so
+    /// that what lights the particles is the lights the probe makes.</summary>
+    static void BuildScene()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var camera = new GameObject("Main Camera") { tag = "MainCamera" };
+        camera.AddComponent<Camera>();
+        camera.transform.position = new Vector3(0f, 0f, -10f);
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.15f, 0.2f, 0.25f, 1f);
+        RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Custom;
+        RenderSettings.customReflectionTexture = null;
+        RenderSettings.reflectionIntensity = 0f;
+        EditorSceneManager.SaveScene(scene, Scene);
+    }
+}

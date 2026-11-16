@@ -1,0 +1,164 @@
+{
+ "draw-additive-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-caster-f005.png": {
+  "mean": 0.027,
+  "worst": 25,
+  "over8": 2,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-deferred-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mapped-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-matte-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh caster-f005.png": {
+  "mean": 0.024,
+  "worst": 53,
+  "over8": 1,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-mesh deferred-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh dying-f012.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh dying-f024.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f008.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f011.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f014.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f017.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f020.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh exposed-f023.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh lit-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh none-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-mesh unlit-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-metal-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-offscreen caster-f005.png": {
+  "mean": 0.026,
+  "worst": 37,
+  "over8": 1,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-offscreen caster-f012.png": {
+  "mean": 0.026,
+  "worst": 37,
+  "over8": 1,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-outputs-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-plain shadow-f005.png": {
+  "mean": 0.009,
+  "worst": 7,
+  "over8": 0,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-shadowed-f005.png": {
+  "mean": 0.001,
+  "worst": 1,
+  "over8": 0,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ },
+ "draw-smooth-f005.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. Edges of quads and meshes fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-unlit caster-f005.png": {
+  "mean": 0.019,
+  "worst": 7,
+  "over8": 0,
+  "reason": "Pixels on the edge of a hard shadow differ; every other pixel is the Editor's. The cause is not resolved: the control without any effect (draw-plain shadow) has such pixels too, so the pipeline's shadows of the scene's own objects differ at caster edges already, and whether the effects' shadow pass adds to that is not separated (follow-up for the shadows: bring the shadow maps to the Editor's and measure these images again). Limits are the residuals as measured on the one machine both ran on (an NVIDIA driver, OpenGL Core)."
+ }
+}

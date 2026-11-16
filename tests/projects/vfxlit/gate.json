@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/vfxlit/run.py gate"
+  ],
+  "summary": "vfxlit: .*",
+  "engine_paths": [
+    "managed/UnityEngine/VFX/",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs",
+    "managed/UnityEngine/Graphics/IndirectDraws.cs",
+    "managed/UnityEngine/Graphics/Srp/ShadowCasterCulling.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs"
+  ]
+}
