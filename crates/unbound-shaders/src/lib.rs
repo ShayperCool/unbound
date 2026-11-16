@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 61;
+pub const FORMAT_VERSION: u32 = 62;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1103,6 +1103,9 @@ impl ShaderCompiler {
         if self.settings.device.coarse_derivatives() {
             pp.define("ddx", "ddx_coarse");
             pp.define("ddy", "ddy_coarse");
+            // `fwidth` is `abs(ddx(x)) + abs(ddy(x))`, which Shader Model 5 compiles from the same
+            // coarse derivatives (it has no instruction of its own).
+            pp.provide(COARSE_FWIDTH)?;
         }
         let mut source = String::from(SAMPLERS);
         if self.settings.device.compiler_precision_types() {
@@ -1260,6 +1263,9 @@ const PRECISION_TYPES: &str = r#"
 /// `_UnityFBInput<idx>` at the fragment's pixel, as the Core RP library declares them where
 /// there are no subpass inputs. The render pass binds input `idx` of a subpass there
 /// (`RenderPasses` on the managed side).
+/// `fwidth` from coarse derivatives (see [`unbound_graphics::GraphicsDevice::coarse_derivatives`]).
+const COARSE_FWIDTH: &str = "fwidth(x) (abs(ddx_coarse(x)) + abs(ddy_coarse(x)))";
+
 const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
     "FRAMEBUFFER_INPUT_FLOAT(idx) TEXTURE2D_FLOAT(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
     "FRAMEBUFFER_INPUT_HALF(idx) TEXTURE2D_HALF(_UnityFBInput##idx); float4 _UnityFBInput##idx##_TexelSize",
@@ -1991,16 +1997,16 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
     }
 
-    /// HLSL's `ddx`/`ddy` are coarse derivatives on Vulkan, as the Editor's Vulkan programs take
-    /// them (tests/projects/urp `decal_screen_space_*` on Vulkan), and the driver's default
-    /// elsewhere; `ddx_fine` stays fine everywhere.
+    /// HLSL's `ddx`/`ddy` (and `fwidth`, built from them) are coarse derivatives on Vulkan, as the
+    /// Editor's Vulkan programs take them (tests/projects/urp `decal_screen_space_*` on Vulkan),
+    /// and the driver's default elsewhere; `ddx_fine` stays fine everywhere.
     #[test]
     fn vulkan_programs_take_coarse_derivatives() {
         let source = r#"
 #pragma vertex vert
 #pragma fragment frag
 float4 vert(float4 position : POSITION) : SV_POSITION { return position; }
-float4 frag(float4 p : SV_POSITION) : SV_Target { return float4(ddx(p.x), ddy(p.y), ddx_fine(p.z), 1); }
+float4 frag(float4 p : SV_POSITION) : SV_Target { return float4(ddx(p.x), ddy(p.y), ddx_fine(p.z), fwidth(p.w)); }
 "#;
         for (device, coarse) in [
             (unbound_graphics::GraphicsDevice::Vulkan, true),
@@ -2029,6 +2035,12 @@ float4 frag(float4 p : SV_POSITION) : SV_Target { return float4(ddx(p.x), ddy(p.
                 );
             }
             assert!(fragment.contains("dpdxFine("), "{device:?}: {fragment}");
+            // `fwidth` takes the coarse derivatives too, on Vulkan.
+            assert_eq!(
+                fragment.contains("fwidth("),
+                !coarse,
+                "{device:?}: {fragment}"
+            );
         }
     }
 
