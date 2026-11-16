@@ -1,7 +1,7 @@
 # Slider label drags
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 240 rows. The values are managed slider state and
+byte-identical and the canonical reference has 253 rows. The values are managed slider state and
 change notifications in a runtime panel, so they do not depend on the OS or the graphics device.
 The gate compares every missing, extra or unequal row exactly.
 
@@ -25,17 +25,18 @@ the change notification and whether the label holds the mouse capture:
   range and clamping (`int.default`, `int.classes`, `int.pageSize.*`, `int.key.*`, `int.narrow.*`,
   `int.reversed.*`). Arrow keys do nothing without navigation (`int.key.right*`); navigation moves
   step once a submit has made the dragger movable (`int.narrow.nav.*`, `int.keyed.nav.*`).
-
 - Tracker clicks and dragger drags of SliderInt (`track*.click.*`, `drag.*`): without a page size a
   click jumps the dragger there and a drag moves it, the value rounded to a whole number; with one, a
   click beside the dragger steps by the page size towards the click's side of the value range. The
-  step is negated when the range is reversed, when `inverted` is set on an increasing range, or for
-  a vertical slider that is not inverted (any one of them, not each in turn: `track6`, vertical and
-  reversed, steps down at the bottom); on a horizontal slider `inverted` does not change which side
-  of the screen steps up (`track2` equals `track1`), on a vertical one it does (`track5`). The
-  trackers' labels have no width, so their size does not depend on text layout. Each press is preceded by a pointer move to the same place: a press
-  acts only when the element under the pointer, which the panel takes from the pointer events
-  themselves, is inside the tracker.
+  step is negated for a reversed range that is not inverted, an increasing range that is inverted,
+  or a vertical slider that is not inverted (any one of these, not each in turn: `track6`, vertical
+  and reversed, steps down at the bottom; `track7` and `track8` are reversed and inverted); on a
+  horizontal slider `inverted` does not change which side of the screen steps up (`track2` equals
+  `track1`), on a vertical one it does (`track5`). A press 9 px off the dragger's centre re-centres
+  the dragger on the pointer before the drag (`drag.move8`). The trackers' labels have no width, so
+  their size does not depend on text layout. Each press is preceded by a pointer move to the same
+  place: a press acts only when the element under the pointer, which the panel takes from the
+  pointer events themselves, is inside the tracker.
 
 The panel's scale is set to `96 / Screen.dpi`, so a panel point is a screen pixel on every display
 (the macOS Editor's batch-mode screen is 640x480 at 255 dpi; without this its panel is 241 points

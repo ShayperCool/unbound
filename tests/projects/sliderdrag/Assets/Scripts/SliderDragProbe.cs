@@ -122,13 +122,14 @@ public class SliderDragProbe : MonoBehaviour
         drag.value = 5;
         var container = drag.Q("unity-drag-container");
         var dragger = drag.Q("unity-dragger");
-        // Off the dragger's centre: without a page size the press centres the dragger on the
-        // pointer (the value rounds back to 5), and the moves start from there.
-        var start = dragger.worldBound.center + new Vector2(6f, 0f);
+        // 9 px right of the dragger's centre: without a page size the press centres the dragger on
+        // the pointer (the value rounds back to 5) and the moves start from there (move 8 tells:
+        // 5.6 rounds to 6 from the centred dragger, 5.3 would round to 5 from the grabbed one).
+        var start = dragger.worldBound.center + new Vector2(9f, 0f);
         Send(dragger, PointerMoveEvent.GetPooled(At(EventType.MouseMove, start, Vector2.zero)));
         Send(dragger, PointerDownEvent.GetPooled(At(EventType.MouseDown, start, Vector2.zero)));
         Put("drag.down", drag.value);
-        foreach (var dx in new[] { 60f, 100f, -200f, 400f })
+        foreach (var dx in new[] { 8f, 60f, 100f, -200f, 400f })
         {
             var p = start + new Vector2(dx, 0f);
             Send(container, PointerMoveEvent.GetPooled(At(EventType.MouseDrag, p, new Vector2(dx, 0f))));
@@ -340,7 +341,7 @@ public class SliderDragProbe : MonoBehaviour
         Put("int.reversed.clamp", reversed.value);
 
         // Sliders for the tracker controls, laid out over the next frames.
-        tracks = new SliderInt[7];
+        tracks = new SliderInt[9];
         tracks[0] = new SliderInt("Track", 0, 10) { value = 5 };
         tracks[1] = new SliderInt("Paged", 0, 10, SliderDirection.Horizontal, 2f) { value = 5 };
         tracks[2] = new SliderInt("Inverted", 0, 10, SliderDirection.Horizontal, 2f) { value = 5, inverted = true };
@@ -348,6 +349,8 @@ public class SliderDragProbe : MonoBehaviour
         tracks[4] = new SliderInt("Vertical", 0, 10, SliderDirection.Vertical, 2f) { value = 5 };
         tracks[5] = new SliderInt("VerticalInverted", 0, 10, SliderDirection.Vertical, 2f) { value = 5, inverted = true };
         tracks[6] = new SliderInt("VerticalReversed", 10, 0, SliderDirection.Vertical, 2f) { value = 5 };
+        tracks[7] = new SliderInt("ReversedInverted", 10, 0, SliderDirection.Horizontal, 2f) { value = 5, inverted = true };
+        tracks[8] = new SliderInt("VerticalReversedInverted", 10, 0, SliderDirection.Vertical, 2f) { value = 5, inverted = true };
         foreach (var track in tracks)
         {
             track.style.width = 300;

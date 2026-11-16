@@ -231,7 +231,20 @@
 {"key":"track6.click.start.up","value":"5 1"}
 {"key":"track6.click.start.again.down","value":"7 1"}
 {"key":"track6.click.start.again.up","value":"7 1"}
+{"key":"track7.click.end.down","value":"3 1"}
+{"key":"track7.click.end.up","value":"3 1"}
+{"key":"track7.click.start.down","value":"5 1"}
+{"key":"track7.click.start.up","value":"5 1"}
+{"key":"track7.click.start.again.down","value":"7 1"}
+{"key":"track7.click.start.again.up","value":"7 1"}
+{"key":"track8.click.end.down","value":"3 1"}
+{"key":"track8.click.end.up","value":"3 1"}
+{"key":"track8.click.start.down","value":"5 1"}
+{"key":"track8.click.start.up","value":"5 1"}
+{"key":"track8.click.start.again.down","value":"7 1"}
+{"key":"track8.click.start.again.up","value":"7 1"}
 {"key":"drag.down","value":"5"}
+{"key":"drag.move8","value":"6"}
 {"key":"drag.move60","value":"7"}
 {"key":"drag.move100","value":"9"}
 {"key":"drag.move-200","value":"0"}
