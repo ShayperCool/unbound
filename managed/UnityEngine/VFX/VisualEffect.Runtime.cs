@@ -148,8 +148,9 @@ namespace UnityEngine.VFX
                     | VFXSystemFlag.SystemNeedsComputeBounds | VFXSystemFlag.SystemAutomaticBounds | VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
                 // Spawned by GPU events: the graph compiler gives such a system particles that
-                // can die and a list of the dead, also when no block ever kills one; a system
-                // without is not one it writes, and what it would count is not measured.
+                // can die and a list of the dead when it has an update or an output context,
+                // also when no block ever kills one. One without (a system of an initialize
+                // context alone, which can only pass events on) is not measured.
                 const VFXSystemFlag Spawned = VFXSystemFlag.SystemReceivedEventGPU, Dying = VFXSystemFlag.SystemHasKill;
                 if ((system.flags & (Spawned | Dying)) == Spawned) return $"the system '{system.name}' spawned by GPU events without a list of dead particles";
             }
