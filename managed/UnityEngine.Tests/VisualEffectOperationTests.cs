@@ -1,0 +1,137 @@
+using System;
+using Unbound.Runtime;
+using UnityEditor.VFX;
+using UnityEngine.VFX;
+using Xunit;
+using static UnityEngine.Tests.VisualEffectSimulationTests;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>Expression operations of matrices, colour spaces and object sizes, on compiled
+    /// graphs made by hand.</summary>
+    public class VisualEffectOperationTests
+    {
+        static VisualEffectValues Evaluated(VisualEffectCompiledData data)
+        {
+            var values = new VisualEffectValues(data);
+            VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+            return values;
+        }
+
+        [Fact]
+        public void MatricesAreMadeOfRowsColumnsAndAxesAndSplitIntoThem()
+        {
+            var a = new Vector4(1f, 2f, 3f, 4f);
+            var b = new Vector4(5f, -6f, 7f, 8f);
+            var c = new Vector4(-1f, 0.5f, 0.25f, 2f);
+            var d = new Vector4(0f, 0.125f, -3f, 1f);
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Float4), Value(VFXValueType.Float4), Value(VFXValueType.Float4), Value(VFXValueType.Float4),
+                Op(VFXExpressionOperation.RowToMatrix, 0, 1, 2, 3),
+                Op(VFXExpressionOperation.ColumnToMatrix, 0, 1, 2, 3),
+                Value(VFXValueType.Int32),
+                Op(VFXExpressionOperation.MatrixToRow, 4, 6),
+                Op(VFXExpressionOperation.MatrixToColumn, 4, 6),
+                Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float3),
+                Op(VFXExpressionOperation.AxisToMatrix, 9, 10, 11, 12),
+            }, new[]
+            {
+                Constant(0, a), Constant(1, b), Constant(2, c), Constant(3, d), Constant(6, 2),
+                Constant(9, new Vector3(1f, 0f, 0f)), Constant(10, new Vector3(0f, 0f, 1f)), Constant(11, new Vector3(0f, -1f, 0f)), Constant(12, new Vector3(4f, 5f, 6f)),
+            });
+            foreach (var op in data.Operations) Assert.True(VFXExpressionEvaluator.Supported(op), op.ToString());
+            var values = Evaluated(data);
+            var rows = values.GetMatrix(4);
+            Assert.Equal(c, rows.GetRow(2));
+            var columns = values.GetMatrix(5);
+            Assert.Equal(b, columns.GetColumn(1));
+            Assert.Equal(c, values.GetVector(7, 4));
+            Assert.Equal(rows.GetColumn(2), values.GetVector(8, 4));
+            var axes = values.GetMatrix(13);
+            Assert.Equal(new Vector4(0f, 0f, 1f, 0f), axes.GetColumn(1));
+            Assert.Equal(new Vector4(4f, 5f, 6f, 1f), axes.GetColumn(3));
+        }
+
+        [Fact]
+        public void AFramesPositionAnglesAndScaleComeFromItsAffinePart()
+        {
+            var frame = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(30f, -120f, 200f), new Vector3(2f, 0.5f, 3f));
+            // A last row that is not (0, 0, 0, 1) is left out of the angles and the scale.
+            var bent = frame;
+            bent.m30 = 0.25f;
+            bent.m33 = 2f;
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Matrix4x4),
+                Op(VFXExpressionOperation.ExtractPositionFromMatrix, 0),
+                Op(VFXExpressionOperation.ExtractAnglesFromMatrix, 0),
+                Op(VFXExpressionOperation.ExtractScaleFromMatrix, 0),
+            }, new[] { Constant(0, bent) });
+            var values = Evaluated(data);
+            Assert.Equal(new Vector4(1f, 2f, 3f, 0f), values.GetVector(1, 3));
+            var angles = Quaternion.ToEulerRad(frame.rotation) * Mathf.Rad2Deg;
+            Assert.Equal(new Vector4(angles.x, angles.y, angles.z, 0f), values.GetVector(2, 3));
+            // Not made positive, as eulerAngles is.
+            Assert.True(angles.y < 0f || angles.x < 0f || angles.z < 0f);
+            var scale = frame.lossyScale;
+            Assert.Equal(new Vector4(scale.x, scale.y, scale.z, 0f), values.GetVector(3, 3));
+        }
+
+        [Fact]
+        public void ColoursGoToHueSaturationValueAndBackBySixths()
+        {
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Float3), Op(VFXExpressionOperation.RGBtoHSV, 0),
+                Value(VFXValueType.Float3), Op(VFXExpressionOperation.HSVtoRGB, 2),
+            }, new[] { Constant(0, new Vector3(0.8f, 0.3f, 0.6f)), Constant(2, new Vector3(0.71f, 0.6f, 0.9f)) });
+            var values = Evaluated(data);
+            Color.RGBToHSV(new Color(0.8f, 0.3f, 0.6f), out float h, out float s, out float v);
+            Assert.Equal(new Vector4(h, s, v, 0f), values.GetVector(1, 3));
+            // 0.71 of the circle is in its fifth sixth (240 to 300 degrees): red from the hue's
+            // place in it, green the least, blue the most.
+            float hue = 0.71f * 360f, chroma = 0.6f * 0.9f, second = (1f - MathF.Abs(hue / 60f % 2f - 1f)) * chroma, rest = 0.9f - chroma;
+            Assert.Equal(new Vector4(second + rest, 0f + rest, rest + chroma, 0f), values.GetVector(3, 3));
+            // Every sixth: a hue of one gives what a hue of zero does (red).
+            foreach (var (h0, expected) in new[] { (0f, new Vector3(1f, 0f, 0f)), (1f / 3f, new Vector3(0f, 1f, 0f)), (2f / 3f, new Vector3(0f, 0f, 1f)), (1f, new Vector3(1f, 0f, 0f)) })
+            {
+                var one = Data(new[] { Value(VFXValueType.Float3), Op(VFXExpressionOperation.HSVtoRGB, 0) }, new[] { Constant(0, new Vector3(h0, 1f, 1f)) });
+                var rgb = Evaluated(one).GetVector(1, 3);
+                Assert.Equal(expected.x, rgb.x, 5);
+                Assert.Equal(expected.y, rgb.y, 5);
+                Assert.Equal(expected.z, rgb.z, 5);
+            }
+        }
+
+        [Fact]
+        public void ATexturesSizeAndABuffersCountAreZeroWithoutOne()
+        {
+            var texture = new Texture2D(8, 4);
+            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 7, 12);
+            try
+            {
+                var data = Data(new[]
+                {
+                    Value(VFXValueType.Texture2D), Op(VFXExpressionOperation.TextureWidth, 0), Op(VFXExpressionOperation.TextureHeight, 0),
+                    Value(VFXValueType.Buffer), Op(VFXExpressionOperation.BufferCount, 3),
+                }, Array.Empty<VFXExpressionValueContainerDesc>());
+                var values = new VisualEffectValues(data);
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+                Assert.Equal(0u, values.GetWord(1));
+                Assert.Equal(0u, values.GetWord(4));
+                values.SetObject(0, texture);
+                values.SetObject(3, buffer);
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+                Assert.Equal(8u, values.GetWord(1));
+                Assert.Equal(4u, values.GetWord(2));
+                Assert.Equal(7u, values.GetWord(4));
+            }
+            finally
+            {
+                buffer.Release();
+                Object.DestroyImmediate(texture);
+            }
+        }
+    }
+}

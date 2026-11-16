@@ -44,22 +44,17 @@ namespace Unbound.Runtime
         {
             switch (op)
             {
-                // No control records these two yet (the graph compiler has no operator that
-                // gives the first; the second reads an event's attributes in a spawn context).
+                // No control records these yet: no operator of the package gives the first
+                // two on the CPU; the third reads an event's attributes among the expressions
+                // evaluated per spawn event, which Unbound does not evaluate yet.
                 case VFXExpressionOperation.InverseMatrix:
-                case VFXExpressionOperation.ReadEventAttribute:
-                case VFXExpressionOperation.ExtractPositionFromMatrix:
-                case VFXExpressionOperation.ExtractAnglesFromMatrix:
-                case VFXExpressionOperation.ExtractScaleFromMatrix:
-                case VFXExpressionOperation.RowToMatrix:
-                case VFXExpressionOperation.ColumnToMatrix:
-                case VFXExpressionOperation.AxisToMatrix:
-                case VFXExpressionOperation.MatrixToRow:
-                case VFXExpressionOperation.MatrixToColumn:
                 case VFXExpressionOperation.MatrixToAxis:
-                case VFXExpressionOperation.RGBtoHSV:
-                case VFXExpressionOperation.HSVtoRGB:
+                case VFXExpressionOperation.ReadEventAttribute:
                     return false;
+                case VFXExpressionOperation.TextureWidth:
+                case VFXExpressionOperation.TextureHeight:
+                case VFXExpressionOperation.BufferCount:
+                    return true;
             }
             if (op >= VFXExpressionOperation.SampleMeshVertexFloat && op <= VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer) return false;
             if (op >= VFXExpressionOperation.ValueNoise1D && op <= VFXExpressionOperation.TextureFormat) return false;
@@ -212,6 +207,92 @@ namespace Unbound.Runtime
                         Store(w, at, inverse);
                         break;
                     }
+                    case VFXExpressionOperation.RowToMatrix:
+                    case VFXExpressionOperation.ColumnToMatrix:
+                    {
+                        // Four vectors, the matrix's rows or its columns.
+                        int v2 = offsets[operands[d + 2]], v3 = offsets[operands[d + 3]];
+                        bool rows = op == VFXExpressionOperation.RowToMatrix;
+                        for (int i = 0; i < 4; i++)
+                            for (int k = 0; k < 4; k++)
+                            {
+                                uint word = (k == 0 ? w[p0 + i] : k == 1 ? w[p1 + i] : k == 2 ? w[v2 + i] : w[v3 + i]);
+                                // Column-major storage: cell (row, column) at column * 4 + row.
+                                if (rows) w[at + i * 4 + k] = word;
+                                else w[at + k * 4 + i] = word;
+                            }
+                        break;
+                    }
+                    case VFXExpressionOperation.AxisToMatrix:
+                    {
+                        // Three axes and a position: the columns, with the last row (0, 0, 0, 1).
+                        int v2 = offsets[operands[d + 2]], v3 = offsets[operands[d + 3]];
+                        for (int k = 0; k < 3; k++)
+                        {
+                            w[at + k] = w[p0 + k];
+                            w[at + 4 + k] = w[p1 + k];
+                            w[at + 8 + k] = w[v2 + k];
+                            w[at + 12 + k] = w[v3 + k];
+                        }
+                        (w[at + 3], w[at + 7], w[at + 11], w[at + 15]) = (0u, 0u, 0u, Bits(1f));
+                        break;
+                    }
+                    case VFXExpressionOperation.MatrixToRow:
+                    {
+                        int index = unchecked((int)w[p1]);
+                        for (int k = 0; k < 4; k++) w[at + k] = w[p0 + k * 4 + index];
+                        break;
+                    }
+                    case VFXExpressionOperation.MatrixToColumn:
+                    {
+                        int index = unchecked((int)w[p1]);
+                        for (int k = 0; k < 4; k++) w[at + k] = w[p0 + index * 4 + k];
+                        break;
+                    }
+                    case VFXExpressionOperation.ExtractPositionFromMatrix:
+                        (w[at], w[at + 1], w[at + 2]) = (w[p0 + 12], w[p0 + 13], w[p0 + 14]);
+                        break;
+                    case VFXExpressionOperation.ExtractAnglesFromMatrix:
+                    {
+                        // Of the matrix with its last row (0, 0, 0, 1): its rotation's Euler angles
+                        // in degrees, not made positive.
+                        var m = AffinePart(Load(w, p0));
+                        var angles = Quaternion.ToEulerRad(m.rotation) * Mathf.Rad2Deg;
+                        (w[at], w[at + 1], w[at + 2]) = (Bits(angles.x), Bits(angles.y), Bits(angles.z));
+                        break;
+                    }
+                    case VFXExpressionOperation.ExtractScaleFromMatrix:
+                    {
+                        var scale = AffinePart(Load(w, p0)).lossyScale;
+                        (w[at], w[at + 1], w[at + 2]) = (Bits(scale.x), Bits(scale.y), Bits(scale.z));
+                        break;
+                    }
+                    case VFXExpressionOperation.RGBtoHSV:
+                    {
+                        Color.RGBToHSV(new Color(Float(w[p0]), Float(w[p0 + 1]), Float(w[p0 + 2])), out float h, out float s, out float v);
+                        (w[at], w[at + 1], w[at + 2]) = (Bits(h), Bits(s), Bits(v));
+                        break;
+                    }
+                    case VFXExpressionOperation.HSVtoRGB:
+                    {
+                        // By sixths of the hue circle (a hue in degrees), the chroma and the second
+                        // largest component from the hue's position in its sixth.
+                        float hue = Float(w[p0]) * 360f, value = Float(w[p0 + 2]), chroma = Float(w[p0 + 1]) * value;
+                        float second = (1f - MathF.Abs(hue / 60f % 2f + -1f)) * chroma;
+                        float r = chroma, g = second, b = 0f;
+                        if (hue >= 60f) { r = second; g = chroma; }
+                        if (hue >= 120f) { r = 0f; g = chroma; b = second; }
+                        if (hue >= 180f) { g = second; b = chroma; }
+                        if (hue >= 240f) { r = second; g = 0f; b = chroma; }
+                        if (hue >= 300f) { r = chroma; b = second; }
+                        float rest = value - chroma;
+                        (w[at], w[at + 1], w[at + 2]) = (Bits(r + rest), Bits(g + rest), Bits(rest + b));
+                        break;
+                    }
+                    // A texture's size (none: zero) and a buffer's element count.
+                    case VFXExpressionOperation.TextureWidth: w[at] = values.GetObject(a0) is Texture wide && wide ? (uint)wide.width : 0u; break;
+                    case VFXExpressionOperation.TextureHeight: w[at] = values.GetObject(a0) is Texture high && high ? (uint)high.height : 0u; break;
+                    case VFXExpressionOperation.BufferCount: w[at] = values.GetObject(a0) is GraphicsBuffer counted && counted.IsValid() ? (uint)counted.count : 0u; break;
                     case VFXExpressionOperation.TransposeMatrix: Store(w, at, Load(w, p0).transpose); break;
                     case VFXExpressionOperation.TransformMatrix: Store(w, at, Load(w, p0) * Load(w, p1)); break;
                     case VFXExpressionOperation.TransformPos:
@@ -473,6 +554,17 @@ namespace Unbound.Runtime
         static uint Bits(float f) => BitConverter.SingleToUInt32Bits(f);
 
         static float Float(uint bits) => BitConverter.UInt32BitsToSingle(bits);
+
+        /// <summary>A matrix with its last row (0, 0, 0, 1): what a frame's angles and scale are
+        /// taken from.</summary>
+        static Matrix4x4 AffinePart(Matrix4x4 m)
+        {
+            m.m30 = 0f;
+            m.m31 = 0f;
+            m.m32 = 0f;
+            m.m33 = 1f;
+            return m;
+        }
 
         static Matrix4x4 Load(uint[] w, int at)
         {

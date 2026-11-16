@@ -307,8 +307,8 @@ namespace UnityEngine.Tests
         {
             var plain = Data(new[] { Value(VFXValueType.Float), Op(VFXExpressionOperation.Sin, 0, -1, -1, 1) }, new[] { Constant(0, 1f) });
             Assert.Null(VisualEffect.Unsupported(plain));
-            var color = Data(new[] { Value(VFXValueType.Float3), Op(VFXExpressionOperation.RGBtoHSV, 0) }, new[] { Constant(0, Vector3.one) });
-            Assert.Equal("the expression operation RGBtoHSV", VisualEffect.Unsupported(color));
+            var inverse = Data(new[] { Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.InverseMatrix, 0) }, new[] { Constant(0, Matrix4x4.identity) });
+            Assert.Equal("the expression operation InverseMatrix", VisualEffect.Unsupported(inverse));
             // A bake has a place among the sheet's own expressions only.
             var baked = Data(new[] { Value(VFXValueType.Curve), Op(VFXExpressionOperation.BakeCurve, 0) }, new[] { Constant(0, new AnimationCurve()) });
             Assert.Null(VisualEffect.Unsupported(baked));
