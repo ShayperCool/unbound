@@ -11,7 +11,15 @@ it is Normal; on a new Animator, setting animatePhysics leaves
 updateMode alone and setting updateMode leaves animatePhysics alone. The property is not obsolete.
 
 Physics rows are categories, because exact positions and velocities depend on the platform's physics
-arithmetic and, in Normal mode, on frame timing. A kinematic platform (4 × 0.5 × 2 box) is animated
+arithmetic and, in Normal mode, on frame timing. The probe's graphs run on game time
+(`DirectorUpdateMode.GameTime`): a new graph's default DSP clock follows the audio device in real
+time, so on a loaded machine the pose ran ahead of the fixed steps and the platform left the box
+behind. A graph's animation output is evaluated once per frame for a Fixed Animator too (an
+exploratory macOS Editor capture outside the reference: the pose stays the same over a frame's
+fixed steps), so frames much longer than a fixed step move the platform in jumps the box does not
+follow; the engine run therefore fixes its frames at 60 per second (`run.py` `FIXED_FPS`). The
+Editor captures were taken with frames far shorter than a fixed step; two captures with game-time
+graphs are byte-identical to the reference. A kinematic platform (4 × 0.5 × 2 box) is animated
 along x at 1 unit/s with a 1 m box resting on it; after 100 fixed steps the probe records whether the
 platform travelled more than 1 unit, whether its velocity exceeded 0.5 units/s in one of the last ten steps
 (in Normal mode a step without an Update before it has no new pose), and whether the box travelled
