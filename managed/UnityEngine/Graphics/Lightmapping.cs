@@ -344,6 +344,15 @@ namespace UnityEngine
             }
             if (realtime) return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
             if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
+            // Through a built proxy volume: its texture and constants; the renderer's probe
+            // constants stay the ambient probe's (the frame's), none with Low quality (measured:
+            // tests/projects/lppv *.sh). Without one it is lit as Blend Probes lights it.
+            if (probes && renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume && LightProbeProxyVolume.Of(renderer) is { } volume)
+            {
+                properties = volume.LowQuality ? WithProbe(default, properties, owner: renderer) : DrawPropertyPool.Copy(properties);
+                volume.Apply(properties);
+                return properties;
+            }
             var lightProbes = LightmapSettings.lightProbes;
             if (!probes || lightProbes == null || lightProbes.count == 0
                 || (renderer.lightProbeUsage != LightProbeUsage.BlendProbes && renderer.lightProbeUsage != LightProbeUsage.UseProxyVolume))
