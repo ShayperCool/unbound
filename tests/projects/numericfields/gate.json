@@ -11,6 +11,9 @@
     "managed/UnityEngine/Math/Mathf.NumericFields.cs",
     "managed/UnityEngine/Runtime/MonoNumberFormat.cs",
     "managed/UnityEngine/Runtime/NumericFieldDraggerUtility.cs",
-    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs"
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
+    "managed/UnityEngine/UIElements/Controls/Slider.cs",
+    "managed/UnityEngine/UIElements/Controls/SliderInt.cs",
+    "managed/UnityEngine/UIElements/Controls/BaseField.cs"
   ]
 }

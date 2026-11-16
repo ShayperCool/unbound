@@ -394,6 +394,18 @@
 {"key":"eval.65.int","value":"False 0"}
 {"key":"eval.65.long","value":"False 0"}
 {"key":"eval.65.ulong","value":"False 0"}
+{"key":"eval.66.expression","value":"[1e+39]"}
+{"key":"eval.66.double","value":"True 1E+39|48078287f49c4a1d"}
+{"key":"eval.66.float","value":"False 0|00000000"}
+{"key":"eval.66.int","value":"<unspecified>"}
+{"key":"eval.66.long","value":"<unspecified>"}
+{"key":"eval.66.ulong","value":"<unspecified>"}
+{"key":"eval.67.expression","value":"[3.5e38]"}
+{"key":"eval.67.double","value":"True 3.5E+38|47f074f8c4d3cd7b"}
+{"key":"eval.67.float","value":"True Infinity|7f800000"}
+{"key":"eval.67.int","value":"<unspecified>"}
+{"key":"eval.67.long","value":"<unspecified>"}
+{"key":"eval.67.ulong","value":"<unspecified>"}
 {"key":"int.default","value":"value 0 text 0 format #######0 delayed False maxLength 1000 readOnly False"}
 {"key":"int.classes","value":"unity-base-field unity-base-text-field unity-integer-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-integer-field__label unity-label unity-text-element | input unity-base-field__input unity-base-text-field__input unity-base-text-field__input--single-line unity-integer-field__input"}
 {"key":"int.set","value":"value 7 text 7 changes 1 0>7"}
@@ -421,10 +433,10 @@
 {"key":"int.type8.committed","value":"value 1 text 1 changes 0 "}
 {"key":"int.type9.typed","value":"value 7 text ac changes 0 "}
 {"key":"int.type9.committed","value":"value 7 text 7 changes 0 "}
-{"key":"int.plusEquals.typed","value":"value 10 text +=3 changes 1 7>10"}
-{"key":"int.plusEquals.committed","value":"value 10 text 10 changes 0 "}
-{"key":"int.timesEquals.typed","value":"value 20 text *=2 changes 1 10>20"}
-{"key":"int.timesEquals.committed","value":"value 20 text 20 changes 0 "}
+{"key":"int.plusEquals.typed","value":"value 19 text +=12 changes 2 8>19"}
+{"key":"int.plusEquals.committed","value":"value 19 text 19 changes 0 "}
+{"key":"int.timesEquals.typed","value":"value 38 text *=2 changes 1 19>38"}
+{"key":"int.timesEquals.committed","value":"value 38 text 38 changes 0 "}
 {"key":"int.delayed.typed","value":"value 7 text 2*4 changes 0 "}
 {"key":"int.delayed.committed","value":"value 8 text 8 changes 1 7>8"}
 {"key":"int.delta.normal","value":"value 17 text 17 changes 1 7>17"}
@@ -456,10 +468,10 @@
 {"key":"long.type3.committed","value":"value 3 text 3 changes 0 "}
 {"key":"long.type4.typed","value":"value -9223372036854775808 text -9223372036854775808 changes 19 -922337203685477580>-9223372036854775808"}
 {"key":"long.type4.committed","value":"value -9223372036854775808 text -9223372036854775808 changes 0 "}
-{"key":"long.plusEquals.typed","value":"value 9000000003 text +=3 changes 1 9000000000>9000000003"}
-{"key":"long.plusEquals.committed","value":"value 9000000003 text 9000000003 changes 0 "}
-{"key":"long.timesEquals.typed","value":"value 18000000006 text *=2 changes 1 9000000003>18000000006"}
-{"key":"long.timesEquals.committed","value":"value 18000000006 text 18000000006 changes 0 "}
+{"key":"long.plusEquals.typed","value":"value 9000000012 text +=12 changes 2 9000000001>9000000012"}
+{"key":"long.plusEquals.committed","value":"value 9000000012 text 9000000012 changes 0 "}
+{"key":"long.timesEquals.typed","value":"value 18000000024 text *=2 changes 1 9000000012>18000000024"}
+{"key":"long.timesEquals.committed","value":"value 18000000024 text 18000000024 changes 0 "}
 {"key":"long.delayed.typed","value":"value 9000000000 text 2*4 changes 0 "}
 {"key":"long.delayed.committed","value":"value 8 text 8 changes 1 9000000000>8"}
 {"key":"long.delta.normal","value":"value 9000028460 text 9000028460 changes 1 9000000000>9000028460"}
@@ -505,10 +517,10 @@
 {"key":"float.type10.committed","value":"value 0.3|3e99999a text 0.3 changes 0 "}
 {"key":"float.type11.typed","value":"value 123456792|4ceb79a3 text 123456789 changes 9 12345678|4b3c614e>123456792|4ceb79a3"}
 {"key":"float.type11.committed","value":"value 123456792|4ceb79a3 text 1.234568E+08 changes 0 "}
-{"key":"float.plusEquals.typed","value":"value 4.5|40900000 text +=3 changes 1 1.5|3fc00000>4.5|40900000"}
-{"key":"float.plusEquals.committed","value":"value 4.5|40900000 text 4.5 changes 0 "}
-{"key":"float.timesEquals.typed","value":"value 9|41100000 text *=2 changes 1 4.5|40900000>9|41100000"}
-{"key":"float.timesEquals.committed","value":"value 9|41100000 text 9 changes 0 "}
+{"key":"float.plusEquals.typed","value":"value 13.5|41580000 text +=12 changes 2 2.5|40200000>13.5|41580000"}
+{"key":"float.plusEquals.committed","value":"value 13.5|41580000 text 13.5 changes 0 "}
+{"key":"float.timesEquals.typed","value":"value 27|41d80000 text *=2 changes 1 13.5|41580000>27|41d80000"}
+{"key":"float.timesEquals.committed","value":"value 27|41d80000 text 27 changes 0 "}
 {"key":"float.delayed.typed","value":"value 1.5|3fc00000 text 2*4 changes 0 "}
 {"key":"float.delayed.committed","value":"value 8|41000000 text 8 changes 1 1.5|3fc00000>8|41000000"}
 {"key":"float.delta.normal","value":"value 1.87|3fef5c29 text 1.87 changes 1 1.5|3fc00000>1.87|3fef5c29"}
@@ -542,10 +554,10 @@
 {"key":"double.type4.committed","value":"value 0.666666666666667|3fe5555555555558 text 0.666666666666667 changes 0 "}
 {"key":"double.type5.typed","value":"value 9.99988867182683E-321|00000000000007e8 text 1e-320 changes 4 1E-32|3949f623d5a8a733>9.99988867182683E-321|00000000000007e8"}
 {"key":"double.type5.committed","value":"value 9.99988867182683E-321|00000000000007e8 text 9.99988867182683E-321 changes 0 "}
-{"key":"double.plusEquals.typed","value":"value 3.1|4008cccccccccccd text +=3 changes 1 0.1|3fb999999999999a>3.1|4008cccccccccccd"}
-{"key":"double.plusEquals.committed","value":"value 3.1|4008cccccccccccd text 3.1 changes 0 "}
-{"key":"double.timesEquals.typed","value":"value 6.2|4018cccccccccccd text *=2 changes 1 3.1|4008cccccccccccd>6.2|4018cccccccccccd"}
-{"key":"double.timesEquals.committed","value":"value 6.2|4018cccccccccccd text 6.2 changes 0 "}
+{"key":"double.plusEquals.typed","value":"value 12.1|4028333333333333 text +=12 changes 2 1.1|3ff199999999999a>12.1|4028333333333333"}
+{"key":"double.plusEquals.committed","value":"value 12.1|4028333333333333 text 12.1 changes 0 "}
+{"key":"double.timesEquals.typed","value":"value 24.2|4038333333333333 text *=2 changes 1 12.1|4028333333333333>24.2|4038333333333333"}
+{"key":"double.timesEquals.committed","value":"value 24.2|4038333333333333 text 24.2 changes 0 "}
 {"key":"double.delayed.typed","value":"value 0.1|3fb999999999999a text 2*4 changes 0 "}
 {"key":"double.delayed.committed","value":"value 8|4020000000000000 text 8 changes 1 0.1|3fb999999999999a>8|4020000000000000"}
 {"key":"double.delta.normal","value":"value 0.4|3fd999999999999a text 0.4 changes 1 0.1|3fb999999999999a>0.4|3fd999999999999a"}
@@ -575,9 +587,9 @@
 {"key":"uint.type2.committed","value":"value 6 text 6 changes 0 "}
 {"key":"uint.type3.typed","value":"value 4294967295 text 4294967295 changes 10 429496729>4294967295"}
 {"key":"uint.type3.committed","value":"value 4294967295 text 4294967295 changes 0 "}
-{"key":"uint.plusEquals.typed","value":"value 4000000003 text +=3 changes 1 4000000000>4000000003"}
-{"key":"uint.plusEquals.committed","value":"value 4000000003 text 4000000003 changes 0 "}
-{"key":"uint.timesEquals.typed","value":"value 4294967295 text *=2 changes 1 4000000003>4294967295"}
+{"key":"uint.plusEquals.typed","value":"value 4000000012 text +=12 changes 2 4000000001>4000000012"}
+{"key":"uint.plusEquals.committed","value":"value 4000000012 text 4000000012 changes 0 "}
+{"key":"uint.timesEquals.typed","value":"value 4294967295 text *=2 changes 1 4000000012>4294967295"}
 {"key":"uint.timesEquals.committed","value":"value 4294967295 text 4294967295 changes 0 "}
 {"key":"uint.delayed.typed","value":"value 4000000000 text 2*4 changes 0 "}
 {"key":"uint.delayed.committed","value":"value 8 text 8 changes 1 4000000000>8"}
@@ -610,7 +622,7 @@
 {"key":"ulong.type3.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
 {"key":"ulong.type4.typed","value":"value 1152921504606850048 text 2^60 changes 3 64>1152921504606850048"}
 {"key":"ulong.type4.committed","value":"value 1152921504606850048 text 1152921504606850048 changes 0 "}
-{"key":"ulong.plusEquals.typed","value":"value 18446744073709551615 text +=3 changes 0 "}
+{"key":"ulong.plusEquals.typed","value":"value 18446744073709551615 text +=12 changes 0 "}
 {"key":"ulong.plusEquals.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
 {"key":"ulong.timesEquals.typed","value":"value 18446744073709551615 text *=2 changes 0 "}
 {"key":"ulong.timesEquals.committed","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
@@ -628,6 +640,17 @@
 {"key":"ulong.mixed.blurred","value":"value 18446744073709551615 text — changes 0  mixed True"}
 {"key":"ulong.mixed.off","value":"value 18446744073709551615 text 18446744073709551615 changes 0 "}
 {"key":"ulong.clear","value":"value 0 text  changes 1 18446744073709551615>0"}
+{"key":"third.unedited","value":"value 0.333333343|3eaaaaab text 0.3333333 changes 0 "}
+{"key":"third.retyped.typed","value":"value 0.3333333|3eaaaaaa text 0.3333333 changes 8 0.333333|3eaaaa9f>0.3333333|3eaaaaaa"}
+{"key":"third.retyped.committed","value":"value 0.3333333|3eaaaaaa text 0.3333333 changes 0 "}
+{"key":"third.random1.typed","value":"value 75.49978|4296ffe3 text R(0,100) changes 1 0.3333333|3eaaaaaa>75.49978|4296ffe3"}
+{"key":"third.random1.committed","value":"value 29.1804981|41e971a9 text 29.1805 changes 2 61.0917473|42745df3>29.1804981|41e971a9"}
+{"key":"third.random2.typed","value":"value 11.3828669|41362039 text R(0,100) changes 1 29.1804981|41e971a9>11.3828669|41362039"}
+{"key":"third.random2.committed","value":"value 97.91731|42c3d5aa text 97.91731 changes 2 21.9414482|41af8816>97.91731|42c3d5aa"}
+{"key":"slider.expression","value":"6|40c00000 text 6"}
+{"key":"slider.relative","value":"0|00000000 text 0"}
+{"key":"sliderInt.expression","value":"6 text 6"}
+{"key":"sliderInt.relative","value":"0 text 0"}
 {"key":"plain","value":"unity-base-field unity-base-field--no-label unity-base-text-field unity-integer-field | label unity-base-field__label unity-base-field__label--with-dragger unity-base-text-field__label unity-integer-field__label unity-label unity-text-element | text 0 label []"}
 {"key":"short.typed","value":"value 123|42f60000 text 123 changes 0 "}
 {"key":"short.committed","value":"value 123|42f60000 text 123 changes 0 "}
@@ -640,6 +663,8 @@
 {"key":"uxml.aliases","value":"readOnly False password True mask 35 text 12"}
 {"key":"uxml.propertyNames","value":"readOnly False password False mask 0 text 12"}
 {"key":"uxml.text","value":"readOnly True password True mask 36 text abc"}
+{"key":"uxml.formerMask","value":"readOnly False password False mask 33 text 12"}
+{"key":"uxml.longMask","value":"readOnly False password False mask 97 text 12"}
 {"key":"binding.initial","value":"value 5 text 5 changes 1 0>5 source 5"}
 {"key":"binding.fromSource","value":"value 9 text 9 changes 1 5>9 source 9"}
 {"key":"binding.toSource","value":"value 11 text 11 changes 1 9>11 source 11"}

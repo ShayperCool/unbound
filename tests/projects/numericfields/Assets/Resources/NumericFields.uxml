@@ -7,5 +7,7 @@
     <ui:UnsignedLongField name="ulong" value="18446744073709551615" />
     <ui:IntegerField name="aliases" value="12" is-read-only="true" password="true" mask-character="#" />
     <ui:IntegerField name="propertyNames" value="12" is-password-field="true" mask-char="%" />
+    <ui:IntegerField name="formerMask" value="12" maskCharacter="!" />
+    <ui:IntegerField name="longMask" value="12" mask-character="ab" />
     <ui:TextField name="text" value="abc" readonly="true" password="true" mask-character="$" format-string="0.0" />
 </ui:UXML>

@@ -142,7 +142,7 @@ public class NumericFieldProbe : MonoBehaviour
         }
         // Relative to the text when the edit started.
         field.SetValueWithoutNotify(a);
-        yield return Type(name + ".plusEquals", field, "+=3");
+        yield return Type(name + ".plusEquals", field, "+=12");
         yield return Type(name + ".timesEquals", field, "*=2");
         // Delayed: the value follows on Return only.
         field.isDelayed = true;
@@ -199,7 +199,7 @@ public class NumericFieldProbe : MonoBehaviour
         "cos(0)", "sin(0)", "1/3*3", "0.1+0.2", "1/3", "2/3", "1e39", "-1e39", "1e400", "1e-50", "pi", "2*pi", "1,5", "1.5f", "3l", "2.5d", "",
         " ", "  7  ", "abc", "2+", "2*", "(2+3", "2+3)", "((2))", "+=3", "x*2", "L(0,10)", "R(0,1)", "#", "9999999999", "-9999999999",
         "-5", "18446744073709551615", "18446744073709551616", "1.23456789012345678", "123456789.123", "0x10", "1 000", "--2", "3-", "1e5",
-        "1E5", "+5", ".5", "5.", "1/0", "-1/0", "0/0", "2^64", "2^63", "inf", "nan",
+        "1E5", "+5", ".5", "5.", "1/0", "-1/0", "0/0", "2^64", "2^63", "inf", "nan", "1e+39", "3.5e38",
     };
 
     // An integer result is read from the expression's double value; C# leaves the conversion of a
@@ -237,6 +237,45 @@ public class NumericFieldProbe : MonoBehaviour
         yield return Exercise("ulong", new UnsignedLongField("Id"), 18446744073709551615ul, 1ul, "X",
             new[] { "-5", "1e19", "12345678901234567890", "18446744073709551615", "2^60" });
 
+        // A float field whose text shows fewer digits than its value: the edit ends without a change,
+        // then the shown text is typed again.
+        var third = new FloatField("Third");
+        Watch(third);
+        root.Add(third);
+        third.value = 1f / 3;
+        Changes();
+        third.Focus();
+        yield return Settle();
+        Input(third).Blur();
+        yield return Settle();
+        Put("third.unedited", State(third));
+        yield return Type("third.retyped", third, "0.3333333");
+        // The random function, read twice from a fresh evaluator.
+        yield return Type("third.random1", third, "R(0,100)");
+        yield return Type("third.random2", third, "R(0,100)");
+        third.RemoveFromHierarchy();
+
+        // The text fields of sliders read expressions.
+        var slider = new Slider("S", 0, 100) { showInputField = true, value = 10 };
+        var sliderInt = new SliderInt("I", 0, 100) { showInputField = true, value = 10 };
+        root.Add(slider);
+        root.Add(sliderInt);
+        yield return Settle();
+        foreach (var (key, field, typed) in new[] { ("slider.expression", (VisualElement)slider, "2*3"), ("slider.relative", slider, "+=5"), ("sliderInt.expression", sliderInt, "2*3"), ("sliderInt.relative", sliderInt, "+=5") })
+        {
+            var text = field.Q<TextField>();
+            text.Focus();
+            yield return Settle();
+            text.SelectAll();
+            var input = text.Q<TextElement>(className: TextElement.ussClassName + "--inner-input-field-component");
+            foreach (var c in typed) Send(input, KeyDownEvent.GetPooled(c, KeyCode.None, EventModifiers.None));
+            Send(input, KeyDownEvent.GetPooled('\n', KeyCode.Return, EventModifiers.None));
+            yield return Settle();
+            Put(key, (field is Slider s ? V(s.value) : V(((SliderInt)field).value)) + " text " + text.value);
+        }
+        slider.RemoveFromHierarchy();
+        sliderInt.RemoveFromHierarchy();
+
         // A field made without a label and one with a maximum length.
         var plain = new IntegerField();
         var shortField = new FloatField("Short", 3);
@@ -269,7 +308,7 @@ public class NumericFieldProbe : MonoBehaviour
             }
             Put("uxml." + name, described);
         }
-        foreach (var name in new[] { "aliases", "propertyNames", "text" })
+        foreach (var name in new[] { "aliases", "propertyNames", "text", "formerMask", "longMask" })
         {
             var e = container.Q(name);
             switch (e)
