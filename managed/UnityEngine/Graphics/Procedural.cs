@@ -19,8 +19,10 @@ namespace Unbound.Runtime
                 mesh = new UnityEngine.Mesh { name = $"Unbound Procedural {topology} {vertexCount}" };
                 if (vertexCount > 65535) mesh.indexFormat = IndexFormat.UInt32;
                 mesh.vertices = new UnityEngine.Vector3[vertexCount];
-                var indices = new int[vertexCount];
-                for (int i = 0; i < vertexCount; i++) indices[i] = i;
+                // Whole primitives only: triangles drop the vertices after the last whole one, as
+                // a draw of them does, and the mesh accepts no partial triangle.
+                var indices = new int[topology == UnityEngine.MeshTopology.Triangles ? vertexCount - vertexCount % 3 : vertexCount];
+                for (int i = 0; i < indices.Length; i++) indices[i] = i;
                 mesh.SetIndices(indices, topology, 0, false, 0);
                 mesh.bounds = new UnityEngine.Bounds(UnityEngine.Vector3.zero, UnityEngine.Vector3.one * 1e6f);
             }
