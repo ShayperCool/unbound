@@ -1,0 +1,66 @@
+{"key":"ime.beforeFocus","value":"Auto"}
+{"key":"unfocused.validate.selectAll","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"unfocused.execute.selectAll","value":"reached 1 trickled 1 bubbled 1 text hello world value hello world cursor 0 select 0 clipboard CLIP changes 0 "}
+{"key":"unfocused.execute.paste","value":"reached 1 trickled 1 bubbled 1 text hello world value hello world cursor 0 select 0 clipboard CLIP changes 0 "}
+{"key":"focused","value":"TextField in Recorder"}
+{"key":"ime.focused","value":"On"}
+{"key":"selection.afterFocus","value":"0 0"}
+{"key":"validate.noSelection.Copy","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"validate.noSelection.Cut","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"validate.noSelection.Paste","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.Delete","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.SelectAll","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.UndoRedoPerformed","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.OnLostFocus","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.Duplicate","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.noSelection.Find","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"selection.range","value":"0 5"}
+{"key":"validate.selection.Copy","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.selection.Cut","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"validate.emptyClipboard.Paste","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"execute.copy","value":"reached 0 trickled 1 bubbled 0 text hello world value hello world cursor 0 select 5 clipboard hello changes 0 "}
+{"key":"execute.cut","value":"reached 0 trickled 1 bubbled 0 text hello  value hello  cursor 6 select 6 clipboard world changes 1 hello world>hello "}
+{"key":"execute.paste","value":"reached 0 trickled 1 bubbled 0 text hello world value hello world cursor 11 select 11 clipboard world changes 1 hello >hello world"}
+{"key":"execute.selectAll","value":"reached 0 trickled 1 bubbled 0 text hello world value hello world cursor 0 select 11 clipboard world changes 0 "}
+{"key":"execute.paste.newline","value":"reached 0 trickled 1 bubbled 0 text line1 line2hello world value line1 line2hello world cursor 11 select 11 clipboard line1\nline2 changes 1 hello world>line1 line2hello world"}
+{"key":"execute.delete","value":"reached 0 trickled 1 bubbled 0 text  line2hello world value  line2hello world cursor 0 select 0 clipboard line1\nline2 changes 1 line1 line2hello world> line2hello world"}
+{"key":"execute.delete.noSelection","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard line1\nline2 changes 1  line2hello world> ine2hello world"}
+{"key":"execute.cut.noSelection","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard line1\nline2 changes 0 "}
+{"key":"execute.onLostFocus","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard line1\nline2 changes 0 "}
+{"key":"execute.duplicate","value":"reached 1 trickled 1 bubbled 1 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard line1\nline2 changes 0 "}
+{"key":"execute.copy.noSelection","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard line1\nline2 changes 0 "}
+{"key":"execute.paste.emptyClipboard","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 1 select 1 clipboard  changes 0 "}
+{"key":"panel.execute.selectAll","value":"reached 0 trickled 1 bubbled 0 text  ine2hello world value  ine2hello world cursor 0 select 16 clipboard CLIP changes 0 "}
+{"key":"panel.execute.cut","value":"reached 0 trickled 1 bubbled 0 text  i2hello world value  i2hello world cursor 2 select 2 clipboard ne changes 1  ine2hello world> i2hello world"}
+{"key":"reuse.firstStopped","value":"True"}
+{"key":"reuse.same","value":"True"}
+{"key":"reuse.state","value":"<null> False True"}
+{"key":"imgui.commandName","value":"SelectAll"}
+{"key":"imgui.execute.selectAll","value":"reached 0 trickled 1 bubbled 0 text  i2hello world value  i2hello world cursor 0 select 14 clipboard ne changes 0 "}
+{"key":"multi.execute.paste","value":"reached 0 trickled 1 bubbled 0 text abx\ny value abx\ny cursor 5 select 5 clipboard x\ny changes 1 ab>abx\ny"}
+{"key":"ime.lockedFocused","value":"Auto"}
+{"key":"locked.validate.Copy","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"locked.validate.Cut","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"locked.validate.Paste","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"locked.validate.SelectAll","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"locked.validate.Find","value":"reached 0 trickled 1 bubbled 0"}
+{"key":"locked.execute.copy","value":"reached 0 trickled 1 bubbled 0 text locked text value locked text cursor 0 select 6 clipboard locked changes 0 "}
+{"key":"locked.execute.cut","value":"reached 1 trickled 1 bubbled 1 text locked text value locked text cursor 0 select 6 clipboard locked changes 0 "}
+{"key":"locked.execute.paste","value":"reached 1 trickled 1 bubbled 1 text locked text value locked text cursor 0 select 6 clipboard locked changes 0 "}
+{"key":"locked.execute.selectAll","value":"reached 0 trickled 1 bubbled 0 text locked text value locked text cursor 0 select 11 clipboard locked changes 0 "}
+{"key":"otherFocused.execute.cut","value":"reached 1 trickled 1 bubbled 1 text  i2hello world value  i2hello world cursor 0 select 3 clipboard locked changes 0 "}
+{"key":"disabled.focused","value":"<none>"}
+{"key":"disabled.ime","value":"Auto"}
+{"key":"disabled.validate.Copy","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"disabled.validate.Find","value":"reached 1 trickled 1 bubbled 1"}
+{"key":"disabled.execute.selectAll","value":"reached 1 trickled 1 bubbled 1 text other value other cursor 0 select 0 clipboard locked changes 0 "}
+{"key":"disabled.execute.cut","value":"reached 1 trickled 1 bubbled 1 text other value other cursor 0 select 0 clipboard locked changes 0 "}
+{"key":"imeEvent.type","value":"False EventBase`1"}
+{"key":"imeEvent.composition","value":"ka"}
+{"key":"imeEvent.focused","value":"reached 0 trickled 1 bubbled 1 text  i2hello world value  i2hello world cursor 1 select 3 clipboard locked changes 0  stopped False"}
+{"key":"imeEvent.reuse","value":"True <null>"}
+{"key":"imeEvent.disabledTarget","value":"reached 0 trickled 1 bubbled 1"}
+{"key":"imeEvent.panel","value":"reached 0 trickled 0 bubbled 0 text  i2hello world value  i2hello world cursor 1 select 3 clipboard locked changes 0 "}
+{"key":"ime.blurred","value":"Auto"}
+{"key":"blurred.selection","value":"1 1"}
+{"key":"complete","value":"1"}

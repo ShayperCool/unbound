@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/textcommands/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/TextElement.cs",
+    "managed/UnityEngine/UIElements/Controls/TextEditing.cs",
+    "managed/UnityEngine/UIElements/Events/RuntimeEventConversion.cs"
+  ]
+}
