@@ -31,6 +31,9 @@ public class Holder : MonoBehaviour
     public ScriptableObject scriptableBaseField;
     public Component componentField;
     public Behaviour behaviourField;
+    // Not written in the scene (a field added after the scene was saved).
+    public Rigidbody keylessField;
+    public GUIStyle style;
 
     public GameObject PrivateField => privateField;
 }

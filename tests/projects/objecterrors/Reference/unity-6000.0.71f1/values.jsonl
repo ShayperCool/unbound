@@ -221,6 +221,31 @@
 {"k":"unassigned.behaviour.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
 {"k":"unassigned.behaviour.enabled","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector."}
 {"k":"unassigned.behaviour.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable behaviourField of Holder has not been assigned.\nYou probably need to assign the behaviourField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.keyless.reference_null","v":"false"}
+{"k":"unassigned.keyless.equals_null","v":"true"}
+{"k":"unassigned.keyless.bool","v":"false"}
+{"k":"unassigned.keyless.is_null","v":"false"}
+{"k":"unassigned.keyless.type","v":"UnityEngine.Rigidbody"}
+{"k":"unassigned.keyless.to_string","v":"returns null"}
+{"k":"unassigned.keyless.name","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.id_zero","v":"returns True"}
+{"k":"unassigned.keyless.hide_flags","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.equals_self","v":"returns True"}
+{"k":"unassigned.keyless.transform","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.game_object","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.get_component","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.mass","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector."}
+{"k":"unassigned.keyless.instantiate","v":"throws UnityEngine.UnassignedReferenceException: The variable keylessField of Holder has not been assigned.\nYou probably need to assign the keylessField variable of the Holder script in the inspector. Parameter name: data"}
+{"k":"unassigned.style_background.reference_null","v":"true"}
+{"k":"unassigned.style_background.equals_null","v":"true"}
+{"k":"unassigned.style_background.bool","v":"false"}
+{"k":"unassigned.style_background.is_null","v":"true"}
+{"k":"unassigned.style_background.type","v":"none"}
+{"k":"unassigned.style_font.reference_null","v":"true"}
+{"k":"unassigned.style_font.equals_null","v":"true"}
+{"k":"unassigned.style_font.bool","v":"false"}
+{"k":"unassigned.style_font.is_null","v":"true"}
+{"k":"unassigned.style_font.type","v":"none"}
 {"k":"unassigned.namespaced.reference_null","v":"false"}
 {"k":"unassigned.namespaced.equals_null","v":"true"}
 {"k":"unassigned.namespaced.bool","v":"false"}

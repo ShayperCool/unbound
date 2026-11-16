@@ -140,6 +140,9 @@ public class ObjectErrorsProbe : MonoBehaviour
         Facts("unassigned.scriptable_base", holder.scriptableBaseField);
         Facts("unassigned.component", holder.componentField);
         Facts("unassigned.behaviour", holder.behaviourField);
+        Facts("unassigned.keyless", holder.keylessField);
+        Facts("unassigned.style_background", holder.style.normal.background);
+        Facts("unassigned.style_font", holder.style.font);
         Facts("unassigned.namespaced", GameObject.Find("NsHolder").GetComponent<Probes.NsHolder>().target);
         var asset = Resources.Load<DataHolder>("DataHolder");
         Facts("asset.target", asset.target);
