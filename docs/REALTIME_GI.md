@@ -173,12 +173,19 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   then 1 at the light. The light therefore grows with its range: at the point light's own range
   10 the Room's lightmaps are about five times the legacy falloff's (`room-delegate-linear`:
   2 isolated values outside the comparator's tolerance; two higher-band light probe
-  coefficients of this brightest case reported, as in `room-bounce`), and at range 6, where
-  the far corners read the table's outer samples, the scale follows the range
-  (`room-delegate-linear-range6`: 6 isolated values next to the emissive panel, one higher-band
-  probe coefficient reported). At range 4 the floor's
-  texels next to the left wall show the short-range residual below (a capture outside the
-  reference: texels (8,10) to (8,12) 11-20% above the Editor's).
+  coefficients of this brightest case reported, as in `room-bounce`). At range 6, where the
+  far corners read the table's outer samples, it scales with the range
+  (`room-delegate-linear-range6`: 6 isolated values, (1,9), (1,12) and (2,12) next to the
+  emissive panel and (36,12), (30,14) and (18,26); one higher-band probe coefficient reported),
+  though the engine's lightmap is 1.2% brighter than the Editor's in sum where the other
+  delegate cases are 0.5% darker, more so in the far texels (the short-range residual below).
+  With the light 0.4 below the ceiling (`room-delegate-linear-near`, range 10), the ceiling
+  above it reads the table between its innermost sample and the light, where the sample at the
+  light of 1 fits: 3 isolated values, its brightest texels 2-5% below the Editor's as in
+  `room-delegate-linear` (with that sample at the range the falloff right above the light would
+  be 2.5 times as large). At range 4 the floor's texels next to the left wall show the
+  short-range residual below (a capture outside the reference: texels (8,10) to (8,12) 11-20%
+  above the Editor's).
 - **Spot lights**: the cone of step 1 with the inner angle the delegate gives
   (`pipeline-spot` and `pipeline-spot-inner`, the bright spot light alone with inner angles
   21.8 and 5: 139 of their 5070 values differ by more than the comparator's tolerance); the
@@ -214,8 +221,11 @@ and the legacy falloff, 10 values of the floor's texels next to the left wall ar
 the Editor's (more than the gate allows; a capture outside the reference), where the same
 texels are 2-4% above it at the light's own range 10 and 8-10% with an inverse-squared falloff
 at range 4 (within the gate); with the linear falloff at range 4 texels (8,10) to (8,12) are
-11-20% above it. Its cause is not found ([Open](#open)); the probe's legacy and linear
-cases use the light's own range.
+11-20% above it, and at range 6 the whole lightmap 1.7% brighter relative to the other cases.
+Its cause is not found ([Open](#open)): it is not the outermost interval of the table alone
+(with nothing read below the second lit sample the range-6 lightmap is 9% too dark). The
+probe's legacy cases use the light's own range, its linear ones the light's own range or 6
+(the capture at range 4 stays outside the reference).
 
 ## Directionality
 

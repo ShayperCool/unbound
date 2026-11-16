@@ -192,13 +192,14 @@ the cube given again and `RoomBakedEnvironment` loaded alone, its lights put out
 Then `RoomAuto`: `roomauto-base` and `roomauto-moved` (the point light moved), recorded as the
 `RoomCharts` cases are. The charts the precompute made are in the scene's precomputed data, as
 there. Then `RoomTurned` the same way: `roomturned-base` and `roomturned-moved`. Then `RoomHoles`
-(`roomholes-base`). Then the Room loaded six more times with a script's light delegate
+(`roomholes-base`). Then the Room loaded seven more times with a script's light delegate
 (`GlobalIllumination.Lightmapping.SetDelegate`, set before the load) that extracts the lights as
 `LightmapperUtils` does but gives the point and spot lights one falloff type each:
 `room-delegate-legacy` and `room-delegate-undefined` at the point light's own range,
 `room-delegate-inversesquared` and `room-delegate-norange` (InverseSquaredNoRangeAttenuation)
-with its range 4, `room-delegate-linear` (Linear) at its own range and
-`room-delegate-linear-range6` with its range 6 (the spot light is off in all of them). Last,
+with its range 4, `room-delegate-linear` (Linear) at its own range,
+`room-delegate-linear-range6` with its range 6 and `room-delegate-linear-near` at its own range
+0.4 below the ceiling (the spot light is off in all of them). Last,
 `lights-dilatedrange`: `Light.dilatedRange` of a light of range 5 as a rectangle (2 x 1, 3 x 3, no size), a disc (`areaSize` 1.5 by 0.3 and by 7, 4 by 0.3), and a
 point, spot, directional, pyramid, box and tube light of `areaSize` 2 x 1, and the range
 `LightmapperUtils.Extract` gives the 2 x 1 rectangle and the first disc.
@@ -384,7 +385,10 @@ Observations (not documented guarantees):
   The `Linear` falloff grows with the range: at the point light's own range 10 the lightmaps
   are about five times the legacy falloff's, and at range 6 the scale follows the range (each
   from two byte-identical captures, every earlier file of the reference byte-identical in them;
-  a first pair with range 4 stays outside the reference, docs/REALTIME_GI.md).
+  a first pair with range 4 stays outside the reference, docs/REALTIME_GI.md). The pair that
+  added `room-delegate-linear-near` agrees in it; one of the two had `roomturned-base` and
+  `roomturned-moved` in another converged state (RoomTurned has two systems, as RoomSystems:
+  up to 0.02 apart, no value outside the comparator's tolerance), the other the reference's.
   `Light.dilatedRange` is a rectangle light's range plus half its diagonal (6.118034 for 2 x 1),
   a disc light's plus half its `areaSize.x` (5.75 and 7, whatever `areaSize.y`), any other
   light's range (every other light type); `LightmapperUtils` gives area lights that range.
