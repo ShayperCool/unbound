@@ -1,0 +1,73 @@
+{"k":"renderer/matte","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMatte/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/smooth","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitSmooth/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/metal","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMetal/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/additive","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitAdditive/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/mapped","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMapped/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/outputs","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitOutputs/System (1)/Output Particle|Unlit Quad, Hidden/VFX/LitOutputs/System (1)/Output Particle|URP Lit|Quad, Hidden/VFX/LitOutputs/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/shadowed","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMatte/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/caster","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitCaster/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/mesh caster","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshCaster/System (1)/Output Particle|URP Lit|Mesh"}
+{"k":"renderer/unlit caster","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/UnlitCaster/System (1)/Output Particle|Unlit Quad"}
+{"k":"renderer/offscreen caster","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitCaster/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/hidden caster","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitCaster/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/hidden","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMatte/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/deferred","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitMatte/System (1)/Output Particle|URP Lit|Quad"}
+{"k":"renderer/mesh deferred","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshLit/System (1)/Output Particle|URP Lit|Mesh"}
+{"k":"renderer/mesh unlit","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshUnlit/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/mesh lit","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshLit/System (1)/Output Particle|URP Lit|Mesh"}
+{"k":"renderer/mesh exposed","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshExposed/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/mesh none","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshNone/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/mesh dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshDying/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
+{"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
+{"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
+{"k":"renderer/motion vectors","v":"cast=Off receive=0 motion=Object materials=1"}
+{"k":"renderer/saved settings","v":"cast=Off receive=1 motion=Camera materials=1"}
+{"k":"null/SetMesh","v":"ArgumentNullException m"}
+{"k":"null/SetMesh unknown name","v":"ArgumentNullException m"}
+{"k":"null/SetTexture","v":"ArgumentNullException t"}
+{"k":"null/SetAnimationCurve","v":"ArgumentNullException c"}
+{"k":"null/SetGradient","v":"ArgumentNullException g"}
+{"k":"null/SetMesh destroyed","v":"MissingReferenceException"}
+{"k":"null/SetTexture destroyed","v":"MissingReferenceException"}
+{"k":"null/Shape after","v":"Spike"}
+{"k":"draw/matte/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/smooth/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/metal/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/additive/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mapped/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/outputs/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/shadowed/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/caster/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh caster/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/unlit caster/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/offscreen caster/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/hidden caster/f005","v":"alive=9 culled=1 awake=1 renderer enabled=1 visible=0"}
+{"k":"draw/hidden/f005","v":"alive=9 culled=1 awake=1 renderer enabled=1 visible=0"}
+{"k":"draw/plain shadow/f005","v":"no effect"}
+{"k":"draw/deferred/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh deferred/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh unlit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh lit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh exposed/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh none/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f006","v":"Mask=1 -> Shape=Wedge Mask=1"}
+{"k":"draw/mesh exposed/f008","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f009","v":"Mask=2 -> Shape=Wedge Mask=2"}
+{"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
+{"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/hidden caster/f012","v":"alive=9 culled=1 awake=1 renderer enabled=1 visible=0"}
+{"k":"draw/hidden/f012","v":"alive=9 culled=1 awake=1 renderer enabled=1 visible=0"}
+{"k":"draw/mesh dying/f012","v":"alive=1 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh exposed/f014","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f015","v":"Shape=Spike -> Shape=Spike Mask=4294967294"}
+{"k":"draw/mesh exposed/f017","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f018","v":"Mask=0xffffffff -> Shape=Spike Mask=4294967295"}
+{"k":"act/mesh exposed/f020","v":"Shape=null throws ArgumentNullException m -> Shape=Spike Mask=4294967295"}
+{"k":"draw/mesh exposed/f020","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/mesh exposed/f021","v":"Shape=Wedge -> Shape=Wedge Mask=4294967295"}
+{"k":"draw/mesh exposed/f023","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh dying/f024","v":"alive=1 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"capture/graphs imported while playing","v":""}
+{"k": "complete", "v": true}
