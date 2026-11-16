@@ -11,7 +11,7 @@ device frame shows one input's complete output row. All controls run in one sess
 | Basis | Contract or observation |
 | --- | --- |
 | Documented, Unity 6000.0 | [AudioSpeakerMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSpeakerMode.html) names the output layouts; [AudioSettings.Reset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSettings.Reset.html) selects one. [panStereo](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource-panStereo.html) pans a 2D sound left or right. None of them specifies how a six-channel clip maps to a layout's speakers. |
-| Measured, Unity 6000.0.71f1, this profile | Every layout first applies the same balance to the inputs: inputs 0 and 4 are scaled by `min(1, 1 - pan)`, inputs 1 and 5 by `min(1, 1 + pan)`; inputs 2 and 3 are unchanged. A fixed matrix per layout then maps the six inputs to the speakers (below). Device PCM agrees with the Master floats within one 16-bit step, and both rates give identical rows. |
+| Measured, Unity 6000.0.71f1, this profile | Every layout first applies the same balance to the inputs: inputs 0 and 4 are scaled by `min(1, 1 - pan)`, inputs 1 and 5 by `min(1, 1 + pan)`; inputs 2 and 3 are unchanged. This profile measures pan 0 and ±0.65; the [voice-input](VOICE_INPUT.md) pan controls support the same law for Stereo. A fixed matrix per layout then maps the six inputs to the speakers (below). Device PCM agrees with the Master floats within one 16-bit step, and both rates give identical rows. |
 
 Rows are inputs 0 to 5, columns the layout's output channels, at pan 0:
 

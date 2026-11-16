@@ -60,11 +60,13 @@ class SixInputLayouts(unittest.TestCase):
                     record = meta[case+suffix]
                     values = samples(root, record)
                     width = record['channels']
+                    self.assertEqual(len(values), record['frames'] * width, (rate, case+suffix))
                     rows = {4096 + 2048 * channel: row for channel, row in enumerate(self.MATRICES[int(mode)])}
                     # Nothing reaches the output outside the six impulse frames.
                     stray = [i for i, value in enumerate(values) if value and i // width not in rows]
                     self.assertEqual(stray, [], (rate, case+suffix))
                     for channel, row in enumerate(self.MATRICES[int(mode)]):
+                        self.assertEqual(width, len(row), (rate, case+suffix))
                         frame = 4096 + 2048 * channel
                         actual = values[frame * width:frame * width + len(row)]
                         expected = [0.25 * balance[channel] * gain for gain in row]
@@ -76,4 +78,3 @@ class SixInputLayouts(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
