@@ -105,7 +105,7 @@ public sealed class VfxOutputsProbe : MonoBehaviour
     {
         try
         {
-            foreach (var route in new[] { "UpdateList", "ComputeCulled", "FrustumCulled" })
+            foreach (var route in k_Routes)
             {
                 // Seen whole, in part (the rest out of the camera's view) and from inside the
                 // cloud (particles behind the camera as well), by three cameras in each frame.
@@ -120,7 +120,9 @@ public sealed class VfxOutputsProbe : MonoBehaviour
                 // The list made for each camera (in the Editor, OpenGL Core, NVIDIA) shows a
                 // different few of these particles in each capture: not shot (README.md).
                 Front(AddStage(route + " many", route + "Many", 5)).Shots = route != "FrustumCulled";
-                Front(AddStage(route + " blend", route + "Blend", 5));
+                // Seen whole and in part in each frame.
+                var glow = Front(AddStage(route + " glow", route + "Glow", 3, 10));
+                Eye(glow, "part", new Vector3(0.3f, 0.2f, -10f), Vector3.forward, 1.4f);
 
                 // A camera that looks away until frame 20, then at the effect.
                 var away = AddStage(route + " away", route + "Away", 10, 19, 30);
@@ -145,7 +147,12 @@ public sealed class VfxOutputsProbe : MonoBehaviour
         if (m_Done) return;
         m_Frame++;
         foreach (var stage in m_Stages) stage.Act?.Invoke(m_Frame, stage);
+        // Effects made while the others play (after their draws have begun).
+        if (m_Frame == 6)
+            foreach (var route in k_Routes) Front(AddStage(route + " late", route + "Late", 10));
     }
+
+    static readonly string[] k_Routes = { "UpdateList", "ComputeCulled", "FrustumCulled" };
 
     System.Collections.IEnumerator EndOfFrames()
     {

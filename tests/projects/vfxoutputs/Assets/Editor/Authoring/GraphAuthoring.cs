@@ -17,11 +17,16 @@ public static class GraphAuthoring
 {
     public const string Folder = "Assets/OutputGraphs";
     public const string Scene = "Assets/Scenes/Probe.unity";
+    const string WhitePath = Folder + "/White.png";
 
     public static void Author()
     {
         Directory.CreateDirectory(Folder);
         Directory.CreateDirectory(Path.GetDirectoryName(Scene));
+        // A white image: quads of one flat colour (the package's default texture fades out).
+        var white = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+        white.SetPixels(Enumerable.Repeat(Color.white, 16).ToArray());
+        File.WriteAllBytes(WhitePath, white.EncodeToPNG());
         AssetDatabase.Refresh();
         Indirect();
         AssetDatabase.SaveAssets();
@@ -188,17 +193,28 @@ public static class GraphAuthoring
             SetVector(manyInit, "color", new Vector3(0.3f, 0.6f, 1f));
             Save(many);
 
-            // Thirty half-transparent quads at once over each other, blended in the order they
-            // are drawn (none is sorted).
-            var blend = NewGraph(name + "Blend");
-            var (blendSpawn, blendInit, blendOutput) = System(blend, 32);
-            Routed(blendOutput, route, VFXAbstractRenderedOutput.BlendMode.Alpha);
-            Burst(blendSpawn, 30f);
-            SetRandom(blendInit, "position", new Vector3(-0.6f, -0.6f, -1f), new Vector3(0.6f, 0.6f, 1f));
-            Set(blendInit, "size", 0.7f);
-            Set(blendInit, "alpha", 0.5f);
-            SetRandom(blendInit, "color", new Vector3(0f, 0f, 0f), new Vector3(1f, 1f, 1f));
-            Save(blend);
+            // Thirty flat quads of one colour at once over each other, added to what is behind:
+            // the more of them overlap, the brighter (in any order), so a particle drawn twice
+            // shows.
+            var glow = NewGraph(name + "Glow");
+            var (glowSpawn, glowInit, glowOutput) = System(glow, 32);
+            Routed(glowOutput, route, VFXAbstractRenderedOutput.BlendMode.Additive);
+            Input(glowOutput, "mainTexture").value = AssetDatabase.LoadAssetAtPath<Texture2D>(WhitePath);
+            Burst(glowSpawn, 30f);
+            SetRandom(glowInit, "position", new Vector3(-0.6f, -0.6f, -1f), new Vector3(0.6f, 0.6f, 1f));
+            Set(glowInit, "size", 0.7f);
+            SetVector(glowInit, "color", new Vector3(0.2f, 0.12f, 0.08f));
+            Save(glow);
+
+            // Still's particles again, for an effect made while the others play.
+            var late = NewGraph(name + "Late");
+            var (lateSpawn, lateInit, lateOutput) = System(late, 64);
+            Routed(lateOutput, route, VFXAbstractRenderedOutput.BlendMode.Opaque);
+            Burst(lateSpawn, 40f);
+            SetRandom(lateInit, "position", new Vector3(-1f, -1f, -1f), new Vector3(1f, 1f, 1f));
+            Set(lateInit, "size", 0.4f);
+            SetRandom(lateInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+            Save(late);
         }
     }
 

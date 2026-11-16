@@ -34,8 +34,10 @@ The graphs of each route (`Assets/OutputGraphs/<Route><Graph>.vfx`):
   an asset of its own (effects of one asset share their alive-count readback in the Editor).
 - `Many`: a burst of 20000 additive quads, more than the 16384 one draw's 16-bit indices reach,
   drawn as instances of 2048.
-- `Blend`: thirty half-transparent quads over each other, alpha blended in the order of the list
-  (unsorted).
+- `Glow`: thirty flat quads of one colour (a white texture the authoring step writes) over each
+  other, added to what is behind: the more overlap, the brighter, in any order, so a particle
+  drawn twice shows.
+- `Late`: `Still`'s particles, for an effect made while the others play.
 
 `Assets/Scenes/Probe.unity` holds only a camera that sees none of the stages. The Editor-authored
 files (graphs, scene, the package lock) are kept in `Authored/unity-<release>/default`
@@ -55,7 +57,11 @@ others with a start seed of 11 and gives it orthographic cameras of its own, eac
   cloud (half of the particles are behind it, most of the rest outside its 1.2-unit view).
 - `dying` (frames 12, 30, 45): the lists skip the dead particles as the system recycles them.
 - `many` (frame 5): 20000 quads through the list, drawn as instances.
-- `blend` (frame 5): the blending follows the order of the list.
+- `glow` (frames 3 and 10): `front` and `part` in each frame: each camera's list is made anew
+  for it (a list not emptied for the second camera would draw its particles twice).
+- `late` (frame 10): made in frame 6, after the others' draws began: its outputs take more entries
+  of indirect arguments than there were, which are made anew, and every effect's arguments with
+  them (the images of the others after frame 6 show it).
 - `away` (frames 10, 19, 30): the camera looks away from the effect until frame 20, then at it: the
   effect is culled (its renderer is not visible, it does not simulate and asks for no alive count),
   then drawn. Its alive count is -1 until the first count read back after it is seen.
@@ -72,12 +78,24 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
 - The images are the cameras' colour without alpha. An opaque output writes its texture's filtered
   alpha, which the Editor's own graphs give one unit apart from each other where a texel is
   magnified (the three routes of one graph in one capture); nothing is drawn with it here.
-- The `FrustumCulled` route of `many` is not shot: in the Editor (OpenGL Core, NVIDIA) its images
-  show a different small part of the 20000 particles in each capture (5 and 32 in two captures of
-  the same project), while the other routes draw them all. Unbound draws them all.
-- URP 17 does not set the frustum planes the output-update kernel culls with (`_FrustumPlanes`):
-  frustum culling culls nothing there, and no image could tell (a particle out of a camera's
-  view is not seen either way). Culling by another pipeline's planes is not measured.
+- The `FrustumCulled` route of `many` is not shot. In the Editor (OpenGL Core, NVIDIA) the lists
+  made for each camera of large systems are drawn incompletely and differently from capture to
+  capture: of 20000 particles, 5 were drawn in one capture and 32 in another; in two further
+  captures (outside Git) with dots of 1.7 pixels at 256x256, systems of 64, 1024, 16385 and 20000
+  particles drew what the compute-culled route draws in all six shots, one of 4096 drew it in five
+  shots and 2941 lit pixels instead of 10680 in the sixth, and one of 16384 drew a few particles
+  differently in every shot. The other routes draw every particle in every shot. The package's
+  documentation (Visual Effect Graph 17.0, Shared Output Settings, Frustum Culling: "cull particles
+  that are outside of the camera frustum in a compute pass") leaves particles inside the frustum
+  drawn; Unbound draws every particle the kernel keeps. The per-camera controls here have 64
+  particles at most, where every capture agreed.
+- URP 17 sets no frustum planes for the output-update kernel (`_FrustumPlanes`, read off the
+  pipeline's sources): frustum culling culls nothing there, which no image can tell (a particle
+  out of a camera's view is not seen either way). Culling by another pipeline's planes is not
+  measured.
+- The order of an unsorted list: the package documents it as not deterministic (Shared Output
+  Settings, Sort: an alpha-blended output with sorting off flickers), so no control blends
+  overlapping quads whose order shows.
 - Quads seen at an angle: crossing quads are ties of depth that the Editor's own graphs decide
   differently (the three routes of one graph in one capture).
 - Sorted outputs (alpha blended ones are sorted by default), other primitives, lit outputs, soft
