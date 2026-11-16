@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/mixerclone/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Audio/AudioMixer.cs",
+    "managed/UnityEngine/Runtime/AssetAdapters.cs"
+  ]
+}
