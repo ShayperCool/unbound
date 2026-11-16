@@ -941,9 +941,10 @@ public class RealtimeGIProbe : MonoBehaviour
         Finish();
     }
 
-    /// <summary>The directional scene as the linear sequence first records it: as it loads, with
+    /// <summary>Three of the directional scene's cases of the linear sequence: as it loads, with
     /// its point light moved, then with hardly any light (no light on, the panel's emission black
-    /// and a dark ambient color). For the gamma-space sequence and a render pipeline's; frames only
+    /// and a dark ambient color; the linear sequence changes the bounce, indirect scale and
+    /// threshold in between). For the gamma-space sequence and a render pipeline's; frames only
     /// when <paramref name="frames"/>.</summary>
     IEnumerator Directionality(bool frames)
     {

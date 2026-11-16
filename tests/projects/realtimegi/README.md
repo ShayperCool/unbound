@@ -218,8 +218,9 @@ glows until it is made dark): `room-intensity` (point light intensity 4), `room-
 alone), `room-directional` (a directional light alone) and, with the panel dark, `room-sky-only`
 and `room-sky-only-intensity` (the procedural sky at ambient intensities 1 and 2) and
 `room-envdata` (a script's cube); then, the environment back to the flat ambient color,
-`RoomDirectional` as the linear sequence first records it: `roomdirectional-base`,
-`roomdirectional-moved` and `roomdirectional-dim`. These rows share the linear set's names but
+`RoomDirectional` with three of the linear sequence's cases (without the indirect scale and
+threshold steps between them): `roomdirectional-base`, `roomdirectional-moved` and
+`roomdirectional-dim`. These rows share the linear set's names but
 follow this sequence's own states. Recorded while the machine was building, two captures of this set
 differed from the two made on an idle machine: one in `room-gradient` (1607 values, up to 0.04;
 the reference holds that case since before), the other in `room-sky-only` (1988 values, up to
