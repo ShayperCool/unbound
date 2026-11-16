@@ -51,18 +51,12 @@ namespace Unbound.Runtime
     /// </summary>
     internal sealed partial class VFXOutput
     {
-        /// <summary>The quads one draw's 16-bit indices reach (four vertices each), and the
-        /// quads of each instance of a draw of more: the generated vertex programs find a
-        /// quad's particle as <c>(vertexID >> 2) + instanceID * 2048</c>.</summary>
-        internal const int MaxQuadsPerDraw = 16384, QuadsPerInstance = 2048;
-
         static readonly int s_InstancingConstants = Shader.PropertyToID("instancingConstants");
         static readonly int s_InstanceIndex = Shader.PropertyToID("_InstanceIndex");
         static readonly int s_InstanceActiveIndex = Shader.PropertyToID("_InstanceActiveIndex");
         /// <summary>The texture the generated programs sample curves and gradients from.</summary>
         internal const string BakedTextureName = "bakedTexture";
         static readonly int s_BakedTexture = Shader.PropertyToID(BakedTextureName);
-
 
         readonly VFXParticleSystem m_System;
         readonly VFXEditorTaskDesc m_Task;
@@ -288,9 +282,6 @@ namespace Unbound.Runtime
         /// <summary>The planar primitive an output task draws.</summary>
         internal static Primitive PrimitiveOf(VFXTaskType type) =>
             type == VFXTaskType.ParticleTriangleOutput ? Primitive.Triangle : type == VFXTaskType.ParticleOctagonOutput ? Primitive.Octagon : Primitive.Quad;
-
-        /// <summary>The draw of <paramref name="quads"/> quads (<see cref="Primitive.Draw"/>).</summary>
-        internal static DrawSetup QuadDraw(GraphicsBuffer indices, uint quads) => Primitive.Quad.Draw(indices, quads);
 
         /// <summary>Computes the arguments of an indirect draw from the count its list has now
         /// (after the kernels that make the list for this camera). False when they cannot be.</summary>

@@ -964,6 +964,10 @@ namespace UnityEngine.Tests
             var setup = Primitive.Triangle.Draw(triangles, 30000);
             Assert.Equal((90000u, 1u), (setup.IndexCount, setup.Instances));
             Assert.Same(triangles, Primitive.Triangle.Indices(20000));
+            // Outgrown in a frame where a draw holds them: kept until a later frame.
+            var bigger = Primitive.Triangle.Indices(200000);
+            Assert.NotSame(triangles, bigger);
+            Assert.True(triangles.IsValid());
             var data = (uint[])Primitive.Triangle.Data(30000);
             Assert.Equal(new uint[] { 89994, 89995, 89996, 89997, 89998, 89999 }, data[89994..]);
             Assert.Equal(new ushort[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 }, Primitive.Quad.Data(2));
@@ -972,12 +976,12 @@ namespace UnityEngine.Tests
         [Fact]
         public void MoreQuadsThanIndicesReachAreDrawnAsInstances()
         {
-            var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, VFXOutput.MaxQuadsPerDraw * 6, 2);
+            var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, 16384 * 6, 2);
             try
             {
                 (uint, uint) Draw(uint quads)
                 {
-                    var setup = VFXOutput.QuadDraw(indices, quads);
+                    var setup = Primitive.Quad.Draw(indices, quads);
                     return (setup.IndexCount, setup.Instances);
                 }
                 Assert.Equal((6u, 1u), Draw(1));
