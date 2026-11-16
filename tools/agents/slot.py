@@ -35,6 +35,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build  # noqa: E402
+import git_hooks  # noqa: E402
 
 DEFAULT_COUNT = 10
 SLOT_PREFIX = 'slot-'
@@ -174,7 +175,12 @@ def cmd_prepare(args, repo):
             git('clean', '-fd', cwd=path)  # untracked, not ignored: caches stay
         from runtime_snapshot import finish_task
         finish_task(path, repo=repo)
-        git('switch', '-C', args.branch, args.base, cwd=path)
+        # A work branch has no upstream, whatever the base (origin/main sets one by default):
+        # the post-commit hook pushes only a branch that tracks its own name (git_hooks.py).
+        git('switch', '--no-track', '-C', args.branch, args.base, cwd=path)
+        if git('config', '--get', f'branch.{args.branch}.merge', cwd=path, check=False):
+            git('branch', '--unset-upstream', args.branch, cwd=path)
+        git_hooks.install(repo)
     print(f'{path.name} is on {args.branch} from {args.base}: cd {path}')
     print(f'build target: {build.default_target(path, build.build_root())}')
     return 0

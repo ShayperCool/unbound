@@ -53,7 +53,9 @@ tools/validation/README.md for why that is unsafe).
   branch, whether it still holds work, idle time and whether its target is warm.
 - A worker starts with `python3 tools/agents/slot.py prepare <slot> <branch>`: it refuses a slot
   that still holds unlanded commits or changes (`--discard` drops them once they are landed or
-  abandoned), then switches the slot to a new branch from `main` and keeps ignored files.
+  abandoned), then switches the slot to a new branch from `main` without an upstream (also
+  from `--base origin/main`) and keeps ignored files. It also installs the repository's git hooks
+  (`tools/agents/git_hooks.py install`; `.git/hooks` is outside Git).
 - One slot holds one task at a time. A slot is free once its branch is on `main` and it is clean.
 - A worker started by a tool that creates its own worktree works in its slot and leaves that
   worktree untouched. `slot.py reap` removes such worktrees, and any other finished worktree
@@ -152,8 +154,9 @@ tools/validation/README.md for why that is unsafe).
 Rules:
 - Stay in your own slot. Never touch the main checkout, another worktree or shared refs.
   `git stash`, `git reset --hard` and `git push --force` are off-limits outside your own branch.
-- Do not push your branch; `land.py` pushes `main`. If your branch tracks a remote, the
-  post-commit hook would push every commit, so run `git branch --unset-upstream` first.
+- Do not push your branch; `land.py` pushes `main`. The post-commit hook pushes a branch only
+  to the same-named branch of its upstream remote (never a work branch into `main`); a work
+  branch should have no upstream at all (`git branch --unset-upstream`).
 - Never edit a Unity reference, a comparator tolerance or an existing assertion to make a probe
   pass. The oracle guard refuses it unless a commit carries `Oracle-Change: <why>` (for example,
   a re-recorded reference) or `Test-Removal: <why>`.

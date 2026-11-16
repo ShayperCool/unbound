@@ -292,7 +292,7 @@ class Checker:
         main = self.git('rev-parse', 'main')
         branch = f"postland/revert-{culprit['new'][:10]}"
         self.checkout(main)
-        self.git('switch', '--quiet', '-C', branch, main, cwd=self.worktree)
+        self.git('switch', '--quiet', '--no-track', '-C', branch, main, cwd=self.worktree)
         applied = subprocess.run(['git', 'revert', '--no-commit', f"{culprit['old']}..{culprit['new']}"],
                                  cwd=self.worktree, capture_output=True, text=True)
         if applied.returncode:

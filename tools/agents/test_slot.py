@@ -14,6 +14,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import slot  # noqa: E402
 import build  # noqa: E402  (tools/, put on the path by slot)
+import git_hooks  # noqa: E402
 
 
 class SlotTests(unittest.TestCase):
@@ -42,6 +43,10 @@ class SlotTests(unittest.TestCase):
 
     def git(self, *args, cwd=None):
         return subprocess.run(['git', *args], cwd=cwd or self.repo, check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def branch_config(self, branch):
+        return subprocess.run(['git', 'config', '--get-regexp', f'^branch\\.{branch}\\.'], cwd=self.repo,
                               capture_output=True, text=True).stdout.strip()
 
     def run_slot(self, *args):
@@ -83,6 +88,26 @@ class SlotTests(unittest.TestCase):
         self.run_slot('prepare', 'slot-01', 't3/task-a')
         self.assertEqual(self.git('branch', '--show-current', cwd=path), 't3/task-a')
         self.assertTrue((path/'cache'/'warm.bin').exists())
+
+    def test_prepare_from_a_remote_branch_or_over_a_tracking_branch_leaves_no_upstream(self):
+        remote = Path(self.temp.name).resolve()/'remote.git'
+        subprocess.run(['git', 'init', '-q', '--bare', '-b', 'main', str(remote)], check=True)
+        self.git('remote', 'add', 'origin', str(remote))
+        self.git('push', '-q', 'origin', 'main')
+        self.git('fetch', '-q', 'origin')
+        self.run_slot('create', '--count', '1')
+        path = self.slot_path(1)
+        # A remote-tracking base sets an upstream by default.
+        self.run_slot('prepare', 'slot-01', 'slot/a', '--base', 'origin/main')
+        self.assertEqual(self.git('branch', '--show-current', cwd=path), 'slot/a')
+        self.assertEqual(self.branch_config('slot/a'), '')
+        # A branch that already tracked main is reset without its upstream.
+        self.git('branch', '-q', '--set-upstream-to', 'origin/main', 'slot/a')
+        self.run_slot('prepare', 'slot-01', 'slot/a', '--base', 'origin/main')
+        self.assertEqual(self.branch_config('slot/a'), '')
+        # The checkout's post-commit hook is the current one.
+        hook = Path(self.git('rev-parse', '--path-format=absolute', '--git-common-dir'))/'hooks/post-commit'
+        self.assertEqual(hook.read_text(), git_hooks.POST_COMMIT)
 
     def test_reap_retires_only_the_removed_worktrees_runtime(self):
         import runtime_snapshot as runtime
