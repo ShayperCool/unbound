@@ -57,12 +57,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void AGraphsDspClockMovesEveryFrameWithinABufferOfTheAudioClock()
         {
-            // Frames as the player loop runs them: the audio clock, then DirectorSampleTime.
+            // Frames as the player loop runs them: the audio clock, DirectorSampleTime, and the
+            // audio update at the frame's end (whose status gives the buffer).
             void Sample(double realDelta)
             {
                 Time.s_RealDeltaTime = realDelta;
                 AudioSystem.AdvanceClock();
                 PlayableSystem.SampleTime();
+                AudioSystem.Update();
             }
             Sample(0.0);
             Assert.Equal(0, PlayableSystem.DspDelta);
@@ -71,7 +73,7 @@ namespace UnityEngine.Tests
             {
                 Sample(1.0 / 120);
                 // Every frame moves the graphs by the frame's real time, though the audio clock
-                // moves only in whole buffers, and stays within a buffer above it.
+                // moves only in whole buffers, and stays within a buffer of it.
                 Assert.Equal(1.0 / 120, PlayableSystem.DspDelta, 9);
                 Assert.InRange(PlayableSystem.GraphDspTime, AudioSettings.dspTime, AudioSettings.dspTime + Step);
             }
@@ -81,14 +83,14 @@ namespace UnityEngine.Tests
             Sample(0.3);
             Assert.Equal(0.3, PlayableSystem.GraphDspTime - before, 9);
             // An audio clock that moved further than the frame's real time (a device's own
-            // clock) takes the graphs along; one left behind holds them at a buffer above it.
+            // clock) takes the graphs along to a buffer below it; one left behind holds them at a
+            // buffer above it.
             m_Backend.AdvanceClock(1.0);
             Sample(0.0);
-            Assert.Equal(AudioSettings.dspTime, PlayableSystem.GraphDspTime, 12);
-            double held = PlayableSystem.GraphDspTime;
+            Assert.Equal(AudioSettings.dspTime - Step, PlayableSystem.GraphDspTime, 12);
             Time.s_RealDeltaTime = 0.5;
             PlayableSystem.SampleTime();
-            Assert.Equal(held + Step, PlayableSystem.GraphDspTime, 12);
+            Assert.Equal(AudioSettings.dspTime + Step, PlayableSystem.GraphDspTime, 12);
         }
 
         [Fact]

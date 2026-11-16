@@ -21,7 +21,7 @@ started):
 - the graph's time is not a whole number of buffers and moves in every frame after the one that
   made it:
   between the audio clock's buffers it moves with the frames (an exploratory capture: by about
-  each frame's real time, meeting the audio clock again where that one steps further).
+  each frame's real time).
 
 Exploratory macOS Editor captures outside the reference also showed the clock moving within a frame
 (a 30 ms busy wait in `Update` moved it by one or two buffers) and, with Disable Unity Audio set,
