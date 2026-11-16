@@ -51,10 +51,13 @@ namespace UnityEngine.UIElements
 
         internal override int SliderRange() => Math.Abs(highValue - lowValue);
 
-        /// <summary>The text field's integer (expressions are not evaluated, as for
-        /// <see cref="Slider"/>); 0 when it does not parse.</summary>
-        internal override int ParseStringToValue(string previousValue, string newValue) =>
-            int.TryParse(newValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+        /// <summary>The text field's value read as an integer field reads it; 0 when it does not read.</summary>
+        internal override int ParseStringToValue(string previousValue, string newValue)
+        {
+            bool success = UINumericFieldsUtils.TryConvertStringToInt(newValue, previousValue, out var value, out var expression);
+            expressionEvaluated?.Invoke(expression);
+            return success ? value : 0;
+        }
 
         /// <summary>A click beside the dragger with a page size steps the value by the page size
         /// towards the click; without one it jumps as other sliders do.</summary>

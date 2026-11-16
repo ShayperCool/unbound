@@ -39,6 +39,7 @@ namespace UnityEngine
             public override bool Equals(object obj) =>
                 obj is Expression other && ((ReadOnlySpan<string>)rpnTokens).SequenceEqual(other.rpnTokens);
 
+            // As in the release: equal expressions compare equal but hash by their token array.
             public override int GetHashCode() => rpnTokens.GetHashCode();
 
             public override string ToString() => string.Join(" ", rpnTokens);
@@ -340,7 +341,8 @@ namespace UnityEngine
             var number = CultureInfo.InvariantCulture.NumberFormat;
             if (typeof(T) == typeof(float))
             {
-                bool ok = TryParseFinite(lower, out double d);
+                // A literal beyond the float range does not parse either.
+                bool ok = TryParseFinite(lower, out double d) && !float.IsInfinity((float)d);
                 result = (T)(object)(ok ? (float)d : 0f);
                 return ok;
             }

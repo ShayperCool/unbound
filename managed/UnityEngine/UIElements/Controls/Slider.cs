@@ -623,8 +623,14 @@ namespace UnityEngine.UIElements
 
         internal override float SliderRange() => Math.Abs(highValue - lowValue);
 
-        internal override float ParseStringToValue(string previousValue, string newValue) =>
-            float.TryParse(newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0f;
+        /// <summary>The text field's value read as a numeric field reads it (an expression, relative
+        /// to the previous text with "+="); 0 when it does not read.</summary>
+        internal override float ParseStringToValue(string previousValue, string newValue)
+        {
+            bool success = UINumericFieldsUtils.TryConvertStringToFloat(newValue, previousValue, out var value, out var expression);
+            expressionEvaluated?.Invoke(expression);
+            return success ? value : 0f;
+        }
 
         internal override void ComputeValueFromKey(SliderKey sliderKey, bool isShift)
         {

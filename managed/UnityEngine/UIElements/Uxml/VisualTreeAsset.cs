@@ -928,7 +928,8 @@ namespace Unbound.UIElements
 
         /// <summary>Attributes of engine elements whose UXML name is not their property's name in
         /// kebab case (matches the Unity 6000.0.71f1 Editor, tests/projects/numericfields): the text
-        /// inputs read "readonly", "password" and "mask-character" (not their property names), and
+        /// inputs read "readonly", "password" and "mask-character" (also under its former name
+        /// "maskCharacter") but not their property names, and
         /// the numeric text fields take no "format-string". A null property ignores the attribute.</summary>
         static readonly (Type declaringType, string attribute, string property)[] s_AttributeNames =
         {
@@ -937,6 +938,7 @@ namespace Unbound.UIElements
             (typeof(TextInputBaseField<>), "password", "isPasswordField"),
             (typeof(TextInputBaseField<>), "is-password-field", null),
             (typeof(TextInputBaseField<>), "mask-character", "maskChar"),
+            (typeof(TextInputBaseField<>), "maskCharacter", "maskChar"),
             (typeof(TextInputBaseField<>), "mask-char", null),
             (typeof(TextValueField<>), "format-string", null),
         };

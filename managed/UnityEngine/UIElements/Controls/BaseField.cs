@@ -127,6 +127,9 @@ namespace UnityEngine.UIElements
 
         internal event Func<TValueType, TValueType> onValidateValue;
 
+        /// <summary>Told the expression each read of typed text leaves for later (null when there is none).</summary>
+        internal Action<ExpressionEvaluator.Expression> expressionEvaluated;
+
         internal BaseField(string label)
         {
             isCompositeRoot = true;
