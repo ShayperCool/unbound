@@ -45,7 +45,10 @@ namespace UnityEngine
         DataFormat m_DataFormat = DataFormat.Float;
         float m_ProbeDensity = 0.25f;
         int m_ResolutionX = 2, m_ResolutionY = 2, m_ResolutionZ = 2;
-        Vector3 m_BoundingBoxSize = Vector3.one, m_BoundingBoxOrigin;
+        /// <summary>A new volume's custom size, on a renderer or not (Unity 6000.0.71f1 Editor:
+        /// infinite, tests/projects/lppv default.custom and bare.custom).</summary>
+        static readonly Vector3 s_NewSize = Vector3.positiveInfinity;
+        Vector3 m_BoundingBoxSize = s_NewSize, m_BoundingBoxOrigin;
 
         public LightProbeProxyVolume() => Volumes.Add(this);
 
@@ -220,10 +223,12 @@ namespace UnityEngine
         }
 
         /// <summary>The probes' count along an axis: the nearest power of two (a tie upwards) to
-        /// the rounded count, 1 to 32.</summary>
+        /// the rounded count, 1 to 32 (a count of 48 or more, an infinite one included, gives 32;
+        /// NaN gives 1).</summary>
         internal static int Cells(float probes)
         {
-            int n = Math.Max(1, (int)Math.Floor(probes + 0.5f));
+            const int Past = 64;
+            int n = Math.Clamp((int)Math.Floor(Math.Min(probes + 0.5f, Past)), 1, Past);
             int lower = 1;
             while (lower * 2 <= n) lower *= 2;
             int cells = lower == n || n - lower < lower * 2 - n ? lower : lower * 2;
@@ -380,7 +385,7 @@ namespace UnityEngine
             m_ResolutionX = body.Int("m_ResolutionX", 2);
             m_ResolutionY = body.Int("m_ResolutionY", 2);
             m_ResolutionZ = body.Int("m_ResolutionZ", 2);
-            m_BoundingBoxSize = body.Get("m_BoundingBoxSize") != null ? body.Vector3("m_BoundingBoxSize") : Vector3.one;
+            m_BoundingBoxSize = body.Get("m_BoundingBoxSize") != null ? body.Vector3("m_BoundingBoxSize") : s_NewSize;
             m_BoundingBoxOrigin = body.Vector3("m_BoundingBoxOrigin");
         }
     }

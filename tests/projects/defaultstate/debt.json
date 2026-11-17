@@ -1683,19 +1683,6 @@
       }
     },
     {
-      "key": "UnityEngine.LightProbeProxyVolume/Property/UnityEngine.LightProbeProxyVolume/sizeCustom",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=Infinity;y=Infinity;z=Infinity}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=1;y=1;z=1}"
-      }
-    },
-    {
       "key": "UnityEngine.MeshCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
       "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",

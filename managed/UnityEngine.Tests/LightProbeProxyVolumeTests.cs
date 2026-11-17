@@ -29,6 +29,13 @@ namespace Unbound.Tests
         [InlineData(24f, 32)]
         [InlineData(31f, 32)]
         [InlineData(40f, 32)]
+        // Past 32 every count gives 32: a new volume's custom size is infinite (lppv
+        // default.custom), so its automatic resolution in Custom mode counts infinitely many.
+        [InlineData(47f, 32)]
+        [InlineData(48f, 32)]
+        [InlineData(3e9f, 32)]
+        [InlineData(float.PositiveInfinity, 32)]
+        [InlineData(float.NaN, 1)]
         public void CellsRoundToTheNearestPowerOfTwo(float probes, int cells) =>
             Assert.Equal(cells, LightProbeProxyVolume.Cells(probes));
 
@@ -44,6 +51,10 @@ namespace Unbound.Tests
                 // The custom resolution is answered in Automatic mode too.
                 Assert.Equal((2, 2, 2), (volume.gridResolutionX, volume.gridResolutionY, volume.gridResolutionZ));
                 Assert.Equal(0.25f, volume.probeDensity);
+                // The custom box before one is set: infinite, at the object's origin, on an object
+                // without renderers as on one with them (lppv bare.custom, default.custom).
+                Assert.Equal(Vector3.positiveInfinity, volume.sizeCustom);
+                Assert.Equal(Vector3.zero, volume.originCustom);
             }
             finally { Object.DestroyImmediate(go); }
         }
