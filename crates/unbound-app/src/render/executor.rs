@@ -4550,8 +4550,10 @@ impl UnityRenderer {
                 } else {
                     texture_of(name)
                 };
-                // `<name>_TexelSize` of a global texture too, as Unity provides it.
+                // `<name>_TexelSize` of a global texture too, as Unity provides it (of the
+                // texture the slot reads: a declared property never reads a global one).
                 if handle == 0
+                    && !resolved.declares(name)
                     && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
                         globals_index.find(&globals, name)
                 {

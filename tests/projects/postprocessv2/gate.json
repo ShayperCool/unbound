@@ -4,6 +4,9 @@
   ],
   "summary": "postprocessv2: .*",
   "engine_paths": [
-    "crates/unbound-app/src/materials.rs"
+    "crates/unbound-app/src/materials.rs",
+    "crates/unbound-app/src/render/executor.rs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Deferred.cs"
   ]
 }

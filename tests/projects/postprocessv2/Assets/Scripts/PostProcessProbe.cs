@@ -28,7 +28,9 @@ public sealed class PostProcessProbe : MonoBehaviour
 
     IEnumerator Start()
     {
-        int code = 0;
+        // Nonzero unless every case was recorded: an exception ends the coroutine through the
+        // finally block, which exits with it.
+        int code = 1;
         string dir = Environment.GetEnvironmentVariable("POST_PROCESS_V2_OUT");
         var target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGB32) { name = "ProbeTarget" };
         var camera = new GameObject("ProbeCamera").AddComponent<Camera>();
@@ -66,16 +68,17 @@ public sealed class PostProcessProbe : MonoBehaviour
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
             }
+            code = 0;
         }
         finally
         {
             if (volume != null) RuntimeUtilities.DestroyVolume(volume, true, true);
-        }
 #if UNITY_EDITOR
-        UnityEditor.EditorApplication.Exit(code);
+            UnityEditor.EditorApplication.Exit(code);
 #else
-        Application.Quit(code);
+            Application.Quit(code);
 #endif
+        }
     }
 
     static readonly string[] GlobalShaders = { "MainUndeclared", "MainDeclared", "OtherUndeclared", "OtherDeclared" };
