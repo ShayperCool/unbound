@@ -89,7 +89,9 @@ namespace UnityEngine.Tests
 
         /// <summary>Lays out the label in its panel and gives it <paramref name="spans"/> as its
         /// generated text, with the handling generation sets up.</summary>
-        static void Generate(Panel panel, Label label, params Span[] spans)
+        static void Generate(Panel panel, Label label, params Span[] spans) => Generate(panel, label, spans, setUp: true);
+
+        static void Generate(Panel panel, Label label, Span[] spans, bool setUp)
         {
             panel.ApplyStyles();
             panel.ValidateLayout();
@@ -125,6 +127,7 @@ namespace UnityEngine.Tests
             handle.TextInfoNode = new LinkedListNode<TextInfo>(info);
             // Kept as the permanent cache keeps it, so the handler's bookkeeping does not generate it again.
             handle.IsCachedPermanent = true;
+            if (!setUp) return;
             var handler = handle.m_TextEventHandler;
             handler.HandleATag();
             handler.HandleLinkTag();
@@ -292,6 +295,34 @@ namespace UnityEngine.Tests
             Generate(editor, label, anchor);
             Send(label, EventType.MouseMove, 10);
             Assert.Equal(new[] { "set 4" }, cursors.Calls);
+        }
+
+        // Text without <a> links generated in a runtime panel keeps the cursor handling; generated
+        // without them in an Editor panel again, it removes it.
+        [Fact]
+        public void TheLinkCursorHandlingIsRemovedOnlyByAGenerationInAnEditorPanel()
+        {
+            using var runtime = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+            using var editor = new Panel(null, ContextType.Editor, EventDispatcher.CreateDefault(), null);
+            var cursors = new CursorRecorder();
+            editor.cursorManager = cursors;
+            runtime.cursorManager = cursors;
+            var anchor = Anchor("https://example.com/", 'A', 0);
+            var plain = Link("k", 'A', 0);
+            var label = LaidOut(editor, anchor);
+            runtime.visualTree.Add(label);
+            Generate(runtime, label, plain);
+            // The <a> text again without its handling set up: the cursor handling is still there.
+            Generate(runtime, label, new[] { anchor }, setUp: false);
+            Send(label, EventType.MouseMove, 10);
+            Send(label, EventType.MouseMove, 30);
+            Assert.Equal(new[] { "set 4", "set 0" }, cursors.Calls);
+            cursors.Calls.Clear();
+            editor.visualTree.Add(label);
+            Generate(editor, label, plain);
+            Generate(editor, label, new[] { anchor }, setUp: false);
+            Send(label, EventType.MouseMove, 10);
+            Assert.Empty(cursors.Calls);
         }
     }
 }

@@ -231,10 +231,13 @@ namespace UnityEngine.UIElements
                     m_ATagCursorCallbacksRegistered = true;
                 }
             }
-            else if (m_ATagCallbacksRegistered)
+            else if (HasAllocatedATagCallbacks())
             {
-                m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-                m_ATagCallbacksRegistered = false;
+                if (m_ATagCallbacksRegistered)
+                {
+                    m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
+                    m_ATagCallbacksRegistered = false;
+                }
                 if (editor && m_ATagCursorCallbacksRegistered) UnregisterATagCursorCallbacks();
             }
         }
