@@ -9,7 +9,8 @@ by their shape only: the id's sign, the user id's length and digits, the count a
 first-run flag and the project's preferences), sets and clears the custom ids, subscribes to every
 event, calls each RemoteSettings getter with and without defaults and with null keys, asks
 GetObject for plain, abstract and UnityEngine.Object types and with a null default, calls
-ForceUpdate and waits ten frames, and calls a few members from a worker thread.
+ForceUpdate and waits ten frames, calls a few members from a worker thread, and finally calls
+PlayerPrefs.DeleteAll; a second subscriber to the session events is added before the scene loads.
 
 Measured:
 
@@ -22,8 +23,12 @@ Measured:
 - RemoteSettings has no settings: getters return 0, "", false or the default given, GetKeys an
   empty array, GetObject null (or the default given, the same object), GetDictionary null; null
   keys do the same. A null type or default, an abstract type and UnityEngine.Object types throw.
-- ForceUpdate raises no event, then or in the next ten frames; no session or token event comes.
+- ForceUpdate raises no event, then or in the next ten frames; no session or token event comes, not
+  even to a subscriber added before the scene loads.
+- PlayerPrefs.DeleteAll keeps the three session preferences (as it keeps the other service-owned
+  ones, tests/projects/editorservices), and the session's values stay as they were.
 - Off the main thread the session values and RemoteSettings throw Unity's main-thread exception
   with their binding's name.
 
-Unmeasured: entering Play mode again within one Editor session, services logged in, other releases.
+Unmeasured: entering Play mode again within one Editor session, services enabled or logged in (Unbound
+reports that context), other releases.

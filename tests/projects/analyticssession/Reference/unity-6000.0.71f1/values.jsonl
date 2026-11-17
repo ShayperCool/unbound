@@ -1,3 +1,4 @@
+{"k":"events.earlySubscriber","v":""}
 {"k":"session.state","v":"kSessionStarted"}
 {"k":"session.id","v":"positive"}
 {"k":"session.countAtLeastOne","v":true}
@@ -50,4 +51,9 @@
 {"k":"remote.fromServerAfter","v":false}
 {"k":"remote.worker.forceUpdate","v":"UnityException: ForceUpdate can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
 {"k":"events.afterWorkerForceUpdate","v":""}
+{"k":"deleteAll.countKey","v":true}
+{"k":"deleteAll.sessionIdKey","v":true}
+{"k":"deleteAll.userIdKey","v":true}
+{"k":"deleteAll.userIdKeySame","v":true}
+{"k":"deleteAll.sessionValuesSame","v":true}
 {"k":"complete","v":true}

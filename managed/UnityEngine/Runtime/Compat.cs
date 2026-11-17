@@ -30,7 +30,7 @@ namespace Unbound.Runtime
         /// Other lifecycle phases and releases remain unsupported.</summary>
         internal static bool EditorPlayMenusMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Service-owned preference retention measured by editorservices on 6000.0.71f1.
+        /// <summary>Service-owned preference retention measured by editorservices and analyticssession on 6000.0.71f1.
         /// Other releases keep their previous complete DeleteAll behavior, unmeasured.</summary>
         internal static bool ServicePreferencesPreserved => Release == (6000, 0, 71, 'f', 1);
 

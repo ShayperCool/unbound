@@ -8,8 +8,9 @@ using Xunit;
 
 // AnalyticsSessionInfo and RemoteSettings with Unity services not logged in (Unity 6000.0.71f1,
 // tests/projects/analyticssession). Controls outside the probe: a second session in the same
-// preferences counts on and keeps the user id, a count the preferences cannot read starts again at
-// 1, RemoteSettings' getters return the defaults given, and worker threads are refused by binding.
+// preferences counts on and keeps the user id, also after PlayerPrefs.DeleteAll (which removes a
+// game's keys), a count the preferences cannot read starts again at 1, RemoteSettings' getters
+// return the defaults given, and worker threads are refused by binding.
 
 namespace UnityEngine.Tests
 {
@@ -66,6 +67,21 @@ namespace UnityEngine.Tests
             Assert.Equal(AnalyticsSessionInfo.sessionId.ToString(), PlayerPrefs.GetString("unity.player_sessionid"));
             Assert.Equal(user, AnalyticsSessionInfo.userId);
             Assert.Equal("", AnalyticsSessionInfo.identityToken);
+        }
+
+        [Fact]
+        public void DeleteAllKeepsTheSessionPreferences()
+        {
+            AnalyticsSessionInfo.BeginPlaySession();
+            PlayerPrefs.SetString("game.progress", "level 3");
+            string user = AnalyticsSessionInfo.userId;
+            PlayerPrefs.DeleteAll();
+            Assert.False(PlayerPrefs.HasKey("game.progress"));
+            Assert.Equal(user, PlayerPrefs.GetString("unity.cloud_userid"));
+            Assert.Equal(AnalyticsSessionInfo.sessionCount.ToString(), PlayerPrefs.GetString("unity.player_session_count"));
+            Assert.Equal(AnalyticsSessionInfo.sessionId.ToString(), PlayerPrefs.GetString("unity.player_sessionid"));
+            AnalyticsSessionInfo.BeginPlaySession();
+            Assert.Equal(user, AnalyticsSessionInfo.userId);
         }
 
         [Fact]

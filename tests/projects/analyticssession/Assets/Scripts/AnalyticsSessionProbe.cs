@@ -32,6 +32,17 @@ namespace AnalyticsSessionProbe
             public string text = "default";
         }
 
+        static readonly List<string> s_EarlyEvents = new List<string>();
+
+        // Subscribed before any scene loads: what the session start sends to early subscribers.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void SubscribeEarly()
+        {
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANALYTICS_SESSION_OUT"))) return;
+            AnalyticsSessionInfo.sessionStateChanged += (state, id, elapsed, changed) => s_EarlyEvents.Add("session " + state + " " + changed);
+            AnalyticsSessionInfo.identityTokenChanged += token => s_EarlyEvents.Add("token " + Shape(token));
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Create()
         {
@@ -90,6 +101,7 @@ namespace AnalyticsSessionProbe
             RemoteSettings.Completed += (fromServer, changed, response) => m_Events.Add("completed " + fromServer + " " + changed + " " + response);
             yield return null;
 
+            Put("events.earlySubscriber", string.Join(" | ", s_EarlyEvents));
             Put("session.state", AnalyticsSessionInfo.sessionState);
             Put("session.id", AnalyticsSessionInfo.sessionId == 0 ? "0" : AnalyticsSessionInfo.sessionId > 0 ? "positive" : "negative");
             // The count and first-run flag carry over between runs of the project (its preferences).
@@ -153,6 +165,15 @@ namespace AnalyticsSessionProbe
             for (int i = 0; i < 3; i++) yield return null;
             Put("events.afterWorkerForceUpdate", string.Join(" | ", m_Events));
 
+            // PlayerPrefs.DeleteAll: the session's preferences, and the session's values after it.
+            string userBefore = AnalyticsSessionInfo.userId;
+            long countBefore = AnalyticsSessionInfo.sessionCount, idBefore = AnalyticsSessionInfo.sessionId;
+            PlayerPrefs.DeleteAll();
+            Put("deleteAll.countKey", PlayerPrefs.HasKey("unity.player_session_count"));
+            Put("deleteAll.sessionIdKey", PlayerPrefs.HasKey("unity.player_sessionid"));
+            Put("deleteAll.userIdKey", PlayerPrefs.HasKey("unity.cloud_userid"));
+            Put("deleteAll.userIdKeySame", PlayerPrefs.GetString("unity.cloud_userid") == userBefore);
+            Put("deleteAll.sessionValuesSame", AnalyticsSessionInfo.userId == userBefore && AnalyticsSessionInfo.sessionCount == countBefore && AnalyticsSessionInfo.sessionId == idBefore);
             Put("complete", true);
             File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
             EditorApplication.Exit(0);

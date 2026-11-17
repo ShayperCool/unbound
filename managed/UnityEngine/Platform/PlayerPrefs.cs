@@ -103,15 +103,26 @@ namespace UnityEngine
             if (Values.Remove(key)) s_Dirty = true;
         }
 
+        /// <summary>Service-owned preferences, which survive DeleteAll in the 6000.0.71f1 Editor
+        /// (tests/projects/editorservices, tests/projects/analyticssession).</summary>
+        static readonly string[] s_ServiceKeys =
+        {
+            UnityConsent.EndUserConsent.PreferenceKey,
+            Identifiers.Identifiers.PreferenceKey,
+            Analytics.AnalyticsSessionInfo.CountKey,
+            Analytics.AnalyticsSessionInfo.SessionIdKey,
+            Analytics.AnalyticsSessionInfo.UserIdKey,
+        };
+
         public static void DeleteAll()
         {
             MainThreadCheck.Check("DeleteAll");
-            // Service-owned preferences survive DeleteAll in the 6000.0.71f1 Editor.
-            var consent = Compat.ServicePreferencesPreserved ? GetString(UnityConsent.EndUserConsent.PreferenceKey, null) : null;
-            var installation = Compat.ServicePreferencesPreserved ? GetString(Identifiers.Identifiers.PreferenceKey, null) : null;
+            List<KeyValuePair<string, object>> kept = null;
+            if (Compat.ServicePreferencesPreserved)
+                foreach (var key in s_ServiceKeys)
+                    if (Values.TryGetValue(key, out var value)) (kept ??= new List<KeyValuePair<string, object>>()).Add(new KeyValuePair<string, object>(key, value));
             Values.Clear();
-            if (consent != null) Values[UnityConsent.EndUserConsent.PreferenceKey] = consent;
-            if (installation != null) Values[Identifiers.Identifiers.PreferenceKey] = installation;
+            if (kept != null) foreach (var pair in kept) Values[pair.Key] = pair.Value;
             s_Dirty = true;
         }
 
