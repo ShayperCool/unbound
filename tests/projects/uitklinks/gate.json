@@ -1,0 +1,11 @@
+{
+  "commands": ["python3 tests/projects/uitklinks/run.py gate"],
+  "summary": "uitklinks: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Text/TextEventHandler.cs",
+    "managed/UnityEngine/UIElements/Text/UITKTextHandle.cs",
+    "managed/UnityEngine/UIElements/Events/LinkTagEvents.cs",
+    "managed/UnityEngine/UIElements/Controls/TextElement.Rendering.cs",
+    "managed/UnityEngine/Text/TextCoreText/TextInfo.cs"
+  ]
+}

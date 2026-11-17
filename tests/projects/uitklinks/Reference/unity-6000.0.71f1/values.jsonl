@@ -1,0 +1,19 @@
+{"k":"links.ontoOne","v":"over(one|AAAA) at label target links BubbleUp ; over(one|AAAA) at parent target links BubbleUp"}
+{"k":"links.withinOne","v":"move(one|AAAA) at label target links BubbleUp ; move(one|AAAA) at parent target links BubbleUp"}
+{"k":"links.offLinks","v":"out(-|-) at label target links BubbleUp ; out(-|-) at parent target links BubbleUp"}
+{"k":"links.ontoTwo","v":"over(two|CCCC) at label target links BubbleUp ; over(two|CCCC) at parent target links BubbleUp"}
+{"k":"links.twoToOne","v":"out(-|-) at label target links BubbleUp ; out(-|-) at parent target links BubbleUp"}
+{"k":"links.downOnOne","v":"down(one|AAAA) at label target links BubbleUp ; down(one|AAAA) at parent target links BubbleUp"}
+{"k":"links.upOnTwo","v":"up(two|CCCC) at label target links BubbleUp ; up(two|CCCC) at parent target links BubbleUp"}
+{"k":"links.downOffLinks","v":""}
+{"k":"links.upOffLinks","v":""}
+{"k":"links.leave","v":""}
+{"k":"anchor.over","v":""}
+{"k":"anchor.down","v":""}
+{"k":"anchor.up","v":""}
+{"k":"changing.over","v":"over(three|EEEEEEEE) at label target changing BubbleUp ; over(three|EEEEEEEE) at parent target changing BubbleUp"}
+{"k":"changing.textChanged","v":""}
+{"k":"changing.downAfter","v":""}
+{"k":"changing.moveAfter","v":""}
+{"k":"changing.leaveAfter","v":""}
+{"k":"complete","v":true}
