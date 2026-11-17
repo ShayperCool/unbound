@@ -238,11 +238,65 @@ namespace UnityEngine.Tests
             var cb = new CommandBuffer();
             cb.SwitchIntoFastMemory(BuiltinRenderTextureType.CameraTarget, FastMemoryFlags.SpillTop, 0.5f, true);
             Assert.Equal(1, cb.CommandCount);
+            Assert.Equal(28, cb.sizeInBytes);
             cb.SwitchOutOfFastMemory(BuiltinRenderTextureType.CameraTarget, true);
             Assert.Equal(2, cb.CommandCount);
             Assert.Empty(Logs(() => Graphics.ExecuteCommandBuffer(cb)));
             cb.Release();
             Assert.Equal(0, cb.CommandCount);
+        }
+
+        [Fact]
+        public void ShaderModeSettersKeepAnyValueAndUnknownTypesShareDeferredShading()
+        {
+            try
+            {
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int> { ["m_DepthNormals"] = 1 });
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, BuiltinShaderMode.Disabled);
+                Assert.Equal(BuiltinShaderMode.Disabled, GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, (BuiltinShaderMode)5);
+                Assert.Equal((BuiltinShaderMode)5, GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+                // An unknown type asserts and shares the deferred shading slot.
+                string[] logs = null;
+                logs = Logs(() => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.UseCustom));
+                Assert.Equal(new[] { "Assert: Unknown builtin shader type 8" }, logs);
+                Assert.Equal(BuiltinShaderMode.UseCustom, GraphicsSettings.GetShaderMode(BuiltinShaderType.DeferredShading));
+                // Control: the other types keep their own modes.
+                Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.LensFlare));
+
+                var shader = Shader.Find("Unlit/Color");
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, shader);
+                Assert.Same(shader, GraphicsSettings.GetCustomShader(BuiltinShaderType.MotionVectors));
+                Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.MotionVectors));
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, null);
+                Assert.Null(GraphicsSettings.GetCustomShader(BuiltinShaderType.MotionVectors));
+            }
+            finally
+            {
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+            }
+        }
+
+        [Fact]
+        public void CommandSizesAreTheEditorsAndStartOnFourByteBoundaries()
+        {
+            var cb = new CommandBuffer();
+            int id = Shader.PropertyToID("_SizeProbe");
+            cb.SetGlobalFloat(id, 1f);
+            Assert.Equal(12, cb.sizeInBytes);
+            cb.SetInvertCulling(true);
+            Assert.Equal(17, cb.sizeInBytes);
+            cb.SetInvertCulling(false);
+            Assert.Equal(25, cb.sizeInBytes);
+            cb.SetGlobalFloatArray(id, new float[4]);
+            Assert.Equal(56, cb.sizeInBytes);
+            cb.BeginSample("sample");
+            Assert.Equal(72, cb.sizeInBytes);
+            // The profiler samples take space but record no command.
+            Assert.Equal(4, cb.CommandCount);
+            cb.Clear();
+            Assert.Equal(0, cb.sizeInBytes);
+            cb.Release();
         }
 
         [Fact]
