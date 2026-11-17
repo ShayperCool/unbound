@@ -71,9 +71,9 @@ namespace UnityEngine.Tests
             Assert.Equal(UsageHints.MaskContainer | UsageHints.DynamicTransform, p.b.usageHints);
         }
 
-        // Image values switch as other discrete values (the probe measures textures, sprites and
-        // none): a render texture to a vector image with ease-out switches before the halfway time,
-        // without a usage hint.
+        // Image values switch as other discrete values (the probe takes them with linear and ease-in
+        // easings): with ease-out a render texture to a vector image switches before the halfway
+        // time, without a usage hint.
         [Fact]
         public void ImageKindsSwitchAtHalfTheEasedProgress()
         {
