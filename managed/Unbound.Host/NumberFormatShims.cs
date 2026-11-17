@@ -390,7 +390,7 @@ static class NumberFormatShims
     {
         var (start, end, _) = DeltaMetadata.Body(il, offset);
         int constrainedAt = -1, constrainedType = 0;
-        foreach (var (opcode, at, operand) in DeltaMetadata.Instructions(il, start, end))
+        foreach (var (opcode, at, operand) in Unbound.Runtime.ILCode.Instructions(il, start, end))
         {
             if (opcode is 0x28 or 0x6F) // call, callvirt
             {

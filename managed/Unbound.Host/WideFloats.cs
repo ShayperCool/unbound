@@ -297,10 +297,10 @@ static partial class WideFloats
         if (names.Method(method.Signature)) return true;
         var (start, end, locals) = DeltaMetadata.Body(il, offset);
         if (locals != 0 && names.Token(locals)) return true;
-        foreach (var (opcode, _, operand) in DeltaMetadata.Instructions(il, start, end))
+        foreach (var (opcode, _, operand) in Unbound.Runtime.ILCode.Instructions(il, start, end))
         {
             if (s_SingleOpCodes.Contains(opcode)) return true;
-            if (DeltaMetadata.HasToken(opcode) && opcode != 0x72 && names.Token(BitConverter.ToInt32(il, operand))) return true; // not ldstr
+            if (Unbound.Runtime.ILCode.HasToken(opcode) && opcode != 0x72 && names.Token(BitConverter.ToInt32(il, operand))) return true; // not ldstr
         }
         return false;
     }

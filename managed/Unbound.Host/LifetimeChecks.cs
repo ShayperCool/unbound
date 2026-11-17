@@ -113,7 +113,7 @@ static class LifetimeChecks
         {
             var (start, end, _) = DeltaMetadata.Body(patched, offset);
             int constrainedAt = -1;
-            foreach (var (opcode, at, operand) in DeltaMetadata.Instructions(patched, start, end))
+            foreach (var (opcode, at, operand) in Unbound.Runtime.ILCode.Instructions(patched, start, end))
             {
                 if (opcode == 0xFE16) { constrainedAt = at; continue; } // constrained.
                 if (opcode is not (0x28 or 0x6F)) continue; // call, callvirt
