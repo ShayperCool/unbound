@@ -202,41 +202,60 @@ public partial class ParticleRenderProbe
         Time.captureDeltaTime = 0f;
     }
 
-    /// <summary>Prewarms longer than 5 s under a Time.maximumParticleDeltaTime above the loop's
-    /// duration (0.25 s for loops of 0.1 s), where a long step by the duration is shorter than the
-    /// equal steps: without sub-emitters (a World-space rate under gravity) and with a Birth child
-    /// living 8 s; then two frames of 0.05 s.</summary>
+    /// <summary>Prewarms under a Time.maximumParticleDeltaTime above or below the loop's duration:
+    /// World-space rates under gravity without sub-emitters (every particle's age and position
+    /// shows the steps taken) for several maxima, durations, lifetimes (below 5 s, 8 s, 12 s) and
+    /// rates, and a Birth child living 8 s; then two frames of 0.05 s. Each maximum is its own
+    /// pass (it is global).</summary>
     IEnumerator MaxDeltaPrewarmControls()
     {
-        Time.captureDeltaTime = 0.05f;
         float maximum = Time.maximumParticleDeltaTime;
-        Time.maximumParticleDeltaTime = 0.25f;
-        yield return null;
-        var systems = new List<(string, ParticleSystem)>();
-        var played = new List<ParticleSystem>();
-        var origin = new Vector3(0f, 400f, 0f);
-        var gravity = PrewarmParent("prewarm/maxdelta/plain_gravity8/parent", origin, s =>
+        var passes = new (float maxDelta, (float duration, float lifetime, float rate)[] cases, bool birth)[]
         {
-            var m = s.main; m.duration = 0.1f; m.startLifetime = 8f; m.startSpeed = 2f; m.gravityModifier = 0.3f;
-            m.simulationSpace = ParticleSystemSimulationSpace.World;
-            var e = s.emission; e.rateOverTime = 10f; e.SetBursts(new ParticleSystem.Burst[0]);
-        });
-        systems.Add(("prewarm/maxdelta/plain_gravity8/parent", gravity));
-        played.Add(gravity);
-        var parent = PrewarmParent("prewarm/maxdelta/birth_child8/parent", origin + new Vector3(3f, 0f, 0f),
-            s => { var m = s.main; m.duration = 0.1f; m.startLifetime = 0.07f; });
-        systems.Add(("prewarm/maxdelta/birth_child8/parent", parent));
-        played.Add(parent);
-        systems.Add(("prewarm/maxdelta/birth_child8/child", LinkedChild("prewarm/maxdelta/birth_child8/child", parent,
-            s => { var m = s.main; m.startLifetime = 8f; var e = s.emission; e.rateOverTime = 30f; })));
-        foreach (var ps in played) ps.Play();
-        foreach (var (key, ps) in systems) RecordPrewarm(key + "/start", ps);
-        for (int frame = 0; frame < 2; frame++)
+            (0.25f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f), (0.1f, 12f, 10f), (0.1f, 8f, 100f), (0.2f, 8f, 10f), (0.3f, 8f, 10f), (1f, 8f, 1f) }, true),
+            (0.15f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f) }, false),
+            (0.4f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f), (0.3f, 8f, 10f) }, false),
+        };
+        foreach (var (maxDelta, cases, birth) in passes)
         {
+            Time.captureDeltaTime = 0.05f;
+            Time.maximumParticleDeltaTime = maxDelta;
             yield return null;
-            foreach (var (key, ps) in systems) RecordPrewarm(key + "/" + frame, ps);
+            var systems = new List<(string, ParticleSystem)>();
+            var played = new List<ParticleSystem>();
+            var origin = new Vector3(0f, 400f + 100f * maxDelta, 0f);
+            int slot = 0;
+            string pass = "prewarm/maxdelta/" + maxDelta.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            foreach (var (duration, lifetime, rate) in cases)
+            {
+                string key = $"{pass}/d{duration.ToString(System.Globalization.CultureInfo.InvariantCulture)}_l{lifetime}_r{rate}/parent";
+                var ps = PrewarmParent(key, origin + new Vector3(3f * slot++, 0f, 0f), s =>
+                {
+                    var m = s.main; m.duration = duration; m.startLifetime = lifetime; m.startSpeed = 2f; m.gravityModifier = 0.3f;
+                    m.simulationSpace = ParticleSystemSimulationSpace.World;
+                    var e = s.emission; e.rateOverTime = rate; e.SetBursts(new ParticleSystem.Burst[0]);
+                });
+                systems.Add((key, ps));
+                played.Add(ps);
+            }
+            if (birth)
+            {
+                var parent = PrewarmParent(pass + "/birth_child8/parent", origin + new Vector3(3f * slot++, 0f, 0f),
+                    s => { var m = s.main; m.duration = 0.1f; m.startLifetime = 0.07f; });
+                systems.Add((pass + "/birth_child8/parent", parent));
+                played.Add(parent);
+                systems.Add((pass + "/birth_child8/child", LinkedChild(pass + "/birth_child8/child", parent,
+                    s => { var m = s.main; m.startLifetime = 8f; var e = s.emission; e.rateOverTime = 30f; })));
+            }
+            foreach (var ps in played) ps.Play();
+            foreach (var (key, ps) in systems) RecordPrewarm(key + "/start", ps);
+            for (int frame = 0; frame < 2; frame++)
+            {
+                yield return null;
+                foreach (var (key, ps) in systems) RecordPrewarm(key + "/" + frame, ps);
+            }
+            foreach (var ps in played) Done(ps);
         }
-        foreach (var ps in played) Done(ps);
         Time.maximumParticleDeltaTime = maximum;
         Time.captureDeltaTime = 0f;
     }
