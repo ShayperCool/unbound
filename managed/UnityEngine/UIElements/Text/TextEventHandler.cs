@@ -22,6 +22,7 @@ namespace UnityEngine.UIElements
         EventCallback<PointerMoveEvent> m_ATagOnPointerMove;
         EventCallback<PointerOverEvent> m_ATagOnPointerOver;
         EventCallback<PointerOutEvent> m_ATagOnPointerOut;
+        bool m_LinkCallbacksRegistered, m_ATagCallbacksRegistered, m_ATagCursorCallbacksRegistered;
         internal bool isOverridingCursor;
         internal int currentLinkIDHash = -1;
         internal bool hasLinkTag;
@@ -33,14 +34,8 @@ namespace UnityEngine.UIElements
 
         public void OnDestroy()
         {
-            if (HasAllocatedLinkCallbacks()) UnregisterLinkCallbacks();
-            if (HasAllocatedATagCallbacks())
-            {
-                m_TextElement.UnregisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
-                m_TextElement.UnregisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
-                m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-                m_TextElement.UnregisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
-            }
+            if (m_LinkCallbacksRegistered) UnregisterLinkCallbacks();
+            if (m_ATagCallbacksRegistered) UnregisterATagCallbacks();
         }
 
         bool HasAllocatedLinkCallbacks() => m_LinkTagOnPointerDown != null;
@@ -71,6 +66,20 @@ namespace UnityEngine.UIElements
             m_TextElement.UnregisterCallback(m_LinkTagOnPointerUp, TrickleDown.TrickleDown);
             m_TextElement.UnregisterCallback(m_LinkTagOnPointerMove, TrickleDown.TrickleDown);
             m_TextElement.UnregisterCallback(m_LinkTagOnPointerOut, TrickleDown.TrickleDown);
+            m_LinkCallbacksRegistered = false;
+        }
+
+        void UnregisterATagCallbacks()
+        {
+            m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
+            if (m_ATagCursorCallbacksRegistered)
+            {
+                m_TextElement.UnregisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
+                m_TextElement.UnregisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
+                m_TextElement.UnregisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
+                m_ATagCursorCallbacksRegistered = false;
+            }
+            m_ATagCallbacksRegistered = false;
         }
 
         /// <summary>The link under a pointer event's position (in the element's content box), or -1.</summary>
@@ -112,19 +121,19 @@ namespace UnityEngine.UIElements
         void ATagOnPointerOver(PointerOverEvent _) => isOverridingCursor = false;
 
         /// <summary>Editor panels only: the link cursor while over an <c>&lt;a&gt;</c> link, the
-        /// element's own cursor again once off it.</summary>
+        /// element's own cursor again once off it (also onto a <c>&lt;link&gt;</c>).</summary>
         void ATagOnPointerMove(PointerMoveEvent pme)
         {
             int index = LinkAt(pme);
             var cursorManager = (m_TextElement.panel as BaseVisualElementPanel)?.cursorManager;
-            if (index >= 0)
+            if (index >= 0 && textInfo.linkInfo[index].hashCode == (int)MarkupTag.HREF)
             {
-                // Over a <link>, the cursor stays as it is.
-                if (textInfo.linkInfo[index].hashCode != (int)MarkupTag.HREF || isOverridingCursor) return;
+                if (isOverridingCursor) return;
                 isOverridingCursor = true;
                 cursorManager?.SetCursor(new Cursor { defaultCursorId = k_LinkCursorId });
                 return;
             }
+            // Off the <a> links (no link, or a <link>).
             if (!isOverridingCursor) return;
             cursorManager?.SetCursor(m_TextElement.computedValues.cursor);
             isOverridingCursor = false;
@@ -188,39 +197,35 @@ namespace UnityEngine.UIElements
         {
             var panel = m_TextElement?.panel;
             if (panel == null) return;
-            if (hasLinkTag)
+            if (hasLinkTag && !m_LinkCallbacksRegistered)
             {
                 AllocateLinkCallbacks();
                 m_TextElement.RegisterCallback(m_LinkTagOnPointerDown, TrickleDown.TrickleDown);
                 m_TextElement.RegisterCallback(m_LinkTagOnPointerUp, TrickleDown.TrickleDown);
                 m_TextElement.RegisterCallback(m_LinkTagOnPointerMove, TrickleDown.TrickleDown);
                 m_TextElement.RegisterCallback(m_LinkTagOnPointerOut, TrickleDown.TrickleDown);
+                m_LinkCallbacksRegistered = true;
             }
-            else if (HasAllocatedLinkCallbacks())
+            else if (!hasLinkTag && m_LinkCallbacksRegistered)
             {
                 UnregisterLinkCallbacks();
             }
-            bool editor = panel.contextType == ContextType.Editor;
-            if (hasATag)
+            if (hasATag && !m_ATagCallbacksRegistered)
             {
                 AllocateATagCallbacks();
                 m_TextElement.RegisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-                if (editor)
+                if (panel.contextType == ContextType.Editor)
                 {
                     m_TextElement.RegisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
                     m_TextElement.RegisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
                     m_TextElement.RegisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
+                    m_ATagCursorCallbacksRegistered = true;
                 }
+                m_ATagCallbacksRegistered = true;
             }
-            else if (HasAllocatedATagCallbacks())
+            else if (!hasATag && m_ATagCallbacksRegistered)
             {
-                m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-                if (editor)
-                {
-                    m_TextElement.UnregisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
-                    m_TextElement.UnregisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
-                    m_TextElement.UnregisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
-                }
+                UnregisterATagCallbacks();
             }
         }
 
