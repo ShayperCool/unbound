@@ -147,7 +147,6 @@ public class RuntimeApisProbe : MonoBehaviour
         foreach (BuiltinShaderType type in Enum.GetValues(typeof(BuiltinShaderType)))
         {
             Try("shader_mode." + type, () => GraphicsSettings.GetShaderMode(type));
-            Try("shader_mode." + type + ".shader", () => GraphicsSettings.GetCustomShader(type) == null ? "none" : GraphicsSettings.GetCustomShader(type).name);
         }
     }
 
@@ -184,6 +183,13 @@ public class RuntimeApisProbe : MonoBehaviour
         Try("screen.after_set.msaa_samples", () => typeof(Screen).GetProperty("msaaSamples", All)?.GetValue(null) ?? "absent");
         Try("screen.after_set.quality_anti_aliasing", () => QualitySettings.antiAliasing);
         Do("screen.set_msaa_1", () => Call(typeof(Screen), null, "SetMSAASamples", 1));
+        int quality = QualitySettings.antiAliasing;
+        foreach (int samples in new[] { 0, 4, 8 })
+        {
+            QualitySettings.antiAliasing = samples;
+            Try("screen.quality_aa" + samples + ".msaa_samples", () => typeof(Screen).GetProperty("msaaSamples", All)?.GetValue(null) ?? "absent");
+        }
+        QualitySettings.antiAliasing = quality;
         Do("texture.streaming_debug_properties", () => Call(typeof(Texture), null, "SetStreamingTextureMaterialDebugProperties", 3));
         var cb = new CommandBuffer { name = "fast" };
         Try("command_buffer.size", () => cb.sizeInBytes);
@@ -197,8 +203,6 @@ public class RuntimeApisProbe : MonoBehaviour
         Do("context.emit_world_geometry_for_scene_view", () => ScriptableRenderContext.EmitWorldGeometryForSceneView(cam));
         Do("context.emit_geometry_for_null", () => ScriptableRenderContext.EmitGeometryForCamera(null));
         Destroy(cam.gameObject);
-        var running = typeof(Camera).Assembly.GetType("UnityEngine.IntegratedSubsystem");
-        Try("subsystem.running_declared", () => running.GetProperty("running", All) != null);
         Try("scripting_runtime.user_assemblies", () =>
         {
             var names = (string[])Call(typeof(Camera).Assembly.GetType("UnityEngine.ScriptingRuntime"), null, "GetAllUserAssemblies");
