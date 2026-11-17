@@ -33,7 +33,9 @@ namespace UnityEngine.Tests
         /// <paramref name="fixedStep"/> is not 0), then puts the clocks back.</summary>
         static void FromFirstFrame(double fixedStep, System.Action body)
         {
-            var (time, unscaled, frames) = (Time.s_Time, Time.s_UnscaledTime, Time.s_FrameCount);
+            var saved = new System.Collections.Generic.Dictionary<System.Reflection.FieldInfo, object>();
+            foreach (var field in typeof(Time).GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic))
+                if (!field.IsInitOnly && !field.IsLiteral && field.FieldType.IsPrimitive) saved[field] = field.GetValue(null);
             try
             {
                 Time.s_FrameCount = 0;
@@ -41,12 +43,26 @@ namespace UnityEngine.Tests
                 Time.BeginFrame(0, fixedStep);
                 body();
             }
-            finally
+            finally { foreach (var pair in saved) pair.Key.SetValue(null, pair.Value); }
+        }
+
+        /// <summary>Paused or Edit mode host frames move fixed-step real time by a step each
+        /// (unscaledTime stands still), and the frames after them go on from there.</summary>
+        [Fact]
+        public void FixedStepRealTimeMovesThroughPausedFrames()
+        {
+            FromFirstFrame(Step, () =>
             {
-                Time.s_FrameCount = 0;
-                Time.BeginFrame(0);
-                (Time.s_Time, Time.s_UnscaledTime, Time.s_FrameCount) = (time, unscaled, frames);
-            }
+                Time.BeginFrame(Step, Step);
+                double before = Time.realtimeSinceStartupAsDouble;
+                for (int i = 0; i < 3; i++) Time.HostFrameOutsidePlay(Step);
+                double paused = Time.realtimeSinceStartupAsDouble;
+                Assert.InRange(paused - before, 3 * Step - 0.002, 3 * Step + 0.01);
+                Time.BeginFrame(Step, Step);
+                double resumed = Time.realtimeSinceStartupAsDouble;
+                Assert.InRange(resumed - Time.unscaledTimeAsDouble, 3 * Step - 1e-9, 3 * Step + 0.01);
+                Assert.True(resumed >= paused);
+            });
         }
 
         /// <summary>Under --fixed-fps a frame lasts its step of real time, as it does for

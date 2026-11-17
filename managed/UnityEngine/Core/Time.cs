@@ -84,9 +84,12 @@ namespace UnityEngine
         /// <summary>Under a scripted fixed frame rate (<c>--fixed-fps</c>, Unbound's deterministic
         /// mode), the frame's step; 0 when frames follow the wall clock.</summary>
         static double s_FixedRealStep;
-        /// <summary>In fixed-step mode, where the next frame's unscaledTime will be: the frame's
-        /// real time ends there.</summary>
+        /// <summary>In fixed-step mode, where the next frame's unscaledTime will be, plus the
+        /// paused time: the frame's real time ends there.</summary>
         static double s_FixedFrameEnd;
+        /// <summary>In fixed-step mode, the real time of host frames that ran no Play mode frame
+        /// (paused, Edit mode): one step each. unscaledTime does not count them.</summary>
+        static double s_FixedOutsidePlay;
         /// <summary>The latest real time read in fixed-step mode, and how many reads this frame
         /// found the frame's real time used up.</summary>
         static double s_LastRealtime;
@@ -245,9 +248,10 @@ namespace UnityEngine
             // there, or where a script last read it if that is later.
             if (fixedStep > 0)
             {
-                double unscaledStart = s_FrameCount == 0 ? 0.0 : s_UnscaledTime + realDelta;
-                s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(unscaledStart, s_LastRealtime);
-                s_FixedFrameEnd = unscaledStart + fixedStep;
+                if (s_FrameCount == 0) s_FixedOutsidePlay = 0;
+                double anchor = s_FrameCount == 0 ? 0.0 : s_UnscaledTime + realDelta + s_FixedOutsidePlay;
+                s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(anchor, s_LastRealtime);
+                s_FixedFrameEnd = anchor + fixedStep;
             }
             else
                 s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(s_FrameRealtime + realDelta, Realtime());
@@ -297,6 +301,22 @@ namespace UnityEngine
         }
 
         internal static void LevelLoaded() => s_TimeSinceLevelLoadStart = s_Time;
+
+        /// <summary>A host frame that runs no Play mode frame (paused, Edit mode). In fixed-step
+        /// mode real time moves by its step, as for a frame; otherwise it keeps following the wall
+        /// clock.</summary>
+        internal static void HostFrameOutsidePlay(double fixedStep)
+        {
+            if (!(fixedStep > 0) || !(s_FixedRealStep > 0)) return;
+            s_FixedOutsidePlay += fixedStep;
+            double anchor = s_FixedFrameEnd;
+            s_FrameRealtime = Math.Max(anchor, s_LastRealtime);
+            s_FixedFrameEnd = anchor + fixedStep;
+            s_FixedRealStep = fixedStep;
+            s_LastRealtime = s_FrameRealtime;
+            s_OverrunReads = 0;
+            s_FrameClock.Restart();
+        }
 
         /// <summary>Play mode starts its clocks from zero (the first frame has no delta).</summary>
         /// <summary>Play mode has run its first fixed step (at fixed time 0).</summary>

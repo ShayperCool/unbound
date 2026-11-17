@@ -517,6 +517,7 @@ namespace Unbound.Runtime
         /// <summary>A frame of paused Play mode: the Editor's updates run, the game does not.</summary>
         static unsafe void PausedFrame(FrameInput* input)
         {
+            Time.HostFrameOutsidePlay(input->FixedStep);
             MainThreadContext.Instance.RunPending();
             UnityEditor.EditorApplication.RunEditorCallbacksNow();
             Jobs.JobSystem.Flush();
@@ -544,6 +545,7 @@ namespace Unbound.Runtime
         /// <summary>An Edit mode frame: the Editor's own updates and editor callbacks; no scene plays.</summary>
         static unsafe void EditModeFrame(FrameInput* input)
         {
+            Time.HostFrameOutsidePlay(input->FixedStep);
             UpdateInput();
             MainThreadContext.Instance.RunPending();
             EditorSession.RunQueuedEditModeUpdate();

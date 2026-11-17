@@ -161,14 +161,17 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   drives time and scripted taps drift). Every engine clock follows those frames: `time` and
   `unscaledTime`, the audio clock, and real time (`realtimeSinceStartup`,
   `EditorApplication.timeSinceStartup`, `WaitForSecondsRealtime`), which starts each frame where
-  `unscaledTime` does and within the frame follows the wall clock up to just short of the next
-  frame's start, so a slow frame cannot make a tap read as a long press. A script waiting longer
-  in one frame sees it move by a microsecond per reading (a loop spending a time budget past
-  that point therefore runs a reading per microsecond of its budget); the frames after it hold
-  real time until `unscaledTime` catches up. The .NET clocks (`Stopwatch`, `DateTime`,
+  `unscaledTime` does (plus a step per paused or Edit mode frame) and within the frame follows
+  the wall clock up to just short of the next frame's start, so a slow frame cannot make a tap
+  read as a long press. A script waiting longer in one frame sees it move by a microsecond per
+  reading (a loop spending a time budget past that point runs a reading per microsecond of its
+  budget); the frames after it hold real time, still a microsecond per reading, until
+  `unscaledTime` catches up, which a game reading it more often than once per microsecond of
+  step would keep from happening. The .NET clocks (`Stopwatch`, `DateTime`,
   `Environment.TickCount`) keep wall time: games time their work and date things with them, and
-  the engine's own work budgets (`InstantiateAsync`'s integration time) use them too. `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
-  instead of the clock, so random choices repeat too.
+  the engine's own work budgets (`InstantiateAsync`'s integration time) use them too.
+  `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N instead of the clock, so random
+  choices repeat too.
 * **Compute shaders**: a `.compute` asset is a `ComputeShader` whose kernels (`#pragma kernel`, with
   their defines and `multi_compile` sets) compile through the same pipeline as draw programs to WGSL
   compute programs; every uniform block, buffer, texture and sampler keeps its name in group 0, so
