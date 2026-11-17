@@ -501,6 +501,8 @@ namespace UnityEngine
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
             if (planned) m_StepRateDt = ageSpan;
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
+            // The loops the plan passes over whole carry no emission phase either.
+            int skipped = planned && m_UseRateBatch ? SkippedLoops(dt, duration) : 0;
             int guard = 0;
             var segment = BurstSegment.Within;
             m_StepBursts.Clear();
@@ -530,7 +532,12 @@ namespace UnityEngine
                 }
                 else if (passBursts) CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration, fire: false);
                 m_Loop++;
-                CarryEmissionPhase(duration);
+                if (skipped > 0)
+                {
+                    skipped--;
+                    m_LoopStart = true;
+                }
+                else CarryEmissionPhase(duration);
                 Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
                 t0 = 0f;
                 t1 = rest;
@@ -560,27 +567,29 @@ namespace UnityEngine
         /// so the next update removes it (6000.0.71f1).</summary>
         const float DiscardedAgePercent = 100.00001f;
 
-        // Count with the established float arithmetic, sharing the step's emission draw
-        // across loops. Start curves use the final playback time of the whole batch.
-        /// <summary>The loop time a step's rate emits for: a looping system's step longer than its
-        /// loop emits only for its advance within the loop (the loops it passes over whole emit
-        /// nothing), its births still spread over the whole step; a shorter step emits for all of
-        /// it (the Unity 6000.0.71f1 Editor, tests/projects/particlerender `prewarm/maxdelta/*`:
-        /// steps of Time.maximumParticleDeltaTime above the duration).</summary>
-        float RateSpan(float t0, float dt, float duration)
+        /// <summary>The whole loops a looping system's step longer than its loop passes over without
+        /// emitting: its rate emits only for the rest of the step, more than none and at most one
+        /// loop, its births still spread over the whole step (the Unity 6000.0.71f1 Editor,
+        /// tests/projects/particlerender `prewarm/maxdelta/*`: steps of Time.maximumParticleDeltaTime
+        /// above the duration, a step of whole loops emitting one loop). A step of up to one loop
+        /// emits for all of it. Measured with the rate batch (<see cref="StartsInBatches"/>), the
+        /// only path that uses it.</summary>
+        int SkippedLoops(float dt, float duration)
         {
-            if (!m_Main.loop || !(dt > duration)) return dt;
-            float advance = (t0 + dt) % duration - t0;
-            return advance < 0f ? advance + duration : advance;
+            if (!m_Main.loop || !(dt > duration)) return 0;
+            // A step within a rounding error above a whole number of loops counts as that number.
+            return Math.Max(0, (int)Math.Ceiling(dt / (double)duration - 1e-4) - 1);
         }
 
+        // Count with the established float arithmetic, sharing the step's emission draw
+        // across loops. Start curves use the final playback time of the whole batch.
         bool PlanRate(float t0, float dt, float duration, float rateRandom)
         {
             var curve = m_Emission.rateOverTime;
             m_RateBatchEmitted = false;
             m_StepRateBirths = 0;
             float counted = m_RateAccumulator, whole = counted, gain = 0f, phase = m_EmitPhase;
-            float t1 = t0 + RateSpan(t0, dt, duration);
+            float t1 = t0 + (dt - SkippedLoops(dt, duration) * duration);
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
@@ -699,7 +708,7 @@ namespace UnityEngine
             float rate = curve.scalar;
             float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
             int births = 0;
-            float t1 = t0 + RateSpan(t0, dt, duration);
+            float t1 = t0 + dt;
             bool ended = false;
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)

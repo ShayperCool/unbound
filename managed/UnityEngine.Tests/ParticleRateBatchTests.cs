@@ -9,17 +9,20 @@ namespace UnityEngine.Tests
         /// <summary>A looping step longer than its loop emits its rate only for its advance within
         /// the loop (Unity 6000.0.71f1, tests/projects/particlerender prewarm/maxdelta/*): one
         /// 0.25 s step of a 0.1 s loop at 100 per second emits a 0.05 s window's births, five 0.05 s
-        /// steps over the same time all 25 (the control); a non-looping system emits the same in
-        /// either.</summary>
+        /// steps over the same time all 25 (the control); a step of two whole loops emits one loop;
+        /// a non-looping system emits the same in either. Other releases keep emitting the whole
+        /// step (their own path, unmeasured).</summary>
         [Fact]
         public void ALoopingStepLongerThanItsLoopEmitsForItsAdvanceWithinTheLoop()
         {
             Assert.InRange(Births(0.25f, true), 4, 5);
             Assert.Equal(25, Births(0.05f, true));
+            Assert.InRange(Births(0.2f, true, 0.2f), 9, 10);
             Assert.Equal(Births(0.05f, false), Births(0.25f, false));
+            Assert.InRange(Births(0.25f, true, release: "6000.0.0f1"), 24, 26);
         }
 
-        static int Births(float maxDelta, bool loop)
+        static int Births(float maxDelta, bool loop, float time = 0.25f, string release = "6000.0.71f1")
         {
             string previousVersion = ProjectInfo.UnityVersion;
             float previousMax = Time.maximumParticleDeltaTime;
@@ -28,14 +31,14 @@ namespace UnityEngine.Tests
             var ps = go.AddComponent<ParticleSystem>();
             try
             {
-                ProjectInfo.UnityVersion = "6000.0.71f1";
+                ProjectInfo.UnityVersion = release;
                 Time.maximumParticleDeltaTime = maxDelta;
                 var m = ps.main;
                 m.playOnAwake = false; m.duration = 0.1f; m.loop = loop; m.startLifetime = 5f;
                 var s = ps.shape; s.enabled = false;
                 var e = ps.emission; e.rateOverTime = 100f;
                 go.SetActive(true);
-                ps.Simulate(0.25f, false, true, false);
+                ps.Simulate(time, false, true, false);
                 return ps.particleCount;
             }
             finally
