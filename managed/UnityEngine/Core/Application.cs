@@ -60,7 +60,13 @@ namespace UnityEngine
         public static event Func<bool> wantsToQuit;
         public static event Action quitting;
         public static event Action unloading;
-        public static event UnityEngine.Events.UnityAction onBeforeRender;
+        /// <summary>Before rendering, in the order of the callbacks' BeforeRenderOrderAttribute
+        /// (<see cref="BeforeRenderHelper"/>).</summary>
+        public static event UnityEngine.Events.UnityAction onBeforeRender
+        {
+            add => BeforeRenderHelper.RegisterCallback(value);
+            remove => BeforeRenderHelper.UnregisterCallback(value);
+        }
 
         [ThreadStatic] static bool t_InLogCallback;
 
@@ -89,7 +95,7 @@ namespace UnityEngine
             focusChanged?.Invoke(focus);
         }
 
-        internal static void Internal_BeforeRender() => onBeforeRender?.Invoke();
+        internal static void Internal_BeforeRender() => BeforeRenderHelper.Invoke();
 
         internal static void Internal_LowMemory() => lowMemory?.Invoke();
 

@@ -406,20 +406,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public static global::UnityEngine.BatchRendererGroupRuntimeAnalytic CreateBatchRendererGroupRuntimeAnalytic() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BatchRendererGroupRuntimeAnalytic.CreateBatchRendererGroupRuntimeAnalytic"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class BeforeRenderHelper
-    {
-        [global::Unbound.Stub] public static void RegisterCallback(global::UnityEngine.Events.UnityAction callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BeforeRenderHelper.RegisterCallback"); }
-        [global::Unbound.Stub] public static void UnregisterCallback(global::UnityEngine.Events.UnityAction callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BeforeRenderHelper.UnregisterCallback"); }
-        [global::Unbound.Stub] public static void Invoke() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BeforeRenderHelper.Invoke"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe partial class BeforeRenderOrderAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public BeforeRenderOrderAttribute(int order) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BeforeRenderOrderAttribute.ctor"); }
-        public int order { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BeforeRenderOrderAttribute.order"); return default; } }
-    }
     unsafe partial class BillboardAsset
     {
         [global::Unbound.Stub] internal void GetImageTexCoordsInternal(object list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BillboardAsset.GetImageTexCoordsInternal"); }
