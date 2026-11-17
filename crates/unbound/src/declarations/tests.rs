@@ -1094,11 +1094,12 @@ fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
     scratch.write("install/Resources/unity_builtin_extra", "stand-in");
     scratch.write("install/Resources/unity default resources", "stand-in");
     scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
-    // The default device in tests is OpenGL Core.
+    // The pass is excluded for the default device of either host OS in tests (OpenGL Core on
+    // Linux, Metal on macOS: graphics_device::get).
     scratch.write(
         "Assets/Dropped.shader",
         "Shader \"Tests/Dropped\" {\n\
-         SubShader { Pass { Name \"FORWARD\" HLSLPROGRAM\n#pragma multi_compile _ KW_FIRST\n#pragma vertex vert\nENDHLSL } Pass { Name \"GBUFFER\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore\n#pragma multi_compile _ KW_GBUFFER_ONLY\n#pragma vertex vert\nENDHLSL } Pass { Name \"META\" HLSLPROGRAM\n#pragma multi_compile_local _ KW_LAST\n#pragma vertex vert\nENDHLSL } }\n\
+         SubShader { Pass { Name \"FORWARD\" HLSLPROGRAM\n#pragma multi_compile _ KW_FIRST\n#pragma vertex vert\nENDHLSL } Pass { Name \"GBUFFER\" HLSLPROGRAM\n#pragma exclude_renderers gles3 glcore metal\n#pragma multi_compile _ KW_GBUFFER_ONLY\n#pragma vertex vert\nENDHLSL } Pass { Name \"META\" HLSLPROGRAM\n#pragma multi_compile_local _ KW_LAST\n#pragma vertex vert\nENDHLSL } }\n\
          SubShader { Pass { Name \"OTHER\" } UsePass \"Tests/Dropped/GBUFFER\" }\n}",
     );
     let provider = Provider::new(inputs(
