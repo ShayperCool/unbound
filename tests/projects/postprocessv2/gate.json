@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/postprocessv2/run.py gate"
+  ],
+  "summary": "postprocessv2: .*",
+  "engine_paths": [
+    "crates/unbound-app/src/materials.rs"
+  ]
+}
