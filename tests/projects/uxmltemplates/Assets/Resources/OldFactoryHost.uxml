@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="OldFactoryDoc" src="OldFactoryDoc.uxml" />
+    <ui:Instance template="OldFactoryDoc" name="oldFactoryHost">
+        <AttributeOverrides element-name="only" old-value="7" />
+    </ui:Instance>
+</ui:UXML>

@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Template name="Middle" src="Middle.uxml" />
+    <p:OldTemplate name="oldNested" template="Middle" />
+    <ui:Label name="after" text="after" />
+</ui:UXML>

@@ -26,6 +26,20 @@ touch) under its path of names, with the logs of each clone.
 - `OldTemplateDoc.uxml`: a game template container of the deprecated factory path (TemplateContainer's
   traits clone its template), cloned alone, inside an instance without overrides (`OldTemplateBare`)
   and inside instances with overrides (`OldTemplateHost`, `OldTemplateOther`, whose override names no
-  element), where the Editor's clone throws a NullReferenceException.
+  element), where the Editor's clone throws a NullReferenceException; also over a template holding
+  an instance (`NestedOld`, which throws) and over a template of deprecated-factory elements only
+  under overrides (`OldFactoryHost`, which clones and takes the override);
+- `AssetHost.uxml` instances `Sub/Card.uxml` and overrides asset references (a ListView's
+  `item-template`, a `[UxmlAttribute]` and a factory's asset description) with a path relative to
+  AssetHost's own folder;
+- `SlotClash.uxml` defines a slot its nested instance's document defines again (the clone throws);
+  `EarlyHost.uxml` instances `EarlySlot.uxml`, whose slot defined before its nested instance is no
+  longer reachable and whose later one is;
+- `Odd.uxml`: overrides without `element-name`, `<AttributeOverrides>` under a plain element and
+  `slot` on a child of a plain element;
+- `import.flags.*`: each document's `importedWithWarnings` and `importedWithErrors`.
+
+The importer's id of an element in its messages (`(Type)(id)`) is an internal number and is recorded
+as `#`.
 
 Other releases are unmeasured.

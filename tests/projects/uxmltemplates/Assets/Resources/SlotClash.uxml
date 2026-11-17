@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Leaf" src="Leaf.uxml" />
+    <ui:VisualElement name="early" slot-name="a" />
+    <ui:Instance template="Leaf" name="leafAfter" />
+    <ui:Label name="after" text="after" />
+</ui:UXML>

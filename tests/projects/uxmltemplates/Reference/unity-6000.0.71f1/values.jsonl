@@ -1,4 +1,26 @@
-{"k":"import.logs","v":"Warning:  (9,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (10,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (13,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (15,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (16,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (19,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'name'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'class'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'style'. | Warning:  (11,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (12,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (2,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (3,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Error:  (3,6): Semantic - Slot definition 'a' is defined more than once | Warning:  (4,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future."}
+{"k":"import.logs","v":"Warning:  (9,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (10,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (13,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (15,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (16,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (19,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'name'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'class'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'style'. | Warning:  (11,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (12,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (2,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (3,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Error:  (3,6): Semantic - Slot definition 'a' is defined more than once | Warning:  (4,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (3,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (3,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (5,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (4,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (5,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (4,10): Semantic - AttributeOverrides node missing 'element-name' attribute. | Warning:  (8,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Error:  (8,10): Semantic - Element has an assigned slot, but its parent '(UnityEngine.UIElements.VisualElement)(#)' is not a template reference"}
+{"k":"import.flags.Leaf","v":"warnings True errors False"}
+{"k":"import.flags.Middle","v":"warnings True errors False"}
+{"k":"import.flags.Outer","v":"warnings True errors False"}
+{"k":"import.flags.Panel","v":"warnings False errors False"}
+{"k":"import.flags.Host","v":"warnings False errors False"}
+{"k":"import.flags.Slots","v":"warnings True errors True"}
+{"k":"import.flags.DuplicateSlots","v":"warnings True errors False"}
+{"k":"import.flags.OldTemplateDoc","v":"warnings False errors False"}
+{"k":"import.flags.OldTemplateHost","v":"warnings False errors False"}
+{"k":"import.flags.OldTemplateBare","v":"warnings False errors False"}
+{"k":"import.flags.OldTemplateOther","v":"warnings False errors False"}
+{"k":"import.flags.Row","v":"warnings False errors False"}
+{"k":"import.flags.Sub/Card","v":"warnings False errors False"}
+{"k":"import.flags.AssetHost","v":"warnings False errors False"}
+{"k":"import.flags.NestedOld","v":"warnings False errors False"}
+{"k":"import.flags.FactoryOnly","v":"warnings False errors False"}
+{"k":"import.flags.OldFactoryDoc","v":"warnings False errors False"}
+{"k":"import.flags.OldFactoryHost","v":"warnings False errors False"}
+{"k":"import.flags.SlotClash","v":"warnings True errors False"}
+{"k":"import.flags.EarlySlot","v":"warnings True errors False"}
+{"k":"import.flags.EarlyHost","v":"warnings True errors False"}
+{"k":"import.flags.Odd","v":"warnings True errors True"}
 {"k":"Leaf.logs","v":""}
 {"k":"Leaf/0:title","v":"Label [unity-text-element unity-label leaf] tooltip 'leaf tip' focusable False tab -1 text 'leaf title'"}
 {"k":"Leaf/1:title","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'second title'"}
@@ -81,6 +103,58 @@
 {"k":"OldTemplateBare/1:after","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'after'"}
 {"k":"OldTemplateOther.exception","v":"NullReferenceException: Object reference not set to an instance of an object"}
 {"k":"OldTemplateOther.logs","v":""}
+{"k":"AssetHost.logs","v":""}
+{"k":"AssetHost/0:card","v":"TemplateContainer [] template 'Card' content self"}
+{"k":"AssetHost/0:card/0:list","v":"ListView [unity-collection-view unity-list-view] focusable True tab 0 itemTemplate 'Row'"}
+{"k":"AssetHost/0:card/0:list/0:-","v":"ScrollView [unity-scroll-view unity-scroll-view--scroll unity-scroll-view--vertical unity-collection-view__scroll-view]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container","v":"VisualElement [unity-scroll-view__content-and-vertical-scroll-container]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/0:unity-content-viewport","v":"VisualElement [unity-scroll-view__content-viewport unity-scroll-view__content-viewport--vertical]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/0:unity-content-viewport/0:unity-content-container","v":"VisualElement [unity-scroll-view__content-container unity-scroll-view__content-container--vertical] focusable True tab 0"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-","v":"Scroller [unity-scroller unity-scroller--vertical unity-scroll-view__vertical-scroller]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/0:unity-low-button","v":"RepeatButton [unity-text-element unity-repeat-button unity-scroller__low-button] focusable False tab -1 text ''"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/1:unity-high-button","v":"RepeatButton [unity-text-element unity-repeat-button unity-scroller__high-button] focusable False tab -1 text ''"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider","v":"ScrollerSlider [unity-base-field unity-base-field--no-label unity-base-slider unity-base-slider--vertical unity-slider unity-scroller__slider] focusable True tab 0"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider/0:-","v":"VisualElement [unity-base-field__input unity-base-slider__input unity-slider__input] focusable True tab 0"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider/0:-/0:unity-drag-container","v":"VisualElement [unity-base-slider__drag-container]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider/0:-/0:unity-drag-container/0:unity-tracker","v":"VisualElement [unity-base-slider__tracker]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider/0:-/0:unity-drag-container/1:unity-dragger-border","v":"VisualElement [unity-base-slider__dragger-border]"}
+{"k":"AssetHost/0:card/0:list/0:-/0:unity-content-and-vertical-scroll-container/1:-/2:unity-slider/0:-/0:unity-drag-container/2:unity-dragger","v":"VisualElement [unity-base-slider__dragger]"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-","v":"Scroller [unity-scroller unity-scroller--horizontal unity-scroll-view__horizontal-scroller]"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/0:unity-low-button","v":"RepeatButton [unity-text-element unity-repeat-button unity-scroller__low-button] focusable False tab -1 text ''"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/1:unity-high-button","v":"RepeatButton [unity-text-element unity-repeat-button unity-scroller__high-button] focusable False tab -1 text ''"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider","v":"ScrollerSlider [unity-base-field unity-base-field--no-label unity-base-slider unity-base-slider--horizontal unity-slider unity-scroller__slider] focusable True tab 0"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider/0:-","v":"VisualElement [unity-base-field__input unity-base-slider__input unity-slider__input] focusable True tab 0"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider/0:-/0:unity-drag-container","v":"VisualElement [unity-base-slider__drag-container]"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider/0:-/0:unity-drag-container/0:unity-tracker","v":"VisualElement [unity-base-slider__tracker]"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider/0:-/0:unity-drag-container/1:unity-dragger-border","v":"VisualElement [unity-base-slider__dragger-border]"}
+{"k":"AssetHost/0:card/0:list/0:-/1:-/2:unity-slider/0:-/0:unity-drag-container/2:unity-dragger","v":"VisualElement [unity-base-slider__dragger]"}
+{"k":"AssetHost/0:card/1:customAsset","v":"NewElement [] myValue 0 note null tree 'Row'"}
+{"k":"AssetHost/0:card/2:legacyAsset","v":"OldElement [] oldValue 0 raw null tree 'Row'"}
+{"k":"NestedOld.exception","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"NestedOld.logs","v":""}
+{"k":"OldFactoryHost.logs","v":""}
+{"k":"OldFactoryHost/0:oldFactoryHost","v":"TemplateContainer [] template 'OldFactoryDoc' content self"}
+{"k":"OldFactoryHost/0:oldFactoryHost/0:oldFactory","v":"OldTemplate [] template 'FactoryOnly' content self"}
+{"k":"OldFactoryHost/0:oldFactoryHost/0:oldFactory/0:only","v":"OldElement [] oldValue 7 raw null"}
+{"k":"SlotClash.exception","v":"ArgumentException: An item with the same key has already been added. Key: a"}
+{"k":"SlotClash.logs","v":""}
+{"k":"SlotClash/0:early","v":"VisualElement []"}
+{"k":"EarlyHost.logs","v":"Error: Slot 'e' was not found. Existing slots: l"}
+{"k":"EarlyHost/0:early","v":"TemplateContainer [] template 'EarlySlot' content self"}
+{"k":"EarlyHost/0:early/0:earlyM","v":"VisualElement []"}
+{"k":"EarlyHost/0:early/1:panelAfter","v":"TemplateContainer [] template 'Panel' content 'body'"}
+{"k":"EarlyHost/0:early/1:panelAfter/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'header'"}
+{"k":"EarlyHost/0:early/1:panelAfter/1:body","v":"VisualElement []"}
+{"k":"EarlyHost/0:early/2:lateM","v":"VisualElement []"}
+{"k":"EarlyHost/0:early/2:lateM/0:intoL","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into l'"}
+{"k":"EarlyHost/0:early/3:intoE","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into e'"}
+{"k":"Odd.logs","v":"Error: Element 'AttributeOverrides' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."}
+{"k":"Odd/0:noElementName","v":"TemplateContainer [] template 'Panel' content 'body'"}
+{"k":"Odd/0:noElementName/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'header'"}
+{"k":"Odd/0:noElementName/1:body","v":"VisualElement []"}
+{"k":"Odd/1:notInstance","v":"VisualElement []"}
+{"k":"Odd/1:notInstance/0:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'Unknown type: 'AttributeOverrides''"}
+{"k":"Odd/1:notInstance/1:slotOutside","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'slot outside'"}
 {"k":"instantiate.logs","v":"Error: Slot 'zzz' was not found. Existing slots: a, b"}
 {"k":"instantiate.root","v":"TemplateContainer [] template 'Middle' content self children 3"}
 {"k":"complete","v":true}

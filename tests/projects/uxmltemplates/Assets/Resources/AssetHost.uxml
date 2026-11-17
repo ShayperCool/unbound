@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Card" src="Sub/Card.uxml" />
+    <ui:Instance template="Card" name="card">
+        <AttributeOverrides element-name="list" item-template="Row.uxml" />
+        <AttributeOverrides element-name="customAsset" tree="Row.uxml" />
+        <AttributeOverrides element-name="legacyAsset" tree="Row.uxml" />
+    </ui:Instance>
+</ui:UXML>

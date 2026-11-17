@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Panel" src="Panel.uxml" />
+    <ui:Instance template="Panel" name="noElementName">
+        <AttributeOverrides text="no element name" />
+    </ui:Instance>
+    <ui:VisualElement name="notInstance">
+        <AttributeOverrides element-name="header" text="under a plain element" />
+        <ui:Label name="slotOutside" text="slot outside" slot="a" />
+    </ui:VisualElement>
+</ui:UXML>

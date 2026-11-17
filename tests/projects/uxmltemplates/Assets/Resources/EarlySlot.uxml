@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Panel" src="Panel.uxml" />
+    <ui:VisualElement name="earlyM" slot-name="e" />
+    <ui:Instance template="Panel" name="panelAfter" />
+    <ui:VisualElement name="lateM" slot-name="l" />
+</ui:UXML>

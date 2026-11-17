@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Template name="FactoryOnly" src="FactoryOnly.uxml" />
+    <p:OldTemplate name="oldFactory" template="FactoryOnly" />
+</ui:UXML>

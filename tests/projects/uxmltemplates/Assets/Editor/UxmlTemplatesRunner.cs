@@ -19,7 +19,11 @@ public static class UxmlTemplatesRunner
             if (type != LogType.Log) logs.Add(type + ": " + message);
         };
         Application.logMessageReceived += capture;
-        foreach (var doc in new[] { "Leaf", "Middle", "Outer", "Panel", "Host", "Slots", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther" })
+        foreach (var doc in new[]
+            {
+                "Leaf", "Middle", "Outer", "Panel", "Host", "Slots", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther",
+                "Row", "Sub/Card", "AssetHost", "NestedOld", "FactoryOnly", "OldFactoryDoc", "OldFactoryHost", "SlotClash", "EarlySlot", "EarlyHost", "Odd",
+            })
             AssetDatabase.ImportAsset("Assets/Resources/" + doc + ".uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
         Application.logMessageReceived -= capture;
         File.WriteAllLines(Path.Combine(output, "import-logs.txt"), logs);

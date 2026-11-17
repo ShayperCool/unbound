@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:ListView name="list" />
+    <p:NewElement name="customAsset" />
+    <p:OldElement name="legacyAsset" />
+</ui:UXML>

@@ -17,6 +17,7 @@ namespace TemplatesProbe
     {
         [UxmlAttribute] public int myValue { get; set; }
         [UxmlAttribute] public string note { get; set; }
+        [UxmlAttribute] public VisualTreeAsset tree { get; set; }
     }
 
     /// <summary>A game element of the deprecated factory path: one attribute read through its
@@ -28,18 +29,21 @@ namespace TemplatesProbe
         public new class UxmlTraits : VisualElement.UxmlTraits
         {
             readonly UxmlIntAttributeDescription m_Old = new UxmlIntAttributeDescription { name = "old-value", obsoleteNames = new[] { "former-value" } };
+            readonly UxmlAssetAttributeDescription<VisualTreeAsset> m_Tree = new UxmlAssetAttributeDescription<VisualTreeAsset> { name = "tree" };
 
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
             {
                 base.Init(ve, bag, cc);
                 var e = (OldElement)ve;
                 e.oldValue = m_Old.GetValueFromBag(bag, cc);
+                e.tree = m_Tree.GetValueFromBag(bag, cc);
                 bag.TryGetAttributeValue("raw-value", out e.rawValue);
             }
         }
 
         public int oldValue;
         public string rawValue;
+        public VisualTreeAsset tree;
     }
 
     /// <summary>A game template container of the deprecated factory path: its template is cloned by
@@ -96,9 +100,11 @@ namespace TemplatesProbe
             if (type != LogType.Log) m_Logs.Add(type + ": " + FirstLine(message));
         }
 
+        /// <summary>The logs since the last call, as one value. An element's id in the importer's
+        /// messages (`(Type)(id)`) is an internal number, recorded as `#`.</summary>
         string TakeLogs()
         {
-            var text = string.Join(" | ", m_Logs);
+            var text = System.Text.RegularExpressions.Regex.Replace(string.Join(" | ", m_Logs), @"\)\(-?[0-9]+\)", ")(#)");
             m_Logs.Clear();
             return text;
         }
@@ -142,8 +148,15 @@ namespace TemplatesProbe
             {
                 case Toggle t: sb.Append(" label ").Append(S(t.label)).Append(" value ").Append(t.value); break;
                 case TextElement t: sb.Append(" text ").Append(S(t.text)); break;
-                case NewElement n: sb.Append(" myValue ").Append(n.myValue).Append(" note ").Append(S(n.note)); break;
-                case OldElement o: sb.Append(" oldValue ").Append(o.oldValue).Append(" raw ").Append(S(o.rawValue)); break;
+                case NewElement n:
+                    sb.Append(" myValue ").Append(n.myValue).Append(" note ").Append(S(n.note));
+                    if (n.tree != null) sb.Append(" tree ").Append(S(n.tree.name));
+                    break;
+                case OldElement o:
+                    sb.Append(" oldValue ").Append(o.oldValue).Append(" raw ").Append(S(o.rawValue));
+                    if (o.tree != null) sb.Append(" tree ").Append(S(o.tree.name));
+                    break;
+                case ListView l: sb.Append(" itemTemplate ").Append(l.itemTemplate == null ? "null" : S(l.itemTemplate.name)); break;
                 case TemplateContainer c: sb.Append(" template ").Append(S(c.templateId)).Append(" content ").Append(c.contentContainer == c ? "self" : S(c.contentContainer.name)); break;
             }
             return sb.ToString();
@@ -166,7 +179,11 @@ namespace TemplatesProbe
             Walk(root, "");
         }
 
-        static readonly string[] s_Documents = { "Leaf", "Middle", "Outer", "Panel", "Host", "Slots", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther" };
+        static readonly string[] s_Documents =
+        {
+            "Leaf", "Middle", "Outer", "Panel", "Host", "Slots", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther",
+            "Row", "Sub/Card", "AssetHost", "NestedOld", "FactoryOnly", "OldFactoryDoc", "OldFactoryHost", "SlotClash", "EarlySlot", "EarlyHost", "Odd",
+        };
 
         void Clone(string doc)
         {
@@ -190,7 +207,17 @@ namespace TemplatesProbe
             // import logs are recorded.
             foreach (var doc in s_Documents) Resources.Load<VisualTreeAsset>(doc);
             Put("import.logs", TakeLogs());
-            foreach (var doc in new[] { "Leaf", "Middle", "Outer", "Host", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther" }) Clone(doc);
+            foreach (var doc in s_Documents)
+            {
+                var asset = Resources.Load<VisualTreeAsset>(doc);
+                Put("import.flags." + doc, "warnings " + asset.importedWithWarnings + " errors " + asset.importedWithErrors);
+            }
+            foreach (var doc in new[]
+            {
+                "Leaf", "Middle", "Outer", "Host", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther",
+                "AssetHost", "NestedOld", "OldFactoryHost", "SlotClash", "EarlyHost", "Odd",
+            })
+                Clone(doc);
             // An instance returned by Instantiate holds the document's elements itself.
             var instance = Resources.Load<VisualTreeAsset>("Middle").Instantiate();
             Put("instantiate.logs", TakeLogs());

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="EarlySlot" src="EarlySlot.uxml" />
+    <ui:Instance template="EarlySlot" name="early">
+        <ui:Label name="intoE" text="into e" slot="e" />
+        <ui:Label name="intoL" text="into l" slot="l" />
+    </ui:Instance>
+</ui:UXML>
