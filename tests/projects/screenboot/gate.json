@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/screenboot/run.py gate"
+  ],
+  "summary": "screenboot: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Input.cs",
+    "managed/Unbound.Host/Game.cs",
+    "crates/unbound-runtime/src/config.rs"
+  ]
+}
