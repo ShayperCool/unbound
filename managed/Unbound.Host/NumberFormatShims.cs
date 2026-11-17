@@ -15,14 +15,16 @@ namespace Unbound.Host;
 /// <summary>
 /// Game code formats floats, doubles and enum values, and reads exception messages, as under Unity's Mono (see
 /// <see cref="Unbound.MonoNumberFormat"/>): calls to <c>float.ToString</c>, <c>double.ToString</c>,
-/// <c>string.Format</c>, <c>string.Concat(object…)</c>, <c>StringBuilder.Append/AppendFormat</c>,
+/// <c>string.Format</c>, <c>string.Concat(object…)</c>, <c>string.Join</c>,
+/// <c>StringBuilder.Append/AppendFormat/AppendJoin</c>,
 /// <c>Convert.ToString</c>, virtual <c>ToString</c>s, virtual <c>Exception.Message</c> reads and
 /// enum texts (<c>Enum.ToString</c>, <c>Enum.GetName</c>, <c>Enum.Format</c>,
 /// <c>Type.GetEnumName</c>) are redirected to it when an assembly loads, and again in the IL of
 /// every hot-reload delta. Every rewritten instruction keeps its size, so the assembly's PDB
 /// still matches. A ToString called directly on an enum value, a nullable or a generic parameter's
 /// value (<c>constrained. T callvirt object::ToString()</c>, the usual <c>e.ToString()</c>), and
-/// string.Join of a generic sequence, are redirected at load only: a delta cannot be given the
+/// string.Join, string.Concat and StringBuilder.AppendJoin of a generic sequence, are redirected
+/// at load only: a delta cannot be given the
 /// generic shims' instantiations, so edited code prints those calls as .NET does.
 /// </summary>
 static class NumberFormatShims
@@ -120,6 +122,8 @@ static class NumberFormatShims
                     }
                     if (target is GenericInstanceMethod { GenericArguments.Count: 1 } generic && FindGenericShim(generic.ElementMethod) is { } genericShim)
                     {
+                        // (callvirt on a StringBuilder: the shim takes it as its first argument.)
+                        instruction.OpCode = OpCodes.Call;
                         instruction.Operand = Instance(genericShim, generic.GenericArguments[0]);
                         continue;
                     }
@@ -181,18 +185,18 @@ static class NumberFormatShims
     }
 
     /// <summary>The generic shim of a call of a generic class library method (one type
-    /// parameter), matched by declaring type, name and parameters.</summary>
+    /// parameter), matched by declaring type, name and parameters (an instance call's receiver
+    /// first).</summary>
     static System.Reflection.MethodInfo? FindGenericShim(MethodReference method)
     {
-        if (method.DeclaringType.FullName != "System.String" || method.HasThis) return null;
+        var declaring = method.DeclaringType.FullName;
+        if (declaring is not ("System.String" or "System.Text.StringBuilder")) return null;
+        var called = method.Parameters.Select(p => GenericName(p.ParameterType)).ToList();
+        if (method.HasThis) called.Insert(0, declaring);
         foreach (var shim in s_GenericShims)
         {
-            var parameters = shim.GetParameters();
-            if (shim.Name != method.Name || parameters.Length != method.Parameters.Count) continue;
-            bool match = true;
-            for (int i = 0; i < parameters.Length && match; i++)
-                match = GenericName(parameters[i].ParameterType) == GenericName(method.Parameters[i].ParameterType);
-            if (match) return shim;
+            if (shim.Name == method.Name && shim.GetParameters().Select(p => GenericName(p.ParameterType)).SequenceEqual(called))
+                return shim;
         }
         return null;
     }

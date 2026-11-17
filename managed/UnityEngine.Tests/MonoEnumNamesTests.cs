@@ -31,6 +31,11 @@ public enum ManyUnsorted
 [Flags] public enum FlagsNoZero { One = 1, Two = 2, Uno = 1 }
 public enum Signed { Neg = -1, Zero = 0, One = 1, MinusOne = -1, Min = int.MinValue }
 public enum Longs : ulong { Small = 1, Big = ulong.MaxValue, Biggest = ulong.MaxValue, Mid = 1UL << 40 }
+public sealed class Localizer : IFormatProvider, ICustomFormatter
+{
+    public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : null;
+    public string Format(string format, object arg, IFormatProvider provider) => arg is SortedAliases value ? ""enum "" + (int)value : null;
+}
 public struct Counter { public int Calls; public override string ToString() => ""calls "" + (++Calls); }
 public static class Probe
 {
@@ -48,6 +53,12 @@ public static class Probe
         + "" "" + typeof(SortedAliases).GetEnumName(2) + "" "" + Enum.Format(typeof(SortedAliases), 2, ""G"") + "" "" + Enum.Format(typeof(SortedAliases), 2, ""D"");
     public static string Generic<T>(T value) => value.ToString();
     public static string GenericEnum() => Generic(SortedAliases.C);
+    public static string GenericObject() => Generic<object>(SortedAliases.C) + "" "" + Generic<Enum>(SortedAliases.C) + "" "" + Generic<object>(1849.9999f) + "" "" + Generic<IFormattable>(1849.9999);
+    public static string CustomFormatter() => string.Format(new Localizer(), ""{0} {1}"", SortedAliases.C, 1.5f) + ""|"" + new StringBuilder().AppendFormat(new Localizer(), ""{0}"", SortedAliases.C);
+    public static string Sequences() => string.Concat(new System.Collections.Generic.List<SortedAliases> { SortedAliases.C, SortedAliases.B })
+        + ""|"" + new StringBuilder().AppendJoin("","", new[] { SortedAliases.C, SortedAliases.B }).AppendJoin('/', new object[] { SortedAliases.C, 1849.9999f })
+        + ""|"" + new StringBuilder().AppendJoin(';', new System.Collections.Generic.List<float> { 1849.9999f, 2f });
+    public static string FormatOtherType() => Enum.Format(typeof(SortedAliases), (byte)2, ""G"");
     public static string GenericClass() => Generic<string>(""text"");
     public static string GenericNull() => Generic<object>(null);
     public static string GenericFloat() => Generic(1849.9999f);
@@ -93,6 +104,11 @@ public static class Probe
             Assert.Equal("C C C C 2", Run(probe, "Lookups"));
             Assert.Equal("C", Run(probe, "GenericEnum"));
             Assert.Equal("C||", Run(probe, "Nullable"));
+            // A reference type parameter holding a boxed enum or float (an object, an Enum).
+            Assert.Equal("C C 1850 1849.9999", Run(probe, "GenericObject"));
+            Assert.Equal("CC|C,CC/1850|1850;2", Run(probe, "Sequences"));
+            // An integral value of another type than the enum's throws as in the class library.
+            Assert.Throws<ArgumentException>(() => Run(probe, "FormatOtherType"));
             Assert.Equal("C,C|C|C,1850|1850|a,,b|1,2|C,", Run(probe, "Joined"));
             Assert.Equal("N V3b V12 Alias Alias, C None 8 0 Uno, Two Neg 2 Big 9", Run(probe, "Others"));
             Assert.Equal("SolidColor LeftMeta Default PerVertex Above", Run(probe, "Engine"));
@@ -106,6 +122,8 @@ public static class Probe
         public void GenericToStringKeepsOtherTypes(OptimizationLevel optimization)
         {
             var probe = Redirected(optimization);
+            // A custom formatter is given the enum itself (it may test its type), not a wrapper.
+            Assert.Equal("enum 2 1.5|enum 2", Run(probe, "CustomFormatter"));
             Assert.Equal("text", Run(probe, "GenericClass"));
             Assert.Throws<NullReferenceException>(() => Run(probe, "GenericNull"));
             Assert.Equal("1850", Run(probe, "GenericFloat"));
@@ -115,10 +133,12 @@ public static class Probe
 
         enum Unsorted16 { P9 = 9, P1 = 1, P5 = 5, P5b = 5, P3 = 3 }
 
-        /// <summary>The engine's own texts (the log) use the same names.</summary>
+        /// <summary>The engine's own texts (the log, an IMGUI event) use the same names.</summary>
         [Fact]
         public void EngineTextsUseMonosNames()
         {
+            // tests/projects/enumtext unity.UnityEngine.EventType.0: "mouseDown".
+            Assert.StartsWith("Event: mouseDown   Position:", new Event { type = EventType.MouseDown }.ToString());
             Assert.Equal("SolidColor", MonoNumberFormat.ObjectToString(CameraClearFlags.SolidColor));
             Assert.Equal("SolidColor", MonoNumberFormat.ToString((Enum)CameraClearFlags.Color));
             // Unsorted constants with one alias: insertion sort keeps declaration order (P5, P5b), the

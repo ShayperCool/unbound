@@ -406,10 +406,10 @@ namespace Unbound
         public static string Format(string format, object arg0, object arg1) => string.Format(format, Wrap(arg0), Wrap(arg1));
         public static string Format(string format, object arg0, object arg1, object arg2) => string.Format(format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
         public static string Format(string format, object[] args) => string.Format(format, Wrap(args));
-        public static string Format(IFormatProvider provider, string format, object arg0) => string.Format(provider, format, Wrap(arg0));
-        public static string Format(IFormatProvider provider, string format, object arg0, object arg1) => string.Format(provider, format, Wrap(arg0), Wrap(arg1));
-        public static string Format(IFormatProvider provider, string format, object arg0, object arg1, object arg2) => string.Format(provider, format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
-        public static string Format(IFormatProvider provider, string format, object[] args) => string.Format(provider, format, Wrap(args));
+        public static string Format(IFormatProvider provider, string format, object arg0) => string.Format(provider, format, Wrap(arg0, provider));
+        public static string Format(IFormatProvider provider, string format, object arg0, object arg1) => string.Format(provider, format, Wrap(arg0, provider), Wrap(arg1, provider));
+        public static string Format(IFormatProvider provider, string format, object arg0, object arg1, object arg2) => string.Format(provider, format, Wrap(arg0, provider), Wrap(arg1, provider), Wrap(arg2, provider));
+        public static string Format(IFormatProvider provider, string format, object[] args) => string.Format(provider, format, Wrap(args, provider));
 
         public static string Concat(object arg0) => string.Concat(Wrap(arg0));
         public static string Concat(object arg0, object arg1) => string.Concat(Wrap(arg0), Wrap(arg1));
@@ -420,6 +420,13 @@ namespace Unbound
         public static string Join(char separator, object[] values) => string.Join(separator, Wrap(values));
         public static string Join<T>(string separator, IEnumerable<T> values) => Texts<T>.Mono ? string.Join(separator, MonoTexts(values)) : string.Join(separator, values);
         public static string Join<T>(char separator, IEnumerable<T> values) => Texts<T>.Mono ? string.Join(separator, MonoTexts(values)) : string.Join(separator, values);
+        public static string Concat<T>(IEnumerable<T> values) => Texts<T>.Mono ? string.Concat(MonoTexts(values)) : string.Concat(values);
+        public static StringBuilder AppendJoin(StringBuilder builder, string separator, object[] values) => builder.AppendJoin(separator, Wrap(values));
+        public static StringBuilder AppendJoin(StringBuilder builder, char separator, object[] values) => builder.AppendJoin(separator, Wrap(values));
+        public static StringBuilder AppendJoin<T>(StringBuilder builder, string separator, IEnumerable<T> values) =>
+            Texts<T>.Mono ? builder.AppendJoin(separator, MonoTexts(values)) : builder.AppendJoin(separator, values);
+        public static StringBuilder AppendJoin<T>(StringBuilder builder, char separator, IEnumerable<T> values) =>
+            Texts<T>.Mono ? builder.AppendJoin(separator, MonoTexts(values)) : builder.AppendJoin(separator, values);
 
         /// <summary>Whether values of a type may print otherwise under Mono: floats, doubles,
         /// enums, exceptions, or values of a type that can hold any of them.</summary>
@@ -441,10 +448,10 @@ namespace Unbound
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object arg0, object arg1) => builder.AppendFormat(format, Wrap(arg0), Wrap(arg1));
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object arg0, object arg1, object arg2) => builder.AppendFormat(format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object[] args) => builder.AppendFormat(format, Wrap(args));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0) => builder.AppendFormat(provider, format, Wrap(arg0));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1) => builder.AppendFormat(provider, format, Wrap(arg0), Wrap(arg1));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1, object arg2) => builder.AppendFormat(provider, format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object[] args) => builder.AppendFormat(provider, format, Wrap(args));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0) => builder.AppendFormat(provider, format, Wrap(arg0, provider));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1) => builder.AppendFormat(provider, format, Wrap(arg0, provider), Wrap(arg1, provider));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1, object arg2) => builder.AppendFormat(provider, format, Wrap(arg0, provider), Wrap(arg1, provider), Wrap(arg2, provider));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object[] args) => builder.AppendFormat(provider, format, Wrap(args, provider));
 
         /// <summary>An object's string as Mono makes it (floats and doubles by the rules above).</summary>
         public static string ObjectToString(object value) => value switch
@@ -464,6 +471,14 @@ namespace Unbound
             Enum e => new BoxedEnum(e),
             _ => value,
         };
+
+        /// <summary>A provider with a custom formatter is given the arguments themselves (it may
+        /// test their types); its fallback prints them as .NET does.</summary>
+        static bool CustomFormatter(IFormatProvider provider) => provider?.GetFormat(typeof(ICustomFormatter)) != null;
+
+        static object Wrap(object value, IFormatProvider provider) => CustomFormatter(provider) ? value : Wrap(value);
+
+        static object[] Wrap(object[] args, IFormatProvider provider) => CustomFormatter(provider) ? args : Wrap(args);
 
         static object[] Wrap(object[] args)
         {

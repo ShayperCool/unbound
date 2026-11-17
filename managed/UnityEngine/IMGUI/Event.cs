@@ -332,14 +332,14 @@ namespace UnityEngine
             if (isKey)
             {
                 if (m_Character == '\0')
-                    return string.Format(System.Globalization.CultureInfo.InvariantCulture, "Event:{0}   Character:\\0   Modifiers:{1}   KeyCode:{2}", m_Type, m_Modifiers, m_KeyCode);
-                return "Event:" + m_Type + "   Character:" + (int)m_Character + "   Modifiers:" + m_Modifiers + "   KeyCode:" + m_KeyCode;
+                    return Unbound.MonoNumberFormat.Format(System.Globalization.CultureInfo.InvariantCulture, "Event:{0}   Character:\\0   Modifiers:{1}   KeyCode:{2}", m_Type, m_Modifiers, m_KeyCode);
+                return Unbound.MonoNumberFormat.Format(System.Globalization.CultureInfo.InvariantCulture, "Event:{0}   Character:{1}   Modifiers:{2}   KeyCode:{3}", new object[] { m_Type, (int)m_Character, m_Modifiers, m_KeyCode });
             }
             if (isMouse)
-                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "Event: {0}   Position: {1} Modifiers: {2}", m_Type, m_MousePosition, m_Modifiers);
+                return Unbound.MonoNumberFormat.Format(System.Globalization.CultureInfo.InvariantCulture, "Event: {0}   Position: {1} Modifiers: {2}", m_Type, m_MousePosition, m_Modifiers);
             if (m_Type == EventType.ExecuteCommand || m_Type == EventType.ValidateCommand)
-                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "Event: {0}  \"{1}\"", m_Type, m_CommandName);
-            return "" + m_Type;
+                return Unbound.MonoNumberFormat.Format(System.Globalization.CultureInfo.InvariantCulture, "Event: {0}  \"{1}\"", m_Type, m_CommandName);
+            return Unbound.MonoNumberFormat.ObjectToString(m_Type);
         }
     }
 }

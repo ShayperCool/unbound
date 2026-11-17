@@ -125,6 +125,9 @@ namespace Unbound
                 return ToString((Enum)(object)value, null);
             }
             if (Kind<T>.NullableMono) return (object)value is { } boxed ? MonoNumberFormat.ObjectToString(boxed) : "";
+            // A reference type parameter may hold a boxed enum, float or exception (null throws, as
+            // the call it replaces does).
+            if (!typeof(T).IsValueType) return value is null ? throw new NullReferenceException() : MonoNumberFormat.ObjectToString(value);
             return value.ToString();
         }
 
@@ -194,8 +197,9 @@ namespace Unbound
         /// <summary>Enum.Format: names in the "G" and "F" formats, the rest as .NET.</summary>
         internal static string Format(Type enumType, object value, string format)
         {
+            // (A value of another enum, or of another integral type than the enum's, throws as there.)
             if (enumType == null || value == null || format == null || !enumType.IsEnum || !IsIntegral(value)
-                || (value is Enum && value.GetType() != enumType) || format is not ("G" or "g" or "F" or "f"))
+                || value.GetType() != enumType && value.GetType() != Enum.GetUnderlyingType(enumType) || format is not ("G" or "g" or "F" or "f"))
                 return Enum.Format(enumType, value, format);
             return ToString((Enum)Enum.ToObject(enumType, value), format);
         }
