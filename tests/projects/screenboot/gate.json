@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Core/Input.cs",
     "managed/Unbound.Host/Game.cs",
-    "crates/unbound-runtime/src/config.rs"
+    "crates/unbound-runtime/src/config.rs",
+    "crates/unbound/src/commands.rs"
   ]
 }

@@ -19,7 +19,7 @@ namespace UnityEngine
 
         /// <summary>The Game view's size before Play mode's first callback: the Editor's Game view
         /// exists before Play mode, so scripts see its size from SubsystemRegistration on (matches
-        /// the Unity 6000.0.71f1 macOS Editor, tests/projects/screenboot).</summary>
+        /// the Unity 6000.0.71f1 Editor, tests/projects/screenboot).</summary>
         internal static void SetInitialSize(int width, int height)
         {
             if (width <= 0 || height <= 0) return;

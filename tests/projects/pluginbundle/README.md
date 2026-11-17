@@ -10,7 +10,9 @@ the bundle. `run.py` builds two from `Plugins/pluginbundle.c` (clang, arm64) int
 the answer or the exception's type. Then `Same`'s native `pluginbundle_call` calls a managed
 `Action<string, int, string>` back through the pointer `Marshal.GetFunctionPointerForDelegate`
 makes of it, a delegate of a generic type that the Editor's Mono marshals (`callback.generic`:
-the arguments the action received, or the exception's type). Values compare exactly.
+the arguments the action received, or the exception's type), and through the same function
+declared with an `Action<string, int, string>` parameter, a P/Invoke argument of a generic
+delegate type (`callback.pinvoke`). Values compare exactly.
 
 Plugin loading is decided by the OS, so the reference is the macOS Editor's
 (`Reference/unity-6000.0.71f1/macos.jsonl`, two identical batchmode captures on Apple silicon);

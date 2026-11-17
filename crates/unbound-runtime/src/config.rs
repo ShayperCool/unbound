@@ -37,8 +37,9 @@ pub struct GameOptions {
     pub player_prefs: Option<PathBuf>,
     /// Application.persistentDataPath of the run's own instead of the Editor's.
     pub persistent_data_path: Option<PathBuf>,
-    /// The Game view's size in rendering pixels (the window's), which scripts see from the first
-    /// callback of Play mode on; None without a window.
+    /// The Game view's size in rendering pixels (the window's, headless runs included), which
+    /// scripts see from the first callback of Play mode on; None in `unbound test`'s Edit-mode
+    /// runs, whose size before the first frame is unmeasured.
     pub screen: Option<(i32, i32)>,
 }
 

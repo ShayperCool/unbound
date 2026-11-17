@@ -20,6 +20,7 @@ public sealed class PluginBundleProbe : MonoBehaviour
     [DllImport("RenamedLib", EntryPoint = "pluginbundle_answer")] static extern int RenamedByExecutable();
     [DllImport("Same", EntryPoint = "pluginbundle_answer")] static extern int SameByBundle();
     [DllImport("Same", EntryPoint = "pluginbundle_call")] static extern void CallBack(IntPtr callback);
+    [DllImport("Same", EntryPoint = "pluginbundle_call")] static extern void CallBackGeneric(Action<string, int, string> callback);
 
     static string s_Received = "not called";
     static readonly Action<string, int, string> s_Callback = (a, b, c) => s_Received = a + "|" + b + "|" + c;
@@ -50,6 +51,16 @@ public sealed class PluginBundleProbe : MonoBehaviour
         }
         catch (Exception e) { generic = e.GetType().Name; }
         m_Out.Append("{\"k\":\"callback.generic\",\"v\":\"").Append(generic).Append("\"}\n");
+        // The delegate as a P/Invoke argument.
+        s_Received = "not called";
+        string pinvoke;
+        try
+        {
+            CallBackGeneric((a, b, c) => s_Received = a + "/" + b + "/" + c);
+            pinvoke = s_Received;
+        }
+        catch (Exception e) { pinvoke = e.GetType().Name; }
+        m_Out.Append("{\"k\":\"callback.pinvoke\",\"v\":\"").Append(pinvoke).Append("\"}\n");
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         string dir = Environment.GetEnvironmentVariable("PLUGIN_BUNDLE_OUT");
         if (string.IsNullOrEmpty(dir)) Debug.Log(m_Out.ToString());

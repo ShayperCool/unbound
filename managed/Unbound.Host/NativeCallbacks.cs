@@ -16,7 +16,8 @@ namespace Unbound.Host;
 /// delegate, so every P/Invoke taking a delegate gets a managed wrapper that roots the delegates
 /// it passes before calling the native entry point (kept as <c>&lt;name&gt;__native</c>).
 /// Mono also marshals a delegate of a generic type (<c>Action&lt;string, int&gt;</c>), which .NET
-/// refuses: such a parameter reaches the native entry point as the callback pointer
+/// refuses (tests/projects/pluginbundle `callback.pinvoke`): such a parameter reaches the native
+/// entry point as the callback pointer
 /// <see cref="Unbound.MonoMarshal.ToNative"/> makes of it.
 /// </summary>
 static class NativeCallbacks
@@ -68,10 +69,10 @@ static class NativeCallbacks
         }
     }
 
-    /// <summary>Moves the P/Invoke to a new method and makes the original a managed wrapper.</summary>
     /// <summary>A parameter of a generic delegate type passed by value.</summary>
     static bool IsGenericDelegate(Mono.Cecil.TypeReference type) => type is GenericInstanceType && IsDelegate(type);
 
+    /// <summary>Moves the P/Invoke to a new method and makes the original a managed wrapper.</summary>
     static void Wrap(Mono.Cecil.TypeDefinition type, Mono.Cecil.MethodDefinition method, MethodReference keep, MethodReference toNative)
     {
         var native = new Mono.Cecil.MethodDefinition(method.Name + "__native", method.Attributes, method.ReturnType)
@@ -84,7 +85,8 @@ static class NativeCallbacks
         foreach (var p in method.Parameters)
         {
             bool generic = IsGenericDelegate(p.ParameterType);
-            var copy = new ParameterDefinition(p.Name, p.Attributes, generic ? type.Module.TypeSystem.IntPtr : p.ParameterType);
+            var copy = new ParameterDefinition(p.Name, generic ? p.Attributes & ~ParameterAttributes.HasFieldMarshal : p.Attributes,
+                generic ? type.Module.TypeSystem.IntPtr : p.ParameterType);
             if (p.HasMarshalInfo && !generic) copy.MarshalInfo = p.MarshalInfo;
             native.Parameters.Add(copy);
         }
