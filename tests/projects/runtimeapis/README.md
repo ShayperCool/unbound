@@ -30,7 +30,7 @@ writes with their log type (`.logs`).
 
 Measured in the Unity 6000.0.71f1 Editor on Linux with an NVIDIA GPU, windowed (two
 byte-identical captures; a third attempt that crashed while the Editor started was discarded). The project has only its predefined script assemblies: whether package
-assemblies count as user assemblies is not measured. `run.py record` / `publish` / `gate`
+assemblies and precompiled plugin DLLs count as user assemblies is not measured. `run.py record` / `publish` / `gate`
 (tests/value_probe.py).
 
 Recorded residuals (`residuals.json`): CommandBuffer.sizeInBytes counts 64 bytes per recorded
