@@ -101,7 +101,7 @@ public static class EditorLoadProbe
         Do("subscribe.assembly_compiled", () => CompilationPipeline.assemblyCompilationFinished += (p, m) => s_Fired.Add("assemblyCompilationFinished"));
         Do("subscribe.prefab_reverted", () => PrefabUtility.prefabInstanceReverted += g => s_Fired.Add("prefabInstanceReverted"));
         Do("subscribe.require_in_build", () => UnityEditor.Analytics.AnalyticsSettings.OnRequireInBuildHandler += () => { s_Fired.Add("OnRequireInBuildHandler"); return false; });
-        Do("subscribe.active_context", () => ToolManager.activeContextChanged += () => s_Fired.Add("activeContextChanged"));
+        Do("subscribe.active_context", () => ToolManager.activeContextChanged += () => { s_Fired.Add("activeContextChanged"); events.Add("activeContextChanged"); });
         Do("subscribe.tool_events", () =>
         {
             ToolManager.activeToolChanging += () => events.Add("activeToolChanging");
@@ -174,6 +174,8 @@ public static class EditorLoadProbe
 
     static void ToolState()
     {
+        // The tool and context types read before Tools.current.
+        Try("tools.types_first", () => (ToolManager.activeToolType?.FullName ?? "null") + "|" + (ToolManager.activeContextType?.FullName ?? "null"));
         Try("tools.start", ToolsNow);
         var mode = Tools.pivotMode;
         var rotation = Tools.pivotRotation;
