@@ -60,9 +60,8 @@ namespace Unbound
     /// generic type (<c>Action&lt;string, int, string&gt;</c>) gets a native-callable pointer too,
     /// while .NET refuses generic delegate types (tests/projects/pluginbundle `callback.generic`). Such a delegate is
     /// called through a delegate of a non-generic type with its signature (one type per generic
-    /// type). As under Mono, where a native callback made from a delegate stays valid after the
-    /// delegate is collected (plugins pass temporary ones), the delegate called is kept alive, once
-    /// per equal delegate (Unbound.NativeCallbackRoots). Game assemblies' calls are redirected here
+    /// type). The delegate called is kept alive, once per equal delegate, so that a temporary one a
+    /// plugin is given stays callable (Unbound.NativeCallbackRoots). Game assemblies' calls are redirected here
     /// when they load (Unbound.Host.FrameworkShims).
     /// </summary>
     public static class MonoMarshal
@@ -101,11 +100,10 @@ namespace Unbound
         static Type Define(Type generic)
         {
             var invoke = generic.GetMethod("Invoke");
-            // Marshalling given per parameter is not carried over: fail rather than marshal otherwise.
-            const ParameterAttributes marshalling = ParameterAttributes.HasFieldMarshal | ParameterAttributes.In | ParameterAttributes.Out;
+            // [MarshalAs] on a parameter is not carried over: fail rather than marshal otherwise.
             foreach (var parameter in invoke.GetParameters().Append(invoke.ReturnParameter))
-                if ((parameter.Attributes & marshalling) != 0)
-                    throw new NotSupportedException($"Unbound: Marshal.GetFunctionPointerForDelegate of {generic} is not supported: its parameters' marshalling ([MarshalAs], [In], [Out]) is not carried to the callback.");
+                if ((parameter.Attributes & ParameterAttributes.HasFieldMarshal) != 0)
+                    throw new NotSupportedException($"Unbound: Marshal.GetFunctionPointerForDelegate of {generic} is not supported: its parameters' [MarshalAs] is not carried to the callback.");
             lock (s_Types)
             {
                 s_Module ??= AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Unbound.MonoMarshal.Callbacks"), AssemblyBuilderAccess.Run)
@@ -125,10 +123,13 @@ namespace Unbound
                 builder.DefineConstructor(MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                         CallingConventions.Standard, new[] { typeof(object), typeof(IntPtr) })
                     .SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
-                var parameters = Array.ConvertAll(invoke.GetParameters(), p => p.ParameterType);
-                builder.DefineMethod("Invoke", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
-                        invoke.ReturnType, parameters)
-                    .SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
+                var source = invoke.GetParameters();
+                var method = builder.DefineMethod("Invoke", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
+                    invoke.ReturnType, Array.ConvertAll(source, p => p.ParameterType));
+                // Each parameter's direction ([In], [Out], `out`) as the generic Invoke has it.
+                for (int i = 0; i < source.Length; i++)
+                    method.DefineParameter(i + 1, source[i].Attributes & (ParameterAttributes.In | ParameterAttributes.Out), source[i].Name);
+                method.SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
                 return builder.CreateType();
             }
         }

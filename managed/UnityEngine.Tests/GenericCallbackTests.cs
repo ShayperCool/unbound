@@ -17,6 +17,9 @@ using System;
 using System.Runtime.InteropServices;
 public delegate void Plain(int x);
 public delegate void Marshalled<T>([MarshalAs(UnmanagedType.I1)] bool ok, T data);
+[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+public delegate void Wide<T>(string text, T data);
+public delegate void Getter<T>(T key, out int value);
 public static class Probe
 {
     public static string Received = ""not called"";
@@ -32,6 +35,13 @@ public static class Probe
     // A temporary delegate of a non-generic type: .NET's own marshalling, kept alive as under Mono.
     public static IntPtr TemporaryPlain() => Marshal.GetFunctionPointerForDelegate(new Plain(Store));
     static void Ignore(bool ok, int data) { }
+    public static string WideText;
+    static void ReadWide(string text, int data) => WideText = text + ""/"" + data;
+    static readonly Wide<int> s_Wide = ReadWide;
+    public static IntPtr WideCallback() => Marshal.GetFunctionPointerForDelegate(s_Wide);
+    static void Get(int key, out int value) => value = key + 1;
+    static readonly Getter<int> s_Getter = Get;
+    public static IntPtr GetterCallback() => Marshal.GetFunctionPointerForDelegate(s_Getter);
     public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
 }";
 
@@ -86,6 +96,23 @@ public static class Probe
             GC.Collect();
             ((delegate* unmanaged<int, void>)pointer)(5);
             Assert.Equal(5, probe.GetType("Probe")!.GetField("Seen")!.GetValue(null));
+        }
+
+        [Fact]
+        public unsafe void TheGenericTypesMarshallingAndDirectionsAreKept()
+        {
+            var probe = Compiled(redirected: true);
+            // CharSet.Unicode of [UnmanagedFunctionPointer]: the string arrives as UTF-16.
+            var wide = (IntPtr)Call(probe, "WideCallback");
+            var text = Marshal.StringToHGlobalUni("h\u00e9llo");
+            try { ((delegate* unmanaged[Cdecl]<IntPtr, int, void>)wide)(text, 4); }
+            finally { Marshal.FreeHGlobal(text); }
+            Assert.Equal("h\u00e9llo/4", probe.GetType("Probe")!.GetField("WideText")!.GetValue(null));
+            // An `out` parameter writes back.
+            var getter = (IntPtr)Call(probe, "GetterCallback");
+            int value = 0;
+            ((delegate* unmanaged<int, int*, void>)getter)(41, &value);
+            Assert.Equal(42, value);
         }
 
         [Fact]
