@@ -1,12 +1,36 @@
 {
   "RGBA4444 atlas lower mip levels: the first level matches, the Editor's rule for the levels below (from the 4444 texels) is not found yet; Unbound rebuilds them from the first level as for RGBA32 (q561 follow-up)": [
-    "pack.argb4444.level1.hash", "pack.argb4444.level2.hash", "pack.argb4444.level3.hash", "pack.argb4444.level4.hash",
-    "pack.argb4444.level5.hash", "pack.argb4444.level6.hash",
-    "pack.rgba4444.level1.hash", "pack.rgba4444.level2.hash", "pack.rgba4444.level3.hash", "pack.rgba4444.level4.hash",
-    "pack.rgba4444.level5.hash", "pack.rgba4444.level6.hash"
+    "pack.argb4444.level1.hash",
+    "pack.argb4444.level2.hash",
+    "pack.argb4444.level3.hash",
+    "pack.argb4444.level4.hash",
+    "pack.argb4444.level5.hash",
+    "pack.argb4444.level6.hash",
+    "pack.rgba4444.level1.hash",
+    "pack.rgba4444.level2.hash",
+    "pack.rgba4444.level3.hash",
+    "pack.rgba4444.level4.hash",
+    "pack.rgba4444.level5.hash",
+    "pack.rgba4444.level6.hash",
+    "pack.argb4444mixedmips.level1.hash",
+    "pack.argb4444mixedmips.level2.hash",
+    "pack.argb4444mixedmips.level3.hash",
+    "pack.argb4444mixedmips.level4.hash",
+    "pack.argb4444mixedmips.level5.hash",
+    "pack.argb4444mixedmips.level6.hash",
+    "pack.argb4444padding.level1.hash",
+    "pack.argb4444padding.level2.hash",
+    "pack.argb4444padding.level3.hash",
+    "pack.argb4444padding.level4.hash",
+    "pack.argb4444padding.level5.hash",
+    "pack.argb4444padding.level6.hash"
   ],
   "Textures shrunk to fit the maximum size: the Editor's scaling of their texels is unmeasured; Unbound scales bilinearly (the layout and format match)": [
-    "pack.dxt5shrunk.level0.hash", "pack.dxt5shrunk.level1.hash", "pack.dxt5shrunk.level2.hash", "pack.dxt5shrunk.level3.hash",
-    "pack.dxt5shrunk.level4.hash", "pack.dxt5shrunk.level5.hash"
+    "pack.dxt5shrunk.level0.hash",
+    "pack.dxt5shrunk.level1.hash",
+    "pack.dxt5shrunk.level2.hash",
+    "pack.dxt5shrunk.level3.hash",
+    "pack.dxt5shrunk.level4.hash",
+    "pack.dxt5shrunk.level5.hash"
   ]
 }

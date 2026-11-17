@@ -107,32 +107,34 @@ namespace UnityEngine.Tests
 
         public static IEnumerable<object[]> Formats() => new[]
         {
-            // (formats, mips per texture, padding, the atlas's format)
-            new object[] { new[] { TextureFormat.DXT1, TextureFormat.DXT1 }, new[] { true, true }, 0, TextureFormat.DXT1 },
-            new object[] { new[] { TextureFormat.DXT1, TextureFormat.DXT5 }, new[] { true, true }, 0, TextureFormat.DXT5 },
-            new object[] { new[] { TextureFormat.BC7, TextureFormat.BC7, TextureFormat.BC7 }, new[] { true, true, true }, 0, TextureFormat.BC7 },
-            new object[] { new[] { TextureFormat.ASTC_4x4, TextureFormat.ASTC_4x4 }, new[] { true, true }, 0, TextureFormat.ASTC_4x4 },
-            new object[] { new[] { TextureFormat.ETC2_RGB, TextureFormat.ETC2_RGB }, new[] { true, true }, 0, TextureFormat.ETC2_RGB },
+            // (formats, mips per texture, padding, the atlas's format, its levels for 32 × 32 and 16 × 16
+            // textures: a compressed atlas down to the smallest side's one block, else the full chain)
+            new object[] { new[] { TextureFormat.DXT1, TextureFormat.DXT1 }, new[] { true, true }, 0, TextureFormat.DXT1, 3 },
+            new object[] { new[] { TextureFormat.DXT1, TextureFormat.DXT5 }, new[] { true, true }, 0, TextureFormat.DXT5, 3 },
+            new object[] { new[] { TextureFormat.BC7, TextureFormat.BC7, TextureFormat.BC7 }, new[] { true, true, true }, 0, TextureFormat.BC7, 3 },
+            new object[] { new[] { TextureFormat.ASTC_4x4, TextureFormat.ASTC_4x4 }, new[] { true, true }, 0, TextureFormat.ASTC_4x4, 3 },
+            new object[] { new[] { TextureFormat.ETC2_RGB, TextureFormat.ETC2_RGB }, new[] { true, true }, 0, TextureFormat.ETC2_RGB, 3 },
+            new object[] { new[] { TextureFormat.ETC_RGB4, TextureFormat.ETC2_RGB }, new[] { true, true }, 0, TextureFormat.ETC2_RGB, 3 },
             // Mipmaps on some only, or padding with mipmaps: uncompressed.
-            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, false }, 0, TextureFormat.RGBA32 },
-            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, true }, 1, TextureFormat.RGBA32 },
+            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, false }, 0, TextureFormat.RGBA32, 7 },
+            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, true }, 1, TextureFormat.RGBA32, 7 },
             // Without mipmaps padding keeps it compressed.
-            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { false, false }, 3, TextureFormat.DXT5 },
+            new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { false, false }, 3, TextureFormat.DXT5, 1 },
             // The first texture's format decides; an uncompressed one makes RGBA32.
-            new object[] { new[] { TextureFormat.RGBA32, TextureFormat.DXT5 }, new[] { true, true }, 0, TextureFormat.RGBA32 },
-            new object[] { new[] { TextureFormat.DXT5, TextureFormat.RGB24 }, new[] { true, true }, 0, TextureFormat.RGBA32 },
+            new object[] { new[] { TextureFormat.RGBA32, TextureFormat.DXT5 }, new[] { true, true }, 0, TextureFormat.RGBA32, 7 },
+            new object[] { new[] { TextureFormat.DXT5, TextureFormat.RGB24 }, new[] { true, true }, 0, TextureFormat.RGBA32, 7 },
         };
 
         [Theory]
         [MemberData(nameof(Formats))]
-        public void TheAtlasFormatFollowsTheTextures(TextureFormat[] formats, bool[] mips, int padding, TextureFormat expected)
+        public void TheAtlasFormatFollowsTheTextures(TextureFormat[] formats, bool[] mips, int padding, TextureFormat expected, int levels)
         {
             var textures = new Texture2D[formats.Length];
             for (int i = 0; i < formats.Length; i++) textures[i] = Make(32 >> (i % 2), 32 >> (i % 2), formats[i], mips[i]);
             var atlas = Atlas();
             Assert.NotNull(atlas.PackTextures(textures, padding, 2048));
             Assert.Equal(expected, atlas.format);
-            Assert.Equal(mips[0] || mips[^1] ? atlas.mipmapCount > 1 : false, atlas.mipmapCount > 1);
+            Assert.Equal(levels, atlas.mipmapCount);
         }
 
         [Fact]
@@ -141,6 +143,35 @@ namespace UnityEngine.Tests
             var atlas = Atlas();
             atlas.PackTextures(new[] { Make(64, 64, TextureFormat.DXT5), Make(16, 16, TextureFormat.DXT5) }, 0, 32);
             Assert.Equal(TextureFormat.RGBA32, atlas.format);
+        }
+
+        /// <summary>The 4444 formats stay 4444 with mipmaps on some only and with padding (the
+        /// Editor, tests/projects/packtextures `argb4444mixedmips`, `argb4444padding`).</summary>
+        [Fact]
+        public void The4444FormatsStayWithMixedMipmapsAndPadding()
+        {
+            var atlas = Atlas();
+            atlas.PackTextures(new[] { Make(32, 32, TextureFormat.ARGB4444), Make(16, 16, TextureFormat.ARGB4444, false) }, 2, 2048);
+            Assert.True(atlas.format is TextureFormat.ARGB4444 or TextureFormat.RGBA4444);
+        }
+
+        /// <summary>A texture whose place is not on a block in the second level has no second level
+        /// (tests/projects/packtextures `dxt5offblock`: the 8 × 12 texture at (64, 20)).</summary>
+        [Fact]
+        public void APlaceOffTheBlocksEndsTheTexturesLevels()
+        {
+            var a = Make(64, 64, TextureFormat.DXT5);
+            var b = Make(12, 20, TextureFormat.DXT5);
+            var c = Make(8, 8, TextureFormat.DXT5);
+            var d = Make(8, 12, TextureFormat.DXT5);
+            var atlas = Atlas();
+            var rects = atlas.PackTextures(new[] { a, b, c, d }, 0, 2048);
+            Assert.Equal(2, atlas.mipmapCount);
+            Assert.Equal(new Rect(0.5f, 0.3125f, 0.0625f, 0.1875f), rects[3]);
+            // c (at 64, 32) keeps its second level at (32, 16); d's place (64, 20) halves to (32, 10).
+            var level = Level(atlas, 1);
+            Assert.True(Block(level, 64, 8, 4, 16).SequenceEqual(Level(c, 1).AsSpan(0, 16)));
+            Assert.False(Block(level, 64, 8, 3, 16).SequenceEqual(Level(d, 1).AsSpan(0, 16)));
         }
 
         /// <summary>In a compressed atlas the places are on whole blocks: with 2 texels of padding the

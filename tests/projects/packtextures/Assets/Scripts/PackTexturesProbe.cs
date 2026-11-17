@@ -159,6 +159,12 @@ public sealed class PackTexturesProbe : MonoBehaviour
             // The same texture twice.
             var twice = Make("t", 32, 32, TextureFormat.DXT5, true);
             Case("dxt5twice", 0, 2048, twice, twice, Make("u", 16, 16, TextureFormat.DXT5, true));
+            // 4444 textures with mipmaps on some only, and with padding.
+            Case("argb4444mixedmips", 0, 2048, Make("a", 32, 32, TextureFormat.ARGB4444, true), Make("b", 16, 16, TextureFormat.ARGB4444, false));
+            Case("argb4444padding", 2, 2048, Make("a", 32, 32, TextureFormat.ARGB4444, true), Make("b", 16, 16, TextureFormat.ARGB4444, true));
+            // A place on a block in the first level but not in the second (76 -> 38).
+            Case("dxt5offblock", 0, 2048, Make("a", 64, 64, TextureFormat.DXT5, true), Make("b", 12, 20, TextureFormat.DXT5, true),
+                Make("c", 8, 8, TextureFormat.DXT5, true), Make("d", 8, 12, TextureFormat.DXT5, true));
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             if (!string.IsNullOrEmpty(dir))
             {

@@ -1,7 +1,7 @@
 # Texture2D.PackTextures of compressed and other textures
 
 `Assets/Scripts/PackTexturesProbe.cs` makes textures at run time from fixed pseudo-random blocks
-(or texels) with `LoadRawTextureData`, so no encoder takes part, and packs 23 sets of them with
+(or texels) with `LoadRawTextureData`, so no encoder takes part, and packs 26 sets of them with
 `Texture2D.PackTextures`: DXT1, DXT5, BC7, ETC2 RGB, ETC2 RGBA8, ASTC 4×4 and the 4444 formats,
 alone and mixed with each other and with RGBA32, with and without mipmaps (on all or some),
 with and without padding, small textures at odd places, a texture over the maximum size, a
@@ -22,7 +22,10 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, Linux, NVIDIA 
   one block; each level holds each texture's own blocks at its place, DXT1 and ETC2 RGB blocks
   behind eight bytes of 0xFF (an opaque alpha block), and zero blocks elsewhere.
 * ARGB4444 and RGBA4444 textures make an RGBA4444 atlas on this device (it does not sample the
-  ARGB4444 layout); its first level is the textures' texels.
+  ARGB4444 layout), also with mipmaps on some only and with padding (the Scripting API page
+  says RGBA32 for mixed mipmaps); its first level is the textures' texels.
+* A texture whose place is not on a block in a lower level has no levels from there on
+  (`dxt5offblock`: the 8 × 12 texture at (64, 20) shows its neighbour's blocks at level 1).
 * An RGBA32 atlas is the textures' first levels with mip levels rebuilt from the first.
 
 Known residuals (`residuals.json`): the RGBA4444 atlas's lower levels, and the texels of
