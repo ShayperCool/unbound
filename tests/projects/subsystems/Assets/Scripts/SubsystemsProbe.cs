@@ -112,6 +112,8 @@ public class SubsystemsProbe : MonoBehaviour
         Try("start.subsystems", Subsystems);
         var integratedSubsystems = new List<IntegratedSubsystem>();
         Try("start.integrated_subsystems", () => { SubsystemManager.GetSubsystems(integratedSubsystems); return integratedSubsystems.Count; });
+        Try("start.null_list", () => { SubsystemManager.GetSubsystems<ISubsystem>(null); return "done"; });
+        Try("start.null_descriptor_list", () => { SubsystemManager.GetSubsystemDescriptors<ISubsystemDescriptor>(null); return "done"; });
         Try("start.list_cleared", () =>
         {
             var list = new List<ISubsystem> { null, null };
@@ -161,6 +163,8 @@ public class SubsystemsProbe : MonoBehaviour
         Try("destroy.subsystems", Subsystems);
         Do("destroy.again", () => first.Destroy());
         Do("destroy.start", () => first.Start());
+        Do("destroy.restarted", () => first.Destroy());
+        Try("destroy.restarted.state", () => first.running + "|" + first.GetProvider().running);
         Try("recreate", () => { var again = s_Descriptor.Create(); return ReferenceEquals(again, first) ? "same" : again?.GetType().Name; });
         Try("recreate.subsystems", Subsystems);
     }

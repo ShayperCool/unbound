@@ -124,6 +124,13 @@ namespace UnityEngine.Tests
             Assert.False(subsystem.running || subsystem.GetProvider().running);
             SubsystemManager.GetSubsystems(listed);
             Assert.DoesNotContain(subsystem, listed);
+            // Started again after it was destroyed, Destroy only stops it.
+            subsystem.Start();
+            Calls.Clear();
+            subsystem.Destroy();
+            Assert.Equal(new[] { "OnStop", "Provider.Stop" }, Calls);
+            Assert.False(subsystem.running || subsystem.GetProvider().running);
+            Assert.Throws<NullReferenceException>(() => SubsystemManager.GetSubsystems<ISubsystem>(null));
             // A destroyed subsystem is no longer the descriptor's: Create makes another.
             Assert.NotSame(subsystem, descriptor.Create());
         }

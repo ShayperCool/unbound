@@ -35,7 +35,7 @@ namespace UnityEngine
 
         public static void GetSubsystems<T>(List<T> subsystems) where T : ISubsystem
         {
-            if (subsystems == null) return;
+            if (subsystems == null) throw Unbound.Runtime.MonoExceptions.NullReference();
             subsystems.Clear();
             foreach (var subsystem in s_StandaloneSubsystems)
                 if (subsystem is T matching) subsystems.Add(matching);
@@ -109,14 +109,14 @@ namespace UnityEngine.SubsystemsImplementation
 
         internal static void GetAllSubsystemDescriptors(List<ISubsystemDescriptor> descriptors)
         {
-            if (descriptors == null) return;
+            if (descriptors == null) throw Unbound.Runtime.MonoExceptions.NullReference();
             descriptors.Clear();
             foreach (var descriptor in s_StandaloneDescriptors) descriptors.Add(descriptor);
         }
 
         internal static void GetSubsystemDescriptors<T>(List<T> descriptors) where T : ISubsystemDescriptor
         {
-            if (descriptors == null) return;
+            if (descriptors == null) throw Unbound.Runtime.MonoExceptions.NullReference();
             descriptors.Clear();
             foreach (var descriptor in s_StandaloneDescriptors)
                 if (descriptor is T matching) descriptors.Add(matching);
@@ -221,7 +221,8 @@ namespace UnityEngine.SubsystemsImplementation
     }
 
     /// <summary>Start and Stop run once each until the other (OnStart/OnStop, then the provider's
-    /// running flag); Destroy stops it, leaves the manager and runs OnDestroy once.</summary>
+    /// running flag); Destroy stops it, and the first Destroy also takes it out of the manager and
+    /// runs OnDestroy.</summary>
     public abstract partial class SubsystemWithProvider : ISubsystem
     {
         protected SubsystemWithProvider() { }
@@ -250,9 +251,8 @@ namespace UnityEngine.SubsystemsImplementation
 
         public void Destroy()
         {
-            if (!SubsystemManager.RemoveStandaloneSubsystem(this)) return;
             Stop();
-            OnDestroy();
+            if (SubsystemManager.RemoveStandaloneSubsystem(this)) OnDestroy();
         }
 
         protected abstract void OnStart();
