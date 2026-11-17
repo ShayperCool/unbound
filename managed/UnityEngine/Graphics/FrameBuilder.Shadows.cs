@@ -20,6 +20,11 @@ namespace Unbound.Runtime
         static Mesh s_CollectorQuad;
         /// <summary>The camera being drawn has a screen-space shadow mask (SHADOWS_SCREEN).</summary>
         static bool s_ScreenShadows;
+        /// <summary>The main light's screen-space mask while <see cref="s_ScreenShadows"/>: the
+        /// deferred light pass's _ShadowMapTexture (its shader declares the property, so a
+        /// global one does not reach it).</summary>
+        static RenderTexture s_ScreenShadowMask;
+        static readonly Dictionary<int, object> s_CollectorProperties = new Dictionary<int, object>();
 
         /// <summary>A light's shadow map size, as the built-in pipeline picks it: the light's pixel
         /// size (the larger side of what it reaches on screen) times the quality's multiplier (Very
@@ -61,12 +66,14 @@ namespace Unbound.Runtime
         static bool RenderMainLightShadows(Camera camera, CameraContext context, int width, int height)
         {
             s_ScreenShadows = false;
+            s_ScreenShadowMask = null;
             var light = LightingGlobals.MainLightOf();
             if (light == null || light.shadows == LightShadows.None || QualitySettings.shadows == ShadowQuality.Disable) return false;
             var mask = RenderDirectionalShadow(light, camera, context, width, height);
             if (mask == null) return false;
             GfxStream.GlobalTexture("_ShadowMapTexture", TextureHandles.Of(mask));
             s_ScreenShadows = true;
+            s_ScreenShadowMask = mask;
             return true;
         }
 
@@ -246,7 +253,10 @@ namespace Unbound.Runtime
             RunLightEvent(camera, light, LightEvent.BeforeScreenspaceMask, mask);
             var quad = CollectorQuad(context.Projection);
             var model = (context.Projection * context.View).inverseDoublePrecision;
-            GfxStream.Draw(quad.Sync(), 0, s_Collector.Sync(), soft ? 2 : 0, model, Color.white);
+            // Its shader declares _ShadowMapTexture, so the map is the draw's, not a global.
+            s_CollectorProperties[s_ShadowMapTextureId] = shadowMap;
+            GfxStream.Draw(quad.Sync(), 0, s_Collector.Sync(), soft ? 2 : 0, model, Color.white, properties: s_CollectorProperties);
+            s_CollectorProperties.Clear();
             RunLightEvent(camera, light, LightEvent.AfterScreenspaceMask, mask);
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", false);
             GfxStream.Keyword("SHADOWS_SINGLE_CASCADE", false);
@@ -626,6 +636,7 @@ namespace Unbound.Runtime
             s_LightShadows.Clear();
             s_CameraDepth = null;
             s_ScreenShadows = false;
+            s_ScreenShadowMask = null;
         }
     }
 }

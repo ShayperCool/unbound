@@ -193,7 +193,11 @@ namespace Unbound.Runtime
                 string shadowKeyword = null, softKeyword = null;
                 if (l == ForwardLights.Main)
                 {
-                    if (s_ScreenShadows) shadowKeyword = "SHADOWS_SCREEN";
+                    if (s_ScreenShadows)
+                    {
+                        shadowKeyword = "SHADOWS_SCREEN";
+                        properties[s_ShadowMapTextureId] = s_ScreenShadowMask;
+                    }
                 }
                 else AddPassShadow(l, true, properties, out shadowKeyword, out softKeyword);
                 foreach (var k in s_DeferredLightKeywords) GfxStream.Keyword(k, k == keyword);
