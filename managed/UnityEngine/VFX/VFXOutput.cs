@@ -359,7 +359,7 @@ namespace Unbound.Runtime
                 if (value is Texture texture) m_Block.SetTexture(name, texture);
                 else if (value is GraphicsBuffer graphicsBuffer) m_Block.SetBuffer(name, graphicsBuffer);
                 // A property without an object leaves the program what it has without one.
-                else m_Block.m_Values.Remove(name);
+                else m_Block.Remove(name);
             }
             if (m_Task.type == VFXTaskType.ParticleMeshOutput)
             {

@@ -27,6 +27,9 @@ namespace UnityEngine
     {
         internal Terrain m_Terrain;
         Material m_Template;
+        /// <summary>The template's values the passes were made from: a change of the template
+        /// draws (measured: tests/projects/propertyblocks `materialChanged`).</summary>
+        int m_TemplateVersion = -1;
         Material[] m_Passes = Array.Empty<Material>();
         int m_SplatVersion = -1;
         TerrainData m_SplatData;
@@ -279,7 +282,8 @@ namespace UnityEngine
             var template = terrain.materialTemplate;
             if (template == null) template = BuiltinObjects.DefaultTerrainMaterial;
             if (template == null) return;
-            if (template == m_Template && m_SplatData == data && m_SplatVersion == data.m_SplatVersion + data.m_HeightsVersion * 7919) return;
+            if (template == m_Template && template.m_Version == m_TemplateVersion && m_SplatData == data
+                && m_SplatVersion == data.m_SplatVersion + data.m_HeightsVersion * 7919) return;
             m_Template = template;
             m_SplatData = data;
             m_SplatVersion = data.m_SplatVersion + data.m_HeightsVersion * 7919;
@@ -306,6 +310,7 @@ namespace UnityEngine
             foreach (var old in m_Passes) if (old != null) DestroyImmediate(old);
             m_Passes = materials;
             UpdateBaseMaterials(template, data);
+            m_TemplateVersion = template.m_Version;
         }
 
         /// <summary>A terrain with holes cuts them out of every material it draws with.</summary>

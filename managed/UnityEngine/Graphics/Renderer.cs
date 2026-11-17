@@ -370,9 +370,13 @@ namespace UnityEngine
         internal MaterialPropertyBlock BlockFor(int index) =>
             m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(index, out var own) ? own : m_PropertyBlock;
 
+        /// <summary>The renderer's own copy of the block last set with <see cref="SetPropertyBlock(MaterialPropertyBlock)"/>
+        /// (kept for the next set while none is set).</summary>
+        MaterialPropertyBlock m_OwnBlock;
+
         /// <summary>Per material slot: the material drawn under the property block, and what it was
-        /// made from (source, its version, the block).</summary>
-        (Material Drawn, Material Source, int Version, MaterialPropertyBlock Block)[] m_BlockMaterials;
+        /// made from (source and block, with the versions of their values).</summary>
+        (Material Drawn, Material Source, int Version, MaterialPropertyBlock Block, int BlockVersion)[] m_BlockMaterials;
 
         /// <summary>The block a material this renderer draws with was made under (null: none).</summary>
         internal MaterialPropertyBlock BlockOfDrawn(Material drawn)
@@ -384,7 +388,10 @@ namespace UnityEngine
         }
 
         /// <summary>The material slot <paramref name="index"/> draws with: the material itself, or,
-        /// under a property block, a copy with the block's values (Unity applies them per draw).</summary>
+        /// under a property block, a copy with the block's values (Unity applies them per draw).
+        /// The copy is kept while the material and the block hold the same values, and made again
+        /// in place when either changes, also when a block is edited where it is kept (a terrain's
+        /// splat block, a tree's).</summary>
         internal Material DrawnMaterial(int index, Material source)
         {
             var block = BlockFor(index);
@@ -392,12 +399,15 @@ namespace UnityEngine
             if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)
                 Array.Resize(ref m_BlockMaterials, Math.Max(index + 1, m_Materials.Length));
             var cached = m_BlockMaterials[index];
-            if (cached.Drawn != null && ReferenceEquals(cached.Source, source) && cached.Version == source.m_Version && ReferenceEquals(cached.Block, block))
-                return cached.Drawn;
-            if (cached.Drawn != null) DestroyImmediate(cached.Drawn);
-            Material drawn;
-            using (ObjectRegistry.AsAssets())
-                drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave, parent = null };
+            var drawn = cached.Drawn;
+            if (drawn != null && ReferenceEquals(cached.Source, source) && cached.Version == source.m_Version
+                && ReferenceEquals(cached.Block, block) && cached.BlockVersion == block.m_Version)
+                return drawn;
+            if (drawn != null)
+                drawn.ResetToCopyOf(source);
+            else
+                using (ObjectRegistry.AsAssets())
+                    drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave, parent = null };
             foreach (var p in block.m_Values)
             {
                 switch (p.Value)
@@ -416,13 +426,22 @@ namespace UnityEngine
                     case Matrix4x4[] ms: drawn.SetMatrixArray(p.Key, ms); break;
                 }
             }
-            m_BlockMaterials[index] = (drawn, source, source.m_Version, block);
+            m_BlockMaterials[index] = (drawn, source, source.m_Version, block, block.m_Version);
             return drawn;
         }
 
+        /// <summary>Copies the block's values: later edits of <paramref name="properties"/> draw only
+        /// once it is set again (documented in the 6000.0 MaterialPropertyBlock page; measured:
+        /// tests/projects/propertyblocks).</summary>
         public void SetPropertyBlock(MaterialPropertyBlock properties)
         {
-            m_PropertyBlock = properties?.Copy();
+            if (properties == null)
+                m_PropertyBlock = null;
+            else
+            {
+                (m_OwnBlock ??= new MaterialPropertyBlock()).Assign(properties);
+                m_PropertyBlock = m_OwnBlock;
+            }
             Dirty();
         }
 
@@ -430,6 +449,8 @@ namespace UnityEngine
         {
             if (properties == null || properties.isEmpty)
                 m_MaterialBlocks?.Remove(materialIndex);
+            else if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own))
+                own.Assign(properties);
             else
                 (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[materialIndex] = properties.Copy();
             Dirty();
@@ -697,6 +718,7 @@ namespace UnityEngine
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
             m_PropertyBlock = source.m_PropertyBlock?.Copy();
+            m_OwnBlock = m_PropertyBlock;
             m_MaterialBlocks = null;
             if (source.m_MaterialBlocks != null)
                 foreach (var pair in source.m_MaterialBlocks) (m_MaterialBlocks ??= new Dictionary<int, MaterialPropertyBlock>())[pair.Key] = pair.Value.Copy();
@@ -1312,11 +1334,32 @@ namespace UnityEngine
     /// <summary>Per-renderer overrides of material properties.</summary>
     public sealed partial class MaterialPropertyBlock
     {
+        /// <summary>The values; written only through the block's methods, which count each change
+        /// in <see cref="m_Version"/>.</summary>
         internal readonly Dictionary<int, object> m_Values = new Dictionary<int, object>();
+
+        /// <summary>Counts changes of the values, so that what was made from them (a renderer's
+        /// drawn material) is made again after the block is edited.</summary>
+        internal int m_Version;
 
         public bool isEmpty => m_Values.Count == 0;
 
-        public void Clear() => m_Values.Clear();
+        public void Clear()
+        {
+            m_Values.Clear();
+            m_Version++;
+        }
+
+        void Put(int nameID, object value)
+        {
+            m_Values[nameID] = value;
+            m_Version++;
+        }
+
+        internal void Remove(int nameID)
+        {
+            if (m_Values.Remove(nameID)) m_Version++;
+        }
 
         internal MaterialPropertyBlock Copy()
         {
@@ -1328,30 +1371,85 @@ namespace UnityEngine
         internal void CopyFrom(MaterialPropertyBlock other)
         {
             foreach (var p in other.m_Values) m_Values[p.Key] = p.Value is Array a ? a.Clone() : p.Value;
+            m_Version++;
         }
 
-        public void SetFloat(string name, float value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetFloat(int nameID, float value) => m_Values[nameID] = value;
-        public void SetInt(string name, int value) => m_Values[Shader.PropertyToID(name)] = (float)value;
-        public void SetInt(int nameID, int value) => m_Values[nameID] = (float)value;
-        public void SetInteger(string name, int value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetInteger(int nameID, int value) => m_Values[nameID] = value;
-        public void SetVector(string name, Vector4 value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetVector(int nameID, Vector4 value) => m_Values[nameID] = value;
+        /// <summary>Makes this block hold <paramref name="other"/>'s values, as a copy (later edits
+        /// of <paramref name="other"/> do not reach it). Unchanged values leave it and its version as
+        /// they are, so setting the same values again remakes nothing.</summary>
+        internal void Assign(MaterialPropertyBlock other)
+        {
+            if (SameValues(other)) return;
+            m_Values.Clear();
+            CopyFrom(other);
+        }
+
+        bool SameValues(MaterialPropertyBlock other)
+        {
+            if (other.m_Values.Count != m_Values.Count) return false;
+            foreach (var p in other.m_Values)
+                if (!m_Values.TryGetValue(p.Key, out var mine) || !SameValue(mine, p.Value)) return false;
+            return true;
+        }
+
+        /// <summary>Whether two stored values are the same, bit for bit (0 and -0 differ; arrays by
+        /// their elements).</summary>
+        static bool SameValue(object a, object b)
+        {
+            if (ReferenceEquals(a, b)) return true;
+            switch (a)
+            {
+                case float x when b is float y: return Bits(x) == Bits(y);
+                case int x when b is int y: return x == y;
+                case Vector4 x when b is Vector4 y: return Same(x, y);
+                case Color x when b is Color y: return Same(x, y);
+                case Matrix4x4 x when b is Matrix4x4 y: return Same(x, y);
+                case TextureElement x when b is TextureElement y: return ReferenceEquals(x.Texture, y.Texture) && x.Element == y.Element;
+                case float[] x when b is float[] y:
+                    if (x.Length != y.Length) return false;
+                    for (int i = 0; i < x.Length; i++) if (Bits(x[i]) != Bits(y[i])) return false;
+                    return true;
+                case Vector4[] x when b is Vector4[] y:
+                    if (x.Length != y.Length) return false;
+                    for (int i = 0; i < x.Length; i++) if (!Same(x[i], y[i])) return false;
+                    return true;
+                case Matrix4x4[] x when b is Matrix4x4[] y:
+                    if (x.Length != y.Length) return false;
+                    for (int i = 0; i < x.Length; i++) if (!Same(x[i], y[i])) return false;
+                    return true;
+            }
+            // Textures and buffers: the same object (checked above).
+            return false;
+        }
+
+        static int Bits(float f) => BitConverter.SingleToInt32Bits(f);
+        static bool Same(Vector4 a, Vector4 b) => Bits(a.x) == Bits(b.x) && Bits(a.y) == Bits(b.y) && Bits(a.z) == Bits(b.z) && Bits(a.w) == Bits(b.w);
+        static bool Same(Matrix4x4 a, Matrix4x4 b) =>
+            Same(a.GetColumn(0), b.GetColumn(0)) && Same(a.GetColumn(1), b.GetColumn(1)) && Same(a.GetColumn(2), b.GetColumn(2)) && Same(a.GetColumn(3), b.GetColumn(3));
+        static bool Same(Color a, Color b) => Bits(a.r) == Bits(b.r) && Bits(a.g) == Bits(b.g) && Bits(a.b) == Bits(b.b) && Bits(a.a) == Bits(b.a);
+
+        public void SetFloat(string name, float value) => Put(Shader.PropertyToID(name), value);
+        public void SetFloat(int nameID, float value) => Put(nameID, value);
+        public void SetInt(string name, int value) => Put(Shader.PropertyToID(name), (float)value);
+        public void SetInt(int nameID, int value) => Put(nameID, (float)value);
+        public void SetInteger(string name, int value) => Put(Shader.PropertyToID(name), value);
+        public void SetInteger(int nameID, int value) => Put(nameID, value);
+        public void SetVector(string name, Vector4 value) => Put(Shader.PropertyToID(name), value);
+        public void SetVector(int nameID, Vector4 value) => Put(nameID, value);
         public void SetColor(string name, Color value) => SetColor(Shader.PropertyToID(name), value);
         // SetColor converts when assigned, independently of the shader declaration. SetVector is raw.
-        public void SetColor(int nameID, Color value) => m_Values[nameID] =
-            QualitySettings.activeColorSpace == ColorSpace.Linear ? value.linear : value;
-        public void SetMatrix(string name, Matrix4x4 value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetMatrix(int nameID, Matrix4x4 value) => m_Values[nameID] = value;
+        public void SetColor(int nameID, Color value) => Put(nameID,
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? value.linear : value);
+        public void SetMatrix(string name, Matrix4x4 value) => Put(Shader.PropertyToID(name), value);
+        public void SetMatrix(int nameID, Matrix4x4 value) => Put(nameID, value);
         public void SetTexture(string name, Texture value) => SetTexture(Shader.PropertyToID(name), value);
         /// <summary>The texture with its decode values under `&lt;name&gt;_HDR`, which a vector of
         /// that name set later replaces (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/lightmapencoding block/* and precedence/block*).</summary>
         public void SetTexture(int nameID, Texture value)
         {
-            m_Values[nameID] = value;
-            m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
+            Put(nameID, value);
+            Put(HdrDecode.IdOf(nameID), HdrDecode.Of(value));
         }
 
         public void SetTexture(string name, RenderTexture value, RenderTextureSubElement element) => SetTexture(Shader.PropertyToID(name), value, element);
@@ -1362,21 +1460,21 @@ namespace UnityEngine
         public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element)
         {
             if ((object)value == null) throw new ArgumentNullException("value");
-            m_Values[nameID] = new TextureElement(value, element);
-            m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
+            Put(nameID, new TextureElement(value, element));
+            Put(HdrDecode.IdOf(nameID), HdrDecode.Of(value));
         }
         public void SetFloatArray(string name, float[] values) => SetFloatArray(Shader.PropertyToID(name), values);
-        public void SetFloatArray(int nameID, float[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetFloatArray(int nameID, float[] values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public void SetFloatArray(string name, List<float> values) => SetFloatArray(Shader.PropertyToID(name), values);
-        public void SetFloatArray(int nameID, List<float> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetFloatArray(int nameID, List<float> values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public void SetVectorArray(string name, Vector4[] values) => SetVectorArray(Shader.PropertyToID(name), values);
-        public void SetVectorArray(int nameID, Vector4[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetVectorArray(int nameID, Vector4[] values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public void SetVectorArray(string name, List<Vector4> values) => SetVectorArray(Shader.PropertyToID(name), values);
-        public void SetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetVectorArray(int nameID, List<Vector4> values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public void SetMatrixArray(string name, Matrix4x4[] values) => SetMatrixArray(Shader.PropertyToID(name), values);
-        public void SetMatrixArray(int nameID, Matrix4x4[] values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetMatrixArray(int nameID, Matrix4x4[] values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public void SetMatrixArray(string name, List<Matrix4x4> values) => SetMatrixArray(Shader.PropertyToID(name), values);
-        public void SetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Set(m_Values, nameID, values);
+        public void SetMatrixArray(int nameID, List<Matrix4x4> values) { PropertyArrays.Set(m_Values, nameID, values); m_Version++; }
         public float[] GetFloatArray(string name) => GetFloatArray(Shader.PropertyToID(name));
         public float[] GetFloatArray(int nameID) => PropertyArrays.Get<float>(m_Values, nameID);
         public Vector4[] GetVectorArray(string name) => GetVectorArray(Shader.PropertyToID(name));
@@ -1389,15 +1487,15 @@ namespace UnityEngine
         public void GetVectorArray(int nameID, List<Vector4> values) => PropertyArrays.Get(m_Values, nameID, values);
         public void GetMatrixArray(string name, List<Matrix4x4> values) => PropertyArrays.Get(m_Values, Shader.PropertyToID(name), values);
         public void GetMatrixArray(int nameID, List<Matrix4x4> values) => PropertyArrays.Get(m_Values, nameID, values);
-        public void SetBuffer(string name, ComputeBuffer value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetBuffer(int nameID, ComputeBuffer value) => m_Values[nameID] = value;
-        public void SetBuffer(string name, GraphicsBuffer value) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetBuffer(int nameID, GraphicsBuffer value) => m_Values[nameID] = value;
+        public void SetBuffer(string name, ComputeBuffer value) => Put(Shader.PropertyToID(name), value);
+        public void SetBuffer(int nameID, ComputeBuffer value) => Put(nameID, value);
+        public void SetBuffer(string name, GraphicsBuffer value) => Put(Shader.PropertyToID(name), value);
+        public void SetBuffer(int nameID, GraphicsBuffer value) => Put(nameID, value);
         /// <summary>A constant buffer for the cbuffer of that name (read from its start).</summary>
-        public void SetConstantBuffer(string name, ComputeBuffer value, int offset, int size) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetConstantBuffer(int nameID, ComputeBuffer value, int offset, int size) => m_Values[nameID] = value;
-        public void SetConstantBuffer(string name, GraphicsBuffer value, int offset, int size) => m_Values[Shader.PropertyToID(name)] = value;
-        public void SetConstantBuffer(int nameID, GraphicsBuffer value, int offset, int size) => m_Values[nameID] = value;
+        public void SetConstantBuffer(string name, ComputeBuffer value, int offset, int size) => Put(Shader.PropertyToID(name), value);
+        public void SetConstantBuffer(int nameID, ComputeBuffer value, int offset, int size) => Put(nameID, value);
+        public void SetConstantBuffer(string name, GraphicsBuffer value, int offset, int size) => Put(Shader.PropertyToID(name), value);
+        public void SetConstantBuffer(int nameID, GraphicsBuffer value, int offset, int size) => Put(nameID, value);
 
         public bool HasProperty(string name) => m_Values.ContainsKey(Shader.PropertyToID(name));
         public bool HasProperty(int nameID) => m_Values.ContainsKey(nameID);
@@ -1451,7 +1549,7 @@ namespace UnityEngine
         {
             if (m_Values.TryGetValue(nameID, out var v) && v is Vector4[] existing) return existing;
             var array = new Vector4[count];
-            m_Values[nameID] = array;
+            Put(nameID, array);
             return array;
         }
 
@@ -1464,6 +1562,7 @@ namespace UnityEngine
         void CopySH(IReadOnlyList<SphericalHarmonicsL2> lightProbes, int sourceStart, int destStart, int count)
         {
             if (count == 0) return;
+            m_Version++;
             var arrays = new Vector4[7][];
             for (int k = 0; k < 7; k++) arrays[k] = ProbeArray(s_ShArrayIds[k], count);
             for (int i = 0; i < count; i++)
@@ -1478,6 +1577,7 @@ namespace UnityEngine
         void CopyOcclusion(IReadOnlyList<Vector4> occlusionProbes, int sourceStart, int destStart, int count)
         {
             if (count == 0) return;
+            m_Version++;
             var array = ProbeArray(s_ProbesOcclusionId, count);
             for (int i = 0; i < count && destStart + i < array.Length; i++) array[destStart + i] = occlusionProbes[sourceStart + i];
         }

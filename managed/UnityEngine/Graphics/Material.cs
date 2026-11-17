@@ -198,7 +198,15 @@ namespace UnityEngine
             m_VectorsAfterTexture.UnionWith(source.m_VectorsAfterTexture);
             foreach (var p in source.m_Matrices) m_Matrices[p.Key] = p.Value;
             foreach (var p in source.m_Textures)
-                m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
+            {
+                // A slot this material already has is reused (ResetToCopyOf).
+                if (!m_Textures.TryGetValue(p.Key, out var slot)) m_Textures[p.Key] = slot = new TextureSlot();
+                slot.Texture = p.Value.Texture;
+                slot.Element = p.Value.Element;
+                slot.ElementBinding = p.Value.ElementBinding;
+                slot.Scale = p.Value.Scale;
+                slot.Offset = p.Value.Offset;
+            }
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
@@ -1187,6 +1195,24 @@ namespace UnityEngine
             m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
             m_Shader = shaderBefore;
+        }
+
+        /// <summary>Makes this material what <c>new Material(source) { parent = null }</c> makes,
+        /// keeping its identity (a renderer's material under a property block, made again after
+        /// the material or the block changed).</summary>
+        internal void ResetToCopyOf(Material source)
+        {
+            source.Inherit();
+            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
+            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
+            m_Buffers.Clear(); m_Arrays.Clear(); m_Tags.Clear();
+            foreach (var id in m_Textures.Keys)
+                if (!source.m_Textures.ContainsKey(id)) m_Textures.Remove(id);
+            CopyFrom(source);
+            m_DoubleSidedGI = source.m_DoubleSidedGI;
+            m_Name = source.m_Name;
+            m_Locked = source.m_Locked != null ? new HashSet<int>(source.m_Locked) : null;
+            parent = null;
         }
 
         /// <summary>Copies the properties this material's shader declares (measured: a shader

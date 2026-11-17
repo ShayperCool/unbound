@@ -354,7 +354,22 @@ namespace UnityEngine
 
         internal void RemoveTrees(Vector2 position, float radius, int prototypeIndex) => m_TerrainData?.RemoveTrees(position, radius, prototypeIndex);
 
-        public void SetSplatMaterialPropertyBlock(MaterialPropertyBlock properties) => m_SplatProperties = properties;
+        /// <summary>The terrain's own copy of the block last set (kept for the next set while none is set).</summary>
+        MaterialPropertyBlock m_OwnSplatProperties;
+
+        /// <summary>Copies the block's values, as Renderer.SetPropertyBlock: later edits of
+        /// <paramref name="properties"/> draw only once it is set again (measured:
+        /// tests/projects/propertyblocks).</summary>
+        public void SetSplatMaterialPropertyBlock(MaterialPropertyBlock properties)
+        {
+            if (properties == null)
+                m_SplatProperties = null;
+            else
+            {
+                (m_OwnSplatProperties ??= new MaterialPropertyBlock()).Assign(properties);
+                m_SplatProperties = m_OwnSplatProperties;
+            }
+        }
 
         public void GetSplatMaterialPropertyBlock(MaterialPropertyBlock dest)
         {
