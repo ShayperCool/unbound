@@ -27,6 +27,9 @@ target, read back as:
 * `.cells` (probes per axis) and `.texels`: the texture's rows (`[z, y, texel...]`), every row of
   a volume up to 128 probes, else the first and last.
 
+`default.custom` and `bare.custom` are `[sizeCustom, originCustom]` of a new volume before either
+is set: the `default` box's, and one on an object without renderers (added and removed again).
+
 Cases: the defaults over a box whose renderer does not use the volume (`default`); an image box
 whose renderer does (`lit`, 8x4x2, cell centres); world bounds with half floats (`world`) and
 the same rotated, scaled box in local bounds (`local`); custom bounds with Low quality

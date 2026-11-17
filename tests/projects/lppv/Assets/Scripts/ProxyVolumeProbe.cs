@@ -178,7 +178,17 @@ public class ProxyVolumeProbe : MonoBehaviour
 
         // Defaults over a box stretched through the lamp's probes.
         plain = Box("plain", new Vector3(-0.4f, 1.3f, -0.6f), Quaternion.identity, new Vector3(3.2f, 1.6f, 0.6f), 0, standard);
-        volumes.Add(("default", plain.AddComponent<LightProbeProxyVolume>()));
+        var plainVolume = plain.AddComponent<LightProbeProxyVolume>();
+        volumes.Add(("default", plainVolume));
+        // The custom bounds a new volume answers before any are set: on a renderer, and on an
+        // object without one.
+        Value("default.custom", "[" + V3(plainVolume.sizeCustom) + "," + V3(plainVolume.originCustom) + "]");
+        var bare = new GameObject("bare");
+        made.Add(bare);
+        bare.transform.position = new Vector3(2f, 1f, 0f);
+        var bareVolume = bare.AddComponent<LightProbeProxyVolume>();
+        Value("bare.custom", "[" + V3(bareVolume.sizeCustom) + "," + V3(bareVolume.originCustom) + "]");
+        DestroyImmediate(bareVolume);
 
         // The image's box: its renderer uses its volume (a gradient of probes along it).
         lit = Box("lit", new Vector3(-0.4f, 1.3f, -0.6f), Quaternion.identity, new Vector3(3.2f, 1.6f, 0.6f), 0, standard);
