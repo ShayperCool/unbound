@@ -212,7 +212,9 @@ public partial class ParticleRenderProbe
         float maximum = Time.maximumParticleDeltaTime;
         var passes = new (float maxDelta, (float duration, float lifetime, float rate)[] cases, bool birth)[]
         {
-            (0.25f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f), (0.1f, 12f, 10f), (0.1f, 8f, 100f), (0.2f, 8f, 10f), (0.3f, 8f, 10f), (1f, 8f, 1f) }, true),
+            (0.25f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f), (0.1f, 12f, 10f), (0.1f, 8f, 100f), (0.2f, 8f, 10f), (0.3f, 8f, 10f), (1f, 8f, 1f), (0.1f, 8f, 15f) }, true),
+            // Steps of whole loops, and a rate whose loop holds a fractional birth count.
+            (0.2f, new[] { (0.1f, 8f, 10f), (0.1f, 8f, 15f), (0.05f, 3f, 30f) }, false),
             (0.15f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f) }, false),
             (0.4f, new[] { (0.1f, 8f, 10f), (0.1f, 3f, 10f), (0.3f, 8f, 10f) }, false),
         };
