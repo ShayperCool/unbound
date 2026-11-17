@@ -399,6 +399,7 @@ namespace Unbound.Runtime
         internal static void RestartPlayMode()
         {
             s_EnteredPlayMode = false;
+            UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
             AnimationSystem.BeginPlayMode();
             CustomRenderTextureManager.BeginPlayMode();
             UnityEngine.SendMouseEvents.Reset();
@@ -423,6 +424,8 @@ namespace Unbound.Runtime
             catch (Exception e) { Debug.LogException(e); }
             // Play mode runs inside the Editor: its editor code prepares Play mode first.
             UnityEditor.EditorInitialization.BeforePlayMode();
+            // Each Play mode is an analytics session, counted in the project's preferences.
+            UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);

@@ -59,32 +59,6 @@ namespace UnityEngine.Analytics
         HighestPriorityEvent_NoRetryNoCaching = 49,
     }
     [global::Unbound.Stub]
-    public unsafe static partial class AnalyticsSessionInfo
-    {
-        [global::Unbound.Stub] internal static void CallSessionStateChanged(global::UnityEngine.Analytics.AnalyticsSessionState sessionState, long sessionId, long sessionElapsedTime, bool sessionChanged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.CallSessionStateChanged"); }
-        [global::Unbound.Stub] internal static void CallIdentityTokenChanged(string token) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.CallIdentityTokenChanged"); }
-        public static global::UnityEngine.Analytics.AnalyticsSessionState sessionState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionState"); return default; } }
-        public static long sessionId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionId"); return default; } }
-        public static long sessionCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionCount"); return default; } }
-        public static long sessionElapsedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionElapsedTime"); return default; } }
-        public static bool sessionFirstRun { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionFirstRun"); return default; } }
-        public static string userId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.userId"); return default; } }
-        public static string customUserId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.customUserId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.customUserId"); } }
-        public static string customDeviceId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.customDeviceId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.customDeviceId"); } }
-        public static string identityToken { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.identityToken"); return default; } }
-        public static event global::UnityEngine.Analytics.AnalyticsSessionInfo.SessionStateChanged sessionStateChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.sessionStateChanged"); } [global::Unbound.Stub] remove { } }
-        public static event global::UnityEngine.Analytics.AnalyticsSessionInfo.IdentityTokenChanged identityTokenChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.AnalyticsSessionInfo.identityTokenChanged"); } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void SessionStateChanged(global::UnityEngine.Analytics.AnalyticsSessionState sessionState, long sessionId, long sessionElapsedTime, bool sessionChanged);
-        public unsafe delegate void IdentityTokenChanged(string token);
-    }
-    public enum AnalyticsSessionState
-    {
-        kSessionStopped = 0,
-        kSessionStarted = 1,
-        kSessionPaused = 2,
-        kSessionResumed = 3,
-    }
-    [global::Unbound.Stub]
     public unsafe partial class ContinuousEvent
     {
         [global::Unbound.Stub] public static global::UnityEngine.Analytics.AnalyticsResult RegisterCollector<T>(string metricName, global::System.Func<T> del) where T : struct, global::System.IComparable<T>, global::System.IEquatable<T> { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Analytics.ContinuousEvent.RegisterCollector"); return default; }
@@ -209,40 +183,5 @@ namespace UnityEngine
             kMapVal = 9,
             kMaxTags = 10,
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class RemoteSettings
-    {
-        [global::Unbound.Stub] internal static void RemoteSettingsUpdated(bool wasLastUpdatedFromServer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.RemoteSettingsUpdated"); }
-        [global::Unbound.Stub] internal static void RemoteSettingsBeforeFetchFromServer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.RemoteSettingsBeforeFetchFromServer"); }
-        [global::Unbound.Stub] internal static void RemoteSettingsUpdateCompleted(bool wasLastUpdatedFromServer, bool settingsChanged, int response) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.RemoteSettingsUpdateCompleted"); }
-        [global::System.Obsolete("Calling CallOnUpdate() is not necessary any more and should be removed. Use RemoteSettingsUpdated instead")] [global::Unbound.Stub] public static void CallOnUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.CallOnUpdate"); }
-        [global::Unbound.Stub] public static void ForceUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.ForceUpdate"); }
-        [global::Unbound.Stub] public static bool WasLastUpdatedFromServer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.WasLastUpdatedFromServer"); return default; }
-        [global::Unbound.Stub] public static int GetInt(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetInt"); return default; }
-        [global::Unbound.Stub] public static int GetInt(string key, int defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetInt"); return default; }
-        [global::Unbound.Stub] public static long GetLong(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetLong"); return default; }
-        [global::Unbound.Stub] public static long GetLong(string key, long defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetLong"); return default; }
-        [global::Unbound.Stub] public static float GetFloat(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetFloat"); return default; }
-        [global::Unbound.Stub] public static float GetFloat(string key, float defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetFloat"); return default; }
-        [global::Unbound.Stub] public static string GetString(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetString"); return default; }
-        [global::Unbound.Stub] public static string GetString(string key, string defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetString"); return default; }
-        [global::Unbound.Stub] public static bool GetBool(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetBool"); return default; }
-        [global::Unbound.Stub] public static bool GetBool(string key, bool defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetBool"); return default; }
-        [global::Unbound.Stub] public static bool HasKey(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.HasKey"); return default; }
-        [global::Unbound.Stub] public static int GetCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetCount"); return default; }
-        [global::Unbound.Stub] public static string[] GetKeys() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetKeys"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public static T GetObject<T>(string key = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetObject"); return default; }
-        [global::Unbound.Stub] public static object GetObject(global::System.Type type, string key = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetObject"); return default; }
-        [global::Unbound.Stub] public static object GetObject(string key, object defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetObject"); return default; }
-        [global::Unbound.Stub] internal static object GetAsScriptingObject(global::System.Type t, object defaultValue, string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetAsScriptingObject"); return default; }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IDictionary<string, object> GetDictionary(string key = "") { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetDictionary"); return new global::System.Collections.Generic.Dictionary<string, object>(); }
-        [global::Unbound.Stub] internal static void UseSafeLock() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.UseSafeLock"); }
-        [global::Unbound.Stub] internal static void ReleaseSafeLock() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.ReleaseSafeLock"); }
-        [global::Unbound.Stub] internal static global::System.IntPtr GetSafeTopMap() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.GetSafeTopMap"); return default; }
-        public static event global::UnityEngine.RemoteSettings.UpdatedEventHandler Updated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.Updated"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action BeforeFetchFromServer { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.BeforeFetchFromServer"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<bool, bool, int> Completed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.RemoteSettings.Completed"); } [global::Unbound.Stub] remove { } }
-        public unsafe delegate void UpdatedEventHandler();
     }
 }
