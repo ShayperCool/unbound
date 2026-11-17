@@ -150,6 +150,13 @@ public class RuntimeApisProbe : MonoBehaviour
             Try("gamut." + gamut + ".white_point", () => Call(utility, null, "GetWhitePoint", gamut));
             Try("gamut." + gamut + ".transfer", () => Call(utility, null, "GetTransferFunction", gamut));
         }
+        foreach (int value in new[] { -1, 7 })
+        {
+            var gamut = Enum.ToObject(typeof(ColorGamut), value);
+            Try("gamut.value" + value + ".primaries", () => Call(utility, null, "GetColorPrimaries", gamut));
+            Try("gamut.value" + value + ".white_point", () => Call(utility, null, "GetWhitePoint", gamut));
+            Try("gamut.value" + value + ".transfer", () => Call(utility, null, "GetTransferFunction", gamut));
+        }
     }
 
     static void ShaderModes()
@@ -157,6 +164,10 @@ public class RuntimeApisProbe : MonoBehaviour
         foreach (BuiltinShaderType type in Enum.GetValues(typeof(BuiltinShaderType)))
         {
             Try("shader_mode." + type, () => GraphicsSettings.GetShaderMode(type));
+        }
+        foreach (int value in new[] { -1, 8 })
+        {
+            Try("shader_mode.value" + value, () => GraphicsSettings.GetShaderMode((BuiltinShaderType)value));
         }
     }
 
@@ -196,6 +207,33 @@ public class RuntimeApisProbe : MonoBehaviour
         t.localEulerAngles = new Vector3(400f, 0f, 0f);
         Try("transform.set_euler_400.euler_orderZXY", () => Euler(t, 4));
         Try("transform.set_euler_400.euler", () => t.localEulerAngles);
+        // Gimbal lock: the middle angle at a quarter turn, without a hint and with one.
+        Do("transform.clear_hint", () => Call(typeof(Transform), t, "SetLocalEulerHint", Vector3.zero));
+        t.localRotation = Quaternion.Euler(90f, 30f, 0f);
+        Try("transform.lock90.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.lock90.euler_orderXYZ", () => Euler(t, 0));
+        Try("transform.lock90.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.Euler(90f, 30f, 20f);
+        Try("transform.lock90z.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.lock90z.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.Euler(-90f, 30f, 0f);
+        Try("transform.lock_neg90.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.lock_neg90.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.Euler(89.9f, 30f, 0f);
+        Try("transform.near89.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.near89.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.Euler(89.9999f, 30f, 0f);
+        Try("transform.near_lock.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.near_lock.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.AngleAxis(90f, Vector3.up) * Quaternion.AngleAxis(30f, Vector3.right);
+        Try("transform.lock_y90.euler_orderXYZ", () => Euler(t, 0));
+        Do("transform.lock_hint", () => Call(typeof(Transform), t, "SetLocalEulerHint", new Vector3(90f, 10f, 20f)));
+        t.localRotation = Quaternion.Euler(90f, 30f, 0f);
+        Try("transform.lock90_hint.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.lock90_hint.euler_orderXYZ", () => Euler(t, 0));
+        Do("transform.lock_hint_y", () => Call(typeof(Transform), t, "SetLocalEulerHint", new Vector3(10f, 90f, 5f)));
+        t.localRotation = Quaternion.AngleAxis(90f, Vector3.up) * Quaternion.AngleAxis(30f, Vector3.right);
+        Try("transform.lock_y90_hint.euler_orderXYZ", () => Euler(t, 0));
         Destroy(go);
     }
 
