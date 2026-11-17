@@ -1708,24 +1708,14 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public ImageFieldValueDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImageFieldValueDecoratorAttribute.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class ImmediateModeElement : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class ImmediateModeElement
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId cullingEnabledProperty;
-        [global::Unbound.Stub] public ImmediateModeElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImmediateModeElement.ctor"); }
-        protected abstract void ImmediateRepaint();
-        public bool cullingEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImmediateModeElement.cullingEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImmediateModeElement.cullingEnabled"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
         {
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImmediateModeElement.UxmlSerializedData.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class ImmediateModeException : global::System.Exception
-    {
-        [global::Unbound.Stub] public ImmediateModeException(global::System.Exception inner) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ImmediateModeException.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct InheritedData : global::UnityEngine.UIElements.IStyleDataGroup<global::UnityEngine.UIElements.InheritedData>, global::System.IEquatable<global::UnityEngine.UIElements.InheritedData>

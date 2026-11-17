@@ -61,11 +61,19 @@ namespace Unbound.UIElements
             internal UaDynamicAtlas.Entry AtlasEntry;
             internal int AtlasGeneration;
             public int vertexStart, vertexEnd, indexStart, indexEnd;
+            /// <summary>An ImmediateModeElement's callback, drawn in this segment's place (the
+            /// segment has no vertices).</summary>
+            public System.Action immediate;
+            public VisualElement immediateOwner;
+            public bool immediateCull;
         }
 
         internal readonly List<V> Vertices = new List<V>();
         internal readonly List<int> Indices = new List<int>();
         internal readonly List<Segment> Segments = new List<Segment>();
+
+        /// <summary>Whether it has an immediate-mode callback.</summary>
+        internal bool HasImmediate;
 
         internal bool HasTextures
         {
@@ -87,6 +95,7 @@ namespace Unbound.UIElements
             Vertices.Clear();
             Indices.Clear();
             Segments.Clear();
+            HasImmediate = false;
         }
 
         internal bool TexturesValid()
@@ -130,7 +139,7 @@ namespace Unbound.UIElements
             if (n > 0 && !settings)
             {
                 var last = r.Segments[n - 1];
-                if (!last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness && last.gradients == gradients && last.AtlasEligible == atlasEligible) return 0f;
+                if (last.immediate == null && !last.hasSettings && last.texture == texture && last.sdfScale == sdfScale && last.sharpness == sharpness && last.gradients == gradients && last.AtlasEligible == atlasEligible) return 0f;
             }
             CloseSegment();
             r.Segments.Add(new UaRetainedMesh.Segment
@@ -154,6 +163,30 @@ namespace Unbound.UIElements
                 indexEnd = r.Indices.Count,
             });
             return 0f;
+        }
+
+        /// <summary>An ImmediateModeElement's callback, in the place of the content drawn so far:
+        /// recorded with the element's content, or put straight into the batches.</summary>
+        internal void DrawImmediate(VisualElement owner, System.Action callback, bool cull)
+        {
+            if (m_Recording == null)
+            {
+                Immediate(owner, callback, cull);
+                return;
+            }
+            CloseSegment();
+            m_Recording.HasImmediate = true;
+            int vertices = m_Recording.Vertices.Count, indices = m_Recording.Indices.Count;
+            m_Recording.Segments.Add(new UaRetainedMesh.Segment
+            {
+                immediate = callback,
+                immediateOwner = owner,
+                immediateCull = cull,
+                vertexStart = vertices,
+                vertexEnd = vertices,
+                indexStart = indices,
+                indexEnd = indices,
+            });
         }
 
         void CloseSegment()
@@ -237,10 +270,15 @@ namespace Unbound.UIElements
         /// <summary>Draws a recorded mesh with the current transform, opacity and clipping.</summary>
         void Replay(UaRetainedMesh mesh)
         {
-            if (mesh.Indices.Count == 0) return;
+            if (mesh.Indices.Count == 0 && !mesh.HasImmediate) return;
             int first = Positions.Count;
             foreach (var s in mesh.Segments)
             {
+                if (s.immediate != null)
+                {
+                    Immediate(s.immediateOwner, s.immediate, s.immediateCull);
+                    continue;
+                }
                 var binding = s.AtlasEntry;
                 float id = Begin(binding != null ? binding.Page.Token : s.texture, s.sdfScale, s.sharpness);
                 int textSettings = 0;

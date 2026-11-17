@@ -46,6 +46,13 @@ namespace Unbound.UIElements
             internal readonly float[] SdfScales = new float[TextureSlots];
             internal readonly float[] Sharpness = new float[TextureSlots];
             internal int TextureCount;
+            /// <summary>An ImmediateModeElement's callback in this place (the batch draws no
+            /// vertices): its element, whether it is culled outside the target, and the scissor of
+            /// the element's clip (none without a clipping ancestor).</summary>
+            internal Action Immediate;
+            internal VisualElement ImmediateOwner;
+            internal bool ImmediateCull;
+            internal RectInt? ImmediateScissor;
 
             internal int SlotOf(Texture t)
             {
@@ -102,6 +109,8 @@ namespace Unbound.UIElements
         bool m_Identity = true;
         int m_OpacityId;
         RectInt? m_Scissor;
+        /// <summary>The element's clip (UIR's worldClip) while its content is drawn.</summary>
+        Rect? m_Clip;
         float m_PixelsPerPoint = 1f;
         float m_ViewportHeight;
         internal UaDynamicAtlas Atlas;
@@ -154,6 +163,7 @@ namespace Unbound.UIElements
             m_VertexArrays.Clear();
             m_IndexArrays.Clear();
             m_Scissor = null;
+            m_Clip = null;
             m_StencilRef = 0;
             m_StencilKind = StencilKind.Draw;
             UsesStencil = false;
@@ -206,6 +216,7 @@ namespace Unbound.UIElements
 
             m_Matrix = ve.worldTransform;
             m_Identity = m_Matrix.isIdentity;
+            m_Clip = clip;
             Replay(geometry.Content);
 
             var children = ve.hierarchy.children;
@@ -343,11 +354,13 @@ namespace Unbound.UIElements
 
         /// <summary>A panel rectangle as target pixels from the bottom (UIR's
         /// RectPointsToPixelsAndFlipYAxis).</summary>
-        RectInt ToScissor(Rect r) => new RectInt(
-            Mathf.RoundToInt(r.x * m_PixelsPerPoint),
-            Mathf.RoundToInt(m_ViewportHeight - r.yMax * m_PixelsPerPoint),
-            Mathf.RoundToInt(r.width * m_PixelsPerPoint),
-            Mathf.RoundToInt(r.height * m_PixelsPerPoint));
+        RectInt ToScissor(Rect r) => PointsToPixels(r, m_PixelsPerPoint, m_ViewportHeight);
+
+        internal static RectInt PointsToPixels(Rect r, float pixelsPerPoint, float viewportHeight) => new RectInt(
+            Mathf.RoundToInt(r.x * pixelsPerPoint),
+            Mathf.RoundToInt(viewportHeight - r.yMax * pixelsPerPoint),
+            Mathf.RoundToInt(r.width * pixelsPerPoint),
+            Mathf.RoundToInt(r.height * pixelsPerPoint));
 
         int OpacityId(float opacity)
         {
@@ -374,7 +387,7 @@ namespace Unbound.UIElements
             var b = Current;
             bool scissorChanged = b != null && (!SameScissor(b.Scissor, m_Scissor) || b.StencilRef != m_StencilRef || b.Stencil != m_StencilKind);
             bool full = b != null && texture != null && b.SlotOf(texture) < 0 && b.TextureCount == TextureSlots;
-            if (b == null || scissorChanged || full)
+            if (b == null || b.Immediate != null || scissorChanged || full)
             {
                 CloseBatch();
                 b = new Batch { IndexStart = Indices.Count, Scissor = m_Scissor, StencilRef = m_StencilRef, Stencil = m_StencilKind };
@@ -392,6 +405,21 @@ namespace Unbound.UIElements
                 b.Sharpness[slot] = sharpness;
             }
             return b.Ids[slot];
+        }
+
+        /// <summary>A batch running an ImmediateModeElement's callback, scissored to the clip of the
+        /// element being drawn.</summary>
+        void Immediate(VisualElement owner, Action callback, bool cull)
+        {
+            CloseBatch();
+            Batches.Add(new Batch
+            {
+                IndexStart = Indices.Count,
+                Immediate = callback,
+                ImmediateOwner = owner,
+                ImmediateCull = cull,
+                ImmediateScissor = m_Clip.HasValue ? ToScissor(m_Clip.Value) : (RectInt?)null,
+            });
         }
 
         static bool SameScissor(RectInt? a, RectInt? b) =>

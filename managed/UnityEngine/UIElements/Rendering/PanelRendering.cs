@@ -166,6 +166,7 @@ namespace Unbound.UIElements
             if (clear.clearDepthStencil) flags |= GfxStream.ClearDepth | GfxStream.ClearStencil;
             if (flags != 0) GfxStream.Clear(flags, clear.color);
             GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0f, width, height, 0f, -0.001f, 1.001f));
+            Exception immediateException = null;
             if (s_Painter.Batches.Count > 0)
             {
                 ulong mesh = gpu.Mesh.Sync();
@@ -176,6 +177,11 @@ namespace Unbound.UIElements
                 for (int i = 0; i < s_Painter.Batches.Count; i++)
                 {
                     var batch = s_Painter.Batches[i];
+                    if (batch.Immediate != null)
+                    {
+                        if (immediateException == null) RunImmediate(batch, rt, width, height, ppp, ref immediateException);
+                        continue;
+                    }
                     if (batch.IndexCount == 0) continue;
                     BatchProperties(batch, gpu.ShaderInfo, gpu.GradientSettings, s_Painter.Atlas);
                     Rect? scissor = batch.Scissor.HasValue
@@ -191,6 +197,45 @@ namespace Unbound.UIElements
                 }
             }
             GfxStream.Restore(saved);
+            // The first exception of an ImmediateRepaint, once the panel is drawn.
+            if (immediateException != null)
+            {
+                if (GUIUtility.IsExitGUIException(immediateException)) throw immediateException;
+                throw new ImmediateModeException(immediateException);
+            }
+        }
+
+        /// <summary>An ImmediateModeElement's callback among the panel's draws, as UIR runs it: not
+        /// at all when culling and the element's bounds miss the target; else with GL's projection
+        /// the panel's (in points), GL's modelview the element's world transform, the active render
+        /// texture the panel's target and drawing scissored to the element's clip, which are all put
+        /// back afterwards with the current camera. An exception is kept for after the panel.</summary>
+        static void RunImmediate(UaPainter.Batch batch, RenderTexture target, int width, int height, float pixelsPerPoint, ref Exception exception)
+        {
+            var owner = batch.ImmediateOwner;
+            if (batch.ImmediateCull && !UaPainter.PointsToPixels(owner.worldBound, pixelsPerPoint, height).Overlaps(new RectInt(0, 0, width, height))) return;
+            var stream = GfxStream.Current;
+            var projection = Immediate.Projection;
+            var modelView = Immediate.ModelView;
+            var camera = Camera.current;
+            var active = RenderTexture.active;
+            if (target != null) RenderTexture.active = target;
+            Immediate.Projection = Matrix4x4.Ortho(0f, width, height, 0f, -0.001f, 1.001f) * Matrix4x4.Scale(new Vector3(pixelsPerPoint, pixelsPerPoint, 1f));
+            Immediate.ModelView = owner.worldTransform;
+            if (batch.ImmediateScissor is RectInt scissor) GfxStream.Scissor(new Rect(scissor.x, scissor.y, scissor.width, scissor.height));
+            try
+            {
+                batch.Immediate();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            Camera.Internal_SetCurrent(camera);
+            if (target != null || RenderTexture.active != active) RenderTexture.active = active;
+            Immediate.ModelView = modelView;
+            Immediate.Projection = projection;
+            GfxStream.Restore(stream);
         }
 
         static readonly List<BaseVisualElementPanel> s_Disposed = new List<BaseVisualElementPanel>();
