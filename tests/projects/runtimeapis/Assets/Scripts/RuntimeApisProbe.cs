@@ -175,15 +175,32 @@ public class RuntimeApisProbe : MonoBehaviour
         Do("transform.set_euler_hint", () => Call(typeof(Transform), t, "SetLocalEulerHint", new Vector3(390f, 50f, 70f)));
         Try("transform.after_hint.euler", () => t.localEulerAngles);
         Try("transform.after_hint.rotation", () => t.localRotation.eulerAngles);
+        Try("transform.after_hint.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.after_hint.euler_orderXYZ", () => Euler(t, 0));
         Do("transform.set_euler_hint_other", () => Call(typeof(Transform), t, "SetLocalEulerHint", new Vector3(10f, 10f, 10f)));
         Try("transform.after_other_hint.euler", () => t.localEulerAngles);
+        Try("transform.after_other_hint.euler_orderZXY", () => Euler(t, 4));
         var orderType = typeof(Transform).Assembly.GetType("UnityEngine.RotationOrder");
         Do("transform.set_rotation_order", () => typeof(Transform).GetProperty("rotationOrder", All).SetValue(t, Enum.ToObject(orderType, 3)));
         Try("transform.after_order.rotation_order", () => Call(typeof(Transform), t, "get_rotationOrder"));
         Try("transform.after_order.euler", () => t.localEulerAngles);
         Try("transform.after_order.rotation", () => t.localRotation.eulerAngles);
+        Try("transform.after_order.euler_orderYXZ", () => Euler(t, 3));
+        Try("transform.after_order.euler_orderZXY", () => Euler(t, 4));
+        t.localRotation = Quaternion.Euler(12.34567f, 0f, 0f);
+        Try("transform.fraction.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.fraction.euler", () => t.localEulerAngles);
+        t.localRotation = Quaternion.Euler(-20f, 200f, 300f);
+        Try("transform.wide.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.wide.euler_orderXYZ", () => Euler(t, 0));
+        t.localEulerAngles = new Vector3(400f, 0f, 0f);
+        Try("transform.set_euler_400.euler_orderZXY", () => Euler(t, 4));
+        Try("transform.set_euler_400.euler", () => t.localEulerAngles);
         Destroy(go);
     }
+
+    static object Euler(Transform t, int order) =>
+        Call(typeof(Transform), t, "GetLocalEulerAngles", Enum.ToObject(typeof(Transform).Assembly.GetType("UnityEngine.RotationOrder"), order));
 
     static void Rendering()
     {
