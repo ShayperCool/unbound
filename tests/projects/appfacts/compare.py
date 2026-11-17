@@ -5,10 +5,8 @@
     compare.py --machine CAPTURE [--editor]
 
 REFERENCE and ACTUAL are directories holding values.jsonl. Every key of the union is compared
-exactly; the only normalization is the runtime's wording of an argument's name in exception
-messages (Mono ends them with "\\nParameter name: o", CoreCLR with " (Parameter 'o')"). Every
-missing, extra and failing value is kept in the report and printed; the exit status is nonzero
-when anything fails.
+exactly. Every missing, extra and failing value is kept in the report and printed; the exit
+status is nonzero when anything fails.
 
 --machine checks CAPTURE/machine.jsonl against what the OS reported when it ran (os.json beside
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
@@ -37,14 +35,6 @@ def load(path):
     return result
 
 
-def normalize(value):
-    if isinstance(value, str):
-        return re.sub(r"\nParameter name: (\w+)", r" (Parameter '\1')", value)
-    if isinstance(value, list):
-        return [normalize(v) for v in value]
-    return value
-
-
 def compare(reference, actual):
     a, b = load(Path(reference)/'values.jsonl'), load(Path(actual)/'values.jsonl')
     rows = []
@@ -53,9 +43,9 @@ def compare(reference, actual):
             rows.append({'key': key, 'status': 'missing', 'reference': a[key]})
         elif key not in a:
             rows.append({'key': key, 'status': 'extra', 'actual': b[key]})
-        elif normalize(a[key]) != normalize(b[key]):
+        elif a[key] != b[key]:
             rows.append({'key': key, 'status': 'different', 'reference': a[key], 'actual': b[key]})
-    return {'reference': len(a), 'actual': len(b), 'matched': sum(1 for k in a if k in b and normalize(a[k]) == normalize(b[k])),
+    return {'reference': len(a), 'actual': len(b), 'matched': sum(1 for k in a if k in b and a[k] == b[k]),
             'failures': rows}
 
 

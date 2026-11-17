@@ -70,9 +70,9 @@ the machine comparison for each Editor capture.
 ## Comparison and tolerances
 
 `compare.py REFERENCE ACTUAL` compares the whole key union of `values.jsonl`
-exactly and reports every missing, extra and differing value. The only
-normalization is the runtime's wording of an argument name in exception
-messages: Mono's `\nParameter name: o` equals CoreCLR's ` (Parameter 'o')`.
+exactly and reports every missing, extra and differing value, exception
+messages included (game code reads an argument's name as Mono writes it,
+`\nParameter name: o`).
 
 `compare.py --machine CAPTURE [--editor]` checks `machine.jsonl` against the
 capture's `os.json`, `/etc/os-release` and the Editor licence file read at

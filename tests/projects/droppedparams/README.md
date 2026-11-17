@@ -21,9 +21,8 @@ reaches into the view but whose cone points away.
     python3 tests/projects/droppedparams/compare.py tests/projects/droppedparams/Reference/unity-6000.0.71f1.jsonl \
         ~/.cache/unbound/validation/runs/droppedparams/<L>/unbound/capture.jsonl
 
-`compare.py` compares every value exactly. One normalisation: CoreCLR words an
-ArgumentOutOfRangeException's parameter as `(Parameter 'x')` where Mono writes
-`\nParameter name: x`.
+`compare.py` compares every value exactly (an ArgumentOutOfRangeException's
+parameter name reads `\nParameter name: x` on both sides).
 
 ## What the Editor does (6000.0.71f1)
 
