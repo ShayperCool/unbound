@@ -3379,19 +3379,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class TextEventHandler
-    {
-        [global::Unbound.Stub] internal bool isOverridingCursor;
-        [global::Unbound.Stub] internal int currentLinkIDHash;
-        [global::Unbound.Stub] internal bool hasLinkTag;
-        [global::Unbound.Stub] internal bool hasATag;
-        [global::Unbound.Stub] public TextEventHandler(global::UnityEngine.UIElements.TextElement textElement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.ctor"); }
-        [global::Unbound.Stub] public void OnDestroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.OnDestroy"); }
-        [global::Unbound.Stub] internal void HandleLinkAndATagCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.HandleLinkAndATagCallbacks"); }
-        [global::Unbound.Stub] internal void HandleLinkTag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.HandleLinkTag"); }
-        [global::Unbound.Stub] internal void HandleATag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextEventHandler.HandleATag"); }
-    }
     unsafe partial class TextField
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId multilineProperty;
@@ -3978,7 +3965,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal global::UnityEngine.Color atgHyperlinkColor;
         [global::Unbound.Stub] internal static global::System.Func<int, global::UnityEngine.TextCore.Text.FontAsset, global::UnityEngine.TextCore.Text.FontAsset> GetBlurryMapping;
         [global::Unbound.Stub] internal static global::System.Func<int, bool> CanGenerateFallbackFontAssets;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.TextEventHandler m_TextEventHandler;
         [global::Unbound.Stub] public void ComputeNativeTextSize(in global::UnityEngine.TextCore.Text.RenderedText textToMeasure, float width, float height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ComputeNativeTextSize"); }
         [global::Unbound.Stub] public global::System.ValueTuple<global::UnityEngine.TextCore.Text.NativeTextInfo, bool> UpdateNative(bool generateNativeSettings = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.UpdateNative"); return default; }
         [global::Unbound.Stub] public void ProcessMeshInfos(global::UnityEngine.TextCore.Text.NativeTextInfo textInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ProcessMeshInfos"); }
@@ -3987,9 +3973,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal bool ConvertUssToNativeTextGenerationSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ConvertUssToNativeTextGenerationSettings"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.TextAsset GetICUAssetStaticFalback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.GetICUAssetStaticFalback"); return default; }
         [global::Unbound.Stub] protected internal void InitTextLib() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.InitTextLib"); }
-        [global::Unbound.Stub] public void HandleATag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleATag"); }
-        [global::Unbound.Stub] public void HandleLinkTag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleLinkTag"); }
-        [global::Unbound.Stub] public void HandleLinkAndATagCallbacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.HandleLinkAndATagCallbacks"); }
         [global::Unbound.Stub] internal void ReleaseResourcesIfPossible() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ReleaseResourcesIfPossible"); }
         protected internal global::UnityEngine.TextCore.Text.TextLib textLib { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.textLib"); return default; } }
         public global::UnityEngine.Vector2 ATGMeasuredSizes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGMeasuredSizes"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UITKTextHandle.ATGMeasuredSizes"); } }
@@ -5712,49 +5695,6 @@ namespace UnityEngine.UIElements.Experimental
             [global::Unbound.Stub] public string fileName;
             [global::Unbound.Stub] public int lineNumber;
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PointerDownLinkTagEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent evt, string linkID, string linkText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public PointerDownLinkTagEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent.ctor"); }
-        public string linkID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent.linkID"); return default; } }
-        public string linkText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerDownLinkTagEvent.linkText"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerMoveLinkTagEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent evt, string linkID, string linkText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public PointerMoveLinkTagEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent.ctor"); }
-        public string linkID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent.linkID"); return default; } }
-        public string linkText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerMoveLinkTagEvent.linkText"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerOutLinkTagEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent evt, string linkID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public PointerOutLinkTagEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOutLinkTagEvent.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerOverLinkTagEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent evt, string linkID, string linkText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public PointerOverLinkTagEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent.ctor"); }
-        public string linkID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent.linkID"); return default; } }
-        public string linkText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerOverLinkTagEvent.linkText"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class PointerUpLinkTagEvent : global::UnityEngine.UIElements.PointerEventBase<global::UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent>
-    {
-        [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent.Init"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent GetPooled(global::UnityEngine.UIElements.IPointerEvent evt, string linkID, string linkText) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent.GetPooled"); return default; }
-        [global::Unbound.Stub] public PointerUpLinkTagEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent.ctor"); }
-        public string linkID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent.linkID"); return default; } }
-        public string linkText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Experimental.PointerUpLinkTagEvent.linkText"); return default; } }
     }
     unsafe partial struct StyleValues
     {

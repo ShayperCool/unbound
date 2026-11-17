@@ -36,9 +36,12 @@ namespace UnityEngine.UIElements
 
         public Vector2 RoundedSizes { get; set; }
 
+        internal TextEventHandler m_TextEventHandler;
+
         public UITKTextHandle(TextElement te)
         {
             m_TextElement = te;
+            m_TextEventHandler = new TextEventHandler(te);
         }
 
         public override bool IsPlaceholder => base.IsPlaceholder;
@@ -71,7 +74,20 @@ namespace UnityEngine.UIElements
             UpdateWithHash(hash);
         }
 
-        public void ComputeSettingsAndUpdate() => UpdateMesh();
+        /// <summary>Generates the text, then sets up the pointer handling of its links.</summary>
+        public void ComputeSettingsAndUpdate()
+        {
+            UpdateMesh();
+            HandleATag();
+            HandleLinkTag();
+            HandleLinkAndATagCallbacks();
+        }
+
+        public void HandleATag() => m_TextEventHandler?.HandleATag();
+
+        public void HandleLinkTag() => m_TextEventHandler?.HandleLinkTag();
+
+        public void HandleLinkAndATagCallbacks() => m_TextEventHandler?.HandleLinkAndATagCallbacks();
 
         public override void AddTextInfoToPermanentCache()
         {

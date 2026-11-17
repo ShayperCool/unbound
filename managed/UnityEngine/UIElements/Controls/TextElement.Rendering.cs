@@ -28,7 +28,7 @@ namespace UnityEngine.UIElements
             textSettings?.lineBreakingRules?.LoadLineBreakingRules();
             if (handle.ConvertUssToTextGenerationSettings()) handle.PrepareFontAsset();
             FontAsset.UpdateFontAssetsInUpdateQueue();
-            handle.UpdateMesh();
+            handle.ComputeSettingsAndUpdate();
             var textInfo = handle.textInfo;
             if (textInfo?.meshInfo != null)
             {
