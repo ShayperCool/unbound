@@ -30,7 +30,7 @@
 {"k":"pixels.over.overlap","v":"255 0 255 255"}
 {"k":"pixels.over.alone","v":"255 0 255 255"}
 {"k":"pixels.ortho.element","v":"0 0 0 255"}
-{"k":"pixels.ortho.topRight","v":"255 128 0 255"}
+{"k":"pixels.ortho.topRight","v":"255 102 0 255"}
 {"k":"pixels.ortho.bottomRight","v":"0 0 0 255"}
 {"k":"pixels.after.alone","v":"255 235 4 255"}
 {"k":"pixels.culledPartly.inside","v":"0 255 0 255"}
@@ -54,6 +54,6 @@
 {"k":"scale2.clipped.inside","v":"0 255 0 255"}
 {"k":"scale2.clipped.outsideParent","v":"0 0 0 255"}
 {"k":"scale2.scaled.far","v":"0 0 255 255"}
-{"k":"scale2.ortho.topRight","v":"255 128 0 255"}
+{"k":"scale2.ortho.topRight","v":"255 102 0 255"}
 {"k":"scale2.logs","v":""}
 {"k":"complete","v":true}

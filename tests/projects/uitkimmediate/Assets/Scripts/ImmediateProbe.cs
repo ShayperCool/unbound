@@ -203,7 +203,8 @@ namespace ImmediateProbe
             m_Root.Add(baseBox);
             Quad(m_Root, "over", 630, 40, 60, 60, new Rect(0, 0, 60, 60), Color.magenta);
             // GL.LoadOrtho during the callback, then an element drawn after it.
-            var ortho = Quad(m_Root, "ortho", 40, 200, 20, 20, new Rect(0.9f, 0.9f, 0.1f, 0.1f), new Color(1f, 0.5f, 0f, 1f));
+            // Orange with channels whole bytes, so no device rounds a half.
+            var ortho = Quad(m_Root, "ortho", 40, 200, 20, 20, new Rect(0.9f, 0.9f, 0.1f, 0.1f), new Color32(255, 102, 0, 255));
             ortho.LoadOrtho = true;
             var after = Box("after", 80, 200, 40, 40);
             after.style.backgroundColor = Color.yellow;
