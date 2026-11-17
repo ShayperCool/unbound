@@ -173,8 +173,9 @@ namespace Unbound.UIElements
         /// <summary>A template instance's attribute overrides, in document order (null without any).</summary>
         public List<UxmlAttributeOverride> Overrides;
         /// <summary>For an element description with overrides applied: the document each overridden
-        /// attribute was written in (its asset references resolve against it).</summary>
-        public Dictionary<string, VisualTreeAsset> OverrideSources;
+        /// attribute was written in (its asset references resolve against it) and the override's
+        /// precedence (lower wins: outer instances first, then document order).</summary>
+        public Dictionary<string, (VisualTreeAsset Source, int Rank)> OverrideSources;
         /// <summary>The slot this element defines in its document (`slot-name`), or null.</summary>
         public string SlotName;
         /// <summary>The slot of the enclosing template instance's document this element goes into
@@ -183,7 +184,7 @@ namespace Unbound.UIElements
 
         /// <summary>A copy of the element description with other attributes (the same children,
         /// sheets and position).</summary>
-        public UxmlNode WithAttributes(List<KeyValuePair<string, string>> attributes, Dictionary<string, VisualTreeAsset> sources)
+        public UxmlNode WithAttributes(List<KeyValuePair<string, string>> attributes, Dictionary<string, (VisualTreeAsset Source, int Rank)> sources)
         {
             // The copy reports its import-time warnings once per document element, as the original.
             ReportedUrls ??= new HashSet<string>();
@@ -196,7 +197,7 @@ namespace Unbound.UIElements
         /// <summary>The document an attribute's asset references resolve against: the one that
         /// overrode it, else <paramref name="document"/>.</summary>
         public VisualTreeAsset SourceOf(string attribute, VisualTreeAsset document) =>
-            OverrideSources != null && OverrideSources.TryGetValue(attribute, out var source) ? source : document;
+            OverrideSources != null && OverrideSources.TryGetValue(attribute, out var o) ? o.Source : document;
 
         public string Attr(string name)
         {
@@ -323,15 +324,16 @@ namespace Unbound.UIElements
             var name = node.Attr("name");
             if (string.IsNullOrEmpty(name)) return node;
             List<KeyValuePair<string, string>> attributes = null;
-            Dictionary<string, VisualTreeAsset> sources = null;
+            Dictionary<string, (VisualTreeAsset Source, int Rank)> sources = null;
+            int rank = 0;
             foreach (var range in Ranges)
             {
                 foreach (var o in range)
                 {
                     if (o.ElementName != name) continue;
                     // An outer instance's value (seen first) and the first of an instance's values win.
-                    sources ??= new Dictionary<string, VisualTreeAsset>();
-                    if (!sources.TryAdd(o.AttributeName, o.Source)) continue;
+                    sources ??= new Dictionary<string, (VisualTreeAsset Source, int Rank)>();
+                    if (!sources.TryAdd(o.AttributeName, (o.Source, rank++))) continue;
                     attributes ??= new List<KeyValuePair<string, string>>(node.Attributes);
                     var entry = new KeyValuePair<string, string>(o.AttributeName, o.Value);
                     int index = attributes.FindIndex(a => a.Key == o.AttributeName);
@@ -687,7 +689,7 @@ namespace Unbound.UIElements
                     // Unbound's hint when it has one.
                     Debug.LogError($"Element '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."
                         + (hint != null ? " " + hint : ""));
-                    var unknown = new Label($"Unknown type: '{node.Type}'");
+                    var unknown = new Label($"Unknown type: '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}'");
                     unknown.style.color = Color.red;
                     return unknown;
                 }
@@ -883,10 +885,9 @@ namespace Unbound.UIElements
             foreach (var a in Ordered(node))
             {
                 UxmlMember member = null;
-                if (!IsStructural(a.Key) && !members.ByName.TryGetValue(a.Key, out member) && members.ByObsoleteName.TryGetValue(a.Key, out member))
+                if (!IsStructural(a.Key) && (members.ByName.TryGetValue(a.Key, out member) || members.ByObsoleteName.TryGetValue(a.Key, out member)))
                 {
-                    // Unbound's choice when several of a member's names are present: the current
-                    // name, else the first obsolete name in declaration order.
+                    // One of a member's names is read: see PreferredName.
                     if (PreferredName(node, member) != a.Key) continue;
                 }
                 if (member == null)
@@ -942,14 +943,23 @@ namespace Unbound.UIElements
             }
         }
 
+        /// <summary>The name a member is read under when several of its names are present: the
+        /// override of best precedence under any of them (it wins over the element's own attribute),
+        /// else the current name, else (Unbound's choice) the first obsolete name in declaration order.</summary>
         static string PreferredName(UxmlNode node, UxmlMember member)
         {
-            // An override (under any of the member's names) wins over the element's own attribute.
             if (node.OverrideSources != null)
             {
-                if (node.OverrideSources.ContainsKey(member.UxmlName)) return member.UxmlName;
-                foreach (var obsolete in member.ObsoleteNames)
-                    if (!string.IsNullOrEmpty(obsolete) && node.OverrideSources.ContainsKey(obsolete)) return obsolete;
+                string best = null;
+                int bestRank = int.MaxValue;
+                void Consider(string candidate)
+                {
+                    if (!string.IsNullOrEmpty(candidate) && node.OverrideSources.TryGetValue(candidate, out var o) && o.Rank < bestRank)
+                        (best, bestRank) = (candidate, o.Rank);
+                }
+                Consider(member.UxmlName);
+                foreach (var obsolete in member.ObsoleteNames) Consider(obsolete);
+                if (best != null) return best;
             }
             if (node.Attr(member.UxmlName) != null) return member.UxmlName;
             foreach (var obsolete in member.ObsoleteNames)

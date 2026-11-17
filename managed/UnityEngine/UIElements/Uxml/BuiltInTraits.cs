@@ -415,8 +415,8 @@ namespace UnityEngine.UIElements
 
         public Background GetValueFromBag(IUxmlAttributes bag, CreationContext cc)
         {
-            if (!TryGetValueFromBagAsString(bag, cc, out var text)) return defaultValue;
-            return Background.FromObject(Unbound.UIElements.UxmlAttributeValues.ReadAsset(this, text, cc.visualTreeAsset, typeof(Object)));
+            if (!TryGetValueFromBagAsString(bag, cc, out var text, out var source)) return defaultValue;
+            return Background.FromObject(Unbound.UIElements.UxmlAttributeValues.ReadAsset(this, text, source, typeof(Object)));
         }
     }
 
