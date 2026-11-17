@@ -33,6 +33,7 @@
     "managed/UnityEngine/UIElements/Enums.UIElements.cs",
     "managed/UnityEngine/Video/VideoPlayer.cs",
     "managed/UnityEngine/XR/XRNoDevice.cs",
+    "managed/UnityEngine/Subsystems/Subsystems.cs",
     "managed/UnityEngine/UIElements/",
     "managed/UnityEngine/AI/NavMeshObstacle.cs",
     "managed/UnityEngine/Animation/Animator.cs",

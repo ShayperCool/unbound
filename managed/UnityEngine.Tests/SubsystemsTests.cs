@@ -131,6 +131,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "OnStop", "Provider.Stop" }, Calls);
             Assert.False(subsystem.running || subsystem.GetProvider().running);
             Assert.Throws<NullReferenceException>(() => SubsystemManager.GetSubsystems<ISubsystem>(null));
+            Assert.Throws<NullReferenceException>(() => SubsystemManager.GetSubsystemDescriptors<ISubsystemDescriptor>(null));
             // A destroyed subsystem is no longer the descriptor's: Create makes another.
             Assert.NotSame(subsystem, descriptor.Create());
         }
