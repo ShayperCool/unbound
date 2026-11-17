@@ -80,7 +80,7 @@ D16 uses a normalized 16-bit color copy so its linear filtering keeps the measur
 precision. OpenGL Core and Vulkan use native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
 
-`Stencil.<target>.*` (last): a target of two texels cleared, its left texel drawn with stencil 1,
+`Stencil.<target>.*`: a target of two texels cleared, its left texel drawn with stencil 1,
 then drawn red where the stencil is 1: with 16 depth bits both texels are red (no stencil
 buffer), with 24 bits and with `D16_UNorm_S8_UInt` only the left one; `.format` is the
 target's `depthStencilFormat` after Create (the latter reads `D24_UNorm_S8_UInt` on both
@@ -131,7 +131,7 @@ Unity 6000.0 contracts checked for these cases:
 | [Cull](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-Cull.html) Back discards back faces, Off retains both | Two-sided and Cull Back passes observe the same reflected geometry. |
 | [VFACE](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-ShaderSemantics.html) is positive on front faces and negative on back faces | `FrontFaces.*` read it (and SV_IsFrontFace) where the plain, mirrored and inverted draws disagree about the front face. Which face a flipped draw reports is measured, not documented. |
 
-`Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
+`Compute.<kernel>.<target>`: compute kernels (`DepthCompute.compute`) reading each
 depth target: `Compare` compares both texels against 0.5 through the texture's own comparison
 sampler, `CompareLoad` compares the first and loads both, `LoadOnly` loads both. On Vulkan a
 `Shadowmap` target compares (greater or equal) and a `Depth` target reads its stored depth, as
