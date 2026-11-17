@@ -40,6 +40,9 @@ own models; its assembly carries the name of one of the package's friend assembl
   (below).
 - `OutEvents` (`Assets/EventGraphs`): the output event controls' graph (below).
 - `OpsValues` (`Assets/OpGraphs`): the operation controls' graph (below).
+- `OpsMesh` (`Assets/OpGraphs`), `DrawMesh`, `DrawMeshSurface` (`Assets/DrawGraphs`): the mesh
+  controls' graphs (below), over the meshes `MeshMixed` and `MeshWide` the authoring script makes
+  in `Assets/Objects`.
 
 `Exposed`'s texture and mesh properties default to `Assets/Objects/ImageA.png` and
 `ShapeA.asset`, which the authoring script also makes (with `ImageB` and `ShapeB`).
@@ -342,6 +345,38 @@ destroyed while it is set at frame 12; the buffer is released while it is set at
 none at frame 11, another of five elements at frame 13 and one of nine released before it is set at
 frame 15. The rows are written at frame 20.
 
+## Mesh operations
+
+`OpsMesh` has a spawn context with a block written as a script (`Assets/Callbacks/MeshInputs.cs`)
+whose inputs are fed by operators over exposed properties; `mesh operations/<update>/*` is what
+it read when the context played and in its first sixteen updates: a mesh's vertex, index and
+triangle counts and one of its indices (`u00` to `u03`); a vertex's position, normal and tangent
+(`v00` to `v02`), colour and first two texture coordinates (`q00` to `q02`) with the index
+clamped, the vertex's position with the index wrapped and mirrored (`v03`, `v04`), and a point
+and its colour on a triangle at barycentric coordinates (`v05`, `q03`); a volume's width, height
+and depth and the counts of an array of textures and of an array of cubemaps (`u04` to `u08`).
+`MeshMixed` has five vertices in two streams (positions and normals as floats, tangents as signed
+16-bit norms; colours as bytes, first texture coordinates as half floats, second ones as unsigned
+16-bit norms) and three triangles of 16-bit indices; `MeshWide` has four vertices in one stream of
+floats without normals or tangents, and 32-bit indices in two submeshes. From frame 3, one step a
+frame: the mesh is `MeshMixed`, a volume of 4x2x3, an array of five 2x2 textures and an array of
+two cubemaps are set; the vertex, triangle and index read fall past the mesh's end; the mesh is
+`MeshWide` and the volume a volume render texture of 8x4x6; the mesh is a copy whose data was
+given up (`UploadMeshData(true)`); none can be set (`set none`, `set no texture`: both throw), so
+a mesh, a volume and the arrays are destroyed while they are set; a mesh made by script, whose
+vertices are then replaced and which then gains colours. The rows are written at frame 20, with
+each mesh's `vertexBufferTarget` and `indexBufferTarget` before and after (`<mesh>/before`,
+`after`): a readable mesh's vertex buffer gains `Structured` once it is an effect's value, its
+index buffer once an effect's programs read it.
+
+Drawn, at frame 5: `mesh` (`DrawMesh` over `MeshMixed`) puts a particle on each vertex in turn
+(Set Position Mesh, the vertex given by the particle's id), coloured from a graphics buffer of
+vectors (Sample Graphics Buffer); `mesh stride` gives it a buffer of three floats an element,
+which the program does not read (black particles); `mesh wide` is `DrawMesh` over `MeshWide`;
+`mesh surface` and `mesh surface wide` (`DrawMeshSurface`) put one on each triangle, at
+barycentric coordinates, coloured by the mesh's colours sampled there. The programs read the
+meshes' vertex and index buffers as the effects' values hand them over.
+
 ## A built asset
 
 The authoring step builds an AssetBundle with the asset of a graph of its own
@@ -368,9 +403,12 @@ of the simulation controls), drawn through an indirect buffer, and triangles and
 controlled by `tests/projects/vfxoutputs`; lit outputs, outputs that draw meshes and their
 shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU events by
 `tests/projects/vfxevents`. Motion vectors, Shader Graph outputs, bounds computed on the GPU. Expression operations without a control: a matrix's axis
-(made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), and the ones the runtime does not do yet:
-an event attribute read in a spawn context (it is evaluated per spawn event), meshes, noise, a
-texture's depth and format and a buffer's stride. Of baked curves and gradients, not measured: a curve whose values are larger than a
+(made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
+texture's format (no operator makes it), and the ones the runtime does not do yet: an event
+attribute read in a spawn context (it is evaluated per spawn event), noise, and a skinned mesh
+renderer's mesh, vertices and root bone. Not measured of meshes: one whose data was given up read
+by a program, one whose layout changes while an effect reads it on the GPU, and sampling with
+the edge placement or low-distortion surface coordinates (both made of operations measured here). Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
 that ping-pongs, one that loops before its first key and clamps after its last, one that
 loops after its last key with a range whose product by 127 and quotient by 127 round below

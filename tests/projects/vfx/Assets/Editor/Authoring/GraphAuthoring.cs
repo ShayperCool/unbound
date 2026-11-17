@@ -7,6 +7,7 @@ using UnityEditor.VFX;
 using UnityEditor.VFX.Block;
 using UnityEditor.VFX.Operator;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.VFX;
 
 /// <summary>
@@ -45,6 +46,9 @@ public static class GraphAuthoring
         Cameras();
         OutputEvents();
         Operations();
+        Meshes();
+        MeshOperations();
+        DrawnFromMeshes();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -363,6 +367,223 @@ public static class GraphAuthoring
         To(point.outputSlots[0], "v07");
         graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
         Save(graph);
+    }
+
+    /// <summary>The meshes of the mesh controls (README.md, "Mesh operations"). `MeshMixed`:
+    /// five vertices in two streams, positions and normals as floats, tangents as signed 16-bit
+    /// norms, colours as bytes, first texture coordinates as halves and second ones as unsigned
+    /// 16-bit norms, three triangles of 16-bit indices. `MeshWide`: four vertices in one stream
+    /// of floats (position, colour, four texture coordinates), 32-bit indices in two submeshes.</summary>
+    static void Meshes()
+    {
+        var mixed = new Mesh { name = "MeshMixed" };
+        mixed.SetVertexBufferParams(5,
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, 0),
+            new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3, 0),
+            new VertexAttributeDescriptor(VertexAttribute.Tangent, VertexAttributeFormat.SNorm16, 4, 0),
+            new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4, 1),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float16, 2, 1),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.UNorm16, 2, 1));
+        var positions = new[] { new Vector3(-1f, -1f, 0f), new Vector3(1f, -1f, 0.5f), new Vector3(-1f, 1f, 0f), new Vector3(1f, 1f, -0.5f), new Vector3(0f, 0.3f, 1f) };
+        var normals = new[] { new Vector3(0f, 0f, -2f), new Vector3(0.5f, 0.5f, -1f), new Vector3(1f, 0f, 0f), new Vector3(0f, 3f, 4f), new Vector3(-1f, -1f, -1f) };
+        var tangents = new short[] { 32767, 0, -16384, 32767, -32768, 100, 200, -32767, 1, 2, 3, 4, 16000, -16000, 8000, -8000, 0, 0, 32767, -1 };
+        var colours = new byte[] { 255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 64, 128, 64, 32, 255, 200, 150, 100, 50 };
+        var uv0 = new[] { 0.5f, 0.25f, 1.5f, -2f, 0.1f, 0.2f, 65504f, -0.0001f, 3.14159f, 2.71828f };
+        var uv1 = new ushort[] { 0, 65535, 32768, 1, 12345, 54321, 65535, 65535, 100, 200 };
+        var first = new MemoryStream();
+        var second = new MemoryStream();
+        using (var a = new BinaryWriter(first))
+        using (var b = new BinaryWriter(second))
+        {
+            for (int v = 0; v < 5; v++)
+            {
+                foreach (var f in new[] { positions[v].x, positions[v].y, positions[v].z, normals[v].x, normals[v].y, normals[v].z }) a.Write(f);
+                for (int i = 0; i < 4; i++) a.Write(tangents[v * 4 + i]);
+                for (int i = 0; i < 4; i++) b.Write(colours[v * 4 + i]);
+                for (int i = 0; i < 2; i++) b.Write(Mathf.FloatToHalf(uv0[v * 2 + i]));
+                for (int i = 0; i < 2; i++) b.Write(uv1[v * 2 + i]);
+            }
+            a.Flush();
+            b.Flush();
+            var bytes = first.ToArray();
+            mixed.SetVertexBufferData(bytes, 0, 0, bytes.Length, 0);
+            bytes = second.ToArray();
+            mixed.SetVertexBufferData(bytes, 0, 0, bytes.Length, 1);
+        }
+        mixed.SetIndexBufferParams(9, IndexFormat.UInt16);
+        mixed.SetIndexBufferData(new ushort[] { 0, 1, 2, 2, 1, 3, 3, 1, 4 }, 0, 0, 9);
+        mixed.subMeshCount = 1;
+        mixed.SetSubMesh(0, new SubMeshDescriptor(0, 9));
+        mixed.RecalculateBounds();
+        AssetDatabase.CreateAsset(mixed, ObjectFolder + "/MeshMixed.asset");
+
+        var wide = new Mesh { name = "MeshWide" };
+        wide.SetVertexBufferParams(4,
+            new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, 0),
+            new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4, 0),
+            new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 4, 0));
+        var floats = new[]
+        {
+            -1.2f, -1.2f, 0f, 0.2f, 0.4f, 0.6f, 1f, 1f, 2f, 3f, 4f,
+            1.2f, -1.2f, 0f, 1f, 0.5f, 0.25f, 0.5f, -1f, -2f, -3f, -4f,
+            -1.2f, 1.2f, 0f, 0.9f, 0.1f, 0.8f, 1f, 0.5f, 0.25f, 0.125f, 0f,
+            1.2f, 1.2f, 0f, 0.04f, 0.5f, 1f, 1f, 7f, 8f, 9f, 10f,
+        };
+        wide.SetVertexBufferData(floats, 0, 0, floats.Length, 0);
+        wide.SetIndexBufferParams(9, IndexFormat.UInt32);
+        wide.SetIndexBufferData(new uint[] { 0, 1, 2, 2, 1, 3, 3, 2, 0 }, 0, 0, 9);
+        wide.subMeshCount = 2;
+        wide.SetSubMesh(0, new SubMeshDescriptor(0, 6));
+        wide.SetSubMesh(1, new SubMeshDescriptor(6, 3));
+        wide.RecalculateBounds();
+        AssetDatabase.CreateAsset(wide, ObjectFolder + "/MeshWide.asset");
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>The mesh controls' graph (README.md, "Mesh operations"): a spawn context whose
+    /// script block reads a mesh's counts, an index of it, a vertex sampled with each addressing
+    /// mode and a point on a triangle, and the depth or count of a volume and of arrays of
+    /// textures and cubemaps, all over exposed properties.</summary>
+    static void MeshOperations()
+    {
+        var graph = NewGraph("OpsMesh", OperationFolder);
+        var (spawn, _, _, _) = System(graph, 8);
+        ConstantRate(spawn, 1f);
+        var block = Make<VFXSpawnerCustomWrapper>();
+        block.SetSettingValue("m_customType", new SerializableType(typeof(MeshInputs)));
+        spawn.AddChild(block);
+        VFXSlot Exposed(Type type, string name, object value) => Parameter(graph, type, name, value).outputSlots[0];
+        void To(VFXSlot from, string input) => Link(from, Input(block, input));
+        T Op<T>() where T : VFXOperator
+        {
+            var op = Make<T>();
+            graph.AddChild(op);
+            return op;
+        }
+        // A spaceable output (a position, a direction, a vector) is read through its value.
+        VFXSlot Value(VFXSlot slot) => slot.children.Any() ? slot.children.First() : slot;
+        var mesh = Exposed(typeof(Mesh), "Mesh", Object<Mesh>("MeshMixed"));
+        var vertex = Exposed(typeof(uint), "Vertex", 2u);
+        var triangle = Exposed(typeof(uint), "Triangle", 1u);
+        var bary = Exposed(typeof(Vector2), "Bary", new Vector2(0.25f, 0.5f));
+        var index = Exposed(typeof(uint), "Index", 4u);
+        var vertices = Op<MeshVertexCount>();
+        Link(mesh, Input(vertices, "mesh"));
+        To(vertices.outputSlots[0], "u00");
+        var indices = Op<MeshIndexCount>();
+        Link(mesh, Input(indices, "mesh"));
+        To(indices.outputSlots[0], "u01");
+        var triangles = Op<MeshTriangleCount>();
+        Link(mesh, Input(triangles, "mesh"));
+        To(triangles.outputSlots[0], "u02");
+        var sampledIndex = Op<SampleIndex>();
+        Link(mesh, Input(sampledIndex, "mesh"));
+        Link(index, Input(sampledIndex, "index"));
+        To(sampledIndex.outputSlots[0], "u03");
+        const SampleMesh.VertexAttributeFlag Channels = SampleMesh.VertexAttributeFlag.Position | SampleMesh.VertexAttributeFlag.Normal
+            | SampleMesh.VertexAttributeFlag.Tangent | SampleMesh.VertexAttributeFlag.Color
+            | SampleMesh.VertexAttributeFlag.TexCoord0 | SampleMesh.VertexAttributeFlag.TexCoord1;
+        SampleMesh Sample(SampleMesh.VertexAttributeFlag output, VFXOperatorUtility.SequentialAddressingMode mode, SampleMesh.PlacementMode placement)
+        {
+            var sample = Op<SampleMesh>();
+            sample.SetSettingValue("output", output);
+            sample.SetSettingValue("mode", mode);
+            sample.SetSettingValue("placementMode", placement);
+            if (placement == SampleMesh.PlacementMode.Surface) sample.SetSettingValue("surfaceCoordinates", SampleMesh.SurfaceCoordinates.Barycentric);
+            Link(mesh, Input(sample, "mesh"));
+            if (placement == SampleMesh.PlacementMode.Vertex) Link(vertex, Input(sample, "vertex"));
+            else
+            {
+                Link(triangle, Input(sample, "triangle"));
+                Link(bary, Input(sample, "barycentric"));
+            }
+            return sample;
+        }
+        // Outputs in the order of the channel flags: position, normal, tangent, colour, two
+        // texture coordinates.
+        var clamped = Sample(Channels, VFXOperatorUtility.SequentialAddressingMode.Clamp, SampleMesh.PlacementMode.Vertex);
+        To(Value(clamped.outputSlots[0]), "v00");
+        To(Value(clamped.outputSlots[1]), "v01");
+        To(Value(clamped.outputSlots[2]), "v02");
+        To(clamped.outputSlots[3], "q00");
+        To(clamped.outputSlots[4], "q01");
+        To(clamped.outputSlots[5], "q02");
+        var wrapped = Sample(SampleMesh.VertexAttributeFlag.Position, VFXOperatorUtility.SequentialAddressingMode.Wrap, SampleMesh.PlacementMode.Vertex);
+        To(Value(wrapped.outputSlots[0]), "v03");
+        var mirrored = Sample(SampleMesh.VertexAttributeFlag.Position, VFXOperatorUtility.SequentialAddressingMode.Mirror, SampleMesh.PlacementMode.Vertex);
+        To(Value(mirrored.outputSlots[0]), "v04");
+        var surface = Sample(SampleMesh.VertexAttributeFlag.Position | SampleMesh.VertexAttributeFlag.Color, VFXOperatorUtility.SequentialAddressingMode.Clamp, SampleMesh.PlacementMode.Surface);
+        To(Value(surface.outputSlots[0]), "v05");
+        To(surface.outputSlots[1], "q03");
+        foreach (var (type, name, inputs) in new[]
+                 {
+                     (typeof(Texture3D), "Volume", new[] { "u04", "u05", "u06" }),
+                     (typeof(Texture2DArray), "Layers", new[] { null, null, "u07" }),
+                     (typeof(CubemapArray), "Cubes", new[] { null, null, "u08" }),
+                 })
+        {
+            var dims = Op<TextureDimensions>();
+            dims.SetOperandType(type);
+            Link(Exposed(type, name, null), dims.inputSlots[0]);
+            for (int i = 0; i < 3; i++)
+                if (inputs[i] != null) To(dims.outputSlots[i], inputs[i]);
+        }
+        graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+        Save(graph);
+    }
+
+    /// <summary>The graphs of the drawing controls of meshes and buffers (README.md, "Mesh
+    /// operations"): `DrawMesh` puts a particle on each vertex of the exposed mesh in turn, its
+    /// colour sampled from an exposed buffer of vectors; `DrawMeshSurface` puts one on each
+    /// triangle, at a point and with the colour sampled there. Opaque quads, drawn as kept.</summary>
+    static void DrawnFromMeshes()
+    {
+        foreach (var surface in new[] { false, true })
+        {
+            var graph = NewGraph(surface ? "DrawMeshSurface" : "DrawMesh", DrawFolder);
+            var (spawn, init, _, output) = System(graph, 16);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            Burst(spawn, false, 5f, 0f);
+            var mesh = Parameter(graph, typeof(Mesh), "Mesh", Object<Mesh>("MeshMixed")).outputSlots[0];
+            var id = Make<VFXAttributeParameter>();
+            id.SetSettingValue("attribute", "particleId");
+            graph.AddChild(id);
+            var place = Make<PositionMesh>();
+            place.SetSettingValue("spawnMode", PositionBase.SpawnMode.Custom);
+            place.SetSettingValue("placementMode", surface ? SampleMesh.PlacementMode.Surface : SampleMesh.PlacementMode.Vertex);
+            place.SetSettingValue("applyOrientation", PositionBase.Orientation.None);
+            if (surface) place.SetSettingValue("surfaceCoordinates", SampleMesh.SurfaceCoordinates.Barycentric);
+            init.AddChild(place);
+            Link(mesh, Input(place, "mesh"));
+            Link(id.outputSlots[0], Input(place, surface ? "triangle" : "vertex"));
+            if (surface) Input(place, "barycentric").value = new Vector2(0.3f, 0.2f);
+            Set(init, "size", 0.3f);
+            var colour = Make<SetAttribute>();
+            colour.SetSettingValue("attribute", "color");
+            init.AddChild(colour);
+            if (surface)
+            {
+                var sample = Make<SampleMesh>();
+                graph.AddChild(sample);
+                sample.SetSettingValue("output", SampleMesh.VertexAttributeFlag.Color);
+                sample.SetSettingValue("placementMode", SampleMesh.PlacementMode.Surface);
+                sample.SetSettingValue("surfaceCoordinates", SampleMesh.SurfaceCoordinates.Barycentric);
+                Link(mesh, Input(sample, "mesh"));
+                Link(id.outputSlots[0], Input(sample, "triangle"));
+                Input(sample, "barycentric").value = new Vector2(0.3f, 0.2f);
+                Link(sample.outputSlots[0], colour.inputSlots[0]);
+            }
+            else
+            {
+                var sample = Make<SampleBuffer>();
+                graph.AddChild(sample);
+                sample.SetOperandType(typeof(Vector4));
+                Link(Parameter(graph, typeof(GraphicsBuffer), "Buffer", null).outputSlots[0], Input(sample, "buffer"));
+                Link(id.outputSlots[0], Input(sample, "index"));
+                Link(sample.outputSlots[0], colour.inputSlots[0]);
+            }
+            Save(graph);
+        }
     }
 
     /// <summary>A block that sets an attribute from a curve sampled at a time given.</summary>

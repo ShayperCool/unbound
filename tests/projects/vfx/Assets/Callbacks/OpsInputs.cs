@@ -50,26 +50,32 @@ public class OpsInputs : VFXSpawnerCallbacks
         return string.Join(",", cells);
     }
 
-    static void Write(string what, VFXExpressionValues values, VisualEffect effect)
+    static void Write(string what, VFXExpressionValues values, VisualEffect effect, FieldInfo[] inputs)
     {
         if (!Logs.TryGetValue(effect.name, out var log)) Logs[effect.name] = log = new List<string>();
         var row = new StringBuilder(what);
-        foreach (var input in s_Inputs) row.Append(' ').Append(input.Name).Append('=').Append(Read(values, input));
+        foreach (var input in inputs) row.Append(' ').Append(input.Name).Append('=').Append(Read(values, input));
         log.Add(row.ToString());
     }
 
-    public override void OnPlay(VFXSpawnerState state, VFXExpressionValues vfxValues, VisualEffect vfxComponent)
+    /// <summary>Writes down the inputs when a spawn context of the effect plays.</summary>
+    public static void Played(VFXExpressionValues values, VisualEffect effect, FieldInfo[] inputs)
     {
-        s_Updates[vfxComponent.name] = 0;
-        Write("play", vfxValues, vfxComponent);
+        s_Updates[effect.name] = 0;
+        Write("play", values, effect, inputs);
     }
 
-    public override void OnUpdate(VFXSpawnerState state, VFXExpressionValues vfxValues, VisualEffect vfxComponent)
+    /// <summary>Writes down the inputs in the effect's first updates.</summary>
+    public static void Updated(VFXExpressionValues values, VisualEffect effect, FieldInfo[] inputs)
     {
-        s_Updates.TryGetValue(vfxComponent.name, out int updates);
-        s_Updates[vfxComponent.name] = ++updates;
-        if (updates <= RecordedUpdates) Write("update" + updates, vfxValues, vfxComponent);
+        s_Updates.TryGetValue(effect.name, out int updates);
+        s_Updates[effect.name] = ++updates;
+        if (updates <= RecordedUpdates) Write("update" + updates, values, effect, inputs);
     }
+
+    public override void OnPlay(VFXSpawnerState state, VFXExpressionValues vfxValues, VisualEffect vfxComponent) => Played(vfxValues, vfxComponent, s_Inputs);
+
+    public override void OnUpdate(VFXSpawnerState state, VFXExpressionValues vfxValues, VisualEffect vfxComponent) => Updated(vfxValues, vfxComponent, s_Inputs);
 
     public override void OnStop(VFXSpawnerState state, VFXExpressionValues vfxValues, VisualEffect vfxComponent) { }
 }

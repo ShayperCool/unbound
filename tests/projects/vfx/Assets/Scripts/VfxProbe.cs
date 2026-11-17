@@ -93,6 +93,7 @@ public sealed class VfxProbe : MonoBehaviour
             Bundled();
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
+            BeginMeshOperations();
         }
         catch (Exception e)
         {
@@ -570,6 +571,130 @@ public sealed class VfxProbe : MonoBehaviour
         if (m_OperationsTarget != null) m_OperationsTarget.Release();
     }
 
+    // ------------------------------------------------------------------ mesh operations
+
+    VisualEffect m_MeshOperations;
+    Mesh m_MeshMixed, m_MeshWide, m_Unreadable, m_Made;
+    Texture3D m_Volume;
+    Texture2DArray m_Layers;
+    CubemapArray m_Cubes;
+    RenderTexture m_VolumeTarget;
+    readonly List<GraphicsBuffer> m_MeshBuffers = new List<GraphicsBuffer>();
+
+    /// <summary>The mesh controls (README.md, "Mesh operations"): an effect of OpsMesh whose
+    /// script block reads what the mesh and texture operators give, and drawn effects whose
+    /// particles take their places from meshes and their colours from a buffer or a mesh.</summary>
+    void BeginMeshOperations()
+    {
+        m_MeshMixed = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/MeshMixed.asset");
+        m_MeshWide = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/MeshWide.asset");
+        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide) })
+            Rec("mesh operations/" + name + "/before", MeshState(mesh));
+        m_MeshOperations = Effect("mesh operations", "Assets/OpGraphs/OpsMesh.vfx", new Vector3(0f, 6f, 0f));
+        // Colours by a buffer of vectors (the stride the graph reads), by one of another stride
+        // (none read), from the vertices and from points on the triangles of each mesh.
+        var colours = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 16);
+        colours.SetData(new[] { new Vector4(1f, 0f, 0f, 1f), new Vector4(0f, 1f, 0f, 1f), new Vector4(0f, 0f, 1f, 1f), new Vector4(1f, 1f, 0f, 1f), new Vector4(0.5f, 0.5f, 1f, 1f) });
+        var narrow = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 12);
+        narrow.SetData(new[] { Vector3.one, Vector3.one, Vector3.one, Vector3.one, Vector3.one });
+        m_MeshBuffers.Add(colours);
+        m_MeshBuffers.Add(narrow);
+        foreach (var (key, graph, mesh, buffer) in new[]
+                 {
+                     ("mesh", "DrawMesh", m_MeshMixed, colours), ("mesh stride", "DrawMesh", m_MeshMixed, narrow),
+                     ("mesh wide", "DrawMesh", m_MeshWide, colours),
+                     ("mesh surface", "DrawMeshSurface", m_MeshMixed, null), ("mesh surface wide", "DrawMeshSurface", m_MeshWide, null),
+                 })
+        {
+            Draw(key, graph, 5);
+            var effect = m_Stages[m_Stages.Count - 1].Effect;
+            effect.SetMesh("Mesh", mesh);
+            if (buffer != null) effect.SetGraphicsBuffer("Buffer", buffer);
+        }
+    }
+
+    static string MeshState(Mesh mesh) => "readable=" + (mesh.isReadable ? 1 : 0) + " vertexBufferTarget=" + (int)mesh.vertexBufferTarget + " indexBufferTarget=" + (int)mesh.indexBufferTarget;
+
+    /// <summary>From frame 3 one step a frame: the vertex, triangle and index read change and
+    /// fall outside the mesh, the mesh becomes another of other formats, a copy whose data was
+    /// given up, one destroyed while it is set, one made by script and then changed; the volume
+    /// and the arrays are set, the volume is replaced by a volume render texture, and all three
+    /// are destroyed while they are set.</summary>
+    void MeshOperationFrame()
+    {
+        if (m_MeshOperations == null) return;
+        var effect = m_MeshOperations;
+        switch (m_Frame)
+        {
+            case 3:
+                effect.SetMesh("Mesh", m_MeshMixed);
+                effect.SetTexture("Volume", m_Volume = new Texture3D(4, 2, 3, TextureFormat.RGBA32, false));
+                effect.SetTexture("Layers", m_Layers = new Texture2DArray(2, 2, 5, TextureFormat.RGBA32, false));
+                effect.SetTexture("Cubes", m_Cubes = new CubemapArray(4, 2, TextureFormat.RGBA32, false));
+                break;
+            case 4:
+                effect.SetUInt("Vertex", 7);
+                effect.SetUInt("Triangle", 5);
+                effect.SetUInt("Index", 20);
+                effect.SetVector2("Bary", new Vector2(0.6f, 0.7f));
+                break;
+            case 5:
+                effect.SetMesh("Mesh", m_MeshWide);
+                effect.SetUInt("Vertex", 1);
+                effect.SetUInt("Triangle", 2);
+                effect.SetUInt("Index", 7);
+                effect.SetVector2("Bary", new Vector2(0.1f, 0.8f));
+                m_VolumeTarget = new RenderTexture(8, 4, 0) { dimension = TextureDimension.Tex3D, volumeDepth = 6 };
+                m_VolumeTarget.Create();
+                effect.SetTexture("Volume", m_VolumeTarget);
+                break;
+            case 6:
+                m_Unreadable = Instantiate(m_MeshMixed);
+                m_Unreadable.UploadMeshData(true);
+                effect.SetMesh("Mesh", m_Unreadable);
+                break;
+            case 7:
+                // None cannot be set: a mesh and textures destroyed while they are set stand
+                // for none.
+                Logged("mesh operations/set none", () => effect.SetMesh("Mesh", null));
+                Logged("mesh operations/set no texture", () => effect.SetTexture("Volume", null));
+                var gone = Instantiate(m_MeshMixed);
+                effect.SetMesh("Mesh", gone);
+                DestroyImmediate(gone);
+                var goneVolume = new Texture3D(2, 2, 2, TextureFormat.RGBA32, false);
+                effect.SetTexture("Volume", goneVolume);
+                DestroyImmediate(goneVolume);
+                DestroyImmediate(m_Layers);
+                DestroyImmediate(m_Cubes);
+                break;
+            case 8:
+                m_Made = new Mesh { vertices = new[] { new Vector3(1f, 2f, 3f), new Vector3(4f, 5f, 6f), new Vector3(7f, 8f, 9f) }, triangles = new[] { 0, 2, 1 } };
+                effect.SetMesh("Mesh", m_Made);
+                effect.SetUInt("Vertex", 1);
+                effect.SetUInt("Triangle", 0);
+                effect.SetUInt("Index", 1);
+                break;
+            case 9:
+                m_Made.vertices = new[] { new Vector3(-1f, -2f, -3f), new Vector3(-4f, -5f, -6f), new Vector3(-7f, -8f, -9f) };
+                break;
+            case 10:
+                m_Made.colors32 = new[] { new Color32(10, 20, 30, 40), new Color32(50, 60, 70, 80), new Color32(90, 100, 110, 120) };
+                break;
+        }
+        if (m_Frame != 20) return;
+        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide), ("unreadable", m_Unreadable), ("made", m_Made) })
+            Rec("mesh operations/" + name + "/after", mesh == null ? "none" : MeshState(mesh));
+        foreach (var line in OpsInputs.Logs.TryGetValue("mesh operations", out var log) ? log : new List<string>())
+        {
+            var parts = line.Split(' ');
+            foreach (var part in parts)
+                if (part.Contains("=")) Rec("mesh operations/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
+        }
+        Rec("mesh operations/lines", OpsInputs.Logs.TryGetValue("mesh operations", out var all) ? all.Count : -1);
+        foreach (var buffer in m_MeshBuffers) buffer.Release();
+        if (m_VolumeTarget != null) m_VolumeTarget.Release();
+    }
+
     // ---------------------------------------------------------------------------- bundle
 
     VisualEffect m_Bundled;
@@ -648,6 +773,7 @@ public sealed class VfxProbe : MonoBehaviour
             CameraFrame();
             OutputEventFrame();
             OperationFrame();
+            MeshOperationFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }
