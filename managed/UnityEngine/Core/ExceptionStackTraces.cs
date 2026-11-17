@@ -36,7 +36,7 @@ namespace Unbound.Runtime
                     var method = frame?.GetMethod();
                     if (method == null || !IsGameMethod(method)) continue;
                     AppendCapturedMethod(text, method);
-                    AppendSource(text, frame, ProjectInfo.ProjectPath);
+                    AppendSource(text, frame, ProjectFolder);
                     text.Append('\n');
                 }
             }
@@ -60,17 +60,8 @@ namespace Unbound.Runtime
                     bool game = IsGameMethod(method);
                     bool entry = method.DeclaringType == typeof(UnityEngine.Debug) && method.Name == nameof(UnityEngine.Debug.LogException);
                     if (!game && !entry) continue;
-                    var type = method.DeclaringType;
-                    if (!string.IsNullOrEmpty(type.Namespace)) text.Append(type.Namespace).Append('.');
-                    text.Append(type.Name).Append(':').Append(method.Name).Append('(');
-                    var parameters = method.GetParameters();
-                    for (int parameter = 0; parameter < parameters.Length; parameter++)
-                    {
-                        if (parameter != 0) text.Append(", ");
-                        text.Append(parameters[parameter].ParameterType.Name);
-                    }
-                    text.Append(')');
-                    if (game) AppendSource(text, frame, ProjectInfo.ProjectPath);
+                    AppendManagedMethod(text, method);
+                    if (game) AppendSource(text, frame, ProjectFolder);
                     text.Append('\n');
                 }
             }
@@ -203,12 +194,44 @@ namespace Unbound.Runtime
             return measured && string.IsNullOrWhiteSpace(message) ? exception.GetType().Name : exception.GetType().Name + ": " + message;
         }
 
-        static void AppendSource(StringBuilder text, StackFrame frame, string projectFolder)
+        /// <summary><c>Namespace.Type:Method(ParameterType, ...)</c>, as Unity's managed stack
+        /// texts name a frame's method.</summary>
+        internal static void AppendManagedMethod(StringBuilder text, MethodBase method)
+        {
+            var type = method.DeclaringType;
+            if (!string.IsNullOrEmpty(type.Namespace)) text.Append(type.Namespace).Append('.');
+            text.Append(type.Name).Append(':').Append(method.Name).Append('(');
+            var parameters = method.GetParameters();
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (i != 0) text.Append(", ");
+                text.Append(parameters[i].ParameterType.Name);
+            }
+            text.Append(')');
+        }
+
+        /// <summary>The project's folder as Unity removes it from source paths ("" without a project).</summary>
+        internal static string ProjectFolder => string.IsNullOrEmpty(ProjectInfo.ProjectPath)
+            ? ""
+            : ProjectInfo.ProjectPath.Replace('\\', '/').TrimEnd('/') + "/";
+
+        internal static void AppendSource(StringBuilder text, StackFrame frame, string projectFolder)
         {
             string file = frame.GetFileName();
             if (string.IsNullOrEmpty(file)) return;
-            text.Append(" (at ").Append(SourcePath(file, projectFolder)).Append(':')
+            text.Append(" (at ").Append(StackSourcePath(file, projectFolder, ProjectInfo.ProjectPath)).Append(':')
                 .Append(frame.GetFileLineNumber()).Append(')');
+        }
+
+        /// <summary>A frame's source path in Unity's stack texts: the path the Editor compiled
+        /// (<see cref="AbsoluteSourcePath"/>, under <paramref name="project"/>), without a leading
+        /// <paramref name="projectFolder"/> (matches tests/projects/appfacts).</summary>
+        internal static string StackSourcePath(string file, string projectFolder, string project)
+        {
+            string compiled = AbsoluteSourcePath(file, project);
+            if (string.IsNullOrEmpty(projectFolder)) return compiled;
+            string prefix = projectFolder.Replace('\\', '/');
+            return compiled.StartsWith(prefix, StringComparison.Ordinal) ? compiled.Substring(prefix.Length) : compiled;
         }
 
         static readonly string[] s_SourceRoots = { "Assets", "Packages" };

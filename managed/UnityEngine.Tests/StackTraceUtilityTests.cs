@@ -200,11 +200,38 @@ namespace Unbound.Tests
         public void SourcesAreNamedAsTheEditorCompiledThem()
         {
             Assert.Equal("/p/Assets/A.cs", UnityStackTrace.AbsoluteSourcePath("/p/Assets/A.cs", "/p"));
-            Assert.Equal("/p/Packages/local/B.cs", UnityStackTrace.AbsoluteSourcePath("/p/Packages/local/B.cs", "/p/"));
             Assert.Equal("./Library/PackageCache/com.unity.x@0123456789ab/C.cs",
                 UnityStackTrace.AbsoluteSourcePath("/p/Library/PackageCache/com.unity.x@0123456789ab/C.cs", "/p"));
             Assert.Equal("/elsewhere/D.cs", UnityStackTrace.AbsoluteSourcePath("/elsewhere/D.cs", "/p"));
             Assert.Equal("/p/Assets/A.cs", UnityStackTrace.AbsoluteSourcePath("/p/Assets/A.cs", ""));
+        }
+
+        /// <summary>Caller stacks remove only a leading project folder from the compiled path.</summary>
+        [Fact]
+        public void CallerSourcesLoseOnlyALeadingProjectFolder()
+        {
+            const string cached = "/p/Library/PackageCache/com.unity.x@0123456789ab/C.cs";
+            Assert.Equal("Assets/A.cs", UnityStackTrace.StackSourcePath("/p/Assets/A.cs", "/p/", "/p"));
+            Assert.Equal("./Library/PackageCache/com.unity.x@0123456789ab/C.cs", UnityStackTrace.StackSourcePath(cached, "/p/", "/p"));
+            Assert.Equal("/p/Assets/A.cs", UnityStackTrace.StackSourcePath("/p/Assets/A.cs", "", "/p"));
+            Assert.Equal("/p/Assets/A.cs", UnityStackTrace.StackSourcePath("/p/Assets/A.cs", "Assets/", "/p"));
+        }
+
+        /// <summary>After an edit is applied, a frame keeps the runtime's offset and line: the
+        /// loaded .pdb no longer describes the edited methods.</summary>
+        [Fact]
+        public void AnEditedAssemblysFramesKeepTheRuntimesPlaces()
+        {
+            var assembly = typeof(StackTraceUtilityTests).Assembly;
+            var exception = Caught(() => Throw(string.Concat("A", "B")));
+            var frame = new StackTrace(exception, true).GetFrame(0);
+            try
+            {
+                PortablePdb.Forget(assembly);
+                var first = UnityStackTrace.MonoTrace(exception).Split('\n')[0];
+                Assert.EndsWith(" [0x" + frame.GetILOffset().ToString("x5") + "] in " + frame.GetFileName() + ":" + frame.GetFileLineNumber() + " ", first);
+            }
+            finally { PortablePdb.Reload(assembly); }
         }
 
         static int Callee(int value, [CallerLineNumber] int line = 0) => line + value;

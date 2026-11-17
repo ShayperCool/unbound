@@ -49,6 +49,19 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Stops reading an assembly's .pdb (its code was edited since it loaded): its
+        /// frames keep the runtime's own offsets and lines.</summary>
+        internal static void Forget(Assembly assembly)
+        {
+            lock (s_Loaded) s_Loaded.AddOrUpdate(assembly, null);
+        }
+
+        /// <summary>Reads an assembly's .pdb again at its next use.</summary>
+        internal static void Reload(Assembly assembly)
+        {
+            lock (s_Loaded) s_Loaded.Remove(assembly);
+        }
+
         /// <summary>The .pdb of an assembly file that is not loaded (null without one).</summary>
         internal static PortablePdb OfFile(string path)
         {

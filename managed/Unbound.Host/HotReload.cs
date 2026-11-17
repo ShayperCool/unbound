@@ -137,6 +137,8 @@ internal static class HotReload
                 // (each has a checked call in the image: tested above).
                 il = LifetimeChecks.RedirectDelta(image, applied.Append(delta.Metadata).ToList(), il)!;
                 MetadataUpdater.ApplyUpdate(assembly, delta.Metadata, il, delta.Pdb);
+                // Its loaded .pdb no longer describes the edited methods.
+                Unbound.Runtime.PortablePdb.Forget(assembly);
                 applied.Add(delta.Metadata);
                 response.Applied.Add(delta.Name);
             }

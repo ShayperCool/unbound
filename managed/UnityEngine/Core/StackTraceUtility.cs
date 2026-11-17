@@ -34,8 +34,7 @@ namespace UnityEngine
         static string projectFolder;
 
         /// <summary>The prefix removed from source paths: the project's folder unless set.</summary>
-        static string ProjectFolder => projectFolder
-            ?? (string.IsNullOrEmpty(ProjectInfo.ProjectPath) ? "" : ProjectInfo.ProjectPath + "/");
+        static string ProjectFolder => projectFolder ?? UnityStackTrace.ProjectFolder;
 
         internal static void SetProjectFolder(string folder)
         {
@@ -95,28 +94,16 @@ namespace UnityEngine
             {
                 var frame = stackFrames.GetFrame(i);
                 var method = frame?.GetMethod();
-                var type = method?.DeclaringType;
-                if (type == null) continue;
+                if (method?.DeclaringType == null) continue;
                 string unitySource = UnityStackTrace.UnitySource(method, out bool unity);
                 if (!unity && !UnityStackTrace.IsGameMethod(method)) continue;
-                if (!string.IsNullOrEmpty(type.Namespace)) text.Append(type.Namespace).Append('.');
-                text.Append(type.Name).Append(':').Append(method.Name).Append('(');
-                var parameters = method.GetParameters();
-                for (int p = 0; p < parameters.Length; p++)
-                {
-                    if (p != 0) text.Append(", ");
-                    text.Append(parameters[p].ParameterType.Name);
-                }
-                text.Append(')');
+                UnityStackTrace.AppendManagedMethod(text, method);
                 if (unity)
                 {
                     if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');
                 }
-                else if (frame.GetFileName() is string file && !method.IsDefined(typeof(HideInCallstackAttribute), true))
-                {
-                    text.Append(" (at ").Append(UnityStackTrace.SourcePath(file, ProjectFolder)).Append(':')
-                        .Append(frame.GetFileLineNumber()).Append(')');
-                }
+                else if (!method.IsDefined(typeof(HideInCallstackAttribute), true))
+                    UnityStackTrace.AppendSource(text, frame, ProjectFolder);
                 text.Append('\n');
             }
             return text.ToString();

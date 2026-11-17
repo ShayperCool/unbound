@@ -36,10 +36,7 @@ namespace Unbound.Runtime
                 {
                     if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');
                 }
-                else if (!string.IsNullOrEmpty(file))
-                {
-                    text.Append(" (at ").Append(SourcePath(file, projectFolder)).Append(':').Append(frame.GetFileLineNumber()).Append(')');
-                }
+                else AppendSource(text, frame, projectFolder);
                 text.Append('\n');
             }
             return text.ToString();
