@@ -512,6 +512,64 @@ namespace UnityEngine.Tests
             for (int x = 24; x < 32; x++) Assert.Equal(0, level0[x].a);
         }
 
+        /// <summary>The waving's phase advances once a frame by the frame's time × wavingGrassStrength
+        /// × 0.05, however often the details are drawn in it (tests/projects/grass `Waving`).</summary>
+        [Fact]
+        public void TheWavingPhaseAdvancesOnceAFrame()
+        {
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = Own(new Texture2D(4, 4)) });
+            var go = Own(new GameObject("waving"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            var renderer = terrain.Renderer;
+            Assert.Equal(0.1f * 0.8f * 0.05f, renderer.AdvanceWavePhase(5, 0.1f, 0.8f), 6);
+            Assert.Equal(0.1f * 0.8f * 0.05f, renderer.AdvanceWavePhase(5, 0.1f, 0.8f), 6);
+            Assert.Equal(0.1f * 0.8f * 0.05f + 0.2f * 0.5f * 0.05f, renderer.AdvanceWavePhase(6, 0.2f, 0.5f), 6);
+            Assert.Equal(0.1f * 0.8f * 0.05f + 0.2f * 0.5f * 0.05f, renderer.AdvanceWavePhase(7, 0.3f, 0f), 6);
+        }
+
+        /// <summary>Meshes in the Grass render mode drawn without instancing are part of the grass
+        /// mesh (drawn with the grass shader); in the VertexLit mode they make the meshes' own.</summary>
+        [Theory]
+        [InlineData(DetailRenderMode.Grass)]
+        [InlineData(DetailRenderMode.VertexLit)]
+        public void GrassModeMeshesJoinTheGrassMesh(DetailRenderMode mode)
+        {
+            var mesh = Own(new Mesh());
+            mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+            mesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.up };
+            mesh.triangles = new[] { 0, 1, 2 };
+            var prefab = Own(new GameObject("grass mesh"));
+            prefab.AddComponent<MeshFilter>().sharedMesh = mesh;
+            prefab.AddComponent<MeshRenderer>().sharedMaterial = Own(new Material(Shader.Create("Standard", 2000)));
+            var data = Data(DetailScatterMode.InstanceCountMode,
+                new DetailPrototype { prototypeTexture = Own(new Texture2D(4, 4)), renderMode = DetailRenderMode.Grass },
+                new DetailPrototype { prototype = prefab, usePrototypeMesh = true, renderMode = mode });
+            Fill(data, 0, 1);
+            var go = Own(new GameObject("grass mesh terrain"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            terrain.Renderer.BuildDetailsForTest(terrain, data, terrain.GetPosition());
+            int quadsOnly = terrain.Renderer.DetailVertexCountsForTest()[0];
+            Fill(data, 1, 1);
+            terrain.Renderer.BuildDetailsForTest(terrain, data, terrain.GetPosition());
+            var counts = terrain.Renderer.DetailVertexCountsForTest();
+            if (mode == DetailRenderMode.Grass)
+            {
+                Assert.True(counts[0] > quadsOnly);
+                Assert.Equal(0, counts[2]);
+            }
+            else
+            {
+                Assert.Equal(quadsOnly, counts[0]);
+                Assert.True(counts[2] > 0);
+            }
+        }
+
         /// <summary>The detail atlas holds a texture for each prototype drawn without instancing: a
         /// mesh's material texture, or white (4 × 4) for a mesh whose material has none and for a
         /// refused prototype; instanced prototypes take no place. Packed as Texture2D.PackTextures

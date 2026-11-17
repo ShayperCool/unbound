@@ -26,9 +26,10 @@ namespace UnityEngine
     // corners sit at the instance with their offsets in the tangent; meshes are baked through their
     // instance's transform (turned, tilted to the ground, scaled), their vertex colours (white
     // without them) tinted by its colour. The
-    // shaders' globals: _WaveAndDistance (frame time × speed × 0.04, strength × 0.5, amount × 6,
-    // distance²), _CameraPosition (the camera less the terrain's position, 1 / distance²), the
-    // camera's right and up, the waving tint.
+    // shaders' globals: _WaveAndDistance (the waving's phase, speed × 0.4, amount × 6, distance²),
+    // _CameraPosition (the camera less the terrain's position, 1 / distance²), the camera's right
+    // and up, the waving tint. Meshes in the Grass render mode are part of the grass mesh, drawn
+    // with the grass shader: they wave by their vertex alpha and fade with distance.
     internal sealed partial class TerrainRenderer
     {
         enum DetailKind { Grass, Billboard, Mesh }
@@ -74,6 +75,20 @@ namespace UnityEngine
             "Hidden/TerrainEngine/Details/Vertexlit",
         };
 
+        static readonly int s_WaveAndDistanceId = Shader.PropertyToID("_WaveAndDistance"), s_CameraPositionId = Shader.PropertyToID("_CameraPosition"),
+            s_CameraRightId = Shader.PropertyToID("_CameraRight"), s_CameraUpId = Shader.PropertyToID("_CameraUp"), s_WavingTintId = Shader.PropertyToID("_WavingTint");
+
+        /// <summary>The waving's phase: once in each frame the terrain's details are drawn in, the
+        /// frame's deltaTime × wavingGrassStrength × 0.05 is added (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/grass `Waving`).</summary>
+        float m_WavePhase;
+        int m_WaveFrame = -1;
+        /// <summary>The detail shaders' constants, the draws' own values: one set for each time the
+        /// details are collected in a frame (a camera rendering twice in a frame from two places
+        /// needs two), reused from frame to frame.</summary>
+        readonly List<Dictionary<int, object>> m_DetailValues = new List<Dictionary<int, object>>();
+        int m_DetailValuesUsed, m_DetailValuesFrame = -1;
+
         void CollectDetails(Terrain terrain, TerrainData data, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var origin = terrain.GetPosition();
@@ -81,19 +96,27 @@ namespace UnityEngine
                 BuildDetails(terrain, data, origin);
             float distance = terrain.detailObjectDistance;
             if (distance <= 0f) return;
+            float phase = AdvanceWavePhase(Time.frameCount, Time.deltaTime, data.wavingGrassStrength);
             float squared = distance * distance;
             var cam = camera.Camera;
             var right = cam != null ? cam.transform.right : Vector3.right;
             var up = cam != null ? cam.transform.up : Vector3.up;
-            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
-            var tint = linear ? data.wavingGrassTint.linear : data.wavingGrassTint;
-            var block = new MaterialPropertyBlock();
-            block.SetVector("_WaveAndDistance", new Vector4(Time.deltaTime * data.wavingGrassSpeed * 0.04f, data.wavingGrassStrength * 0.5f, data.wavingGrassAmount * 6f, squared));
+            if (m_DetailValuesFrame != Time.frameCount)
+            {
+                m_DetailValuesFrame = Time.frameCount;
+                m_DetailValuesUsed = 0;
+            }
+            if (m_DetailValuesUsed == m_DetailValues.Count) m_DetailValues.Add(new Dictionary<int, object>());
+            var values = m_DetailValues[m_DetailValuesUsed++];
+            // (phase, wavingGrassSpeed × 0.4, wavingGrassAmount × 6, the detail distance squared)
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/grass `Waving`).
+            values[s_WaveAndDistanceId] = new Vector4(phase, data.wavingGrassSpeed * WaveSizeScale, data.wavingGrassAmount * WaveAmountScale, squared);
             var relative = camera.Position - origin;
-            block.SetVector("_CameraPosition", new Vector4(relative.x, relative.y, relative.z, 1f / squared));
-            block.SetVector("_CameraRight", right);
-            block.SetVector("_CameraUp", up);
-            block.SetColor("_WavingTint", tint);
+            values[s_CameraPositionId] = new Vector4(relative.x, relative.y, relative.z, 1f / squared);
+            values[s_CameraRightId] = (Vector4)right;
+            values[s_CameraUpId] = (Vector4)up;
+            // The tint is a colour: linear in a linear-space project.
+            values[s_WavingTintId] = QualitySettings.activeColorSpace == ColorSpace.Linear ? data.wavingGrassTint.linear : data.wavingGrassTint;
             foreach (var patch in m_DetailPatches)
             {
                 if (!patch.HasBounds || patch.Bounds.SqrDistanceUnchecked(camera.Position) > squared) continue;
@@ -101,10 +124,9 @@ namespace UnityEngine
                 {
                     var renderer = patch.Renderers[kind];
                     if (renderer == null) continue;
-                    renderer.m_PropertyBlock = block;
                     // As the trees: the terrain renderer's rendering layers (unmeasured).
                     renderer.renderingLayerMask = renderingLayerMask;
-                    FrameBuilder.AddMeshDraws(renderer, patch.Meshes[kind], Matrix4x4.Translate(origin), Color.white, camera, into);
+                    FrameBuilder.AddMeshDraws(renderer, patch.Meshes[kind], Matrix4x4.Translate(origin), Color.white, camera, into, properties: values);
                 }
             }
             foreach (var detail in m_InstancedDetails)
@@ -113,6 +135,20 @@ namespace UnityEngine
                 detail.Renderer.renderingLayerMask = renderingLayerMask;
                 FrameBuilder.AddMeshDraws(detail.Renderer, detail.Mesh, detail.Model, Color.white, camera, into);
             }
+        }
+
+        const float WavePhaseRate = 0.05f, WaveSizeScale = 0.4f, WaveAmountScale = 6f;
+
+        /// <summary>The waving's phase, advanced by the frame's time × strength × 0.05 the first
+        /// time the details are collected in a frame.</summary>
+        internal float AdvanceWavePhase(int frame, float deltaTime, float strength)
+        {
+            if (m_WaveFrame != frame)
+            {
+                m_WaveFrame = frame;
+                m_WavePhase += deltaTime * strength * WavePhaseRate;
+            }
+            return m_WavePhase;
         }
 
         void DestroyDetails()
@@ -258,6 +294,15 @@ namespace UnityEngine
 
         internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
         internal Texture2D DetailAtlasForTest => m_DetailAtlas;
+        /// <summary>The built patch meshes' vertex counts per kind (grass, billboards, meshes).</summary>
+        internal int[] DetailVertexCountsForTest()
+        {
+            var counts = new int[3];
+            foreach (var patch in m_DetailPatches)
+                for (int kind = 0; kind < 3; kind++)
+                    if (patch.Meshes[kind] != null) counts[kind] += patch.Meshes[kind].vertexCount;
+            return counts;
+        }
         /// <summary>Each prototype's place in the detail atlas and whether a mesh samples its own texture.</summary>
         internal (Rect rect, bool meshTexture)[] DetailPlacesForTest(DetailPrototype[] prototypes)
         {
@@ -334,7 +379,9 @@ namespace UnityEngine
                                 if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements))
                                     placed++;
                                 if (placements.Count == 0) continue;
-                                if (mesh != null) BakeMeshDetails(data, builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements, places[index]);
+                                // A mesh in the Grass render mode joins the grass quads' mesh.
+                                var kind = mode == DetailRenderMode.Grass ? DetailKind.Grass : DetailKind.Mesh;
+                                if (mesh != null) BakeMeshDetails(data, builders[(int)kind] ??= new MeshBuilder(), prototype, placements, places[index]);
                                 else AddQuads(data, prototype, placements, mode == DetailRenderMode.GrassBillboard, places[index], builders);
                             }
                         }
