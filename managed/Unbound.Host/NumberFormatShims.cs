@@ -47,7 +47,7 @@ static class NumberFormatShims
     static string Key(string name, IEnumerable<string> parameters) => name + "(" + string.Join(",", parameters) + ")";
 
     /// <summary><see cref="Redirect"/>, or the image as it is (reported) when it cannot be rewritten:
-    /// the assembly still loads, formatting numbers as .NET does.</summary>
+    /// the assembly still loads, formatting numbers and exceptions as .NET does.</summary>
     internal static byte[] TryRedirect(byte[] image)
     {
         try
@@ -60,7 +60,7 @@ static class NumberFormatShims
             try { name = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(image)).Assembly.Name.Name; }
             catch { name = "an assembly"; }
             Native.Log((int)UnityEngine.LogType.Warning,
-                $"[Unbound] {name}: cannot redirect its number formatting to Mono's rules, so it prints floats as .NET does ({e.GetType().Name}: {e.Message})");
+                $"[Unbound] {name}: cannot redirect its number and exception texts to Mono's rules, so it prints floats and argument exceptions as .NET does ({e.GetType().Name}: {e.Message})");
             return image;
         }
     }

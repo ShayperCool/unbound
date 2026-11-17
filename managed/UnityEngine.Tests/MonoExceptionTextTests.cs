@@ -60,6 +60,10 @@ public static class Probe
             Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: p",
                 MonoExceptions.MessageOf(new ArgumentOutOfRangeException("p")));
             Assert.Equal("Too big.\nParameter name: p\nActual value was 8.", MonoExceptions.MessageOf(new ArgumentOutOfRangeException("p", 8, "Too big.")));
+            // A float or double actual value prints in Mono's number format (tests/projects/apierrors format.game_range_actual_third*).
+            Assert.Equal("Too big.\nParameter name: p\nActual value was 0.3333333.", MonoExceptions.MessageOf(new ArgumentOutOfRangeException("p", 1f / 3f, "Too big.")));
+            Assert.Equal("Too big.\nParameter name: p\nActual value was 0.333333333333333.", MonoExceptions.MessageOf(new ArgumentOutOfRangeException("p", 1.0 / 3.0, "Too big.")));
+            Assert.Equal("Too big.\nActual value was 0.3333333.", MonoExceptions.MessageOf(new ArgumentOutOfRangeException(null, 1f / 3f, "Too big.")));
             // Unity passes whole sentences as parameter names.
             Assert.Equal("stream\nParameter name: ManagedStream object must be non-null",
                 MonoExceptions.MessageOf(new ArgumentNullException("ManagedStream object must be non-null", "stream")));

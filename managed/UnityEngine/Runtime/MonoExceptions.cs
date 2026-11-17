@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace Unbound.Runtime
 {
@@ -53,13 +54,28 @@ namespace Unbound.Runtime
         static readonly string NetInner = Environment.NewLine + " ---> ";
 
         /// <summary>A message with .NET's " (Parameter 'x')" of an argument exception with a
-        /// parameter name written as Mono writes it.</summary>
+        /// parameter name written as Mono writes it, and an out-of-range float or double actual
+        /// value in Mono's number format.</summary>
         static string Mono(Exception exception, string message)
         {
-            if (exception is not ArgumentException argument || string.IsNullOrEmpty(argument.ParamName) || message == null) return message;
-            string net = " (Parameter '" + argument.ParamName + "')";
-            int at = message.LastIndexOf(net, StringComparison.Ordinal);
-            return at < 0 ? message : message.Substring(0, at) + ParameterName + argument.ParamName + message.Substring(at + net.Length);
+            if (exception is not ArgumentException argument || message == null) return message;
+            if (argument is ArgumentOutOfRangeException { ActualValue: float or double } range)
+            {
+                // The class library writes the value with the current culture's default format.
+                string net = ActualValue + string.Format(CultureInfo.CurrentCulture, "{0}", range.ActualValue) + ".";
+                int value = message.LastIndexOf(net, StringComparison.Ordinal);
+                if (value >= 0)
+                {
+                    string mono = ActualValue + MonoNumberFormat.ObjectToString(range.ActualValue) + ".";
+                    message = message.Substring(0, value) + mono + message.Substring(value + net.Length);
+                }
+            }
+            if (string.IsNullOrEmpty(argument.ParamName)) return message;
+            string parameter = " (Parameter '" + argument.ParamName + "')";
+            int at = message.LastIndexOf(parameter, StringComparison.Ordinal);
+            return at < 0 ? message : message.Substring(0, at) + ParameterName + argument.ParamName + message.Substring(at + parameter.Length);
         }
+
+        const string ActualValue = "Actual value was ";
     }
 }
