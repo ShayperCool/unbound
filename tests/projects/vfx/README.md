@@ -364,9 +364,10 @@ runs (culled, awake), not its particles or an image of them.
 ## Not covered yet
 
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
-of the simulation controls), drawn through an indirect buffer, lit outputs,
-motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
-(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: a matrix's axis
+of the simulation controls), drawn through an indirect buffer, and triangles and octagons are
+controlled by `tests/projects/vfxoutputs`; lit outputs, outputs that draw meshes and their
+shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU events by
+`tests/projects/vfxevents`. Motion vectors, Shader Graph outputs, bounds computed on the GPU. Expression operations without a control: a matrix's axis
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), and the ones the runtime does not do yet:
 an event attribute read in a spawn context (it is evaluated per spawn event), meshes, noise, a
 texture's depth and format and a buffer's stride. Of baked curves and gradients, not measured: a curve whose values are larger than a
