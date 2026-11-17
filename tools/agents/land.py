@@ -1085,6 +1085,70 @@ def journal_lock(entry):
         pass
 
 
+def lock_holders(path):
+    """[(pid, shared)] of the processes that hold a flock on `path`, from the kernel's lock table
+    (waiting requests excluded); None where there is no /proc/locks."""
+    try:
+        status = os.stat(path)
+        table = Path('/proc/locks').read_text()
+    except OSError:
+        return None
+    file = f'{os.major(status.st_dev):02x}:{os.minor(status.st_dev):02x}:{status.st_ino}'
+    holders = []
+    for line in table.splitlines():
+        # `N: FLOCK  ADVISORY  WRITE 1234 fc:00:7995670 0 EOF`; a waiter has `->` after `N:`.
+        fields = line.split()
+        if len(fields) >= 6 and fields[1] == 'FLOCK' and fields[5] == file and fields[4].isdigit():
+            holders.append((int(fields[4]), fields[3] == 'READ'))
+    return holders
+
+
+def process_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
+def describe_lock_holders(lock, holder):
+    """Who holds the land lock now. A landing records itself in `holder` while it holds the lock,
+    but other holders (the push worker's receipts take it shared) do not, and a landing killed
+    outright leaves its record behind: the kernel's lock table decides, the record names the
+    holder it matches."""
+    try:
+        recorded = holder.read_text().strip()
+    except OSError:
+        recorded = ''
+    match = re.search(r' pid (\d+) ', recorded+' ')
+    recorded_pid = int(match.group(1)) if match else None
+    holders = lock_holders(lock)
+    if holders is None:
+        if recorded and recorded_pid is not None and not process_alive(recorded_pid):
+            return f'an unknown process ({recorded} has ended)'
+        return recorded or 'an unknown process'
+    if not holders:
+        return 'nobody now'
+    names = []
+    for pid, shared in holders:
+        if pid == recorded_pid:
+            names.append(recorded)
+            continue
+        try:
+            command = Path(f'/proc/{pid}/cmdline').read_bytes().replace(b'\0', b' ').decode(errors='replace').strip()
+        except OSError:
+            command = ''
+        names.append(f'pid {pid}{" (shared)" if shared else ""}: {command[:200] or "command unknown"}')
+    return '; '.join(names)
+
+
+# While a landing waits for the land lock it says again who holds it whenever that changes, at
+# most this often: one wait can outlast several holders.
+LOCK_REPORT_SECONDS = 30
+
+
 @contextlib.contextmanager
 def land_lock(branch, request=None):
     STATE.mkdir(parents=True, exist_ok=True)
@@ -1094,11 +1158,29 @@ def land_lock(branch, request=None):
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            who = holder.read_text().strip() if holder.exists() else 'unknown'
+            who = describe_lock_holders(STATE/'land.lock', holder)
             print(f'land: waiting for the land lock, held by {who}', flush=True)
-            fcntl.flock(handle, fcntl.LOCK_EX)
+            taken = threading.Event()
+
+            def report():
+                last = who
+                while not taken.wait(LOCK_REPORT_SECONDS):
+                    now = describe_lock_holders(STATE/'land.lock', holder)
+                    if now != last:
+                        print(f'land: still waiting for the land lock, now held by {now}', flush=True)
+                        last = now
+            reporter = threading.Thread(target=report, daemon=True)
+            reporter.start()
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX)
+            finally:
+                taken.set()
+                reporter.join()
         acquired = time.time()
-        holder.write_text(f'{branch} pid {os.getpid()} since {datetime.datetime.now():%F %T}\n')
+        # Whole or not at all for a waiter that reads it meanwhile.
+        record = holder.with_name(f'{holder.name}.{os.getpid()}.tmp')
+        record.write_text(f'{branch} pid {os.getpid()} since {datetime.datetime.now():%F %T}\n')
+        os.replace(record, holder)
         try:
             yield
         finally:

@@ -210,6 +210,71 @@ class GateTimingTests(unittest.TestCase):
             self.assertEqual(row['pid'], os.getpid())
             self.assertGreaterEqual(row['held_s'], 0)
 
+    def hold(self, lock, mode, seconds):
+        """A process that holds `lock` (LOCK_EX or LOCK_SH) for `seconds` without recording itself."""
+        child = subprocess.Popen([sys.executable, '-c', 'import fcntl, sys, time\n'
+                                  'f = open(sys.argv[1], "a+"); fcntl.flock(f, int(sys.argv[2]))\n'
+                                  'print("held", flush=True); time.sleep(float(sys.argv[3]))',
+                                  str(lock), str(mode), str(seconds)], stdout=subprocess.PIPE, text=True)
+        self.addCleanup(lambda: (child.kill(), child.wait()))
+        self.assertEqual(child.stdout.readline().strip(), 'held')
+        return child
+
+    @unittest.skipUnless(Path('/proc/locks').is_file(), 'needs the kernel lock table')
+    def test_a_waiting_landing_names_the_process_that_holds_the_lock(self):
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(land, 'STATE', Path(temporary)), \
+                mock.patch.object(land, 'LOCK_REPORT_SECONDS', 0.05):
+            state = Path(temporary)
+            # A landing killed outright left its record; the lock is held by a process that does
+            # not record itself (the push worker's receipts take it shared).
+            (state/'land.holder').write_text('slot/killed pid 999999999 since 2026-11-17 00:00:00\n')
+            child = self.hold(state/'land.lock', fcntl.LOCK_SH, 1)
+            self.assertEqual(land.lock_holders(state/'land.lock'), [(child.pid, True)])
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                with land.land_lock('slot/waiting'):
+                    self.assertRegex((state/'land.holder').read_text(), rf'^slot/waiting pid {os.getpid()} since ')
+                    self.assertEqual(land.lock_holders(state/'land.lock'), [(os.getpid(), False)])
+            text = output.getvalue()
+            self.assertIn(f'land: waiting for the land lock, held by pid {child.pid} (shared): ', text)
+            self.assertIn('-c import fcntl', text)
+            self.assertNotIn('slot/killed', text)
+            self.assertFalse((state/'land.holder').exists())
+            self.assertEqual(land.lock_holders(state/'land.lock'), [])
+            # A holder that recorded itself is named by its record.
+            (state/'land.holder').write_text(f'slot/live pid {os.getpid()} since now\n')
+            with open(state/'land.lock') as handle:
+                fcntl.flock(handle, fcntl.LOCK_EX)
+                self.assertEqual(land.describe_lock_holders(state/'land.lock', state/'land.holder'),
+                                 f'slot/live pid {os.getpid()} since now')
+            self.assertEqual(land.describe_lock_holders(state/'land.lock', state/'land.holder'), 'nobody now')
+
+    def test_without_a_lock_table_an_ended_holder_is_not_named_as_the_holder(self):
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(land, 'lock_holders', return_value=None):
+            holder = Path(temporary)/'land.holder'
+            holder.write_text('slot/killed pid 999999999 since then\n')
+            self.assertEqual(land.describe_lock_holders(Path(temporary)/'land.lock', holder),
+                             'an unknown process (slot/killed pid 999999999 since then has ended)')
+            holder.write_text(f'slot/live pid {os.getpid()} since then\n')
+            self.assertEqual(land.describe_lock_holders(Path(temporary)/'land.lock', holder),
+                             f'slot/live pid {os.getpid()} since then')
+            holder.unlink()
+            self.assertEqual(land.describe_lock_holders(Path(temporary)/'land.lock', holder), 'an unknown process')
+
+    def test_a_long_wait_reports_each_new_holder(self):
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(land, 'STATE', Path(temporary)), \
+                mock.patch.object(land, 'LOCK_REPORT_SECONDS', 0.05):
+            self.hold(Path(temporary)/'land.lock', fcntl.LOCK_EX, 1)
+            answers = iter(['first leader', 'first leader', 'second leader'])
+            output = io.StringIO()
+            with mock.patch.object(land, 'describe_lock_holders', side_effect=lambda *_: next(answers, 'second leader')), \
+                    contextlib.redirect_stdout(output):
+                with land.land_lock('slot/waiting'):
+                    pass
+            self.assertEqual(output.getvalue().splitlines(),
+                             ['land: waiting for the land lock, held by first leader',
+                              'land: still waiting for the land lock, now held by second leader'])
+
     def test_journal_write_failure_does_not_affect_landing(self):
         with tempfile.TemporaryDirectory() as temporary, \
              mock.patch.object(land, 'STATE', Path(temporary)), \
