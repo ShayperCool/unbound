@@ -152,16 +152,19 @@ namespace Unbound.Runtime
         const int NoBufferWords = 4;
         static GraphicsBuffer s_NoBuffer;
 
+        /// <summary>Whether the buffer is <see cref="NoBuffer"/> (without making it).</summary>
+        internal static bool IsNoBuffer(GraphicsBuffer buffer) => buffer != null && ReferenceEquals(buffer, s_NoBuffer);
+
         /// <summary>The view of the stream's vertex buffer the programs read. A buffer without the
         /// device's target for effects cannot be bound: the programs read zeros of a mesh without
         /// read/write access (which does not gain it; tests/projects/vfx <c>draw-mesh locked</c>)
-        /// and, not measured, of no mesh.</summary>
+        /// and, not measured, of no mesh and of a stream the mesh has no buffer of.</summary>
         internal static GraphicsBuffer VertexBuffer(Mesh mesh, uint infos, GraphicsBuffer kept)
         {
             if (mesh == null) return NoBuffer;
             Held(mesh);
             if ((mesh.vertexBufferTarget & GraphicsDeviceProfile.Current.VfxMeshBufferTarget) == 0) return NoBuffer;
-            return mesh.VertexBufferView((int)(infos >> 16 & 0xff), ReferenceEquals(kept, s_NoBuffer) ? null : kept) ?? NoBuffer;
+            return mesh.VertexBufferView((int)(infos >> 16 & 0xff), IsNoBuffer(kept) ? null : kept) ?? NoBuffer;
         }
 
         /// <summary>The view of the index buffer the programs read: a readable mesh's index
@@ -172,7 +175,7 @@ namespace Unbound.Runtime
             if (mesh == null) return NoBuffer;
             if (mesh.isReadable) mesh.indexBufferTarget |= GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
             if ((mesh.indexBufferTarget & GraphicsDeviceProfile.Current.VfxMeshBufferTarget) == 0) return NoBuffer;
-            return mesh.IndexBufferView(ReferenceEquals(kept, s_NoBuffer) ? null : kept) ?? NoBuffer;
+            return mesh.IndexBufferView(IsNoBuffer(kept) ? null : kept) ?? NoBuffer;
         }
     }
 }

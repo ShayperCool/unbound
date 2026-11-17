@@ -367,7 +367,7 @@ namespace Unbound.Runtime
                             ? VFXMeshFunctions.VertexBuffer(viewed, w[p1], kept)
                             : VFXMeshFunctions.IndexBuffer(viewed, kept);
                         if (ReferenceEquals(view, kept)) break;
-                        if (!ReferenceEquals(kept, VFXMeshFunctions.NoBuffer)) kept?.Release();
+                        if (!VFXMeshFunctions.IsNoBuffer(kept)) kept?.Release();
                         values.SetObject(e, view);
                         break;
                     }

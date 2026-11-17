@@ -208,8 +208,8 @@ namespace UnityEngine.Tests
                 Assert.False(vertices.IsValid());
                 Assert.False(indices.IsValid());
                 // A mesh whose data was given up gains no target for effects: the programs read
-                // zeros of it (unless a script gave its buffers that target); of a destroyed
-                // one too. The buffer of zeros is shared and stays valid.
+                // zeros of it; of a destroyed one too. The buffer of zeros is shared and stays
+                // valid.
                 values.SetObject(0, locked);
                 Evaluate();
                 Assert.Same(VFXMeshFunctions.NoBuffer, values.GetObject(2));

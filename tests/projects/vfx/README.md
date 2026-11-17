@@ -417,8 +417,11 @@ shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU ev
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
 texture's format (no operator makes it), and the ones the runtime does not do yet: an event
 attribute read in a spawn context (it is evaluated per spawn event), noise, and a skinned mesh
-renderer's mesh, vertices and root bone. Not measured of meshes: no mesh read by a program
-(Unbound gives it zeros, as for a mesh without read/write access), one whose layout changes while
+renderer's mesh, vertices and root bone. Not measured of meshes: no mesh, and a mesh without the
+channel a program reads, read by a program (Unbound gives them zeros, as for a mesh without
+read/write access); a copy whose data was given up read by a program (taken to read as
+`MeshLocked`); a mesh without read/write access whose buffers a script gave a target for compute
+access (Unbound binds them only with the `Structured` target); one whose layout changes while
 an effect reads it on the GPU, sampling with the edge placement or low-distortion surface
 coordinates (both made of operations measured here), signed 8-bit and integer channels, float
 colours outside zero to one, and an index read in the other index format or past the buffer's end
