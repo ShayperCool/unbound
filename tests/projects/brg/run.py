@@ -289,7 +289,7 @@ def main():
     DEVICE = args.device
     if MACOS and DEVICE != 'metal' and args.mode in ('native', 'publish'):
         parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
-    if MACOS and DEVICE != 'metal':
+    if MACOS and DEVICE != 'metal' and args.mode in ('engine', 'check'):
         print(f'brg: macOS draws with Metal; checking the Metal reference, not the {DEVICE} one')
         DEVICE = 'metal'
     if DEVICE == 'metal' and not MACOS:
