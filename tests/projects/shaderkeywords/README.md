@@ -239,7 +239,7 @@ only.
 The ten `subshaderTag` exception messages match since game code reads argument exception
 messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception texts"), which left
 `context.isBatchMode` alone failing: a property of the batch-mode capture. The windowed re-record
-(two byte-identical Linux GPU captures, every other key unchanged) closes it, so Linux is expected
-to fail none; a Mac run of 2026-11-17 failed 12 before the message change, the two OS-decided keys
+(two byte-identical Linux GPU captures, every other key unchanged) closes it: no key fails on
+Linux (the landing gate of 2026-11-17, 1510/1510); a Mac run of 2026-11-17 failed 12 before the message change, the two OS-decided keys
 `context.platform` and `context.graphicsDeviceType` among them.
 Anything else is a regression.
