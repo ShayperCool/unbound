@@ -20,6 +20,7 @@
     "managed/UnityEngine/U2D/Light2DBase.cs",
     "managed/UnityEngine/Runtime/ScriptingRuntime.cs",
     "managed/Unbound.Host/Game.cs",
-    "crates/unbound-runtime/src/config.rs"
+    "crates/unbound-runtime/src/config.rs",
+    "managed/UnityEngine/Graphics/Procedural.cs"
   ]
 }

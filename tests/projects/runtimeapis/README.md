@@ -24,6 +24,12 @@ writes with their log type (`.logs`).
 * `texture.*`, `command_buffer.*`, `context.*`: Texture.SetStreamingTextureMaterialDebugProperties,
   CommandBuffer.SwitchIntoFastMemory / SwitchOutOfFastMemory and sizeInBytes,
   ScriptableRenderContext.EmitGeometryForCamera / EmitWorldGeometryForSceneView (also with null).
+* `custom_shader.*`, `set_mode.*`, `set_custom.*`: GraphicsSettings.GetCustomShader of every
+  type and of a value outside the enum, then SetShaderMode and SetCustomShader (also with a mode
+  outside the enum, null, the removed type and a value outside the enum) and what reads back.
+* `size.*`: CommandBuffer.sizeInBytes after one and two of each of 34 commands (property names
+  of different lengths, arrays of different lengths, keywords, targets, clears, temporaries,
+  blits, copies, draws, matrices, culling, depth bias and profiler samples), and after Clear.
 * `scripting_runtime.*`, `sorting_layer.*`, `attribute.*`, `exception.*`: the project's script
   assemblies (ScriptingRuntime.GetAllUserAssemblies, sorted), SortingLayer.onLayerChanged, and
   attributes and an exception the render pipelines construct.
@@ -32,6 +38,3 @@ Measured in the Unity 6000.0.71f1 Editor on Linux with an NVIDIA GPU, windowed (
 byte-identical captures; a third attempt that crashed while the Editor started was discarded). The project has only its predefined script assemblies: whether package
 assemblies and precompiled plugin DLLs count as user assemblies is not measured. `run.py record` / `publish` / `gate`
 (tests/value_probe.py).
-
-Recorded residuals (`residuals.json`): CommandBuffer.sizeInBytes counts 64 bytes per recorded
-command, not the size of Unity's own encoding of each command.
