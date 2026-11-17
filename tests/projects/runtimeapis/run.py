@@ -8,4 +8,4 @@ import value_probe  # noqa: E402
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(Path(__file__).resolve().parent, 'ProbeRunner.Record', 'RUNTIMEAPIS_OUT',
-                              tolerance=0, engine_args=['--frames', '20', '--size', '96x64'], batch=False))
+                              tolerance=0, engine_args=['--frames', '20', '--size', '160x90'], batch=False))

@@ -1,0 +1,138 @@
+{"k":"camera.stereo_enabled","v":"returns False"}
+{"k":"camera.projection","v":"returns 0.97428\t0.00000\t0.00000\t0.00000\n0.00000\t1.73205\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00060\t-0.60018\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.nonjittered","v":"returns 0.97428\t0.00000\t0.00000\t0.00000\n0.00000\t1.73205\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00060\t-0.60018\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.stereo_projection_left","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.stereo_projection_left.logs","v":"Warning: Camera.GetStereoProjectionMatrix is returning an invalid valid value since the value has not been set.\n"}
+{"k":"camera.stereo_nonjittered_left","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.stereo_nonjittered_right","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.stereo_view_left","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.set_stereo_projection_left","v":"returns done"}
+{"k":"camera.after_set.stereo_projection_left","v":"returns 1.42967\t0.00000\t0.00000\t0.00000\n0.00000\t2.14451\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00133\t-0.40027\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.after_set.stereo_projection_right","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.after_set.stereo_projection_right.logs","v":"Warning: Camera.GetStereoProjectionMatrix is returning an invalid valid value since the value has not been set.\n"}
+{"k":"camera.after_set.stereo_nonjittered_left","v":"returns 1.42967\t0.00000\t0.00000\t0.00000\n0.00000\t2.14451\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00133\t-0.40027\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.after_set.projection","v":"returns 0.97428\t0.00000\t0.00000\t0.00000\n0.00000\t1.73205\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00060\t-0.60018\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.copy_device_to_nonjittered_left","v":"returns done"}
+{"k":"camera.after_copy.stereo_nonjittered_left","v":"returns 1.42967\t0.00000\t0.00000\t0.00000\n0.00000\t2.14451\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00133\t-0.40027\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.after_copy.stereo_projection_left","v":"returns 1.42967\t0.00000\t0.00000\t0.00000\n0.00000\t2.14451\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00133\t-0.40027\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.set_stereo_projection_left_other","v":"returns done"}
+{"k":"camera.after_other.stereo_projection_left","v":"returns 0.71407\t0.00000\t0.00000\t0.00000\n0.00000\t1.42815\t0.00000\t0.00000\n0.00000\t0.00000\t-1.01005\t-1.00503\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.after_other.stereo_nonjittered_left","v":"returns 0.71407\t0.00000\t0.00000\t0.00000\n0.00000\t1.42815\t0.00000\t0.00000\n0.00000\t0.00000\t-1.01005\t-1.00503\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.set_stereo_projection_right","v":"returns done"}
+{"k":"camera.after_right.stereo_nonjittered_right","v":"returns 0.71407\t0.00000\t0.00000\t0.00000\n0.00000\t1.42815\t0.00000\t0.00000\n0.00000\t0.00000\t-1.01005\t-1.00503\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.copy_device_to_nonjittered_right","v":"returns done"}
+{"k":"camera.set_stereo_projection_right_again","v":"returns done"}
+{"k":"camera.after_right_again.stereo_nonjittered_right","v":"returns 1.42967\t0.00000\t0.00000\t0.00000\n0.00000\t2.14451\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00133\t-0.40027\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.reset_stereo_projection","v":"returns done"}
+{"k":"camera.after_reset.stereo_projection_left","v":"returns 0.71407\t0.00000\t0.00000\t0.00000\n0.00000\t1.42815\t0.00000\t0.00000\n0.00000\t0.00000\t-1.01005\t-1.00503\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.after_reset.stereo_nonjittered_left","v":"returns 0.71407\t0.00000\t0.00000\t0.00000\n0.00000\t1.42815\t0.00000\t0.00000\n0.00000\t0.00000\t-1.01005\t-1.00503\n0.00000\t0.00000\t-1.00000\t0.00000\n"}
+{"k":"camera.set_stereo_view_left","v":"returns done"}
+{"k":"camera.after_set.stereo_view_left","v":"returns 0.84349\t-0.41841\t0.33682\t1.00000\n0.49240\t0.85287\t-0.17365\t2.00000\n-0.21461\t0.31232\t0.92542\t3.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.after_set.stereo_view_right","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.after_set.world_to_camera","v":"returns 1.00000\t0.00000\t0.00000\t0.00000\n0.00000\t1.00000\t0.00000\t0.00000\n0.00000\t0.00000\t-1.00000\t0.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.reset_stereo_view","v":"returns done"}
+{"k":"camera.after_reset.stereo_view_left","v":"returns 0.84349\t-0.41841\t0.33682\t1.00000\n0.49240\t0.85287\t-0.17365\t2.00000\n-0.21461\t0.31232\t0.92542\t3.00000\n0.00000\t0.00000\t0.00000\t1.00000\n"}
+{"k":"camera.scene_view_filter_mode","v":"returns Off"}
+{"k":"gamut.sRGB.primaries","v":"returns Rec709"}
+{"k":"gamut.sRGB.white_point","v":"returns D65"}
+{"k":"gamut.sRGB.transfer","v":"returns sRGB"}
+{"k":"gamut.Rec709.primaries","v":"returns Rec709"}
+{"k":"gamut.Rec709.white_point","v":"returns D65"}
+{"k":"gamut.Rec709.transfer","v":"returns Linear"}
+{"k":"gamut.Rec2020.primaries","v":"returns Rec2020"}
+{"k":"gamut.Rec2020.white_point","v":"returns D65"}
+{"k":"gamut.Rec2020.transfer","v":"returns Linear"}
+{"k":"gamut.DisplayP3.primaries","v":"returns P3"}
+{"k":"gamut.DisplayP3.white_point","v":"returns D65"}
+{"k":"gamut.DisplayP3.transfer","v":"returns sRGB"}
+{"k":"gamut.HDR10.primaries","v":"returns Rec2020"}
+{"k":"gamut.HDR10.white_point","v":"returns D65"}
+{"k":"gamut.HDR10.transfer","v":"returns PQ"}
+{"k":"gamut.DolbyHDR.primaries","v":"returns Rec2020"}
+{"k":"gamut.DolbyHDR.white_point","v":"returns D65"}
+{"k":"gamut.DolbyHDR.transfer","v":"returns PQ"}
+{"k":"gamut.P3D65G22.primaries","v":"returns P3"}
+{"k":"gamut.P3D65G22.white_point","v":"returns D65"}
+{"k":"gamut.P3D65G22.transfer","v":"returns Gamma22"}
+{"k":"shader_mode.DeferredShading","v":"returns UseBuiltin"}
+{"k":"shader_mode.DeferredReflections","v":"returns UseBuiltin"}
+{"k":"shader_mode.LegacyDeferredLighting","v":"returns UseBuiltin"}
+{"k":"shader_mode.LegacyDeferredLighting.logs","v":"Assert: Unknown builtin shader type 2"}
+{"k":"shader_mode.ScreenSpaceShadows","v":"returns UseBuiltin"}
+{"k":"shader_mode.DepthNormals","v":"returns UseBuiltin"}
+{"k":"shader_mode.MotionVectors","v":"returns UseBuiltin"}
+{"k":"shader_mode.LightHalo","v":"returns UseBuiltin"}
+{"k":"shader_mode.LensFlare","v":"returns UseBuiltin"}
+{"k":"transform.rotation_order","v":"returns OrderZXY"}
+{"k":"transform.euler_orderOrderXYZ","v":"returns (56.14300, -2.29300, 54.53300)"}
+{"k":"transform.euler_orderOrderXZY","v":"returns (59.35800, -3.94800, 54.46900)"}
+{"k":"transform.euler_orderOrderYZX","v":"returns (70.35500, 48.84900, 28.23100)"}
+{"k":"transform.euler_orderOrderYXZ","v":"returns (56.07500, -4.11100, 57.94600)"}
+{"k":"transform.euler_orderOrderZXY","v":"returns (30.00000, 50.00000, 70.00000)"}
+{"k":"transform.euler_orderOrderZYX","v":"returns (41.93000, 41.56100, 39.21000)"}
+{"k":"transform.euler","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.set_euler_hint","v":"returns done"}
+{"k":"transform.after_hint.euler","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.after_hint.rotation","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.after_hint.euler_orderZXY","v":"returns (390.00000, 50.00000, 70.00000)"}
+{"k":"transform.after_hint.euler_orderXYZ","v":"returns (416.14300, -2.29300, 54.53300)"}
+{"k":"transform.set_euler_hint_other","v":"returns done"}
+{"k":"transform.after_other_hint.euler","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.after_other_hint.euler_orderZXY","v":"returns (30.00000, 50.00000, 70.00000)"}
+{"k":"transform.set_rotation_order","v":"returns done"}
+{"k":"transform.after_order.rotation_order","v":"returns OrderYXZ"}
+{"k":"transform.after_order.euler","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.after_order.rotation","v":"returns (30.00000, 50.00001, 70.00000)"}
+{"k":"transform.after_order.euler_orderYXZ","v":"returns (56.07500, -4.11100, 57.94600)"}
+{"k":"transform.after_order.euler_orderZXY","v":"returns (30.00000, 50.00000, 70.00000)"}
+{"k":"transform.fraction.euler_orderZXY","v":"returns (12.34600, 0.00000, 0.00000)"}
+{"k":"transform.fraction.euler","v":"returns (12.34567, 0.00000, 0.00000)"}
+{"k":"transform.wide.euler_orderZXY","v":"returns (-20.00000, -160.00000, -60.00000)"}
+{"k":"transform.wide.euler_orderXYZ","v":"returns (-27.35800, 173.83900, 54.93700)"}
+{"k":"transform.set_euler_400.euler_orderZXY","v":"returns (40.00000, 0.00000, 0.00000)"}
+{"k":"transform.set_euler_400.euler","v":"returns (40.00000, 0.00000, 0.00000)"}
+{"k":"quality.anti_aliasing","v":"returns 2"}
+{"k":"screen.msaa_samples","v":"returns 2"}
+{"k":"screen.set_msaa_4","v":"returns done"}
+{"k":"screen.set_msaa_4.logs","v":"Error: SetMSAASamples is only available when using a scriptable render pipeline. Please use the Graphics Settings for the built-in renderer."}
+{"k":"screen.after_set.msaa_samples","v":"returns 2"}
+{"k":"screen.after_set.quality_anti_aliasing","v":"returns 2"}
+{"k":"screen.set_msaa_1","v":"returns done"}
+{"k":"screen.set_msaa_1.logs","v":"Error: SetMSAASamples is only available when using a scriptable render pipeline. Please use the Graphics Settings for the built-in renderer."}
+{"k":"screen.quality_aa0.msaa_samples","v":"returns 0"}
+{"k":"screen.quality_aa4.msaa_samples","v":"returns 4"}
+{"k":"screen.quality_aa8.msaa_samples","v":"returns 8"}
+{"k":"texture.streaming_debug_properties","v":"returns done"}
+{"k":"command_buffer.size","v":"returns 0"}
+{"k":"command_buffer.switch_into_fast_memory","v":"returns done"}
+{"k":"command_buffer.after_into.size","v":"returns 28"}
+{"k":"command_buffer.switch_out_of_fast_memory","v":"returns done"}
+{"k":"command_buffer.after_out.size","v":"returns 48"}
+{"k":"context.emit_geometry_for_camera","v":"returns done"}
+{"k":"context.emit_world_geometry_for_scene_view","v":"returns done"}
+{"k":"context.emit_geometry_for_null","v":"returns done"}
+{"k":"scripting_runtime.user_assemblies","v":"returns Assembly-CSharp-Editor.dll,Assembly-CSharp.dll"}
+{"k":"sorting_layer.on_layer_changed","v":"returns null"}
+{"k":"attribute.recreate_pipeline","v":"returns UnityEngine.Rendering.RecreatePipelineOnChangeAttribute"}
+{"k":"attribute.prefer_binary","v":"returns UnityEngine.PreferBinarySerialization"}
+{"k":"attribute.assembly_is_editor","v":"returns UnityEngine.AssemblyIsEditorAssembly"}
+{"k":"exception.invalid_import","v":"returns System.Exception: bad import"}
+{"k":"srp.assign","v":"returns done"}
+{"k":"srp.msaa_samples","v":"returns 2"}
+{"k":"srp.frame.msaa_samples","v":"returns 2"}
+{"k":"srp.set_msaa_4","v":"returns done"}
+{"k":"srp.after_set_4.msaa_samples","v":"returns 4"}
+{"k":"srp.after_set_4.quality_anti_aliasing","v":"returns 2"}
+{"k":"srp.after_set_4.frame.msaa_samples","v":"returns 4"}
+{"k":"srp.set_msaa_1","v":"returns done"}
+{"k":"srp.after_set_1.msaa_samples","v":"returns 1"}
+{"k":"srp.after_set_1.quality_anti_aliasing","v":"returns 2"}
+{"k":"srp.after_set_1.frame.msaa_samples","v":"returns 1"}
+{"k":"srp.set_msaa_3","v":"returns done"}
+{"k":"srp.after_set_3.msaa_samples","v":"returns 3"}
+{"k":"srp.quality_aa8.msaa_samples","v":"returns 3"}
+{"k":"srp.quality_aa8.frame.msaa_samples","v":"returns 3"}
+{"k":"srp.unassign","v":"returns done"}
+{"k":"srp.unassigned.msaa_samples","v":"returns 3"}
+{"k":"srp.unassigned.frame.msaa_samples","v":"returns 3"}
+{"k":"complete","v":true}

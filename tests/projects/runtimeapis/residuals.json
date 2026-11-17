@@ -1,0 +1,6 @@
+{
+  "CommandBuffer.sizeInBytes counts 64 bytes per recorded command, not the size of Unity's own command encoding": [
+    "command_buffer.after_into.size",
+    "command_buffer.after_out.size"
+  ]
+}

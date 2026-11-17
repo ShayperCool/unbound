@@ -1,0 +1,22 @@
+{
+  "commands": [
+    "python3 tests/projects/runtimeapis/run.py gate"
+  ],
+  "summary": "runtimeapis: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Camera.cs",
+    "managed/UnityEngine/Graphics/ColorGamutUtility.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Graphics/CommandBuffer.cs",
+    "managed/UnityEngine/Graphics/CommandBufferExtensions.cs",
+    "managed/UnityEngine/Graphics/Texture.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Core/Transform.cs",
+    "managed/UnityEngine/Core/Input.cs",
+    "managed/UnityEngine/Core/Attributes.cs",
+    "managed/UnityEngine/Runtime/ScriptingRuntime.cs",
+    "managed/Unbound.Host/Game.cs",
+    "crates/unbound-runtime/src/config.rs"
+  ]
+}
