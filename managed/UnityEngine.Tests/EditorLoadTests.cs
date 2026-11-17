@@ -97,6 +97,10 @@ namespace UnityEngine.Tests
         {
             var mode = Tools.pivotMode;
             var rotation = Tools.pivotRotation;
+            // Unbound writes preferences to its own file under the cache: a private one here.
+            string cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+            string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "unbound-prefs-" + Guid.NewGuid().ToString("N"));
+            Environment.SetEnvironmentVariable("XDG_CACHE_HOME", directory);
             try
             {
                 Tools.pivotMode = PivotMode.Pivot;
@@ -108,9 +112,11 @@ namespace UnityEngine.Tests
             {
                 Tools.pivotMode = mode;
                 Tools.pivotRotation = rotation;
+                // Control: setting them back writes them back.
+                Assert.Equal((int)mode, EditorPrefs.GetInt("PivotMode", -1));
+                Environment.SetEnvironmentVariable("XDG_CACHE_HOME", cache);
+                if (System.IO.Directory.Exists(directory)) System.IO.Directory.Delete(directory, true);
             }
-            // Control: setting them back writes them back.
-            Assert.Equal((int)mode, EditorPrefs.GetInt("PivotMode", -1));
         }
 
         [Fact]

@@ -76,13 +76,14 @@ namespace UnityEditor
 
 namespace UnityEditor.EditorTools
 {
-    /// <summary>The active tool and tool context. The first query starts the Move tool, raising
-    /// the tool change events once; choosing another tool raises them again (measured:
+    /// <summary>The active tool and tool context. The first query of the context starts it
+    /// (raising activeContextChanged); the first read of Tools.current also starts the Move tool
+    /// (raising the tool change events); choosing another tool raises them again (measured:
     /// tests/projects/editorload tools.*).</summary>
     public static partial class ToolManager
     {
         static Tool s_Current = Tool.Move;
-        static bool s_Started;
+        static bool s_ToolStarted, s_ContextStarted;
 
         /// <summary>Raised before the active tool changes.</summary>
         public static event Action activeToolChanging;
@@ -90,16 +91,15 @@ namespace UnityEditor.EditorTools
         /// <summary>Raised after the active tool changed.</summary>
         public static event Action activeToolChanged;
 
-        /// <summary>Raised when the tool context changes. The Editor raises it once in the first
-        /// frames of Play mode, which Unbound does not reproduce (tests/projects/editorload
-        /// later.events, a recorded residual); Unbound's context does not change.</summary>
+        /// <summary>Raised when the tool context changes: when the first query starts it.</summary>
         public static event Action activeContextChanged;
 
+        /// <summary>The active tool's class; none until a tool starts.</summary>
         public static Type activeToolType
         {
             get
             {
-                Start();
+                if (!s_ToolStarted) return null;
                 return EditorType(s_Current switch
                 {
                     Tool.View => "UnityEditor.ViewModeTool",
@@ -117,7 +117,7 @@ namespace UnityEditor.EditorTools
         {
             get
             {
-                Start();
+                StartContext();
                 return EditorType("UnityEditor.EditorTools.GameObjectToolContext");
             }
         }
@@ -126,7 +126,12 @@ namespace UnityEditor.EditorTools
         {
             get
             {
-                Start();
+                StartContext();
+                if (!s_ToolStarted)
+                {
+                    s_ToolStarted = true;
+                    Change(Tool.Move);
+                }
                 return s_Current;
             }
         }
@@ -135,17 +140,18 @@ namespace UnityEditor.EditorTools
         /// (measured: tests/projects/editorload tools.current_Custom).</summary>
         internal static void Select(Tool tool)
         {
-            Start();
+            StartContext();
             if (tool == Tool.Custom) tool = Tool.None;
-            if (tool == s_Current) return;
+            if (s_ToolStarted && tool == s_Current) return;
+            s_ToolStarted = true;
             Change(tool);
         }
 
-        static void Start()
+        static void StartContext()
         {
-            if (s_Started) return;
-            s_Started = true;
-            Change(Tool.Move);
+            if (s_ContextStarted) return;
+            s_ContextStarted = true;
+            activeContextChanged?.Invoke();
         }
 
         static void Change(Tool tool)
