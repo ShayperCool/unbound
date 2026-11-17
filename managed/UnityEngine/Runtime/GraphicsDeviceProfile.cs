@@ -84,19 +84,28 @@ namespace Unbound.Runtime
         /// tests/projects/nativegfx `metal.jsonl` volume.compressed3d); null elsewhere (a stub).</summary>
         internal bool? Compressed3DTextures { get; init; }
 
-        /// <summary>Whether Texture2D.ReadPixels and AsyncGPUReadback read a render texture whose
-        /// format answers no ReadPixels usage. Metal reads B8G8R8A8 (its LDR targets), B4G4R4A4,
-        /// E5B9G9R9 and A2B10G10R10 targets, whose usages leave ReadPixels out, and refuses only
-        /// <see cref="UnreadableTargets"/> and A2B10G10R10 into float texels
-        /// (tests/projects/textureformats `metal.jsonl` readback.*, two macOS Editor captures on an
-        /// Apple M2 Pro). False: such a target is refused (Vulkan's ReadPixels and every device's
-        /// AsyncGPUReadback, tests/projects/textureformats).</summary>
-        internal bool ReadsTargetsWithoutReadPixelsUsage { get; init; }
-        /// <summary>The render texture formats the device reads back from no target, by the name its
-        /// AsyncGPUReadback error gives the format (Metal: A1R5G5B5, measured with
-        /// <see cref="ReadsTargetsWithoutReadPixelsUsage"/>).</summary>
-        internal System.Collections.Generic.IReadOnlyDictionary<GraphicsFormat, string> UnreadableTargets { get; init; }
-            = new System.Collections.Generic.Dictionary<GraphicsFormat, string>();
+        /// <summary>How Texture2D.ReadPixels and AsyncGPUReadback treat a render texture whose format
+        /// answers no ReadPixels usage. Null: they refuse it (Vulkan's ReadPixels and every device's
+        /// AsyncGPUReadback, tests/projects/textureformats). Metal's rule:
+        /// <see cref="TargetReadbackRule"/>.</summary>
+        internal TargetReadbackRule TargetReadback { get; init; }
+
+        /// <summary>A device's own rule for reading back targets whose format answers no ReadPixels
+        /// usage (Metal: tests/projects/textureformats `metal.jsonl` readback.*, two macOS Editor
+        /// captures on an Apple M2 Pro). Formats the rule does not name are unmeasured: refused,
+        /// with Unbound's message.</summary>
+        internal sealed class TargetReadbackRule
+        {
+            /// <summary>Formats whose targets ReadPixels reads (converting their texels).</summary>
+            internal System.Collections.Generic.HashSet<GraphicsFormat> Converted { get; init; }
+            /// <summary>Formats whose targets ReadPixels refuses, by the id its assertion gives: the
+            /// format is not supported for image operations (asserted twice; the texels stay).
+            /// B5G5R5A1 asserts R5G5B5A1's id.</summary>
+            internal System.Collections.Generic.Dictionary<GraphicsFormat, int> NoImageOperations { get; init; }
+            /// <summary>AsyncGPUReadback reads a target whose format answers GetPixels usage and
+            /// refuses the others, naming the format as these names do.</summary>
+            internal System.Collections.Generic.Dictionary<GraphicsFormat, string> RefusedSourceNames { get; init; }
+        }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
         /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
@@ -197,10 +206,32 @@ namespace Unbound.Runtime
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
             Compressed3DTextures = true,
-            ReadsTargetsWithoutReadPixelsUsage = true,
-            UnreadableTargets = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
+            TargetReadback = new TargetReadbackRule
             {
-                [GraphicsFormat.A1R5G5B5_UNormPack16] = "A1RGB5 UNorm",
+                Converted = new System.Collections.Generic.HashSet<GraphicsFormat>
+                {
+                    GraphicsFormat.B8G8R8A8_UNorm, GraphicsFormat.B8G8R8A8_SRGB, GraphicsFormat.B8G8R8A8_SNorm,
+                    GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormat.R5G6B5_UNormPack16,
+                    GraphicsFormat.A2B10G10R10_UNormPack32, GraphicsFormat.E5B9G9R9_UFloatPack32, GraphicsFormat.R10G10B10_XRUNormPack32,
+                },
+                NoImageOperations = new System.Collections.Generic.Dictionary<GraphicsFormat, int>
+                {
+                    [GraphicsFormat.A1R5G5B5_UNormPack16] = (int)GraphicsFormat.A1R5G5B5_UNormPack16,
+                    [GraphicsFormat.R5G5B5A1_UNormPack16] = (int)GraphicsFormat.R5G5B5A1_UNormPack16,
+                    [GraphicsFormat.B5G5R5A1_UNormPack16] = (int)GraphicsFormat.R5G5B5A1_UNormPack16,
+                    [GraphicsFormat.A2R10G10B10_UNormPack32] = (int)GraphicsFormat.A2R10G10B10_UNormPack32,
+                    [GraphicsFormat.A10R10G10B10_XRUNormPack32] = (int)GraphicsFormat.A10R10G10B10_XRUNormPack32,
+                },
+                RefusedSourceNames = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
+                {
+                    [GraphicsFormat.A1R5G5B5_UNormPack16] = "A1RGB5 UNorm",
+                    [GraphicsFormat.R5G5B5A1_UNormPack16] = "RGB5A1 UNorm",
+                    [GraphicsFormat.B5G5R5A1_UNormPack16] = "BGR5A1 UNorm",
+                    [GraphicsFormat.R5G6B5_UNormPack16] = "R5G6B5 UNorm",
+                    [GraphicsFormat.B8G8R8A8_SNorm] = "BGRA8 SNorm",
+                    [GraphicsFormat.A2R10G10B10_UNormPack32] = "BGR10A2 UNorm",
+                    [GraphicsFormat.A10R10G10B10_XRUNormPack32] = "BGRA10XR UNorm",
+                },
             },
             RefusedVolumeFormats = new System.Collections.Generic.Dictionary<TextureFormat, string>
             {

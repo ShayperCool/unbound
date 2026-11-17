@@ -186,17 +186,23 @@ Vulkan device) checks the Metal reference. The readback cases run only when name
 target of one format to (0.25, 0.5, 0.75, 0.625) and reads it with ReadPixels into RGBAFloat and
 RGBA32 and with AsyncGPUReadback (its own format and RGBAFloat), with the errors each logs.
 
-- Metal reads B8G8R8A8 (its LDR and Default format), B4G4R4A4, E5B9G9R9 and A2B10G10R10 targets
-  although their usages leave ReadPixels out. ReadPixels refuses A1R5G5B5 (asserting twice
-  that the format is not supported for image operations) and A2B10G10R10 into RGBAFloat (an
-  image blit conversion error); A2B10G10R10 into RGBA32 reads, with 2-bit alpha.
-- AsyncGPUReadback refuses A1R5G5B5 with its own error. An RGBAFloat request of a target
-  without ReadPixels usage logs that it failed but returns the converted texels; for
-  A2B10G10R10 they are memory the Editor never wrote (the repeats differ), so only that the
-  request succeeds is recorded.
-- One- and two-channel targets read their missing channels as 1, as on Vulkan.
+- ReadPixels reads targets whose formats answer no ReadPixels usage where it converts their
+  texels: B8G8R8A8 (Metal's LDR and Default format, UNorm, sRGB and SNorm), B4G4R4A4,
+  R4G4B4A4, R5G6B5, E5B9G9R9, R10G10B10_XR and A2B10G10R10 (into RGBA32 with 2-bit alpha; into
+  RGBAFloat an image blit conversion error). It refuses A1R5G5B5, R5G5B5A1, B5G5R5A1,
+  A2R10G10B10 and A10R10G10B10_XR, asserting twice that the format is not supported for image
+  operations (B5G5R5A1 with R5G5B5A1's id); the texels stay.
+- AsyncGPUReadback reads a target whose format answers GetPixels usage and refuses one with
+  neither ReadPixels nor GetPixels usage, naming the format (`A1RGB5 UNorm (72)`, ...). An
+  RGBAFloat request of a target without ReadPixels usage logs that it failed but returns the
+  converted texels; for A2B10G10R10 they are memory the Editor never wrote (the repeats
+  differ), so only that the request succeeds is recorded.
+- One- and two-channel targets read their missing channels as 1, as on Vulkan; B10G11R11 into
+  RGBA32 reads alpha 0.
 
-`residuals-metal.json` lists Unbound's remaining differences: a request in a packed target's
-own format (no raw packed encoding; the request fails, logged) and B4G4R4A4 targets, which
-Unbound stores at 8 bits per channel. Whether the Vulkan Editor's ReadPixels reads a B8G8R8A8
+Unbound refuses, with its own message, a target format the rule does not name (unmeasured).
+`residuals-metal.json` lists its remaining differences: requests in a packed target's own format
+(no raw packed encoding; the request fails, logged), 4444, 565, B8G8R8A8_SNorm and
+R10G10B10_XR targets, which Unbound stores as plain 8-bit channels, and B10G11R11's alpha.
+Whether the Vulkan Editor's ReadPixels reads a B8G8R8A8
 target is unmeasured; Unbound keeps refusing every target without ReadPixels usage there.

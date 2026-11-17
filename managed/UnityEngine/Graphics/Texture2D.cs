@@ -564,18 +564,19 @@ namespace UnityEngine
         bool RefusesTarget(GraphicsFormat source)
         {
             var device = GraphicsDeviceProfile.Current;
+            var rule = device.TargetReadback;
+            if (SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels))
+                return false;
             // A target without color (a depth-only one) is refused on every device.
-            if (!device.ReadsTargetsWithoutReadPixelsUsage || source == GraphicsFormat.None)
+            if (rule == null || source == GraphicsFormat.None)
             {
-                if (SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels))
-                    return false;
                 Debug.LogError($"ReadPixels is unsupported for {source}; the texture is left unchanged.");
                 return true;
             }
-            if (device.UnreadableTargets.ContainsKey(source))
+            if (rule.NoImageOperations.TryGetValue(source, out int id))
             {
-                // Asserted twice (tests/projects/textureformats metal.jsonl readback.A1R5G5B5_UNormPack16).
-                string message = $"The texture format is not supported for Image operations (id={(int)source})";
+                // Asserted twice (tests/projects/textureformats metal.jsonl readback.*.read.*).
+                string message = $"The texture format is not supported for Image operations (id={id})";
                 Debug.LogAssertion(message);
                 Debug.LogAssertion(message);
                 return true;
@@ -591,7 +592,10 @@ namespace UnityEngine
                     Debug.LogError($"Unbound: ReadPixels of an {source} target into {graphicsFormat} is unmeasured on {device.Type}; refused as into RGBAFloat (the texture is left unchanged).");
                 return true;
             }
-            return false;
+            if (rule.Converted.Contains(source))
+                return false;
+            Debug.LogError($"Unbound: ReadPixels of a {source} render texture is unmeasured on {device.Type}; the texture is left unchanged.");
+            return true;
         }
 
         /// <summary>Whether ReadPixels from a target of <paramref name="source"/> reads 8-bit

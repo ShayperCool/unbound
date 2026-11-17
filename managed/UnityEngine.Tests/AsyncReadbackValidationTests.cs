@@ -123,9 +123,10 @@ namespace Unbound.Tests
 
         const string BlitRefusal = "Image blit conversion between formats 75 -> 52 is not supported";
 
-        /// <summary>Metal reads targets whose format answers no ReadPixels usage, refusing only its
-        /// unreadable formats (tests/projects/textureformats metal.jsonl readback.*); Vulkan
-        /// refuses every such target.</summary>
+        /// <summary>Metal reads targets whose format answers no ReadPixels usage where it converts
+        /// their texels, refuses those not supported for image operations and, in Unbound, the
+        /// unmeasured ones (tests/projects/textureformats metal.jsonl readback.*); Vulkan refuses
+        /// every such target.</summary>
         [Theory]
         [InlineData("Metal", GraphicsFormat.B8G8R8A8_UNorm, TextureFormat.RGBAFloat, null, false)]
         [InlineData("Metal", GraphicsFormat.B8G8R8A8_SRGB, TextureFormat.RGBA32, null, false)]
@@ -134,6 +135,16 @@ namespace Unbound.Tests
         [InlineData("Metal", GraphicsFormat.A2B10G10R10_UNormPack32, TextureFormat.RGBAFloat, BlitRefusal, false)]
         [InlineData("Metal", GraphicsFormat.A1R5G5B5_UNormPack16, TextureFormat.RGBA32,
             "The texture format is not supported for Image operations (id=72)", true)]
+        [InlineData("Metal", GraphicsFormat.R5G6B5_UNormPack16, TextureFormat.RGBAFloat, null, false)]
+        [InlineData("Metal", GraphicsFormat.B8G8R8A8_SNorm, TextureFormat.RGBA32, null, false)]
+        [InlineData("Metal", GraphicsFormat.R5G5B5A1_UNormPack16, TextureFormat.RGBAFloat,
+            "The texture format is not supported for Image operations (id=70)", true)]
+        [InlineData("Metal", GraphicsFormat.A10R10G10B10_XRUNormPack32, TextureFormat.RGBA32,
+            "The texture format is not supported for Image operations (id=86)", true)]
+        [InlineData("Metal", GraphicsFormat.B5G5R5A1_UNormPack16, TextureFormat.RGBA32,
+            "The texture format is not supported for Image operations (id=70)", true)]
+        [InlineData("Metal", GraphicsFormat.R10G10B10_XRSRGBPack32, TextureFormat.RGBA32,
+            "Unbound: ReadPixels of a R10G10B10_XRSRGBPack32 render texture is unmeasured on Metal; the texture is left unchanged.", false)]
         [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm, TextureFormat.RGBAFloat,
             "ReadPixels is unsupported for B8G8R8A8_UNorm; the texture is left unchanged.", false)]
         [InlineData("Vulkan", GraphicsFormat.R8G8B8A8_UNorm, TextureFormat.RGBAFloat, null, false)]
@@ -179,12 +190,18 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>AsyncGPUReadback of a target: Metal refuses only its unreadable formats, with
-        /// their own error; elsewhere a target without ReadPixels usage fails.</summary>
+        /// <summary>AsyncGPUReadback of a target: Metal refuses one whose format answers neither
+        /// ReadPixels nor GetPixels usage, naming the format; elsewhere a target without ReadPixels
+        /// usage fails.</summary>
         [Theory]
         [InlineData("Metal", GraphicsFormat.A1R5G5B5_UNormPack16,
             "AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back")]
         [InlineData("Metal", GraphicsFormat.B8G8R8A8_UNorm, null)]
+        [InlineData("Metal", GraphicsFormat.R10G10B10_XRUNormPack32, null)]
+        [InlineData("Metal", GraphicsFormat.R5G6B5_UNormPack16,
+            "AsyncGPUReadback - R5G6B5 UNorm (68) graphics format is not supported as source for async read back")]
+        [InlineData("Metal", GraphicsFormat.A10R10G10B10_XRUNormPack32,
+            "AsyncGPUReadback - BGRA10XR UNorm (86) graphics format is not supported as source for async read back")]
         [InlineData("Metal", GraphicsFormat.R32G32B32A32_SInt,
             "'R32G32B32A32_SInt' doesn't support ReadPixels usage on this platform. Async GPU readback failed.")]
         [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm,

@@ -336,19 +336,24 @@ namespace Unbound.Runtime
                 return result;
             }
             // A render texture whose format the device cannot read pixels from (measured for
-            // A2B10G10R10_UNormPack32 and the integer formats: tests/projects/textureformats; on
-            // Metal only its unreadable formats and, unmeasured there, the integer ones:
-            // metal.jsonl readback.*).
-            var device = GraphicsDeviceProfile.Current;
-            if (src is RenderTexture && device.UnreadableTargets.TryGetValue(src.graphicsFormat, out var unreadable))
+            // A2B10G10R10_UNormPack32 and the integer formats: tests/projects/textureformats). The
+            // device's own rule reads one with GetPixels usage (metal.jsonl readback.*); integer
+            // targets stay refused there (unmeasured).
+            var rule = GraphicsDeviceProfile.Current.TargetReadback;
+            var source = src.graphicsFormat;
+            if (src is RenderTexture && rule != null && source != GraphicsFormat.None && !GraphicsFormatUtility.IsIntegerFormat(source)
+                && !SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels)
+                && !SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.GetPixels))
             {
-                Debug.LogError($"AsyncGPUReadback - {unreadable} ({(int)src.graphicsFormat}) graphics format is not supported as source for async read back");
+                Debug.LogError(rule.RefusedSourceNames.TryGetValue(source, out var name)
+                    ? $"AsyncGPUReadback - {name} ({(int)source}) graphics format is not supported as source for async read back"
+                    : $"Unbound: AsyncGPUReadback of a {source} render texture is unmeasured on this device; the request fails.");
                 result.HasError = true;
                 return result;
             }
-            if (src is RenderTexture && src.graphicsFormat != GraphicsFormat.None
-                && (!device.ReadsTargetsWithoutReadPixelsUsage || GraphicsFormatUtility.IsIntegerFormat(src.graphicsFormat))
-                && !SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.ReadPixels))
+            if (src is RenderTexture && source != GraphicsFormat.None
+                && (rule == null || GraphicsFormatUtility.IsIntegerFormat(source))
+                && !SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels))
             {
                 if (!reportedSource) UnsupportedReadPixels(src.graphicsFormat);
                 result.HasError = true;

@@ -88,4 +88,98 @@
 {"k":"readback.R32G32_SFloat.read.RGBA32","v":{"value":"3e808081,3f008081,3f800000,3f800000;3e808081,3f008081,3f800000,3f800000","logs":[]}}
 {"k":"readback.R32G32_SFloat.async","v":{"value":"0000803e0000003f0000803e0000003f","logs":[]}}
 {"k":"readback.R32G32_SFloat.asyncfloat","v":{"value":"0000803e0000003f0000803f0000803f0000803e0000003f0000803f0000803f","logs":[]}}
+{"k":"readback.B8G8R8A8_SNorm.graphicsFormat","v":"B8G8R8A8_SNorm"}
+{"k":"readback.B8G8R8A8_SNorm.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B8G8R8A8_SNorm.compatible.render","v":"B8G8R8A8_SNorm"}
+{"k":"readback.B8G8R8A8_SNorm.compatible.sample","v":"R8G8B8A8_SNorm"}
+{"k":"readback.B8G8R8A8_SNorm.create","v":true}
+{"k":"readback.B8G8R8A8_SNorm.read.RGBAFloat","v":{"value":"3e810204,3f010204,3f3f7efe,3f1f3e7d;3e810204,3f010204,3f3f7efe,3f1f3e7d","logs":[]}}
+{"k":"readback.B8G8R8A8_SNorm.read.RGBA32","v":{"value":"3e808081,3f008081,3f3ebebf,3f1e9e9f;3e808081,3f008081,3f3ebebf,3f1e9e9f","logs":[]}}
+{"k":"readback.B8G8R8A8_SNorm.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - BGRA8 SNorm (61) graphics format is not supported as source for async read back"]}}
+{"k":"readback.B8G8R8A8_SNorm.asyncfloat","v":{"value":"error","logs":["Error: 'B8G8R8A8_SNorm' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - BGRA8 SNorm (61) graphics format is not supported as source for async read back"]}}
+{"k":"readback.R4G4B4A4_UNormPack16.graphicsFormat","v":"R4G4B4A4_UNormPack16"}
+{"k":"readback.R4G4B4A4_UNormPack16.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R4G4B4A4_UNormPack16.compatible.render","v":"R4G4B4A4_UNormPack16"}
+{"k":"readback.R4G4B4A4_UNormPack16.compatible.sample","v":"R4G4B4A4_UNormPack16"}
+{"k":"readback.R4G4B4A4_UNormPack16.create","v":true}
+{"k":"readback.R4G4B4A4_UNormPack16.read.RGBAFloat","v":{"value":"3e888889,3f088889,3f3bbbbc,3f19999a;3e888889,3f088889,3f3bbbbc,3f19999a","logs":[]}}
+{"k":"readback.R4G4B4A4_UNormPack16.read.RGBA32","v":{"value":"3e888889,3f088889,3f3bbbbc,3f19999a;3e888889,3f088889,3f3bbbbc,3f19999a","logs":[]}}
+{"k":"readback.R4G4B4A4_UNormPack16.async","v":{"value":"b948b948","logs":[]}}
+{"k":"readback.R4G4B4A4_UNormPack16.asyncfloat","v":{"value":"8988883e8988083fbcbb3b3f9a99193f8988883e8988083fbcbb3b3f9a99193f","logs":["Error: 'R4G4B4A4_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.R5G6B5_UNormPack16.graphicsFormat","v":"R5G6B5_UNormPack16"}
+{"k":"readback.R5G6B5_UNormPack16.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R5G6B5_UNormPack16.compatible.render","v":"R5G6B5_UNormPack16"}
+{"k":"readback.R5G6B5_UNormPack16.compatible.sample","v":"B5G6R5_UNormPack16"}
+{"k":"readback.R5G6B5_UNormPack16.create","v":true}
+{"k":"readback.R5G6B5_UNormPack16.read.RGBAFloat","v":{"value":"3e842108,3f020821,3f3def7c,3f800000;3e842108,3f020821,3f3def7c,3f800000","logs":[]}}
+{"k":"readback.R5G6B5_UNormPack16.read.RGBA32","v":{"value":"3e848485,3f028283,3f3dbdbe,3f800000;3e848485,3f028283,3f3dbdbe,3f800000","logs":[]}}
+{"k":"readback.R5G6B5_UNormPack16.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - R5G6B5 UNorm (68) graphics format is not supported as source for async read back"]}}
+{"k":"readback.R5G6B5_UNormPack16.asyncfloat","v":{"value":"error","logs":["Error: 'R5G6B5_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - R5G6B5 UNorm (68) graphics format is not supported as source for async read back"]}}
+{"k":"readback.B5G6R5_UNormPack16.graphicsFormat","v":"B5G6R5_UNormPack16"}
+{"k":"readback.B5G6R5_UNormPack16.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B5G6R5_UNormPack16.compatible.render","v":"B5G6R5_UNormPack16"}
+{"k":"readback.B5G6R5_UNormPack16.compatible.sample","v":"B5G6R5_UNormPack16"}
+{"k":"readback.B5G6R5_UNormPack16.create","v":true}
+{"k":"readback.B5G6R5_UNormPack16.read.RGBAFloat","v":{"value":"3e842108,3f020821,3f3def7c,3f800000;3e842108,3f020821,3f3def7c,3f800000","logs":[]}}
+{"k":"readback.B5G6R5_UNormPack16.read.RGBA32","v":{"value":"3e848485,3f028283,3f3dbdbe,3f800000;3e848485,3f028283,3f3dbdbe,3f800000","logs":[]}}
+{"k":"readback.B5G6R5_UNormPack16.async","v":{"value":"17441744","logs":[]}}
+{"k":"readback.B5G6R5_UNormPack16.asyncfloat","v":{"value":"0821843e2108023f7cef3d3f0000803f0821843e2108023f7cef3d3f0000803f","logs":[]}}
+{"k":"readback.R5G5B5A1_UNormPack16.graphicsFormat","v":"R5G5B5A1_UNormPack16"}
+{"k":"readback.R5G5B5A1_UNormPack16.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R5G5B5A1_UNormPack16.compatible.render","v":"R5G5B5A1_UNormPack16"}
+{"k":"readback.R5G5B5A1_UNormPack16.compatible.sample","v":"None"}
+{"k":"readback.R5G5B5A1_UNormPack16.create","v":true}
+{"k":"readback.R5G5B5A1_UNormPack16.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=70)","Assert: The texture format is not supported for Image operations (id=70)"]}}
+{"k":"readback.R5G5B5A1_UNormPack16.read.RGBA32","v":{"value":"3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd;3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=70)","Assert: The texture format is not supported for Image operations (id=70)"]}}
+{"k":"readback.R5G5B5A1_UNormPack16.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - RGB5A1 UNorm (70) graphics format is not supported as source for async read back"]}}
+{"k":"readback.R5G5B5A1_UNormPack16.asyncfloat","v":{"value":"error","logs":["Error: 'R5G5B5A1_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - RGB5A1 UNorm (70) graphics format is not supported as source for async read back"]}}
+{"k":"readback.B5G5R5A1_UNormPack16.graphicsFormat","v":"B5G5R5A1_UNormPack16"}
+{"k":"readback.B5G5R5A1_UNormPack16.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B5G5R5A1_UNormPack16.compatible.render","v":"B5G5R5A1_UNormPack16"}
+{"k":"readback.B5G5R5A1_UNormPack16.compatible.sample","v":"None"}
+{"k":"readback.B5G5R5A1_UNormPack16.create","v":true}
+{"k":"readback.B5G5R5A1_UNormPack16.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=70)","Assert: The texture format is not supported for Image operations (id=70)"]}}
+{"k":"readback.B5G5R5A1_UNormPack16.read.RGBA32","v":{"value":"3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd;3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=70)","Assert: The texture format is not supported for Image operations (id=70)"]}}
+{"k":"readback.B5G5R5A1_UNormPack16.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - BGR5A1 UNorm (71) graphics format is not supported as source for async read back"]}}
+{"k":"readback.B5G5R5A1_UNormPack16.asyncfloat","v":{"value":"error","logs":["Error: 'B5G5R5A1_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - BGR5A1 UNorm (71) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A2R10G10B10_UNormPack32.graphicsFormat","v":"A2R10G10B10_UNormPack32"}
+{"k":"readback.A2R10G10B10_UNormPack32.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.A2R10G10B10_UNormPack32.compatible.render","v":"A2R10G10B10_UNormPack32"}
+{"k":"readback.A2R10G10B10_UNormPack32.compatible.sample","v":"None"}
+{"k":"readback.A2R10G10B10_UNormPack32.create","v":true}
+{"k":"readback.A2R10G10B10_UNormPack32.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=78)","Assert: The texture format is not supported for Image operations (id=78)"]}}
+{"k":"readback.A2R10G10B10_UNormPack32.read.RGBA32","v":{"value":"3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd;3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=78)","Assert: The texture format is not supported for Image operations (id=78)"]}}
+{"k":"readback.A2R10G10B10_UNormPack32.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - BGR10A2 UNorm (78) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A2R10G10B10_UNormPack32.asyncfloat","v":{"value":"error","logs":["Error: 'A2R10G10B10_UNormPack32' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - BGR10A2 UNorm (78) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A2R10G10B10_XRUNormPack32.graphicsFormat","v":"A2R10G10B10_XRUNormPack32"}
+{"k":"readback.A2R10G10B10_XRUNormPack32.usages","v":[]}
+{"k":"readback.A2R10G10B10_XRUNormPack32.compatible.render","v":"A2B10G10R10_UNormPack32"}
+{"k":"readback.A2R10G10B10_XRUNormPack32.compatible.sample","v":"R16G16B16A16_UNorm"}
+{"k":"readback.R10G10B10_XRUNormPack32.graphicsFormat","v":"R10G10B10_XRUNormPack32"}
+{"k":"readback.R10G10B10_XRUNormPack32.usages","v":["Render","Blend","GetPixels","SetPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R10G10B10_XRUNormPack32.compatible.render","v":"R10G10B10_XRUNormPack32"}
+{"k":"readback.R10G10B10_XRUNormPack32.compatible.sample","v":"None"}
+{"k":"readback.R10G10B10_XRUNormPack32.create","v":true}
+{"k":"readback.R10G10B10_XRUNormPack32.read.RGBAFloat","v":{"value":"3f008081,3f1f9fa0,3f3fbfc0,3f800000;3f008081,3f1f9fa0,3f3fbfc0,3f800000","logs":[]}}
+{"k":"readback.R10G10B10_XRUNormPack32.read.RGBA32","v":{"value":"3f008081,3f1f9fa0,3f3fbfc0,3f800000;3f008081,3f1f9fa0,3f3fbfc0,3f800000","logs":[]}}
+{"k":"readback.R10G10B10_XRUNormPack32.async","v":{"value":"fefe09e0fefe09e0","logs":[]}}
+{"k":"readback.R10G10B10_XRUNormPack32.asyncfloat","v":{"value":"8180003fa09f1f3fc0bf3f3f0000803f8180003fa09f1f3fc0bf3f3f0000803f","logs":["Error: 'R10G10B10_XRUNormPack32' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.A10R10G10B10_XRUNormPack32.graphicsFormat","v":"A10R10G10B10_XRUNormPack32"}
+{"k":"readback.A10R10G10B10_XRUNormPack32.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.A10R10G10B10_XRUNormPack32.compatible.render","v":"A10R10G10B10_XRUNormPack32"}
+{"k":"readback.A10R10G10B10_XRUNormPack32.compatible.sample","v":"R16G16B16A16_UNorm"}
+{"k":"readback.A10R10G10B10_XRUNormPack32.create","v":true}
+{"k":"readback.A10R10G10B10_XRUNormPack32.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=86)","Assert: The texture format is not supported for Image operations (id=86)"]}}
+{"k":"readback.A10R10G10B10_XRUNormPack32.read.RGBA32","v":{"value":"3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd;3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=86)","Assert: The texture format is not supported for Image operations (id=86)"]}}
+{"k":"readback.A10R10G10B10_XRUNormPack32.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - BGRA10XR UNorm (86) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A10R10G10B10_XRUNormPack32.asyncfloat","v":{"value":"error","logs":["Error: 'A10R10G10B10_XRUNormPack32' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - BGRA10XR UNorm (86) graphics format is not supported as source for async read back"]}}
+{"k":"readback.B10G11R11_UFloatPack32.graphicsFormat","v":"B10G11R11_UFloatPack32"}
+{"k":"readback.B10G11R11_UFloatPack32.usages","v":["Render","Blend","GetPixels","SetPixels","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B10G11R11_UFloatPack32.compatible.render","v":"B10G11R11_UFloatPack32"}
+{"k":"readback.B10G11R11_UFloatPack32.compatible.sample","v":"E5B9G9R9_UFloatPack32"}
+{"k":"readback.B10G11R11_UFloatPack32.create","v":true}
+{"k":"readback.B10G11R11_UFloatPack32.read.RGBAFloat","v":{"value":"3e800000,3f000000,3f400000,3f800000;3e800000,3f000000,3f400000,3f800000","logs":[]}}
+{"k":"readback.B10G11R11_UFloatPack32.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,00000000;3e808081,3f008081,3f3fbfc0,00000000","logs":[]}}
+{"k":"readback.B10G11R11_UFloatPack32.async","v":{"value":"40031c7440031c74","logs":[]}}
+{"k":"readback.B10G11R11_UFloatPack32.asyncfloat","v":{"value":"0000803e0000003f0000403f0000803f0000803e0000003f0000403f0000803f","logs":[]}}
 {"k":"complete","v":true}

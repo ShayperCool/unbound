@@ -157,6 +157,10 @@ public static class TexFormatsProbe
         GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.B8G8R8A8_UNorm, GraphicsFormat.B8G8R8A8_SRGB,
         GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormat.A1R5G5B5_UNormPack16, GraphicsFormat.A2B10G10R10_UNormPack32,
         GraphicsFormat.E5B9G9R9_UFloatPack32, GraphicsFormat.R8_UNorm, GraphicsFormat.R16_SFloat, GraphicsFormat.R32G32_SFloat,
+        GraphicsFormat.B8G8R8A8_SNorm, GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormat.R5G6B5_UNormPack16,
+        GraphicsFormat.B5G6R5_UNormPack16, GraphicsFormat.R5G5B5A1_UNormPack16, GraphicsFormat.B5G5R5A1_UNormPack16,
+        GraphicsFormat.A2R10G10B10_UNormPack32, GraphicsFormat.A2R10G10B10_XRUNormPack32, GraphicsFormat.R10G10B10_XRUNormPack32,
+        GraphicsFormat.A10R10G10B10_XRUNormPack32, GraphicsFormat.B10G11R11_UFloatPack32,
     };
     static readonly List<string> s_Logs = new List<string>();
 
