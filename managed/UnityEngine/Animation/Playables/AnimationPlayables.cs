@@ -738,7 +738,10 @@ namespace Unbound.Runtime.Playables
             {
                 if (EnsurePlayer() is { } player) return player;
                 if (Controller == null || Controller.Graph is not { } graph) return null;
-                return m_Detached ??= AnimatorPlayer.Detached(Controller, graph);
+                // A controller whose graph changed (an override controller given another base)
+                // starts over.
+                if (m_Detached == null || m_Detached.Graph != graph) m_Detached = AnimatorPlayer.Detached(Controller, graph);
+                return m_Detached;
             }
         }
 

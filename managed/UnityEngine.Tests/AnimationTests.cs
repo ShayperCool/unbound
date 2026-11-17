@@ -1202,6 +1202,8 @@ namespace UnityEngine.Tests
                     "Warning: Animator.GotoState: State could not be found",
                     "Warning: Invalid Layer Index '-1'",
                 }, m_Logs);
+                // A request made before an output plays it (unmeasured: Unbound's hand-over).
+                playable.Play("Walk", 0, 0.2f);
                 // Played through an output on an Animator, it keeps what was set on it.
                 var animator = root.AddComponent<Animator>();
                 var output = UnityEngine.Animations.AnimationPlayableOutput.Create(graph, "Output", animator);
@@ -1209,12 +1211,43 @@ namespace UnityEngine.Tests
                 graph.Evaluate(0f);
                 Assert.True(playable.GetBool("Run"));
                 Assert.Equal("Base Layer", playable.GetLayerName(0));
+                Assert.True(playable.GetCurrentAnimatorStateInfo(0).IsName("Walk"));
                 Assert.Equal(5, m_Logs.Count);
             }
             finally
             {
                 graph.Destroy();
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A controller playable no output plays makes no behaviours; the player an output
+        /// then plays it on makes them once.</summary>
+        [Fact]
+        public void AnUnplayedControllerPlayableMakesNoBehaviours()
+        {
+            var file = Load(AnimationFixtures.Machines);
+            var recorder = ScriptableObject.CreateInstance<StateRecorder>();
+            ((ControllerStateAsset)file.Objects[1102000002]).Behaviours.Add(recorder);
+            var graph = UnityEngine.Playables.PlayableGraph.Create("Unplayed");
+            var root = Hierarchy("Character", "Body");
+            int before = Resources.FindObjectsOfTypeAll<StateRecorder>().Length;
+            try
+            {
+                var playable = UnityEngine.Animations.AnimatorControllerPlayable.Create(graph, (RuntimeAnimatorController)file.Objects[9100000]);
+                Assert.True(playable.GetParameterCount() >= 0);
+                Assert.Equal("Base Layer", playable.GetLayerName(0));
+                Assert.Equal(before, Resources.FindObjectsOfTypeAll<StateRecorder>().Length);
+                var output = UnityEngine.Animations.AnimationPlayableOutput.Create(graph, "Output", root.AddComponent<Animator>());
+                UnityEngine.Playables.PlayableOutputExtensions.SetSourcePlayable(output, playable);
+                graph.Evaluate(0f);
+                Assert.Equal(before + 1, Resources.FindObjectsOfTypeAll<StateRecorder>().Length);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(recorder);
             }
         }
 

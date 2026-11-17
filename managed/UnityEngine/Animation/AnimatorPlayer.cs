@@ -232,7 +232,9 @@ namespace Unbound.Runtime
                 if (state == null) continue;
                 var run = new StateRun(state, 0.0);
                 SetCurrent(layer, run);
-                QueueEnter(layer, run);
+                // A detached player has no behaviours: their instances and callbacks belong to
+                // the player an output makes.
+                if (animator != null) QueueEnter(layer, run);
             }
         }
 
