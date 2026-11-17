@@ -106,7 +106,7 @@ namespace UnityEngine
         /// clock starts each frame where unscaledTime does and, within the frame, follows the wall
         /// clock up to a read step short of the next frame's unscaledTime, then moves by a read step
         /// per read. A script that waited past that in one frame has the clock ahead by what it
-        /// waited; the frames then hold it until unscaledTime catches up.</summary>
+        /// waited; the frames then hold it until unscaledTime (plus the paused time) catches up.</summary>
         static double Realtime()
         {
             double inFrame = s_FrameClock.Elapsed.TotalSeconds;
@@ -303,8 +303,8 @@ namespace UnityEngine
         internal static void LevelLoaded() => s_TimeSinceLevelLoadStart = s_Time;
 
         /// <summary>A host frame that runs no Play mode frame (paused, Edit mode). In fixed-step
-        /// mode real time moves by its step, as for a frame; otherwise it keeps following the wall
-        /// clock.</summary>
+        /// mode, once Play mode has run a frame, real time moves by its step, as for a frame;
+        /// otherwise (and in Edit mode before Play mode) it keeps following the wall clock.</summary>
         internal static void HostFrameOutsidePlay(double fixedStep)
         {
             if (!(fixedStep > 0) || !(s_FixedRealStep > 0)) return;

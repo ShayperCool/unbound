@@ -161,13 +161,15 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   drives time and scripted taps drift). Every engine clock follows those frames: `time` and
   `unscaledTime`, the audio clock, and real time (`realtimeSinceStartup`,
   `EditorApplication.timeSinceStartup`, `WaitForSecondsRealtime`), which starts each frame where
-  `unscaledTime` does (plus a step per paused or Edit mode frame) and within the frame follows
+  `unscaledTime` does (plus a step per paused or Edit mode frame after Play mode started; before
+  it, Edit mode keeps wall time) and within the frame follows
   the wall clock up to just short of the next frame's start, so a slow frame cannot make a tap
   read as a long press. A script waiting longer in one frame sees it move by a microsecond per
   reading (a loop spending a time budget past that point runs a reading per microsecond of its
   budget); the frames after it hold real time, still a microsecond per reading, until
-  `unscaledTime` catches up, which a game reading it more often than once per microsecond of
-  step would keep from happening. The .NET clocks (`Stopwatch`, `DateTime`,
+  `unscaledTime` (plus the paused time) catches up, which a game reading it more than once per
+  microsecond of frame step (about 16,667 readings per frame at 60 fps) would keep from
+  happening. The .NET clocks (`Stopwatch`, `DateTime`,
   `Environment.TickCount`) keep wall time: games time their work and date things with them, and
   the engine's own work budgets (`InstantiateAsync`'s integration time) use them too.
   `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N instead of the clock, so random
