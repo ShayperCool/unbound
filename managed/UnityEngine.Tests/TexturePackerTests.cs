@@ -128,6 +128,16 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 0, 0, 120, 20 }, Texels(atlas, rects)[0]);
         }
 
+        /// <summary>A maximum of int.MaxValue ("no limit") packs as the largest texture side allows.</summary>
+        [Fact]
+        public void AnUnlimitedMaximumStillPacks()
+        {
+            var atlas = Make(1, 1);
+            var rects = atlas.PackTextures(new[] { Make(64, 64), Make(32, 32) }, 2, int.MaxValue);
+            Assert.NotNull(rects);
+            Assert.Equal(new[] { 0, 0, 64, 64 }, Texels(atlas, rects)[0]);
+        }
+
         /// <summary>The textures' pixels land at their places, transparent black elsewhere.</summary>
         [Fact]
         public void PixelsLandAtTheirPlaces()

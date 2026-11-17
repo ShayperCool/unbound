@@ -46,12 +46,15 @@ namespace Unbound.Runtime
         internal static bool Layout(int[] widths, int[] heights, int padding, int maximumSize, int[] x, int[] y, out int atlasWidth, out int atlasHeight)
         {
             int count = widths.Length;
-            int max = NextPowerOfTwo(Math.Max(8, maximumSize));
+            // A maximum over the largest texture side (int.MaxValue meaning "no limit") is that side
+            // (the cap is not measured).
+            int max = NextPowerOfTwo(Math.Clamp(maximumSize, 8, UnityEngine.SystemInfo.maxTextureSize));
             for (int i = 0; i < count; i++)
             {
                 widths[i] = FitSide(widths[i], max);
                 heights[i] = FitSide(heights[i], max);
             }
+            // A 32-bit sum, as the Editor's.
             uint area = 0;
             int widest = 0, highest = 0;
             for (int i = 0; i < count; i++)
@@ -237,7 +240,7 @@ namespace Unbound.Runtime
             var ys = new int[n];
             for (int i = 0; i < n; i++) { widths[i] = unique[i].width; heights[i] = unique[i].height; }
             if (!Layout(widths, heights, padding, maximumSize, xs, ys, out int width, out int height)) return null;
-            atlas.Reinitialize(width, height, UnityEngine.TextureFormat.RGBA32, mipmaps);
+            if (!atlas.Reinitialize(width, height, UnityEngine.TextureFormat.RGBA32, mipmaps)) return null;
             var pixels = new UnityEngine.Color32[width * height];
             var placed = new UnityEngine.Rect[n];
             for (int i = 0; i < n; i++)
