@@ -152,6 +152,149 @@ public partial class EffectProbe : MonoBehaviour
         new[] { "context_sixspatial_5_flat_monoclip_spread", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0", "pan=-0.5", "spread=90", "pos=2:0:1", "preflight=4", "blocks=32", "music=imp", "mono=1", "Music:Att" },
         new[] { "context_sixspatial_5_side_monoclip_spread_half", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=2:0:1", "preflight=4", "blocks=32", "music=imp", "mono=1", "Music:Att" },
         new[] { "context_sixspatial_2_side_monoclip_spread_half", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=2:0:1", "preflight=4", "blocks=32", "music=imp", "mono=1", "Music:Att" },
+        new[] { "context_inputs_1_3_impulses", "asset=context_zone_2_listener_dry", "mode=Mono", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_3_spatial", "asset=context_zone_2_listener_dry", "mode=Mono", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_3_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_3_spatial", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_3_impulses", "asset=context_zone_2_listener_dry", "mode=Quad", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_3_spatial", "asset=context_zone_2_listener_dry", "mode=Quad", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_3_impulses", "asset=context_zone_2_listener_dry", "mode=Surround", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_3_spatial", "asset=context_zone_2_listener_dry", "mode=Surround", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_3_impulses", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_3_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_3_impulses", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_3_spatial", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_3_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_3_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=-0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_3_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=0.65", "clip_channels=3", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_4_impulses", "asset=context_zone_2_listener_dry", "mode=Mono", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_4_spatial", "asset=context_zone_2_listener_dry", "mode=Mono", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_4_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_4_spatial", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_4_impulses", "asset=context_zone_2_listener_dry", "mode=Quad", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_4_spatial", "asset=context_zone_2_listener_dry", "mode=Quad", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_4_impulses", "asset=context_zone_2_listener_dry", "mode=Surround", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_4_spatial", "asset=context_zone_2_listener_dry", "mode=Surround", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_4_impulses", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_4_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_4_impulses", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_4_spatial", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_4_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_4_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=-0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_4_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=0.65", "clip_channels=4", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_5_impulses", "asset=context_zone_2_listener_dry", "mode=Mono", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_5_spatial", "asset=context_zone_2_listener_dry", "mode=Mono", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_5_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_5_spatial", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_5_impulses", "asset=context_zone_2_listener_dry", "mode=Quad", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_5_spatial", "asset=context_zone_2_listener_dry", "mode=Quad", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_5_impulses", "asset=context_zone_2_listener_dry", "mode=Surround", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_5_spatial", "asset=context_zone_2_listener_dry", "mode=Surround", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_5_impulses", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_5_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_5_impulses", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_5_spatial", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_5_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_5_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=-0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_5_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=0.65", "clip_channels=5", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_7_impulses", "asset=context_zone_2_listener_dry", "mode=Mono", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_7_spatial", "asset=context_zone_2_listener_dry", "mode=Mono", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_7_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_7_spatial", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_7_impulses", "asset=context_zone_2_listener_dry", "mode=Quad", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_7_spatial", "asset=context_zone_2_listener_dry", "mode=Quad", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_7_impulses", "asset=context_zone_2_listener_dry", "mode=Surround", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_7_spatial", "asset=context_zone_2_listener_dry", "mode=Surround", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_7_impulses", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_7_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_7_impulses", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_7_spatial", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_7_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_7_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=-0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_7_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=0.65", "clip_channels=7", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_8_impulses", "asset=context_zone_2_listener_dry", "mode=Mono", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Mono", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_1_8_spatial", "asset=context_zone_2_listener_dry", "mode=Mono", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_8_impulses", "asset=context_zone_2_listener_dry", "mode=Stereo", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Stereo", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_8_spatial", "asset=context_zone_2_listener_dry", "mode=Stereo", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_8_impulses", "asset=context_zone_2_listener_dry", "mode=Quad", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Quad", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_3_8_spatial", "asset=context_zone_2_listener_dry", "mode=Quad", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_8_impulses", "asset=context_zone_2_listener_dry", "mode=Surround", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Surround", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_4_8_spatial", "asset=context_zone_2_listener_dry", "mode=Surround", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_8_impulses", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_8_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_8_impulses", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_6_8_spatial", "asset=context_zone_2_listener_dry", "mode=Mode7point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_8_impulses", "asset=context_zone_2_listener_dry", "mode=Prologic", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_8_pan_left", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=-0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_7_8_pan_right", "asset=context_zone_2_listener_dry", "mode=Prologic", "pan=0.65", "clip_channels=8", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_6_reader", "asset=context_zone_2_listener_dry", "mode=Stereo", "input=reader", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_reader", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "input=reader", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_reader_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "input=reader", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_streaming", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "input=six_streaming", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_streaming_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "input=six_streaming", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_2_6_compressed", "asset=context_zone_2_listener_dry", "mode=Stereo", "input=six_compressed", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_compressed", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "input=six_compressed", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
+        new[] { "context_inputs_5_6_compressed_spatial", "asset=context_zone_2_listener_dry", "mode=Mode5point1", "blend=0.5", "pan=-0.5", "spread=90", "pos=1:0:1.732", "input=six_compressed", "clip_channels=6", "preflight=4", "blocks=32", "music=noise_full:0.1", "Music:Att", "six_signal=impulses" },
         new[] { "plain", "music=imp", "Music:Att" },
         new[] { "default_imp", "music=imp" },
         new[] { "default_silence", "music=none" },
@@ -1501,9 +1644,8 @@ public partial class EffectProbe : MonoBehaviour
         }
         return data;
     }
-    static float[] SixChannelSignal(string signal)
+    static float[] MultiChannelSignal(int channels, string signal)
     {
-        const int channels = 6;
         var data = new float[ClipFrames * channels];
         if (signal == "impulses") {
             // Separate channel basis impulses follow the initial gain transitions.
@@ -1516,7 +1658,7 @@ public partial class EffectProbe : MonoBehaviour
                 seed = ProbeNoise.Next(seed);
                 data[i] = 0.1f * ((seed >> 8) / 8388608f - 1f);
             }
-        } else throw new Exception("Unknown six-channel signal " + signal);
+        } else throw new Exception("Unknown multichannel signal " + signal);
         return data;
     }
     static void ConfigureZone(AudioReverbZone zone)
@@ -1771,23 +1913,49 @@ public partial class EffectProbe : MonoBehaviour
             } else {
                 int channels = int.Parse(Option(key, "clip_channels=", Option(key, "mono=", "0") == "1" ? "1" : "2"));
                 int clipRate = key.StartsWith("context_settings_") || key.StartsWith("context_wide_") ? actual.sampleRate : rate;
-                clip = AudioClip.Create(key, ClipFrames, channels, clipRate, false);
-                var data = channels == 6 ? SixChannelSignal(Option(key, "six_signal=", "")) : Signal(Option(key, "music=", "dc:0.5"), clipRate);
+                var data = channels > 2 ? MultiChannelSignal(channels, Option(key, "six_signal=", "")) : Signal(Option(key, "music=", "dc:0.5"), clipRate);
                 if (channels == 1) { var mono = new float[ClipFrames]; for (int f = 0; f < ClipFrames; f++) mono[f] = data[2*f]; data = mono; }
-                if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
+                string inputKind = Option(key, "input=", "created");
+                if (inputKind == "reader") {
+                    // A streamed clip whose reader serves the same interleaved samples.
+                    int readerFrame = 0;
+                    var served = data;
+                    clip = AudioClip.Create(key, ClipFrames, channels, clipRate, true,
+                        buffer => {
+                            for (int i = 0; i < buffer.Length; i++) {
+                                int index = readerFrame * channels + i;
+                                buffer[i] = index < served.Length ? served[index] : 0f;
+                            }
+                            readerFrame += buffer.Length / channels;
+                        },
+                        frame => readerFrame = frame);
+                } else if (inputKind != "created") {
+                    // An imported clip (Resources) with the same samples at 48000 Hz.
+                    clip = Resources.Load<AudioClip>(inputKind);
+                    if (!clip) throw new Exception("Missing clip " + inputKind);
+                    if (clip.channels != channels || clip.samples != ClipFrames) throw new Exception("Unexpected clip " + inputKind);
+                    records.Add("\""+key+".clip_load_type\":"+(int)clip.loadType);
+                    records.Add("\""+key+".clip_frequency\":"+clip.frequency);
+                } else {
+                    clip = AudioClip.Create(key, ClipFrames, channels, clipRate, false);
+                    if (!clip.SetData(data, 0)) throw new Exception("SetData failed");
+                }
                 source.clip = clip;
-                if (channels == 6) {
-                    var observed = new float[ClipFrames * channels];
-                    if (!clip.GetData(observed, 0)) throw new Exception("six-channel GetData failed");
-                    for (int i = 0; i < data.Length; i++)
-                        if (observed[i] != data[i]) throw new Exception("six-channel readback differs at " + i);
+                if (channels > 2) {
+                    var observed = data;
+                    if (inputKind == "created") {
+                        observed = new float[ClipFrames * channels];
+                        if (!clip.GetData(observed, 0)) throw new Exception("multichannel GetData failed");
+                        for (int i = 0; i < data.Length; i++)
+                            if (observed[i] != data[i]) throw new Exception("multichannel readback differs at " + i);
+                    }
                     using (var input = new BinaryWriter(File.Create(Path.Combine(output, key+".input.f32"))))
                         foreach (var sample in observed) input.Write(sample);
                     records.Add("\""+key+".input_channels\":"+clip.channels);
                     records.Add("\""+key+".input_frames\":"+ClipFrames);
-                    records.Add("\""+key+".input_roundtrip\":true");
+                    records.Add("\""+key+".input_roundtrip\":"+(inputKind == "created" ? "true" : "false"));
                     records.Add("\""+key+".driver_caps\":"+(int)AudioSettings.driverCapabilities);
-                    records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+ClipFrames+",\"channels\":6}");
+                    records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+ClipFrames+",\"channels\":"+channels+"}");
                 }
                 var script = Option(key, "script=", "");
                 if (script != "") {

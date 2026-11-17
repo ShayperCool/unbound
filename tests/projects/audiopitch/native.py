@@ -16,7 +16,7 @@ p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
 p.add_argument('--buffer', type=int, choices=(256, 512, 1024, 2048), default=1024)
 p.add_argument('--cases', help='Comma-separated subset of one set, for diagnostics and part sessions')
 p.add_argument('--reset-cases', action='store_true', help='Reset output before each case, then run its normal preflight')
-p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input', 'six-layouts', 'six-spatial'), default='all',
+p.add_argument('--set', choices=('all', 'layouts', 'devices', 'surround', 'transitions', 'resets', 'scheduled-resets', 'wet', 'wet-edges', 'settings', 'prologic', 'zones', 'mono', 'recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input', 'six-layouts', 'six-spatial', 'input-contexts'), default='all',
                help='all: stereo, buffer and layout controls (plus device controls at 48000 Hz)')
 p.add_argument('--device-channels', type=int, choices=(2, 4, 6, 8), default=8, help='Private device width for encoding and voice-input captures')
 a = p.parse_args()
@@ -28,7 +28,7 @@ if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] !=
     p.error('release does not match fixture')
 a.work.mkdir(parents=True, exist_ok=False)
 project = a.work/'project'
-if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'six-layouts', 'six-spatial', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
+if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts', 'encoding', 'six-layouts', 'six-spatial', 'input-contexts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
     import sys
     sys.path.insert(0, str(fixture.parents[1]))
     from authored_project import assemble
@@ -36,10 +36,10 @@ if a.set in ('recovery', 'wide', 'wide-pcm', 'configurations', 'listener-scripts
     if a.set in ('wide', 'wide-pcm', 'configurations'):
         from wide_boot import prepare
         prepare(project)
-    if a.set in ('listener-scripts', 'encoding', 'six-layouts', 'six-spatial', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
+    if a.set in ('listener-scripts', 'encoding', 'six-layouts', 'six-spatial', 'input-contexts', 'schedule', 'listener-chain', 'listener-diagnostics', 'mono-live', 'topology-diagnostics', 'topology-pcm', 'listener-live', 'voice-input'):
         # Only the alias used by this independent private capture project is imported.
         source = (fixture/'Assets/Scripts/EffectProbe.cs').read_text()
-        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'six-layouts': 'context_sixlayout_', 'six-spatial': 'context_sixspatial_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_', 'listener-live': 'context_topologydiag_', 'voice-input': 'context_voiceinput_'}[a.set]
+        prefix = {'listener-scripts': 'context_scriptzone_', 'encoding': 'context_encoding_', 'six-layouts': 'context_sixlayout_', 'six-spatial': 'context_sixspatial_', 'input-contexts': 'context_inputs_', 'schedule': 'context_schedule_', 'listener-chain': 'context_listenerchain_', 'listener-diagnostics': 'context_listenerdiag_', 'mono-live': 'context_monolive_', 'topology-diagnostics': 'context_topologydiag_', 'topology-pcm': 'context_monolive_', 'listener-live': 'context_topologydiag_', 'voice-input': 'context_voiceinput_'}[a.set]
         keep = set(re.findall(r'new\[\] \{ "'+prefix+r'[^"]+", "asset=([^"]+)"', source))
         assert keep, 'prepared controls have no mixer aliases'
         for mixer in (project/'Assets/Resources').glob('*.mixer'):
@@ -216,7 +216,7 @@ if a.set in ('settings', 'prologic', 'encoding', 'voice-input'):
         from prologic_pairs import compare_pairs
         assert compare_pairs(a.work/'capture', a.work/'paired-modes.jsonl.gz', a.release, a.rate) == 0
     raise SystemExit
-if a.set in ('six-layouts', 'six-spatial'):
+if a.set in ('six-layouts', 'six-spatial', 'input-contexts'):
     selected = list(__import__('common').profile(a.set, a.rate))
     part(a.work, selected, prepared=True)
     assert 'Assertion failed on expression:' not in (a.work/'editor.log').read_text(), 'Editor assertion; see '+str(a.work/'editor.log')

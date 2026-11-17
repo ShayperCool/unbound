@@ -30,6 +30,7 @@ p.add_argument('--wide-pcm', action='store_true', help='Publish the certified wi
 p.add_argument('--schedule', action='store_true', help='Publish fractional scheduling and audio-update controls')
 p.add_argument('--six-layouts', action='store_true', help='Publish six-input output-layout and balance references')
 p.add_argument('--six-spatial', action='store_true', help='Publish six-input spatial source references')
+p.add_argument('--input-contexts', action='store_true', help='Publish other input widths and streamed six-channel clips')
 p.add_argument('--encoding', action='store_true', help='Publish six-input encoder availability diagnostics, without engine PCM admission')
 p.add_argument('--listener-chain', action='store_true', help='Publish listener component and contiguous script controls')
 p.add_argument('--listener-diagnostics', action='store_true', help='Publish separate listener topology diagnostics without engine admission')
@@ -71,6 +72,9 @@ if a.six_layouts:
 if a.six_spatial:
     from common import profile
     selected = list(profile('six-spatial', a.rate))
+if a.input_contexts:
+    from common import profile
+    selected = list(profile('input-contexts', a.rate))
 if a.encoding:
     from common import encoding_cases
     selected = encoding_cases()
@@ -120,6 +124,7 @@ if a.voice_input: target = target/'voice-input' if a.device_channels == 8 else t
 if a.encoding: target = target/'encoding' if a.device_channels == 8 else target/'encoding-devices'/('device-'+str(a.device_channels))
 if a.six_layouts: target = target/'six-layouts'
 if a.six_spatial: target = target/'six-spatial'
+if a.input_contexts: target = target/'input-contexts'
 if a.wide: target = target/'wide'
 if a.wide_pcm: target = target/'wide-pcm'
 target = target/('rate-'+str(a.rate))

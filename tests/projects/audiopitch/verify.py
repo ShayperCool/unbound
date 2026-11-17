@@ -65,11 +65,11 @@ def verify(root, release, rate, contexts=False, selected=None, device_channels=8
             assert meta[case+'.mode'] == requested_mode, case
             assert meta[case+'.render_channels'] == 2, case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
-        if case.startswith(('context_sixlayout_', 'context_sixspatial_')):
+        if case.startswith(('context_sixlayout_', 'context_sixspatial_', 'context_inputs_')):
             # Each speaker mode renders its own width; the device stays the private 7.1 sink.
             requested_mode = int(case.split('_')[2])
             assert meta[case+'.mode'] == requested_mode, case
-            assert meta[case+'.render_channels'] == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8}[requested_mode], case
+            assert meta[case+'.render_channels'] == {1: 1, 2: 2, 3: 4, 4: 5, 5: 6, 6: 8, 7: 2}[requested_mode], case
             assert meta[case+'.rate'] == rate and meta[case+'.buffer'] == 1024, case
         if case.startswith(('context_encoding_', 'context_sixlayout_')) or (case.startswith(('context_voiceinput_', 'context_sixspatial_')) and case+'.input' in meta):
             assert meta[case+'.input_channels'] == 6, case
@@ -88,6 +88,18 @@ def verify(root, release, rate, contexts=False, selected=None, device_channels=8
                 columns = [values[channel::6] for channel in range(6)]
                 assert all(sum(value != 0 for value in column) > 32000 for column in columns), case
                 assert len({hashlib.sha256(column.tobytes()).digest() for column in columns}) == 6, case
+        if case.startswith('context_inputs_'):
+            # Other input widths and streamed six-channel inputs: one impulse per channel.
+            width = int(case.split('_')[3])
+            created = not case.endswith(('_reader', '_streaming', '_compressed', '_reader_spatial', '_streaming_spatial', '_compressed_spatial'))
+            assert meta[case+'.input_channels'] == width and meta[case+'.input_frames'] == 32768, case
+            assert meta[case+'.input_roundtrip'] is created, case
+            assert meta[case+'.driver_caps'] == {2: 2, 4: 3, 6: 5, 8: 6}[device_channels], case
+            record = meta[case+'.input']
+            assert record == dict(file=case+'.input.f32', frames=32768, channels=width), case
+            values = samples(root, record)
+            assert [(i, value) for i, value in enumerate(values) if value] == [
+                ((4096+2048*channel)*width+channel, 0.25) for channel in range(width)], case
         if case.startswith('context_voiceinput_') and case.endswith('_untapped'):
             assert case+'.source_float' not in meta, case
         if case.startswith('context_voiceinput_') and not case.endswith('_untapped'):
