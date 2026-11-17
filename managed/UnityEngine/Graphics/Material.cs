@@ -210,7 +210,15 @@ namespace UnityEngine
                 slot.Offset = p.Value.Offset;
             }
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
-            foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
+            foreach (var p in source.m_Arrays)
+            {
+                // An array this material already has of the same type and length is reused (ResetToCopyOf).
+                var from = (Array)p.Value;
+                if (m_Arrays.TryGetValue(p.Key, out var mine) && mine is Array to && to.GetType() == from.GetType() && to.Length == from.Length)
+                    Array.Copy(from, to, from.Length);
+                else
+                    m_Arrays[p.Key] = from.Clone();
+            }
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
             m_KeywordExtras.AddRange(source.m_KeywordExtras);
             if (source.m_DisabledPasses == null) m_DisabledPasses = null;
@@ -1230,15 +1238,18 @@ namespace UnityEngine
         internal void CopyPropertiesKeepingShader(Material mat) => CopyProperties(mat);
 
         /// <summary>Empties the values before <see cref="CopyFrom"/> copies <paramref name="source"/>'s;
-        /// texture slots the source also has are kept for it to fill.</summary>
+        /// texture slots and arrays the source also has are kept for it to fill.</summary>
         void ClearForCopyOf(Material source)
         {
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
-            m_Buffers.Clear(); m_Arrays.Clear();
+            m_Buffers.Clear();
+            foreach (var id in m_Arrays.Keys)
+                if (!source.m_Arrays.ContainsKey(id)) m_Arrays.Remove(id);
             foreach (var p in m_Textures)
                 if (!source.m_Textures.ContainsKey(p.Key))
                 {
+                    p.Value.Texture = null;
                     (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(p.Value);
                     m_Textures.Remove(p.Key);
                 }

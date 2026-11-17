@@ -35,6 +35,10 @@ namespace UnityEngine
         int m_SplatVersion = -1;
         TerrainData m_SplatData;
         Texture2D m_Holes;
+        /// <summary>The data and its heights version (holes count as heights) the holes map was made
+        /// from: it is made again only when they change.</summary>
+        TerrainData m_HolesData;
+        int m_HolesVersion = -1;
         static readonly HashSet<string> s_Warned = new HashSet<string>();
 
         internal static TerrainRenderer For(Terrain terrain)
@@ -460,6 +464,9 @@ namespace UnityEngine
         Texture2D HolesTexture(TerrainData data)
         {
             int n = data.holesResolution;
+            if (m_Holes != null && m_Holes.width == n && m_HolesData == data && m_HolesVersion == data.m_HeightsVersion) return m_Holes;
+            m_HolesData = data;
+            m_HolesVersion = data.m_HeightsVersion;
             if (m_Holes == null || m_Holes.width != n)
             {
                 if (m_Holes != null) DestroyImmediate(m_Holes);

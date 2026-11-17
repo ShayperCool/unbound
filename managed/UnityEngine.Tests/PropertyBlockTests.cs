@@ -254,6 +254,8 @@ namespace UnityEngine.Tests
             var go = new GameObject("terrain");
             var data = new TerrainData { heightmapResolution = 33 };
             data.terrainLayers = new[] { new TerrainLayer { diffuseTexture = new Texture2D(4, 4) } };
+            // A hole: every material cuts it out with the holes map, made once.
+            data.SetHoles(3, 3, new bool[,] { { false } });
             var terrain = go.AddComponent<Terrain>();
             terrain.terrainData = data;
             var template = new Material { color = Color.red };
@@ -269,6 +271,9 @@ namespace UnityEngine.Tests
             Assert.Equal(Color.green, pass.color);
             // The splat values the terrain sets are set again over the template's.
             Assert.Same(data.terrainLayers[0].diffuseTexture, pass.GetTexture("_Splat0"));
+            var holes = pass.GetTexture("_TerrainHolesTexture");
+            Assert.NotNull(holes);
+            Assert.True(pass.IsKeywordEnabled("_ALPHATEST_ON"));
 
             int version = pass.m_Version;
             renderer.UpdateMaterials(terrain, data);
@@ -283,6 +288,14 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             Assert.Same(pass, renderer.PassesForTest[0]);
+            Assert.Same(holes, pass.GetTexture("_TerrainHolesTexture"));
+
+            // New holes: the map is made again.
+            var pixels = ((Texture2D)holes).GetPixels32();
+            data.SetHoles(4, 4, new bool[,] { { false } });
+            template.color = Color.white;
+            renderer.UpdateMaterials(terrain, data);
+            Assert.NotEqual(pixels, ((Texture2D)renderer.PassesForTest[0].GetTexture("_TerrainHolesTexture")).GetPixels32());
 
             // Another template makes the passes again.
             terrain.materialTemplate = new Material { color = Color.blue };
