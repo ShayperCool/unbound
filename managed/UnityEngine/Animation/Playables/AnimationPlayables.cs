@@ -726,6 +726,21 @@ namespace Unbound.Runtime.Playables
         internal RuntimeAnimatorController Controller;
         internal AnimatorPlayer Player;
         internal PlayableNode Node;
+        AnimatorPlayer m_Detached;
+
+        /// <summary>What the playable's own API reads and sets: the player of the Animator an
+        /// output reaches it through, else a detached one with the controller's state (the Unity
+        /// 6000.0.71f1 Editor answers and warns for a playable no output plays,
+        /// tests/projects/apierrors `playable.*`).</summary>
+        internal AnimatorPlayer State
+        {
+            get
+            {
+                if (EnsurePlayer() is { } player) return player;
+                if (Controller == null || Controller.Graph is not { } graph) return null;
+                return m_Detached ??= AnimatorPlayer.Detached(Controller, graph);
+            }
+        }
 
         internal override bool CanChangeInputs => false;
         internal override bool CanSetWeights => false;
@@ -752,6 +767,8 @@ namespace Unbound.Runtime.Playables
             {
                 Playable = new UnityEngine.Animations.AnimatorControllerPlayable(Node.ToHandle()),
             };
+            if (m_Detached != null && m_Detached.Graph == graph) Player.AdoptFrom(m_Detached);
+            m_Detached = null;
             Player.InstantiateBehaviours();
             return Player;
         }

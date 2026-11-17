@@ -170,6 +170,28 @@ namespace Unbound.Runtime
         internal AnimatorPlayer(Animator animator, RuntimeAnimatorController controller, ControllerGraph graph)
             : this(animator, controller, graph, null, attached: true) { }
 
+        /// <summary>The state of a controller playable that no animation output reaches: its
+        /// parameters, layers and the states it starts in, for its lookups and the values and
+        /// requests set on it, without an Animator, bindings or behaviours. It is never stepped (a
+        /// graph evaluates only what an output reaches); the player made when an output first
+        /// reaches the playable takes over its values (<see cref="AdoptFrom"/>).</summary>
+        internal static AnimatorPlayer Detached(RuntimeAnimatorController controller, ControllerGraph graph) =>
+            new AnimatorPlayer(null, controller, graph, new AnimationBindings(null), attached: false);
+
+        /// <summary>Takes over what was set on a detached player of the same graph: parameter
+        /// values, layer weights and pending Play and CrossFade requests.</summary>
+        internal void AdoptFrom(AnimatorPlayer detached)
+        {
+            Array.Copy(detached.Floats, Floats, Floats.Length);
+            Array.Copy(detached.Ints, Ints, Ints.Length);
+            Array.Copy(detached.Bools, Bools, Bools.Length);
+            for (int i = 0; i < Layers.Length; i++)
+            {
+                Layers[i].Weight = detached.Layers[i].Weight;
+                if (detached.Layers[i].Pending is { } pending) Layers[i].Pending = pending;
+            }
+        }
+
         AnimatorPlayer(Animator animator, RuntimeAnimatorController controller, ControllerGraph graph, AnimationBindings bindings, bool attached)
         {
             Attached = attached;
@@ -193,7 +215,8 @@ namespace Unbound.Runtime
             // Clips may animate this Animator's own parameters: binding them asks the Animator for
             // its player, which is this one from here on.
             if (attached) animator.m_Player = this;
-            BindClips();
+            // A detached player (no Animator) binds nothing.
+            if (animator != null) BindClips();
             m_OverrideVersion = controller.OverrideVersion;
 
             Layers = new LayerRun[graph.Layers.Length];

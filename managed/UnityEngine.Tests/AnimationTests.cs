@@ -1170,6 +1170,54 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(root);
         }
 
+        /// <summary>A controller playable no output plays has its controller's state: lookups answer
+        /// and warn (Unity 6000.0.71f1, tests/projects/apierrors `playable.*`), and what is set on it
+        /// is what the player of the Animator an output then plays it on starts with.</summary>
+        [Fact]
+        public void AControllerPlayableNoOutputPlaysKeepsItsState()
+        {
+            Expect("does not match.");
+            Expect("does not exist.");
+            Expect("Invalid Layer Index");
+            Expect("Animator.GotoState: State could not be found");
+            var file = Load(AnimationFixtures.Locomotion);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var graph = UnityEngine.Playables.PlayableGraph.Create("Unplayed");
+            var root = Hierarchy("Character", "Body");
+            try
+            {
+                var playable = UnityEngine.Animations.AnimatorControllerPlayable.Create(graph, controller);
+                Assert.Equal(3, playable.GetParameterCount());
+                playable.SetBool("Run", true);
+                Assert.True(playable.GetBool("Run"));
+                playable.SetFloat("Run", 1f);
+                playable.SetFloat("NoSuch", 1f);
+                Assert.Equal("", playable.GetLayerName(3));
+                playable.Play("Swim");
+                Assert.Equal(new[]
+                {
+                    "Warning: Parameter type 'Run' does not match.",
+                    "Warning: Parameter 'NoSuch' does not exist.",
+                    "Warning: Invalid Layer Index '3'",
+                    "Warning: Animator.GotoState: State could not be found",
+                    "Warning: Invalid Layer Index '-1'",
+                }, m_Logs);
+                // Played through an output on an Animator, it keeps what was set on it.
+                var animator = root.AddComponent<Animator>();
+                var output = UnityEngine.Animations.AnimationPlayableOutput.Create(graph, "Output", animator);
+                UnityEngine.Playables.PlayableOutputExtensions.SetSourcePlayable(output, playable);
+                graph.Evaluate(0f);
+                Assert.True(playable.GetBool("Run"));
+                Assert.Equal("Base Layer", playable.GetLayerName(0));
+                Assert.Equal(5, m_Logs.Count);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void LayersBlendTreesAndAdditiveLayersCombine()
         {

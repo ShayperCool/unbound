@@ -49,7 +49,7 @@ namespace UnityEngine.Animations
 
         public bool Equals(AnimatorControllerPlayable other) => GetHandle() == other.GetHandle();
 
-        AnimatorPlayer Player => (PlayableGraphData.Get(m_Handle)?.Kind as ControllerKind)?.EnsurePlayer();
+        AnimatorPlayer Player => (PlayableGraphData.Get(m_Handle)?.Kind as ControllerKind)?.State;
 
         // ------------------------------------------------------------------ parameters
 
