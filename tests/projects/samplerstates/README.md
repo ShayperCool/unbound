@@ -86,7 +86,7 @@ buffer), with 24 bits and with `D16_UNorm_S8_UInt` only the left one; `.format` 
 target's `depthStencilFormat` after Create (the latter reads `D24_UNorm_S8_UInt` on both
 devices).
 
-`StencilFaces.<culling>.<draw>` (recorded last): a two-texel target with a stencil buffer gets a
+`StencilFaces.<culling>.<draw>`: a two-texel target with a stencil buffer gets a
 quad over its left texel and the same quad through a mirrored matrix (negative determinant) over
 its right one, with a two-sided stencil state writing 1 for front faces and 255 for back faces,
 then red where the stencil is 1 and green where it is 255; once plain, once with
