@@ -457,7 +457,7 @@ def record_problems(path, release, device):
     for key in ('compute.found', 'saved.found', 'variant.found'):
         if values.get(key) is not True:
             problems.append(f'{key} is not true (fixture)')
-    want = {'context.unityVersion': release, 'context.isBatchMode': True, 'context.graphicsDeviceType': device,
+    want = {'context.unityVersion': release, 'context.isBatchMode': False, 'context.graphicsDeviceType': device,
             'context.renderPipeline': None}
     for key, value in want.items():
         if key not in values or values[key] != value:
@@ -483,7 +483,7 @@ def tree(root):
 
 def editor_result_problems(directory, release):
     """Strict exit 0: no forced stop of any kind (not even the shutdown guard), NVIDIA, logged
-    shutdown, the planned batchmode GPU command."""
+    shutdown, the planned windowed GPU command."""
     path = Path(directory)/'editor-run.json'
     if not path.exists():
         return ['no Editor result (editor-run.json)']
@@ -514,8 +514,8 @@ def command_problems(command, release):
     editor = command[3] if len(command) > 3 else ''
     if not editor.endswith('/Editor/Unity') or f'/{release}/' not in editor:
         problems.append(f'Editor {editor!r} is not release {release}')
-    if '-batchmode' not in command:
-        problems.append('-batchmode is missing')
+    if '-batchmode' in command:
+        problems.append('-batchmode must not be passed')
     for flag in ('-nographics', '-quit'):
         if flag in command:
             problems.append(f'{flag} must not be passed')
@@ -574,8 +574,8 @@ def runner_event_problems(path):
     if names and names[-1] != 'exit':
         problems.append(f'the last runner event is {names[-1]!r}, not exit')
     record = detail.get('record') or ''
-    if 'batchmode=true' not in record:
-        problems.append(f'the runner did not record in batchmode: {record!r}')
+    if 'batchmode=false' not in record:
+        problems.append(f'the runner did not record in windowed mode: {record!r}')
     return problems
 
 

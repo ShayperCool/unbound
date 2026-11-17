@@ -231,7 +231,7 @@ def record_controls(normal, out):
     mutated('probe shader not found', setv('probe.Probe/KwHlsl.found', False), 'probe shader Probe/KwHlsl was not found')
     mutated('wrong release', setv('context.unityVersion', '6000.0.70f1'), 'context.unityVersion')
     mutated('wrong device', setv('context.graphicsDeviceType', 'Direct3D11'), 'context.graphicsDeviceType')
-    mutated('not batchmode', setv('context.isBatchMode', False), 'context.isBatchMode')
+    mutated('batchmode', setv('context.isBatchMode', True), 'context.isBatchMode')
     mutated('render pipeline', setv('context.renderPipeline', 'URP'), 'context.renderPipeline')
     mutated('unscoped error', setv('capture.unscopedLogs', ['Error: boom']), 'unexpected errors outside the probe cases')
     mutated('not a k/v record', lambda rows: full.replace('{"k":"mat.toggle.log"', '{"key":"mat.toggle.log"', 1), 'not a {"k","v"} record')
@@ -299,7 +299,7 @@ def run_controls(normal_dir, out):
     case('launcher exit 1', edit_json('editor-run.json', lambda d, _: d.update(launcher={'exit': 1})), 'launcher exit 1')
     case('-quit passed', command(lambda c: c+['-quit']), '-quit must not be passed')
     case('-nographics passed', command(lambda c: c[:5]+['-nographics']+c[5:]), '-nographics must not be passed')
-    case('no -batchmode', command(lambda c: [a for a in c if a != '-batchmode']), '-batchmode is missing')
+    case('-batchmode passed', command(lambda c: c+['-batchmode']), '-batchmode must not be passed')
     case('no Record entry point', command(lambda c: [a for a in c if a not in ('-executeMethod', 'ProbeRunner.Record')]), 'ProbeRunner.Record is missing')
     case('Editor of another release', command(lambda c: [a.replace(RELEASE, '6000.0.70f1') for a in c]), 'is not release')
     case('no Editor result', lambda d: (d/'editor-run.json').unlink(), 'no Editor result')
@@ -328,7 +328,7 @@ def run_controls(normal_dir, out):
     case('runner left Play before finishing', events(swap), 'runner transitions')
     case('runner sequence gap', events(lambda rows: [r for i, r in enumerate(rows) if i != 1] if len(rows) > 2 else rows), 'not contiguous')
     case('runner probe finished 3', events(lambda rows: [dict(r, detail='3') if r['e'] == 'finished' else r for r in rows]), "finished with '3'")
-    case('runner not batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=true', 'batchmode=false')) if r['e'] == 'record' else r for r in rows]), 'not record in batchmode')
+    case('runner batchmode', events(lambda rows: [dict(r, detail=r['detail'].replace('batchmode=false', 'batchmode=true')) if r['e'] == 'record' else r for r in rows]), 'not record in windowed mode')
 
     def log(text):
         return lambda d: (d/'editor.log').write_text((d/'editor.log').read_text()+text+'\n')
