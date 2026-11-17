@@ -97,6 +97,7 @@ public unsafe class BrgProbe : MonoBehaviour
             // The sorting scenario through an orthographic camera framing the same quads.
             Sorting("sorting_ortho", true, s_OrthographicDepths);
             LightmapArrays();
+            GpuWritten();
         }
         catch (Exception e)
         {
@@ -1063,6 +1064,89 @@ public unsafe class BrgProbe : MonoBehaviour
         };
     }
 
+    /// <summary>The gpu_written scenario's instances and how many of them the kernel colours.</summary>
+    const int GpuCubes = 8, GpuColored = 4;
+    GraphicsBuffer m_GpuBuffer;
+    BatchID m_GpuBatch;
+
+    /// <summary>Instance data a compute shader writes, as Entities Graphics uploads it: a raw
+    /// buffer (given to AddBatch with a window where the device reads constant buffers) holding
+    /// the matrices and a grey colour per cube from SetData, then a kernel
+    /// (Assets/Shaders/Resources/BrgWrite.compute) writes the first four cubes' colours. Records
+    /// each cube's colour at its centre.</summary>
+    void GpuWritten()
+    {
+        const string name = "gpu_written";
+        int n = GpuCubes;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int bytes = (colors + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = LightmapCube(i);
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            int o = colors / 4 + i * 4;
+            data[o] = 0.4f; data[o + 1] = 0.45f; data[o + 2] = 0.5f; data[o + 3] = 1f;
+        }
+        m_GpuBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_GpuBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        m_GpuBatch = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? m_Brg.AddBatch(metadata, m_GpuBuffer.bufferHandle, 0, (uint)bytes)
+            : m_Brg.AddBatch(metadata, m_GpuBuffer.bufferHandle);
+        metadata.Dispose();
+        Row(name + ".batch", m_GpuBatch.value);
+
+        var kernel = Resources.Load<ComputeShader>("BrgWrite");
+        int write = kernel.FindKernel("Write");
+        kernel.SetBuffer(write, "_Data", m_GpuBuffer);
+        kernel.SetInt("_ColorsAt", colors);
+        kernel.SetInt("_Count", GpuColored);
+        kernel.Dispatch(write, 1, 1, 1);
+
+        Scenario(name);
+        RecordViews();
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int i = 0; i < n; i++) Row(name + ".c" + i + ".body", Pixel(LightmapCube(i).GetPosition()));
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+
+        m_Brg.RemoveBatch(m_GpuBatch);
+        m_GpuBuffer.Dispose();
+    }
+
+    /// <summary>The gpu_written scenario's commands: one for its cubes.</summary>
+    void GpuWrittenCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int n = GpuCubes;
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>(), alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(n * sizeof(int), alignment, Allocator.TempJob);
+        commands->instanceSortingPositions = null;
+        commands->instanceSortingPositionFloatCount = 0;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = 1;
+        commands->drawRangeCount = 1;
+        commands->visibleInstanceCount = n;
+        for (int i = 0; i < n; i++) commands->visibleInstances[i] = i;
+        commands->drawCommands[0] = new BatchDrawCommand
+        {
+            visibleOffset = 0, visibleCount = (uint)n, batchID = m_GpuBatch, materialID = m_Lit, meshID = m_Cube,
+            submeshIndex = 0, splitVisibilityMask = 0xff, flags = BatchDrawCommandFlags.None,
+        };
+        commands->drawRanges[0] = new BatchDrawRange
+        {
+            drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = 1,
+            filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff },
+        };
+    }
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -1077,6 +1161,11 @@ public unsafe class BrgProbe : MonoBehaviour
         if (m_Scenario.StartsWith("split_masks", StringComparison.Ordinal))
         {
             SplitMaskCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
+        if (m_Scenario == "gpu_written")
+        {
+            GpuWrittenCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();
         }
         if (m_Scenario == "lightmap_arrays")

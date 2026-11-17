@@ -1,0 +1,16 @@
+// Writes the gpu_written scenario's colours into a BatchRendererGroup batch's buffer: instance i
+// of the first _Count gets a colour of its own at _ColorsAt + 16 i.
+#pragma kernel Write
+
+RWByteAddressBuffer _Data;
+uint _ColorsAt;
+uint _Count;
+
+[numthreads(64, 1, 1)]
+void Write(uint id : SV_DispatchThreadID)
+{
+    if (id >= _Count) return;
+    float t = id / 3.0;
+    float4 color = float4(0.95, 0.35 + 0.2 * t, 0.1 + 0.25 * t, 1.0);
+    _Data.Store4(_ColorsAt + id * 16, asuint(color));
+}
