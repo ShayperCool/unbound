@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/subsystems/run.py gate"
+  ],
+  "summary": "subsystems: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Subsystems/Subsystems.cs",
+    "managed/UnityEngine/XR/XRNoDevice.cs"
+  ]
+}

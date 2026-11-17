@@ -1,0 +1,65 @@
+{"k":"start.descriptors","v":"returns 0:"}
+{"k":"start.integrated_descriptors","v":"returns 0"}
+{"k":"start.subsystems","v":"returns 0:"}
+{"k":"start.integrated_subsystems","v":"returns 0"}
+{"k":"start.list_cleared","v":"returns 0"}
+{"k":"register.descriptor","v":"returns 1:probe.a/ProbeDescriptor"}
+{"k":"register.typed","v":"returns 1:probe.a/ProbeDescriptor"}
+{"k":"register.same_again","v":"returns 1:probe.a/ProbeDescriptor"}
+{"k":"register.same_again.logs","v":"Warning: Registering subsystem descriptor with duplicate ID 'probe.a' - overwriting previous entry."}
+{"k":"register.same_id","v":"returns 1:probe.a/ProbeDescriptor"}
+{"k":"register.same_id.logs","v":"Warning: Registering subsystem descriptor with duplicate ID 'probe.a' - overwriting previous entry."}
+{"k":"register.null_id","v":"returns 2:probe.a/ProbeDescriptor,/ProbeDescriptor"}
+{"k":"register.empty_id","v":"returns 3:probe.a/ProbeDescriptor,/ProbeDescriptor,/ProbeDescriptor"}
+{"k":"register.no_provider","v":"throws System.InvalidOperationException: Invalid descriptor - must supply a valid providerType field!"}
+{"k":"register.wrong_provider","v":"throws System.InvalidOperationException: Can't create provider - providerType 'System.String' is not a subclass of 'ProbeSubsystem+Provider'!"}
+{"k":"register.wrong_override","v":"throws System.InvalidOperationException: Can't create provider - subsystemTypeOverride 'System.String' is not a subclass of 'ProbeSubsystem'!"}
+{"k":"register.null","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"register.descriptor_fields","v":"returns probe.a|ProbeProvider|null"}
+{"k":"create","v":"returns ProbeSubsystem"}
+{"k":"create.calls","v":"Provider.ctor,Provider.TryInitialize,ProbeSubsystem.ctor,OnCreate"}
+{"k":"create.state","v":"returns False|True|ProbeProvider|False"}
+{"k":"create.subsystems","v":"returns 1:ProbeSubsystem-"}
+{"k":"create.again","v":"returns same"}
+{"k":"create.interface","v":"returns same"}
+{"k":"create.typed_list","v":"returns 1"}
+{"k":"run","v":"returns done"}
+{"k":"run.calls","v":"OnStart,Provider.Start"}
+{"k":"run.state","v":"returns True|True"}
+{"k":"run.again","v":"returns done"}
+{"k":"run.subsystems","v":"returns 1:ProbeSubsystem+"}
+{"k":"stop","v":"returns done"}
+{"k":"stop.calls","v":"OnStop,Provider.Stop"}
+{"k":"stop.state","v":"returns False|False"}
+{"k":"stop.again","v":"returns done"}
+{"k":"start_then_destroy.start","v":"returns done"}
+{"k":"start_then_destroy.start.calls","v":"OnStart,Provider.Start"}
+{"k":"destroy","v":"returns done"}
+{"k":"destroy.calls","v":"OnStop,Provider.Stop,OnDestroy,Provider.Destroy"}
+{"k":"destroy.state","v":"returns False|False"}
+{"k":"destroy.subsystems","v":"returns 0:"}
+{"k":"destroy.again","v":"returns done"}
+{"k":"destroy.start","v":"returns done"}
+{"k":"destroy.start.calls","v":"OnStart,Provider.Start"}
+{"k":"recreate","v":"returns ProbeSubsystem"}
+{"k":"recreate.calls","v":"Provider.ctor,Provider.TryInitialize,ProbeSubsystem.ctor,OnCreate"}
+{"k":"recreate.subsystems","v":"returns 1:ProbeSubsystem-"}
+{"k":"fail.create","v":"returns null"}
+{"k":"fail.create.calls","v":"Provider.ctor,Provider.TryInitialize"}
+{"k":"fail.subsystems","v":"returns 1:ProbeSubsystem-"}
+{"k":"fail.create_again","v":"returns ProbeSubsystem"}
+{"k":"fail.create_again.calls","v":"Provider.ctor,Provider.TryInitialize,ProbeSubsystem.ctor,OnCreate"}
+{"k":"derived.create","v":"returns DerivedProbeSubsystem"}
+{"k":"derived.create.calls","v":"Provider.ctor,Provider.TryInitialize,DerivedProbeSubsystem.ctor,OnCreate"}
+{"k":"derived.subsystems","v":"returns 3:ProbeSubsystem-,ProbeSubsystem-,DerivedProbeSubsystem-"}
+{"k":"proxy.create","v":"returns ProbeProvider"}
+{"k":"proxy.create.calls","v":"Provider.ctor,Provider.TryInitialize"}
+{"k":"proxy.state","v":"returns False|False"}
+{"k":"proxy.run","v":"returns done"}
+{"k":"proxy.run.state","v":"returns True|True"}
+{"k":"proxy.stop","v":"returns done"}
+{"k":"proxy.subsystems","v":"returns 3:ProbeSubsystem-,ProbeSubsystem-,DerivedProbeSubsystem-"}
+{"k":"descriptors.end","v":"returns 6:probe.a/ProbeDescriptor,/ProbeDescriptor,/ProbeDescriptor,probe.fail/ProbeDescriptor,probe.derived/ProbeDescriptor,probe.proxy/ProbeDescriptor"}
+{"k":"end.subsystems","v":"returns 3:ProbeSubsystem-,ProbeSubsystem-,DerivedProbeSubsystem-"}
+{"k":"end.reload_events","v":"returns 0,0"}
+{"k":"complete","v":true}
