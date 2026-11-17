@@ -71,6 +71,31 @@ namespace UnityEngine.Tests
             Assert.Equal(UsageHints.MaskContainer | UsageHints.DynamicTransform, p.b.usageHints);
         }
 
+        // Image values switch as other discrete values (the probe measures textures, sprites and
+        // none): a render texture to a vector image with ease-out switches before the halfway time,
+        // without a usage hint.
+        [Fact]
+        public void ImageKindsSwitchAtHalfTheEasedProgress()
+        {
+            using var p = new ClockPanel();
+            var target = new RenderTexture(4, 4, 0) { name = "rt" };
+            var vector = ScriptableObject.CreateInstance<VectorImage>();
+            vector.name = "vector";
+            p.a.style.backgroundImage = Background.FromRenderTexture(target);
+            Linear(p.a, "background-image", EasingMode.EaseOut);
+            var runs = Runs(p.a);
+            p.Tick(0);
+            p.a.style.backgroundImage = Background.FromVectorImage(vector);
+            p.Tick(0);
+            p.Tick(250);
+            Assert.Same(target, p.a.resolvedStyle.backgroundImage.renderTexture);
+            p.Tick(400);
+            Assert.Same(vector, p.a.resolvedStyle.backgroundImage.vectorImage);
+            Assert.Null(p.a.resolvedStyle.backgroundImage.renderTexture);
+            Assert.Equal(new[] { "background-image" }, runs);
+            Assert.Equal(UsageHints.None, p.a.usageHints);
+        }
+
         // A discrete value switches when the eased progress reaches one half: with ease-in that is
         // after the halfway time.
         [Fact]
