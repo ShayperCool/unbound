@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/stpmotion/run.py gate"
+  ],
+  "summary": "stpmotion: .*",
+  "engine_paths": [
+    "crates/unbound-shaders/src/compute.rs",
+    "crates/unbound-shaders/src/samplers.rs",
+    "crates/unbound-app/src/render/executor/compute.rs"
+  ]
+}

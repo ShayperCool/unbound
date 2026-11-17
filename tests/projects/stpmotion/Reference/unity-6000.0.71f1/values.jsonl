@@ -1,0 +1,17 @@
+{"k":"stp_static.frame","v":25}
+{"k":"stp_pan.frame","v":50}
+{"k":"stp_turn.frame","v":75}
+{"k":"stp_pan_08.frame","v":100}
+{"k":"linear_pan.frame","v":125}
+{"k":"stp_pan_far.frame","v":150}
+{"k":"stp_pan_prime.frame","v":175}
+{"k":"stp_pan_noise.frame","v":200}
+{"k":"stp_static_noise.frame","v":225}
+{"k":"stp_turn_fast.frame","v":250}
+{"k":"stp_turn_fast_noise.frame","v":275}
+{"k":"stp_pan_fast.frame","v":300}
+{"k":"stp_pan_offset.frame","v":325}
+{"k":"stp_static_offset.frame","v":350}
+{"k":"stp_turn_fast_720.frame","v":375}
+{"k":"stp_turn_fast_noise_720.frame","v":400}
+{"k":"complete","v":true}

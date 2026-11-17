@@ -1,0 +1,98 @@
+{
+ "linear_pan.png": {
+  "mean": 0.001,
+  "worst": 4,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_pan.png": {
+  "mean": 0.0006,
+  "worst": 1,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_pan_08.png": {
+  "mean": 0.0031,
+  "worst": 31,
+  "over8": 4,
+  "reason": "Two 2x2 clusters of pixels at one post's edge differ (up to 31/255); every other pixel is the Editor's within rounding. The cause is not resolved; the same spot differs in stp_pan_noise, which shares the camera path. NVIDIA driver, OpenGL Core only."
+ },
+ "stp_pan_far.png": {
+  "mean": 0.0006,
+  "worst": 1,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_pan_fast.png": {
+  "mean": 0.0056,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_pan_noise.png": {
+  "mean": 0.0031,
+  "worst": 20,
+  "over8": 2,
+  "reason": "Two pixels at one post's edge differ (up to 20/255), at the spot stp_pan_08 differs (the same camera path); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
+ },
+ "stp_pan_offset.png": {
+  "mean": 0.0162,
+  "worst": 59,
+  "over8": 4,
+  "reason": "Four pixels around one post's corner differ (up to 59/255); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
+ },
+ "stp_pan_prime.png": {
+  "mean": 0.0006,
+  "worst": 1,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_static.png": {
+  "mean": 0.0008,
+  "worst": 1,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_static_noise.png": {
+  "mean": 0.0028,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_static_offset.png": {
+  "mean": 0.0129,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_turn.png": {
+  "mean": 0.0006,
+  "worst": 1,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_turn_fast.png": {
+  "mean": 0.0013,
+  "worst": 3,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_turn_fast_720.png": {
+  "mean": 0.0011,
+  "worst": 3,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_turn_fast_noise.png": {
+  "mean": 0.0039,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_turn_fast_noise_720.png": {
+  "mean": 0.0034,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ }
+}
