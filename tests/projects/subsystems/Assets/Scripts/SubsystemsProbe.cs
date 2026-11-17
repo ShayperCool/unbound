@@ -148,10 +148,10 @@ public class SubsystemsProbe : MonoBehaviour
         Try("create.again", () => { var again = s_Descriptor.Create(); return ReferenceEquals(again, first) ? "same" : again?.GetType().Name; });
         Try("create.interface", () => { var again = ((ISubsystemDescriptor)s_Descriptor).Create(); return ReferenceEquals(again, first) ? "same" : again?.GetType().Name; });
         Try("create.typed_list", () => { var list = new List<ProbeSubsystem>(); SubsystemManager.GetSubsystems(list); return list.Count; });
-        Do("start", () => first.Start());
-        Try("start.state", () => first.running + "|" + first.GetProvider().running);
-        Do("start.again", () => first.Start());
-        Try("start.subsystems", Subsystems);
+        Do("run", () => first.Start());
+        Try("run.state", () => first.running + "|" + first.GetProvider().running);
+        Do("run.again", () => first.Start());
+        Try("run.subsystems", Subsystems);
         Do("stop", () => first.Stop());
         Try("stop.state", () => first.running + "|" + first.GetProvider().running);
         Do("stop.again", () => first.Stop());
