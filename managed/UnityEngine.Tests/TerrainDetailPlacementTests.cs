@@ -512,6 +512,58 @@ namespace UnityEngine.Tests
             for (int x = 24; x < 32; x++) Assert.Equal(0, level0[x].a);
         }
 
+        /// <summary>The detail atlas holds a texture for each prototype drawn without instancing: a
+        /// mesh's material texture, or white (4 × 4) for a mesh whose material has none and for a
+        /// refused prototype; instanced prototypes take no place. Packed as Texture2D.PackTextures
+        /// packs them: a 16 × 32 grass texture and white make a 32 × 32 atlas with the white at
+        /// (16, 0) (tests/projects/grass).</summary>
+        [Fact]
+        public void TheDetailAtlasHoldsMeshTexturesAndWhite()
+        {
+            var blade = Own(new Texture2D(16, 32, TextureFormat.RGBA32, true));
+            var checker = Own(new Texture2D(8, 8, TextureFormat.RGBA32, true));
+            GameObject MeshPrefab(Texture2D texture)
+            {
+                var mesh = Own(new Mesh());
+                mesh.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+                mesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.up };
+                mesh.triangles = new[] { 0, 1, 2 };
+                var go = Own(new GameObject("mesh detail"));
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var material = Own(new Material(Shader.Create("Standard", 2000)));
+                if (texture != null) material.mainTexture = texture;
+                go.AddComponent<MeshRenderer>().sharedMaterial = material;
+                return go;
+            }
+            var plain = MeshPrefab(null);
+            var prototypes = new[]
+            {
+                new DetailPrototype { prototypeTexture = blade, renderMode = DetailRenderMode.Grass },
+                new DetailPrototype { prototype = plain, usePrototypeMesh = true, renderMode = DetailRenderMode.VertexLit },
+                new DetailPrototype { prototype = MeshPrefab(checker), usePrototypeMesh = true, renderMode = DetailRenderMode.Grass },
+                new DetailPrototype { prototype = plain, usePrototypeMesh = true, useInstancing = true, renderMode = DetailRenderMode.VertexLit },
+            };
+            var data = Data(DetailScatterMode.InstanceCountMode, prototypes);
+            var go = Own(new GameObject("atlas places"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            var places = terrain.Renderer.DetailPlacesForTest(data.detailPrototypes);
+            var atlas = terrain.Renderer.DetailAtlasForTest;
+            // Area 512 + 16 + 64: a 32 × 32 atlas; the blade at the origin.
+            Assert.Equal((32, 32), (atlas.width, atlas.height));
+            Assert.Equal(new Rect(0f, 0f, 0.5f, 1f), places[0].rect);
+            Assert.False(places[0].meshTexture);
+            Assert.False(places[1].meshTexture);
+            Assert.Equal(4f, places[1].rect.width * 32f, 4);
+            Assert.True(places[2].meshTexture);
+            Assert.Equal(8f, places[2].rect.width * 32f, 4);
+            Assert.Equal(default, places[3].rect);
+            var white = atlas.GetPixel(Mathf.FloorToInt(places[1].rect.center.x * 32f), Mathf.FloorToInt(places[1].rect.center.y * 32f));
+            Assert.Equal(Color.white, white);
+        }
+
         /// <summary>A mesh in the Grass render mode takes the terrain's normal at every vertex, its
         /// faces lit alike (tests/projects/grass Refusals); in the VertexLit mode it keeps its own
         /// normals, turned with the instance.</summary>
