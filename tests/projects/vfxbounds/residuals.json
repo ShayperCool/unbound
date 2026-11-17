@@ -1,0 +1,13 @@
+{
+ "The Editor runs the effects of one instanced graph as a batch, and its update kernel reduces the particles' boxes over thread groups that span the batch's effects where the system kills no particle (its effects' particles are packed one after the other): the first effect of a group gets the box of every particle in it, each in its own effect's space, and the others none. `shared` and `shared second` are two such effects in one thread group: the Editor gives `shared` the box of both effects' particles (at frames 4 and 10 that is its own box) and `shared second` the box of none. Unbound gives each effect the box of its own particles. Follow-up: reproduce the batch's packing": [
+  "sim/shared/f030",
+  "sim/shared second/f004",
+  "sim/shared second/f010",
+  "sim/shared second/f030"
+ ],
+ "A system in world space of an effect that is turned: the update kernel takes each particle into the effect's space by a matrix product whose terms cancel (the effect stands at x = 1300), and the product's last places depend on how the shader compiler orders and fuses its multiplications: the Editor's OpenGL program and Unbound's differ by up to 6e-5 in the box (the matrices given to the kernel are the same: `matrix/world turned/*`; the same system on an effect that is not turned, `world`, is exact)": [
+  "sim/world turned/f004",
+  "sim/world turned/f010",
+  "sim/world turned/f030"
+ ]
+}
