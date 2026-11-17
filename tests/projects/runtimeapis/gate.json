@@ -21,6 +21,8 @@
     "managed/UnityEngine/Runtime/ScriptingRuntime.cs",
     "managed/Unbound.Host/Game.cs",
     "crates/unbound-runtime/src/config.rs",
-    "managed/UnityEngine/Graphics/Procedural.cs"
+    "managed/UnityEngine/Graphics/Procedural.cs",
+    "managed/UnityEngine/Graphics/Srp/DeviceSettings.cs",
+    "managed/UnityEngine/Graphics/Srp/Keywords.cs"
   ]
 }
