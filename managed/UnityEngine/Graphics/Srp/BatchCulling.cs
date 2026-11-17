@@ -96,14 +96,17 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>A draw item's draw command: its output and index, and its header.</summary>
+        /// <summary>The kind of a draw item's command: which of the output's command arrays it is in
+        /// (BatchDrawCommandType).</summary>
+        internal enum CommandKind : byte { Direct, Indirect, Procedural, ProceduralIndirect }
+
+        /// <summary>A draw item's draw command: its output, kind and index, and its header.</summary>
         internal struct DrawRef
         {
             internal Output Output;
             internal int Command;
             internal Header Header;
-            /// <summary>An indirect draw command (of the output's indirect commands).</summary>
-            internal bool Indirect;
+            internal CommandKind Kind;
             /// <summary>The one visible instance (from the command's first) a draw of a command
             /// with sorting positions draws, -1 for the command's whole visible range.</summary>
             internal int Instance;
@@ -345,8 +348,9 @@ namespace Unbound.Runtime
         internal static uint s_Warned;
 
         // Unsupported parts of draw commands (bits of s_Warned).
-        const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2,
-            UnsupportedCrossFadeKeyword = 3, UnsupportedMissingArrays = 4, UnsupportedSortingPosition = 5, UnsupportedSplit = 6;
+        const int UnsupportedIndirectTopology = 0, UnsupportedQuads = 1, UnsupportedIndexBuffer = 2,
+            UnsupportedCrossFadeKeyword = 3, UnsupportedMissingArrays = 4, UnsupportedSortingPosition = 5, UnsupportedSplit = 6,
+            UnsupportedVisibilityWindow = 7;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -354,14 +358,25 @@ namespace Unbound.Runtime
 
         static readonly string[] s_Unsupported =
         {
-            "BatchRendererGroup indirect draw commands of a topology other than triangles are not supported yet; they are not drawn.",
-            "BatchRendererGroup procedural draw commands are not supported yet; they are not drawn.",
-            "BatchRendererGroup procedural indirect draw commands are not supported yet; they are not drawn.",
+            "BatchRendererGroup indirect draw commands of a mesh read as a line strip or quads are not supported yet; they are not drawn.",
+            "BatchRendererGroup procedural draw commands of quads are not supported on this graphics device yet; they are not drawn.",
+            "a BatchRendererGroup procedural draw command's index buffer is not a live index buffer, or its byte offset is not a multiple of its index size; it is not drawn.",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
             "a shadow caster list's split is not one of the six a BatchRendererGroup splitVisibilityMask covers; its commands are drawn whatever their mask.",
+            "a BatchRendererGroup indirect draw command's visible instances start past the 16 KB a constant buffer window reads from the buffer's start; it is not drawn.",
         };
+
+        /// <summary>The visible instance indices an indirect command's constant buffer reads
+        /// (core's UnityDOTSInstancing.hlsl: <c>unity_DOTSInstancing_IndirectInstanceVisibilityRaw[1024]</c>,
+        /// four indices per float4).</summary>
+        const uint IndirectVisibilityElements = 4096;
+
+        /// <summary>The Editor's error for an indirect command with a visible instance buffer window
+        /// where batches are raw buffers, by the window (kept: the message is logged again for
+        /// every list that reads the command, as the Editor's).</summary>
+        static readonly Dictionary<(uint, uint), string> s_RawWindowErrors = new Dictionary<(uint, uint), string>();
 
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
         internal static readonly HashSet<(long, long, int, uint, uint, uint)> s_InvalidIds = new HashSet<(long, long, int, uint, uint, uint)>();
@@ -446,56 +461,233 @@ namespace Unbound.Runtime
                     if ((filtering.layerMask & (1 << filter.layer)) == 0) continue;
                     if ((filtering.renderingLayerMask & filter.renderingLayerMask) == 0) continue;
                     if (filtering.excludeMotionVectorObjects && filter.motionMode == MotionVectorGenerationMode.Object) continue;
-                    if (range.drawCommandsType == BatchDrawCommandType.Indirect)
+                    switch (range.drawCommandsType)
                     {
-                        CollectIndirect(camera, output, ref d, range, filter, main, shadows ? splitBit : (ushort)0, into, ref sequence);
-                        continue;
-                    }
-                    if (range.drawCommandsType != BatchDrawCommandType.Direct)
-                    {
-                        WarnOnce(range.drawCommandsType == BatchDrawCommandType.Procedural ? UnsupportedProcedural : UnsupportedProceduralIndirect);
-                        continue;
-                    }
-                    long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.drawCommandCount);
-                    for (long c = range.drawCommandsBegin; c < end; c++)
-                    {
-                        var command = d.drawCommands[c];
-                        var group = output.Group;
-                        var batch = group.GetBatch(command.batchID);
-                        var mesh = group.GetRegisteredMesh(command.meshID);
-                        var material = group.GetRegisteredMaterial(command.materialID);
-                        if (batch == null || mesh == null || material == null)
-                        {
-                            LogInvalidId(c, c - range.drawCommandsBegin, r, command.materialID, material, command.meshID, mesh, command.batchID);
-                            continue;
-                        }
-                        if (command.visibleCount == 0) continue;
-                        if (shadows && splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
-                        if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
-                        var item = Item(output, (int)c, false, mesh, command.submeshIndex, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
-                        if ((command.flags & BatchDrawCommandFlags.HasSortingPosition) == 0 || camera == null)
-                        {
-                            item.Distance = ApproximateDistance(command.sortingPosition);
-                            into.Add(item);
-                            continue;
-                        }
-                        // Each instance is drawn and sorted on its own, at its sorting position.
-                        for (int k = 0; k < command.visibleCount; k++)
-                        {
-                            var instance = item;
-                            instance.Sequence = k == 0 ? item.Sequence : sequence++;
-                            instance.Dots = item.Dots.Value with { Instance = k };
-                            instance.Distance = SortingDistance(camera, ref d, command.sortingPosition + 3L * k, command.sortingPosition);
-                            into.Add(instance);
-                        }
+                        case BatchDrawCommandType.Direct:
+                            CollectDirect(camera, output, ref d, range, r, filter, main, splitBit, into, ref sequence);
+                            break;
+                        case BatchDrawCommandType.Indirect:
+                            CollectIndirect(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
+                            break;
+                        case BatchDrawCommandType.Procedural:
+                            CollectProcedural(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
+                            break;
+                        case BatchDrawCommandType.ProceduralIndirect:
+                            CollectProceduralIndirect(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
+                            break;
                     }
                 }
             }
         }
 
-        /// <summary>A range's indirect commands: each draws its mesh's indices with the counts its
-        /// arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances' batch
-        /// indices read from its visible instance buffer from its visible offset on.</summary>
+        /// <summary>A range's direct commands: each draws its mesh's submesh for its visible
+        /// instances. A shadow split's list (<paramref name="splitBit"/> set) draws the commands
+        /// visible in the split.</summary>
+        static void CollectDirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, int r, in BatchFilterSettings filter,
+            Light main, ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.drawCommandCount);
+            for (long c = range.drawCommandsBegin; c < end; c++)
+            {
+                var command = d.drawCommands[c];
+                var group = output.Group;
+                var batch = group.GetBatch(command.batchID);
+                var mesh = group.GetRegisteredMesh(command.meshID);
+                var material = group.GetRegisteredMaterial(command.materialID);
+                if (batch == null || mesh == null || material == null)
+                {
+                    LogInvalidId(c, c - range.drawCommandsBegin, r, command.materialID, material, command.meshID, mesh, command.batchID);
+                    continue;
+                }
+                if (command.visibleCount == 0) continue;
+                if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
+                if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
+                var item = Item(output, (int)c, CommandKind.Direct, mesh, command.submeshIndex, mesh.bounds, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
+                AddSorted(camera, ref d, item, command.flags, command.sortingPosition, command.visibleCount, into, ref sequence);
+            }
+        }
+
+        /// <summary>A direct or procedural command's item: sorted by its sortingPosition, or, with
+        /// sorting positions and a camera, as one item per visible instance, each at its own
+        /// position.</summary>
+        static void AddSorted(FrameBuilder.CameraContext camera, ref BatchCullingOutputDrawCommands d, in FrameBuilder.DrawItem item, BatchDrawCommandFlags flags, int sortingPosition,
+            uint visibleCount, List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            if ((flags & BatchDrawCommandFlags.HasSortingPosition) == 0 || camera == null)
+            {
+                var sorted = item;
+                sorted.Distance = ApproximateDistance(sortingPosition);
+                into.Add(sorted);
+                return;
+            }
+            // Each instance is drawn and sorted on its own, at its sorting position.
+            for (int k = 0; k < visibleCount; k++)
+            {
+                var instance = item;
+                instance.Sequence = k == 0 ? item.Sequence : sequence++;
+                instance.Dots = item.Dots.Value with { Instance = k };
+                instance.Distance = SortingDistance(camera, ref d, sortingPosition + 3L * k, sortingPosition);
+                into.Add(instance);
+            }
+        }
+
+        /// <summary>A range's procedural commands (BatchDrawCommandProcedural): each draws its
+        /// element count of vertex ids, or of its index buffer's indices from its byte offset plus
+        /// its base vertex, as its topology, for its visible instances, with no mesh (the vertex
+        /// program builds its vertices; their attributes read zero). A non-indexed command's base
+        /// vertex is not a first vertex: its ids start at 0 (measured: tests/projects/brg
+        /// procedural.c1, as procedural.c0).</summary>
+        static void CollectProcedural(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter,
+            Light main, ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            if (range.drawCommandsCount > 0 && d.proceduralDrawCommands == null)
+            {
+                WarnOnce(UnsupportedMissingArrays);
+                return;
+            }
+            long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.proceduralDrawCommandCount);
+            for (long c = range.drawCommandsBegin; c < end; c++)
+            {
+                var command = d.proceduralDrawCommands[c];
+                var group = output.Group;
+                var batch = group.GetBatch(command.batchID);
+                var material = group.GetRegisteredMaterial(command.materialID);
+                // An unknown batch or material is skipped without the invalid-ID error, which
+                // names a mesh (unmeasured for procedural commands).
+                if (batch == null || material == null) continue;
+                if (command.visibleCount == 0 || command.elementCount == 0) continue;
+                if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
+                if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
+                if (!ProceduralShape(command.topology, command.indexBufferHandle, command.indexOffsetBytes, command.elementCount, false, out var mesh, out _)) continue;
+                var item = Item(output, (int)c, CommandKind.Procedural, mesh, 0, default, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
+                AddSorted(camera, ref d, item, command.flags, command.sortingPosition, command.visibleCount, into, ref sequence);
+            }
+        }
+
+        /// <summary>
+        /// The stand-in mesh a procedural command draws and the indices it reads: vertex ids from
+        /// 0 (<see cref="ProceduralMeshes"/>; an indirect command's count from its arguments), or
+        /// its index buffer's indices over the 65536 zeroed vertices of <see cref="IndexedDraws"/>
+        /// (a direct command's from its byte offset, at most its element count and the buffer's;
+        /// an indirect command's first index and count from its arguments). Quads, which the
+        /// devices have no primitive for, are drawn as the device draws them
+        /// (<see cref="GraphicsDeviceProfile.ProceduralQuads"/>). False, warned once, when Unbound
+        /// cannot draw it: quads on a device where they are unmeasured, an index buffer that is not
+        /// a live index buffer or a byte offset that does not start an index, index sizes and
+        /// topologies <see cref="IndexedDraws"/> does not draw.
+        /// </summary>
+        static bool ProceduralShape(MeshTopology topology, GraphicsBufferHandle indexBuffer, uint indexOffsetBytes, uint count, bool indirect, out Mesh mesh, out DrawSetup setup)
+        {
+            mesh = null;
+            setup = default;
+            if (topology == MeshTopology.Quads)
+            {
+                if (GraphicsDeviceProfile.Current.ProceduralQuads is not MeshTopology quads)
+                {
+                    WarnOnce(UnsupportedQuads);
+                    return false;
+                }
+                topology = quads;
+            }
+            if (indexBuffer.value == 0)
+            {
+                mesh = ProceduralMeshes.Get(topology, indirect ? ProceduralMeshes.IndirectVertices : (int)Math.Min(count, int.MaxValue));
+                return true;
+            }
+            var indices = GpuBufferStorage.Find(indexBuffer.value);
+            if (indices == null || indices.Released || !indices.Has(GraphicsBuffer.Target.Index) || indexOffsetBytes % (uint)indices.Stride != 0)
+            {
+                WarnOnce(UnsupportedIndexBuffer);
+                return false;
+            }
+            if (!IndexedDraws.Supported(indices.Stride, topology, indirect ? "BatchDrawCommandProceduralIndirect" : "BatchDrawCommandProcedural")) return false;
+            mesh = IndexedDraws.StandIn(topology);
+            if (indirect)
+            {
+                setup = IndexedDraws.Indirect(indices.Handle, indices.Stride, indices.Count, 0, 0);
+                return true;
+            }
+            long first = indexOffsetBytes / indices.Stride;
+            // The Editor draws a count past the buffer's end without an error (as
+            // IndexedDraws.Count); Unbound reads the buffer's.
+            long drawn = Math.Min(count, indices.Count - first);
+            if (drawn <= 0) return false;
+            setup = IndexedDraws.Direct(indices.Handle, indices.Stride, (int)first, (int)drawn, 0);
+            return true;
+        }
+
+        /// <summary>Whether an indirect command's visible instance buffer window is refused, with
+        /// the Editor's error: where batches are raw buffers, a window offset or size other than
+        /// zero (measured on Vulkan: tests/projects/brg procedural, each indirect command with a
+        /// window is logged for every list that reads it and is not drawn).</summary>
+        static bool RefusedWindow(uint offset, uint size)
+        {
+            if ((offset == 0 && size == 0) || BatchRendererGroup.BufferTarget != BatchBufferTarget.RawBuffer) return false;
+            if (!s_RawWindowErrors.TryGetValue((offset, size), out var message))
+                s_RawWindowErrors[(offset, size)] = message = "BatchRendererGroup had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. "
+                    + $"Pass zero for both visibleInstancesBufferWindowOffset and visibleInstancesBufferWindowSizeBytes in RawBuffer mode. (got {offset}, {size})";
+            Debug.LogError(message);
+            return true;
+        }
+
+        /// <summary>An indirect command's packed visible offset (<see cref="IndirectVisibleOffsetEnabled"/>
+        /// set): its visible offset in the window of its visible instance buffer. A constant buffer
+        /// is read from the buffer's start, so the window's offset is counted in (measured on
+        /// OpenGL Core: tests/projects/brg procedural.c16, a window at byte 256 reads the indices
+        /// there); false, warned once, when that passes what the constant buffer reads.</summary>
+        static bool PackedVisibleOffset(uint visibleOffset, uint windowOffset, out uint packed)
+        {
+            uint start = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer ? visibleOffset + windowOffset / 4 : visibleOffset;
+            packed = start | IndirectVisibleOffsetEnabled;
+            if (BatchRendererGroup.BufferTarget != BatchBufferTarget.ConstantBuffer || start < IndirectVisibilityElements) return true;
+            WarnOnce(UnsupportedVisibilityWindow);
+            return false;
+        }
+
+        /// <summary>The sorting distance of an indirect command, whose instance count is on the GPU:
+        /// with sorting positions and a camera, its first instance's (unmeasured for indirect
+        /// commands), else its sortingPosition's.</summary>
+        static float IndirectDistance(FrameBuilder.CameraContext camera, ref BatchCullingOutputDrawCommands d, BatchDrawCommandFlags flags, int sortingPosition) =>
+            (flags & BatchDrawCommandFlags.HasSortingPosition) != 0 && camera != null
+                ? SortingDistance(camera, ref d, sortingPosition, sortingPosition)
+                : ApproximateDistance(sortingPosition);
+
+        /// <summary>A range's procedural indirect commands (BatchDrawCommandProceduralIndirect):
+        /// each draws, as its topology, the vertex ids or its index buffer's indices its arguments
+        /// buffer counts (IndirectDrawArgs, or IndirectDrawIndexedArgs with an index buffer), the
+        /// instances' batch indices read from its visible instance buffer as an indirect
+        /// command's.</summary>
+        static void CollectProceduralIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter,
+            Light main, ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
+        {
+            if (range.drawCommandsCount > 0 && d.proceduralIndirectDrawCommands == null)
+            {
+                WarnOnce(UnsupportedMissingArrays);
+                return;
+            }
+            long end = Math.Min((long)range.drawCommandsBegin + range.drawCommandsCount, d.proceduralIndirectDrawCommandCount);
+            for (long c = range.drawCommandsBegin; c < end; c++)
+            {
+                var command = d.proceduralIndirectDrawCommands[c];
+                var group = output.Group;
+                var batch = group.GetBatch(command.batchID);
+                var material = group.GetRegisteredMaterial(command.materialID);
+                if (batch == null || material == null) continue;
+                if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
+                if (RefusedWindow(command.visibleInstancesBufferWindowOffset, command.visibleInstancesBufferWindowSizeBytes)) continue;
+                if (!PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out _)) continue;
+                if (!ProceduralShape(command.topology, command.indexBufferHandle, 0, 0, true, out var mesh, out _)) continue;
+                var item = Item(output, (int)c, CommandKind.ProceduralIndirect, mesh, 0, default, material, command.flags, command.lightmapIndex,
+                    batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence);
+                item.Distance = IndirectDistance(camera, ref d, command.flags, command.sortingPosition);
+                into.Add(item);
+            }
+        }
+
+        /// <summary>A range's indirect commands: each draws its mesh's indices, read as its
+        /// topology (triangles, lines or points: measured, tests/projects/brg procedural), with the
+        /// counts its arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances'
+        /// batch indices read from its visible instance buffer from its visible offset on.</summary>
         static void CollectIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
             ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
@@ -515,23 +707,30 @@ namespace Unbound.Runtime
                 if (batch == null || mesh == null || material == null) continue;
                 // A shadow split's list (splitBit set) draws the commands visible in the split.
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
-                if (command.topology != MeshTopology.Triangles)
+                if (IndirectTopology(command.topology) is null)
                 {
                     WarnOnce(UnsupportedIndirectTopology);
                     continue;
                 }
+                if (RefusedWindow(command.visibleInstancesBufferWindowOffset, command.visibleInstancesBufferWindowSizeBytes)) continue;
+                if (!PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out _)) continue;
                 // The arguments give the indices (the first one and the count): the mesh's whole
                 // index buffer is read.
-                var item = Item(output, (int)c, true, mesh, 0, material, command.flags, command.lightmapIndex,
+                var item = Item(output, (int)c, CommandKind.Indirect, mesh, 0, mesh.bounds, material, command.flags, command.lightmapIndex,
                     batch.WithVisibility(command.visibleInstancesBufferHandle), filter, main, ref sequence);
-                // The instance count is on the GPU: a command with sorting positions sorts at its
-                // first instance's (unmeasured for indirect commands).
-                item.Distance = (command.flags & BatchDrawCommandFlags.HasSortingPosition) != 0 && camera != null
-                    ? SortingDistance(camera, ref d, command.sortingPosition, command.sortingPosition)
-                    : ApproximateDistance(command.sortingPosition);
+                item.Distance = IndirectDistance(camera, ref d, command.flags, command.sortingPosition);
                 into.Add(item);
             }
         }
+
+        /// <summary>What an indirect command's mesh indices are read as (<see cref="GfxStream.DrawShape"/>,
+        /// whatever the submesh's own topology): triangles, lines or points; null for the
+        /// topologies not drawn yet (a line strip and quads, unmeasured).</summary>
+        static MeshTopology? IndirectTopology(MeshTopology topology) => topology switch
+        {
+            MeshTopology.Triangles or MeshTopology.Lines or MeshTopology.Points => topology,
+            _ => null,
+        };
 
         /// <summary>The sorting distance of a command without sorting positions: its
         /// sortingPosition cast to a float is "an approximate depth" (the Scripting API's
@@ -558,9 +757,10 @@ namespace Unbound.Runtime
             return FrameBuilder.Distance(camera, new Vector3(p[0], p[1], p[2]));
         }
 
-        /// <summary>A command's draw item: its mesh, submesh and material at the default sorting
-        /// layer, its batch's properties and its header.</summary>
-        static FrameBuilder.DrawItem Item(Output output, int command, bool indirect, Mesh mesh, int submesh, Material material, BatchDrawCommandFlags commandFlags,
+        /// <summary>A command's draw item: its mesh (a procedural command's stand-in), submesh and
+        /// material at the default sorting layer, its batch's properties and its header, whose
+        /// mesh bounds are <paramref name="bounds"/> (a procedural command's: none).</summary>
+        static FrameBuilder.DrawItem Item(Output output, int command, CommandKind kind, Mesh mesh, int submesh, in Bounds bounds, Material material, BatchDrawCommandFlags commandFlags,
             ushort lightmapIndex, Dictionary<int, object> properties, in BatchFilterSettings filter, Light main, ref long sequence)
         {
             uint motion = filter.motionMode switch
@@ -581,7 +781,6 @@ namespace Unbound.Runtime
             int lightmap = legacy && BakedLighting.IsLightmapIndex(lightmapIndex) ? lightmapIndex : -1;
             bool lightmapped = lightmap >= 0 || (commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0;
             if ((commandFlags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
-            var bounds = mesh.bounds;
             var header = new Header
             {
                 RenderingLayer = filter.renderingLayerMask,
@@ -605,37 +804,83 @@ namespace Unbound.Runtime
                 Bounds = group.m_GlobalBounds ?? default,
                 CullBounds = group.m_GlobalBounds ?? default,
                 Layer = filter.layer,
-                Dots = new DrawRef { Output = output, Command = command, Header = header, Indirect = indirect, Instance = -1 },
+                Dots = new DrawRef { Output = output, Command = command, Header = header, Kind = kind, Instance = -1 },
             };
         }
 
-        /// <summary>A draw command's draws: its visible instances in draws of at most
-        /// <see cref="MaxInstancesPerDraw"/>, each with its batch's window (a sorted instance's
-        /// item draws that instance alone).</summary>
+        /// <summary>A draw command's draws: a direct or procedural command's visible instances in
+        /// draws of at most <see cref="MaxInstancesPerDraw"/>, each with its batch's window (a sorted
+        /// instance's item draws that instance alone); an indirect command's one draw, its counts
+        /// from its arguments buffer.</summary>
         internal static void Draw(in FrameBuilder.DrawItem item, DrawRef dots, ulong material, int pass, Dictionary<int, object> properties)
         {
             ref var d = ref dots.Output.Drawn;
-            if (dots.Indirect)
+            var group = dots.Output.Group;
+            switch (dots.Kind)
             {
-                var indirect = d.indirectDrawCommands[dots.Command];
-                var indirectBatch = dots.Output.Group?.GetBatch(indirect.batchID);
-                if (indirectBatch == null) return;
-                GfxStream.DotsDraw(dots.Header, indirectBatch.Offset, indirectBatch.Window, indirect.visibleOffset | IndirectVisibleOffsetEnabled, null, 0);
-                GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = indirect.indirectArgsBufferHandle.value, Offset = indirect.indirectArgsBufferOffset, Indexed = true });
-                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
-                return;
+                case CommandKind.Indirect:
+                {
+                    var command = d.indirectDrawCommands[dots.Command];
+                    var batch = group?.GetBatch(command.batchID);
+                    if (batch == null || !PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out uint packed)) return;
+                    GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, packed, null, 0);
+                    GfxStream.DrawShape(IndirectTopology(command.topology), 0);
+                    GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = command.indirectArgsBufferHandle.value, Offset = command.indirectArgsBufferOffset, Indexed = true });
+                    GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
+                    return;
+                }
+                case CommandKind.ProceduralIndirect:
+                {
+                    var command = d.proceduralIndirectDrawCommands[dots.Command];
+                    var batch = group?.GetBatch(command.batchID);
+                    if (batch == null || !PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out uint packed)
+                        || !ProceduralShape(command.topology, command.indexBufferHandle, 0, 0, true, out _, out var setup)) return;
+                    GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, packed, null, 0);
+                    setup.Instances = 1;
+                    setup.Args = command.indirectArgsBufferHandle.value;
+                    setup.Offset = command.indirectArgsBufferOffset;
+                    GfxStream.DrawSetup(setup);
+                    GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
+                    return;
+                }
+                case CommandKind.Procedural:
+                {
+                    var command = d.proceduralDrawCommands[dots.Command];
+                    var batch = group?.GetBatch(command.batchID);
+                    if (batch == null || !ProceduralShape(command.topology, command.indexBufferHandle, command.indexOffsetBytes, command.elementCount, false, out _, out var setup)) return;
+                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, setup, (int)command.baseVertex, material, pass, properties);
+                    return;
+                }
+                default:
+                {
+                    var command = d.drawCommands[dots.Command];
+                    var batch = group?.GetBatch(command.batchID);
+                    if (batch == null) return;
+                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, default, 0, material, pass, properties);
+                    return;
+                }
             }
-            var command = d.drawCommands[dots.Command];
-            var batch = dots.Output.Group?.GetBatch(command.batchID);
-            if (batch == null) return;
-            int* visible = d.visibleInstances + command.visibleOffset;
-            // A sorted instance's draw draws that instance alone.
+        }
+
+        /// <summary>A direct or procedural command's visible instances in draws of at most
+        /// <see cref="MaxInstancesPerDraw"/> (a sorted instance's item draws that instance alone),
+        /// each reading <paramref name="indices"/>' indices plus <paramref name="baseVertex"/> when it
+        /// has a buffer.</summary>
+        static void DrawInstances(in FrameBuilder.DrawItem item, DrawRef dots, BatchRendererGroup.Batch batch, int* visible, uint visibleCount, DrawSetup indices, int baseVertex,
+            ulong material, int pass, Dictionary<int, object> properties)
+        {
             uint begin = dots.Instance >= 0 ? (uint)dots.Instance : 0u;
-            uint end = dots.Instance >= 0 ? Math.Min(begin + 1, command.visibleCount) : command.visibleCount;
+            uint end = dots.Instance >= 0 ? Math.Min(begin + 1, visibleCount) : visibleCount;
             for (uint first = begin; first < end; first += MaxInstancesPerDraw)
             {
                 int count = (int)Math.Min(MaxInstancesPerDraw, end - first);
                 GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + first, count);
+                if (indices.Indices != 0)
+                {
+                    if (baseVertex != 0) GfxStream.DrawShape(null, baseVertex);
+                    indices.Instances = (uint)count;
+                    GfxStream.DrawSetup(indices);
+                }
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
             }
         }

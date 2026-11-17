@@ -54,6 +54,12 @@ namespace Unbound.Runtime
         /// <summary>SystemInfo.GetGraphicsFormat(DefaultFormat.LDR) and the Default render
         /// texture format are B8G8R8A8 (Metal), else R8G8B8A8.</summary>
         internal bool BgraLdr { get; init; }
+        /// <summary>What a BatchRendererGroup procedural command of MeshTopology.Quads draws its
+        /// vertex ids as, the device having no quad primitive: a triangle list on Vulkan, points on
+        /// OpenGL Core (measured, Unity 6000.0.71f1 on the NVIDIA driver: tests/projects/brg
+        /// <c>procedural.c8</c>); null where unmeasured (such commands are warned about and not
+        /// drawn).</summary>
+        internal UnityEngine.MeshTopology? ProceduralQuads { get; init; }
         /// <summary>The most samples GetRenderTextureSupportedMSAASampleCount answers.</summary>
         internal int MaxMsaaSamples { get; init; } = 8;
         internal bool DepthFetchInRenderPass { get; init; } = true;
@@ -185,13 +191,17 @@ namespace Unbound.Runtime
         {
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
+            ProceduralQuads = UnityEngine.MeshTopology.Points,
         };
 
         internal static readonly GraphicsDeviceProfile Vulkan = new GraphicsDeviceProfile(
             GraphicsDeviceType.Vulkan, uvStartsAtTop: true, reversedZ: true, loadStore: true,
             resolveStencil: true, autoResolve: true, cbufferAlignment: 64,
             RenderingThreadingMode.SingleThreaded, GraphicsFormat.D32_SFloat_S8_UInt,
-            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false, alpha8Readback: Alpha8ReadbackMode.Red);
+            BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false, alpha8Readback: Alpha8ReadbackMode.Red)
+        {
+            ProceduralQuads = UnityEngine.MeshTopology.Triangles,
+        };
 
         /// <summary>The macOS Editor's device (tests/projects/urp CapsProbe
         /// `unity-6000.0.71f1/caps-metal.jsonl`, arm64, Apple M2 Pro).</summary>

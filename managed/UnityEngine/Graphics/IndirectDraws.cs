@@ -54,9 +54,13 @@ namespace Unbound.Runtime
         /// <paramref name="topology"/>: indices of 2 or 4 bytes, as triangles, lines or points
         /// (the pipelines set no strip index format; quads are not drawn). Others are counted and
         /// warned once under <paramref name="method"/>.</summary>
-        internal static bool Supported(GraphicsBuffer indexBuffer, MeshTopology topology, string method)
+        internal static bool Supported(GraphicsBuffer indexBuffer, MeshTopology topology, string method) => Supported(indexBuffer.stride, topology, method);
+
+        /// <summary><see cref="Supported(GraphicsBuffer, MeshTopology, string)"/> for indices of
+        /// <paramref name="stride"/> bytes.</summary>
+        internal static bool Supported(int stride, MeshTopology topology, string method)
         {
-            if (indexBuffer.stride != 2 && indexBuffer.stride != 4)
+            if (stride != 2 && stride != 4)
             {
                 Stubs.Ignored(method + " index stride", "other than 2 or 4 bytes is not drawn");
                 return false;
@@ -71,17 +75,28 @@ namespace Unbound.Runtime
         }
 
         /// <summary><paramref name="count"/> indices from <paramref name="first"/>, per instance.</summary>
-        internal static DrawSetup Direct(GraphicsBuffer indexBuffer, int first, int count, int instances) => new DrawSetup
+        internal static DrawSetup Direct(GraphicsBuffer indexBuffer, int first, int count, int instances) =>
+            Direct(indexBuffer.Handle, indexBuffer.stride, first, count, instances);
+
+        /// <summary><paramref name="count"/> indices of <paramref name="stride"/> bytes of buffer
+        /// <paramref name="indices"/> (a handle) from <paramref name="first"/>, per instance.</summary>
+        internal static DrawSetup Direct(ulong indices, int stride, int first, int count, int instances) => new DrawSetup
         {
-            Instances = (uint)instances, Indices = indexBuffer.Handle, IndexSize = (byte)indexBuffer.stride, FirstIndex = (uint)first, IndexCount = (uint)count,
+            Instances = (uint)instances, Indices = indices, IndexSize = (byte)stride, FirstIndex = (uint)first, IndexCount = (uint)count,
         };
 
         /// <summary>The counts, first index and base vertex read on the GPU from
         /// <paramref name="args"/> at <paramref name="offset"/> bytes (five integers).</summary>
-        internal static DrawSetup Indirect(GraphicsBuffer indexBuffer, ulong args, int offset) => new DrawSetup
+        internal static DrawSetup Indirect(GraphicsBuffer indexBuffer, ulong args, int offset) =>
+            Indirect(indexBuffer.Handle, indexBuffer.stride, indexBuffer.count, args, offset);
+
+        /// <summary><see cref="Indirect(GraphicsBuffer, ulong, int)"/> for buffer
+        /// <paramref name="indices"/> (a handle) of <paramref name="count"/> indices of
+        /// <paramref name="stride"/> bytes.</summary>
+        internal static DrawSetup Indirect(ulong indices, int stride, int count, ulong args, int offset) => new DrawSetup
         {
             Instances = 1, Args = args, Offset = (uint)offset, Indexed = true,
-            Indices = indexBuffer.Handle, IndexSize = (byte)indexBuffer.stride, FirstIndex = 0, IndexCount = (uint)indexBuffer.count,
+            Indices = indices, IndexSize = (byte)stride, FirstIndex = 0, IndexCount = (uint)count,
         };
 
         internal static void Draw(Matrix4x4 matrix, Material material, int shaderPass, MeshTopology topology, DrawSetup setup, Dictionary<int, object> properties)

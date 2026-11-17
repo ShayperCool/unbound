@@ -89,6 +89,26 @@ view type how many callbacks ran. Scenarios:
   (9 on OpenGL Core, 8 on Vulkan): the `errors` scenario's AddBatch calls make one more batch on
   OpenGL Core (`errors.add.twiceMaxWindow`).
 
+- `procedural`: commands without a mesh and indirect commands of other topologies, one per cell
+  of a grid in front of the scene, each drawing two instances (`Assets/Shaders/DotsProcedural.shader`:
+  DOTS instanced, no vertex attributes; vertex id v lies at corner v % 4 of a square shifted along
+  x by v / 4, so the ids a draw reads show in the image). `procedural.c<i>.pixels` counts the
+  pixels of cell i that differ from the scene drawn without the commands (`procedural_background`),
+  `.drawn` whether any does. Procedural commands (`BatchDrawCommandProcedural`): triangles of six
+  vertex ids, the same with base vertex 6 (drawn as without it: a non-indexed command's ids start
+  at 0), 16-bit indices from a byte offset, 32-bit indices with base vertex 4, lines without and
+  with indices, points, a line strip and quads (the device's own primitive: points on OpenGL
+  Core, a triangle list over the ids on Vulkan). Procedural indirect commands
+  (`BatchDrawCommandProceduralIndirect`): their counts, first vertex or index from an arguments
+  buffer, the instances from a visible instance buffer. Indirect commands of the cube's indices as
+  triangles, lines and points and of a line square's as lines. A procedural indirect command whose
+  visible instance buffer window starts at byte 256 reads its instances there on OpenGL Core,
+  whose buffers are constant buffers read through a window (`c16`; `c17`, the instances it would
+  read at the buffer's start, stays empty); on Vulkan, whose buffers are raw, the Editor refuses a
+  window (`BatchRendererGroup had non-zero ConstantBuffer mode parameters when BufferTarget is
+  RawBuffer. ...`, in its log for every list that reads the command) and does not draw it; the
+  probe's other indirect commands pass no window there.
+
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures
@@ -98,7 +118,7 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (2329 records on OpenGL Core, 2326 on Vulkan), the cascades'
+the images are identical on both, and so are the values but the buffer target, the AddBatch windows each device refuses and the `procedural` scenario (its lines' and points' pixels, its quads and its windowed command). Unbound: every value on both devices (2502 records on OpenGL Core, 2499 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
 

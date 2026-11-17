@@ -23,6 +23,16 @@ namespace Unbound.Runtime
         bool m_DestroyedOwner;
         bool m_GpuReleased;
 
+        /// <summary>The storages whose GPU buffer is alive, by handle: a GraphicsBufferHandle
+        /// names its buffer by this value (BatchRendererGroup's commands give index buffers so).</summary>
+        static readonly Dictionary<ulong, GpuBufferStorage> s_Live = new Dictionary<ulong, GpuBufferStorage>();
+
+        /// <summary>The live storage of a handle (null: none).</summary>
+        internal static GpuBufferStorage Find(ulong handle)
+        {
+            lock (s_Live) return s_Live.TryGetValue(handle, out var storage) ? storage : null;
+        }
+
         internal void AddView() => m_Views++;
 
         internal void ReleaseView()
@@ -64,6 +74,7 @@ namespace Unbound.Runtime
             MeshOwned = meshOwned;
             Handle = RenderHandles.Next();
             GfxStream.CreateBuffer(Handle, (long)count * stride, usage);
+            lock (s_Live) s_Live[Handle] = this;
         }
 
         internal void Release()
@@ -76,6 +87,7 @@ namespace Unbound.Runtime
         {
             if (m_GpuReleased) return;
             m_GpuReleased = true;
+            lock (s_Live) s_Live.Remove(Handle);
             GfxStream.ReleaseBuffer(Handle);
             FreeMirror();
         }

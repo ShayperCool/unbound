@@ -446,7 +446,7 @@ namespace UnityEngine.Tests
             try
             {
                 var item = Assert.Single(Collect(Cull(), new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue }));
-                Assert.True(item.Dots.Value.Indirect);
+                Assert.Equal(BatchCulling.CommandKind.Indirect, item.Dots.Value.Kind);
                 Assert.Same(m_Material, item.Material);
                 Assert.Equal(visible.bufferHandle, item.Properties[BatchCulling.IndirectVisibilityId]);
                 Assert.False(group.GetBatch(batch).Properties.ContainsKey(BatchCulling.IndirectVisibilityId));
@@ -817,7 +817,7 @@ namespace UnityEngine.Tests
                     items.Clear();
                     BatchCulling.CollectShadows(data, all, sun, 1, items, ref sequence);
                     Assert.Equal(split1, items.Count);
-                    Assert.True(Assert.Single(Collect(data, all)).Dots.Value.Indirect);
+                    Assert.Equal(BatchCulling.CommandKind.Indirect, Assert.Single(Collect(data, all)).Dots.Value.Kind);
                 }
             }
             finally
@@ -943,6 +943,285 @@ namespace UnityEngine.Tests
             Assert.True(m_Camera.TryGetCullingParameters(out parameters));
             var ortho = parameters.GetCullingPlane(5);
             Assert.Equal(0f, ortho.GetDistanceToPoint(m_Camera.transform.position + forward * 20f), 2);
+        }
+
+        /// <summary>A callback emitting one range of <paramref name="type"/> over instances 0..n,
+        /// <paramref name="commands"/> copied into the array it allocates.</summary>
+        static BatchRendererGroup.OnPerformCulling EmitRange<T>(BatchDrawCommandType type, BatchFilterSettings filter, int instances, T[] commands) where T : unmanaged => (g, c, o, u) =>
+        {
+            var d = (BatchCullingOutputDrawCommands*)o.drawCommands.GetUnsafePtr();
+            int alignment = UnsafeUtility.AlignOf<long>();
+            var array = (T*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<T>() * Math.Max(1, commands.Length), alignment, Allocator.TempJob);
+            for (int i = 0; i < commands.Length; i++) array[i] = commands[i];
+            switch (type)
+            {
+                case BatchDrawCommandType.Procedural:
+                    d->proceduralDrawCommands = (BatchDrawCommandProcedural*)array;
+                    d->proceduralDrawCommandCount = commands.Length;
+                    break;
+                case BatchDrawCommandType.ProceduralIndirect:
+                    d->proceduralIndirectDrawCommands = (BatchDrawCommandProceduralIndirect*)array;
+                    d->proceduralIndirectDrawCommandCount = commands.Length;
+                    break;
+                default:
+                    d->indirectDrawCommands = (BatchDrawCommandIndirect*)array;
+                    d->indirectDrawCommandCount = commands.Length;
+                    break;
+            }
+            d->visibleInstances = (int*)UnsafeUtility.Malloc(Math.Max(1, instances) * sizeof(int), alignment, Allocator.TempJob);
+            for (int i = 0; i < instances; i++) d->visibleInstances[i] = i;
+            d->visibleInstanceCount = instances;
+            d->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+            d->drawRangeCount = 1;
+            d->drawRanges[0] = new BatchDrawRange { drawCommandsType = type, drawCommandsBegin = 0, drawCommandsCount = (uint)commands.Length, filterSettings = filter };
+            return default;
+        };
+
+        static readonly FilteringSettings s_All = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+
+        /// <summary>Whether the recorded stream holds <paramref name="bytes"/> in a row.</summary>
+        static bool Holds(ReadOnlySpan<byte> recorded, params byte[] bytes) => recorded.IndexOf(bytes) >= 0;
+
+        static byte[] Bytes(byte op, params object[] values)
+        {
+            var bytes = new List<byte> { op };
+            foreach (var v in values)
+                bytes.AddRange(v switch
+                {
+                    byte b => new[] { b },
+                    int i => BitConverter.GetBytes(i),
+                    uint i => BitConverter.GetBytes(i),
+                    ulong l => BitConverter.GetBytes(l),
+                    _ => throw new ArgumentException(v.GetType().Name),
+                });
+            return bytes.ToArray();
+        }
+
+        // The stream's opcodes these tests look for (CommandStream.cs).
+        const byte DrawIndicesOp = 28, DrawShapeOp = 37;
+
+        /// <summary>
+        /// Procedural commands draw stand-ins of no mesh bounds (tests/projects/brg procedural): a
+        /// non-indexed one its element count of vertex ids from 0, its base vertex left out
+        /// (procedural.c1); an indexed one the 65536-vertex stand-in with its buffer's indices from
+        /// its byte offset (at most the buffer's) plus its base vertex. An index buffer that is not
+        /// live, or an offset inside an index, is warned about and not drawn.
+        /// </summary>
+        [Fact]
+        public void ProceduralCommandsDrawStandInsWithTheirIndices()
+        {
+            uint warned = BatchCulling.s_Warned;
+            BatchCulling.s_Warned = 0;
+            var indices = new GraphicsBuffer(GraphicsBuffer.Target.Index, 8, 2);
+            m_Buffers.Add(indices);
+            BatchID batch = default;
+            BatchMaterialID material = default;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue };
+            BatchDrawCommandProcedural Command(MeshTopology topology, uint count, uint baseVertex, GraphicsBufferHandle buffer, uint offset) => new BatchDrawCommandProcedural
+            {
+                batchID = batch, materialID = material, visibleOffset = 0, visibleCount = 2, topology = topology, elementCount = count,
+                baseVertex = baseVertex, indexBufferHandle = buffer, indexOffsetBytes = offset,
+            };
+            var group = Group((g, c, o, u) => EmitRange(BatchDrawCommandType.Procedural, filter, 2, new[]
+            {
+                Command(MeshTopology.Triangles, 6, 6, default, 0),
+                // Ten indices from index 2: the buffer's last six.
+                Command(MeshTopology.Lines, 10, 4, indices.bufferHandle, 4),
+                Command(MeshTopology.Lines, 4, 0, new GraphicsBufferHandle(999999), 0),
+                Command(MeshTopology.Lines, 4, 0, indices.bufferHandle, 3),
+            })(g, c, o, u));
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group);
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                var items = Collect(Cull(), s_All);
+                Assert.Equal(2, items.Count);
+                Assert.Equal(ProceduralMeshes.Get(MeshTopology.Triangles, 6).Sync(), items[0].Mesh);
+                Assert.Equal(IndexedDraws.StandIn(MeshTopology.Lines).Sync(), items[1].Mesh);
+                Assert.All(items, item => Assert.Equal(BatchCulling.CommandKind.Procedural, item.Dots.Value.Kind));
+                Assert.Equal(Vector3.zero, items[0].Dots.Value.Header.Extent);
+                Assert.Single(logged, m => m.Contains("index buffer is not a live index buffer"));
+
+                GfxStream.Flush();
+                BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
+                // No base vertex (the command's 6 is left out) and no indices of a buffer.
+                Assert.False(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 6)));
+                Assert.False(Holds(GfxStream.Recorded, Bytes(DrawIndicesOp, (ulong)indices.bufferHandle.value)));
+                GfxStream.Flush();
+                BatchCulling.Draw(items[1], items[1].Dots.Value, 1, 0, null);
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 4)));
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawIndicesOp, (ulong)indices.bufferHandle.value, (byte)2, 2u, 6u)));
+                GfxStream.Flush();
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                BatchCulling.s_Warned = warned;
+            }
+        }
+
+        /// <summary>Quads, which the devices have no primitive for, draw as the device draws them
+        /// (tests/projects/brg procedural.c8): points on OpenGL Core, a triangle list on Vulkan; on
+        /// Metal, unmeasured, they are warned about and not drawn.</summary>
+        [Theory]
+        [InlineData("OpenGLCore")]
+        [InlineData("Vulkan")]
+        [InlineData("Metal")]
+        public void ProceduralQuadsDrawAsTheDeviceDrawsThem(string device)
+        {
+            var previousDevice = GraphicsDeviceProfile.Current;
+            uint warned = BatchCulling.s_Warned;
+            BatchCulling.s_Warned = 0;
+            try
+            {
+                GraphicsDeviceProfile.Select(device);
+                BatchID batch = default;
+                BatchMaterialID material = default;
+                var group = Group((g, c, o, u) => EmitRange(BatchDrawCommandType.Procedural, new BatchFilterSettings { renderingLayerMask = uint.MaxValue }, 1, new[]
+                {
+                    new BatchDrawCommandProcedural { batchID = batch, materialID = material, visibleCount = 1, topology = MeshTopology.Quads, elementCount = 8 },
+                })(g, c, o, u));
+                material = group.RegisterMaterial(m_Material);
+                batch = AddBatch(group);
+                var items = Collect(Cull(), s_All);
+                if (device == "Metal")
+                {
+                    Assert.Empty(items);
+                    Assert.NotEqual(0u, BatchCulling.s_Warned);
+                    return;
+                }
+                var drawn = device == "OpenGLCore" ? MeshTopology.Points : MeshTopology.Triangles;
+                Assert.Equal(ProceduralMeshes.Get(drawn, 8).Sync(), Assert.Single(items).Mesh);
+            }
+            finally
+            {
+                BatchCulling.s_Warned = warned;
+                GraphicsDeviceProfile.Select(previousDevice.Type.ToString());
+            }
+        }
+
+        /// <summary>
+        /// An indirect command's visible instance buffer window (tests/projects/brg procedural.c16):
+        /// where batches are raw buffers (Vulkan) one other than zero is refused with the Editor's
+        /// error, logged for every list that reads the command; a constant buffer (OpenGL Core) is
+        /// read from the buffer's start, so the window's offset is counted into the packed visible
+        /// offset, and a start past the 4096 indices it reads is warned about and not drawn.
+        /// Procedural indirect commands draw the vertex-id stand-in for an indirect count.
+        /// </summary>
+        [Theory]
+        [InlineData("OpenGLCore")]
+        [InlineData("Vulkan")]
+        public void IndirectVisibleInstanceWindowsFollowTheBufferTarget(string device)
+        {
+            var previousDevice = GraphicsDeviceProfile.Current;
+            uint warned = BatchCulling.s_Warned;
+            BatchCulling.s_Warned = 0;
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            try
+            {
+                GraphicsDeviceProfile.Select(device);
+                var visible = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 128, 4);
+                var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 4, 4);
+                m_Buffers.Add(visible);
+                m_Buffers.Add(args);
+                BatchID batch = default;
+                BatchMaterialID material = default;
+                uint visibleOffset = 34;
+                var group = Group((g, c, o, u) => EmitRange(BatchDrawCommandType.ProceduralIndirect, new BatchFilterSettings { renderingLayerMask = uint.MaxValue }, 0, new[]
+                {
+                    new BatchDrawCommandProceduralIndirect
+                    {
+                        batchID = batch, materialID = material, topology = MeshTopology.Triangles, visibleOffset = visibleOffset,
+                        visibleInstancesBufferHandle = visible.bufferHandle, visibleInstancesBufferWindowOffset = 256, visibleInstancesBufferWindowSizeBytes = 256,
+                        indirectArgsBufferHandle = args.bufferHandle,
+                    },
+                })(g, c, o, u));
+                material = group.RegisterMaterial(m_Material);
+                batch = AddBatch(group);
+                Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+                var data = Cull();
+                var items = Collect(data, s_All);
+                if (device == "Vulkan")
+                {
+                    Assert.Empty(items);
+                    Assert.Empty(Collect(data, s_All));
+                    Assert.Equal(2, logged.FindAll(m => m == "BatchRendererGroup had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. "
+                        + "Pass zero for both visibleInstancesBufferWindowOffset and visibleInstancesBufferWindowSizeBytes in RawBuffer mode. (got 256, 256)").Count);
+                    return;
+                }
+                var item = Assert.Single(items);
+                Assert.Equal(ProceduralMeshes.Get(MeshTopology.Triangles, ProceduralMeshes.IndirectVertices).Sync(), item.Mesh);
+                Assert.Equal(visible.bufferHandle, item.Properties[BatchCulling.IndirectVisibilityId]);
+                GfxStream.Flush();
+                BatchCulling.Draw(item, item.Dots.Value, 1, 0, null);
+                // 34 indices into the window at byte 256 (index 64).
+                Assert.True(Holds(GfxStream.Recorded, BitConverter.GetBytes((34u + 64u) | 0x80000000u)));
+                GfxStream.Flush();
+                Assert.Empty(logged);
+                visibleOffset = 4096 - 64;
+                Assert.Empty(Collect(Cull(), s_All));
+                Assert.Single(logged, m => m.Contains("past the 16 KB"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                BatchCulling.s_Warned = warned;
+                GraphicsDeviceProfile.Select(previousDevice.Type.ToString());
+            }
+        }
+
+        /// <summary>An indirect command reads its mesh's indices as its topology, whatever the
+        /// submesh's (tests/projects/brg procedural: the cube's triangles as lines and points); a
+        /// line strip or quads are warned about and not drawn (unmeasured).</summary>
+        [Fact]
+        public void IndirectCommandsReadTheirMeshAsTheirTopology()
+        {
+            uint warned = BatchCulling.s_Warned;
+            BatchCulling.s_Warned = 0;
+            var visible = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 4, 4);
+            var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 5, 4);
+            m_Buffers.Add(visible);
+            m_Buffers.Add(args);
+            BatchID batch = default;
+            BatchMeshID mesh = default;
+            BatchMaterialID material = default;
+            BatchDrawCommandIndirect Command(MeshTopology topology) => new BatchDrawCommandIndirect
+            {
+                batchID = batch, meshID = mesh, materialID = material, topology = topology,
+                visibleInstancesBufferHandle = visible.bufferHandle, indirectArgsBufferHandle = args.bufferHandle,
+            };
+            var group = Group((g, c, o, u) => EmitRange(BatchDrawCommandType.Indirect, new BatchFilterSettings { renderingLayerMask = uint.MaxValue }, 0, new[]
+            {
+                Command(MeshTopology.Lines), Command(MeshTopology.Points), Command(MeshTopology.LineStrip), Command(MeshTopology.Quads),
+            })(g, c, o, u));
+            mesh = group.RegisterMesh(m_Mesh);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group);
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                var items = Collect(Cull(), s_All);
+                Assert.Equal(2, items.Count);
+                Assert.Single(logged, m => m.Contains("line strip or quads"));
+                GfxStream.Flush();
+                BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Lines, 0)));
+                GfxStream.Flush();
+                BatchCulling.Draw(items[1], items[1].Dots.Value, 1, 0, null);
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Points, 0)));
+                GfxStream.Flush();
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                BatchCulling.s_Warned = warned;
+            }
         }
     }
 }
