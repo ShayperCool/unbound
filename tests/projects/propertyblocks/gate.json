@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/propertyblocks/run.py gate"
+  ],
+  "summary": "propertyblocks: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Terrain/Terrain.cs",
+    "managed/UnityEngine/Terrain/TerrainRenderer.cs"
+  ]
+}
