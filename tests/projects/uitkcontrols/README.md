@@ -12,7 +12,8 @@ exactly (tolerance 0). `Assets/Scripts/ControlsProbe.cs` records:
   the indexer and its exceptions (type, parameter and message; the runtime's own parameter suffix
   is not compared), active and inactive options, set/toggle/reset all, CreateFromOptions,
   FromEnumFlags/ToEnumFlags/Compare with byte, short, int and long flag enums (also at the full
-  length of 64, where a short's sign extension shows) and a non-flag enum,
+  length of 64, where a short's sign extension shows; these narrow-enum rows were measured with the
+  macOS arm64 Editor only) and a non-flag enum,
   equality, CompareTo, JsonUtility, and ToggleButtonGroupStatePropertiesAttribute's defaults;
 - `group.*`: ToggleButtonGroup: its hierarchy with and without a label and with no options (the
   empty label), buttons added one by one (their classes, the first option selected when the
