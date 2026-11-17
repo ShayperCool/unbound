@@ -200,7 +200,8 @@ In dependency order; each item ends with an Editor-reference probe.
       drawn; its system runs).
       Systems spawned by GPU events run (`tests/projects/vfxevents`), and particle strips,
       drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`);
-      bounds set to Automatic are computed from the particles (`tests/projects/vfxbounds`).
+      bounds set to Automatic are computed from the particles (`tests/projects/vfxbounds`),
+      and an event wired straight to an Initialize context spawns (`tests/projects/vfxdirect`).
       Not yet either: part of the expression operations and a few system kinds (an effect
       using them does not simulate and says what); `unbound doctor` lists the effects.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
