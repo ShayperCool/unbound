@@ -168,8 +168,13 @@ namespace Unbound.UIElements
         public int Line, Column;
         /// <summary>Attributes whose import-time warnings were logged (once per document element).</summary>
         public HashSet<string> ReportedUrls;
+        /// <summary>The element's position among the document's elements (depth first).</summary>
+        public int Index;
         /// <summary>A template instance's attribute overrides, in document order (null without any).</summary>
         public List<UxmlAttributeOverride> Overrides;
+        /// <summary>For an element description with overrides applied: the document each overridden
+        /// attribute was written in (its asset references resolve against it).</summary>
+        public Dictionary<string, VisualTreeAsset> OverrideSources;
         /// <summary>The slot this element defines in its document (`slot-name`), or null.</summary>
         public string SlotName;
         /// <summary>The slot of the enclosing template instance's document this element goes into
@@ -178,12 +183,20 @@ namespace Unbound.UIElements
 
         /// <summary>A copy of the element description with other attributes (the same children,
         /// sheets and position).</summary>
-        public UxmlNode WithAttributes(List<KeyValuePair<string, string>> attributes)
+        public UxmlNode WithAttributes(List<KeyValuePair<string, string>> attributes, Dictionary<string, VisualTreeAsset> sources)
         {
+            // The copy reports its import-time warnings once per document element, as the original.
+            ReportedUrls ??= new HashSet<string>();
             var copy = (UxmlNode)MemberwiseClone();
             copy.m_Attributes = attributes;
+            copy.OverrideSources = sources;
             return copy;
         }
+
+        /// <summary>The document an attribute's asset references resolve against: the one that
+        /// overrode it, else <paramref name="document"/>.</summary>
+        public VisualTreeAsset SourceOf(string attribute, VisualTreeAsset document) =>
+            OverrideSources != null && OverrideSources.TryGetValue(attribute, out var source) ? source : document;
 
         public string Attr(string name)
         {
@@ -198,12 +211,15 @@ namespace Unbound.UIElements
         public readonly string ElementName;
         public readonly string AttributeName;
         public readonly string Value;
+        /// <summary>The document the override is written in.</summary>
+        public readonly VisualTreeAsset Source;
 
-        public UxmlAttributeOverride(string elementName, string attributeName, string value)
+        public UxmlAttributeOverride(string elementName, string attributeName, string value, VisualTreeAsset source)
         {
             ElementName = elementName;
             AttributeName = attributeName;
             Value = value;
+            Source = source;
         }
     }
 
@@ -228,10 +244,30 @@ namespace Unbound.UIElements
         /// clone, emptied once an instance's children are placed).</summary>
         public readonly Dictionary<string, VisualElement> Slots;
 
-        UxmlCloneScope(List<List<UxmlAttributeOverride>> ranges, Dictionary<string, VisualElement> slots)
+        /// <summary>Whether this is the clone TemplateContainer's deprecated traits make: it cannot
+        /// clone a template instance, nor, under overrides, an element of the UXML serialization path
+        /// (built-in and [UxmlElement] elements); the Unity 6000.0.71f1 Editor throws a
+        /// NullReferenceException out of the clone there (tests/projects/uxmltemplates NestedOld,
+        /// OldTemplateHost, OldTemplateOther; OldTemplateBare and OldFactoryHost clone).</summary>
+        public readonly bool FromDeprecatedTraits;
+
+        UxmlCloneScope(List<List<UxmlAttributeOverride>> ranges, Dictionary<string, VisualElement> slots, bool fromDeprecatedTraits = false)
         {
             Ranges = ranges;
             Slots = slots;
+            FromDeprecatedTraits = fromDeprecatedTraits;
+        }
+
+        /// <summary>The scope of the template TemplateContainer's deprecated traits clone.</summary>
+        public UxmlCloneScope ForDeprecatedTraits() => new UxmlCloneScope(Ranges, Slots, true);
+
+        /// <summary>Fails as the deprecated traits' clone does before creating
+        /// <paramref name="node"/> (<paramref name="serializationPath"/>: a built-in or [UxmlElement]
+        /// element).</summary>
+        public void CheckDeprecatedTraitsClone(UxmlNode node, bool serializationPath)
+        {
+            if (FromDeprecatedTraits && (node.TemplateName != null || serializationPath && Ranges.Count > 0))
+                throw new NullReferenceException("Object reference not set to an instance of an object");
         }
 
         /// <summary>The scope of a document cloned from code: no overrides, its own slot table.</summary>
@@ -244,14 +280,15 @@ namespace Unbound.UIElements
             var ranges = new List<List<UxmlAttributeOverride>>(Ranges.Count + 1);
             ranges.AddRange(Ranges);
             ranges.Add(overrides);
-            return new UxmlCloneScope(ranges, Slots);
+            return new UxmlCloneScope(ranges, Slots, FromDeprecatedTraits);
         }
 
         /// <summary>The value an override gives attribute <paramref name="attribute"/> (or one of
         /// <paramref name="obsoleteNames"/>) of the element named <paramref name="elementName"/>.</summary>
-        public bool TryGetOverride(string elementName, string attribute, IEnumerable<string> obsoleteNames, out string value)
+        public bool TryGetOverride(string elementName, string attribute, IEnumerable<string> obsoleteNames, out string value, out VisualTreeAsset source)
         {
             value = null;
+            source = null;
             if (string.IsNullOrEmpty(elementName)) return false;
             foreach (var range in Ranges)
             {
@@ -261,6 +298,7 @@ namespace Unbound.UIElements
                     if (o.AttributeName == attribute || IsObsoleteName(o.AttributeName, obsoleteNames))
                     {
                         value = o.Value;
+                        source = o.Source;
                         return true;
                     }
                 }
@@ -285,15 +323,15 @@ namespace Unbound.UIElements
             var name = node.Attr("name");
             if (string.IsNullOrEmpty(name)) return node;
             List<KeyValuePair<string, string>> attributes = null;
-            HashSet<string> overridden = null;
+            Dictionary<string, VisualTreeAsset> sources = null;
             foreach (var range in Ranges)
             {
                 foreach (var o in range)
                 {
                     if (o.ElementName != name) continue;
                     // An outer instance's value (seen first) and the first of an instance's values win.
-                    overridden ??= new HashSet<string>();
-                    if (!overridden.Add(o.AttributeName)) continue;
+                    sources ??= new Dictionary<string, VisualTreeAsset>();
+                    if (!sources.TryAdd(o.AttributeName, o.Source)) continue;
                     attributes ??= new List<KeyValuePair<string, string>>(node.Attributes);
                     var entry = new KeyValuePair<string, string>(o.AttributeName, o.Value);
                     int index = attributes.FindIndex(a => a.Key == o.AttributeName);
@@ -301,7 +339,7 @@ namespace Unbound.UIElements
                     else attributes.Add(entry);
                 }
             }
-            return attributes == null ? node : node.WithAttributes(attributes);
+            return attributes == null ? node : node.WithAttributes(attributes, sources);
         }
     }
 
@@ -321,11 +359,13 @@ namespace Unbound.UIElements
             var rootNode = new UxmlNode { Namespace = root.NamespaceURI, Type = root.LocalName };
             Locate(rootNode, positions, ref next);
             asset.m_UaAssetPath = assetPath;
+            asset.importedWithWarnings = false;
+            asset.importedWithErrors = false;
             var errors = new List<string>();
-            ReadChildren(asset, assetPath, root, rootNode, errors, positions, new HashSet<string>(), ref next);
+            ReadChildren(asset, assetPath, root, rootNode, null, errors, positions, new HashSet<string>(), ref next);
             asset.m_UaRoot = rootNode;
             foreach (var e in errors) Debug.LogWarning(assetPath + ": " + e);
-            asset.importedWithWarnings = errors.Count > 0;
+            if (errors.Count > 0) asset.importedWithWarnings = true;
             asset.contentHash = text.GetHashCode();
             return default;
         }
@@ -347,6 +387,7 @@ namespace Unbound.UIElements
         static void Locate(UxmlNode node, List<(int Line, int Column)> positions, ref int next)
         {
             if (next >= positions.Count) return;
+            node.Index = next;
             (node.Line, node.Column) = positions[next++];
         }
 
@@ -368,7 +409,7 @@ namespace Unbound.UIElements
         /// (tests/projects/uxmltemplates): each `slot-name` and `slot` as experimental, a slot name
         /// defined twice in the document as an error (the first element keeps it), and an override of
         /// `name`, `class` or `style` as one it cannot make (the override is dropped).</summary>
-        static void ReadChildren(VisualTreeAsset asset, string assetPath, XmlElement xml, UxmlNode node, List<string> errors,
+        static void ReadChildren(VisualTreeAsset asset, string assetPath, XmlElement xml, UxmlNode node, UxmlNode parent, List<string> errors,
             List<(int Line, int Column)> positions, HashSet<string> slots, ref int next)
         {
             foreach (XmlAttribute a in xml.Attributes)
@@ -378,7 +419,15 @@ namespace Unbound.UIElements
                 {
                     Debug.LogWarning($" ({node.Line},{node.Column}): {k_SlotWarning}");
                     asset.importedWithWarnings = true;
-                    if (a.Name == "slot") node.SlotUsage = a.Value;
+                    if (a.Name == "slot")
+                    {
+                        if (parent?.TemplateName != null) node.SlotUsage = a.Value;
+                        else
+                        {
+                            Debug.LogError($" ({node.Line},{node.Column}): Semantic - Element has an assigned slot, but its parent '({(parent == null ? "" : UxmlBuilder.TypeName(parent))})({parent?.Index ?? 0})' is not a template reference");
+                            asset.importedWithErrors = true;
+                        }
+                    }
                     else if (slots.Add(a.Value)) node.SlotName = a.Value;
                     else
                     {
@@ -395,8 +444,10 @@ namespace Unbound.UIElements
             {
                 if (!(child is XmlElement element)) continue;
                 string local = element.LocalName;
-                if (local == "AttributeOverrides" && next < positions.Count) ReadOverrides(asset, element, node, positions[next]);
-                if (local == "Style" || local == "Template" || local == "AttributeOverrides") Skip(element, ref next);
+                // Overrides belong to template instances; elsewhere the tag is an element like any other.
+                bool overrides = local == "AttributeOverrides" && node.TemplateName != null;
+                if (overrides) ReadOverrides(asset, element, node, next < positions.Count ? positions[next] : default);
+                if (local == "Style" || local == "Template" || overrides) Skip(element, ref next);
                 if (local == "Style")
                 {
                     var src = element.GetAttribute("src");
@@ -416,7 +467,7 @@ namespace Unbound.UIElements
                     else errors.Add($"template not found: {src}");
                     continue;
                 }
-                if (local == "AttributeOverrides") continue;
+                if (overrides) continue;
                 var childNode = new UxmlNode { Namespace = element.NamespaceURI, Type = local };
                 Locate(childNode, positions, ref next);
                 // Measured (Unity 6000.0.71f1, tests/projects/uitkbindings): a tag in <Bindings> that
@@ -428,7 +479,7 @@ namespace Unbound.UIElements
                     asset.importedWithErrors = true;
                 }
                 if (local == "Instance") childNode.TemplateName = element.GetAttribute("template");
-                ReadChildren(asset, assetPath, element, childNode, errors, positions, slots, ref next);
+                ReadChildren(asset, assetPath, element, childNode, node, errors, positions, slots, ref next);
                 node.Children.Add(childNode);
             }
         }
@@ -437,6 +488,12 @@ namespace Unbound.UIElements
         /// attribute of the template's elements of that name.</summary>
         static void ReadOverrides(VisualTreeAsset asset, XmlElement xml, UxmlNode instance, (int Line, int Column) position)
         {
+            if (!xml.HasAttribute("element-name"))
+            {
+                Debug.LogWarning($" ({position.Line},{position.Column}): Semantic - AttributeOverrides node missing 'element-name' attribute.");
+                asset.importedWithWarnings = true;
+                return;
+            }
             var elementName = xml.GetAttribute("element-name");
             foreach (XmlAttribute a in xml.Attributes)
             {
@@ -447,7 +504,7 @@ namespace Unbound.UIElements
                     asset.importedWithWarnings = true;
                     continue;
                 }
-                (instance.Overrides ??= new List<UxmlAttributeOverride>()).Add(new UxmlAttributeOverride(elementName, a.Name, a.Value));
+                (instance.Overrides ??= new List<UxmlAttributeOverride>()).Add(new UxmlAttributeOverride(elementName, a.Name, a.Value, asset));
             }
         }
     }
@@ -604,6 +661,7 @@ namespace Unbound.UIElements
             Type type = null;
             if (node.TemplateName != null)
             {
+                scope.CheckDeprecatedTraitsClone(node, false);
                 if (!asset.m_UaTemplates.TryGetValue(node.TemplateName, out var template))
                 {
                     Debug.LogError($"Template '{node.TemplateName}' not found in {asset.name}");
@@ -625,12 +683,15 @@ namespace Unbound.UIElements
                 }
                 if (source == ElementSource.Unknown)
                 {
-                    Debug.LogError($"Element '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}' has no registered factory method."
+                    // The Unity 6000.0.71f1 Editor's message (tests/projects/uxmltemplates Odd), with
+                    // Unbound's hint when it has one.
+                    Debug.LogError($"Element '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."
                         + (hint != null ? " " + hint : ""));
                     var unknown = new Label($"Unknown type: '{node.Type}'");
                     unknown.style.color = Color.red;
                     return unknown;
                 }
+                scope.CheckDeprecatedTraitsClone(node, source != ElementSource.Factory);
                 if (source == ElementSource.Factory)
                 {
                     // A factory's traits read the overrides through their attribute descriptions.
@@ -652,7 +713,8 @@ namespace Unbound.UIElements
             }
             if (source == ElementSource.UxmlElement) ApplyUxmlAttributes(asset, element, scope.Apply(node), type);
             else if (source == ElementSource.BuiltIn) ApplyAttributes(asset, element, scope.Apply(node));
-            if (node.SlotName != null) scope.Slots.TryAdd(node.SlotName, element);
+            // A slot name the table holds already (from another document) fails the clone.
+            if (node.SlotName != null) scope.Slots.Add(node.SlotName, element);
             ApplyClassesAndSheets(node, element);
             if (node.InlineSheet != null)
             {
@@ -709,7 +771,7 @@ namespace Unbound.UIElements
             List<KeyValuePair<string, string>> enumAttributes = null, componentAttributes = null;
             foreach (var a in Ordered(node))
             {
-                if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, asset: asset, node: node);
+                if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, asset: node.SourceOf(a.Key, asset), node: node);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
             ApplyComponentAttributes(element, componentAttributes);
@@ -829,11 +891,11 @@ namespace Unbound.UIElements
                 }
                 if (member == null)
                 {
-                    if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: asset, node: node);
+                    if (!Gather(element, a, ref enumAttributes, ref componentAttributes)) ApplyAttribute(element, a.Key, a.Value, engineDeclaredOnly: true, asset: node.SourceOf(a.Key, asset), node: node);
                     continue;
                 }
                 if (member.Problem != null) continue;
-                ApplyMember(asset, node, element, member, a.Key, a.Value);
+                ApplyMember(node.SourceOf(a.Key, asset), node, element, member, a.Key, a.Value);
             }
             ApplyEnumFieldAttributes(asset, node, element, enumAttributes);
             ApplyComponentAttributes(element, componentAttributes);
@@ -882,6 +944,13 @@ namespace Unbound.UIElements
 
         static string PreferredName(UxmlNode node, UxmlMember member)
         {
+            // An override (under any of the member's names) wins over the element's own attribute.
+            if (node.OverrideSources != null)
+            {
+                if (node.OverrideSources.ContainsKey(member.UxmlName)) return member.UxmlName;
+                foreach (var obsolete in member.ObsoleteNames)
+                    if (!string.IsNullOrEmpty(obsolete) && node.OverrideSources.ContainsKey(obsolete)) return obsolete;
+            }
             if (node.Attr(member.UxmlName) != null) return member.UxmlName;
             foreach (var obsolete in member.ObsoleteNames)
                 if (!string.IsNullOrEmpty(obsolete) && node.Attr(obsolete) != null) return obsolete;

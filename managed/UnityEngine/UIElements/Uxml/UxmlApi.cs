@@ -183,15 +183,24 @@ namespace UnityEngine.UIElements
 
         /// <summary>The attribute's text under its name or, failing that, the first of its obsolete
         /// names the bag has. Unbound's choice: the current name wins when both are present.</summary>
-        internal bool TryGetValueFromBagAsString(IUxmlAttributes bag, CreationContext cc, out string value)
+        internal bool TryGetValueFromBagAsString(IUxmlAttributes bag, CreationContext cc, out string value) =>
+            TryGetValueFromBagAsString(bag, cc, out value, out _);
+
+        /// <summary>The attribute's text and the document it is written in (asset references resolve
+        /// against it): a template instance's override of the element's attribute (by the element's
+        /// name, under the attribute's name or a former one) comes first, as in the Unity 6000.0.71f1
+        /// Editor (tests/projects/uxmltemplates).</summary>
+        internal bool TryGetValueFromBagAsString(IUxmlAttributes bag, CreationContext cc, out string value, out VisualTreeAsset sourceAsset)
         {
             value = null;
+            sourceAsset = cc.visualTreeAsset;
             if (bag == null) return false;
-            // A template instance's override of the element's attribute (by the element's name, under
-            // the attribute's name or a former one) comes first, as in the Unity 6000.0.71f1 Editor
-            // (tests/projects/uxmltemplates).
             if (cc.uaScope != null && bag.TryGetAttributeValue("name", out var elementName)
-                && cc.uaScope.TryGetOverride(elementName, name, obsoleteNames, out value)) return true;
+                && cc.uaScope.TryGetOverride(elementName, name, obsoleteNames, out value, out var overrideSource))
+            {
+                sourceAsset = overrideSource;
+                return true;
+            }
             if (!string.IsNullOrEmpty(name) && bag.TryGetAttributeValue(name, out value)) return true;
             if (obsoleteNames != null)
             {
@@ -459,8 +468,8 @@ namespace UnityEngine.UIElements
         public bool TryGetValueFromBag(IUxmlAttributes bag, CreationContext cc, out T value)
         {
             value = defaultValue;
-            if (!TryGetValueFromBagAsString(bag, cc, out var text)) return false;
-            value = UxmlAttributeValues.ReadAsset(this, text, cc.visualTreeAsset, typeof(T)) as T;
+            if (!TryGetValueFromBagAsString(bag, cc, out var text, out var source)) return false;
+            value = UxmlAttributeValues.ReadAsset(this, text, source, typeof(T)) as T;
             return true;
         }
     }

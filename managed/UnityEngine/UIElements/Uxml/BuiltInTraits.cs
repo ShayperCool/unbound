@@ -979,13 +979,10 @@ namespace UnityEngine.UIElements
                     return;
                 }
                 container.templateSource = template;
-                // Under the attribute overrides of an enclosing template instance (any, even one that
-                // names no element of this template) these traits cannot clone their template: the
-                // Unity 6000.0.71f1 Editor throws out of the clone (tests/projects/uxmltemplates
-                // OldTemplateHost, OldTemplateOther; OldTemplateBare clones).
+                // The template gets the enclosing instances' overrides and slots, in a clone that cannot
+                // hold every element (UxmlCloneScope.FromDeprecatedTraits).
                 var scope = cc.uaScope ?? Unbound.UIElements.UxmlCloneScope.Root();
-                if (scope.Ranges.Count > 0) throw new NullReferenceException("Object reference not set to an instance of an object");
-                template.CloneTree(container, scope, out _, out _);
+                template.CloneTree(container, scope.ForDeprecatedTraits(), out _, out _);
             }
         }
     }
