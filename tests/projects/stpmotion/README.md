@@ -33,12 +33,15 @@ it was rendered in.
   are byte-identical to `stp_pan`'s: neither setting changes this scene's image; they keep those
   paths covered in Unbound);
 - `stp_pan_noise`, `stp_static_noise`: a hashed value-noise texture in place of the checker
-  (texture detail of a natural scene rather than flat squares), moving and still;
+  (texture detail of a natural scene rather than flat squares), on `stp_pan_08`'s drifting path
+  and still, both at render scale 0.8;
 - `stp_turn_fast`, `stp_turn_fast_noise`, `stp_pan_fast`: several pixels of motion a frame
   (1.6 degrees of yaw, or 0.11 units sideways);
 - `stp_pan_offset`, `stp_static_offset`: the scene and camera 150, 60, 120 units from the world's
-  origin (STP's view matrices hold the camera's world position);
-- `stp_turn_fast_720`, `stp_turn_fast_noise_720`: a 1280x720 target.
+  origin (STP's view matrices hold the camera's world position), on `stp_pan_08`'s drifting path
+  and still;
+- `stp_turn_fast_720`, `stp_turn_fast_noise_720`: a 1280x720 target, `stp_turn_fast`'s forward
+  step turning 0.5 degrees a frame (several pixels at that width), with the checker and the noise.
 
 Values compare exactly; `image_limits.json` holds each image's measured limits.
 

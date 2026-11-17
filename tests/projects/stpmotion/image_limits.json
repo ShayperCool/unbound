@@ -39,7 +39,7 @@
   "mean": 0.0162,
   "worst": 59,
   "over8": 4,
-  "reason": "A 3x2 cluster around a post's corner differs, four pixels over 8/255 (up to 59/255); every other pixel is the Editor's within rounding. The cause is not resolved: this scenario checks the camera's world position in STP's view matrices, so a precision difference there would show as such pixels. NVIDIA driver, OpenGL Core only."
+  "reason": "A 3x2 cluster around a post's corner differs, four pixels over 8/255 (up to 59/255); every other pixel is the Editor's within rounding. The cause is not resolved. All three scenarios with such clusters (stp_pan_08, stp_pan_noise and this one) share the drifting camera path at render scale 0.8, while stp_static_offset (the same offset, still) is within rounding. NVIDIA driver, OpenGL Core only."
  },
  "stp_pan_prime.png": {
   "mean": 0.0006,
