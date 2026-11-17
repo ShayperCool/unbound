@@ -42,7 +42,12 @@ public static class Probe
     public static IntPtr WideCallback() => Marshal.GetFunctionPointerForDelegate(s_Wide);
     // Flags is not blittable (bool): an [In] parameter is marshalled in only, so the change does not
     // reach the caller's memory.
-    static void Change(ref Flags flags, int data) => flags.Count = data;
+    public static string Touched;
+    static void Change(ref Flags flags, int data)
+    {
+        Touched = flags.On + ""/"" + flags.Count + ""/"" + data;
+        flags.Count = data;
+    }
     static readonly Touch<int> s_Touch = Change;
     public static IntPtr TouchCallback() => Marshal.GetFunctionPointerForDelegate(s_Touch);
     public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
@@ -117,6 +122,7 @@ public static class Probe
             var touch = (IntPtr)Call(probe, "TouchCallback");
             var flags = stackalloc int[2] { 1, 1 }; // a 4-byte BOOL and the count, as marshalled
             ((delegate* unmanaged<int*, int, void>)touch)(flags, 99);
+            Assert.Equal("True/1/99", probe.GetType("Probe")!.GetField("Touched")!.GetValue(null));
             Assert.Equal(1, flags[1]);
         }
 
