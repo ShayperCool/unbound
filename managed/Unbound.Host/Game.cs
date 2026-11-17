@@ -20,6 +20,8 @@ public sealed class GameConfig
     public List<string> Features { get; set; } = new();
     public string ProductName { get; set; } = "";
     public string CompanyName { get; set; } = "";
+    /// <summary>ProjectSettings productGUID as written (hex, low nibble first).</summary>
+    public string ProductGuid { get; set; } = "";
     public string Identifier { get; set; } = "";
     public string BundleVersion { get; set; } = "";
     public string PersistentDataPath { get; set; } = "";
@@ -342,6 +344,7 @@ public static unsafe class Game
         foreach (var feature in c.Features) ProjectInfo.Features.Add(feature);
         ProjectInfo.ProductName = c.ProductName;
         ProjectInfo.CompanyName = c.CompanyName;
+        UnityEditor.PlayerSettings.s_ProductGuid = UnityEditor.PlayerSettings.ParseProductGuid(c.ProductGuid);
         ProjectInfo.Identifier = c.Identifier;
         ProjectInfo.BundleVersion = c.BundleVersion;
         ProjectInfo.PersistentDataPath = c.PersistentDataPath;

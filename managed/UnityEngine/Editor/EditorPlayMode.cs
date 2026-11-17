@@ -97,7 +97,6 @@ namespace UnityEditor.SceneManagement
 }
 namespace UnityEditor.EditorTools
 {
-    public static partial class ToolManager { public static event Action activeToolChanged; }
 }
 namespace UnityEditor.PackageManager
 {

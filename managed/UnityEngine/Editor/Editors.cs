@@ -315,6 +315,69 @@ namespace UnityEditor
         public static object GetGenericData(string type) => type != null && s_Data.TryGetValue(type, out var v) ? v : null;
 
         public static void SetGenericData(string type, object data) => s_Data[type] = data;
+
+        // Drop handlers by the destination view's id. No view takes a drop in Unbound, so none is
+        // called; the Editor also registers its own handlers for the project browser, the
+        // hierarchy and the inspector, which Unbound has no views for (tests/projects/editorload
+        // drop.handlers_*, recorded residuals).
+        static readonly Dictionary<int, List<Delegate>> s_DropHandlers = new Dictionary<int, List<Delegate>>();
+
+        internal static Dictionary<int, List<Delegate>> dropHandlers => s_DropHandlers;
+
+        /// <summary>Adds a handler for a view; one already added throws (null is a handler too)
+        /// (measured: tests/projects/editorload drop.*).</summary>
+        internal static void AddDropHandler(int dropDstId, Delegate handler)
+        {
+            if (!s_DropHandlers.TryGetValue(dropDstId, out var handlers))
+                s_DropHandlers[dropDstId] = handlers = new List<Delegate>();
+            if (handlers.Contains(handler))
+                throw new Exception("Delegate already registered for dropDestinationId:" + dropDstId);
+            handlers.Add(handler);
+        }
+
+        internal static void RemoveDropHandler(int dropDstId, Delegate handler)
+        {
+            if (s_DropHandlers.TryGetValue(dropDstId, out var handlers)) handlers.Remove(handler);
+        }
+
+        internal static bool HasHandler(int dropDstId) => s_DropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Count > 0;
+
+        public static bool HasHandler(int dropDstId, Delegate handler) => s_DropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Contains(handler);
+
+        public static void AddDropHandler(ProjectBrowserDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.projectBrowser, handler);
+        public static void AddDropHandler(SceneDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.sceneView, handler);
+        public static void AddDropHandler(HierarchyDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.hierarchy, handler);
+        public static void AddDropHandler(InspectorDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.inspector, handler);
+        public static void RemoveDropHandler(ProjectBrowserDropHandler handler) => RemoveDropHandler(DragAndDropWindowTarget.projectBrowser, handler);
+        public static void RemoveDropHandler(SceneDropHandler handler) => RemoveDropHandler(DragAndDropWindowTarget.sceneView, handler);
+        public static void RemoveDropHandler(HierarchyDropHandler handler) => RemoveDropHandler(DragAndDropWindowTarget.hierarchy, handler);
+        public static void RemoveDropHandler(InspectorDropHandler handler) => RemoveDropHandler(DragAndDropWindowTarget.inspector, handler);
+
+        public unsafe delegate global::UnityEditor.DragAndDropVisualMode ProjectBrowserDropHandler(int dragInstanceId, string dropUponPath, bool perform);
+        public unsafe delegate global::UnityEditor.DragAndDropVisualMode SceneDropHandler(global::UnityEngine.Object dropUpon, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector2 viewportPosition, global::UnityEngine.Transform parentForDraggedObjects, bool perform);
+        public unsafe delegate global::UnityEditor.DragAndDropVisualMode InspectorDropHandler(global::UnityEngine.Object[] targets, bool perform);
+        public unsafe delegate global::UnityEditor.DragAndDropVisualMode HierarchyDropHandler(int dropTargetInstanceID, global::UnityEditor.HierarchyDropFlags dropMode, global::UnityEngine.Transform parentForDraggedObjects, bool perform);
+    }
+
+    /// <summary>The ids of the views that take drops, as the Editor has them (measured:
+    /// tests/projects/editorload drop.targets).</summary>
+    public partial struct DragAndDropWindowTarget
+    {
+        public static readonly int projectBrowser = -417863675;
+        public static readonly int sceneView = 1081994447;
+        public static readonly int hierarchy = 1486780135;
+        public static readonly int inspector = 1621880143;
+    }
+
+    [global::System.Flags]
+    public enum HierarchyDropFlags
+    {
+        None = 0,
+        DropUpon = 1,
+        DropBetween = 2,
+        DropAfterParent = 4,
+        SearchActive = 8,
+        DropAbove = 16,
     }
 
     public sealed partial class Handles

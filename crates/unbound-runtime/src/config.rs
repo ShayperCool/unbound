@@ -218,6 +218,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .collect::<Vec<_>>(),
         "productName": product,
         "companyName": company,
+        "productGuid": settings.product_guid,
         // As Unity: the active group's application identifier, else com.Company.Product.
         "identifier": settings
             .identifier_for(&options.target)

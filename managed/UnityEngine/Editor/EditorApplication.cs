@@ -205,6 +205,23 @@ namespace UnityEditor
     {
         public static string companyName { get => ProjectInfo.CompanyName; set => ProjectInfo.CompanyName = value; }
         public static string productName { get => ProjectInfo.ProductName; set => ProjectInfo.ProductName = value; }
+
+        /// <summary>The project's GUID (ProjectSettings productGUID, hex in Unity's order: the low
+        /// nibble of each byte first) (measured: tests/projects/editorload player.product_guid).</summary>
+        public static Guid productGUID => s_ProductGuid;
+        internal static Guid s_ProductGuid;
+
+        internal static Guid ParseProductGuid(string hex)
+        {
+            if (hex == null || hex.Length != 32) return Guid.Empty;
+            Span<byte> bytes = stackalloc byte[16];
+            for (int i = 0; i < 16; i++)
+            {
+                if (!Uri.IsHexDigit(hex[2 * i]) || !Uri.IsHexDigit(hex[2 * i + 1])) return Guid.Empty;
+                bytes[i] = (byte)(Uri.FromHex(hex[2 * i + 1]) << 4 | Uri.FromHex(hex[2 * i]));
+            }
+            return new Guid(bytes);
+        }
         public static string applicationIdentifier { get => ProjectInfo.Identifier; set => ProjectInfo.Identifier = value; }
         public static string bundleVersion { get => ProjectInfo.BundleVersion; set => ProjectInfo.BundleVersion = value; }
         public static bool runInBackground { get => Application.runInBackground; set => Application.runInBackground = value; }

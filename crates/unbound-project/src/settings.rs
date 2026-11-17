@@ -15,6 +15,8 @@ pub struct BuildScene {
 pub struct Settings {
     pub product_name: String,
     pub company_name: String,
+    /// `PlayerSettings.productGUID` as the settings write it (hex, low nibble first).
+    pub product_guid: String,
     /// `PlayerSettings.bundleVersion`: Application.version.
     pub bundle_version: String,
     /// `PlayerSettings.applicationIdentifier` per build target group (`Android`, `iPhone`, ...).
@@ -346,6 +348,11 @@ impl Settings {
                 .into();
             settings.company_name = body
                 .get("companyName")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .into();
+            settings.product_guid = body
+                .get("productGUID")
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .into();
