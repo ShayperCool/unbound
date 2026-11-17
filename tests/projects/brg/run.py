@@ -12,8 +12,10 @@ device, on a private display through VirtualGL; Unbound with --force-glcore; the
 Reference/unity-R/opengl) or vulkan (the Editor with -force-vulkan on the GPU-backed display :0,
 Unbound with --force-vulkan; Reference/unity-R/vulkan) or metal (macOS arm64: the macOS Editor
 in batch mode, which draws with Metal, through tests/macos_editor.py; Reference/unity-R/metal).
-On macOS the engine draws with Metal: an opengl check compares it with the Linux OpenGL Core
-reference, and a vulkan check (macOS has no Vulkan device) checks the Metal reference instead.
+On macOS the engine draws with Metal, so every engine run and check there is a Metal one,
+compared with the Metal reference (the device decides the probe's buffer target, refusals and
+rounding: they follow the macOS Editor, AGENTS.md Platforms); it says so when another device is
+named.
 
 The probe's scripts are staged over a fresh copy of the shader graph probe's URP project
 (tests/projects/shadergraph: its scene, pipeline asset and renderer; its own script is left out)
@@ -151,17 +153,8 @@ def publish(labels):
         for name in capture_names(first/CAPTURE):
             shutil.copyfile(first/CAPTURE/name, path/name)
     if DEVICE == 'metal':
-        repeats = [run_root(ROOT, label) for label in labels]
-        for repeat in repeats:
-            code = (repeat/macos_editor.EXIT).read_text().strip() if (repeat/macos_editor.EXIT).exists() else 'missing'
-            problem = editor_runner.jsonl_complete(f'{CAPTURE}/{VALUES}')(repeat)
-            if code != '0' or problem:
-                sys.exit(f'{repeat.name}: Editor exit {code}, {problem or "complete"}; not publishing')
-        names = capture_names(repeats[0]/CAPTURE)
-        if any(capture_names(r/CAPTURE) != names or any((r/CAPTURE/n).read_bytes() != (repeats[0]/CAPTURE/n).read_bytes()
-                                                        for n in names) for r in repeats[1:]):
-            sys.exit('the repeats differ; not publishing')
-        write(fresh, repeats[0])
+        write(fresh, macos_editor.agreeing([run_root(ROOT, label) for label in labels], f'{CAPTURE}/{VALUES}',
+                                           lambda d: [f'{CAPTURE}/{n}' for n in capture_names(d/CAPTURE)]))
     else:
         editor_runner.publish([run_root(ROOT, label) for label in labels], fresh,
                               lambda d: [f'{CAPTURE}/{n}' for n in capture_names(Path(d)/CAPTURE)], write,
@@ -296,8 +289,8 @@ def main():
     DEVICE = args.device
     if MACOS and DEVICE != 'metal' and args.mode in ('native', 'publish'):
         parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
-    if MACOS and DEVICE == 'vulkan':
-        print('brg: macOS has no Vulkan device; checking the Metal reference instead')
+    if MACOS and DEVICE != 'metal':
+        print(f'brg: macOS draws with Metal; checking the Metal reference, not the {DEVICE} one')
         DEVICE = 'metal'
     if DEVICE == 'metal' and not MACOS:
         parser.error('--device metal runs on macOS arm64 only')

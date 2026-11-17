@@ -7,6 +7,8 @@ the Editor's log (`editor.log`), its output (`editor.out`) and exit code (`edito
     capture(project, out, args, env)       one batchmode Editor run (windowed=True: with its windows)
     publish(directories, target, name)     two or more captures that exited 0, are complete and
                                            byte-identical in `name` become `target`
+    agreeing(directories, complete, names) the checks of publish over several files: the first
+                                           capture's directory, to publish from
 """
 import os
 import subprocess
@@ -44,25 +46,33 @@ def capture(project, out, args, env, timeout=900, windowed=False):
     return code
 
 
-def publish(directories, target, name):
-    """Writes the first capture's `name` to `target` when every capture exited 0 and is complete,
-    all are byte-identical, and `target` is new."""
+def agreeing(directories, complete, names):
+    """The first of two or more captures when every one exited 0, `complete` (a JSONL file whose
+    last row is complete) is so in each, and each has the same `names(directory)` files,
+    byte-identical; SystemExit otherwise."""
     directories = [Path(d) for d in directories]
     if len(directories) < 2:
         raise SystemExit('publishing needs two independent repeats')
-    captures = []
     for directory in directories:
         exit_file = directory/EXIT
         code = exit_file.read_text().strip() if exit_file.exists() else 'missing'
-        problem = jsonl_complete(name)(directory)
+        problem = jsonl_complete(complete)(directory)
         if code != '0' or problem:
             raise SystemExit(f'{directory.name}: Editor exit {code}, {problem or "complete"}; not publishing')
-        captures.append((directory/name).read_bytes())
-    if any(capture != captures[0] for capture in captures):
+    first = names(directories[0])
+    if any(names(d) != first or any((d/n).read_bytes() != (directories[0]/n).read_bytes() for n in first)
+           for d in directories[1:]):
         raise SystemExit('the repeats differ; not publishing')
+    return directories[0]
+
+
+def publish(directories, target, name):
+    """Writes the first capture's `name` to `target` when every capture exited 0 and is complete,
+    all are byte-identical, and `target` is new."""
+    first = agreeing(directories, name, lambda directory: [name])
     target = Path(target)
     if target.exists():
         raise SystemExit(f'refusing to overwrite reference: {target}')
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(captures[0])
+    target.write_bytes((first/name).read_bytes())
     return 0

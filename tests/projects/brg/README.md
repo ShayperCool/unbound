@@ -108,6 +108,8 @@ included; every image matches exactly.
 (`tests/macos_editor.py`); `Reference/unity-6000.0.71f1/metal` holds two byte-identical
 captures on an Apple M2 Pro. Against the Linux references every Metal image differs by one
 step in most pixels (means 0.46 to 0.98, worst 1) in the macOS Editor and in Unbound alike: that
-is Metal's own rounding, which the device decides, so on macOS the check compares Metal with the
-Metal reference (`check --device vulkan` there, since macOS has no Vulkan device) at the same
-bounds, while `check` still compares with the Linux OpenGL Core reference.
+is Metal's own rounding, which the device decides; the device also decides the batch buffer
+target (RawBuffer, as on Vulkan) and the refusals that follow from it. So on macOS every check
+compares Metal with the Metal reference at the same bounds (`check` and `check --device vulkan`
+alike, each saying so). The Metal values match Vulkan's apart from `device` and one rounding step
+in `lightmap_arrays.c5.body`.
