@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.VFX;
 
 namespace Unbound.Runtime
@@ -92,7 +94,16 @@ namespace Unbound.Runtime
         /// to the systems awake and updated in the frame.</summary>
         internal static void AskDue(uint frame)
         {
-            foreach (var schedule in s_All) schedule.Ask(frame);
+            foreach (var schedule in s_All)
+            {
+                // One schedule's failure is its own: said, and not tried again before a period.
+                try { schedule.Ask(frame); }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    if (schedule.m_Waiting == 0) schedule.m_NextFrame = frame + Period;
+                }
+            }
         }
 
         void Ask(uint frame)

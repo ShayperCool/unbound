@@ -115,7 +115,8 @@ Linux Editor on OpenGL Core).
 - Strips of a system that sleeps or is culled; several steps in a frame; strips of more than
   a few dozen particles, and more strips than one dispatch's thread groups reach.
 - The alive counts of more effects of one graph than a batch holds (the asset's batch
-  capacity), of effects made after their batch emptied, of an effect that is culled or asleep
+  capacity), of effects made after their batch emptied or while it runs (every effect of the
+  probe is made in its first frame), of an effect that is culled or asleep
   when its batch's counts are asked, and with instancing turned off in the Editor's preferences
   (`Instancing Enabled`).
 - Other devices than OpenGL Core in the Editor.
