@@ -1,0 +1,12 @@
+{
+  "commands": ["python3 tests/projects/coreremainder/run.py gate"],
+  "summary": "coreremainder: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/BeforeRender.cs",
+    "managed/UnityEngine/Core/Application.cs",
+    "managed/UnityEngine/Core/UnityString.cs",
+    "managed/UnityEngine/Core/UnityApiCompatibilityVersion.cs",
+    "managed/UnityEngine/Core/SettingsObjects.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs"
+  ]
+}

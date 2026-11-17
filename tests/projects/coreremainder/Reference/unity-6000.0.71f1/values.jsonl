@@ -1,0 +1,30 @@
+{"k":"invoke.registered","v":"M-100 C-5 B B A10 D10"}
+{"k":"invoke.removedA10AndOnePlain","v":"M-100 C-5 B D10"}
+{"k":"invoke.order10EmptiedThenA10Twice","v":"M-100 C-5 B A10 A10"}
+{"k":"invoke.oneA10Removed","v":"M-100 C-5 B A10"}
+{"k":"invoke.unregisteredRemoved","v":"M-100 C-5 B A10"}
+{"k":"invoke.throwing","v":"M-100 C-5 B T1 | threw InvalidOperationException: probe throw"}
+{"k":"invoke.registeringDuring","v":"M-100 C-5 B R3 R3 A10 N20"}
+{"k":"invoke.afterRegistering","v":"M-100 P-50 C-5 B R3 A10 N20"}
+{"k":"invoke.allRemoved","v":""}
+{"k":"event.addNull","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"event.removeNull","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"event.addLambda","v":"ok"}
+{"k":"invoke.lambda","v":"L"}
+{"k":"attribute.order","v":"7"}
+{"k":"unityString.numbers","v":"1.1 2.01 1850 0.1 1,234,567.3"}
+{"k":"unityString.nullArgs","v":"ArgumentNullException: Value cannot be null.\u000aParameter name: args"}
+{"k":"compat.versionOnly","v":"2019.4.1f1"}
+{"k":"compat.checkOnlyTrue","v":"6000.0.71f1"}
+{"k":"compat.checkOnlyFalse","v":"ArgumentException: You must pass 'true' to checkOnlyUnityVersion parameter."}
+{"k":"compat.hashes","v":"1.2"}
+{"k":"quality.object","v":"QualitySettings UnityEngine.QualitySettings"}
+{"k":"quality.sameAgain","v":true}
+{"k":"quality.sameAsSingleton","v":true}
+{"k":"quality.sameAsAsset","v":true}
+{"k":"quality.levels","v":"6 first Very Low"}
+{"k":"quality.current","v":"5"}
+{"k":"graphics.object","v":"GraphicsSettings UnityEngine.Rendering.GraphicsSettings"}
+{"k":"graphics.sameAsSingleton","v":true}
+{"k":"graphics.alwaysIncluded","v":"7"}
+{"k":"complete","v":true}
