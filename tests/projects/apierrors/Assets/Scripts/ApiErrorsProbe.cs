@@ -295,7 +295,7 @@ public class ApiErrorsProbe : MonoBehaviour
         Do("texture.non_readable_set_pixel", () => locked.SetPixel(0, 0, Color.red));
         Try("texture.non_readable_get_pixels", () => locked.GetPixels());
         Destroy(t);
-        Destroy(locked); CopyControls(); LayeredTextures();
+        Destroy(locked); CopyControls(); LayeredTextures(); NumberTexts();
     }
 
     static IEnumerator Animators()
@@ -835,5 +835,31 @@ public class ApiErrorsProbe : MonoBehaviour
         lockedArray.Apply(false, true);
         Try("texture.array.non_readable_get_pixels", () => lockedArray.GetPixels(0));
         Destroy(lockedArray);
+    }
+
+    /// <summary>Actual values made of floats (tuples) and number texts under a culture with a
+    /// decimal comma, as game code and the log see them.</summary>
+    static void NumberTexts()
+    {
+        Shape("format.number.range_actual_tuple", () => throw new ArgumentOutOfRangeException("p", (1f / 3f, 2.5f), "Too big."));
+        Shape("format.number.range_actual_tuple_double", () => throw new ArgumentOutOfRangeException("p", (1.0 / 3.0, 0.1), "Too big."));
+        Row("format.number.tuple_to_string", (1f / 3f, 2.5f).ToString());
+        Row("format.number.tuple_format", string.Format("{0}", (1f / 3f, 2.5f)));
+        Row("format.number.tuple_concat", "t=" + (1f / 3f, 0.1));
+        var culture = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            Shape("format.number.de_range_actual_float", () => throw new ArgumentOutOfRangeException("p", 2.5f, "Too big."));
+            Shape("format.number.de_range_actual_third", () => throw new ArgumentOutOfRangeException("p", 1f / 3f, "Too big."));
+            Shape("format.number.de_range_actual_double", () => throw new ArgumentOutOfRangeException("p", 1.0 / 3.0, "Too big."));
+            Shape("format.number.de_range_actual_tuple", () => throw new ArgumentOutOfRangeException("p", (1f / 3f, 2.5f), "Too big."));
+            Row("format.number.de_float_to_string", (2.5f).ToString() + " " + (1f / 3f).ToString() + " " + (1.0 / 3.0).ToString());
+            Row("format.number.de_float_format", string.Format("{0} {1}", 2.5f, 1.0 / 3.0));
+            Row("format.number.de_float_concat", "v=" + 2.5f + " " + 0.1);
+            Row("format.number.de_tuple_to_string", (1f / 3f, 2.5f).ToString());
+            Row("format.number.de_vector", new Vector3(1.5f, 2f, 0.25f).ToString());
+        }
+        finally { System.Threading.Thread.CurrentThread.CurrentCulture = culture; }
     }
 }

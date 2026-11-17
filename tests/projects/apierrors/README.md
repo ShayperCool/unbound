@@ -42,6 +42,9 @@ log messages it writes with their log type (`.logs`; logs written on other threa
   exceptions the class library and Unity throw (their stacks hold their own frames); a null and a
   non-exception argument; asked from a coroutine, from LateUpdate and from a coroutine's first step
   started there (`started_*`), each with StackTraceUtility.ExtractStackTrace's text.
+* `format.number.*`: actual values made of floats (tuples of a float and a double) and tuples in
+  game code's ToString, string.Format and concatenation; then, under the de-DE culture (a decimal
+  comma), float, double and tuple actual values, float and tuple texts, and a Vector3's.
 
 Measured in the Unity 6000.0.71f1 Editor on macOS in batch mode (two byte-identical captures;
 none of the values depends on the OS or the graphics device); the reference with the `format.*`

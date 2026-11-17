@@ -322,6 +322,44 @@
 {"k":"texture.cubemap.non_readable_get_pixels","v":"throws System.ArgumentException: Cubemap.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture 'LockedCube')"}
 {"k":"texture.cubemap.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture 'LockedCube' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.array.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2DArray.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture 'LockedLayers')"}
+{"k":"format.number.range_actual_tuple","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.3333333, 2.5)."}
+{"k":"format.number.range_actual_tuple.param","v":"p"}
+{"k":"format.number.range_actual_tuple.actual","v":"(0.3333333, 2.5)"}
+{"k":"format.number.range_actual_tuple.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.3333333, 2.5)."}
+{"k":"format.number.range_actual_tuple.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.3333333, 2.5)."}
+{"k":"format.number.range_actual_tuple_double","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.333333333333333, 0.1)."}
+{"k":"format.number.range_actual_tuple_double.param","v":"p"}
+{"k":"format.number.range_actual_tuple_double.actual","v":"(0.333333333333333, 0.1)"}
+{"k":"format.number.range_actual_tuple_double.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.333333333333333, 0.1)."}
+{"k":"format.number.range_actual_tuple_double.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0.333333333333333, 0.1)."}
+{"k":"format.number.tuple_to_string","v":"(0.3333333, 2.5)"}
+{"k":"format.number.tuple_format","v":"(0.3333333, 2.5)"}
+{"k":"format.number.tuple_concat","v":"t=(0.3333333, 0.1)"}
+{"k":"format.number.de_range_actual_float","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2,5."}
+{"k":"format.number.de_range_actual_float.param","v":"p"}
+{"k":"format.number.de_range_actual_float.actual","v":"2,5"}
+{"k":"format.number.de_range_actual_float.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2,5."}
+{"k":"format.number.de_range_actual_float.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2,5."}
+{"k":"format.number.de_range_actual_third","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,3333333."}
+{"k":"format.number.de_range_actual_third.param","v":"p"}
+{"k":"format.number.de_range_actual_third.actual","v":"0,3333333"}
+{"k":"format.number.de_range_actual_third.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,3333333."}
+{"k":"format.number.de_range_actual_third.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,3333333."}
+{"k":"format.number.de_range_actual_double","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,333333333333333."}
+{"k":"format.number.de_range_actual_double.param","v":"p"}
+{"k":"format.number.de_range_actual_double.actual","v":"0,333333333333333"}
+{"k":"format.number.de_range_actual_double.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,333333333333333."}
+{"k":"format.number.de_range_actual_double.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0,333333333333333."}
+{"k":"format.number.de_range_actual_tuple","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0,3333333, 2,5)."}
+{"k":"format.number.de_range_actual_tuple.param","v":"p"}
+{"k":"format.number.de_range_actual_tuple.actual","v":"(0,3333333, 2,5)"}
+{"k":"format.number.de_range_actual_tuple.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0,3333333, 2,5)."}
+{"k":"format.number.de_range_actual_tuple.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was (0,3333333, 2,5)."}
+{"k":"format.number.de_float_to_string","v":"2,5 0,3333333 0,333333333333333"}
+{"k":"format.number.de_float_format","v":"2,5 0,333333333333333"}
+{"k":"format.number.de_float_concat","v":"v=2,5 0,1"}
+{"k":"format.number.de_tuple_to_string","v":"(0,3333333, 2,5)"}
+{"k":"format.number.de_vector","v":"(1.50, 2.00, 0.25)"}
 {"k":"animator.set_float_missing","v":"returns done"}
 {"k":"animator.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
 {"k":"animator.get_float_missing","v":"returns 0"}
