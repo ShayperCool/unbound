@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/urpoverlayui/run.py gate"
+  ],
+  "summary": "urpoverlayui: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/UI/CanvasSystem.cs",
+    "managed/UnityEngine/IMGUI/GuiRender.cs"
+  ]
+}
