@@ -98,6 +98,7 @@ public unsafe class BrgProbe : MonoBehaviour
             Sorting("sorting_ortho", true, s_OrthographicDepths);
             LightmapArrays();
             GpuWritten();
+            Procedural();
         }
         catch (Exception e)
         {
@@ -1147,6 +1148,291 @@ public unsafe class BrgProbe : MonoBehaviour
         };
     }
 
+    // ---- procedural scenario ----
+
+    enum ProcKind { Procedural, ProceduralIndirect, Indirect }
+
+    /// <summary>
+    /// The procedural scenario's commands, one per cell, each drawing two instances (the cell's
+    /// batch instances 2c and 2c + 1, two squares one above the other): its type, topology,
+    /// whether its material expands six vertex ids into a square's two triangles
+    /// (Probe/DotsProcedural's _Expand), its index buffer (0: none, else 16 or 32 bits), its
+    /// first index (procedural: the index byte offset), its vertex or index count, its base vertex
+    /// (or the arguments' start vertex), the mesh of an indirect command (0 the cube, 1 a square
+    /// of four lines) and the byte offset of its visible instance buffer window. Probe/DotsProcedural's
+    /// vertex v lies at corner v % 4 of square v / 4 (shifted along x), so the ids read show in
+    /// the image.
+    /// </summary>
+    static readonly (ProcKind Kind, MeshTopology Topology, bool Expand, int IndexBits, uint First, uint Count, uint Base, int Mesh, uint Window)[] s_ProcCommands =
+    {
+        (ProcKind.Procedural, MeshTopology.Triangles, true, 0, 0, 6, 0, 0, 0),
+        // A non-indexed command's base vertex: the second square if it is the first vertex id.
+        (ProcKind.Procedural, MeshTopology.Triangles, true, 0, 0, 6, 6, 0, 0),
+        // 16-bit indices 6-11 (the second square) by their byte offset.
+        (ProcKind.Procedural, MeshTopology.Triangles, false, 16, 12, 6, 0, 0, 0),
+        // 32-bit indices of the first square with base vertex 4 (the second square).
+        (ProcKind.Procedural, MeshTopology.Triangles, false, 32, 0, 6, 4, 0, 0),
+        (ProcKind.Procedural, MeshTopology.Lines, false, 0, 0, 8, 0, 0, 0),
+        // The square's outline (16-bit indices 12-19) with base vertex 4.
+        (ProcKind.Procedural, MeshTopology.Lines, false, 16, 24, 8, 4, 0, 0),
+        (ProcKind.Procedural, MeshTopology.Points, false, 0, 0, 8, 0, 0, 0),
+        (ProcKind.Procedural, MeshTopology.LineStrip, false, 0, 0, 5, 0, 0, 0),
+        (ProcKind.Procedural, MeshTopology.Quads, false, 0, 0, 8, 0, 0, 0),
+        // Arguments: 6 vertices from start vertex 0, two instances.
+        (ProcKind.ProceduralIndirect, MeshTopology.Triangles, true, 0, 0, 6, 0, 0, 0),
+        // Arguments: 6 indices from index 6, base vertex 0, two instances.
+        (ProcKind.ProceduralIndirect, MeshTopology.Triangles, false, 16, 6, 6, 0, 0, 0),
+        (ProcKind.ProceduralIndirect, MeshTopology.Lines, false, 0, 0, 8, 0, 0, 0),
+        // Mesh commands: the cube's 36 indices as triangles, lines and points, the square's 8 as lines.
+        (ProcKind.Indirect, MeshTopology.Triangles, false, 0, 0, 36, 0, 0, 0),
+        (ProcKind.Indirect, MeshTopology.Lines, false, 0, 0, 36, 0, 0, 0),
+        (ProcKind.Indirect, MeshTopology.Lines, false, 0, 0, 8, 0, 1, 0),
+        (ProcKind.Indirect, MeshTopology.Points, false, 0, 0, 36, 0, 0, 0),
+        // The visible instance buffer through a window at byte 256: visible offset 34 reads this
+        // cell's instances there (uint 98), the next cell's at the buffer's start (uint 34). Where
+        // the buffer is raw, the Editor refuses a window (an error per draw; not drawn).
+        (ProcKind.ProceduralIndirect, MeshTopology.Triangles, true, 0, 0, 6, 0, 0, 256),
+    };
+    /// <summary>The cells: one per command and one more, whose instances the windowed command
+    /// draws if it reads its visible instances from the buffer's start.</summary>
+    static int ProcCells => s_ProcCommands.Length + 1;
+    const int ProcWindowCommand = 16, ProcVisibleBytes = 512, ProcArgsStride = 20;
+
+    GraphicsBuffer m_ProcBuffer, m_ProcIndices16, m_ProcIndices32, m_ProcArgs, m_ProcVisible;
+    BatchID m_ProcBatch;
+    BatchMaterialID m_ProcSquares, m_ProcIds, m_ProcUnlit;
+    BatchMeshID m_ProcLineMesh;
+
+    /// <summary>The procedural scenario's cell c: its centre at z -2 (in front of the scene),
+    /// five per row.</summary>
+    static Vector3 ProcCell(int c) => new Vector3(-3.2f + 1.6f * (c % 5), 2.4f - 1.0f * (c / 5), -2f);
+
+    /// <summary>Instance k (0, 1) of cell c: a square of 0.35 (procedural shapes, the line
+    /// mesh), or a turned cube of 0.3 about its middle (the cube commands).</summary>
+    static Matrix4x4 ProcInstance(int c, int k)
+    {
+        var corner = ProcCell(c) + new Vector3(-0.6f, -0.4f + 0.45f * k, 0f);
+        if (c < s_ProcCommands.Length && s_ProcCommands[c].Kind == ProcKind.Indirect && s_ProcCommands[c].Mesh == 0)
+            return Matrix4x4.TRS(corner + new Vector3(0.15f, 0.15f, 0f), Quaternion.Euler(20f, 30f, 0f), Vector3.one * 0.3f);
+        return Matrix4x4.TRS(corner, Quaternion.identity, Vector3.one * 0.35f);
+    }
+
+    /// <summary>
+    /// Procedural and indirect commands beside the triangles of mesh commands: procedural
+    /// commands (BatchDrawCommandProcedural: vertex ids without a mesh, or an index buffer's,
+    /// with a base vertex) and procedural indirect ones (their counts in an arguments buffer) of
+    /// Probe/DotsProcedural as triangles, lines, a line strip, points and quads, and indirect
+    /// commands of the cube's and a line square's indices as triangles, lines and points. Each
+    /// command draws in a cell of its own; <c>procedural.c&lt;i&gt;.pixels</c> counts the pixels of
+    /// cell i that differ from the scene without the commands, <c>.drawn</c> whether any does.
+    /// </summary>
+    void Procedural()
+    {
+        const string name = "procedural";
+        int n = 2 * ProcCells;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int bytes = (colors + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = ProcInstance(i / 2, i % 2);
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            var color = Color.HSVToRGB((i / 2) / (float)ProcCells, 0.85f, 1f);
+            int o = colors / 4 + i * 4;
+            data[o] = color.r; data[o + 1] = color.g; data[o + 2] = color.b; data[o + 3] = 1f;
+        }
+        bool constant = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer;
+        m_ProcBuffer = constant ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16) : new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_ProcBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        m_ProcBatch = constant ? m_Brg.AddBatch(metadata, m_ProcBuffer.bufferHandle, 0, (uint)bytes) : m_Brg.AddBatch(metadata, m_ProcBuffer.bufferHandle);
+        metadata.Dispose();
+
+        m_ProcIndices16 = new GraphicsBuffer(GraphicsBuffer.Target.Index, 20, 2);
+        m_ProcIndices16.SetData(new ushort[] { 0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 0, 1, 1, 2, 2, 3, 3, 0 });
+        m_ProcIndices32 = new GraphicsBuffer(GraphicsBuffer.Target.Index, 6, 4);
+        m_ProcIndices32.SetData(new uint[] { 0, 1, 2, 0, 2, 3 });
+
+        // Every command's arguments at 20 bytes each: indexed (count, instances, first index,
+        // base vertex, first instance) or not (count, instances, start vertex, first instance).
+        var args = new uint[s_ProcCommands.Length * ProcArgsStride / 4];
+        for (int c = 0; c < s_ProcCommands.Length; c++)
+        {
+            var command = s_ProcCommands[c];
+            int at = c * ProcArgsStride / 4;
+            args[at] = command.Count;
+            args[at + 1] = 2;
+            bool indexed = command.Kind == ProcKind.Indirect || command.IndexBits != 0;
+            args[at + 2] = indexed ? command.First : command.Base;
+            args[at + 3] = indexed ? command.Base : 0;
+        }
+        m_ProcArgs = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, args.Length, 4);
+        m_ProcArgs.SetData(args);
+
+        // The visible instances of indirect commands: command c's at uint 2c; the windowed
+        // command's at uint 98 (its visible offset 34 in the window at byte 256), the extra
+        // cell's at uint 34.
+        var visible = new uint[ProcVisibleBytes / 4];
+        for (int c = 0; c < s_ProcCommands.Length; c++)
+        {
+            visible[2 * c] = (uint)(2 * c);
+            visible[2 * c + 1] = (uint)(2 * c + 1);
+        }
+        uint windowAt = s_ProcCommands[ProcWindowCommand].Window / 4 + ProcWindowVisibleOffset;
+        visible[windowAt] = 2 * ProcWindowCommand;
+        visible[windowAt + 1] = 2 * ProcWindowCommand + 1;
+        visible[ProcWindowVisibleOffset] = (uint)(2 * s_ProcCommands.Length);
+        visible[ProcWindowVisibleOffset + 1] = (uint)(2 * s_ProcCommands.Length + 1);
+        m_ProcVisible = constant ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, ProcVisibleBytes / 16, 16) : new GraphicsBuffer(GraphicsBuffer.Target.Raw, ProcVisibleBytes / 4, 4);
+        m_ProcVisible.SetData(visible);
+
+        var shader = Shader.Find("Probe/DotsProcedural");
+        var squares = new Material(shader);
+        squares.SetFloat("_Expand", 1f);
+        var ids = new Material(shader);
+        var unlit = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        unlit.SetColor("_BaseColor", Color.white);
+        m_ProcSquares = m_Brg.RegisterMaterial(squares);
+        m_ProcIds = m_Brg.RegisterMaterial(ids);
+        m_ProcUnlit = m_Brg.RegisterMaterial(unlit);
+        var lines = new Mesh { name = "LineSquare" };
+        lines.vertices = new[] { Vector3.zero, Vector3.right, new Vector3(1f, 1f, 0f), Vector3.up };
+        lines.SetIndices(new[] { 0, 1, 1, 2, 2, 3, 3, 0 }, MeshTopology.Lines, 0);
+        m_ProcLineMesh = m_Brg.RegisterMesh(lines);
+
+        // The scene without the commands, then with them.
+        m_NoCommands = true;
+        Scenario(name + "_background");
+        var background = m_LastImage;
+        m_NoCommands = false;
+        m_Views.Clear();
+        Scenario(name);
+        RecordViews();
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int c = 0; c < ProcCells; c++)
+        {
+            int pixels = ChangedPixels(background, m_LastImage, ProcCell(c), 0.75f, 0.5f);
+            Row(name + ".c" + c + ".pixels", pixels);
+            Row(name + ".c" + c + ".drawn", pixels > 0);
+        }
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+
+        m_Brg.RemoveBatch(m_ProcBatch);
+        m_Brg.UnregisterMaterial(m_ProcSquares);
+        m_Brg.UnregisterMaterial(m_ProcIds);
+        m_Brg.UnregisterMaterial(m_ProcUnlit);
+        m_Brg.UnregisterMesh(m_ProcLineMesh);
+        foreach (var buffer in new[] { m_ProcBuffer, m_ProcIndices16, m_ProcIndices32, m_ProcArgs, m_ProcVisible }) buffer.Dispose();
+        DestroyImmediate(squares);
+        DestroyImmediate(ids);
+        DestroyImmediate(unlit);
+        DestroyImmediate(lines);
+    }
+
+    /// <summary>The windowed command's visible offset (in uints, from its window's start).</summary>
+    const uint ProcWindowVisibleOffset = 34;
+
+    /// <summary>The pixels of the rectangle half <paramref name="halfWidth"/> wide and half
+    /// <paramref name="halfHeight"/> high about a world point (facing the camera) where two images
+    /// differ by more than 8 in a channel.</summary>
+    int ChangedPixels(Texture2D before, Texture2D after, Vector3 centre, float halfWidth, float halfHeight)
+    {
+        var low = m_Camera.WorldToViewportPoint(centre - new Vector3(halfWidth, halfHeight, 0f));
+        var high = m_Camera.WorldToViewportPoint(centre + new Vector3(halfWidth, halfHeight, 0f));
+        int x0 = Mathf.Clamp((int)(low.x * Width), 0, Width), x1 = Mathf.Clamp((int)(high.x * Width), 0, Width);
+        int y0 = Mathf.Clamp((int)(low.y * Height), 0, Height), y1 = Mathf.Clamp((int)(high.y * Height), 0, Height);
+        int changed = 0;
+        for (int y = y0; y < y1; y++)
+            for (int x = x0; x < x1; x++)
+            {
+                Color32 a = before.GetPixel(x, y), b = after.GetPixel(x, y);
+                if (Math.Abs(a.r - b.r) > 8 || Math.Abs(a.g - b.g) > 8 || Math.Abs(a.b - b.b) > 8) changed++;
+            }
+        return changed;
+    }
+
+    /// <summary>The procedural scenario's commands (camera views only): a range of each type.</summary>
+    void ProceduralCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int procedural = 0, proceduralIndirect = 0, indirect = 0;
+        foreach (var command in s_ProcCommands)
+        {
+            if (command.Kind == ProcKind.Procedural) procedural++;
+            else if (command.Kind == ProcKind.ProceduralIndirect) proceduralIndirect++;
+            else indirect++;
+        }
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->proceduralDrawCommands = (BatchDrawCommandProcedural*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandProcedural>() * procedural, alignment, Allocator.TempJob);
+        commands->proceduralIndirectDrawCommands = (BatchDrawCommandProceduralIndirect*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandProceduralIndirect>() * proceduralIndirect, alignment, Allocator.TempJob);
+        commands->indirectDrawCommands = (BatchDrawCommandIndirect*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandIndirect>() * indirect, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>() * 3, alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(2 * procedural * sizeof(int), alignment, Allocator.TempJob);
+        commands->drawCommands = null;
+        commands->instanceSortingPositions = null;
+        commands->instanceSortingPositionFloatCount = 0;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = 0;
+        commands->proceduralDrawCommandCount = procedural;
+        commands->proceduralIndirectDrawCommandCount = proceduralIndirect;
+        commands->indirectDrawCommandCount = indirect;
+        commands->visibleInstanceCount = 2 * procedural;
+        commands->drawRangeCount = 3;
+        int p = 0, pi = 0, ind = 0;
+        for (int c = 0; c < s_ProcCommands.Length; c++)
+        {
+            var command = s_ProcCommands[c];
+            var indices = command.IndexBits == 16 ? m_ProcIndices16.bufferHandle : command.IndexBits == 32 ? m_ProcIndices32.bufferHandle : default;
+            var material = command.Kind == ProcKind.Indirect ? m_ProcUnlit : command.Expand ? m_ProcSquares : m_ProcIds;
+            uint argsAt = (uint)(c * ProcArgsStride);
+            uint visibleOffset = c == ProcWindowCommand ? ProcWindowVisibleOffset : (uint)(2 * c);
+            // A constant buffer is read through a window (the whole buffer, or the windowed
+            // command's); a raw buffer takes none, so the windowed command is refused there.
+            uint windowSize = command.Window != 0 ? 256u : BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer ? ProcVisibleBytes : 0u;
+            switch (command.Kind)
+            {
+                case ProcKind.Procedural:
+                    commands->visibleInstances[2 * p] = 2 * c;
+                    commands->visibleInstances[2 * p + 1] = 2 * c + 1;
+                    commands->proceduralDrawCommands[p] = new BatchDrawCommandProcedural
+                    {
+                        flags = BatchDrawCommandFlags.None, batchID = m_ProcBatch, materialID = material, splitVisibilityMask = 0xff,
+                        visibleOffset = (uint)(2 * p), visibleCount = 2, topology = command.Topology, indexBufferHandle = indices,
+                        baseVertex = command.Base, indexOffsetBytes = command.First, elementCount = command.Count,
+                    };
+                    p++;
+                    break;
+                case ProcKind.ProceduralIndirect:
+                    commands->proceduralIndirectDrawCommands[pi++] = new BatchDrawCommandProceduralIndirect
+                    {
+                        flags = BatchDrawCommandFlags.None, batchID = m_ProcBatch, materialID = material, splitVisibilityMask = 0xff,
+                        visibleOffset = visibleOffset, topology = command.Topology, indexBufferHandle = indices,
+                        visibleInstancesBufferHandle = m_ProcVisible.bufferHandle, visibleInstancesBufferWindowOffset = command.Window,
+                        visibleInstancesBufferWindowSizeBytes = windowSize, indirectArgsBufferHandle = m_ProcArgs.bufferHandle, indirectArgsBufferOffset = argsAt,
+                    };
+                    break;
+                default:
+                    commands->indirectDrawCommands[ind++] = new BatchDrawCommandIndirect
+                    {
+                        flags = BatchDrawCommandFlags.None, batchID = m_ProcBatch, materialID = material, splitVisibilityMask = 0xff,
+                        visibleOffset = visibleOffset, meshID = command.Mesh == 0 ? m_Cube : m_ProcLineMesh, topology = command.Topology,
+                        visibleInstancesBufferHandle = m_ProcVisible.bufferHandle, visibleInstancesBufferWindowOffset = command.Window,
+                        visibleInstancesBufferWindowSizeBytes = windowSize, indirectArgsBufferHandle = m_ProcArgs.bufferHandle, indirectArgsBufferOffset = argsAt,
+                    };
+                    break;
+            }
+        }
+        var filter = new BatchFilterSettings { renderingLayerMask = 0xffffffff };
+        commands->drawRanges[0] = new BatchDrawRange { drawCommandsType = BatchDrawCommandType.Procedural, drawCommandsBegin = 0, drawCommandsCount = (uint)procedural, filterSettings = filter };
+        commands->drawRanges[1] = new BatchDrawRange { drawCommandsType = BatchDrawCommandType.ProceduralIndirect, drawCommandsBegin = 0, drawCommandsCount = (uint)proceduralIndirect, filterSettings = filter };
+        commands->drawRanges[2] = new BatchDrawRange { drawCommandsType = BatchDrawCommandType.Indirect, drawCommandsBegin = 0, drawCommandsCount = (uint)indirect, filterSettings = filter };
+    }
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -1166,6 +1452,11 @@ public unsafe class BrgProbe : MonoBehaviour
         if (m_Scenario == "gpu_written")
         {
             GpuWrittenCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
+        if (m_Scenario == "procedural")
+        {
+            if (context.viewType == BatchCullingViewType.Camera) ProceduralCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();
         }
         if (m_Scenario == "lightmap_arrays")
