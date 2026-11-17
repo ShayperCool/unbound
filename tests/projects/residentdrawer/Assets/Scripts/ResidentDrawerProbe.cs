@@ -83,6 +83,18 @@ public class ResidentDrawerProbe : MonoBehaviour
     static readonly bool s_MotionMode = Environment.GetEnvironmentVariable("RESIDENT_DRAWER_MOTION") == "1";
     const int MotionLastFrame = 50;
 
+    /// <summary>The motion profile's depth controls (<see cref="DepthReadControls"/>): a depth-only
+    /// target, another target, the kernel reading the first, its output and a buffer the commands write.</summary>
+    RenderTexture m_DepthTarget, m_OtherTarget;
+    ComputeShader m_DepthRead;
+    ComputeBuffer m_DepthOut;
+    GraphicsBuffer m_Scratch;
+    Material m_DepthQuad;
+    Mesh m_Cover;
+    MaterialPropertyBlock m_Near, m_Far;
+    static readonly string[] DepthCases = { "base", "bound", "afterBufferData", "afterSwitch" };
+    static readonly float[] s_ScratchData = { 1, 2, 3, 4 };
+
     void Start()
     {
         s_Out = Environment.GetEnvironmentVariable("RESIDENT_DRAWER_OUT");
@@ -117,7 +129,9 @@ public class ResidentDrawerProbe : MonoBehaviour
         {
             Row("device", SystemInfo.graphicsDeviceType.ToString());
             Row("drawer.enabled.start", DrawerEnabled());
+            NameSceneRenderers();
             Guarded("build", BuildMotion);
+            Guarded("depthSetup", SetupDepthControls);
             return;
         }
         m_Light.shadows = LightShadows.Hard;
@@ -126,9 +140,7 @@ public class ResidentDrawerProbe : MonoBehaviour
         Row("brgVariants", UnityEditor.Rendering.EditorGraphicsSettings.batchRendererGroupShaderStrippingMode.ToString());
 #endif
         Row("drawer.enabled.start", DrawerEnabled());
-        // The scene's own renderers (its Lit sphere) by their objects' names.
-        foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            m_Names[renderer.GetInstanceID()] = renderer.gameObject.name;
+        NameSceneRenderers();
         try
         {
             CreateDispatcher();
@@ -167,6 +179,63 @@ public class ResidentDrawerProbe : MonoBehaviour
         m_Camera.transform.position = new Vector3(x, 1.5f, -4);
         int zoom = Math.Max(frame - 36, 0);
         m_Camera.fieldOfView = zoom <= 6 ? 60 - 40 * zoom / 6f : 20 + 40 * Math.Min(zoom - 6, 6) / 6f;
+    }
+
+    /// <summary>The scene's own renderers (its Lit sphere) by their objects' names.</summary>
+    void NameSceneRenderers()
+    {
+        foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            m_Names[renderer.GetInstanceID()] = renderer.gameObject.name;
+    }
+
+    void SetupDepthControls()
+    {
+        m_DepthTarget = new RenderTexture(16, 16, 24, RenderTextureFormat.Depth) { name = "ProbeDepth" };
+        m_DepthTarget.Create();
+        m_OtherTarget = new RenderTexture(16, 16, 0, RenderTextureFormat.ARGB32) { name = "ProbeOther" };
+        m_OtherTarget.Create();
+        m_DepthRead = Resources.Load<ComputeShader>("ProbeDepthRead");
+        m_DepthOut = new ComputeBuffer(1, sizeof(float));
+        m_Scratch = new GraphicsBuffer(GraphicsBuffer.Target.Structured, s_ScratchData.Length, sizeof(float));
+        m_DepthQuad = new Material(Shader.Find("Hidden/ResidentDrawerProbe/DepthQuad"));
+        m_Cover = new Mesh { vertices = new[] { new Vector3(-1, -1, 0), new Vector3(3, -1, 0), new Vector3(-1, 3, 0) }, triangles = new[] { 0, 1, 2 } };
+        m_Near = new MaterialPropertyBlock();
+        m_Near.SetFloat("_Depth", 0.25f);
+        m_Far = new MaterialPropertyBlock();
+        m_Far.SetFloat("_Depth", 0.75f);
+    }
+
+    /// <summary>The motion profile's depth controls, one command buffer each: a draw gives the
+    /// depth-only target depth 0.25 and the commands move to another target; `base` then reads the
+    /// target with a compute kernel through a float slot. The others first draw depth 0.75 into it
+    /// and read it with the target still bound (`bound`), after a SetBufferData (`afterBufferData`),
+    /// and after a SetBufferData and a move to the other target (`afterSwitch`): a kernel reads
+    /// what was drawn before it.</summary>
+    void DepthReadControls(bool record)
+    {
+        var read = new float[1];
+        foreach (var name in DepthCases)
+        {
+            var cmd = new CommandBuffer { name = "ProbeDepthRead " + name };
+            cmd.SetRenderTarget(m_DepthTarget);
+            cmd.DrawMesh(m_Cover, Matrix4x4.identity, m_DepthQuad, 0, 0, m_Near);
+            cmd.SetRenderTarget(m_OtherTarget);
+            if (name != "base")
+            {
+                cmd.SetRenderTarget(m_DepthTarget);
+                cmd.DrawMesh(m_Cover, Matrix4x4.identity, m_DepthQuad, 0, 0, m_Far);
+                if (name != "bound") cmd.SetBufferData(m_Scratch, s_ScratchData);
+                if (name == "afterSwitch") cmd.SetRenderTarget(m_OtherTarget);
+            }
+            cmd.SetComputeTextureParam(m_DepthRead, 0, "_Src", m_DepthTarget);
+            cmd.SetComputeBufferParam(m_DepthRead, 0, "_Out", m_DepthOut);
+            cmd.DispatchCompute(m_DepthRead, 0, 1, 1, 1);
+            Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Release();
+            if (!record) continue;
+            m_DepthOut.GetData(read);
+            Row("depthRead." + name, read[0].ToString("F3", CultureInfo.InvariantCulture));
+        }
     }
 
     static bool DrawerEnabled() =>
@@ -400,6 +469,8 @@ public class ResidentDrawerProbe : MonoBehaviour
             // The scripted frames start once no shader has compiled for ten frames and three
             // seconds (the Editor starts compiling a variant some frames after it is first drawn).
             m_WarmupFrames++;
+            // The controls' shader compiles during the warm-up, as the scene's do.
+            if (s_MotionMode && m_DepthQuad != null) Guarded("depthRead", () => DepthReadControls(false));
             if (Compiling())
             {
                 m_Quiet = 0;
@@ -417,6 +488,7 @@ public class ResidentDrawerProbe : MonoBehaviour
         if (s_MotionMode)
         {
             // Every frame from the first moved one on: the image of the frame before.
+            if (m_Frame == 1) Guarded("depthRead", () => DepthReadControls(true));
             if (m_Frame >= 2) Guarded("capture", () => Capture(m_Frame - 1));
             Guarded("step", () => StepMotion(m_Frame));
             if (m_Frame == MotionLastFrame) Finish();

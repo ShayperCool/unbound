@@ -1,0 +1,12 @@
+// The motion profile's depth controls: a texel of a depth-only render texture, read through a
+// float texture slot, into _Out[0].
+#pragma kernel Read
+
+Texture2D<float> _Src;
+RWStructuredBuffer<float> _Out;
+
+[numthreads(1, 1, 1)]
+void Read(uint3 id : SV_DispatchThreadID)
+{
+    _Out[0] = _Src.Load(int3(8, 8, 0));
+}

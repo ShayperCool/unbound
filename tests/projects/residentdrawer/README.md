@@ -69,7 +69,18 @@ from x -3 at 0.25 a frame (25 to 36) and zooms from a field of view of 60 to 20 
 (43 to 48). Every frame is captured, with every renderer's isVisible and the renderers the drawer
 holds. Each frame's draws are tested against the previous frame's depth pyramid and the ones it
 culls again against the frame's own, so the Editor draws every cube the camera sees in the frame it
-shows; the cubes behind the wall are the control that occlusion culling hides what is hidden.
+shows (the scene's own Lit sphere stays where the URP probe's scene has it). The images and
+isVisible catch culling of what the camera sees; what the wall hides looks the same whether it is
+culled or only fails the depth test.
+
+The profile also records four depth controls once, before the camera moves (`depthRead.*`): a
+draw gives a 16x16 depth-only render texture depth 0.25 and the command buffer moves to another
+target, then `base` reads one texel of it with a compute kernel through a float texture slot
+(`Shaders/Resources/ProbeDepthRead.compute`). The others first draw depth 0.75 into it
+(`ProbeDepthQuad.shader`) and read it with the target still bound (`bound`), after a
+`SetBufferData` (`afterBufferData`) and after a `SetBufferData` and a move to the other target
+(`afterSwitch`). A kernel reads what the commands before it drew, as the drawer's occluder depth
+pyramid does from the camera's depth after the opaque draws.
 
     python3 tests/projects/residentdrawer/run.py native --label L [--profile occlusion|motion|controls|lightmaps|shadowmask|speedtree]   # two Editor captures
     python3 tests/projects/residentdrawer/run.py publish L-1 L-2 [--profile occlusion|motion|controls|lightmaps|shadowmask|speedtree]
