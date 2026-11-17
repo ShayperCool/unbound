@@ -9,6 +9,11 @@ records, in Play mode:
   in-tangent −∞, `L` a linear control. Sampled at 0, 0.25, 0.49, 0.51, 0.99 and 1 s by an Animator
   playing it through a controller (`Animator.Update`), by a manually evaluated
   AnimationClipPlayable, and as the curves themselves (`AnimationCurve.Evaluate`).
+* `curvetime.*`: `AnimationCurve.Evaluate` at NaN, ±Infinity and ±`float.MaxValue` for stepped,
+  smooth, linear, one-key and empty curves and for looping and ping-pong wrap modes on both sides or
+  on one, each time on a new curve. Evaluating one curve at these times in turn can give other
+  answers in the Editor (seen once: −MaxValue NaN after other extreme times, the first key on a new
+  curve); that history is not covered.
 * `entry.*`: script-playable graphs created and played before the first scene loads, in game time
   and in unscaled time: their time after the first frame's update, and whether the second frame
   advanced it.
@@ -33,6 +38,11 @@ What the Editor does (measured):
 - A segment with a +∞ tangent at either end holds the first key's value; otherwise one with a −∞
   tangent holds the second key's value, from the segment's first key on (`B`, `C` read 3 at 0 s,
   `E` reads 2 from 0 s). The Animator, the clip playable and the curve agree.
+- A time that is no number reads NaN on a curve with two keys or more (one key: its value; no key:
+  0). A clamped side holds its end key's value for every finite time (±MaxValue included) and
+  reads NaN at an infinite time; a looping side reads NaN there; a side that ping-pongs reads the
+  last key's value at an infinite time, before the keys too. Games reach these times by dividing by
+  a zero `Screen.dpi` (the Editor answers 0 on displays without a physical size).
 - Graphs playing at Play entry, in game and in unscaled time, take a zero interval in the first
   frame's update (time 0), then advance.
 - `AnimatorControllerPlayable.Play` issued before the graph's first evaluation takes effect in that

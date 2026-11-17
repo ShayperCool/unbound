@@ -68,6 +68,36 @@ namespace Unbound.Tests
             Assert.Equal(Bits(sloped.Evaluate(float.PositiveInfinity)), Bits(sloped.EvaluateCubic(float.PositiveInfinity)));
         }
 
+        /// <summary>Times that are no number or infinite (tests/projects/animedges curvetime.*): NaN on
+        /// a curve with two keys or more; a clamped side holds its end value for every finite time
+        /// and reads NaN at an infinite one; no key and one key keep their constant answers.</summary>
+        [Fact]
+        public void TimesOutsideTheRealNumbers()
+        {
+            var stepped = new AnimationCurve(new Keyframe(0f, .285f, 0f, 0f), new Keyframe(1f, .475f, float.PositiveInfinity, float.PositiveInfinity),
+                new Keyframe(2f, .65f, float.PositiveInfinity, float.PositiveInfinity));
+            Assert.True(float.IsNaN(stepped.Evaluate(float.NaN)));
+            Assert.True(float.IsNaN(stepped.Evaluate(float.PositiveInfinity)));
+            Assert.True(float.IsNaN(stepped.Evaluate(float.NegativeInfinity)));
+            Assert.Equal((.65f, .285f), (stepped.Evaluate(float.MaxValue), stepped.Evaluate(-float.MaxValue)));
+            Assert.Equal((.285f, .475f, .65f), (stepped.Evaluate(.5f), stepped.Evaluate(1.5f), stepped.Evaluate(2f)));
+            Assert.Equal(3f, new AnimationCurve(new Keyframe(.5f, 3f)).Evaluate(float.NaN));
+            Assert.Equal(0f, new AnimationCurve().Evaluate(float.NegativeInfinity));
+            // Clamped before the keys, looping after them.
+            var mixed = AnimationCurve.Linear(0f, 2f, 3f, 5f);
+            mixed.preWrapMode = WrapMode.ClampForever;
+            mixed.postWrapMode = WrapMode.Loop;
+            Assert.True(float.IsNaN(mixed.Evaluate(float.NegativeInfinity)));
+            Assert.Equal(2f, mixed.Evaluate(-1e30f));
+            Assert.Equal(mixed.Evaluate(1f), mixed.Evaluate(4f), 5);
+            Assert.True(float.IsNaN(mixed.Evaluate(float.PositiveInfinity)));
+            // A side that ping-pongs reads the last key at an infinite time, before the keys too.
+            var bounce = new AnimationCurve(new Keyframe(1f, 7f), new Keyframe(2f, 2f), new Keyframe(4f, 5f)) { preWrapMode = WrapMode.PingPong };
+            Assert.Equal(5f, bounce.Evaluate(float.NegativeInfinity));
+            Assert.True(float.IsNaN(bounce.Evaluate(float.PositiveInfinity)));
+            Assert.Equal(7f, bounce.Evaluate(-float.MaxValue));
+        }
+
         [Fact]
         public void HermiteWithTangents()
         {

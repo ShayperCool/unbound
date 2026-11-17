@@ -33,6 +33,7 @@ public class AnimEdgesProbe : MonoBehaviour
     static readonly float[] Steps = { 0f, .25f, .24f, .02f, .48f, .01f };
 
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
+    static string V(float f) => float.IsNaN(f) || float.IsInfinity(f) ? S(F(f)) : F(f);
     static string S(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
     static void Record(string key, string value) =>
@@ -128,6 +129,46 @@ public class AnimEdgesProbe : MonoBehaviour
 #endif
     }
 
+    // ------------------------------------------------------------------ Times outside the real numbers
+
+    /// <summary><c>curvetime.*</c>: AnimationCurve.Evaluate at NaN, the infinities and the largest
+    /// finite times, for curves of each kind: stepped segments (infinite tangents, as games author
+    /// sensitivity tables), a smooth and a linear curve, one key, no key, and looping and ping-pong
+    /// wrap modes on both sides or on one. Each time is evaluated on a new curve: the Editor's
+    /// answer at these times can depend on the times the same curve was evaluated at before.
+    /// NaN and the infinities are written as text.</summary>
+    static void CurveTimes()
+    {
+        Func<Keyframe[]> three = () => new[] { new Keyframe(1f, 7f), new Keyframe(2f, 2f), new Keyframe(4f, 5f) };
+        Func<Keyframe[], WrapMode, WrapMode, AnimationCurve> wrapped = (keys, pre, post) =>
+            new AnimationCurve(keys) { preWrapMode = pre, postWrapMode = post };
+        const WrapMode Clamp = WrapMode.ClampForever;
+        var curves = new (string Name, Func<AnimationCurve> Create)[]
+        {
+            ("stepped", () => new AnimationCurve(new Keyframe(0f, .285f, 0f, 0f), new Keyframe(1f, .475f, float.PositiveInfinity, float.PositiveInfinity),
+                new Keyframe(2f, .65f, float.PositiveInfinity, float.PositiveInfinity))),
+            ("smooth", () => AnimationCurve.EaseInOut(0f, 1f, 2f, 4f)),
+            ("linear", () => AnimationCurve.Linear(0f, 2f, 3f, 5f)),
+            ("single", () => new AnimationCurve(new Keyframe(.5f, 3f))),
+            ("empty", () => new AnimationCurve()),
+            ("loop", () => wrapped(AnimationCurve.EaseInOut(0f, 1f, 2f, 4f).keys, WrapMode.Loop, WrapMode.Loop)),
+            ("loop3", () => wrapped(three(), WrapMode.Loop, WrapMode.Loop)),
+            ("pingPong", () => wrapped(AnimationCurve.EaseInOut(0f, 1f, 2f, 4f).keys, WrapMode.PingPong, WrapMode.PingPong)),
+            ("pingPong3", () => wrapped(three(), WrapMode.PingPong, WrapMode.PingPong)),
+            ("pingPongBefore", () => wrapped(three(), WrapMode.PingPong, Clamp)),
+            ("pingPongAfter", () => wrapped(three(), Clamp, WrapMode.PingPong)),
+            ("pingPongStepped", () => wrapped(new[] { new Keyframe(1f, 7f, 0f, float.PositiveInfinity), new Keyframe(2f, 2f, float.PositiveInfinity, 0f),
+                new Keyframe(4f, 5f) }, WrapMode.PingPong, WrapMode.PingPong)),
+        };
+        var times = new (string Name, float Time)[]
+        {
+            ("NaN", float.NaN), ("+Infinity", float.PositiveInfinity), ("-Infinity", float.NegativeInfinity),
+            ("+Max", float.MaxValue), ("-Max", -float.MaxValue),
+        };
+        foreach (var (name, create) in curves)
+            Record("curvetime." + name, "{" + string.Join(",", times.Select(t => S(t.Name) + ":" + V(create().Evaluate(t.Time)))) + "}");
+    }
+
     // ------------------------------------------------------------------ Play before the first evaluation
 
     static string State(GameObject root, AnimatorStateInfo info) =>
@@ -181,6 +222,7 @@ public class AnimEdgesProbe : MonoBehaviour
             StepsByAnimator();
             StepsByClipPlayable();
             StepsByCurves();
+            CurveTimes();
             ManualGraph("manual", connectFirst: true, evaluateFirst: false, float.NegativeInfinity);
             ManualGraph("manualTime", connectFirst: true, evaluateFirst: false, .5f);
             ManualGraph("manualUnconnected", connectFirst: false, evaluateFirst: false, float.NegativeInfinity);

@@ -374,19 +374,32 @@ namespace UnityEngine
             if (count == 1)
                 return m_Keys[0].value;
 
+            // A time that is not a number reads NaN, whatever the wrap modes (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/animedges curvetime.*).
+            if (float.IsNaN(time))
+                return float.NaN;
+
             float first = m_Keys[0].time;
             float last = m_Keys[count - 1].time;
             float duration = last - first;
 
+            // An infinite time on a side that ping-pongs reads the last key's value, before the
+            // keys too; a clamped side holds its end key's value for any finite time beyond it and
+            // reads NaN at an infinite time; a looping side reads NaN there (animedges
+            // curvetime.*: -float.MaxValue reads the first key, -Infinity NaN).
             if (time < first)
             {
+                if (m_PreWrapMode == WrapMode.PingPong && float.IsInfinity(time))
+                    return m_Keys[count - 1].value;
                 if (!WrapTime(ref time, m_PreWrapMode, first, duration))
-                    return m_Keys[0].value;
+                    return float.IsInfinity(time) ? float.NaN : m_Keys[0].value;
             }
             else if (time > last)
             {
-                if (!WrapTime(ref time, m_PostWrapMode, first, duration))
+                if (m_PostWrapMode == WrapMode.PingPong && float.IsInfinity(time))
                     return m_Keys[count - 1].value;
+                if (!WrapTime(ref time, m_PostWrapMode, first, duration))
+                    return float.IsInfinity(time) ? float.NaN : m_Keys[count - 1].value;
             }
 
             // Last segment whose start key is at or before time.
