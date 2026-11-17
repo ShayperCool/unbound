@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="first" slot-name="a" />
+    <ui:VisualElement name="second" slot-name="a" />
+</ui:UXML>

@@ -1,0 +1,86 @@
+{"k":"import.logs","v":"Warning:  (9,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (10,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (13,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (15,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (16,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (19,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'name'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'class'. | Warning:  (8,10): Semantic - AttributeOverrides node cannot override attribute 'style'. | Warning:  (11,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (12,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (2,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Warning:  (3,6): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future. | Error:  (3,6): Semantic - Slot definition 'a' is defined more than once | Warning:  (4,10): Syntax - Slot are an experimental feature. Syntax and semantic may change in the future."}
+{"k":"Leaf.logs","v":""}
+{"k":"Leaf/0:title","v":"Label [unity-text-element unity-label leaf] tooltip 'leaf tip' focusable False tab -1 text 'leaf title'"}
+{"k":"Leaf/1:title","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'second title'"}
+{"k":"Leaf/2:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'unnamed'"}
+{"k":"Leaf/3:custom","v":"NewElement [] myValue 1 note 'leaf note'"}
+{"k":"Leaf/4:legacy","v":"OldElement [] oldValue 1 raw 'leaf raw'"}
+{"k":"Leaf/5:toggle","v":"Toggle [unity-base-field unity-toggle] focusable True tab 0 label 'leaf toggle' value False"}
+{"k":"Leaf/5:toggle/0:-","v":"Label [unity-text-element unity-label unity-base-field__label unity-toggle__label] focusable False tab -1 text 'leaf toggle'"}
+{"k":"Leaf/5:toggle/1:-","v":"VisualElement [unity-base-field__input unity-toggle__input] focusable True tab 0"}
+{"k":"Leaf/5:toggle/1:-/0:unity-checkmark","v":"VisualElement [unity-toggle__checkmark]"}
+{"k":"Leaf/6:box","v":"VisualElement []"}
+{"k":"Leaf/7:slotA","v":"VisualElement []"}
+{"k":"Leaf/8:slotB","v":"VisualElement []"}
+{"k":"Middle.logs","v":"Error: Slot 'zzz' was not found. Existing slots: a, b"}
+{"k":"Middle/0:leafInMiddle","v":"TemplateContainer [] template 'Leaf' content self"}
+{"k":"Middle/0:leafInMiddle/0:title","v":"Label [unity-text-element unity-label leaf] tooltip 'middle tip' focusable False tab -1 text 'middle title'"}
+{"k":"Middle/0:leafInMiddle/1:title","v":"Label [unity-text-element unity-label] tooltip 'middle tip' focusable False tab -1 text 'middle title'"}
+{"k":"Middle/0:leafInMiddle/2:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'unnamed'"}
+{"k":"Middle/0:leafInMiddle/3:custom","v":"NewElement [] myValue 2 note 'leaf note'"}
+{"k":"Middle/0:leafInMiddle/4:legacy","v":"OldElement [] oldValue 2 raw 'leaf raw'"}
+{"k":"Middle/0:leafInMiddle/5:toggle","v":"Toggle [unity-base-field unity-toggle] focusable True tab 0 label 'middle toggle' value True"}
+{"k":"Middle/0:leafInMiddle/5:toggle/0:-","v":"Label [unity-text-element unity-label unity-base-field__label unity-toggle__label] focusable False tab -1 text 'middle toggle'"}
+{"k":"Middle/0:leafInMiddle/5:toggle/1:-","v":"VisualElement [unity-base-field__input unity-toggle__input] focusable True tab 0"}
+{"k":"Middle/0:leafInMiddle/5:toggle/1:-/0:unity-checkmark","v":"VisualElement [unity-toggle__checkmark]"}
+{"k":"Middle/0:leafInMiddle/6:box","v":"VisualElement [] focusable True tab 4"}
+{"k":"Middle/0:leafInMiddle/7:slotA","v":"VisualElement []"}
+{"k":"Middle/0:leafInMiddle/7:slotA/0:intoA","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into a'"}
+{"k":"Middle/0:leafInMiddle/8:slotB","v":"VisualElement []"}
+{"k":"Middle/0:leafInMiddle/8:slotB/0:intoB","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into b'"}
+{"k":"Middle/0:leafInMiddle/9:plain","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'plain child'"}
+{"k":"Middle/0:leafInMiddle/10:intoMissing","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into missing'"}
+{"k":"Middle/1:title","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'middle own title'"}
+{"k":"Middle/2:middleSlot","v":"VisualElement []"}
+{"k":"Outer.logs","v":"Error: Slot 'zzz' was not found. Existing slots: a, b | Error: Slot 'a' was not found. Existing slots: m"}
+{"k":"Outer/0:middleInOuter","v":"TemplateContainer [] template 'Middle' content self"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle","v":"TemplateContainer [] template 'Leaf' content self"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/0:title","v":"Label [unity-text-element unity-label leaf] tooltip 'middle tip' focusable False tab -1 text 'outer title'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/1:title","v":"Label [unity-text-element unity-label] tooltip 'middle tip' focusable False tab -1 text 'outer title'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/2:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'unnamed'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/3:custom","v":"NewElement [] myValue 2 note 'outer note'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/4:legacy","v":"OldElement [] oldValue 3 raw 'leaf raw'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle","v":"Toggle [unity-base-field unity-toggle] focusable True tab 0 label 'outer toggle' value True"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle/0:-","v":"Label [unity-text-element unity-label unity-base-field__label unity-toggle__label] focusable False tab -1 text 'outer toggle'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle/1:-","v":"VisualElement [unity-base-field__input unity-toggle__input] focusable True tab 0"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle/1:-/0:unity-checkmark","v":"VisualElement [unity-toggle__checkmark]"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/6:box","v":"VisualElement [] focusable True tab 4"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/7:slotA","v":"VisualElement []"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/7:slotA/0:intoA","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into a'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/8:slotB","v":"VisualElement []"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/8:slotB/0:intoB","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into b'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/9:plain","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'plain child'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/10:intoMissing","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into missing'"}
+{"k":"Outer/0:middleInOuter/1:title","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'outer title'"}
+{"k":"Outer/0:middleInOuter/2:middleSlot","v":"VisualElement []"}
+{"k":"Outer/0:middleInOuter/2:middleSlot/0:intoM","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into m'"}
+{"k":"Outer/0:middleInOuter/3:intoNestedA","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into nested a'"}
+{"k":"Outer/0:middleInOuter/4:outerPlain","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'outer plain'"}
+{"k":"Host.logs","v":""}
+{"k":"Host/0:panel","v":"TemplateContainer [] template 'Panel' content 'body'"}
+{"k":"Host/0:panel/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'host header'"}
+{"k":"Host/0:panel/1:body","v":"VisualElement []"}
+{"k":"Host/0:panel/1:body/0:content","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'content'"}
+{"k":"Host/1:panelByTraits","v":"TemplateContainer [] template 'Panel' content self"}
+{"k":"DuplicateSlots.logs","v":""}
+{"k":"DuplicateSlots/0:slots","v":"TemplateContainer [] template 'Slots' content self"}
+{"k":"DuplicateSlots/0:slots/0:first","v":"VisualElement []"}
+{"k":"DuplicateSlots/0:slots/0:first/0:intoA","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into a'"}
+{"k":"DuplicateSlots/0:slots/1:second","v":"VisualElement []"}
+{"k":"OldTemplateDoc.logs","v":""}
+{"k":"OldTemplateDoc/0:oldTemplate","v":"OldTemplate [] template 'Panel' content 'body'"}
+{"k":"OldTemplateDoc/0:oldTemplate/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'header'"}
+{"k":"OldTemplateDoc/0:oldTemplate/1:body","v":"VisualElement []"}
+{"k":"OldTemplateHost.exception","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"OldTemplateHost.logs","v":""}
+{"k":"OldTemplateBare.logs","v":""}
+{"k":"OldTemplateBare/0:oldTemplateBare","v":"TemplateContainer [] template 'OldTemplateDoc' content self"}
+{"k":"OldTemplateBare/0:oldTemplateBare/0:oldTemplate","v":"OldTemplate [] template 'Panel' content 'body'"}
+{"k":"OldTemplateBare/0:oldTemplateBare/0:oldTemplate/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'header'"}
+{"k":"OldTemplateBare/0:oldTemplateBare/0:oldTemplate/1:body","v":"VisualElement []"}
+{"k":"OldTemplateBare/1:after","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'after'"}
+{"k":"OldTemplateOther.exception","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"OldTemplateOther.logs","v":""}
+{"k":"instantiate.logs","v":"Error: Slot 'zzz' was not found. Existing slots: a, b"}
+{"k":"instantiate.root","v":"TemplateContainer [] template 'Middle' content self children 3"}
+{"k":"complete","v":true}

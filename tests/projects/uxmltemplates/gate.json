@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/uxmltemplates/run.py gate"],
+  "summary": "uxmltemplates: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
+    "managed/UnityEngine/UIElements/Uxml/UxmlApi.cs",
+    "managed/UnityEngine/UIElements/Uxml/BuiltInTraits.cs"
+  ]
+}

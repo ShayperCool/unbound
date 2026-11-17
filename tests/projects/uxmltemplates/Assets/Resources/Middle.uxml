@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Template name="Leaf" src="Leaf.uxml" />
+    <ui:Instance template="Leaf" name="leafInMiddle">
+        <AttributeOverrides element-name="title" text="middle title" tooltip="middle tip" />
+        <AttributeOverrides element-name="custom" my-value="2" />
+        <AttributeOverrides element-name="legacy" old-value="2" raw-value="middle raw" />
+        <AttributeOverrides element-name="legacy" old-value="5" />
+        <AttributeOverrides element-name="custom" my-value="9" />
+        <AttributeOverrides element-name="toggle" value="true" label="middle toggle" />
+        <AttributeOverrides element-name="box" focusable="true" />
+        <AttributeOverrides element-name="box" focusable="false" tabindex="4" />
+        <AttributeOverrides element-name="plain" text="overridden plain" />
+        <ui:Label name="intoA" text="into a" slot="a" />
+        <ui:Label name="plain" text="plain child" />
+        <ui:Label name="intoB" text="into b" slot="b" />
+        <ui:Label name="intoMissing" text="into missing" slot="zzz" />
+    </ui:Instance>
+    <ui:Label name="title" text="middle own title" />
+    <ui:VisualElement name="middleSlot" slot-name="m" />
+</ui:UXML>

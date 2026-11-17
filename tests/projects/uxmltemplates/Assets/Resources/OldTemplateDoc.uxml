@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Template name="Panel" src="Panel.uxml" />
+    <p:OldTemplate name="oldTemplate" template="Panel" />
+</ui:UXML>

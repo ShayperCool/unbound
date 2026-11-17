@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="OldTemplateDoc" src="OldTemplateDoc.uxml" />
+    <ui:Instance template="OldTemplateDoc" name="oldTemplateHost">
+        <AttributeOverrides element-name="header" text="host header" />
+    </ui:Instance>
+    <ui:Label name="after" text="after" />
+</ui:UXML>

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="OldTemplateDoc" src="OldTemplateDoc.uxml" />
+    <ui:Instance template="OldTemplateDoc" name="oldTemplateOther">
+        <AttributeOverrides element-name="nobody" text="nobody" />
+    </ui:Instance>
+    <ui:Label name="after" text="after" />
+</ui:UXML>

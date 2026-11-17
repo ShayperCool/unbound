@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Label name="title" text="leaf title" tooltip="leaf tip" class="leaf" />
+    <ui:Label name="title" text="second title" />
+    <ui:Label text="unnamed" />
+    <p:NewElement name="custom" my-value="1" note="leaf note" />
+    <p:OldElement name="legacy" old-value="1" raw-value="leaf raw" />
+    <ui:Toggle name="toggle" label="leaf toggle" />
+    <ui:VisualElement name="box" focusable="false" />
+    <ui:VisualElement name="slotA" slot-name="a" />
+    <ui:VisualElement name="slotB" slot-name="b" />
+</ui:UXML>

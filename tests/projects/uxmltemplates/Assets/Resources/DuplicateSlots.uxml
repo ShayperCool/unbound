@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Slots" src="Slots.uxml" />
+    <ui:Instance template="Slots" name="slots">
+        <ui:Label name="intoA" text="into a" slot="a" />
+    </ui:Instance>
+</ui:UXML>

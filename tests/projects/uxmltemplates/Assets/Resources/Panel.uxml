@@ -1,0 +1,4 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Label name="header" text="header" />
+    <ui:VisualElement name="body" content-container="anything" />
+</ui:UXML>

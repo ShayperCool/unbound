@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="Panel" src="Panel.uxml" />
+    <ui:Instance template="Panel" name="panel">
+        <AttributeOverrides element-name="header" text="host header" />
+        <ui:Label name="content" text="content" />
+    </ui:Instance>
+    <ui:TemplateContainer template="Panel" name="panelByTraits" />
+</ui:UXML>

@@ -1,0 +1,15 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
+    <ui:Template name="Middle" src="Middle.uxml" />
+    <ui:Instance template="Middle" name="middleInOuter">
+        <AttributeOverrides element-name="title" text="outer title" />
+        <AttributeOverrides element-name="custom" note="outer note" />
+        <AttributeOverrides element-name="legacy" former-value="3" />
+        <AttributeOverrides element-name="toggle" label="outer toggle" />
+        <AttributeOverrides element-name="box" name="renamed" class="added" style="width: 7px;" />
+        <AttributeOverrides element-name="leafInMiddle" tooltip="outer tip on the instance" />
+        <AttributeOverrides element-name="nobody" text="nobody" />
+        <ui:Label name="intoM" text="into m" slot="m" />
+        <ui:Label name="intoNestedA" text="into nested a" slot="a" />
+        <ui:Label name="outerPlain" text="outer plain" />
+    </ui:Instance>
+</ui:UXML>
