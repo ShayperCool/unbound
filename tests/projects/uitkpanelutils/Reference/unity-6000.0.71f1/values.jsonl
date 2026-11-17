@@ -1,0 +1,43 @@
+{"k":"screen","v":"640x480"}
+{"k":"camera.pixelRect","v":"0,0 640,480"}
+{"k":"constant1.root","v":"640,480"}
+{"k":"constant1.screen 0,0","v":"0,0"}
+{"k":"constant1.screen 100,50","v":"100,50"}
+{"k":"constant1.screen 640,480","v":"640,480"}
+{"k":"constant1.screen -30,1000","v":"-30,1000"}
+{"k":"constant1.world 0,0,0","v":"320,281.569"}
+{"k":"constant1.world 2,1,3","v":"383.953,240"}
+{"k":"constant1.world 0,0,-20","v":"320,198.431"}
+{"k":"constant1.rect 0,0,0 1x1","v":"320,281.569 41.569,41.569"}
+{"k":"constant1.rect 2,1,3 2x0.5","v":"383.953,240 63.953,15.988"}
+{"k":"constant1.turned world 2,1,3","v":"155.82,166.702"}
+{"k":"constant1.turned rect 2,1,3 2x0.5","v":"155.82,166.702 70.057,11.151"}
+{"k":"constant1.ortho rect 1,2,0 3x2","v":"368,192 144,96"}
+{"k":"constant2.root","v":"320,240"}
+{"k":"constant2.screen 0,0","v":"0,0"}
+{"k":"constant2.screen 100,50","v":"50,25"}
+{"k":"constant2.screen 640,480","v":"320,240"}
+{"k":"constant2.screen -30,1000","v":"-15,500"}
+{"k":"constant2.world 0,0,0","v":"160,140.785"}
+{"k":"constant2.world 2,1,3","v":"191.976,120"}
+{"k":"constant2.world 0,0,-20","v":"160,99.215"}
+{"k":"constant2.rect 0,0,0 1x1","v":"160,140.785 20.785,20.785"}
+{"k":"constant2.rect 2,1,3 2x0.5","v":"191.976,120 31.976,7.994"}
+{"k":"constant2.turned world 2,1,3","v":"77.91,83.351"}
+{"k":"constant2.turned rect 2,1,3 2x0.5","v":"77.91,83.351 35.028,5.575"}
+{"k":"constant2.ortho rect 1,2,0 3x2","v":"184,96 72,48"}
+{"k":"screenSize.root","v":"564.706,423.529"}
+{"k":"screenSize.screen 0,0","v":"0,0"}
+{"k":"screenSize.screen 100,50","v":"88.235,44.118"}
+{"k":"screenSize.screen 640,480","v":"564.706,423.529"}
+{"k":"screenSize.screen -30,1000","v":"-26.471,882.353"}
+{"k":"screenSize.world 0,0,0","v":"282.353,248.443"}
+{"k":"screenSize.world 2,1,3","v":"338.782,211.765"}
+{"k":"screenSize.world 0,0,-20","v":"282.353,175.086"}
+{"k":"screenSize.rect 0,0,0 1x1","v":"282.353,248.443 36.679,36.679"}
+{"k":"screenSize.rect 2,1,3 2x0.5","v":"338.782,211.765 56.429,14.107"}
+{"k":"screenSize.turned world 2,1,3","v":"137.488,147.09"}
+{"k":"screenSize.turned rect 2,1,3 2x0.5","v":"137.488,147.09 61.815,9.839"}
+{"k":"screenSize.ortho rect 1,2,0 3x2","v":"324.706,169.412 127.059,84.706"}
+{"k":"nullPanel","v":"NullReferenceException"}
+{"k":"complete","v":true}
