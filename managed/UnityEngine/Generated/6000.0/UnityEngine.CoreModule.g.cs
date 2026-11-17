@@ -217,7 +217,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void SimulateMemoryUsage(global::UnityEngine.ApplicationMemoryUsage usage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.SimulateMemoryUsage"); }
         [global::Unbound.Stub] internal static bool HasARGV(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.HasARGV"); return default; }
         [global::Unbound.Stub] internal static string GetValueForARGV(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.GetValueForARGV"); return default; }
-        [global::System.Obsolete("Use UnityEngine.Diagnostics.Utils.ForceCrash")] [global::Unbound.Stub] public static void ForceCrash(int mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.ForceCrash"); }
         [global::Unbound.Stub] internal static void CallLowMemory(global::UnityEngine.ApplicationMemoryUsage usage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.CallLowMemory"); }
         [global::Unbound.Stub] internal static bool HasLogCallback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.HasLogCallback"); return default; }
         [global::Unbound.Stub] internal static void InvokeOnAdvertisingIdentifierCallback(string advertisingId, bool trackingEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Application.InvokeOnAdvertisingIdentifierCallback"); }
@@ -2749,24 +2748,14 @@ namespace UnityEngine.Device
 }
 namespace UnityEngine.Diagnostics
 {
-    public enum ForcedCrashCategory
-    {
-        AccessViolation = 0,
-        FatalError = 1,
-        Abort = 2,
-        PureVirtualFunction = 3,
-        MonoAbort = 4,
-    }
     [global::Unbound.Stub]
     public unsafe static partial class PlayerConnection
     {
         [global::System.Obsolete("PlayerConnection.SendFile is no longer supported.")] [global::Unbound.Stub] public static void SendFile(string remoteFilePath, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.PlayerConnection.SendFile"); }
         [global::System.Obsolete("Use UnityEngine.Networking.PlayerConnection.PlayerConnection.instance.isConnected instead.")] public static bool connected { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.PlayerConnection.connected"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class Utils
+    unsafe static partial class Utils
     {
-        [global::Unbound.Stub] public static void ForceCrash(global::UnityEngine.Diagnostics.ForcedCrashCategory crashCategory) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.Utils.ForceCrash"); }
         [global::Unbound.Stub] public static void NativeAssert(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.Utils.NativeAssert"); }
         [global::Unbound.Stub] public static void NativeError(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.Utils.NativeError"); }
         [global::Unbound.Stub] public static void NativeWarning(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Diagnostics.Utils.NativeWarning"); }
