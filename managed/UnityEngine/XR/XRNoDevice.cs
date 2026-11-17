@@ -421,23 +421,22 @@ namespace UnityEngine.XR
 
 namespace UnityEngine
 {
-    // Declared here so the subsystem manager compiles on its own; the stubs give the members.
-    public partial interface ISubsystem { }
-    public partial interface ISubsystemDescriptor { }
+    // Declared here so the integrated subsystems compile on their own. Native subsystems need a
+    // provider plug-in and none is loaded, so no integrated subsystem exists: the interface members
+    // they implement stay stubs, written as the generator writes them.
     internal partial interface ISubsystemDescriptorImpl : ISubsystemDescriptor { }
-    public partial class IntegratedSubsystem : ISubsystem { }
-    public partial class IntegratedSubsystem<TSubsystemDescriptor> : IntegratedSubsystem where TSubsystemDescriptor : ISubsystemDescriptor { }
-    public abstract partial class IntegratedSubsystemDescriptor : ISubsystemDescriptorImpl, ISubsystemDescriptor { }
-    public partial class IntegratedSubsystemDescriptor<TSubsystem> : IntegratedSubsystemDescriptor where TSubsystem : IntegratedSubsystem { }
-
-    /// <summary>No subsystem providers: every query comes back empty.</summary>
-    public static partial class SubsystemManager
+    public partial class IntegratedSubsystem : ISubsystem
     {
-        public static void GetAllSubsystemDescriptors(List<ISubsystemDescriptor> descriptors) => descriptors?.Clear();
-        public static void GetSubsystemDescriptors<T>(List<T> descriptors) where T : ISubsystemDescriptor => descriptors?.Clear();
-        public static void GetSubsystems<T>(List<T> subsystems) where T : ISubsystem => subsystems?.Clear();
-
-        [global::System.@ObsoleteAttribute("Use GetSubsystems instead. (UnityUpgradable) -> GetSubsystems<T>(*)", false)]
-        public static void GetInstances<T>(List<T> subsystems) where T : ISubsystem => subsystems?.Clear();
+        [global::Unbound.Stub] public void Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Start"); }
+        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Stop"); }
+        [global::Unbound.Stub] public void Destroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Destroy"); }
+        public bool running { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.running"); return default; } }
     }
+    public partial class IntegratedSubsystem<TSubsystemDescriptor> : IntegratedSubsystem where TSubsystemDescriptor : ISubsystemDescriptor { }
+    public abstract partial class IntegratedSubsystemDescriptor : ISubsystemDescriptorImpl, ISubsystemDescriptor
+    {
+        [global::Unbound.Stub] ISubsystem ISubsystemDescriptor.Create() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.Create"); return default; }
+        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystemDescriptor.id"); return default; } }
+    }
+    public partial class IntegratedSubsystemDescriptor<TSubsystem> : IntegratedSubsystemDescriptor where TSubsystem : IntegratedSubsystem { }
 }
