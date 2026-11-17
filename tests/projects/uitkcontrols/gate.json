@@ -5,6 +5,8 @@
     "managed/UnityEngine/UIElements/Controls/HelpBox.cs",
     "managed/UnityEngine/UIElements/Controls/ToggleButtonGroup.cs",
     "managed/UnityEngine/UIElements/Controls/TwoPaneSplitView.cs",
-    "managed/UnityEngine/UIElements/Uxml/BuiltInTraits.cs"
+    "managed/UnityEngine/UIElements/Enums.UIElements.cs",
+    "managed/UnityEngine/UIElements/Uxml/BuiltInTraits.cs",
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs"
   ]
 }

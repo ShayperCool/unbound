@@ -28,6 +28,9 @@
 {"k":"state.fromIntFlags","v":"01010/5"}
 {"k":"state.fromLongFlags","v":"0000000000000000000000000000000000000000000000000000000000000001/64"}
 {"k":"state.fromNegativeInt","v":"11111111111111111111111111111110/32"}
+{"k":"state.fromByte64","v":"0000000000000000000000000000000000000000000000000000000010000001/64"}
+{"k":"state.fromShort64","v":"1111111111111111111111111111111111111111111111111000000000000001/64"}
+{"k":"state.compareNarrow","v":"True False False"}
 {"k":"state.fromNotFlags","v":"ArgumentException param -: Enum type T is not a flag enum type."}
 {"k":"state.fromTooLong","v":"ArgumentOutOfRangeException param length: length of 70 should be greater than or equal to 0 and less than or equal to 64."}
 {"k":"state.toIntFlags","v":"A, C"}
@@ -77,6 +80,7 @@
 {"k":"split.laid.h1","v":"fixed h1B flexed h1A | h1A 0,0 279x300 display Flex | h1B 280,0 120x300 display Flex | anchor 279,0 1x300 | content padding 1,0"}
 {"k":"split.laid.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x80 display Flex | v0B 0,81 400x219 display Flex | anchor 0,80 400x1 | content padding 0,1"}
 {"k":"split.laid.pending","v":"fixed pendingA flexed pendingB | pendingA 0,0 400x300 display Flex | pendingB 0,0 0x0 display None | anchor 0,0 0x0 | content padding 0,0"}
+{"k":"split.laid.keyed","v":"fixed keyedA flexed keyedB | keyedA 0,0 100x300 display Flex | keyedB 101,0 699x300 display Flex | anchor 100,0 1x300 | content padding 1,0"}
 {"k":"split.laid.tree","v":"TwoPaneSplitView#h0[unity-two-pane-split-view]{VisualElement#unity-content-container[unity-two-pane-split-view__content-container unity-two-pane-split-view--horizontal]{VisualElement#h0A[], VisualElement#h0B[]}, VisualElement#unity-dragline-anchor[unity-two-pane-split-view__dragline-anchor unity-two-pane-split-view__dragline-anchor--horizontal]{VisualElement#unity-dragline[unity-two-pane-split-view__dragline unity-two-pane-split-view__dragline--horizontal]}}"}
 {"k":"split.laid.logs","v":""}
 {"k":"split.shrunk.h1","v":"fixed h1B flexed h1A | h1A 0,0 149x300 display Flex | h1B 150,0 120x300 display Flex | anchor 150,0 1x300 | content padding 1,0"}
@@ -89,7 +93,10 @@
 {"k":"split.dragPastMin.h0","v":"fixed h0A flexed h0B | h0A 0,0 0x300 display Flex | h0B 1,0 399x300 display Flex | anchor 0,0 1x300 | content padding 1,0"}
 {"k":"split.drag.h1","v":"fixed h1B flexed h1A | h1A 0,0 219x300 display Flex | h1B 220,0 180x300 display Flex | anchor 220,0 1x300 | content padding 1,0"}
 {"k":"split.dragPastMax.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x295 display Flex | v0B 0,296 400x4 display Flex | anchor 0,295 400x1 | content padding 0,1"}
+{"k":"split.drag.keyed","v":"fixed keyedA flexed keyedB | keyedA 0,0 150x300 display Flex | keyedB 151,0 649x300 display Flex | anchor 150,0 1x300 | content padding 1,0"}
 {"k":"split.dragLogs","v":"Warning: Runtime cursors other than the default cursor need to be defined using a texture. | Warning: Runtime cursors other than the default cursor need to be defined using a texture."}
+{"k":"split.keyedSetUpAgain","v":"fixed keyedA flexed keyedB | keyedA 0,0 799x150 display Flex | keyedB 1,150 799x150 display Flex | anchor 0,150 800x1 | content padding 1,0"}
+{"k":"split.unkeyedSetUpAgain","v":"fixed h1B flexed h1A | h1A 0,0 399x180 display Flex | h1B 1,180 399x120 display Flex | anchor 0,-120 400x1 | content padding 1,0"}
 {"k":"split.collapse0.h0","v":"fixed h0A flexed h0B | h0A 0,0 0x0 display None | h0B 0,0 400x300 display Flex | anchor 0,0 0x0 | content padding 0,0"}
 {"k":"split.uncollapse.h0","v":"fixed h0A flexed h0B | h0A 0,0 120x300 display Flex | h0B 120,0 280x300 display Flex | anchor 120,0 1x300 | content padding 0,0"}
 {"k":"split.collapseInvalid","v":"Error: Invalid index. Must be 0 or 1."}

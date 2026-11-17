@@ -35,6 +35,7 @@ namespace ControlsProbe
     }
 
     [Flags] public enum ByteFlags : byte { A = 1, B = 2, High = 128 }
+    [Flags] public enum ShortFlags : short { A = 1, Top = unchecked((short)0x8000) }
     [Flags] public enum IntFlags { A = 1, B = 2, C = 4, D = 8 }
     [Flags] public enum LongFlags : long { A = 1, Big = 1L << 40 }
     public enum Plain { A, B }
@@ -257,6 +258,12 @@ namespace ControlsProbe
             Put("state.fromIntFlags", S(ToggleButtonGroupState.FromEnumFlags(IntFlags.B | IntFlags.D, 5)));
             Put("state.fromLongFlags", S(ToggleButtonGroupState.FromEnumFlags(LongFlags.A | LongFlags.Big)));
             Put("state.fromNegativeInt", S(ToggleButtonGroupState.FromEnumFlags((IntFlags)(-2))));
+            // Enums narrower than 32 bits: at the full length and in Compare.
+            Put("state.fromByte64", S(ToggleButtonGroupState.FromEnumFlags(ByteFlags.A | ByteFlags.High, 64)));
+            Put("state.fromShort64", S(ToggleButtonGroupState.FromEnumFlags(ShortFlags.A | ShortFlags.Top, 64)));
+            Put("state.compareNarrow", ToggleButtonGroupState.Compare(new ToggleButtonGroupState(0x81, 8), ByteFlags.A | ByteFlags.High) + " "
+                + ToggleButtonGroupState.Compare(new ToggleButtonGroupState(0x8001, 16), ShortFlags.A | ShortFlags.Top) + " "
+                + ToggleButtonGroupState.Compare(new ToggleButtonGroupState(0x8001, 64), ShortFlags.A | ShortFlags.Top));
             Put("state.fromNotFlags", Throws(() => ToggleButtonGroupState.FromEnumFlags(Plain.B)));
             Put("state.fromTooLong", Throws(() => ToggleButtonGroupState.FromEnumFlags(IntFlags.A, 70)));
             var options = new ToggleButtonGroupState(0b0101, 4);
@@ -515,13 +522,17 @@ namespace ControlsProbe
             var h1 = MakeSplit("h1", new TwoPaneSplitView(1, 120, TwoPaneSplitViewOrientation.Horizontal), minFlexed: 50);
             var v0 = MakeSplit("v0", new TwoPaneSplitView(0, 80, TwoPaneSplitViewOrientation.Vertical), minFixed: 30);
             var pending = MakeSplit("pending", new TwoPaneSplitView(0, 100, TwoPaneSplitViewOrientation.Horizontal));
+            // With a view-data key the view keeps a dragged size when it is set up again.
+            var keyed = MakeSplit("keyed", new TwoPaneSplitView(0, 100, TwoPaneSplitViewOrientation.Horizontal));
+            keyed.viewDataKey = "keyed";
             pending.CollapseChild(1);
             row.Add(h0);
             row.Add(h1);
             row.Add(v0);
             row.Add(pending);
+            row.Add(keyed);
             yield return Frames(3);
-            foreach (var view in new[] { h0, h1, v0, pending }) Put("split.laid." + view.name, Split(view));
+            foreach (var view in new[] { h0, h1, v0, pending, keyed }) Put("split.laid." + view.name, Split(view));
             Put("split.laid.tree", Tree(h0));
             Put("split.laid.logs", TakeLogs());
 
@@ -551,7 +562,14 @@ namespace ControlsProbe
             Put("split.drag.h1", Split(h1));
             yield return Drag(v0, new Vector2(0, 500));
             Put("split.dragPastMax.v0", Split(v0));
+            yield return Drag(keyed, new Vector2(50, 0));
+            Put("split.drag.keyed", Split(keyed));
             Put("split.dragLogs", TakeLogs());
+            keyed.orientation = TwoPaneSplitViewOrientation.Vertical;
+            h1.orientation = TwoPaneSplitViewOrientation.Vertical;
+            yield return Frames(3);
+            Put("split.keyedSetUpAgain", Split(keyed));
+            Put("split.unkeyedSetUpAgain", Split(h1));
 
             // Collapsing and restoring.
             h0.CollapseChild(0);

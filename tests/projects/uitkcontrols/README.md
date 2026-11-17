@@ -11,7 +11,8 @@ exactly (tolerance 0). `Assets/Scripts/ControlsProbe.cs` records:
 - `state.*`: ToggleButtonGroupState: the constructor's masking of bits past the length, ToString,
   the indexer and its exceptions (type, parameter and message; the runtime's own parameter suffix
   is not compared), active and inactive options, set/toggle/reset all, CreateFromOptions,
-  FromEnumFlags/ToEnumFlags/Compare with byte, int and long flag enums and a non-flag enum,
+  FromEnumFlags/ToEnumFlags/Compare with byte, short, int and long flag enums (also at the full
+  length of 64, where a short's sign extension shows) and a non-flag enum,
   equality, CompareTo, JsonUtility, and ToggleButtonGroupStatePropertiesAttribute's defaults;
 - `group.*`: ToggleButtonGroup: its hierarchy with and without a label and with no options (the
   empty label), buttons added one by one (their classes, the first option selected when the
@@ -23,8 +24,10 @@ exactly (tolerance 0). `Assets/Scripts/ControlsProbe.cs` records:
   layout, the drag line anchor and the content padding for a fixed first pane, a fixed second pane
   (with a flexed minimum), a vertical view (with a fixed minimum) and a collapse requested before
   layout; the view shrunk, shrunk past both minimums and grown again; pointer drags of the line
-  (also past the minimum and the maximum); collapsing, restoring and an invalid index; changing the
-  fixed pane index, the orientation and the initial dimension; one child only;
+  (also past the minimum and the maximum); a view with a view-data key, which keeps its dragged size
+  when a property change sets it up again (one without a key goes back to the initial dimension);
+  collapsing, restoring and an invalid index; changing the fixed pane index, the orientation and the
+  initial dimension; one child only;
 - `uxml.*`: the four controls from `Resources/Controls.uxml` through the UXML serialization path and
   through game subclasses whose deprecated UxmlFactory uses the built-in UxmlTraits
   (`fixed-pane-initial-dimension` is read as an integer there, so `80.5` gives the default 100).
