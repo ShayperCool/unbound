@@ -548,8 +548,6 @@ namespace UnityEngine.VFX
             }
             m_TotalTime = state.TotalTime;
             m_AdvanceOneFrame = false;
-            if (simulate)
-                foreach (var system in m_ParticleSystems) system.AskBounds();
         }
 
         // ----------------------------------------------------------------------- the state

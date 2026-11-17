@@ -29,7 +29,7 @@ namespace UnityEngine.Tests
             };
             var data = Data(
                 new[] { Value(VFXValueType.Float), Value(VFXValueType.Float3), Value(VFXValueType.Float3), Value(VFXValueType.Float3) },
-                new[] { Constant(0, 30f), Constant(1, center), Constant(2, size), Constant(3, padding) },
+                new[] { Constant(0, 45f), Constant(1, center), Constant(2, size), Constant(3, padding) },
                 new[] { spawner, system }, new[]
                 {
                     new VFXEventDesc { name = "OnPlay", startSystems = new uint[] { 0 }, stopSystems = Array.Empty<uint>(), initSystems = Array.Empty<uint>() },
@@ -114,6 +114,7 @@ namespace UnityEngine.Tests
                 // and no computed box; a name that is no system's answers nothing.
                 Assert.Equal(new Bounds(new Vector3(3f, 4f, 5f), Vector3.one + 2f * padding), manual.GetParticleSystemInfo("Particles").bounds);
                 Assert.Equal(default, manual.GetComputedBounds("Particles"));
+                Assert.Equal(padding, manual.GetCurrentBoundsPadding("Particles"));
                 Assert.Equal(default, effect.GetComputedBounds("None"));
                 Assert.Equal(Vector3.zero, effect.GetCurrentBoundsPadding("None"));
             }

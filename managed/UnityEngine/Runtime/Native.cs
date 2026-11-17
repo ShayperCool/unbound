@@ -213,6 +213,27 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A buffer's bytes from <paramref name="offset"/> on, after every command so
+        /// far, into <paramref name="into"/> (as many as it holds); false without a GPU or when
+        /// the buffer holds fewer. For what is read every frame: nothing is allocated here.</summary>
+        internal static bool ReadBuffer(ulong buffer, long offset, Span<byte> into)
+        {
+            if (!s_Ready) return false;
+            GfxStream.Flush();
+            NativeBuffer bytes;
+            if (s_Api.ReadBuffer(buffer, offset, into.Length, &bytes) == 0) return false;
+            try
+            {
+                if ((long)bytes.Length < into.Length) return false;
+                new ReadOnlySpan<byte>(bytes.Data, into.Length).CopyTo(into);
+                return true;
+            }
+            finally
+            {
+                Free(bytes);
+            }
+        }
+
         /// <summary>The frame's gamepad input into <paramref name="output"/> when it fits; returns its
         /// size (0 without SDL). <paramref name="family"/> is the Unity family, UTF-8.</summary>
         internal static int GamepadsState(ReadOnlySpan<byte> family, Span<byte> output)

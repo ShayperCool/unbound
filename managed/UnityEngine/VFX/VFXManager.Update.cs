@@ -101,8 +101,10 @@ namespace UnityEngine.VFX
                 try { effect.UpdateEffect(time); }
                 catch (Exception e) { Debug.LogException(e, effect); }
             }
-            // Once every effect is updated: the alive counts that are due are asked for.
+            // Once every effect is updated: the alive counts that are due are asked for, and
+            // the bounds computed from particles are read.
             VFXAliveReadback.AskDue(s_Frame);
+            VFXParticleSystem.ReadComputedBounds(s_Frame);
         }
 
         /// <summary>Copies a dead list's count into its second word on the GPU, with the

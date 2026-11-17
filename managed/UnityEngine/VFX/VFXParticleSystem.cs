@@ -415,7 +415,6 @@ namespace Unbound.Runtime
         {
             if (!KernelsUsable()) return;
             m_UpdatedFrame = VFXManager.Frame;
-            if (state.LastStep) EmptyBounds();
             foreach (var spawner in m_Spawners) TakeEvent(spawner.State.Attribute.Words);
             m_Total += m_Spawned;
             UpdateSleepState(state.FrameIndex);
@@ -426,6 +425,7 @@ namespace Unbound.Runtime
                 return;
             }
 
+            if (state.LastStep) EmptyBounds();
             uint spawned = m_Spawned;
             uint spawnIndex = m_Total - spawned;
             // A system that neither kills nor takes GPU events visits the particles spawned so
@@ -836,6 +836,7 @@ namespace Unbound.Runtime
             m_Alive?.Leave(this);
             ReleaseEvents();
             ReleaseStrips();
+            ReleaseBounds();
             m_Initialize?.Release();
             foreach (var update in m_Updates) update.Release();
             foreach (var kernel in m_PerCamera) kernel.Release();
