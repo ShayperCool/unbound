@@ -1211,8 +1211,38 @@ namespace UnityEngine.Tests
                 graph.Evaluate(0f);
                 Assert.True(playable.GetBool("Run"));
                 Assert.Equal("Base Layer", playable.GetLayerName(0));
-                Assert.True(playable.GetCurrentAnimatorStateInfo(0).IsName("Walk"));
+                // The request's own time, not a transition's entry at 0.
+                var walk = playable.GetCurrentAnimatorStateInfo(0);
+                Assert.True(walk.IsName("Walk"));
+                Assert.Equal(0.2f, walk.normalizedTime, 3);
                 Assert.Equal(5, m_Logs.Count);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A layer weight set on a controller playable no output plays is the weight of the
+        /// player an output then plays it on (Unbound's hand-over, unmeasured).</summary>
+        [Fact]
+        public void AnUnplayedControllerPlayableHandsOverItsLayerWeights()
+        {
+            var file = Load(AnimationFixtures.Layers);
+            var graph = UnityEngine.Playables.PlayableGraph.Create("Unplayed");
+            var root = Hierarchy("Character", "Body");
+            try
+            {
+                var playable = UnityEngine.Animations.AnimatorControllerPlayable.Create(graph, (RuntimeAnimatorController)file.Objects[9100000]);
+                Assert.True(playable.GetLayerCount() > 1);
+                float initial = playable.GetLayerWeight(1);
+                playable.SetLayerWeight(1, 0.25f);
+                Assert.NotEqual(0.25f, initial);
+                var output = UnityEngine.Animations.AnimationPlayableOutput.Create(graph, "Output", root.AddComponent<Animator>());
+                UnityEngine.Playables.PlayableOutputExtensions.SetSourcePlayable(output, playable);
+                graph.Evaluate(0f);
+                Assert.Equal(0.25f, playable.GetLayerWeight(1));
             }
             finally
             {

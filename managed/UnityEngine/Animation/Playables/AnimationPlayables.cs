@@ -728,8 +728,9 @@ namespace Unbound.Runtime.Playables
         internal PlayableNode Node;
         AnimatorPlayer m_Detached;
 
-        /// <summary>What the playable's own API reads and sets: the player of the Animator an
-        /// output reaches it through, else a detached one with the controller's state (the Unity
+        /// <summary>What the playable's own API reads and sets: the player made for the Animator of
+        /// the graph's first animation output with a target (see <see cref="EnsurePlayer()"/>),
+        /// else a detached one with the controller's state (the Unity
         /// 6000.0.71f1 Editor answers and warns for a playable no output plays,
         /// tests/projects/apierrors `playable.*`).</summary>
         internal AnimatorPlayer State
