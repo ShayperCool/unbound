@@ -40,6 +40,7 @@ const PROJECTS: &[&str] = &[
     "blendshapes",
     "humanoid",
     "lightmapuvs",
+    "meshreadable",
     "modelaxis",
     "modelclips",
     "modelfileids",

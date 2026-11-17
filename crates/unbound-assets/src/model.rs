@@ -69,6 +69,9 @@ const ANIMATION: i32 = 111;
 /// keep name-hashed hierarchy ids (generation 1).
 const LAST_NAME_HASH_IMPORTER_VERSION: i64 = 20100;
 
+/// The UV channels a Unity mesh has (`Mesh.uv` to `Mesh.uv8`).
+const MESH_UV_CHANNELS: usize = 8;
+
 /// The hierarchy path of the root GameObject under `fileIdsGeneration: 2`: the root takes part
 /// as `root`, whatever the file is called, so every model's root objects share their IDs.
 const STABLE_ROOT_PATH: &str = "//RootNode/root";
@@ -419,7 +422,7 @@ pub struct ModelMesh {
     pub normals: Vec<[f32; 3]>,
     /// Empty unless imported from the file (see [`ModelSettings::tangents`]).
     pub tangents: Vec<[f32; 4]>,
-    /// UV channels 0..=3 present in the file (`uvs[0]` is `Mesh.uv`).
+    /// UV channels 0..=7 present in the file (`uvs[0]` is `Mesh.uv`).
     pub uvs: Vec<Vec<[f32; 2]>>,
     /// Empty when the file has no vertex colours.
     pub colors: Vec<[f32; 4]>,
@@ -852,7 +855,7 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 58;
+    const VERSION: u32 = 59;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -2406,8 +2409,14 @@ impl<'a> Builder<'a> {
     ) -> Result<(ModelMesh, Vec<Option<&'a ufbx::Material>>, Option<String>)> {
         let settings = self.settings;
         let with_normals = settings.normals != NormalMode::None;
-        let mut uv_sets: Vec<&ufbx::VertexVec2> =
-            mesh.uv_sets.iter().take(4).map(|s| &s.vertex_uv).collect();
+        // A mesh's eight UV channels, the file's first eight sets (matches the Unity 6000.0.71f1
+        // Editor, tests/projects/meshreadable `layers.attributes`: eight sets, eight channels).
+        let mut uv_sets: Vec<&ufbx::VertexVec2> = mesh
+            .uv_sets
+            .iter()
+            .take(MESH_UV_CHANNELS)
+            .map(|s| &s.vertex_uv)
+            .collect();
         if settings.swap_uv_channels && uv_sets.len() >= 2 {
             uv_sets.swap(0, 1);
         }
