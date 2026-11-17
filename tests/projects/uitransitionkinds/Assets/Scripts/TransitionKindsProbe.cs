@@ -13,8 +13,8 @@ using UnityEngine.UIElements;
 // text-overflow, white-space), rotate between angle units, translate and transform-origin depth under an
 // overshooting easing, lengths whose unit changes (against the parent's width or height, the
 // parent's flex direction, the element's own width, a parent of no width, the text lengths that do
-// not convert, background-size), percent font sizes from rules and inline, integer slices, and the usage hints a transition adds when it
-// starts (inline, from a USS class and through `all`).
+// not convert, background-size), percent font sizes from rules and inline, integer slices, the usage hints a transition adds when it
+// starts (inline, from a USS class and through `all`), and image and font values.
 public class TransitionKindsProbe : MonoBehaviour
 {
     [RuntimeInitializeOnLoadMethod] static void Install() { new GameObject("TransitionKindsProbe").AddComponent<TransitionKindsProbe>(); }
@@ -259,5 +259,41 @@ public class TransitionKindsProbe : MonoBehaviour
         Put("hintAll.before", Hints(box));
         box.AddToClassList("kinds-all-target");
         Samples("hintAll", () => "border " + N(box.resolvedStyle.borderLeftColor.r) + " rotate " + N(box.resolvedStyle.rotate.angle.value));
+
+        // Image and font values.
+        var texA = new Texture2D(4, 4) { name = "texA" };
+        var texB = new Texture2D(4, 4) { name = "texB" };
+        var spriteB = Sprite.Create(texB, new Rect(0, 0, 4, 4), Vector2.zero);
+        spriteB.name = "spriteB";
+        var fontA = new Font("fontA");
+        var fontB = new Font("fontB");
+        Case("imageTexture", "background-image", () => box.style.backgroundImage = new StyleBackground(texA), () => box.style.backgroundImage = new StyleBackground(texB), Image);
+        Case("imageNoneToTexture", "background-image", null, () => box.style.backgroundImage = new StyleBackground(texA), Image);
+        Case("imageTextureToNone", "background-image", () => box.style.backgroundImage = new StyleBackground(texA), () => box.style.backgroundImage = StyleKeyword.None, Image);
+        Case("imageTextureToSprite", "background-image", () => box.style.backgroundImage = new StyleBackground(texA), () => box.style.backgroundImage = new StyleBackground(spriteB), Image);
+        Case("imageEaseIn", "background-image", () => box.style.backgroundImage = new StyleBackground(texA), () => box.style.backgroundImage = new StyleBackground(texB), Image, EasingMode.EaseIn);
+        Case("imageAll", "all", () => box.style.backgroundImage = new StyleBackground(texA), () => box.style.backgroundImage = new StyleBackground(texB), Image);
+        Case("fontObject", "-unity-font", () => box.style.unityFont = fontA, () => box.style.unityFont = fontB, FontName);
+        Case("fontNoneToFont", "-unity-font", null, () => box.style.unityFont = fontA, FontName);
+        Case("fontEaseIn", "-unity-font", () => box.style.unityFont = fontA, () => box.style.unityFont = fontB, FontName, EasingMode.EaseIn);
+        Case("fontDefinition", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromFont(fontB), FontDefinitionName);
+        Case("fontDefinitionNoneToFont", "-unity-font-definition", null, () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), FontDefinitionName);
+        Case("fontDefinitionEaseIn", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromFont(fontB), FontDefinitionName, EasingMode.EaseIn);
+    }
+
+    static string Name(UnityEngine.Object o) => o == null ? "null" : o.name;
+
+    static string Image()
+    {
+        var b = box.resolvedStyle.backgroundImage;
+        return "image texture " + Name(b.texture) + " sprite " + Name(b.sprite) + " renderTexture " + Name(b.renderTexture) + " vector " + Name(b.vectorImage);
+    }
+
+    static string FontName() => "font " + Name(box.resolvedStyle.unityFont);
+
+    static string FontDefinitionName()
+    {
+        var d = box.resolvedStyle.unityFontDefinition;
+        return "definition font " + Name(d.font) + " asset " + Name(d.fontAsset);
     }
 }

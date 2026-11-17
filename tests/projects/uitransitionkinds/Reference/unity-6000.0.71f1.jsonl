@@ -204,4 +204,76 @@
 {"key":"hintAll.500","value":"border 0 rotate 22.5 hints 9 []"}
 {"key":"hintAll.750","value":"border 0 rotate 33.75 hints 9 []"}
 {"key":"hintAll.1000","value":"border 0 rotate 45 hints 9 [end:border-left-color end:rotate]"}
+{"key":"imageTexture.before","value":"image texture texA sprite null renderTexture null vector null hints 0"}
+{"key":"imageTexture.0","value":"image texture texA sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageTexture.250","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTexture.500","value":"image texture texB sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTexture.750","value":"image texture texB sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTexture.1000","value":"image texture texB sprite null renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"imageNoneToTexture.before","value":"image texture null sprite null renderTexture null vector null hints 0"}
+{"key":"imageNoneToTexture.0","value":"image texture null sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageNoneToTexture.250","value":"image texture null sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageNoneToTexture.500","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageNoneToTexture.750","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageNoneToTexture.1000","value":"image texture texA sprite null renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"imageTextureToNone.before","value":"image texture texA sprite null renderTexture null vector null hints 0"}
+{"key":"imageTextureToNone.0","value":"image texture texA sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageTextureToNone.250","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToNone.500","value":"image texture null sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToNone.750","value":"image texture null sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToNone.1000","value":"image texture null sprite null renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"imageTextureToSprite.before","value":"image texture texA sprite null renderTexture null vector null hints 0"}
+{"key":"imageTextureToSprite.0","value":"image texture texA sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageTextureToSprite.250","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToSprite.500","value":"image texture null sprite spriteB renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToSprite.750","value":"image texture null sprite spriteB renderTexture null vector null hints 0 []"}
+{"key":"imageTextureToSprite.1000","value":"image texture null sprite spriteB renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"imageEaseIn.before","value":"image texture texA sprite null renderTexture null vector null hints 0"}
+{"key":"imageEaseIn.0","value":"image texture texA sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageEaseIn.250","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageEaseIn.500","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageEaseIn.750","value":"image texture texB sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageEaseIn.1000","value":"image texture texB sprite null renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"imageAll.before","value":"image texture texA sprite null renderTexture null vector null hints 0"}
+{"key":"imageAll.0","value":"image texture texA sprite null renderTexture null vector null hints 0 [run:background-image]"}
+{"key":"imageAll.250","value":"image texture texA sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageAll.500","value":"image texture texB sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageAll.750","value":"image texture texB sprite null renderTexture null vector null hints 0 []"}
+{"key":"imageAll.1000","value":"image texture texB sprite null renderTexture null vector null hints 0 [end:background-image]"}
+{"key":"fontObject.before","value":"font fontA hints 0"}
+{"key":"fontObject.0","value":"font fontA hints 0 [run:-unity-font]"}
+{"key":"fontObject.250","value":"font fontA hints 0 []"}
+{"key":"fontObject.500","value":"font fontB hints 0 []"}
+{"key":"fontObject.750","value":"font fontB hints 0 []"}
+{"key":"fontObject.1000","value":"font fontB hints 0 [end:-unity-font]"}
+{"key":"fontNoneToFont.before","value":"font null hints 0"}
+{"key":"fontNoneToFont.0","value":"font null hints 0 [run:-unity-font]"}
+{"key":"fontNoneToFont.250","value":"font null hints 0 []"}
+{"key":"fontNoneToFont.500","value":"font fontA hints 0 []"}
+{"key":"fontNoneToFont.750","value":"font fontA hints 0 []"}
+{"key":"fontNoneToFont.1000","value":"font fontA hints 0 [end:-unity-font]"}
+{"key":"fontEaseIn.before","value":"font fontA hints 0"}
+{"key":"fontEaseIn.0","value":"font fontA hints 0 [run:-unity-font]"}
+{"key":"fontEaseIn.250","value":"font fontA hints 0 []"}
+{"key":"fontEaseIn.500","value":"font fontA hints 0 []"}
+{"key":"fontEaseIn.750","value":"font fontB hints 0 []"}
+{"key":"fontEaseIn.1000","value":"font fontB hints 0 [end:-unity-font]"}
+{"key":"fontDefinition.before","value":"definition font fontA asset null hints 0"}
+{"key":"fontDefinition.0","value":"definition font fontA asset null hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinition.250","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinition.500","value":"definition font fontB asset null hints 0 []"}
+{"key":"fontDefinition.750","value":"definition font fontB asset null hints 0 []"}
+{"key":"fontDefinition.1000","value":"definition font fontB asset null hints 0 [end:-unity-font-definition]"}
+{"key":"fontDefinitionNoneToFont.before","value":"definition font null asset null hints 0"}
+{"key":"fontDefinitionNoneToFont.0","value":"definition font null asset null hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinitionNoneToFont.250","value":"definition font null asset null hints 0 []"}
+{"key":"fontDefinitionNoneToFont.500","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionNoneToFont.750","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionNoneToFont.1000","value":"definition font fontA asset null hints 0 [end:-unity-font-definition]"}
+{"key":"fontDefinitionEaseIn.before","value":"definition font fontA asset null hints 0"}
+{"key":"fontDefinitionEaseIn.0","value":"definition font fontA asset null hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinitionEaseIn.250","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionEaseIn.500","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionEaseIn.750","value":"definition font fontB asset null hints 0 []"}
+{"key":"fontDefinitionEaseIn.1000","value":"definition font fontB asset null hints 0 [end:-unity-font-definition]"}
 {"key":"complete","value":"1"}

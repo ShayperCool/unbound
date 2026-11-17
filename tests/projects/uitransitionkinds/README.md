@@ -1,7 +1,7 @@
 # Transition value kinds
 
 Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference has 207 rows (managed style state of a runtime panel
+byte-identical and the canonical reference has 279 rows (managed style state of a runtime panel
 driven by an explicit millisecond clock, as in `uitransitions`; independent of the OS and the
 graphics device). The gate compares every row exactly.
 
@@ -26,6 +26,9 @@ the transition events since the previous row.
 - `fontPercent*`: a percent font size from a USS rule is a share of the parent's font size; an
   inline one (from code or a UXML `style` attribute) keeps its number, and a child inheriting it
   takes its own share of that number.
+- `image*`, `font*`: background-image (textures, a sprite, none), `-unity-font` and
+  `-unity-font-definition` (fonts, none) run and are taken at half the eased progress, as other
+  discrete values, through their own name and through `all`, without usage hints.
 - `hint*`: a starting transition of a colour (background, border, text) adds
   `UsageHints.DynamicColor`, of rotate, scale, translate or transform-origin `DynamicTransform`,
   inline, from USS classes and through `all`, keeping hints already set; one that does not start
