@@ -21,12 +21,13 @@ namespace UnityEngine
     [Flags]
     public enum ParticleSystemBakeTextureOptions
     {
-        Default = 4,
+        // Declared in Unity's order: the name a value prints with depends on it.
         BakeRotationAndScale = 1,
         BakePosition = 2,
         PerVertex = 4,
         PerParticle = 8,
         IncludeParticleIndices = 16,
+        Default = 4,
     }
 }
 

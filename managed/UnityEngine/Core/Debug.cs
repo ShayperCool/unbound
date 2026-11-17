@@ -66,6 +66,7 @@ namespace UnityEngine
             {
                 float f => Unbound.MonoNumberFormat.Format(f, null, CultureInfo.InvariantCulture),
                 double d => Unbound.MonoNumberFormat.Format(d, null, CultureInfo.InvariantCulture),
+                Enum e => Unbound.MonoEnumNames.ToString(e, null),
                 IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
                 Exception exception => Unbound.Runtime.MonoExceptions.ToStringOf(exception),
                 _ => message.ToString(),

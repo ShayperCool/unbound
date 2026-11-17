@@ -13,18 +13,24 @@ using Unbound.Runtime;
 namespace Unbound.Host;
 
 /// <summary>
-/// Game code formats floats and doubles, and reads exception messages, as under Unity's Mono (see
+/// Game code formats floats, doubles and enum values, and reads exception messages, as under Unity's Mono (see
 /// <see cref="Unbound.MonoNumberFormat"/>): calls to <c>float.ToString</c>, <c>double.ToString</c>,
 /// <c>string.Format</c>, <c>string.Concat(object…)</c>, <c>StringBuilder.Append/AppendFormat</c>,
-/// <c>Convert.ToString</c>, virtual <c>ToString</c>s and virtual <c>Exception.Message</c> reads are
-/// redirected to it when an assembly loads, and again in the IL of every hot-reload delta. Every
-/// rewritten instruction keeps its size, so the assembly's symbols still match.
+/// <c>Convert.ToString</c>, virtual <c>ToString</c>s, virtual <c>Exception.Message</c> reads and
+/// enum texts (<c>Enum.ToString</c>, <c>Enum.GetName</c>, <c>Enum.Format</c>,
+/// <c>Type.GetEnumName</c>) are redirected to it when an assembly loads, and again in the IL of
+/// every hot-reload delta. Every rewritten instruction keeps its size, so the assembly's PDB
+/// still matches. A ToString called directly on an enum value, a nullable or a generic parameter's
+/// value (<c>constrained. T callvirt object::ToString()</c>, the usual <c>e.ToString()</c>), and
+/// string.Join of a generic sequence, are redirected at load only: a delta cannot be given the
+/// generic shims' instantiations, so edited code prints those calls as .NET does.
 /// </summary>
 static class NumberFormatShims
 {
     static readonly HashSet<string> s_Types = new(StringComparer.Ordinal)
     {
         "System.Single", "System.Double", "System.String", "System.Text.StringBuilder", "System.Convert",
+        "System.Enum", "System.Type",
     };
 
     static readonly string s_ShimType = typeof(Unbound.MonoNumberFormat).FullName!;
@@ -39,10 +45,19 @@ static class NumberFormatShims
     /// <summary>Shims by name and parameter types (an instance call's receiver first).</summary>
     static readonly Dictionary<string, System.Reflection.MethodInfo> s_Shims = typeof(Unbound.MonoNumberFormat)
         .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-        .Where(m => m.DeclaringType == typeof(Unbound.MonoNumberFormat))
+        .Where(m => m.DeclaringType == typeof(Unbound.MonoNumberFormat) && !m.IsGenericMethodDefinition)
         .ToDictionary(m => Key(m.Name, m.GetParameters().Select(p => p.ParameterType.FullName!)), StringComparer.Ordinal);
 
     static readonly HashSet<string> s_Names = new(s_Shims.Values.Select(m => m.Name), StringComparer.Ordinal);
+
+    /// <summary>The generic shims, instantiated per call with the call's type argument: a ToString
+    /// called directly on a value that may be an enum, and string.Join of a sequence.</summary>
+    static readonly System.Reflection.MethodInfo[] s_GenericShims = typeof(Unbound.MonoNumberFormat)
+        .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+        .Where(m => m.DeclaringType == typeof(Unbound.MonoNumberFormat) && m.IsGenericMethodDefinition)
+        .ToArray();
+
+    static readonly System.Reflection.MethodInfo s_ConstrainedToString = s_GenericShims.Single(m => m.Name == nameof(Unbound.MonoNumberFormat.ConstrainedToString));
 
     static string Key(string name, IEnumerable<string> parameters) => name + "(" + string.Join(",", parameters) + ")";
 
@@ -60,7 +75,7 @@ static class NumberFormatShims
             try { name = Mono.Cecil.ModuleDefinition.ReadModule(new MemoryStream(image)).Assembly.Name.Name; }
             catch { name = "an assembly"; }
             Native.Log((int)UnityEngine.LogType.Warning,
-                $"[Unbound] {name}: cannot redirect its number and exception texts to Mono's rules, so it prints floats and argument exceptions as .NET does ({e.GetType().Name}: {e.Message})");
+                $"[Unbound] {name}: cannot redirect its number, enum and exception texts to Mono's rules, so it prints floats, enum names and argument exceptions as .NET does ({e.GetType().Name}: {e.Message})");
             return image;
         }
     }
@@ -74,6 +89,15 @@ static class NumberFormatShims
         var references = new Dictionary<System.Reflection.MethodInfo, MethodReference>();
         MethodReference ReferenceTo(System.Reflection.MethodInfo shim) =>
             references.TryGetValue(shim, out var reference) ? reference : references[shim] = Reference(module, shim);
+        var genericReferences = new Dictionary<System.Reflection.MethodInfo, MethodReference>();
+        MethodReference Instance(System.Reflection.MethodInfo shim, Mono.Cecil.TypeReference argument)
+        {
+            if (!genericReferences.TryGetValue(shim, out var definition)) genericReferences[shim] = definition = GenericReference(module, shim);
+            // (The writer shares equal instantiations.)
+            var instance = new GenericInstanceMethod(definition);
+            instance.GenericArguments.Add(argument);
+            return instance;
+        }
         foreach (var type in module.GetTypes())
         {
             foreach (var method in type.Methods)
@@ -85,19 +109,27 @@ static class NumberFormatShims
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
                     var constrained = instruction.Previous is { OpCode.Code: Code.Constrained } prefix ? prefix : null;
+                    if (constrained?.Operand is Mono.Cecil.TypeReference receiver && IsObjectToString(target) && MayBeEnum(receiver))
+                    {
+                        // constrained. T callvirt object::ToString() -> call ConstrainedToString<T>(ref T):
+                        // the receiver is already the value's address.
+                        instruction.OpCode = OpCodes.Call;
+                        instruction.Operand = Instance(s_ConstrainedToString, receiver);
+                        Nop(il, constrained);
+                        continue;
+                    }
+                    if (target is GenericInstanceMethod { GenericArguments.Count: 1 } generic && FindGenericShim(generic.ElementMethod) is { } genericShim)
+                    {
+                        instruction.Operand = Instance(genericShim, generic.GenericArguments[0]);
+                        continue;
+                    }
                     var shim = FindShim(target.Name, target.DeclaringType.FullName, target.HasThis,
                         target.Parameters.Select(p => p.ParameterType.FullName), (constrained?.Operand as Mono.Cecil.TypeReference)?.FullName,
                         instruction.OpCode == OpCodes.Callvirt);
                     if (shim == null) continue;
                     instruction.OpCode = OpCodes.Call;
                     instruction.Operand = ReferenceTo(shim);
-                    if (constrained != null)
-                    {
-                        // "constrained. T" is six bytes: six nops keep every offset after it.
-                        constrained.OpCode = OpCodes.Nop;
-                        constrained.Operand = null;
-                        for (int i = 0; i < 5; i++) il.InsertAfter(constrained, il.Create(OpCodes.Nop));
-                    }
+                    if (constrained != null) Nop(il, constrained);
                 }
             }
         }
@@ -121,11 +153,97 @@ static class NumberFormatShims
         return output.ToArray();
     }
 
+    /// <summary>"constrained. T" is six bytes: six nops keep every offset after it.</summary>
+    static void Nop(ILProcessor il, Instruction constrained)
+    {
+        constrained.OpCode = OpCodes.Nop;
+        constrained.Operand = null;
+        for (int i = 0; i < 5; i++) il.InsertAfter(constrained, il.Create(OpCodes.Nop));
+    }
+
+    static bool IsObjectToString(MethodReference target) =>
+        target.Name == "ToString" && target.HasThis && target.Parameters.Count == 0 && target.DeclaringType.FullName == "System.Object";
+
+    /// <summary>Whether a constrained call's type may hold an enum value: a generic parameter, a
+    /// nullable or an enum (false when it cannot be resolved).</summary>
+    static bool MayBeEnum(Mono.Cecil.TypeReference type)
+    {
+        if (type is Mono.Cecil.GenericParameter) return true;
+        if (type is GenericInstanceType { ElementType.FullName: "System.Nullable`1" }) return true;
+        try
+        {
+            return type.Resolve()?.IsEnum == true;
+        }
+        catch (AssemblyResolutionException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The generic shim of a call of a generic class library method (one type
+    /// parameter), matched by declaring type, name and parameters.</summary>
+    static System.Reflection.MethodInfo? FindGenericShim(MethodReference method)
+    {
+        if (method.DeclaringType.FullName != "System.String" || method.HasThis) return null;
+        foreach (var shim in s_GenericShims)
+        {
+            var parameters = shim.GetParameters();
+            if (shim.Name != method.Name || parameters.Length != method.Parameters.Count) continue;
+            bool match = true;
+            for (int i = 0; i < parameters.Length && match; i++)
+                match = GenericName(parameters[i].ParameterType) == GenericName(method.Parameters[i].ParameterType);
+            if (match) return shim;
+        }
+        return null;
+    }
+
+    /// <summary>A parameter type's name with method type parameters by position (<c>!!0</c>), for
+    /// a shim's and for a call's open method.</summary>
+    static string GenericName(Type type) => type.IsGenericMethodParameter ? "!!" + type.GenericParameterPosition
+        : type.IsByRef ? GenericName(type.GetElementType()!) + "&"
+        : type.IsConstructedGenericType ? type.GetGenericTypeDefinition().FullName + "<" + string.Join(",", type.GetGenericArguments().Select(GenericName)) + ">"
+        : type.FullName ?? type.Name;
+
+    static string GenericName(Mono.Cecil.TypeReference type) => type switch
+    {
+        Mono.Cecil.GenericParameter { Type: GenericParameterType.Method } p => "!!" + p.Position,
+        ByReferenceType r => GenericName(r.ElementType) + "&",
+        GenericInstanceType g => g.ElementType.FullName + "<" + string.Join(",", g.GenericArguments.Select(GenericName)) + ">",
+        _ => type.FullName,
+    };
+
+    /// <summary>A reference to the generic shim <paramref name="shim"/> (one method type parameter).</summary>
+    static MethodReference GenericReference(Mono.Cecil.ModuleDefinition module, System.Reflection.MethodInfo shim)
+    {
+        var reference = new MethodReference(shim.Name, Type(module, shim.ReturnType), ShimType(module, shim)) { HasThis = false };
+        var parameter = new Mono.Cecil.GenericParameter("T", reference);
+        reference.GenericParameters.Add(parameter);
+        Mono.Cecil.TypeReference Of(Type type)
+        {
+            if (type.IsGenericParameter) return parameter;
+            if (type.IsByRef) return new ByReferenceType(Of(type.GetElementType()!));
+            if (!type.IsConstructedGenericType) return Type(module, type);
+            var instance = new GenericInstanceType(Type(module, type.GetGenericTypeDefinition()));
+            foreach (var argument in type.GetGenericArguments()) instance.GenericArguments.Add(Of(argument));
+            return instance;
+        }
+        foreach (var p in shim.GetParameters()) reference.Parameters.Add(new ParameterDefinition(Of(p.ParameterType)));
+        return reference;
+    }
+
     /// <summary>A reference to a shim in the assembly's own terms: the engine by the name the
     /// assembly already references it with (a second reference to it with another version would
     /// stop Edit and Continue from using the image as its baseline), framework types from the
     /// assembly's core library.</summary>
     static MethodReference Reference(Mono.Cecil.ModuleDefinition module, System.Reflection.MethodInfo shim)
+    {
+        var reference = new MethodReference(shim.Name, Type(module, shim.ReturnType), ShimType(module, shim)) { HasThis = false };
+        foreach (var parameter in shim.GetParameters())
+            reference.Parameters.Add(new ParameterDefinition(Type(module, parameter.ParameterType)));
+        return reference;
+    }
+
+    static Mono.Cecil.TypeReference ShimType(Mono.Cecil.ModuleDefinition module, System.Reflection.MethodInfo shim)
     {
         var engineName = typeof(Unbound.MonoNumberFormat).Assembly.GetName().Name!;
         var engine = module.AssemblyReferences.FirstOrDefault(r => r.Name == engineName);
@@ -134,11 +252,7 @@ static class NumberFormatShims
             engine = new AssemblyNameReference(engineName, new Version(0, 0, 0, 0));
             module.AssemblyReferences.Add(engine);
         }
-        var declaring = new Mono.Cecil.TypeReference(shim.DeclaringType!.Namespace, shim.DeclaringType.Name, module, engine);
-        var reference = new MethodReference(shim.Name, Type(module, shim.ReturnType), declaring) { HasThis = false };
-        foreach (var parameter in shim.GetParameters())
-            reference.Parameters.Add(new ParameterDefinition(Type(module, parameter.ParameterType)));
-        return reference;
+        return new Mono.Cecil.TypeReference(shim.DeclaringType!.Namespace, shim.DeclaringType.Name, module, engine);
     }
 
     static Mono.Cecil.TypeReference Type(Mono.Cecil.ModuleDefinition module, Type type)
@@ -150,6 +264,7 @@ static class NumberFormatShims
         if (type == typeof(object)) return system.Object;
         if (type == typeof(float)) return system.Single;
         if (type == typeof(double)) return system.Double;
+        if (type == typeof(char)) return system.Char;
         return new Mono.Cecil.TypeReference(type.Namespace, type.Name, module, system.CoreLibrary, type.IsValueType);
     }
 

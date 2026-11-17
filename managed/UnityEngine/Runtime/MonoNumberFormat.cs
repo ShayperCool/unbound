@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
@@ -14,7 +15,8 @@ namespace Unbound
     /// between two texts rounds away from zero (.NET rounds it to the even digit), and a value that
     /// rounds to zero prints no minus sign. Exceptions print their messages as Mono writes them
     /// (Unbound.Runtime.MonoExceptions): Exception.Message, a virtual ToString() and the calls that
-    /// format their arguments.
+    /// format their arguments. Enum values print the name Mono picks among names that share a value
+    /// (<see cref="MonoEnumNames"/>).
     /// Game assemblies' calls are redirected here when they load (Unbound.Host.NumberFormatShims);
     /// the methods take an instance's value by reference first, like the call they replace.
     /// </summary>
@@ -343,6 +345,7 @@ namespace Unbound
             float f => Format(f, null, null),
             double d => Format(d, null, null),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+            Enum e => MonoEnumNames.ToString(e, null),
             _ => value.ToString(),
         };
 
@@ -354,8 +357,27 @@ namespace Unbound
         {
             float f => Format(f, format, provider),
             double d => Format(d, format, provider),
+            Enum e => MonoEnumNames.ToString(e, format),
             _ => value.ToString(format, provider),
         };
+
+        // Enum calls: ToString on a value held directly (an enum, a nullable or a generic
+        // parameter's value, which may also be a float or double), on an Enum reference or a boxed
+        // value; the static lookups.
+
+        public static string ConstrainedToString<T>(ref T value)
+        {
+            if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), null, null);
+            if (typeof(T) == typeof(double)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, double>(ref value), null, null);
+            return MonoEnumNames.ToString(ref value);
+        }
+        public static string ToString(Enum value) => MonoEnumNames.ToString(value, null);
+        public static string ToString(Enum value, string format) => MonoEnumNames.ToString(value, format);
+        public static string ToString(Enum value, IFormatProvider provider) => MonoEnumNames.ToString(value, null);
+        public static string ToString(Enum value, string format, IFormatProvider provider) => MonoEnumNames.ToString(value, format);
+        public static string GetName(Type enumType, object value) => MonoEnumNames.GetName(enumType, value);
+        public static string GetEnumName(Type enumType, object value) => MonoEnumNames.GetName(enumType, value);
+        public static string Format(Type enumType, object value, string format) => MonoEnumNames.Format(enumType, value, format);
 
         // Calls that format their arguments: floats and doubles among them format as above.
 
@@ -368,6 +390,7 @@ namespace Unbound
             float f => Format(f, null, null),
             double d => Format(d, null, null),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+            Enum e => MonoEnumNames.ToString(e, null),
             _ => Convert.ToString(value),
         };
         public static string ToString(object value, IFormatProvider provider) => value switch
@@ -375,6 +398,7 @@ namespace Unbound
             float f => Format(f, null, provider),
             double d => Format(d, null, provider),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+            Enum e => MonoEnumNames.ToString(e, null),
             _ => Convert.ToString(value, provider),
         };
 
@@ -391,6 +415,24 @@ namespace Unbound
         public static string Concat(object arg0, object arg1) => string.Concat(Wrap(arg0), Wrap(arg1));
         public static string Concat(object arg0, object arg1, object arg2) => string.Concat(Wrap(arg0), Wrap(arg1), Wrap(arg2));
         public static string Concat(object[] args) => string.Concat(Wrap(args));
+
+        public static string Join(string separator, object[] values) => string.Join(separator, Wrap(values));
+        public static string Join(char separator, object[] values) => string.Join(separator, Wrap(values));
+        public static string Join<T>(string separator, IEnumerable<T> values) => Texts<T>.Mono ? string.Join(separator, MonoTexts(values)) : string.Join(separator, values);
+        public static string Join<T>(char separator, IEnumerable<T> values) => Texts<T>.Mono ? string.Join(separator, MonoTexts(values)) : string.Join(separator, values);
+
+        /// <summary>Whether values of a type may print otherwise under Mono: floats, doubles,
+        /// enums, exceptions, or values of a type that can hold any of them.</summary>
+        static class Texts<T>
+        {
+            internal static readonly bool Mono = !typeof(T).IsValueType || typeof(T).IsEnum || typeof(T) == typeof(float) || typeof(T) == typeof(double)
+                || Nullable.GetUnderlyingType(typeof(T)) is { } inner && (inner.IsEnum || inner == typeof(float) || inner == typeof(double));
+        }
+
+        static IEnumerable<string> MonoTexts<T>(IEnumerable<T> values)
+        {
+            foreach (var value in values) yield return value is null ? null : ObjectToString(value);
+        }
 
         public static StringBuilder Append(StringBuilder builder, float value) => builder.Append(Format(value, null, null));
         public static StringBuilder Append(StringBuilder builder, double value) => builder.Append(Format(value, null, null));
@@ -410,6 +452,7 @@ namespace Unbound
             float f => Format(f, null, null),
             double d => Format(d, null, null),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+            Enum e => MonoEnumNames.ToString(e, null),
             _ => value?.ToString(),
         };
 
@@ -418,6 +461,7 @@ namespace Unbound
             float f => new Boxed(f, true),
             double d => new Boxed(d, false),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+            Enum e => new BoxedEnum(e),
             _ => value,
         };
 
@@ -427,7 +471,7 @@ namespace Unbound
             object[] wrapped = null;
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] is not (float or double or Exception)) continue;
+                if (args[i] is not (float or double or Exception or Enum)) continue;
                 wrapped ??= (object[])args.Clone();
                 wrapped[i] = Wrap(args[i]);
             }
@@ -449,6 +493,18 @@ namespace Unbound
             public string ToString(string format, IFormatProvider provider) => Format(m_Value, format, provider, m_Single);
 
             public override string ToString() => Format(m_Value, null, null, m_Single);
+        }
+
+        /// <summary>An enum value that string.Format and string.Concat print with Mono's names.</summary>
+        sealed class BoxedEnum : IFormattable
+        {
+            readonly Enum m_Value;
+
+            internal BoxedEnum(Enum value) => m_Value = value;
+
+            public string ToString(string format, IFormatProvider provider) => MonoEnumNames.ToString(m_Value, format);
+
+            public override string ToString() => MonoEnumNames.ToString(m_Value, null);
         }
     }
 }
