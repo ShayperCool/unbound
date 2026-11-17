@@ -144,9 +144,10 @@ namespace UnityEngine.VFX
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
                 if (system.type != VFXSystemType.Particle) continue;
-                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasStrips | VFXSystemFlag.SystemHasDirectLink
+                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasDirectLink
                     | VFXSystemFlag.SystemNeedsComputeBounds | VFXSystemFlag.SystemAutomaticBounds | VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
+                if (VFXParticleSystem.StripRefusal(system) is string strips) return strips;
                 // Spawned by GPU events: the graph compiler gives such a system particles that
                 // can die and a list of the dead when it has an update or an output context,
                 // also when no block ever kills one. One without (a system of an initialize
@@ -535,7 +536,6 @@ namespace UnityEngine.VFX
             for (uint step = 0; step < steps; step++) Step(flags);
             m_TotalTime = state.TotalTime;
             m_AdvanceOneFrame = false;
-            foreach (var system in m_ParticleSystems) system.UpdateReadback();
         }
 
         // ----------------------------------------------------------------------- the state

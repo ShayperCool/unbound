@@ -31,9 +31,6 @@ namespace Unbound.Runtime
         /// <summary>The dead list starts with the instance's dead count and its copy for the
         /// initialize kernel; the dead particle indices follow.</summary>
         const int DeadListHeaderWords = 2;
-        /// <summary>How many frames pass between two requests for the alive count.</summary>
-        const int ReadbackPeriod = 60;
-
         internal readonly uint Capacity;
         internal readonly bool HasKill, HasStrips, ReceivesGpuEvents;
 
@@ -79,12 +76,15 @@ namespace Unbound.Runtime
         uint m_LastActiveFrame;
         bool m_Sleeping = true;
 
-        // The alive count of a system that kills particles is read back from the GPU.
+        // The alive count of a system that kills particles is read back from the GPU, when
+        // its schedule asks (one the effects of a graph run as a batch share).
         int m_ReadAlive = -1;
-        uint m_NextReadbackFrame;
-        bool m_ReadbackPending;
-        uint m_ReadbackFrame;
-        int m_ReadbackGeneration, m_RequestGeneration;
+        readonly VFXAliveReadback m_Alive;
+        /// <summary>Whether the schedule waits for this system's answer, and how many answers
+        /// are still to come that it stopped waiting for (asked before the system started
+        /// over): answers come in the order they were asked for.</summary>
+        bool m_Asked;
+        int m_Forgotten;
         /// <summary>The last frame the system was updated in (stepped, or found asleep).</summary>
         uint m_UpdatedFrame;
         Action<AsyncGPUReadbackRequest> m_OnReadback;
@@ -166,6 +166,8 @@ namespace Unbound.Runtime
             cameraLists.RemoveAll(list => !Drawn(list));
             m_StepLists = stepLists.ToArray();
             SetUpEvents(systems);
+            SetUpStrips();
+            if (HasKill) m_Alive = VFXAliveReadback.Join(this);
             m_CameraLists = cameraLists.ToArray();
             var stepSorts = new List<SortTask>();
             var cameraSorts = new List<SortTask>();
@@ -269,6 +271,10 @@ namespace Unbound.Runtime
 
         internal bool Sleeping => m_Sleeping;
 
+        /// <summary>When the system's alive count is asked for: its own schedule, or the one
+        /// its asset's effects share; null for a system that kills no particle.</summary>
+        internal VFXAliveReadback AliveSchedule => m_Alive;
+
         /// <summary>The system's bounds in the effect's space: the box the graph gives it, grown
         /// by its padding (a system in world space has its box brought into the effect's space).
         /// False when the graph gives the system no box.</summary>
@@ -291,13 +297,12 @@ namespace Unbound.Runtime
             m_LastActiveFrame = 0;
             m_Sleeping = true;
             m_ReadAlive = -1;
-            m_ReadbackPending = false;
-            m_ReadbackGeneration++;
-            m_NextReadbackFrame = VFXManager.Frame + 1;
+            ForgetAsked();
             m_PrefixWords[0] = m_PrefixWords[1] = 0;
             m_PreparedCamera = null;
             ResetEvents();
             if (Capacity == 0) return;
+            ResetStrips();
 
             // Every particle dead: the list holds the capacity as its count and the indices so
             // that the first particle spawned takes index zero. The attributes start as zeros
@@ -354,12 +359,12 @@ namespace Unbound.Runtime
             if (spawning) m_LastActiveFrame = frame;
             bool wasSleeping = m_Sleeping;
             if (!HasKill) m_Sleeping = m_Total == 0;
-            else if (m_LastActiveFrame < m_ReadbackFrame)
+            else if (m_LastActiveFrame < m_Alive.AskedFrame)
             {
                 // An answer newer than the last spawn says whether anything is left alive; a
                 // sleeping system stays asleep until it spawns.
                 if (m_Sleeping) return;
-                if (!m_ReadbackPending) m_Sleeping = m_ReadAlive == 0;
+                if (!m_Alive.Waiting) m_Sleeping = m_ReadAlive == 0;
             }
             // Without such an answer a system stays as it is, and wakes when it spawns: one
             // that has spawned nothing yet sleeps on (tests/projects/vfx, `draw/over life`:
@@ -369,7 +374,7 @@ namespace Unbound.Runtime
             {
                 // Awake again: the old count says nothing, and a new one is asked for next frame.
                 m_ReadAlive = -1;
-                m_NextReadbackFrame = VFXManager.Frame + 1;
+                m_Alive?.Woke();
             }
         }
 
@@ -386,6 +391,7 @@ namespace Unbound.Runtime
             m_KernelsUsable = true;
             if (!m_HasRenderer) return true;
             if (m_Initialize != null) m_KernelsUsable = m_Initialize.Usable();
+            m_KernelsUsable &= StripKernelUsable();
             foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
             foreach (var kernel in m_PerCamera) m_KernelsUsable &= kernel.Usable();
             return m_KernelsUsable;
@@ -453,6 +459,7 @@ namespace Unbound.Runtime
             m_UpdatedPrefix = fixedSize ? 0 : 1;
             m_PreparedCamera = null;
             foreach (var update in m_Updates) update.Dispatch(updated, m_UpdatedPrefix);
+            UpdateStrips();
             if (m_HasRenderer)
                 foreach (var sort in m_StepSorts) sort.Run(Effect);
             FillEventArguments();
@@ -516,7 +523,7 @@ namespace Unbound.Runtime
         /// neither kills nor takes GPU events, else every particle it has room for (the vertex
         /// programs leave out the dead ones). None before the system's first step, nor while
         /// it sleeps (all its particles are dead).</summary>
-        internal uint DrawnParticles => !m_Stepped || m_Sleeping ? 0 : !HasKill && !ReceivesGpuEvents ? Math.Min(m_Total, Capacity) : Capacity;
+        internal uint DrawnParticles => !m_Stepped || m_Sleeping ? 0 : !HasKill && !ReceivesGpuEvents && !HasStrips ? Math.Min(m_Total, Capacity) : Capacity;
 
         /// <summary>Adds the draws of an effect's systems' outputs, by their priority (each
         /// output's `sortPriority`, the lowest first; outputs of equal priority in the order of
@@ -566,28 +573,56 @@ namespace Unbound.Runtime
             return Math.Min(words, m_SourceWords.Length);
         }
 
-        /// <summary>After the frame's steps: asks the GPU for the alive count of a system that
-        /// kills particles, once a period, in a frame it was updated in (an effect culled out
-        /// of its simulation asks nothing: tests/projects/vfxoutputs `away`).</summary>
-        internal void UpdateReadback()
+        /// <summary>Asks the GPU for the alive count of a system that kills particles, when
+        /// its schedule does (<see cref="VFXAliveReadback"/>): of a system awake and updated in
+        /// <paramref name="frame"/> (an effect culled out of its simulation asks nothing:
+        /// tests/projects/vfxoutputs `away`). The count is what the list of dead particles
+        /// leaves of the system's room; of strips, the count their kernels keep. False when
+        /// nothing was asked.</summary>
+        internal bool AskAlive(uint frame)
         {
-            if (!HasKill || HasStrips || m_DeadList < 0 || Capacity == 0 || !m_HasRenderer) return;
-            uint frame = VFXManager.Frame;
-            if (m_ReadbackPending || m_NextReadbackFrame > frame || m_Sleeping || m_UpdatedFrame != frame) return;
-            m_ReadbackPending = true;
-            m_ReadbackFrame = frame;
-            m_RequestGeneration = m_ReadbackGeneration;
-            AsyncGPUReadback.Request(Effect.GpuBuffer(m_DeadList, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
+            int counted = HasStrips ? m_StripData : m_DeadList;
+            if (!HasKill || counted < 0 || Capacity == 0 || !m_HasRenderer) return false;
+            if (m_Asked || m_Sleeping || m_UpdatedFrame != frame) return false;
+            // Asked before the request: its answer may come at once.
+            m_Asked = true;
+            try
+            {
+                AsyncGPUReadback.Request(Effect.GpuBuffer(counted, 0), sizeof(uint), 0, m_OnReadback ??= OnReadback);
+            }
+            catch
+            {
+                m_Asked = false;
+                throw;
+            }
+            return true;
         }
 
         void OnReadback(AsyncGPUReadbackRequest request)
         {
             // A system reset since it asked takes no answer from before.
-            if (m_RequestGeneration != m_ReadbackGeneration) return;
-            m_ReadbackPending = false;
-            m_NextReadbackFrame += ReadbackPeriod;
-            if (request.hasError) return;
-            m_ReadAlive = (int)(Capacity - Math.Min(Capacity, request.GetData<uint>()[0]));
+            if (m_Forgotten != 0)
+            {
+                m_Forgotten--;
+                return;
+            }
+            m_Asked = false;
+            if (!request.hasError)
+            {
+                uint counted = request.GetData<uint>()[0];
+                m_ReadAlive = HasStrips ? (int)counted : (int)(Capacity - Math.Min(Capacity, counted));
+            }
+            m_Alive.Answered();
+        }
+
+        /// <summary>An answer asked for is not waited for any more (the system starts over, or
+        /// goes).</summary>
+        void ForgetAsked()
+        {
+            if (!m_Asked) return;
+            m_Asked = false;
+            m_Forgotten++;
+            m_Alive.Answered();
         }
 
         /// <summary>A count rounded up to whole thread groups.</summary>
@@ -765,8 +800,10 @@ namespace Unbound.Runtime
 
         internal override void Release()
         {
-            m_ReadbackGeneration++;
+            ForgetAsked();
+            m_Alive?.Leave(this);
             ReleaseEvents();
+            ReleaseStrips();
             m_Initialize?.Release();
             foreach (var update in m_Updates) update.Release();
             foreach (var kernel in m_PerCamera) kernel.Release();

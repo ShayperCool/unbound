@@ -68,9 +68,14 @@ namespace UnityEngine.VFX
         uint m_StartSeed;
         bool m_ResetSeedOnPlay = true;
         /// <summary>Whether the effect may be batched with others of its asset, and the resource
-        /// version its component was saved with: kept as serialized (every effect is a batch of
-        /// its own here).</summary>
+        /// version its component was saved with: kept as serialized. Every effect has buffers
+        /// of its own here; what a batch shows of itself is when its effects' alive counts
+        /// are read (<see cref="Unbound.Runtime.VFXAliveReadback"/>).</summary>
         bool m_AllowInstancing = true;
+
+        /// <summary>Whether the component lets the Editor batch the effect with the others of
+        /// its asset (the inspector's Allow Instancing; no script sets it).</summary>
+        internal bool AllowsInstancing => m_AllowInstancing;
         uint m_ResourceVersion;
         bool m_Pause;
         float m_PlayRate = 1f;
@@ -90,7 +95,7 @@ namespace UnityEngine.VFX
 
         /// <summary>What Unbound draws of an effect (<c>unbound doctor</c> says it of every
         /// effect with an asset; an effect that runs says which of its outputs it leaves out).</summary>
-        internal const string NotDrawn = "of Visual Effect Graph outputs, quads (also through an indirect buffer, unsorted and unlit) and meshes that the output draws itself are drawn, unlit or lit: sorted outputs, lit or mesh outputs through an indirect buffer, motion vectors, Shader Graph outputs, strips and other primitives show nothing yet";
+        internal const string NotDrawn = "of Visual Effect Graph outputs, quads, triangles and octagons (also through an indirect buffer, sorted or not, when unlit; quads also joined into strips) and meshes that the output draws itself are drawn, unlit or lit: lit or mesh outputs through an indirect buffer, lit strips, motion vectors, Shader Graph outputs and points, lines and cubes show nothing yet";
 
         /// <summary>The outputs said not to be drawn: once per asset, system and reason.</summary>
         static readonly HashSet<(int Asset, string System, string Reason)> s_WarnedOutputs = new HashSet<(int, string, string)>();

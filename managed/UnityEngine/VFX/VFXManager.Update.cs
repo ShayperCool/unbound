@@ -101,6 +101,8 @@ namespace UnityEngine.VFX
                 try { effect.UpdateEffect(time); }
                 catch (Exception e) { Debug.LogException(e, effect); }
             }
+            // Once every effect is updated: the alive counts that are due are asked for.
+            VFXAliveReadback.AskDue(s_Frame);
         }
 
         /// <summary>Copies a dead list's count into its second word on the GPU, with the

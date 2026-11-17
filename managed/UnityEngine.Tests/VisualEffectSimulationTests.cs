@@ -327,7 +327,8 @@ namespace UnityEngine.Tests
             {
                 new VFXEditorSystemDesc { name = "Trail", type = VFXSystemType.Particle, layer = 0, flags = VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips, tasks = Array.Empty<VFXEditorTaskDesc>() },
             });
-            Assert.Equal("SystemHasStrips of the system 'Trail'", VisualEffect.Unsupported(strips));
+            // A strip system is run when it has what the graph compiler gives one.
+            Assert.Equal("the strip system 'Trail' without its strips' buffer or sizes", VisualEffect.Unsupported(strips));
         }
 
         [Fact]
@@ -1057,7 +1058,27 @@ namespace UnityEngine.Tests
             Assert.Equal("its task names no mesh or no submesh mask", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, meshes, null));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));
-            Assert.Equal("strips are not drawn yet", VFXOutput.Refusal(new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips }, quads, material));
+            // A strip system's particles: as quads, joined into strips or one by one, that the
+            // output draws itself; strips also from a sorted list.
+            var stripSystem = new VFXEditorSystemDesc { flags = VFXSystemFlag.SystemHasStrips };
+            var joined = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("strips", 1) } };
+            Assert.Null(VFXOutput.Refusal(stripSystem, joined, material));
+            Assert.Null(VFXOutput.Refusal(stripSystem, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput }, material));
+            VFXEditorTaskDesc Joined(VFXEditorTaskDesc task)
+            {
+                var parameters = new List<VFXMapping>(task.parameters) { new VFXMapping("strips", 1) };
+                task.parameters = parameters.ToArray();
+                return task;
+            }
+            var sortedStrips = new VFXEditorSystemDesc
+            {
+                name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips,
+                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.PerOutputSort, buffers = new[] { new VFXMapping("srcBuffer", 2), new VFXMapping("scratchBuffer", -1), new VFXMapping("dstBuffer", 3) } } },
+            };
+            Assert.Null(VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 3)), material));
+            Assert.Equal("it draws strips through an indirect buffer that is not sorted, which is not measured yet", VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 2)), material));
+            Assert.Equal("it draws a strip system's particles one by one through an indirect buffer, which is not measured yet", VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
+            Assert.Equal("ParticleMeshOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, meshes, material));
             Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
             Assert.StartsWith("it keeps buffers of the frame before (motion vectors)", VFXOutput.Refusal(system, previous, material));
@@ -1121,6 +1142,11 @@ namespace UnityEngine.Tests
                 new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 2), 0), From(quads, 0), From(Indirect(2, 2), 1) } } },
                 new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
             Assert.Equal(new[] { VFXOutput.LitIndirectRefusal, null, null }, litIndirect[0]);
+            // Strips are measured unlit: a lit output of a strip system is not drawn.
+            var litStrips = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(quads, 0), From(quads, 1) } } },
+                new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
+            Assert.Equal(new[] { VFXOutput.LitStripRefusal, null }, litStrips[0]);
 
             var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material);
             asset.m_Data.Systems[1].tasks[0].parameters = Indirect(2, 3).parameters;

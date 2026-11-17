@@ -77,10 +77,10 @@ namespace UnityEngine.Tests
         {
             Assert.Null(VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasKill).m_Data));
             // One without a list of dead particles is not what the graph compiler writes, and
-            // says so; strips are not run yet.
+            // says so; nor is one of strips without the strips' buffer.
             Assert.Equal("the system 'Child' spawned by GPU events without a list of dead particles",
                 VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU).m_Data));
-            Assert.Equal("SystemHasStrips of the system 'Child'",
+            Assert.Equal("the strip system 'Child' without its strips' buffer or sizes",
                 VisualEffect.Unsupported(Spawning(10f, VFXSystemFlag.SystemReceivedEventGPU | VFXSystemFlag.SystemHasKill | VFXSystemFlag.SystemHasStrips).m_Data));
         }
     }

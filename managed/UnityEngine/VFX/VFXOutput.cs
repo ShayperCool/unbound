@@ -43,11 +43,15 @@ namespace Unbound.Runtime
     /// list of the particles to draw that the system's kernels make (the update kernel, an
     /// output-update kernel at each step, or one for each camera that sees the effect), sorted
     /// when the output sorts (<see cref="VFXSort"/>), whose count gives the draw's arguments
-    /// (<see cref="VFXIndirectArgs"/>); and meshes the output draws itself. What an output draws
+    /// (<see cref="VFXIndirectArgs"/>); and meshes the output draws itself. The quads of a strip
+    /// output go from each particle of a strip to the next: for all the strips' room (the
+    /// vertex program leaves out those past a strip's last particle), or from each particle of
+    /// a sorted list. What an output draws
     /// itself may be lit by the pipeline; what goes through an indirect buffer is unlit. An
     /// output of another kind is not drawn and says so once (<see cref="Refusal"/>): the system
     /// is simulated all the same. The draws match the Unity 6000.0.71f1 Editor
-    /// (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs, tests/projects/vfxlit).
+    /// (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs, tests/projects/vfxlit,
+    /// tests/projects/vfxstrips).
     /// </summary>
     internal sealed partial class VFXOutput
     {
@@ -85,6 +89,7 @@ namespace Unbound.Runtime
             m_Objects = new VFXTaskObjects(system.Effect.Data, task);
             m_MeshExpression = Parameter(task, MeshParameter, -1);
             m_SubMeshMaskExpression = Parameter(task, SubMeshMaskParameter, -1);
+            m_Strips = system.HasStrips && Parameter(task, StripsName) != 0;
             // One instance, active, in a batch of one: the counts as the programs read them
             // (the bits of unsigned integers), and instance zero's place in the buffers.
             float one = BitConverter.Int32BitsToSingle(1);
@@ -102,6 +107,10 @@ namespace Unbound.Runtime
         }
 
         const string IndirectDrawName = "indirectDraw";
+        /// <summary>The parameter of an output that draws its system's strips: quads from each
+        /// particle of a strip to the next, rather than one at each particle.</summary>
+        const string StripsName = "strips";
+        readonly bool m_Strips;
 
         /// <summary>Whether the output draws through an indirect buffer.</summary>
         internal bool Indirect => m_ArgsEntry >= 0;
@@ -131,7 +140,19 @@ namespace Unbound.Runtime
         internal static string Refusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task, UnityEngine.Object processor, string sourceRefusal = null)
         {
             if (!IsPlanar(task.type) && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} is not drawn yet (quads, triangles, octagons and meshes are)";
-            if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0) return "strips are not drawn yet";
+            if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
+            {
+                // Strips are quads from each particle to the next, drawn for all the strips'
+                // room; a strip system's particles may be drawn one by one as well.
+                if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} of a strip system's particles is not measured yet";
+                // Through an indirect buffer: strips from a sorted list (what an alpha blended
+                // strip output does by default) are measured.
+                if (Parameter(task, IndirectDrawName) != 0)
+                {
+                    if (Parameter(task, StripsName) == 0) return "it draws a strip system's particles one by one through an indirect buffer, which is not measured yet";
+                    if (Buffer(task, "indirectBuffer") == Parameter(task, "indirectIndex")) return "it draws strips through an indirect buffer that is not sorted, which is not measured yet";
+                }
+            }
             if (Parameter(task, IndirectDrawName) != 0)
             {
                 // Meshes are drawn for the particles the system has to draw, not from a list.
@@ -169,6 +190,10 @@ namespace Unbound.Runtime
         /// the two together are not, and are not drawn until they are.</summary>
         internal const string LitIndirectRefusal = "it is lit and draws through an indirect buffer, which is not measured yet";
 
+        /// <summary>Strips are measured unlit (tests/projects/vfxstrips): a lit strip output is
+        /// not drawn until it is.</summary>
+        internal const string LitStripRefusal = "it is a lit output of strips, which is not measured yet";
+
         /// <summary>Per system and task of a compiled graph: what each output's generated
         /// shader does that is not drawn yet (null for a task that is no output, has no shader
         /// of the graph's, or only does what is drawn).</summary>
@@ -185,8 +210,9 @@ namespace Unbound.Runtime
                     if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
-                    if (refusals[s][t] == null && Parameter(tasks[t], IndirectDrawName) != 0 && !string.IsNullOrEmpty(source) && source.Contains(LitDefine, StringComparison.Ordinal))
-                        refusals[s][t] = LitIndirectRefusal;
+                    if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !source.Contains(LitDefine, StringComparison.Ordinal)) continue;
+                    if (Parameter(tasks[t], IndirectDrawName) != 0) refusals[s][t] = LitIndirectRefusal;
+                    else if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
                 }
             }
             // The renderer finds a generated shader by its name: outputs whose shaders share one
@@ -299,6 +325,8 @@ namespace Unbound.Runtime
         {
             uint quads = m_System.DrawnParticles;
             if (quads == 0 || !m_Material) return;
+            if (m_Strips) quads = m_System.StripSegments;
+            if (quads == 0) return;
             var arguments = VFXIndirectArgs.Shared;
             if (Indirect)
             {

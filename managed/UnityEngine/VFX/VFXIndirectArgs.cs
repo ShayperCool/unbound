@@ -13,6 +13,7 @@ namespace Unbound.Runtime
     {
         internal const string CopyBuffer = "Packages/com.unity.visualeffectgraph/Shaders/VFXCopyBuffer.compute";
         internal const string FillIndirectArgs = "Packages/com.unity.visualeffectgraph/Shaders/VFXFillIndirectArgs.compute";
+        internal const string UpdateStrips = "Packages/com.unity.visualeffectgraph/Shaders/UpdateStrips.compute";
 
         static readonly HashSet<string> s_Missing = new HashSet<string>();
 
