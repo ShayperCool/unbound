@@ -157,7 +157,12 @@ namespace UnityEngine
         public static bool autorotateToPortraitUpsideDown { get; set; } = true;
         public static bool autorotateToLandscapeLeft { get; set; } = true;
         public static bool autorotateToLandscapeRight { get; set; } = true;
-        public static int sleepTimeout { get; set; } = SleepTimeout.SystemSetting;
+        [Unbound.EditorFaithful("measured: tests/projects/devicefacade (reads NeverSleep, also right after SystemSetting is set)")]
+        public static int sleepTimeout
+        {
+            get => SleepTimeout.NeverSleep;
+            set { }
+        }
         public static float brightness { get; set; } = 1f;
         public static Rect safeArea => new Rect(0, 0, s_Width, s_Height);
         [Unbound.EditorFaithful("measured: tests/projects/platform (no cutouts)")]

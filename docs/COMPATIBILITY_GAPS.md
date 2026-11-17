@@ -466,9 +466,15 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       implemented). `unbound api-check` fails (category `silent`) on any that carries neither.
 - [x] Stub generator: events warn on `add`; value-returning stubs take the Editor's answer from a
       small table where 0/null is wrong (`managed/Unbound.ApiTools/StubDefaults.cs`, measured by
-      `stubdefaults`; gen-stubs fails on stale entries or expression type mismatches). Still returning the
-      default because the answer needs a real implementation: `UnityEngine.Device.Screen`/
-      `Application`/`SystemInfo` (forward to the non-Device classes in the Editor),
+      `stubdefaults`; gen-stubs fails on stale entries or expression type mismatches). `UnityEngine.Device.Screen`/
+      `Application`/`SystemInfo` forward to the non-Device classes (`Core/Device.cs`; Q545,
+      `devicefacade`, Unity 6000.0.71f1 Linux GPU Editor, Play mode without the Device Simulator:
+      345/345, before 216/345), except four members whose counterparts are stubs too
+      (`Screen.SetMSAASamples`, `SystemInfo.SupportsVertexAttributeFormat`, `supportsGpuRecorder`,
+      `supportsIndirectDispatchRays`); the Device Simulator itself is not provided. Measured with it:
+      `Screen.sleepTimeout` reads `NeverSleep` in the Linux Editor, also right after `SystemSetting`
+      is set (macOS Editor unmeasured). Still returning the
+      default because the answer needs a real implementation:
       `GarbageCollector.isIncremental` (player setting), the `QualitySettings` texture streaming settings (its terrain settings are read from the quality level and override the terrains' since Q421), `Physics2D.jobOptions`
       and `GraphicsSettings` asset values, `Time.captureDeltaTimeRational`, serialized component
       values (`AudioReverbFilter`/`AudioChorusFilter`/`AudioReverbZone`, physical camera,
