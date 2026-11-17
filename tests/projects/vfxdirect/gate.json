@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/vfxdirect/run.py gate"
+  ],
+  "summary": "vfxdirect: .*",
+  "engine_paths": [
+    "managed/UnityEngine/VFX/",
+    "managed/UnityEngine/Graphics/ComputeShader.cs",
+    "managed/UnityEngine/Graphics/AsyncReadback.cs"
+  ]
+}
