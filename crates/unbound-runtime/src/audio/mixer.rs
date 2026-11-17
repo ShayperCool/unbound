@@ -32,19 +32,22 @@ const STREAM_CHUNK: usize = 4096;
 /// Source gain changes accumulate for 64 samples, then reach the exact target.
 /// Measured by tests/projects/audiodistortion at both output rates.
 const VOICE_GAIN_RAMP_FRAMES: u32 = 64;
-const SIX_INPUT_CHANNELS: usize = 6;
-/// Playback was refused because six-input rendering is outside its measured context.
-pub const SIX_INPUT_UNSUPPORTED: i32 = -1;
+/// The widest clip whose decoded inputs reach the output through a per-voice matrix.
+const MAX_INPUT_CHANNELS: usize = 8;
+/// Playback was refused because multichannel rendering is outside its measured context.
+pub const INPUT_UNSUPPORTED: i32 = -1;
 
+/// How a clip of more than two channels plays.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum SixInputMode {
+enum InputMode {
+    /// Other releases: the first two inputs, unmeasured.
     Legacy,
-    /// Six decoded inputs reach the layout through [`six_input_matrix`].
+    /// Every decoded input reaches the layout through [`input_matrix`].
     Measured,
     Unsupported,
 }
 
-impl SixInputMode {
+impl InputMode {
     /// `speaker_mode`: the active output layout. Spatial voices in Prologic output are
     /// unmeasured.
     fn of(params: &SourceParams, measured: bool, speaker_mode: i32) -> Self {
@@ -59,9 +62,9 @@ impl SixInputMode {
 
     fn rejects(self, clip: Option<&Clip>) -> bool {
         clip.is_some_and(|clip| {
-            clip.channels == SIX_INPUT_CHANNELS
+            clip.channels > 2
                 && self != Self::Legacy
-                && (self != Self::Measured || clip.stream || clip.streamed_asset)
+                && (self != Self::Measured || clip.channels > MAX_INPUT_CHANNELS)
         })
     }
 }
@@ -71,80 +74,363 @@ fn two_d(params: &SourceParams) -> bool {
     params.spatial_blend <= 0.0 && params.spatial_blend_curve.iter().all(|value| *value <= 0.0)
 }
 
-/// The output channels six decoded inputs of a 2D voice reach in each output layout, as
-/// `[output][input]` gains, after the balance of [`six_input_balance`]. Unity 6000.0.71f1,
-/// tests/projects/audiopitch SIX_LAYOUTS.md (Mono to 7.1) and ENCODING.md (Stereo and
-/// Prologic). The Mono output's graph carries its single channel on both lanes.
-fn six_input_layout(mode: i32) -> &'static [[f32; SIX_INPUT_CHANNELS]] {
-    type Row = [f32; SIX_INPUT_CHANNELS];
-    const H: f32 = 0.5;
-    const Q: f32 = 0.25;
-    const NONE: Row = [0.0; SIX_INPUT_CHANNELS];
-    const fn only(input: usize) -> Row {
+/// The pan balance side that scales a 2D gain: `panStereo`'s left or right gain, or none.
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Side {
+    L,
+    R,
+    C,
+}
+
+/// One decoded input's 2D gain into one output channel.
+#[derive(Clone, Copy, PartialEq, Debug)]
+struct InputGain {
+    gain: f32,
+    side: Side,
+}
+
+type InputRow = [InputGain; MAX_INPUT_CHANNELS];
+
+/// The 2D gains of a clip of `width` channels (3 to 8) into each output channel of `mode`, as
+/// `[output][input]`, each scaled by its side's balance. A clip of an odd width other than
+/// one reaches only LFE, from its fourth input; Prologic uses the Stereo gains. Unity
+/// 6000.0.71f1, tests/projects/audiopitch SIX_LAYOUTS.md, ENCODING.md and INPUT_CONTEXTS.md.
+/// The Mono output has one row; its graph carries it on both lanes.
+fn input_layout(width: usize, mode: i32) -> &'static [InputRow] {
+    use Side::{C, L, R};
+    const NONE: InputRow = [InputGain { gain: 0.0, side: C }; MAX_INPUT_CHANNELS];
+    const fn row(entries: &[(usize, f32, Side)]) -> InputRow {
         let mut row = NONE;
-        row[input] = 1.0;
+        let mut index = 0;
+        while index < entries.len() {
+            let (input, gain, side) = entries[index];
+            row[input] = InputGain { gain, side };
+            index += 1;
+        }
         row
     }
-    const MONO: [Row; 2] = [[1.0; SIX_INPUT_CHANNELS]; 2];
-    const STEREO: [Row; 2] = [[1.0, 0.0, H, H, H, 0.0], [0.0, 1.0, H, H, 0.0, H]];
-    const QUAD: [Row; 4] = [
-        [1.0, 0.0, H, Q, 0.0, 0.0],
-        [0.0, 1.0, H, Q, 0.0, 0.0],
-        NONE,
-        NONE,
-    ];
-    const SURROUND: [Row; 5] = [only(0), only(1), only(2), only(5), NONE];
-    const FIVE_ONE: [Row; 6] = [only(0), only(1), only(2), only(3), only(4), only(5)];
-    const SEVEN_ONE: [Row; 8] = [
-        only(0),
-        only(1),
-        only(2),
-        only(3),
-        only(4),
-        only(5),
-        only(4),
-        only(5),
-    ];
-    match mode {
-        speaker_mode::MONO => &MONO,
-        speaker_mode::QUAD => &QUAD,
-        speaker_mode::SURROUND => &SURROUND,
-        speaker_mode::MODE_5POINT1 => &FIVE_ONE,
-        speaker_mode::MODE_7POINT1 => &SEVEN_ONE,
-        // Stereo and Prologic.
-        _ => &STEREO,
+    let mode = if mode == speaker_mode::PROLOGIC {
+        speaker_mode::STEREO
+    } else {
+        mode
+    };
+    match (width, mode) {
+        (3, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[NONE];
+            GAINS
+        }
+        (3, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[NONE, NONE];
+            GAINS
+        }
+        (3, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (3, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (3, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (3, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (4, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[row(&[(0, 1.0, L), (2, 0.5, L)])];
+            GAINS
+        }
+        (4, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L), (2, 0.5, L)]),
+                row(&[(1, 1.0, R), (3, 0.5, R)]),
+            ];
+            GAINS
+        }
+        (4, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[row(&[(0, 1.0, L)]), row(&[(1, 1.0, R)]), NONE, NONE];
+            GAINS
+        }
+        (4, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(0, 0.5, C), (1, 0.5, C)]),
+                row(&[(3, 1.0, R)]),
+                NONE,
+            ];
+            GAINS
+        }
+        (4, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(0, 0.5, C), (1, 0.5, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(2, 1.0, L)]),
+                row(&[(3, 1.0, R)]),
+            ];
+            GAINS
+        }
+        (4, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(0, 0.5, C), (1, 0.5, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(2, 0.5, L)]),
+                row(&[(3, 0.5, R)]),
+                row(&[(2, 0.5, L)]),
+                row(&[(3, 0.5, R)]),
+            ];
+            GAINS
+        }
+        (5, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[NONE];
+            GAINS
+        }
+        (5, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[NONE, NONE];
+            GAINS
+        }
+        (5, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (5, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (5, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, row(&[(3, 1.0, C)]), NONE, NONE];
+            GAINS
+        }
+        (5, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[
+                NONE,
+                NONE,
+                NONE,
+                row(&[(3, 1.0, C)]),
+                NONE,
+                NONE,
+                NONE,
+                NONE,
+            ];
+            GAINS
+        }
+        (6, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[row(&[
+                (0, 1.0, L),
+                (1, 1.0, R),
+                (2, 1.0, C),
+                (3, 1.0, C),
+                (4, 1.0, L),
+                (5, 1.0, R),
+            ])];
+            GAINS
+        }
+        (6, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L), (2, 0.5, C), (3, 0.5, C), (4, 0.5, L)]),
+                row(&[(1, 1.0, R), (2, 0.5, C), (3, 0.5, C), (5, 0.5, R)]),
+            ];
+            GAINS
+        }
+        (6, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L), (2, 0.5, C), (3, 0.25, C)]),
+                row(&[(1, 1.0, R), (2, 0.5, C), (3, 0.25, C)]),
+                NONE,
+                NONE,
+            ];
+            GAINS
+        }
+        (6, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(5, 1.0, R)]),
+                NONE,
+            ];
+            GAINS
+        }
+        (6, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(4, 1.0, L)]),
+                row(&[(5, 1.0, R)]),
+            ];
+            GAINS
+        }
+        (6, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(4, 1.0, L)]),
+                row(&[(5, 1.0, R)]),
+                row(&[(4, 1.0, L)]),
+                row(&[(5, 1.0, R)]),
+            ];
+            GAINS
+        }
+        (7, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[NONE];
+            GAINS
+        }
+        (7, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[NONE, NONE];
+            GAINS
+        }
+        (7, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (7, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, NONE, NONE];
+            GAINS
+        }
+        (7, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[NONE, NONE, NONE, row(&[(3, 1.0, C)]), NONE, NONE];
+            GAINS
+        }
+        (7, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[
+                NONE,
+                NONE,
+                NONE,
+                row(&[(3, 1.0, C)]),
+                NONE,
+                NONE,
+                NONE,
+                NONE,
+            ];
+            GAINS
+        }
+        (8, speaker_mode::MONO) => {
+            const GAINS: &[InputRow] = &[row(&[
+                (0, 1.0, L),
+                (1, 1.0, R),
+                (2, 1.0, C),
+                (3, 1.0, C),
+                (4, 1.0, L),
+                (5, 1.0, R),
+                (6, 1.0, L),
+                (7, 1.0, R),
+            ])];
+            GAINS
+        }
+        (8, speaker_mode::STEREO) => {
+            const GAINS: &[InputRow] = &[
+                row(&[
+                    (0, 1.0, L),
+                    (2, 0.5, C),
+                    (3, 0.5, C),
+                    (4, 0.5, L),
+                    (6, 0.75, L),
+                ]),
+                row(&[
+                    (1, 1.0, R),
+                    (2, 0.5, C),
+                    (3, 0.5, C),
+                    (5, 0.5, R),
+                    (7, 0.75, R),
+                ]),
+            ];
+            GAINS
+        }
+        (8, speaker_mode::QUAD) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L), (2, 0.5, C), (3, 0.25, C)]),
+                row(&[(1, 1.0, R), (2, 0.5, C), (3, 0.25, C)]),
+                NONE,
+                NONE,
+            ];
+            GAINS
+        }
+        (8, speaker_mode::SURROUND) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(5, 1.0, R), (7, 1.0, R)]),
+                NONE,
+            ];
+            GAINS
+        }
+        (8, speaker_mode::MODE_5POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(4, 1.0, L), (6, 1.0, L)]),
+                row(&[(5, 1.0, R), (7, 1.0, R)]),
+            ];
+            GAINS
+        }
+        (8, speaker_mode::MODE_7POINT1) => {
+            const GAINS: &[InputRow] = &[
+                row(&[(0, 1.0, L)]),
+                row(&[(1, 1.0, R)]),
+                row(&[(2, 1.0, C)]),
+                row(&[(3, 1.0, C)]),
+                row(&[(4, 1.0, L)]),
+                row(&[(5, 1.0, R)]),
+                row(&[(6, 1.0, L)]),
+                row(&[(7, 1.0, R)]),
+            ];
+            GAINS
+        }
+        _ => &[],
     }
 }
 
-/// Each decoded input's 2D level before [`six_input_layout`], times `volume`: the balance of
-/// `pan` on the left (0, 4) and right (1, 5) inputs, none on the centre and LFE inputs (2, 3),
-/// in every layout. Unity 6000.0.71f1, tests/projects/audiopitch SIX_LAYOUTS.md and
-/// VOICE_INPUT.md.
-fn six_input_balance(pan: f32, volume: f32) -> [f32; SIX_INPUT_CHANNELS] {
-    let [left, right] = spatial::balance(pan).map(|g| g * volume);
-    [left, right, volume, volume, left, right]
-}
-
-/// A six-input voice's `[output * 6 + input]` gains into the layout of `mode`, and the entries
-/// in use. The 2D part is [`six_input_balance`] through [`six_input_layout`]; the 3D part pans
-/// each input on its own turned direction ([`spatial::input_levels_3d`]). The spatial blend
-/// mixes both parts' speaker levels, then the blended attenuation and `volume` scale them.
-/// Unity 6000.0.71f1, tests/projects/audiopitch SIX_LAYOUTS.md and SIX_SPATIAL.md.
-fn six_input_matrix(
+/// A multichannel voice's `[output * width + input]` gains into the layout of `mode`, and the
+/// entries in use. The 2D part is [`input_layout`] with each gain's side balanced by `pan`; the
+/// 3D part pans each input on its own turned direction ([`spatial::input_levels_3d`]). The
+/// spatial blend mixes both parts' speaker levels, then the blended attenuation and `volume`
+/// scale them. Unity 6000.0.71f1, tests/projects/audiopitch SIX_LAYOUTS.md, SIX_SPATIAL.md
+/// and INPUT_CONTEXTS.md.
+fn input_matrix(
+    width: usize,
     mode: i32,
     speakers: Option<&SpeakerLayout>,
     panning: &spatial::Panning,
     pan: f32,
     volume: f32,
 ) -> (Matrix, usize) {
-    let layout = six_input_layout(mode);
-    let mut matrix = [0.0; 8 * SIX_INPUT_CHANNELS];
-    let entries = layout.len() * SIX_INPUT_CHANNELS;
+    let layout = input_layout(width, mode);
+    let mut matrix = [0.0; MATRIX_ENTRIES];
+    // The Mono output's graph carries its single speaker on both lanes.
+    let lanes = if mode == speaker_mode::MONO {
+        2
+    } else {
+        layout.len()
+    };
+    let entries = lanes * width;
+    let [left, right] = spatial::balance(pan);
+    let balance = |side| match side {
+        Side::L => left,
+        Side::R => right,
+        Side::C => 1.0,
+    };
+    let row = |output: usize| &layout[output.min(layout.len().saturating_sub(1))];
+    if layout.is_empty() {
+        return (matrix, 0);
+    }
     if panning.blend <= 0.0 {
-        let balance = six_input_balance(pan, volume);
-        for (output, row) in layout.iter().enumerate() {
-            for (input, gain) in row.iter().enumerate() {
-                matrix[output * SIX_INPUT_CHANNELS + input] = gain * balance[input];
+        for output in 0..lanes {
+            for (input, gain) in row(output)[..width].iter().enumerate() {
+                matrix[output * width + input] = gain.gain * (balance(gain.side) * volume);
             }
         }
         return (matrix, entries);
@@ -154,21 +440,21 @@ fn six_input_matrix(
         (_, Some(layout)) => spatial::Speakers::Surround(layout),
         _ => spatial::Speakers::Stereo,
     };
-    let balance = six_input_balance(pan, 1.0);
     let (flat, blend) = (1.0 - panning.blend, panning.blend);
     let scale = panning.volume * volume;
+    let turns = spatial::input_turns(width);
     let mut levels = [0.0; 8];
-    for (input, turn) in spatial::SIX_INPUT_TURNS.into_iter().enumerate() {
-        spatial::input_levels_3d(three_d, panning, turn, &mut levels);
-        for (output, row) in layout.iter().enumerate() {
-            // The Mono output's graph carries its single speaker on both lanes.
+    for (input, turn) in turns[..width].iter().enumerate() {
+        spatial::input_levels_3d(three_d, panning, *turn, &mut levels);
+        for output in 0..lanes {
+            let gain = row(output)[input];
             let level = if mode == speaker_mode::MONO {
                 levels[0]
             } else {
                 levels[output]
             };
-            matrix[output * SIX_INPUT_CHANNELS + input] =
-                (flat * (row[input] * balance[input]) + blend * level) * scale;
+            matrix[output * width + input] =
+                (flat * (gain.gain * balance(gain.side)) + blend * level) * scale;
         }
     }
     (matrix, entries)
@@ -797,11 +1083,11 @@ impl Voice {
             submitted: true,
             start_pending: false,
             volume_scale,
-            matrix: [0.0; 8 * SIX_INPUT_CHANNELS],
+            matrix: [0.0; MATRIX_ENTRIES],
             fresh: true,
             fade_frames: 0,
-            fade_delta: [0.0; 8 * SIX_INPUT_CHANNELS],
-            fade_matrix: [0.0; 8 * SIX_INPUT_CHANNELS],
+            fade_delta: [0.0; MATRIX_ENTRIES],
+            fade_matrix: [0.0; MATRIX_ENTRIES],
             stream: None,
             zone_send: ZoneSendState::default(),
             rendered: false,
@@ -1696,9 +1982,9 @@ impl Mixer {
             params.has(source_flags::SURROUND_EFFECTS),
         );
         source.params = params;
-        let mode = SixInputMode::of(
+        let mode = InputMode::of(
             &source.params,
-            self.output_rules.six_channel_voices,
+            self.output_rules.multichannel_voices,
             self.config.speaker_mode,
         );
         let mut rejected = std::mem::take(&mut source.input_rejected);
@@ -1717,7 +2003,7 @@ impl Mixer {
             rejected |= !keep;
             keep
         });
-        if rejected { SIX_INPUT_UNSUPPORTED } else { 0 }
+        if rejected { INPUT_UNSUPPORTED } else { 0 }
     }
 
     /// The listener's components from the frame packet: an unchanged list keeps the chain and
@@ -2068,9 +2354,9 @@ impl Mixer {
         let source = self.sources.get(&handle);
         let default = SourceParams::default();
         let params = source.map_or(&default, |source| &source.params);
-        let mode = SixInputMode::of(
+        let mode = InputMode::of(
             params,
-            self.output_rules.six_channel_voices,
+            self.output_rules.multichannel_voices,
             self.config.speaker_mode,
         );
         let rejects = |handle| mode.rejects(self.clips.get(&handle));
@@ -2086,7 +2372,7 @@ impl Mixer {
             }),
             _ => false,
         };
-        if rejected { SIX_INPUT_UNSUPPORTED } else { 0 }
+        if rejected { INPUT_UNSUPPORTED } else { 0 }
     }
 
     /// Reports admission before a later render can change the source's voice counts.
@@ -2891,7 +3177,7 @@ impl Mixer {
             self.zone_input[..n * 2].fill(0.0);
             self.zone_extra.fill(0.0);
         }
-        let six_channel_voices = self.output_rules.six_channel_voices;
+        let multichannel_voices = self.output_rules.multichannel_voices;
         let Self {
             sources,
             clips,
@@ -2981,23 +3267,15 @@ impl Mixer {
                     two_d(&source.params).then_some(source.params.pan_stereo),
                 )
             };
-            gains.six_input_mode =
-                SixInputMode::of(&source.params, six_channel_voices, config.speaker_mode);
-            if gains.six_input_mode == SixInputMode::Measured
-                && source.main.iter().chain(&source.one_shots).any(|voice| {
-                    clips
-                        .get(&voice.clip)
-                        .is_some_and(|clip| clip.channels == SIX_INPUT_CHANNELS)
-                })
-            {
-                gains.six_input = six_input_matrix(
-                    config.speaker_mode,
-                    speakers.as_ref(),
-                    &s.panning,
-                    source.params.pan_stereo,
-                    volume,
-                );
-            }
+            gains.input_mode =
+                InputMode::of(&source.params, multichannel_voices, config.speaker_mode);
+            gains.inputs = Inputs {
+                mode: config.speaker_mode,
+                speakers,
+                panning: s.panning,
+                pan: source.params.pan_stereo,
+                volume,
+            };
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
             let generator = filter_only;
@@ -3630,6 +3908,18 @@ impl StreamState {
         }
     }
 
+    /// The first `channels` (at most eight) samples of buffered frame `i`; zero outside it.
+    fn frames(&self, i: u64, channels: usize) -> [f32; MAX_INPUT_CHANNELS] {
+        let mut frame = [0.0; MAX_INPUT_CHANNELS];
+        if let Some(rel) = i.checked_sub(self.base) {
+            let at = rel as usize * channels;
+            if let Some(samples) = self.buffer.get(at..at + channels) {
+                frame[..channels].copy_from_slice(samples);
+            }
+        }
+        frame
+    }
+
     fn frame(&self, i: u64, channels: usize) -> (f32, f32) {
         let Some(rel) = i.checked_sub(self.base) else {
             return (0.0, 0.0);
@@ -3772,20 +4062,21 @@ fn render_source_voices(
 ) -> Option<u64> {
     let mut finished_at: Option<u64> = None;
     let target_for = |clip: Option<&Clip>| {
-        if gains.six_input_mode.rejects(clip) {
+        if gains.input_mode.rejects(clip) {
             // Admission and live parameter updates report this on the control thread.
             // Never render an unsupported six-input voice through the two-input path.
             None
-        } else if gains.six_input_mode == SixInputMode::Measured
-            && clip.is_some_and(|clip| clip.channels == SIX_INPUT_CHANNELS && !clip.stream)
+        } else if let Some(width) = clip
+            .map(|clip| clip.channels)
+            .filter(|width| *width > 2 && gains.input_mode == InputMode::Measured)
         {
-            let (matrix, entries) = gains.six_input;
-            Some((matrix, entries, true))
+            let (matrix, entries) = gains.inputs.matrix(width);
+            Some((matrix, entries, width))
         } else {
             Some((
                 gains.matrix(clip.map_or(2, |c| c.channels)),
                 gains.entries,
-                false,
+                2,
             ))
         }
     };
@@ -3803,7 +4094,7 @@ fn render_source_voices(
     }
     if let Some(main) = &mut source.main
         && main.clip != 0
-        && let Some((target, entries, six_input)) = main_target
+        && let Some((target, entries, inputs)) = main_target
     {
         if let Some(end) = render_voice(
             main,
@@ -3814,7 +4105,7 @@ fn render_source_voices(
             rate,
             target,
             entries,
-            six_input,
+            inputs,
             looping,
             measured_resampling,
             measured_matrix,
@@ -3836,7 +4127,7 @@ fn render_source_voices(
         }
     }
     source.one_shots.retain_mut(|voice| {
-        let Some((target, entries, six_input)) = target_for(clips.get(&voice.clip)) else {
+        let Some((target, entries, inputs)) = target_for(clips.get(&voice.clip)) else {
             source.input_rejected = true;
             return false;
         };
@@ -3849,7 +4140,7 @@ fn render_source_voices(
             rate,
             target,
             entries,
-            six_input,
+            inputs,
             false,
             measured_resampling,
             measured_matrix,
@@ -4058,15 +4349,41 @@ fn listener_script_range(first: usize, end: usize) -> i64 {
     ((end as i64) << 32) | (first as i64 + 1)
 }
 
-/// Output-major gains, `[output * inputs + input]`: two inputs for ordinary voices, six for
-/// measured six-input voices, for up to eight output channels.
-type Matrix = [f32; 8 * SIX_INPUT_CHANNELS];
+/// Gain entries of a voice matrix: up to eight inputs for up to eight output channels.
+const MATRIX_ENTRIES: usize = 8 * MAX_INPUT_CHANNELS;
+
+/// Output-major gains, `[output * inputs + input]`: two inputs for ordinary voices, the clip's
+/// width for measured multichannel voices.
+type Matrix = [f32; MATRIX_ENTRIES];
 
 /// A two-input matrix of `gains` (`[output * 2 + input]`), the other entries zero.
 fn two_input_matrix(gains: &[f32]) -> Matrix {
-    let mut matrix = [0.0; 8 * SIX_INPUT_CHANNELS];
+    let mut matrix = [0.0; MATRIX_ENTRIES];
     matrix[..gains.len()].copy_from_slice(gains);
     matrix
+}
+
+/// A source's state for this block that [`input_matrix`] needs.
+#[derive(Clone, Copy, Default)]
+struct Inputs {
+    mode: i32,
+    speakers: Option<SpeakerLayout>,
+    panning: spatial::Panning,
+    pan: f32,
+    volume: f32,
+}
+
+impl Inputs {
+    fn matrix(&self, width: usize) -> (Matrix, usize) {
+        input_matrix(
+            width,
+            self.mode,
+            self.speakers.as_ref(),
+            &self.panning,
+            self.pan,
+            self.volume,
+        )
+    }
 }
 
 /// A source's output gains for this block, before each voice picks its clip's matrix.
@@ -4080,11 +4397,10 @@ struct VoiceGains {
     mono_pan: Option<f32>,
     /// The matrix entries in use: the front pair's four, then two per extra output channel.
     entries: usize,
-    /// Measured output can retain all six decoded inputs through its gain matrix.
-    six_input_mode: SixInputMode,
-    /// A measured six-input voice's [`six_input_matrix`] and its entries in use, computed when
-    /// the source has such a voice.
-    six_input: (Matrix, usize),
+    /// Measured output can retain every decoded input of a clip wider than stereo.
+    input_mode: InputMode,
+    /// What [`input_matrix`] needs for such a voice.
+    inputs: Inputs,
 }
 
 impl VoiceGains {
@@ -4095,8 +4411,8 @@ impl VoiceGains {
             mono_target: mono_target.map(|matrix| two_input_matrix(&matrix)),
             mono_pan,
             entries: 4,
-            six_input_mode: SixInputMode::Legacy,
-            six_input: ([0.0; 8 * SIX_INPUT_CHANNELS], 0),
+            input_mode: InputMode::Legacy,
+            inputs: Inputs::default(),
         }
     }
     /// Every output channel of a surround layout of `channels` channels.
@@ -4106,8 +4422,8 @@ impl VoiceGains {
             mono_target: Some(two_input_matrix(&gains.mono.map(|g| g * volume))),
             mono_pan: None,
             entries: channels * 2,
-            six_input_mode: SixInputMode::Legacy,
-            six_input: ([0.0; 8 * SIX_INPUT_CHANNELS], 0),
+            input_mode: InputMode::Legacy,
+            inputs: Inputs::default(),
         }
     }
     /// A mono output: every voice enters the graph already mono, on both lanes, so
@@ -4154,7 +4470,7 @@ impl VoiceGains {
 /// Output channel `output` of a voice frame through its matrix `m` of `inputs` inputs per output.
 fn matrix_output(
     m: &Matrix,
-    input: &[f32; SIX_INPUT_CHANNELS],
+    input: &[f32; MAX_INPUT_CHANNELS],
     inputs: usize,
     output: usize,
 ) -> f32 {
@@ -4216,7 +4532,7 @@ fn render_voice(
     out_rate: u32,
     target: Matrix,
     entries: usize,
-    six_input: bool,
+    inputs: usize,
     looping: bool,
     measured_resampling: bool,
     measured_matrix: bool,
@@ -4264,9 +4580,8 @@ fn render_voice(
         voice.zone_send.until = 0;
     }
     let inv_n = 1.0 / n as f32;
-    let inputs = if six_input { SIX_INPUT_CHANNELS } else { 2 };
     // The ramped gains of a voice without the measured matrix ramp, frame by frame.
-    let mut ramp = [0.0; 8 * SIX_INPUT_CHANNELS];
+    let mut ramp = [0.0; MATRIX_ENTRIES];
     for f in 0..n {
         let dsp = t0 + f as u64;
         if dsp < voice.start_at {
@@ -4294,18 +4609,21 @@ fn render_voice(
             let frac = (voice.position - i) as f32;
             let i = i as u64;
             stream.ensure(i + 1, clip, voice.clip, looping, callback);
-            let (l0, r0) = stream.frame(i, clip.channels);
-            let (l1, r1) = stream.frame(i + 1, clip.channels);
-            [
-                l0 + (l1 - l0) * frac,
-                r0 + (r1 - r0) * frac,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-            ]
-        } else if six_input {
-            decoded_voice_frame::<SIX_INPUT_CHANNELS>(
+            let mut input = [0.0; MAX_INPUT_CHANNELS];
+            if inputs > 2 {
+                let (first, next) = (stream.frames(i, inputs), stream.frames(i + 1, inputs));
+                for (value, (a, b)) in input.iter_mut().zip(first.iter().zip(&next)) {
+                    *value = a + (b - a) * frac;
+                }
+            } else {
+                let (l0, r0) = stream.frame(i, clip.channels);
+                let (l1, r1) = stream.frame(i + 1, clip.channels);
+                input[0] = l0 + (l1 - l0) * frac;
+                input[1] = r0 + (r1 - r0) * frac;
+            }
+            input
+        } else if inputs > 2 {
+            decoded_voice_frame::<MAX_INPUT_CHANNELS>(
                 clip,
                 voice.position,
                 looping,
@@ -4320,7 +4638,10 @@ fn render_voice(
                 measured_matrix,
                 measured_resampling,
             );
-            [left, right, 0.0, 0.0, 0.0, 0.0]
+            let mut input = [0.0; MAX_INPUT_CHANNELS];
+            input[0] = left;
+            input[1] = right;
+            input
         };
         if let Some(out) = out.as_deref_mut() {
             let t = (f + 1) as f32 * inv_n;
@@ -4406,23 +4727,23 @@ mod tests {
     use crate::audio::protocol::AudioSourceCommand;
 
     #[test]
-    fn unmeasured_six_input_voices_are_refused_with_a_diagnostic_code() {
-        for (mode, blend, stream, streamed_asset) in [
-            (speaker_mode::PROLOGIC, 0.5, false, false),
-            (speaker_mode::PROLOGIC, 1.0, false, false),
-            (speaker_mode::STEREO, 0.0, true, false),
-            (speaker_mode::QUAD, 1.0, true, false),
-            (speaker_mode::MODE_5POINT1, 0.0, true, false),
-            (speaker_mode::STEREO, 0.0, false, true),
-            (speaker_mode::MODE_7POINT1, 0.0, false, true),
+    fn unmeasured_multichannel_voices_are_refused_with_a_diagnostic_code() {
+        for (mode, blend, channels, stream, streamed_asset) in [
+            (speaker_mode::PROLOGIC, 0.5, 6, false, false),
+            (speaker_mode::PROLOGIC, 1.0, 4, true, false),
+            (speaker_mode::STEREO, 0.0, 9, false, false),
+            (speaker_mode::QUAD, 1.0, 12, true, false),
+            (speaker_mode::MODE_7POINT1, 0.0, 16, false, true),
         ] {
             for kind in [command::PLAY, command::PLAY_ONE_SHOT] {
                 let mut mixer = Mixer::new(MixerConfig {
                     speaker_mode: mode,
                     ..Default::default()
                 });
-                mixer.output_rules.six_channel_voices = true;
-                let mut clip = Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024));
+                mixer.output_rules.multichannel_voices = true;
+                let mut frame = vec![0.0; channels];
+                frame[2] = 0.25;
+                let mut clip = Clip::new(channels, 48000, frame.repeat(1024));
                 clip.stream = stream;
                 clip.streamed_asset = streamed_asset;
                 mixer.add_clip(1, clip);
@@ -4433,7 +4754,11 @@ mod tests {
                     volume_scale: 1.0,
                     ..Default::default()
                 };
-                assert_eq!(mixer.command_error(7, &command), SIX_INPUT_UNSUPPORTED);
+                assert_eq!(
+                    mixer.command_error(7, &command),
+                    INPUT_UNSUPPORTED,
+                    "{mode} {channels}"
+                );
                 assert!(!mixer.command(7, &command));
                 assert_eq!(mixer.source_state(7).main, voice_state::NONE);
                 assert_eq!(mixer.source_state(7).one_shots, 0);
@@ -4462,7 +4787,7 @@ mod tests {
             speaker_mode: speaker_mode::PROLOGIC,
             ..Default::default()
         });
-        mixer.output_rules.six_channel_voices = true;
+        mixer.output_rules.multichannel_voices = true;
         mixer.add_clip(
             1,
             Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024)),
@@ -4493,10 +4818,7 @@ mod tests {
             spatial_blend: 1.0,
             ..Default::default()
         };
-        assert_eq!(
-            mixer.update_source(7, params.clone()),
-            SIX_INPUT_UNSUPPORTED
-        );
+        assert_eq!(mixer.update_source(7, params.clone()), INPUT_UNSUPPORTED);
         assert_eq!(mixer.source_state(7).main, voice_state::NONE);
         assert_eq!(mixer.source_state(7).one_shots, 1);
         assert_eq!(mixer.update_source(7, params), 0);
@@ -4508,7 +4830,7 @@ mod tests {
     #[test]
     fn render_side_six_input_rejection_is_reported_on_the_next_control_update() {
         let mut mixer = Mixer::new(MixerConfig::default());
-        mixer.output_rules.six_channel_voices = true;
+        mixer.output_rules.multichannel_voices = true;
         mixer.add_clip(
             1,
             Clip::new(6, 48000, [0.0, 0.0, 0.25, 0.0, 0.0, 0.0].repeat(1024)),
@@ -4528,19 +4850,14 @@ mod tests {
             ));
         }
         // A clip change after admission must preserve ordinary voices and its diagnostic.
-        let mut streamed = mixer.clips[&1].clone();
-        streamed.streamed_asset = true;
-        mixer.add_clip(1, streamed);
+        mixer.add_clip(1, Clip::new(9, 48000, vec![0.0; 9 * 1024]));
         let mut output = [0.0; 97 * 2];
         mixer.render(&mut output, 2);
         assert_eq!(mixer.source_state(7).main, voice_state::NONE);
         assert_eq!(mixer.source_state(7).one_shots, 1);
         assert!(output.iter().any(|value| *value != 0.0));
         let params = mixer.sources[&7].params.clone();
-        assert_eq!(
-            mixer.update_source(7, params.clone()),
-            SIX_INPUT_UNSUPPORTED
-        );
+        assert_eq!(mixer.update_source(7, params.clone()), INPUT_UNSUPPORTED);
         assert_eq!(mixer.update_source(7, params), 0);
     }
 
@@ -4553,12 +4870,12 @@ mod tests {
                     buffer_size: 97,
                     ..Default::default()
                 });
-                mixer.output_rules.six_channel_voices = measured;
+                mixer.output_rules.multichannel_voices = measured;
                 let frame = [0.125, -0.25, 0.5, -0.125, 0.25, -0.5];
                 let mut samples = frame.repeat(1000);
                 // An incomplete trailing input frame is ignored, as for mono/stereo clips.
                 samples.extend_from_slice(&[100.0, 100.0, 100.0]);
-                mixer.add_clip(1, Clip::new(SIX_INPUT_CHANNELS, 32000, samples));
+                mixer.add_clip(1, Clip::new(6, 32000, samples));
                 source_with(&mut mixer, 7, 1, |params| {
                     params.flags = source_flags::SPATIAL_STEREO;
                 });
@@ -4677,7 +4994,7 @@ mod tests {
                         speaker_mode: mode,
                         ..Default::default()
                     });
-                    mixer.output_rules.six_channel_voices = true;
+                    mixer.output_rules.multichannel_voices = true;
                     let mut samples = vec![0.0; 6 * 1024];
                     for input in 0..6 {
                         samples[(128 + 128 * input) * 6 + input] = A;
@@ -4707,7 +5024,7 @@ mod tests {
         }
         // A live layout change keeps the voice and maps its later inputs through the new layout.
         let mut mixer = Mixer::new(MixerConfig::default());
-        mixer.output_rules.six_channel_voices = true;
+        mixer.output_rules.multichannel_voices = true;
         let mut samples = vec![0.0; 6 * 4096];
         samples[1500 * 6 + 5] = A;
         mixer.add_clip(1, Clip::new(6, 48000, samples));
@@ -4803,7 +5120,7 @@ mod tests {
                 speaker_mode: mode,
                 ..Default::default()
             });
-            mixer.output_rules.six_channel_voices = true;
+            mixer.output_rules.multichannel_voices = true;
             let mut samples = vec![0.0; 6 * 1024];
             for input in 0..6 {
                 samples[(128 + 128 * input) * 6 + input] = A;
@@ -4831,7 +5148,7 @@ mod tests {
         // A spatial blend curve at zero for this distance keeps the 2D layout matrix, and the
         // same spatial voice is refused only once the layout becomes Prologic.
         let mut mixer = Mixer::new(MixerConfig::default());
-        mixer.output_rules.six_channel_voices = true;
+        mixer.output_rules.multichannel_voices = true;
         mixer.add_clip(
             1,
             Clip::new(6, 48000, [0.0, 0.0, A, 0.0, 0.0, 0.0].repeat(1024)),
@@ -4855,8 +5172,202 @@ mod tests {
         };
         assert_eq!(mixer.update_source(7, params.clone()), 0);
         mixer.config.speaker_mode = speaker_mode::PROLOGIC;
-        assert_eq!(mixer.update_source(7, params), SIX_INPUT_UNSUPPORTED);
+        assert_eq!(mixer.update_source(7, params), INPUT_UNSUPPORTED);
         assert_eq!(mixer.source_state(7).main, voice_state::NONE);
+    }
+
+    /// Clips of other widths, in 2D and spatially, and a streamed six-channel clip read through
+    /// its PCM reader, as recorded at 48000 Hz for an impulse of 0.25 per input
+    /// (tests/projects/audiopitch INPUT_CONTEXTS.md).
+    #[test]
+    fn multichannel_widths_and_streamed_clips_reach_each_layout_through_measured_gains() {
+        const A: f32 = 0.25;
+        type Rows = &'static [&'static [f32]];
+        // (mode, width, pan, blend, spread, streamed, rows)
+        let cases: [(i32, usize, f32, f32, f32, bool, Rows); 6] = [
+            // `context_inputs_5_4_pan_right`: a gain's side, not its input, takes the balance.
+            (
+                speaker_mode::MODE_5POINT1,
+                4,
+                0.65,
+                0.0,
+                0.0,
+                false,
+                &[
+                    &[0.08750001, 0.0, 0.125, 0.0, 0.0, 0.0],
+                    &[0.0, 0.25, 0.125, 0.0, 0.0, 0.0],
+                    &[0.0, 0.0, 0.0, 0.0, 0.08750001, 0.0],
+                    &[0.0, 0.0, 0.0, 0.25, 0.0, 0.25],
+                ],
+            ),
+            // `context_inputs_2_8_pan_left`
+            (
+                speaker_mode::STEREO,
+                8,
+                -0.65,
+                0.0,
+                0.0,
+                false,
+                &[
+                    &[0.25, 0.0],
+                    &[0.0, 0.08750001],
+                    &[0.125, 0.125],
+                    &[0.125, 0.125],
+                    &[0.125, 0.0],
+                    &[0.0, 0.04375],
+                    &[0.1875, 0.0],
+                    &[0.0, 0.065625],
+                ],
+            ),
+            // `context_inputs_6_5_impulses`: an odd width reaches only LFE, from its fourth input.
+            (
+                speaker_mode::MODE_7POINT1,
+                5,
+                0.0,
+                0.0,
+                0.0,
+                false,
+                &[
+                    &[0.0; 8],
+                    &[0.0; 8],
+                    &[0.0; 8],
+                    &[0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0],
+                    &[0.0; 8],
+                ],
+            ),
+            // `context_inputs_3_3_impulses`
+            (
+                speaker_mode::QUAD,
+                3,
+                0.0,
+                0.0,
+                0.0,
+                false,
+                &[&[0.0; 4], &[0.0; 4], &[0.0; 4]],
+            ),
+            // `context_inputs_6_8_spatial`
+            (
+                speaker_mode::MODE_7POINT1,
+                8,
+                -0.5,
+                0.5,
+                90.0,
+                false,
+                &[
+                    &[
+                        0.09375069, 0.06635804, 0.06622538, 0.09375069, 0.0, 0.0, 0.0, 0.0,
+                    ],
+                    &[0.0, 0.1349266, 0.0, 0.09375069, 0.0, 0.0, 0.0, 0.03218949],
+                    &[0.0, 0.09375069, 0.09375069, 0.09375069, 0.0, 0.0, 0.0, 0.0],
+                    &[0.0, 0.09375069, 0.0, 0.1875014, 0.0, 0.0, 0.0, 0.0],
+                    &[
+                        0.06628703, 0.0, 0.06629648, 0.09375069, 0.09375069, 0.0, 0.0, 0.0,
+                    ],
+                    &[
+                        0.0, 0.03222299, 0.0, 0.09375069, 0.0, 0.04687534, 0.0, 0.08803903,
+                    ],
+                    &[
+                        4.671783e-05,
+                        0.0,
+                        0.09375067,
+                        0.09375069,
+                        0.0,
+                        0.0,
+                        0.09375069,
+                        0.0,
+                    ],
+                    &[0.0, 0.06626094, 0.0, 0.09375069, 0.0, 0.0, 0.0, 0.1131979],
+                ],
+            ),
+            // `context_inputs_5_6_reader_spatial`
+            (
+                speaker_mode::MODE_5POINT1,
+                6,
+                -0.5,
+                0.5,
+                90.0,
+                true,
+                &[
+                    &[0.09375069, 0.01965675, 0.09166682, 0.09375069, 0.0, 0.0],
+                    &[0.0, 0.1398238, 0.0, 0.09375069, 0.0, 0.01223811],
+                    &[0.0, 0.08325876, 0.1368456, 0.09375069, 0.0, 0.0],
+                    &[0.0, 0.08325876, 0.0430949, 0.1875014, 0.0, 0.0],
+                    &[0.0430949, 0.0, 0.08325875, 0.09375069, 0.09375069, 0.0],
+                    &[0.0, 0.08118988, 0.0, 0.09375069, 0.0, 0.09375173],
+                ],
+            ),
+        ];
+        /// A six-channel PCM reader with one impulse per input at frame `128 * (input + 1)`.
+        extern "C" fn reader(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            at: i64,
+        ) {
+            if kind != callback::PCM_READ {
+                return;
+            }
+            let values =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            for (offset, frame) in values.chunks_exact_mut(channels as usize).enumerate() {
+                let index = at as usize + offset;
+                for (input, value) in frame.iter_mut().enumerate() {
+                    *value = if index == 128 * (input + 1) { A } else { 0.0 };
+                }
+            }
+        }
+        for (mode, width, pan, blend, spread, streamed, rows) in cases {
+            let mut mixer = Mixer::new(MixerConfig {
+                speaker_mode: mode,
+                ..Default::default()
+            });
+            mixer.output_rules.multichannel_voices = true;
+            let mut samples = vec![0.0; width * 2048];
+            for input in 0..width {
+                samples[(128 + 128 * input) * width + input] = A;
+            }
+            let mut clip = Clip::new(width, 48000, samples);
+            if streamed {
+                clip.samples.clear();
+                clip.stream = true;
+                mixer.set_callback(Some(reader));
+            }
+            mixer.add_clip(1, clip);
+            source_with(&mut mixer, 7, 1, |params| {
+                params.flags = source_flags::SPATIAL_STEREO;
+                params.pan_stereo = pan;
+                params.spatial_blend = blend;
+                params.spread = spread;
+                params.position = Vector3 {
+                    x: 1.0,
+                    y: 0.0,
+                    z: 1.732,
+                };
+            });
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            let channels = mixer.config.output_channels();
+            let mut output = vec![0.0; 2048 * channels];
+            mixer.render(&mut output, channels);
+            for (input, row) in rows.iter().enumerate() {
+                let frame = 128 + 128 * input;
+                let got = &output[frame * channels..(frame + 1) * channels];
+                for (g, e) in got.iter().zip(*row) {
+                    assert!((g - e).abs() < 2e-6, "{mode} {width} {input}: {got:?}");
+                }
+            }
+            let nonzero = rows
+                .iter()
+                .flat_map(|row| row.iter())
+                .filter(|v| **v != 0.0)
+                .count();
+            assert_eq!(
+                output.iter().filter(|v| **v != 0.0).count(),
+                nonzero,
+                "{mode} {width}"
+            );
+        }
     }
 
     #[test]

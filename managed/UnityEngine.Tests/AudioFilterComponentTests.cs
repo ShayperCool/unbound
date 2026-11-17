@@ -34,11 +34,11 @@ namespace UnityEngine.Tests
         readonly string m_Release = ProjectInfo.UnityVersion;
 
         [Theory]
-        [InlineData(AudioSpeakerMode.Prologic, 0.5f, false)]
-        [InlineData(AudioSpeakerMode.Prologic, 1f, false)]
-        [InlineData(AudioSpeakerMode.Stereo, 0f, true)]
-        [InlineData(AudioSpeakerMode.Mono, 0f, true)]
-        public void SixInputPlaybackRefusesUnmeasuredContexts(AudioSpeakerMode mode, float blend, bool stream)
+        [InlineData(AudioSpeakerMode.Prologic, 0.5f, 6, false)]
+        [InlineData(AudioSpeakerMode.Prologic, 1f, 4, true)]
+        [InlineData(AudioSpeakerMode.Stereo, 0f, 9, false)]
+        [InlineData(AudioSpeakerMode.Mono, 0f, 12, true)]
+        public void MultichannelPlaybackRefusesUnmeasuredContexts(AudioSpeakerMode mode, float blend, int channels, bool stream)
         {
             var config = AudioSettings.GetConfiguration();
             config.speakerMode = mode;
@@ -46,12 +46,12 @@ namespace UnityEngine.Tests
             var source = Source("Six input admission");
             source.playOnAwake = false;
             source.spatialBlend = blend;
-            var clip = stream ? AudioClip.Create("Six input stream", 1024, 6, 48000, true, data => Array.Clear(data))
-                : AudioClip.Create("Six input", 1024, 6, 48000, false);
+            var clip = stream ? AudioClip.Create("Multichannel stream", 1024, channels, 48000, true, data => Array.Clear(data))
+                : AudioClip.Create("Multichannel", 1024, channels, 48000, false);
             try
             {
                 source.clip = clip;
-                Assert.Equal(AudioBackend.SixInputUnsupportedMessage, Assert.Throws<NotSupportedException>(() => source.Play()).Message);
+                Assert.Equal(AudioBackend.MultichannelUnsupportedMessage, Assert.Throws<NotSupportedException>(() => source.Play()).Message);
                 Assert.Throws<NotSupportedException>(() => source.PlayScheduled(1));
                 Assert.Throws<NotSupportedException>(() => source.PlayOneShot(clip));
                 Assert.Equal(AudioVoiceState.None, m_Backend.State(source.Handle).Main);
@@ -110,29 +110,38 @@ namespace UnityEngine.Tests
                 source.Flush(always: true);
                 Assert.Equal(AudioVoiceState.None, m_Backend.State(source.Handle).Main);
                 Assert.Equal(1, m_Backend.State(source.Handle).OneShots);
-                Assert.Single(Errors("six-channel playback"));
+                Assert.Single(Errors("multichannel playback"));
                 source.Flush(always: true);
-                Assert.Single(Errors("six-channel playback"));
+                Assert.Single(Errors("multichannel playback"));
                 source.PlayOneShot(stereo);
                 Assert.Equal(2, m_Backend.State(source.Handle).OneShots);
             }
             finally { Object.DestroyImmediate(six); Object.DestroyImmediate(stereo); }
         }
 
+        // Streaming load metadata and streamed clips are measured (audiopitch INPUT_CONTEXTS.md);
+        // clips wider than eight channels and streamed downloads are not.
         [Fact]
-        public void SixInputStreamingLoadMetadataIsRejectedBeforePlayback()
+        public void MultichannelStreamingInputIsAdmittedAndUnmeasuredInputsAreRejected()
         {
             var source = Source("Streamed six input metadata");
             source.playOnAwake = false;
             var clip = AudioClip.Create("Six input metadata", 1024, 6, 48000, false);
+            var stream = AudioClip.Create("Eight input stream", 1024, 8, 48000, true, data => Array.Clear(data));
+            var wide = AudioClip.Create("Nine inputs", 1024, 9, 48000, false);
             try
             {
                 clip.m_LoadType = AudioClipLoadType.Streaming;
                 source.clip = clip;
-                Assert.Throws<NotSupportedException>(() => source.Play());
+                source.Play();
+                Assert.Equal(AudioVoiceState.Playing, m_Backend.State(source.Handle).Main);
+                source.PlayOneShot(stream);
+                Assert.Equal(1, m_Backend.State(source.Handle).OneShots);
+                Assert.Equal(AudioBackend.MultichannelUnsupportedMessage, Assert.Throws<NotSupportedException>(() => source.PlayOneShot(wide)).Message);
+                clip.m_Download = AudioClip.DownloadedForm.Streamed;
                 Assert.Throws<NotSupportedException>(() => source.PlayOneShot(clip));
             }
-            finally { Object.DestroyImmediate(clip); }
+            finally { Object.DestroyImmediate(clip); Object.DestroyImmediate(stream); Object.DestroyImmediate(wide); }
         }
 
         static int s_CommandStatus, s_UpdateStatus;
@@ -162,10 +171,10 @@ namespace UnityEngine.Tests
                 var packet = new AudioSourcePacket();
                 s_UpdateStatus = -1;
                 backend.UpdateSource(1, ref packet);
-                Assert.Single(Errors("six-channel playback"));
+                Assert.Single(Errors("multichannel playback"));
                 s_UpdateStatus = 0;
                 backend.UpdateSource(1, ref packet);
-                Assert.Single(Errors("six-channel playback"));
+                Assert.Single(Errors("multichannel playback"));
             }
             finally { apiField.SetValue(null, previousApi); readyField.SetValue(null, previousReady); }
         }

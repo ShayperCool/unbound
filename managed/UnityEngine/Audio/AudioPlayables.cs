@@ -91,7 +91,7 @@ namespace Unbound.Runtime.Playables
                 return;
             }
             Clip.EnsureLoaded();
-            AudioBackend.ValidateSixInputClip(Clip);
+            AudioBackend.ValidateMultichannelClip(Clip);
             if (Voice == 0) Voice = AudioBackend.NextHandle();
             source.SendPacket(Voice, Clip, source.m_Volume * Volume * weight, Looped);
             double t = node.Time;

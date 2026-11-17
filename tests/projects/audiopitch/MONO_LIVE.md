@@ -109,7 +109,14 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   its first render, is not measured. The engine still creates each unit with its
   final delay, and the counts are unchanged: `mono-live` 29638/31048 gate failures
   (36607/37211 strict), `topology-diagnostics` 2418/3398 (3222/4422 strict) at
-  48000/44100 Hz.
+  48000/44100 Hz. Q524 hypothesis, not measured by a dedicated control: an Echo unit starts
+  at the 500 ms default and receives the authored delay as a change, then restarts its
+  history without the transition when the number of channels it processes differs from the
+  single channel it was created for (every layout but Mono) and when the source inserts its
+  filter units again after a later filter is added (Echo followed by Chorus). That accounts
+  for every isolated and composed Mono startup above, but the retained histories after
+  removals measured in [LIVE_LISTENERS.md](LIVE_LISTENERS.md) need the same insertion model
+  before an engine change; no engine behaviour or count changes.
 - **Q416-R4b, composed source precision.** Stereo and Quad LowPass/Chorus and
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float

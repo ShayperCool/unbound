@@ -459,10 +459,11 @@ namespace Unbound.Runtime
 
         /// <summary>Speaker-wide effects, measured by tests/projects/audiopitch's surround profile.</summary>
         internal static bool AudioSurroundEffectsMeasured => Release == (6000, 0, 71, 'f', 1);
-        /// <summary>Six decoded inputs of a 2D or spatial voice to every output layout, measured
-        /// by audiopitch/VOICE_INPUT.md, SIX_LAYOUTS.md and SIX_SPATIAL.md. Streamed six-input
-        /// voices and spatial ones in Prologic output are rejected on this release.</summary>
-        internal static bool AudioSixChannelVoicesMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Every decoded input of a clip of three to eight channels, 2D or spatial,
+        /// streamed or not, to every output layout, measured by audiopitch/VOICE_INPUT.md,
+        /// SIX_LAYOUTS.md, SIX_SPATIAL.md and INPUT_CONTEXTS.md. Wider clips, streamed downloads
+        /// and spatial voices in Prologic output are rejected on this release.</summary>
+        internal static bool AudioMultichannelVoicesMeasured => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Block-constant effect parameters applying the measured history rules,
         /// measured on 6000.0.71f1 by tests/projects/audiodistortion's live profile.</summary>

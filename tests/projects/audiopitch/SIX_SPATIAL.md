@@ -51,10 +51,11 @@ Unmeasured parts of these rules: a source straight above or below the listener (
 forward component at a distance) takes the listener-position level, but every such control is
 at the listener's position itself; the mono-clip spread rule is measured in Mono, Stereo and 5.1
 output only and applied in Quad, Surround, 7.1 and Prologic as well. Spatial six-input voices in
-Prologic output are not measured and fail to start with the existing diagnostic. Streamed six-channel clips, other input widths, physical drivers and other
-backends are not covered here.
+Prologic output are not measured and fail to start with the existing diagnostic. Other input
+widths and streamed six-channel clips follow [INPUT_CONTEXTS.md](INPUT_CONTEXTS.md); physical
+drivers and other backends are not covered here.
 
-The engine implements these rules on this release (`Compat` AudioOutputRules.six_channel_voices
+The engine implements these rules on this release (`Compat` AudioOutputRules.multichannel_voices
 for six inputs, the spatial profile's measured path for the mono-clip and listener-position
 rules; other releases keep their earlier unmeasured gains). `context_run.py --profile
 six-spatial` gates every control at both rates. Record two fresh projects per rate with

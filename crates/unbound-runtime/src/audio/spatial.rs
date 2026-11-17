@@ -200,7 +200,7 @@ pub struct Spatialized {
 /// The 3D state shared by every input of a source: its listener-space direction (lateral and
 /// forward components of the unit offset, clamped; `None` at the listener), the spread in
 /// degrees, the spatial blend and the blended distance attenuation.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Panning {
     pub direction: Option<(f32, f32)>,
     pub spread: f32,
@@ -745,6 +745,33 @@ pub const STEREO_INPUT_TURNS: [f32; 2] = [1.0, -1.0];
 /// way, centre and LFE keep the source's direction and the rear pair turns by half the spread
 /// (Unity 6000.0.71f1, tests/projects/audiopitch SIX_SPATIAL.md).
 pub const SIX_INPUT_TURNS: [f32; 6] = [0.5, -0.5, 0.0, 0.0, 1.0, -1.0];
+
+/// The turns of each input of a clip of `width` channels (see [`SIX_INPUT_TURNS`]): measured
+/// shares for four, six and eight inputs, otherwise evenly from +1 (first input) to -1 (last).
+/// Unity 6000.0.71f1, tests/projects/audiopitch SIX_SPATIAL.md and INPUT_CONTEXTS.md.
+pub fn input_turns(width: usize) -> [f32; 8] {
+    let mut turns = [0.0; 8];
+    match width {
+        4 => turns[..4].copy_from_slice(&FOUR_INPUT_TURNS),
+        6 => turns[..6].copy_from_slice(&SIX_INPUT_TURNS),
+        8 => turns.copy_from_slice(&EIGHT_INPUT_TURNS),
+        2..=8 => {
+            let last = (width - 1) as f32;
+            for (input, turn) in turns[..width].iter_mut().enumerate() {
+                *turn = 1.0 - (2 * input) as f32 / last;
+            }
+        }
+        _ => {}
+    }
+    turns
+}
+
+/// Four inputs: the front pair turns by half the spread either way, the rear pair not at all.
+const FOUR_INPUT_TURNS: [f32; 4] = [1.0, -1.0, 0.0, 0.0];
+
+/// Eight inputs: the front pair turns by a third (0.333) of half the spread, centre and LFE
+/// not at all, the rear pair by all of it and the side pair by two thirds (0.667).
+const EIGHT_INPUT_TURNS: [f32; 8] = [0.333, -0.333, 0.0, 0.0, 1.0, -1.0, 0.667, -0.667];
 
 /// `direction` (lateral, forward) turned by `turn` times half of `spread` degrees.
 fn turn_by_spread((x, z): (f32, f32), turn: f32, spread: f32) -> (f32, f32) {

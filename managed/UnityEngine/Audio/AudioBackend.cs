@@ -30,12 +30,16 @@ namespace Unbound.Runtime
     /// </summary>
     internal abstract class AudioBackend
     {
-        internal const string SixInputUnsupportedMessage = "Unbound: six-channel playback requires a non-streamed clip, and a 2D voice in Prologic output, in the measured audio profile.";
+        internal const string MultichannelUnsupportedMessage = "Unbound: multichannel playback requires at most eight channels, a clip that is not a streamed download, and a 2D voice in Prologic output, in the measured audio profile.";
 
-        internal static void ValidateSixInputClip(AudioClip clip)
+        /// <summary>The widest clip whose decoded inputs are measured (audiopitch INPUT_CONTEXTS.md).</summary>
+        internal const int MaxMeasuredInputChannels = 8;
+
+        internal static void ValidateMultichannelClip(AudioClip clip)
         {
-            if (clip != null && clip.m_Channels == 6 && clip.UsesStreamingInput && Compat.AudioSixChannelVoicesMeasured)
-                throw new NotSupportedException(SixInputUnsupportedMessage);
+            if (clip != null && clip.m_Channels > 2 && Compat.AudioMultichannelVoicesMeasured
+                && (clip.m_Channels > MaxMeasuredInputChannels || clip.m_Download == AudioClip.DownloadedForm.Streamed))
+                throw new NotSupportedException(MultichannelUnsupportedMessage);
         }
         static AudioBackend s_Current;
         static long s_NextHandle;
@@ -145,14 +149,14 @@ namespace Unbound.Runtime
         {
             int result;
             fixed (AudioSourcePacket* p = &packet) result = Native.Api.AudioUpdateSource(handle, p);
-            if (result < 0) Debug.LogError(SixInputUnsupportedMessage);
+            if (result < 0) Debug.LogError(MultichannelUnsupportedMessage);
         }
 
         internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var c = command;
             int result = Native.Api.AudioSourceCommand(handle, &c);
-            if (result < 0) throw new NotSupportedException(SixInputUnsupportedMessage);
+            if (result < 0) throw new NotSupportedException(MultichannelUnsupportedMessage);
             return result > 0;
         }
 
@@ -355,11 +359,11 @@ namespace Unbound.Runtime
             return true;
         }
 
-        bool RejectsSixInput(Source source, ulong handle)
+        bool RejectsMultichannel(Source source, ulong handle)
         {
-            return Compat.AudioSixChannelVoicesMeasured
-                && m_Clips.TryGetValue(handle, out var clip) && clip.Channels == 6
-                && (clip.Stream || clip.StreamingInput
+            return Compat.AudioMultichannelVoicesMeasured
+                && m_Clips.TryGetValue(handle, out var clip) && clip.Channels > 2
+                && (clip.Channels > MaxMeasuredInputChannels
                     || (!source.TwoDInput && ActiveSpeakerMode == AudioSpeakerMode.Prologic));
         }
 
@@ -383,7 +387,7 @@ namespace Unbound.Runtime
             source.Params = copy;
             source.TwoDInput = TwoDInput(packet);
             bool rejected = false;
-            if (source.Main != null && RejectsSixInput(source, source.Main.Clip))
+            if (source.Main != null && RejectsMultichannel(source, source.Main.Clip))
             {
                 source.Main = null;
                 source.Pending = 0;
@@ -393,11 +397,11 @@ namespace Unbound.Runtime
             for (int i = 0; i < source.OneShots.Count; i++)
             {
                 var voice = source.OneShots[i];
-                if (RejectsSixInput(source, voice.Clip)) rejected = true;
+                if (RejectsMultichannel(source, voice.Clip)) rejected = true;
                 else source.OneShots[retained++] = voice;
             }
             source.OneShots.RemoveRange(retained, source.OneShots.Count - retained);
-            if (rejected) Debug.LogError(SixInputUnsupportedMessage);
+            if (rejected) Debug.LogError(MultichannelUnsupportedMessage);
         }
 
         /// <summary>Why packets' filter descriptors were refused (tests).</summary>
@@ -445,14 +449,14 @@ namespace Unbound.Runtime
         internal override bool Command(ulong handle, in AudioSourceCommand command)
         {
             var source = SourceOf(handle);
-            bool rejected = command.Kind == AudioCommandKind.Play ? RejectsSixInput(source, source.Params.Clip)
-                : command.Kind == AudioCommandKind.PlayOneShot && RejectsSixInput(source, command.Clip);
+            bool rejected = command.Kind == AudioCommandKind.Play ? RejectsMultichannel(source, source.Params.Clip)
+                : command.Kind == AudioCommandKind.PlayOneShot && RejectsMultichannel(source, command.Clip);
             if (command.Kind == AudioCommandKind.UnPause)
             {
-                rejected |= source.Main != null && RejectsSixInput(source, source.Main.Clip);
-                for (int i = 0; i < source.OneShots.Count; i++) rejected |= RejectsSixInput(source, source.OneShots[i].Clip);
+                rejected |= source.Main != null && RejectsMultichannel(source, source.Main.Clip);
+                for (int i = 0; i < source.OneShots.Count; i++) rejected |= RejectsMultichannel(source, source.OneShots[i].Clip);
             }
-            if (rejected) throw new NotSupportedException(SixInputUnsupportedMessage);
+            if (rejected) throw new NotSupportedException(MultichannelUnsupportedMessage);
             long now = m_Frames;
             long Start(double time) => time < 0 ? now + FrameOf(-time) : Math.Max(now, FrameOf(time));
             switch (command.Kind)

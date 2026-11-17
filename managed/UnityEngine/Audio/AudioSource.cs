@@ -474,7 +474,7 @@ namespace UnityEngine
             }
             ResetPlaybackHistoryIfIdle();
             m_Clip?.EnsureLoaded();
-            AudioBackend.ValidateSixInputClip(m_Clip);
+            AudioBackend.ValidateMultichannelClip(m_Clip);
             PreparePlaybackMotion();
             // Play can start a clipless OnAudioFilterRead generator before the first
             // audio update. Submit its callback identity with the Play command.
@@ -538,7 +538,7 @@ namespace UnityEngine
                 return;
             }
             clip.EnsureLoaded();
-            AudioBackend.ValidateSixInputClip(clip);
+            AudioBackend.ValidateMultichannelClip(clip);
             if (ResetPlaybackHistoryIfIdle()) PreparePlaybackMotion();
             // A one-shot also makes the next bypass change reconnect the filter chain.
             m_ReconnectOnChange = true;
