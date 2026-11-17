@@ -340,7 +340,7 @@ namespace UnityEditor
             if (s_DropHandlers.TryGetValue(dropDstId, out var handlers)) handlers.Remove(handler);
         }
 
-        internal static bool HasHandler(int dropDstId) => s_DropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Count > 0;
+        internal static bool HasHandler(int dropDstId) => s_DropHandlers.ContainsKey(dropDstId);
 
         public static bool HasHandler(int dropDstId, Delegate handler) => s_DropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Contains(handler);
 

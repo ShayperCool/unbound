@@ -27,13 +27,14 @@ namespace UnityEditor
         Global = 1,
     }
 
-    /// <summary>The scene view's tools: the active one and the handle pivot settings, with the
-    /// events the Editor raises when they change (measured: tests/projects/editorload tools.*).
-    /// No scene view draws them.</summary>
+    /// <summary>The scene view's tools: the active one and the handle pivot settings, kept in the
+    /// Editor preferences "PivotMode" and "PivotRotation" as the Editor keeps them, with the events
+    /// the Editor raises when they change (measured: tests/projects/editorload tools.*). No scene
+    /// view draws them.</summary>
     public sealed partial class Tools
     {
-        static PivotMode s_PivotMode = PivotMode.Center;
-        static PivotRotation s_PivotRotation = PivotRotation.Local;
+        static PivotMode? s_PivotMode;
+        static PivotRotation? s_PivotRotation;
 
         public static Tool current
         {
@@ -49,22 +50,24 @@ namespace UnityEditor
 
         public static PivotMode pivotMode
         {
-            get => s_PivotMode;
+            get => s_PivotMode ??= (PivotMode)EditorPrefs.GetInt("PivotMode", 0);
             set
             {
-                if (s_PivotMode == value) return;
+                if (pivotMode == value) return;
                 s_PivotMode = value;
+                EditorPrefs.SetInt("PivotMode", (int)value);
                 pivotModeChanged?.Invoke();
             }
         }
 
         public static PivotRotation pivotRotation
         {
-            get => s_PivotRotation;
+            get => s_PivotRotation ??= (PivotRotation)EditorPrefs.GetInt("PivotRotation", 0);
             set
             {
-                if (s_PivotRotation == value) return;
+                if (pivotRotation == value) return;
                 s_PivotRotation = value;
+                EditorPrefs.SetInt("PivotRotation", (int)value);
                 pivotRotationChanged?.Invoke();
             }
         }

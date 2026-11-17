@@ -208,11 +208,12 @@ namespace UnityEditor
             return false;
         }
 
-        /// <summary>A delegate set with SetIncludeInBuildDelegate decides; otherwise every plugin
-        /// is included (its define constraints and platform settings are not checked yet).</summary>
+        /// <summary>A delegate set with SetIncludeInBuildDelegate may leave the plugin out;
+        /// otherwise it is included (its define constraints and platform settings are not checked
+        /// yet).</summary>
         public bool ShouldIncludeInBuild()
         {
-            if (m_IncludeInBuildDelegate != null) return m_IncludeInBuildDelegate(assetPath);
+            if (m_IncludeInBuildDelegate != null && !m_IncludeInBuildDelegate(assetPath)) return false;
             Stubs.Ignored("PluginImporter.ShouldIncludeInBuild", "is not honoured yet: define constraints and platform settings are not checked");
             return true;
         }

@@ -93,6 +93,48 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void PivotSettingsLiveInTheEditorPreferences()
+        {
+            var mode = Tools.pivotMode;
+            var rotation = Tools.pivotRotation;
+            try
+            {
+                Tools.pivotMode = PivotMode.Pivot;
+                Tools.pivotRotation = PivotRotation.Global;
+                Assert.Equal((int)PivotMode.Pivot, EditorPrefs.GetInt("PivotMode", -1));
+                Assert.Equal((int)PivotRotation.Global, EditorPrefs.GetInt("PivotRotation", -1));
+            }
+            finally
+            {
+                Tools.pivotMode = mode;
+                Tools.pivotRotation = rotation;
+            }
+            // Control: setting them back writes them back.
+            Assert.Equal((int)mode, EditorPrefs.GetInt("PivotMode", -1));
+        }
+
+        [Fact]
+        public void AnIncludeInBuildDelegateCanOnlyLeaveAPluginOut()
+        {
+            using var engine = Unbound.Runtime.MainThreadCheck.Engine();
+            var importer = (PluginImporter)Unbound.Runtime.ObjectConstruction.CreateWithBacking(typeof(PluginImporter));
+            try
+            {
+                string asked = null;
+                importer.SetIncludeInBuildDelegate(path => { asked = path; return false; });
+                Assert.False(importer.ShouldIncludeInBuild());
+                Assert.Equal(importer.assetPath, asked);
+                // Control: a delegate that keeps it leaves the importer's own answer.
+                importer.SetIncludeInBuildDelegate(path => true);
+                Assert.True(importer.ShouldIncludeInBuild());
+            }
+            finally
+            {
+                Object.DestroyImmediate(importer);
+            }
+        }
+
+        [Fact]
         public void ProductGuidReadsTheSettingsInUnitysByteOrder()
         {
             Assert.Equal(new Guid("83698854-3747-92d3-811f-88562ca9becd"), PlayerSettings.ParseProductGuid("4588963874733d2918f18865c29aebdc"));

@@ -844,13 +844,14 @@ mod tests {
         std::fs::write(
             dir.join("ProjectSettings/ProjectSettings.asset"),
             "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!129 &1\nPlayerSettings:\n  \
-             productName: P\n  m_BuildTargetGraphicsAPIs:\n  - m_BuildTarget: LinuxStandaloneSupport\n    \
+             productName: P\n  productGUID: 4588963874733d2918f18865c29aebdc\n  m_BuildTargetGraphicsAPIs:\n  - m_BuildTarget: LinuxStandaloneSupport\n    \
              m_APIs: 1500000011000000\n    m_Automatic: 0\n  - m_BuildTarget: AndroidPlayer\n    \
              m_APIs: 0b000000\n    m_Automatic: 1\n",
         )
         .unwrap();
         let settings = Settings::read(&dir).unwrap();
         std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(settings.product_guid, "4588963874733d2918f18865c29aebdc");
         assert_eq!(
             settings.graphics_apis.get("LinuxStandaloneSupport"),
             Some(&vec![21, 17])
