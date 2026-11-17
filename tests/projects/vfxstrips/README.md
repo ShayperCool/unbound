@@ -1,0 +1,128 @@
+# vfxstrips probe
+
+Particle strips of Visual Effect Graph (com.unity.visualeffectgraph 17.0.4 under URP 17, the
+Editor's built-in packages, unmodified): systems whose particles are kept in strips and drawn
+joined from one to the next, spawned from the CPU or by GPU events; and when the alive counts
+of effects that share a graph are read. Small graphs of the probe's own, each drawn in front of
+a camera of its own, recorded by the same script in the Unity Editor and in Unbound. The
+outputs are unlit and, but for one, opaque, so the images show the simulation and the strips'
+shape alone;
+the import, the API and the simulation of plain systems are `tests/projects/vfx`, outputs
+`tests/projects/vfxoutputs` and `tests/projects/vfxlit`, GPU events `tests/projects/vfxevents`.
+
+The Editor records in a window (not in batch mode), after letting five editor updates pass
+(`Assets/Editor/ProbeRunner.cs`): see `tests/projects/vfx/README.md`.
+
+## Graphs
+
+`Assets/Editor/Authoring/StripAuthoring.cs` builds them in the Editor through the package's own
+models (its assembly carries the name of a friend assembly of the package). The strip outputs
+are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` block.
+
+- `StripSingle`: one strip of sixteen particles; twenty a second at random places, each
+  living three fifths of a second, so the strip's first particle moves on round its room.
+  `StripAlone`: the same graph as an asset with instancing turned off.
+- `StripKeep`: one strip of twelve whose particles never die: it fills and takes no more.
+  `StripKeepTwo`: two strips of six whose particles never die, all spawned into the first.
+- `StripAlpha`: a strip like `StripSingle`'s, wider, half transparent and alpha blended, each
+  particle of a colour of its own and at a depth of its own (two units either side of the
+  effect): such an output sorts its particles by default and draws the strip through a sorted
+  indirect buffer, and where the strip crosses itself the colours show which segment was drawn
+  over which.
+- `StripTrails`: three particles that move, each spawning twenty a second by a GPU event into
+  a system of four strips of sixteen: a particle goes into the strip numbered as the particle
+  that spawned it. `StripTrailsKeep`: the same with strips of twelve whose particles never die.
+- `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
+  context's `stripIndex`, an exposed property `Strip` of the effect.
+- `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
+- `StripTaper`: each particle's size multiplied by its place in the strip
+  (`particleIndexInStrip`), in the output.
+- `StripImage`, `StripImageSegments`, `StripImageSwapped`: strips of eight that draw an image
+  of four quarters: stretched along the strip, once for each segment (`Repeat Per Segment`),
+  and stretched with `Swap UV`.
+- `Dying`: no strips: quads that live three fifths of a second, of a graph that is instanced.
+  `Assets/Objects/DyingApart.prefab` holds an effect of it whose component does not allow
+  instancing. `Waking`: the same graph again.
+
+## What is recorded
+
+`Assets/Scripts/StripProbe.cs` gives each control an effect of a graph (seed 11) and an
+orthographic camera rendering into a 64x64 texture. At the frames named it saves the image
+`draw-<control>-f<frame>.png`; at a fixed list of frames a row `sim/<control>/f<frame>`: the
+effect's alive count, whether it is culled and awake, and each particle system's alive count,
+capacity and whether it sleeps. `systems/<control>` lists the systems' names.
+
+- One control per strip graph: `single`, `keep`, `keep two`, `alpha`, `trails`,
+  `trails keep`, `both`, `taper`, `image`, `image segments`, `image swapped`.
+- `index`: `StripIndex` with `Strip` set to 2 at frame 20, to 7 (a strip the system has not)
+  at frame 40 and to 1 at frame 50: a new strip starts at each change, and nothing is spawned
+  from frame 40 to frame 50.
+- `reinit`, `trails reinit`: `StripSingle` and `StripTrails` with `Reinit()` called at frame 30.
+- `toggled`: `StripSingle` whose object is inactive from frame 30 to frame 34.
+- `stopped`: `StripSingle` with `Stop()` at frame 30 and `Play()` at frame 55: the strip
+  empties between and starts again.
+- `paused`: `StripTrails` paused from frame 20 to frame 36.
+- `alone`, `alone reinit`: two effects of `StripAlone`; `dying`, `dying reinit`: two of
+  `Dying`; `dying apart`: the prefab's effect. Those named `reinit` are reinitialized at
+  frame 30.
+- `wakes`, `wakes first`, `wakes second`, `wakes third`: four effects of `Waking`, the second
+  reinitialized at frame 30, the third at frame 31 and the fourth at frame 32.
+
+What the rows show of alive counts. A strip system whose particles die answers the count its
+kernels keep, read back from the GPU like the count of any system that kills particles; one
+whose particles never die answers what was spawned (`keep`), also what a full strip dropped
+(`keep two` answers 12 with the six particles its first strip holds). The counts of the effects of one
+instanced graph are read together: `single`, `reinit`, `toggled` and `stopped` are four effects
+of `StripSingle`, and all of them that are awake get a new count two frames after one of them
+wakes (frame 33, after `reinit` started over at frame 30 and woke at frame 31; again by frame 40,
+after `toggled` came back), and none sixty frames after their first: `single` itself does nothing
+and its count changes at frame 33. `dying` with `dying reinit` shows the same of a graph without
+strips. An effect that is not batched with the others keeps a schedule of its own: `alone` (its
+asset turns instancing off) and `dying apart` (its component does not allow it) get their second
+count sixty frames after the first, at frame 64, whatever `alone reinit` and `dying reinit` do.
+A wake puts the batch's question off to the next frame, also one that was due: `wakes first`
+wakes at frame 31, `wakes second` at frame 32 and `wakes third` at frame 33, and all four effects
+of `Waking` get their count at frame 35, two frames later than those of `Dying` (`wakes` at 34
+still shows its first).
+`both`, `taper`, `alpha` and the image controls are each the only effect of their graph.
+
+Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/README.md`).
+`capture/graphs imported while playing` must be empty.
+
+## Image limits
+
+Every image is the Editor's pixel for pixel on the machine both ran on (an NVIDIA driver, the
+Linux Editor on OpenGL Core).
+
+## Not covered
+
+- Strip outputs through an indirect buffer that is not sorted (`Indirect Draw` or culling on
+  an output that does not sort), a strip system's particles one by one through an indirect
+  buffer, lit strip outputs, Shader Graph strip outputs, line strips
+  (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
+  drawn (the effect says so).
+- Additive strips; a sorted strip under a perspective camera or with another sort criterion
+  than the default; two strips of one sorted output that cross.
+- A batch in which an effect wakes in every frame for longer than three frames (as measured,
+  its counts would not be asked while that lasts).
+- A particle kept alive as long as the strip it spawned (`stripAlive`): the effect is not
+  simulated and says so.
+- The strip tiling mode `Custom`; `Orient` modes other than `Face Camera Position` on a
+  strip; a perspective camera.
+- `stripIndex` computed for each particle (linked to an attribute); the attributes
+  `particleCountInStrip`, `spawnIndexInStrip` and `stripIndex` read by a block; `Ratio Over
+  Strip`; `Increment Strip Index On Start`.
+- Strips of a system that sleeps or is culled; several steps in a frame; strips of more than
+  a few dozen particles, and more strips than one dispatch's thread groups reach.
+- The alive counts of more effects of one graph than a batch holds (the asset's batch
+  capacity), of effects made after their batch emptied, of an effect that is culled or asleep
+  when its batch's counts are asked, and with instancing turned off in the Editor's preferences
+  (`Instancing Enabled`).
+- Other devices than OpenGL Core in the Editor.
+
+## Running
+
+    python3 tests/projects/vfxstrips/run.py record --label a     # one Editor capture (GPU display)
+    python3 tests/projects/vfxstrips/run.py record --label b
+    python3 tests/projects/vfxstrips/run.py publish a b          # identical captures -> Reference/ and Authored/
+    python3 tests/projects/vfxstrips/run.py gate                 # the engine on the authored project

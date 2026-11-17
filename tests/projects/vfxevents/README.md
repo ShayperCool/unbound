@@ -85,7 +85,7 @@ Linux Editor on OpenGL Core).
 
 ## Not covered
 
-- Strips, and systems spawned by GPU events that are strips: not run yet (the effect says so).
+- Systems spawned by GPU events that are strips: `tests/projects/vfxstrips`.
 - `On Collide` triggers; a spawned system that reads the count of its event (`spawnCount`);
   events of a system that spawns from the CPU as well.
 - An effect whose spawning system sleeps or is culled while the spawned one still has
