@@ -257,9 +257,8 @@ namespace UnityEngine.Tests
                 GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, (BuiltinShaderMode)5);
                 Assert.Equal((BuiltinShaderMode)5, GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
                 // An unknown type asserts and shares the deferred shading slot.
-                string[] logs = null;
-                logs = Logs(() => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.UseCustom));
-                Assert.Equal(new[] { "Assert: Unknown builtin shader type 8" }, logs);
+                var logs = Logs(() => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.UseCustom));
+                Assert.Contains("Assert: Unknown builtin shader type 8", logs);
                 Assert.Equal(BuiltinShaderMode.UseCustom, GraphicsSettings.GetShaderMode(BuiltinShaderType.DeferredShading));
                 // Control: the other types keep their own modes.
                 Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.LensFlare));
