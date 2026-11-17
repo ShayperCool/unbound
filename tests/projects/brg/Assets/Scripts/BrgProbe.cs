@@ -96,6 +96,7 @@ public unsafe class BrgProbe : MonoBehaviour
             SplitMasks("split_masks_second", 0.05f);
             // The sorting scenario through an orthographic camera framing the same quads.
             Sorting("sorting_ortho", true, s_OrthographicDepths);
+            LightmapArrays();
         }
         catch (Exception e)
         {
@@ -909,6 +910,159 @@ public unsafe class BrgProbe : MonoBehaviour
         };
     }
 
+    /// <summary>The lightmap_arrays scenario's cubes: the command's flags, its material (0: Lit
+    /// with LIGHTMAP_ON and the lightmap arrays, 1: the arrays without the keyword, 2: LIGHTMAP_ON
+    /// and DIRLIGHTMAP_COMBINED with a direction array), the instance's array slice
+    /// (unity_LightmapIndex.x) and unity_LightmapST (a zero scale samples the texel its offset
+    /// names; the last cube's scale reads its lightmap UVs).</summary>
+    static readonly (BatchDrawCommandFlags Flags, int Material, int Slice, Vector4 St)[] s_LightmapCubes =
+    {
+        (BatchDrawCommandFlags.IsLightMapped, 0, 0, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.IsLightMapped, 0, 1, new Vector4(0f, 0f, 0.25f, 0.25f)),
+        (BatchDrawCommandFlags.IsLightMapped, 0, 2, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.None, 0, 1, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.IsLightMapped, 1, 0, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.IsLightMapped, 2, 1, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.None, 1, 2, new Vector4(0f, 0f, 0.75f, 0.75f)),
+        (BatchDrawCommandFlags.IsLightMapped, 0, 2, new Vector4(0.5f, 0.5f, 0.25f, 0.25f)),
+    };
+    GraphicsBuffer m_LightmapBuffer;
+    BatchID m_LightmapBatch;
+    readonly BatchMaterialID[] m_LightmapMaterials = new BatchMaterialID[3];
+
+    /// <summary>A 2x2 array of three slices, slice s texel (x, y) a colour of its own, each
+    /// channel at most 0.6 with alpha 0.25 (non-saturated whatever the lightmap encoding).</summary>
+    static Texture2DArray LightmapArray(bool directions)
+    {
+        var array = new Texture2DArray(2, 2, 3, TextureFormat.RGBAHalf, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        for (int s = 0; s < 3; s++)
+        {
+            var texels = new Color[4];
+            for (int t = 0; t < 4; t++)
+            {
+                float bright = 0.2f + 0.4f * t / 3f;
+                texels[t] = directions
+                    ? new Color(0.5f, 0.5f, 0.1f + 0.1f * s, 0.8f)
+                    : new Color(s == 0 ? bright : 0.1f, s == 1 ? bright : 0.1f, s == 2 ? bright : 0.1f, 0.25f);
+            }
+            array.SetPixels(texels, s);
+        }
+        array.Apply(false);
+        return array;
+    }
+
+    /// <summary>Lightmap texture arrays as Entities Graphics draws them: a lightmapped material is
+    /// a copy of Lit with LIGHTMAP_ON (and DIRLIGHTMAP_COMBINED for directional lightmaps) and
+    /// unity_Lightmaps, unity_LightmapsInd and unity_ShadowMasks set, its commands flagged
+    /// IsLightMapped without UseLegacyLightmapsKeyword and each instance's unity_LightmapIndex
+    /// and unity_LightmapST in the batch. Controls: a command without the flag, a material
+    /// without the keyword. Records each cube's colour at its centre.</summary>
+    void LightmapArrays()
+    {
+        const string name = "lightmap_arrays";
+        int n = s_LightmapCubes.Length;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int st = colors + SizeOfFloat4 * n, index = st + SizeOfFloat4 * n;
+        int bytes = (index + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = LightmapCube(i);
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            int o = colors / 4 + i * 4;
+            data[o] = 0.8f; data[o + 1] = 0.8f; data[o + 2] = 0.8f; data[o + 3] = 1f;
+            var v = s_LightmapCubes[i].St;
+            o = st / 4 + i * 4;
+            data[o] = v.x; data[o + 1] = v.y; data[o + 2] = v.z; data[o + 3] = v.w;
+            data[index / 4 + i * 4] = s_LightmapCubes[i].Slice;
+        }
+        m_LightmapBuffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16)
+            : new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_LightmapBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(5, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        metadata[3] = new MetadataValue { NameID = Shader.PropertyToID("unity_LightmapST"), Value = PerInstance | (uint)st };
+        metadata[4] = new MetadataValue { NameID = Shader.PropertyToID("unity_LightmapIndex"), Value = PerInstance | (uint)index };
+        m_LightmapBatch = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer
+            ? m_Brg.AddBatch(metadata, m_LightmapBuffer.bufferHandle, 0, (uint)bytes)
+            : m_Brg.AddBatch(metadata, m_LightmapBuffer.bufferHandle);
+        metadata.Dispose();
+
+        var lightmaps = LightmapArray(false);
+        var directions = LightmapArray(true);
+        var lit = Shader.Find("Universal Render Pipeline/Lit");
+        var made = new Material[3];
+        for (int k = 0; k < 3; k++)
+        {
+            var material = made[k] = new Material(lit);
+            material.SetColor("_BaseColor", Color.white);
+            if (k != 1) material.EnableKeyword("LIGHTMAP_ON");
+            if (k == 2) material.EnableKeyword("DIRLIGHTMAP_COMBINED");
+            material.SetTexture("unity_Lightmaps", lightmaps);
+            material.SetTexture("unity_LightmapsInd", directions);
+            material.SetTexture("unity_ShadowMasks", lightmaps);
+            m_LightmapMaterials[k] = m_Brg.RegisterMaterial(material);
+        }
+
+        Scenario(name);
+        RecordViews();
+        // Each cube's colour at its centre, projected as the 320x180 target renders it.
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int i = 0; i < n; i++) Row(name + ".c" + i + ".body", Pixel(LightmapCube(i).GetPosition()));
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+
+        m_Brg.RemoveBatch(m_LightmapBatch);
+        m_LightmapBuffer.Dispose();
+        for (int k = 0; k < 3; k++)
+        {
+            m_Brg.UnregisterMaterial(m_LightmapMaterials[k]);
+            DestroyImmediate(made[k]);
+        }
+        DestroyImmediate(lightmaps);
+        DestroyImmediate(directions);
+    }
+
+    /// <summary>The lightmap_arrays scenario's cube i: a row across the view above the scene's
+    /// sphere, turned a little.</summary>
+    static Matrix4x4 LightmapCube(int i) =>
+        Matrix4x4.TRS(new Vector3(-2.8f + i * 0.8f, 1.1f, 1.5f), Quaternion.Euler(0f, 25f, 0f), new Vector3(0.6f, 0.6f, 0.6f));
+
+    /// <summary>The lightmap_arrays scenario's commands, one per cube in one range.</summary>
+    void LightmapCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int n = s_LightmapCubes.Length;
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommand>() * n, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(n * sizeof(int), alignment, Allocator.TempJob);
+        commands->instanceSortingPositions = null;
+        commands->instanceSortingPositionFloatCount = 0;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = n;
+        commands->drawRangeCount = 1;
+        commands->visibleInstanceCount = n;
+        for (int i = 0; i < n; i++)
+        {
+            commands->visibleInstances[i] = i;
+            commands->drawCommands[i] = new BatchDrawCommand
+            {
+                visibleOffset = (uint)i, visibleCount = 1, batchID = m_LightmapBatch, materialID = m_LightmapMaterials[s_LightmapCubes[i].Material], meshID = m_Cube,
+                submeshIndex = 0, splitVisibilityMask = 0xff, flags = s_LightmapCubes[i].Flags,
+            };
+        }
+        commands->drawRanges[0] = new BatchDrawRange
+        {
+            drawCommandsType = BatchDrawCommandType.Direct, drawCommandsBegin = 0, drawCommandsCount = (uint)n,
+            filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff },
+        };
+    }
+
     JobHandle OnPerformCulling(BatchRendererGroup group, BatchCullingContext context, BatchCullingOutput output, IntPtr user)
     {
         int call = m_Calls++;
@@ -923,6 +1077,11 @@ public unsafe class BrgProbe : MonoBehaviour
         if (m_Scenario.StartsWith("split_masks", StringComparison.Ordinal))
         {
             SplitMaskCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
+        if (m_Scenario == "lightmap_arrays")
+        {
+            LightmapCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();
         }
         if (m_Scenario == "sorting" || m_Scenario == "sorting_ortho")
