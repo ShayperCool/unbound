@@ -15,7 +15,7 @@
   "mean": 0.0031,
   "worst": 31,
   "over8": 4,
-  "reason": "Two 2x2 clusters of pixels at one post's edge differ (up to 31/255); every other pixel is the Editor's within rounding. The cause is not resolved; the same spot differs in stp_pan_noise, which shares the camera path. NVIDIA driver, OpenGL Core only."
+  "reason": "One 2x2 cluster of pixels at a post's edge differs (up to 31/255); every other pixel is the Editor's within rounding. The cause is not resolved; stp_pan_noise, which shares the camera path, differs at the same spot. NVIDIA driver, OpenGL Core only."
  },
  "stp_pan_far.png": {
   "mean": 0.0006,
@@ -33,13 +33,13 @@
   "mean": 0.0031,
   "worst": 20,
   "over8": 2,
-  "reason": "Two pixels at one post's edge differ (up to 20/255), at the spot stp_pan_08 differs (the same camera path); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
+  "reason": "Two pixels at a post's edge differ (up to 20/255), where stp_pan_08 differs (the same camera path); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
  },
  "stp_pan_offset.png": {
   "mean": 0.0162,
   "worst": 59,
   "over8": 4,
-  "reason": "Four pixels around one post's corner differ (up to 59/255); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
+  "reason": "A 3x2 cluster around a post's corner differs, four pixels over 8/255 (up to 59/255); every other pixel is the Editor's within rounding. The cause is not resolved: this scenario checks the camera's world position in STP's view matrices, so a precision difference there would show as such pixels. NVIDIA driver, OpenGL Core only."
  },
  "stp_pan_prime.png": {
   "mean": 0.0006,

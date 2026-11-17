@@ -6,6 +6,9 @@
   "engine_paths": [
     "crates/unbound-shaders/src/compute.rs",
     "crates/unbound-shaders/src/samplers.rs",
-    "crates/unbound-app/src/render/executor/compute.rs"
+    "crates/unbound-app/src/render/executor/compute.rs",
+    "managed/UnityEngine/Graphics/ComputeShader.cs",
+    "managed/UnityEngine/Graphics/RenderTexture.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.CameraTextures.cs"
   ]
 }

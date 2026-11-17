@@ -29,7 +29,9 @@ it was rendered in.
   turning;
 - `linear_pan`: the Linear upscaler (no history) with the same pan, a control;
 - `stp_pan_far`: near and far planes of 1 and 1500 (STP packs depth logarithmically between them);
-- `stp_pan_prime`: Forced depth priming and the Forward+ path;
+- `stp_pan_prime`: Forced depth priming and the Forward+ path (the Editor's images of these two
+  are byte-identical to `stp_pan`'s: neither setting changes this scene's image; they keep those
+  paths covered in Unbound);
 - `stp_pan_noise`, `stp_static_noise`: a hashed value-noise texture in place of the checker
   (texture detail of a natural scene rather than flat squares), moving and still;
 - `stp_turn_fast`, `stp_turn_fast_noise`, `stp_pan_fast`: several pixels of motion a frame
@@ -41,11 +43,12 @@ it was rendered in.
 Values compare exactly; `image_limits.json` holds each image's measured limits.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
-captures): Unbound on its OpenGL Core device renders every scenario within the limits, most to the
-pixel. A few isolated edge pixels differ where noted. This parity on synthetic content does not
-extend to every scene: docs/COMPATIBILITY_GAPS.md (Q546) records a large URP scene whose STP output
-under camera motion keeps more of its history in Unbound than in the OpenGL Core Editor. Other
-devices, GPUs and drivers are unmeasured.
+captures): Unbound on its OpenGL Core device renders every scenario within the limits, most within
+rounding. Small clusters of edge pixels differ in `stp_pan_08`, `stp_pan_noise` and
+`stp_pan_offset` (their limits say where); the cause is not resolved. This parity on synthetic
+content does not extend to every scene: docs/COMPATIBILITY_GAPS.md (Q546) records a large URP
+scene whose STP output under camera motion keeps more of its history in Unbound than in the OpenGL
+Core Editor. Other devices, GPUs and drivers are unmeasured.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back
