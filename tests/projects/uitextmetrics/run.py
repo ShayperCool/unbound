@@ -4,7 +4,7 @@ import argparse, hashlib, json, os, shutil, subprocess, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, NATIVE_LIBRARY
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['native', 'engine'])
 p.add_argument('--release', required=True)
@@ -39,7 +39,7 @@ else:
     env['UNBOUND_MANAGED_DIR'] = str(a.managed.resolve())
     env['LD_LIBRARY_PATH'] = str(a.managed.resolve())
     command = [str(a.cli.resolve()), 'run', '-p', str(project), '--frames', '35', '--size', '960x540', '--no-watch']
-hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']} if a.mode == 'engine' else {}
+hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/NATIVE_LIBRARY]} if a.mode == 'engine' else {}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, release=a.release), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'editor-gpu' if a.mode == 'native' else 'engine-gpu', 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)

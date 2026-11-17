@@ -65,11 +65,23 @@ def probe_path(environment, shims):
     return str(directory)+os.pathsep+path
 
 
+def pidfd_backend():
+    """Linux: processes are read from /proc and held by pidfd."""
+    return (sys.platform == 'linux' and Path('/proc/self').is_dir()
+            and callable(getattr(os, 'pidfd_open', None)) and callable(getattr(signal, 'pidfd_send_signal', None)))
+
+
+def ps_backend():
+    """macOS: processes are read from ps snapshots and told apart by their start times."""
+    return sys.platform == 'darwin' and shutil.which('ps') is not None
+
+
 def require_process_watch():
-    """Refuse guarded execution when the process-tree backend is unavailable."""
-    if (sys.platform != 'linux' or not Path('/proc/self').is_dir()
-            or not hasattr(os, 'pidfd_open') or not hasattr(signal, 'pidfd_send_signal')):
-        raise RuntimeError('Editor launch guard requires Linux /proc and pidfd support; '
+    """Refuse guarded execution when no process-tree backend is available."""
+    if ps_backend():
+        return
+    if not pidfd_backend():
+        raise RuntimeError('Editor launch guard requires Linux /proc and pidfd support or macOS ps; '
                            f'guarded probe execution is unsupported on {sys.platform}')
     try:
         fd = os.pidfd_open(os.getpid())
@@ -108,8 +120,57 @@ def probe_release(command, root, environment=None):
     return releases.pop() if releases else default_release()
 
 
+def ps(*columns):
+    """The output of `ps -A` with these arguments. Popen directly: a caller that replaces
+    subprocess.run (a test's mock) must not leave the process guard without a listing."""
+    with subprocess.Popen(['ps', '-A', *columns], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True) as listing:
+        out, _ = listing.communicate()
+    if listing.returncode:
+        raise OSError(f'ps exited {listing.returncode}')
+    return out
+
+
+class PsRow:
+    """A process in a ps snapshot: its parent, state, start time, executable and arguments."""
+    __slots__ = ('parent', 'state', 'start', 'executable', 'argv')
+
+    def __init__(self, parent, state, start, executable):
+        self.parent, self.state, self.start, self.executable, self.argv = parent, state, start, executable, []
+
+
+# The latest ps snapshot ({pid: PsRow}): children() takes one, cmdline() and editor_process()
+# read it for the processes of the same scan.
+PS_SNAPSHOT = {}
+PS_LOCK = threading.Lock()
+
+
+def ps_snapshot():
+    """{pid: PsRow} of every process, from two ps listings (macOS ps prints the executable's path
+    and the arguments in separate columns; lstart is five words)."""
+    rows = {}
+    listing = ps('-o', 'pid=', '-o', 'ppid=', '-o', 'stat=', '-o', 'lstart=', '-o', 'comm=')
+    for line in listing.splitlines():
+        fields = line.split(None, 8)
+        if len(fields) == 9:
+            rows[int(fields[0])] = PsRow(int(fields[1]), fields[2], ' '.join(fields[3:8]), fields[8])
+    arguments = ps('-ww', '-o', 'pid=', '-o', 'args=')
+    for line in arguments.splitlines():
+        fields = line.split()
+        if fields and int(fields[0]) in rows:
+            rows[int(fields[0])].argv = fields[1:]
+    with PS_LOCK:
+        PS_SNAPSHOT.clear()
+        PS_SNAPSHOT.update(rows)
+    return rows
+
+
 def children():
     """{parent pid: [child pids]} of every process."""
+    if not pidfd_backend():
+        parents = {}
+        for pid, row in ps_snapshot().items():
+            parents.setdefault(row.parent, []).append(pid)
+        return parents
     parents = {}
     for stat in Path('/proc').glob('[0-9]*/stat'):
         try:
@@ -120,7 +181,72 @@ def children():
     return parents
 
 
-class Tree:
+def Tree(root):
+    """The process tree of a step: held by pidfd on Linux, by pid and start time on macOS."""
+    return PidfdTree(root) if pidfd_backend() else PsTree(root)
+
+
+class PsTree:
+    """A step's process group and every descendant seen in ps snapshots (macOS). A process is
+    known by its pid and start time, so that a pid used again by another process is never
+    signalled; one reparented after its parent died stays tracked once it has been seen. The
+    tracked processes are the keys of `fds` (as with PidfdTree), the start times its values."""
+
+    def __init__(self, root):
+        self.root, self.fds = root, {}
+
+    def collect(self, parents=None):
+        parents = children() if parents is None else parents
+        with PS_LOCK:
+            rows = dict(PS_SNAPSHOT)
+        pending, seen = [self.root, *self.fds], set()
+        while pending:
+            pid = pending.pop()
+            if pid in seen:
+                continue
+            seen.add(pid)
+            row = rows.get(pid)
+            if pid not in self.fds:
+                if row is None or licensing(pid):
+                    continue  # gone, or the shared Unity licensing client, never signalled
+                self.fds[pid] = row.start
+            elif row is None or row.start != self.fds[pid]:
+                continue
+            pending += parents.get(pid, [])
+
+    def live(self):
+        """The tracked processes that still run: the same pid and start time, not a zombie."""
+        rows = ps_snapshot()
+        return [pid for pid, start in self.fds.items()
+                if pid in rows and rows[pid].start == start and not rows[pid].state.startswith('Z')]
+
+    def prune(self):
+        """Forget the processes that have exited."""
+        running = set(self.live())
+        for pid in list(self.fds):
+            if pid != self.root and pid not in running:
+                del self.fds[pid]
+
+    def signal(self, number):
+        self.collect()
+        try:
+            os.killpg(self.root, number)
+        except OSError:
+            pass
+        for pid in self.live():
+            try:
+                os.kill(pid, number)
+            except OSError:
+                pass
+
+    def alive(self):
+        return bool(self.live())
+
+    def close(self):
+        self.fds = {}
+
+
+class PidfdTree:
     """A step's process group and every descendant, held by pidfd so that a process that leaves
     the group (`timeout` makes its own) or is reparented when its parent dies is still reached."""
 
@@ -181,12 +307,13 @@ class Tree:
 
 
 def stop_groups(process, grace):
-    """Portable cleanup for a private session, including descendants in other groups."""
-    tracked, groups = {process.pid}, {process.pid}
+    """Portable cleanup of a process and its descendants: their process groups are signalled,
+    and the tracked processes in the caller's own group (a process started without a session of
+    its own) one by one, so that the caller is never signalled."""
+    tracked, groups, own = {process.pid}, {process.pid}, set()
 
     def collect():
-        rows = subprocess.check_output(['ps', '-A', '-o', 'pid=', '-o', 'ppid=',
-                                        '-o', 'pgid=', '-o', 'stat='], text=True)
+        rows = ps('-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=')
         records = [line.split() for line in rows.splitlines() if line.strip()]
         parents = {}
         for pid, parent, group, state in records:
@@ -201,9 +328,14 @@ def stop_groups(process, grace):
             pending += parents.get(pid, [])
         tracked.update(seen)
         live = False
+        own.clear()
         for pid, parent, group, state in records:
             if int(pid) in tracked:
-                groups.add(int(group))
+                if int(group) == os.getpgrp():
+                    if int(pid) != os.getpid() and not state.startswith('Z'):
+                        own.add(int(pid))
+                else:
+                    groups.add(int(group))
                 live |= not state.startswith('Z')
         return live
 
@@ -213,6 +345,11 @@ def stop_groups(process, grace):
                 continue
             try:
                 os.killpg(group, number)
+            except ProcessLookupError:
+                pass
+        for pid in own:
+            try:
+                os.kill(pid, number)
             except ProcessLookupError:
                 pass
 
@@ -231,9 +368,7 @@ def stop_groups(process, grace):
 
 def stop_tree(process, grace=30):
     """SIGTERM to the step's whole tree; SIGKILL to whatever is left after the grace period."""
-    if (sys.platform != 'linux' or not Path('/proc/self').is_dir()
-            or not callable(getattr(os, 'pidfd_open', None))
-            or not callable(getattr(signal, 'pidfd_send_signal', None))):
+    if not pidfd_backend():
         return stop_groups(process, grace)
     tree = Tree(process.pid)
     try:
@@ -250,11 +385,28 @@ def stop_tree(process, grace=30):
 
 
 def cmdline(pid):
+    """A process's arguments (on macOS from the latest ps snapshot, split at white space)."""
+    if not pidfd_backend():
+        with PS_LOCK:
+            row = PS_SNAPSHOT.get(pid)
+        return list(row.argv) if row else []
     try:
         argv = (Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
     except OSError:
         return []
     return [arg.decode(errors='replace') for arg in argv if arg]
+
+
+def executable_path(pid):
+    """The path of a process's executable ('' when unknown)."""
+    if not pidfd_backend():
+        with PS_LOCK:
+            row = PS_SNAPSHOT.get(pid)
+        return row.executable if row else ''
+    try:
+        return os.readlink(f'/proc/{pid}/exe').removesuffix(' (deleted)')
+    except OSError:
+        return ''
 
 
 def licensing(pid):
@@ -272,11 +424,8 @@ def editor_process(pid):
     """What makes process pid an Editor launch: the Editor itself, or a heavy-job launcher holding
     or queueing an Editor job (an editor kind, or the Editor as its command). None otherwise."""
     argv = cmdline(pid)
-    try:
-        executable = os.readlink(f'/proc/{pid}/exe')
-    except OSError:
-        executable = ''
-    if (argv and is_editor_path(argv[0])) or is_editor_path(executable.removesuffix(' (deleted)')):
+    executable = executable_path(pid)
+    if (argv and is_editor_path(argv[0])) or is_editor_path(executable):
         return shlex.join(argv)[:300] or executable
     launcher = any(Path(arg).name in ('with-heavy-job', 'job_runner.py') for arg in argv)
     kinds = [argv[i+1] for i, arg in enumerate(argv[:-1]) if arg in ('--kind', '--pool-worker')]

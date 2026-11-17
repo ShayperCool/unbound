@@ -11,7 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, NATIVE_LIBRARY
 import editor_runner  # noqa: E402
 
 
@@ -80,7 +80,7 @@ def main():
         'UNBOUND_MANAGED_DIR', 'LD_LIBRARY_PATH')})
     if a.mode == 'engine':
         audit['sha256'] = {str(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in
-                           [a.cli, a.runtime/'UnityEngine.CoreModule.dll', a.runtime/'libunbound_physx.so']}
+                           [a.cli, a.runtime/'UnityEngine.CoreModule.dll', a.runtime/NATIVE_LIBRARY]}
     (work/(a.label+'-command.json')).write_text(json.dumps(audit, indent=2)+'\n')
     with log.open('x') as f:
         result = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT)

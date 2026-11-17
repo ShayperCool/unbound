@@ -13,7 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path, reference_root, unity_version
+from probe_paths import cache_artifact_path, reference_root, unity_version, NATIVE_LIBRARY
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['before', 'after'])
@@ -32,7 +32,7 @@ except ValueError as error:
 work = a.work.resolve()
 if work.exists():
     p.error('--work must be fresh')
-for path in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']:
+for path in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/NATIVE_LIBRARY]:
     if not path.is_file():
         p.error('missing runtime artifact: '+str(path))
 if a.baseline and not (a.baseline/'uitk/record.jsonl').is_file():
@@ -43,7 +43,7 @@ env = dict(os.environ, UNBOUND_MANAGED_DIR=str(a.managed.resolve()), LD_LIBRARY_
 env.pop('WT', None)
 heavy = Path.home()/'.cache/compat/with-heavy-job'
 hashes = {str(path.resolve()):hashlib.sha256(path.read_bytes()).hexdigest()
-          for path in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']}
+          for path in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/NATIVE_LIBRARY]}
 
 
 def run(name, command, extra=None):

@@ -11,7 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, NATIVE_LIBRARY
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['native', 'engine'])
@@ -53,7 +53,7 @@ command = [str(Path.home() / '.cache/compat/with-heavy-job'), 'timeout', '600', 
 audit = {'command': command, 'duration': a.duration, 'scale': a.scale}
 if a.mode == 'engine':
     audit['sha256'] = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
-                       for path in [a.cli, a.runtime / 'UnityEngine.CoreModule.dll', a.runtime / 'libunbound_physx.so']}
+                       for path in [a.cli, a.runtime / 'UnityEngine.CoreModule.dll', a.runtime / NATIVE_LIBRARY]}
 (work / 'command.json').write_text(json.dumps(audit, indent=2) + '\n')
 with (work / 'stdout.log').open('x') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)

@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, NATIVE_LIBRARY
 
 
 def run(fixture=None, method='TransitionRunner.Record', variable='UITRANSITIONS_OUT'):
@@ -50,7 +50,7 @@ def run(fixture=None, method='TransitionRunner.Record', variable='UITRANSITIONS_
         command = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '100', '--fixed-fps', '60', '--no-watch']
     hashes = {}
     if a.mode == 'engine':
-        for path in [a.cli.resolve(), a.managed.resolve()/'UnityEngine.CoreModule.dll', a.managed.resolve()/'libunbound_physx.so']:
+        for path in [a.cli.resolve(), a.managed.resolve()/'UnityEngine.CoreModule.dll', a.managed.resolve()/NATIVE_LIBRARY]:
             hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
     (output/'execution.json').write_text(json.dumps({'command': command, 'release': a.release, 'sha256': hashes}, indent=2)+'\n')
     with (output/'process.log').open('w') as log:

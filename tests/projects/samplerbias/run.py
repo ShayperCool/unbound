@@ -8,7 +8,7 @@ import argparse, hashlib, json, os, shutil, subprocess, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path
+from probe_paths import cache_artifact_path, NATIVE_LIBRARY
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['native', 'engine'])
 p.add_argument('--release', required=True)
@@ -71,7 +71,7 @@ else:
     env['LD_LIBRARY_PATH'] = str(a.managed.resolve())
     command = [str(a.cli.resolve()), 'run', '-p', str(project), '--frames', '35', '--size', '960x540', '--no-watch',
                *(['--force-vulkan'] if a.device == 'vulkan' else [])]
-hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']} if a.mode == 'engine' else {}
+hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/NATIVE_LIBRARY]} if a.mode == 'engine' else {}
 sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest()
            for x in sorted(project.rglob('*')) if x.is_file()}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,

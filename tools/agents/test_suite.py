@@ -443,6 +443,7 @@ class ContinuationTests(unittest.TestCase):
 
 
 class SharedGuardTests(unittest.TestCase):
+    @unittest.skipUnless(probe_runtime.pidfd_backend(), 'pidfd process handles are Linux-only')
     def test_process_liveness_handles_large_descriptors_and_exited_children(self):
         process = subprocess.Popen([sys.executable, '-c', 'pass'])
         fd = os.pidfd_open(process.pid)
@@ -460,10 +461,10 @@ class SharedGuardTests(unittest.TestCase):
     def test_unsupported_platform_fails_before_starting_a_probe(self):
         with tempfile.TemporaryDirectory() as temp:
             gate = land.Gate(Path(temp), 'HEAD', ['touch unsafe'], False, Path(temp)/'gate.log')
-            with unittest.mock.patch.object(probe_runtime.sys, 'platform', 'darwin'):
-                with self.assertRaisesRegex(RuntimeError, 'unsupported on darwin'):
+            with unittest.mock.patch.object(probe_runtime.sys, 'platform', 'win32'):
+                with self.assertRaisesRegex(RuntimeError, 'unsupported on win32'):
                     gate.run_probes()
-                with self.assertRaisesRegex(RuntimeError, 'unsupported on darwin'):
+                with self.assertRaisesRegex(RuntimeError, 'unsupported on win32'):
                     suite.run_step(suite.Step('driver', ['touch', 'unsafe']), {}, Path(temp)/'log', {})
             self.assertFalse((Path(temp)/'unsafe').exists())
 
@@ -488,12 +489,12 @@ class SharedGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             pidfile = root/'editor.pid'
-            child = ('import os,signal,time; from pathlib import Path; '
-                     'signal.signal(signal.SIGTERM, signal.SIG_IGN); '
-                     f'Path({str(pidfile)!r}).write_text(str(os.getpid())); time.sleep(60)')
+            # bash ignoring SIGTERM, named as the Editor (macOS's framework python3 starts its
+            # interpreter again under its own name, so a python child would not keep the name).
+            child = f'trap "" TERM; echo $$ > {shlex.quote(str(pidfile))}; while :; do sleep 1; done'
             editor = root/'6000.0.71f1/Editor/Unity'
             command = 'bash -c '+shlex.quote(
-                f'(exec -a {shlex.quote(str(editor))} {shlex.quote(sys.executable)} -c {shlex.quote(child)}); '
+                f'(exec -a {shlex.quote(str(editor))} bash -c {shlex.quote(child)}); '
                 'touch after')
             script = root/'gate.py'
             script.write_text(
@@ -510,8 +511,8 @@ class SharedGuardTests(unittest.TestCase):
                 # A zombie owns no running payload. Allow the kernel to deliver SIGKILL.
                 deadline = time.monotonic() + 2
                 while time.monotonic() < deadline:
-                    stat = Path(f'/proc/{pid}/stat')
-                    if not stat.exists() or stat.read_text().rsplit(')', 1)[1].split()[0] in ('Z', 'X'):
+                    state = subprocess.run(['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True).stdout.strip()
+                    if not state or state[0] in ('Z', 'X'):
                         break
                     time.sleep(0.01)
                 else:
@@ -889,7 +890,7 @@ class PartialRecipeTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
+            root = Path(temp).resolve()  # macOS: /var/folders is /private/var/folders
             for index, (followups, content, engine_exit, expected) in enumerate([
                 (False, '{"complete":true}\n', 0, 0),
                 (True, '{"complete":true}\n', 0, 0),

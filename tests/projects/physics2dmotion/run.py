@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import reference_file, reference_root, run_root, unity_version, editor_path
+from probe_paths import reference_file, reference_root, run_root, unity_version, editor_path, NATIVE_LIBRARY
 WORK = Path(os.environ.get('MOTION_WORK', run_root(ROOT))).resolve()
 WORK.mkdir(parents=True, exist_ok=True)
 CLI = os.environ.get('UNBOUND_CLI', os.environ.get('SCENE_SETTINGS_CLI', shutil.which('unbound') or str(REPO/'target/release/unbound')))
@@ -35,7 +35,7 @@ else:
     audit = dict(command=command, environment={k:env.get(k) for k in ['UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','PHYSICS_PROBE_OUT','CARGO_TARGET_DIR','UnboundTarget','UnboundNativeDir']})
     if a.mode == 'engine':
         runtime=Path(env['UNBOUND_MANAGED_DIR'])
-        audit['artifacts_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in [Path(CLI),runtime/'UnityEngine.CoreModule.dll',runtime/'libunbound_physx.so']}
+        audit['artifacts_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in [Path(CLI),runtime/'UnityEngine.CoreModule.dll',runtime/NATIVE_LIBRARY]}
     (WORK/(a.label+'-command.json')).write_text(json.dumps(audit,indent=2)+'\n')
     with log.open('w') as f: result = subprocess.run(command,env=env,stdout=f,stderr=subprocess.STDOUT)
     print(a.label,'exit',result.returncode,flush=True)

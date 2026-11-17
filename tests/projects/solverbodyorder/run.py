@@ -12,7 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path, editor_path
+from probe_paths import cache_artifact_path, editor_path, NATIVE_LIBRARY
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
@@ -68,7 +68,7 @@ else:
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', str(runtime/'unbound'),
                'run', '-p', str(project), '--headless', '30000', '--no-watch']
     audit = dict(command=command, sha256={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in
-        [runtime/'unbound', runtime/'managed/UnityEngine.CoreModule.dll', runtime/'managed/libunbound_physx.so']})
+        [runtime/'unbound', runtime/'managed/UnityEngine.CoreModule.dll', runtime/'managed'/NATIVE_LIBRARY]})
     (work/(a.label+'-command.json')).write_text(json.dumps(audit, indent=2)+'\n')
     with log.open('w') as f: result = subprocess.run(command, env=env, stdout=f, stderr=subprocess.STDOUT)
     if result.returncode or not out.exists(): raise SystemExit('Run failed: '+str(log))

@@ -17,7 +17,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 PROBE = HERE.parent
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import cache_artifact_path, editor_path, validation_cache
+from probe_paths import cache_artifact_path, editor_path, validation_cache, NATIVE_LIBRARY
 
 
 def load(name, path):
@@ -181,7 +181,7 @@ def publish(work, reference):
 def replay(work, runtime):
     # A complete matching Root artifact is required. No fresh Core / frozen CLI mixture.
     manifest = json.loads((runtime/'runtime-manifest.json').read_text())
-    for required in ('unbound', 'managed/UnityEngine.CoreModule.dll', 'managed/libunbound_physx.so'):
+    for required in ('unbound', 'managed/UnityEngine.CoreModule.dll', 'managed/'+NATIVE_LIBRARY):
         if required not in manifest:
             raise ValueError(f'runtime manifest lacks {required}')
     for name, expected in manifest.items():

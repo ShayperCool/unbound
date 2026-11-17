@@ -1,8 +1,11 @@
 """Portable locations for Unity references and disposable probe run artifacts."""
 import os
 from pathlib import Path
+import sys
 
 DEFAULT_UNITY_VERSION = '6000.0.71f1'
+# The engine's native library in its managed directory (crates/unbound-host/build.rs names it).
+NATIVE_LIBRARY = 'libunbound_physx.dylib' if sys.platform == 'darwin' else 'libunbound_physx.so'
 
 
 def unity_version():

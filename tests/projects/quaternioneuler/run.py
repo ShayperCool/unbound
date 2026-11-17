@@ -13,7 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path, editor_path
+from probe_paths import cache_artifact_path, editor_path, NATIVE_LIBRARY
 from editor_runner import EditorJob, run as run_editor
 
 p = argparse.ArgumentParser(description=__doc__)
@@ -85,7 +85,7 @@ else:
         env.update(UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=str(runtime/'managed'))
         command += [str(runtime/'unbound'), 'run', '-p', str(project), '--headless', '30000', '--no-watch']
         artifacts = {str(path):sha(path) for path in [runtime/'unbound',
-            runtime/'managed/UnityEngine.CoreModule.dll', runtime/'managed/libunbound_physx.so']}
+            runtime/'managed/UnityEngine.CoreModule.dll', runtime/'managed'/NATIVE_LIBRARY]}
     audit = dict(command=command, release=a.release, artifacts_sha256=artifacts,
         source_sha256=sha(project/'Assets/Scripts/ProbeEntry.cs'),
         environment={key:value for key,value in env.items() if key in
