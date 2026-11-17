@@ -181,6 +181,32 @@ namespace Unbound.Tests
             Assert.Equal("Return value address cannot be 0.\nParameter name: returnValueAddress", MonoExceptions.MessageOf(missing));
         }
 
+        sealed class RemoteException : Exception
+        {
+            public RemoteException() : base("Remote.") { }
+            public override string StackTrace => "  at Server.Handle () [0x00000] in <server>:0 ";
+        }
+
+        [Fact]
+        public void AnExceptionThatWritesItsOwnStackKeepsIt()
+        {
+            var lines = StackTraceUtility.ExtractStringFromException(Caught(() => throw new RemoteException())).Split('\n');
+            Assert.Equal("RemoteException: Remote.", lines[0]);
+            Assert.Equal("  at Server.Handle () [0x00000] in <server>:0 ", lines[1]);
+            Assert.Equal("UnityEngine.StackTraceUtility:ExtractStringFromException(Object)", lines[2]);
+        }
+
+        [Fact]
+        public void SourcesAreNamedAsTheEditorCompiledThem()
+        {
+            Assert.Equal("/p/Assets/A.cs", UnityStackTrace.AbsoluteSourcePath("/p/Assets/A.cs", "/p"));
+            Assert.Equal("/p/Packages/local/B.cs", UnityStackTrace.AbsoluteSourcePath("/p/Packages/local/B.cs", "/p/"));
+            Assert.Equal("./Library/PackageCache/com.unity.x@0123456789ab/C.cs",
+                UnityStackTrace.AbsoluteSourcePath("/p/Library/PackageCache/com.unity.x@0123456789ab/C.cs", "/p"));
+            Assert.Equal("/elsewhere/D.cs", UnityStackTrace.AbsoluteSourcePath("/elsewhere/D.cs", "/p"));
+            Assert.Equal("/p/Assets/A.cs", UnityStackTrace.AbsoluteSourcePath("/p/Assets/A.cs", ""));
+        }
+
         static int Callee(int value, [CallerLineNumber] int line = 0) => line + value;
 
         static int CallsCallee()

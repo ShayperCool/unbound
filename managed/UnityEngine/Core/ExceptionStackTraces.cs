@@ -84,6 +84,9 @@ namespace Unbound.Runtime
         /// and thrown again (ExceptionDispatchInfo) ends with Mono's line for that.</summary>
         internal static string MonoTrace(Exception exception)
         {
+            // A class that writes its own stack keeps it.
+            if (exception.GetType().GetProperty(nameof(Exception.StackTrace))?.GetMethod?.DeclaringType != typeof(Exception))
+                return exception.StackTrace;
             if (exception.StackTrace == null) return null;
             var captured = new StackTrace(exception, true);
             var text = new StringBuilder();
@@ -107,7 +110,7 @@ namespace Unbound.Runtime
                         (offset, file, line) = (start, document, statementLine);
                     text.Append(" [0x").Append(Math.Max(offset, 0).ToString("x5")).Append("] in ");
                     if (file == null) text.Append('<').Append(method.Module.ModuleVersionId.ToString("N")).Append('>');
-                    else text.Append(AbsoluteSourcePath(file));
+                    else text.Append(AbsoluteSourcePath(file, ProjectInfo.ProjectPath));
                     text.Append(':').Append(line).Append(' ');
                 }
                 if (frame != null && IsLastForeignFrame(frame) && text.Length != 0) separate = true;
@@ -124,14 +127,17 @@ namespace Unbound.Runtime
         static bool IsLastForeignFrame(StackFrame frame) => s_LastForeignFrame?.GetValue(frame) is true;
 
         /// <summary>A source path as the Editor compiled it: in the project's folder for the
-        /// project's own sources (a runtime project view resolved).</summary>
-        static string AbsoluteSourcePath(string file)
+        /// project's own sources (a runtime project view resolved), relative to it ("./") for
+        /// packages in its package cache (tests/projects/testrunner); other paths as they are.</summary>
+        internal static string AbsoluteSourcePath(string file, string projectFolder)
         {
-            string relative = SourcePath(file, ProjectInfo.ProjectPath);
-            return relative == file.Replace('\\', '/') || Path.IsPathRooted(relative)
-                ? relative
-                : ProjectInfo.ProjectPath.Replace('\\', '/').TrimEnd('/') + "/" + relative;
+            string relative = SourcePath(file, projectFolder);
+            if (relative == file.Replace('\\', '/') || Path.IsPathRooted(relative)) return relative;
+            if (relative.StartsWith(PackageCache, StringComparison.Ordinal)) return "./" + relative;
+            return projectFolder.Replace('\\', '/').TrimEnd('/') + "/" + relative;
         }
+
+        const string PackageCache = "Library/PackageCache/";
 
         static readonly ConcurrentDictionary<MethodBase, string> s_UnitySources = new();
 
@@ -140,6 +146,8 @@ namespace Unbound.Runtime
         /// <c>path:line</c> (null without the release's .pdb).</summary>
         internal static string UnitySource(MethodBase method, out bool unity)
         {
+            unity = false;
+            if (method.Module.Assembly != s_Engine) return null;
             var frame = method.GetCustomAttribute<Unbound.UnityFrameAttribute>();
             unity = frame != null;
             if (!unity) return null;

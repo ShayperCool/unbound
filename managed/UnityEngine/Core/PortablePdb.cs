@@ -16,15 +16,19 @@ namespace Unbound.Runtime
     /// </summary>
     internal sealed class PortablePdb
     {
+        // The assembly itself, kept only where its method bodies are read (CallSite).
         readonly PEReader m_Image;
         readonly MetadataReader m_Metadata;
+        // Owns the memory m_Pdb reads.
+        readonly MetadataReaderProvider m_Provider;
         readonly MetadataReader m_Pdb;
 
-        PortablePdb(PEReader image, MetadataReader pdb)
+        PortablePdb(PEReader image, MetadataReaderProvider provider)
         {
             m_Image = image;
-            m_Metadata = image.GetMetadataReader();
-            m_Pdb = pdb;
+            m_Metadata = image?.GetMetadataReader();
+            m_Provider = provider;
+            m_Pdb = provider.GetMetadataReader();
         }
 
         static readonly ConditionalWeakTable<Assembly, PortablePdb> s_Loaded = new();
@@ -38,7 +42,7 @@ namespace Unbound.Runtime
             {
                 if (!s_Loaded.TryGetValue(assembly, out var pdb))
                 {
-                    pdb = Open(assembly.Location);
+                    pdb = Open(assembly.Location, keepImage: false);
                     s_Loaded.Add(assembly, pdb);
                 }
                 return pdb;
@@ -52,27 +56,24 @@ namespace Unbound.Runtime
             {
                 if (!s_Files.TryGetValue(path, out var pdb))
                 {
-                    pdb = File.Exists(path) ? Open(path) : null;
+                    pdb = File.Exists(path) ? Open(path, keepImage: true) : null;
                     s_Files.Add(path, pdb);
                 }
                 return pdb;
             }
         }
 
-        static PortablePdb Open(string path)
+        static PortablePdb Open(string path, bool keepImage)
         {
             try
             {
                 // Read into memory: no file stays open (adapted assemblies are replaced on reload).
                 var image = new PEReader(ImmutableArray.Create(File.ReadAllBytes(path)));
-                if (!image.TryOpenAssociatedPortablePdb(path,
-                        pdb => File.Exists(pdb) ? new MemoryStream(File.ReadAllBytes(pdb), false) : null,
-                        out var provider, out _) || provider == null)
-                {
-                    image.Dispose();
-                    return null;
-                }
-                return new PortablePdb(image, provider.GetMetadataReader());
+                bool found = image.TryOpenAssociatedPortablePdb(path,
+                    pdb => File.Exists(pdb) ? new MemoryStream(File.ReadAllBytes(pdb), false) : null,
+                    out var provider, out _) && provider != null;
+                if (!keepImage || !found) image.Dispose();
+                return found ? new PortablePdb(keepImage ? image : null, provider) : null;
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException)
             {
@@ -111,6 +112,7 @@ namespace Unbound.Runtime
         {
             document = null;
             line = 0;
+            if (m_Image == null) return false;
             foreach (var typeHandle in m_Metadata.TypeDefinitions)
             {
                 var type = m_Metadata.GetTypeDefinition(typeHandle);

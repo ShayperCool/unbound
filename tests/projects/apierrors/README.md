@@ -39,7 +39,10 @@ log messages it writes with their log type (`.logs`; logs written on other threa
 
 Measured in the Unity 6000.0.71f1 Editor on macOS in batch mode (two byte-identical captures;
 none of the values depends on the OS or the graphics device); the reference with the `format.*`
-rows was recorded in the Linux Editor (two byte-identical captures, every earlier row unchanged). Asynchronous AssetBundle loads that
+rows was recorded in the Linux Editor (two byte-identical captures, every earlier row unchanged).
+The `format.extract.*` rows name Unity's own frames with the source paths the release's
+UnityEngine.CoreModule .pdb holds, here the Linux release's; on macOS they are the macOS release's
+(unmeasured). Asynchronous AssetBundle loads that
 fail report later, at a moment that varies between runs, so only their synchronous answers are
 recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
