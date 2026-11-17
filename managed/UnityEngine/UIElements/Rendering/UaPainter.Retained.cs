@@ -267,6 +267,14 @@ namespace Unbound.UIElements
             return g;
         }
 
+        /// <summary>Only the immediate-mode callbacks of a recorded mesh.</summary>
+        void ReplayImmediate(UaRetainedMesh mesh)
+        {
+            if (!mesh.HasImmediate) return;
+            foreach (var s in mesh.Segments)
+                if (s.immediate != null) Immediate(s.immediateOwner, s.immediate, s.immediateCull);
+        }
+
         /// <summary>Draws a recorded mesh with the current transform, opacity and clipping.</summary>
         void Replay(UaRetainedMesh mesh)
         {

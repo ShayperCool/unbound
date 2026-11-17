@@ -384,6 +384,11 @@ namespace UnityEngine.UIElements
                 foreach (var e in list) e.WillChangePanel(p);
                 foreach (var e in list)
                 {
+                    if (e is ImmediateModeElement)
+                    {
+                        if (e.elementPanel != null) e.elementPanel.uaImmediateElements--;
+                        if (p != null) p.uaImmediateElements++;
+                    }
                     e.elementPanel = p;
                     e.m_NeedsAttach = p != null;
                 }

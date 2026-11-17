@@ -9,8 +9,9 @@ size). The gate compares every value exactly.
 than its box with no clipping ancestor; one in an overflow-hidden parent, larger than the parent; one
 scaled 2x3 about its top left; one before a later sibling with a background and one after an earlier
 one, overlapping them; one that draws with `GL.LoadOrtho`, followed by an element with a background;
-culled and unculled ones outside the target and a culled one partly inside; a hidden one; and one
-that throws when asked, between two others. Values: the calls per frame, GL's modelview, the active
+culled and unculled ones outside the target and a culled one partly inside; a hidden one; a fully
+transparent one and one under a fully transparent parent; and one that throws when asked, between two
+others. Values: the calls per frame, GL's modelview, the active
 render texture and current camera during the first call of a frame, the target's pixels at chosen
 points (read the next frame), the logs, and the same after an exception, with `cullingEnabled`
 swapped, and at panel scale 2.
@@ -24,7 +25,9 @@ swapped, and at panel scale 2.
   ancestor's padding box. `GL.LoadOrtho` covers the whole target (its (1, 1) corner at the top right
   of the read-back image), and elements drawn after it are placed as usual.
 - With `cullingEnabled`, an element whose bounds miss the target is not called; one partly inside is.
-  Without it, elements outside are called. Hidden elements are not called.
+  Without it, elements outside are called. Hidden elements are not called; fully transparent ones
+  (opacity 0 on the element or an ancestor) are, and their GL drawing shows (UI opacity does not
+  apply to it).
 - An exception in ImmediateRepaint: the later elements' callbacks are skipped for that frame and the
   exception is logged once with the thrown exception's type and message; the next frame calls all
   of them again.

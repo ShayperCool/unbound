@@ -105,5 +105,31 @@ namespace UnityEngine.Tests
             probe.style.display = DisplayStyle.None;
             Assert.DoesNotContain(Paint(panel).Batches, b => b.Immediate != null);
         }
+
+        // The probe's transparent elements sit directly in the root; here the transparent ancestor
+        // is two levels up and clips, and its own background draws nothing.
+        [Fact]
+        public void TransparentSubtreesStillPlaceTheirCallbacksButDrawNothing()
+        {
+            using var panel = NewPanel();
+            var faded = Place(new VisualElement(), 10, 20, 60, 60, Color.red);
+            faded.style.opacity = 0f;
+            faded.style.overflow = Overflow.Hidden;
+            panel.visualTree.Add(faded);
+            var middle = Place(new VisualElement(), 0, 0, 50, 50, Color.blue);
+            faded.Add(middle);
+            var probe = Place(new Probe(), 5, 5, 20, 20);
+            middle.Add(probe);
+            var painter = Paint(panel);
+            var immediate = painter.Batches.Single(b => b.Immediate != null);
+            Assert.Same(probe, immediate.ImmediateOwner);
+            Assert.Equal(new RectInt(10, 20, 60, 60), immediate.ImmediateScissor);
+            Assert.Equal(0, painter.Batches.Sum(b => b.IndexCount));
+            Assert.Equal(1, panel.uaImmediateElements);
+            // Without ImmediateModeElements a transparent subtree is not visited at all.
+            probe.RemoveFromHierarchy();
+            Assert.Equal(0, panel.uaImmediateElements);
+            Assert.Empty(Paint(panel).Batches);
+        }
     }
 }

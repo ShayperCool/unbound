@@ -7,8 +7,8 @@ namespace UnityEngine.UIElements
     /// An element that draws with GL or Graphics.DrawMeshNow from <see cref="ImmediateRepaint"/>, at
     /// its place among the panel's draws: each time the panel renders, with GL's modelview set to the
     /// element's world transform (its local space in points) and drawing scissored to its clip.
-    /// <see cref="cullingEnabled"/> skips the callback while the element is outside the target.
-    /// Matches the Unity 6000.0.71f1 Editor (tests/projects/uitkimmediate).
+    /// <see cref="cullingEnabled"/> skips the callback while the element is outside the target; a
+    /// fully transparent element is still called. Matches the Unity 6000.0.71f1 Editor (tests/projects/uitkimmediate).
     /// </summary>
     public abstract partial class ImmediateModeElement : VisualElement
     {
@@ -50,6 +50,13 @@ namespace UnityEngine.UIElements
 
         /// <summary>Draws the element with immediate-mode graphics, in its local space.</summary>
         protected abstract void ImmediateRepaint();
+    }
+
+    internal abstract partial class BaseVisualElementPanel
+    {
+        /// <summary>How many ImmediateModeElements the panel holds: while there are any, its
+        /// painting visits fully transparent subtrees for their callbacks.</summary>
+        internal int uaImmediateElements;
     }
 
     /// <summary>What a panel's rendering throws after it finished when an ImmediateRepaint threw

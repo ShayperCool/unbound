@@ -65,8 +65,8 @@ namespace ImmediateProbe
     /// ImmediateModeElement on a runtime panel drawing into an 800x600 render texture (cleared each
     /// frame): GL quads drawn by ImmediateRepaint in the elements' local space, clipped by an
     /// overflow-hidden parent, under a scaled element, before and after elements with backgrounds,
-    /// with GL.LoadOrtho, culled and not culled outside the target, while hidden, after an exception,
-    /// and at panel scale 2. Values: GL's modelview, the active render texture and camera during the
+    /// with GL.LoadOrtho, culled and not culled outside the target, while hidden, fully transparent
+    /// (itself or under a transparent parent), after an exception, and at panel scale 2. Values: GL's modelview, the active render texture and camera during the
     /// callback, the calls per frame, the logs, and the target's pixels at chosen points.
     /// </summary>
     public class ImmediateProbeBehaviour : MonoBehaviour
@@ -217,6 +217,12 @@ namespace ImmediateProbe
             Quad(m_Root, "beforeThrow", 200, 400, 20, 20, new Rect(0, 0, 20, 20), Color.green);
             Quad(m_Root, "thrower", 240, 400, 20, 20, new Rect(0, 0, 20, 20), Color.green);
             Quad(m_Root, "afterThrow", 280, 400, 20, 20, new Rect(0, 0, 20, 20), Color.green);
+            // Fully transparent: the element itself, and an element under a transparent parent.
+            Quad(m_Root, "transparent", 360, 400, 20, 20, new Rect(0, 0, 20, 20), Color.blue).style.opacity = 0f;
+            var fadedParent = Box("fadedParent", 400, 400, 40, 40);
+            fadedParent.style.opacity = 0f;
+            m_Root.Add(fadedParent);
+            Quad(fadedParent, "underTransparent", 10, 10, 20, 20, new Rect(0, 0, 20, 20), Color.blue);
         }
 
         void ResetCalls()
@@ -276,7 +282,8 @@ namespace ImmediateProbe
                 ("under.alone", 460, 70), ("under.overlap", 495, 70), ("cover.alone", 530, 70),
                 ("base.alone", 610, 70), ("over.overlap", 645, 70), ("over.alone", 680, 70),
                 ("ortho.element", 50, 210), ("ortho.topRight", 795, 5), ("ortho.bottomRight", 795, 595), ("after.alone", 100, 220),
-                ("culledPartly.inside", 790, 440), ("hidden.inside", 220, 320), ("beforeThrow.inside", 210, 410));
+                ("culledPartly.inside", 790, 440), ("hidden.inside", 220, 320), ("beforeThrow.inside", 210, 410),
+                ("transparent.inside", 370, 410), ("underTransparent.inside", 420, 420));
             Put("logs.drawing", string.Join(" | ", m_Logs));
 
             // A throwing callback: the frame's logs and calls.

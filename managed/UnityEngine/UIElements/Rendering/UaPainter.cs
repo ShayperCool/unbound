@@ -111,6 +111,8 @@ namespace Unbound.UIElements
         RectInt? m_Scissor;
         /// <summary>The element's clip (UIR's worldClip) while its content is drawn.</summary>
         Rect? m_Clip;
+        /// <summary>Whether the panel being painted holds ImmediateModeElements.</summary>
+        bool m_HasImmediateElements;
         float m_PixelsPerPoint = 1f;
         float m_ViewportHeight;
         internal UaDynamicAtlas Atlas;
@@ -142,6 +144,7 @@ namespace Unbound.UIElements
             }
             m_PixelsPerPoint = panel.scaledPixelsPerPoint;
             m_ViewportHeight = viewportHeight;
+            m_HasImmediateElements = panel.uaImmediateElements > 0;
             Opacities.Add(1f);
             TextSettings.Add(default);
             PaintElement(panel.visualTree, 1f, null);
@@ -179,15 +182,19 @@ namespace Unbound.UIElements
                 return;
             }
             float opacity = parentOpacity * Mathf.Clamp01(style.opacity);
-            if (opacity <= 0f) return;
+            // A fully transparent subtree draws nothing, but its ImmediateModeElements are still
+            // called (and draw with GL, which UI opacity does not affect), as in Unity
+            // (tests/projects/uitkimmediate transparent, underTransparent).
+            bool callbacksOnly = opacity <= 0f;
+            if (callbacksOnly && !m_HasImmediateElements) return;
 
             var savedScissor = m_Scissor;
             m_Matrix = ve.worldTransform;
             m_Identity = m_Matrix.isIdentity;
-            m_OpacityId = OpacityId(opacity);
+            m_OpacityId = callbacksOnly ? 0 : OpacityId(opacity);
 
             var geometry = Geometry(ve, style);
-            Replay(geometry.Visuals);
+            if (!callbacksOnly) Replay(geometry.Visuals);
 
             // Overflow clipping (UIR's worldClip: the padding box, or the content box, inside the
             // parent's clip): rounded rectangles and vector image backgrounds by a stencil mask,
@@ -199,7 +206,7 @@ namespace Unbound.UIElements
             {
                 var r = SubtractBorderPadding(ve, style, ve.worldBound);
                 clip = parentClip.HasValue ? Intersect(r, parentClip.Value) : r;
-                if ((HasRadius(ve, style) || style.backgroundImage.vectorImage != null) && m_StencilRef < MaxMaskDepth)
+                if (!callbacksOnly && (HasRadius(ve, style) || style.backgroundImage.vectorImage != null) && m_StencilRef < MaxMaskDepth)
                 {
                     masked = true;
                     UsesStencil = true;
@@ -217,7 +224,8 @@ namespace Unbound.UIElements
             m_Matrix = ve.worldTransform;
             m_Identity = m_Matrix.isIdentity;
             m_Clip = clip;
-            Replay(geometry.Content);
+            if (callbacksOnly) ReplayImmediate(geometry.Content);
+            else Replay(geometry.Content);
 
             var children = ve.hierarchy.children;
             for (int i = 0; i < children.Count; i++)
