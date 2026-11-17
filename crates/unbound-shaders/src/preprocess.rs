@@ -298,25 +298,26 @@ impl<'a> Preprocessor<'a> {
         let expanded = self.expand(tokens.into())?;
         let mut previous: Option<Kind> = None;
         for t in expanded {
+            // A character literal is an integer to Unity's compiler; glslang, whose lexer has
+            // none, would read `'N'` as the name `N` (URP's mipmap debug legend is an array of
+            // them). It is written as a number, and spaced as one.
+            let literal = char_literal(&t);
+            let kind = if literal.is_some() {
+                Kind::Number
+            } else {
+                t.kind
+            };
             // Tokens that came from different places must not merge into one.
             if let Some(p) = previous
-                && needs_space(p, &t)
+                && needs_space(p, kind)
             {
                 out.push(' ');
             }
-            // A character literal is an integer to Unity's compiler; glslang, whose lexer has
-            // none, would read `'N'` as the name `N` (URP's mipmap debug legend is an array of
-            // them).
-            match char_literal(&t) {
-                Some(value) => {
-                    out.push_str(&value.to_string());
-                    previous = Some(Kind::Number);
-                }
-                None => {
-                    out.push_str(&t.text);
-                    previous = Some(t.kind);
-                }
+            match literal {
+                Some(value) => out.push_str(&value.to_string()),
+                None => out.push_str(&t.text),
             }
+            previous = Some(kind);
         }
         Ok(())
     }
@@ -816,9 +817,9 @@ fn trim(mut tokens: Vec<Tok>) -> Vec<Tok> {
     tokens
 }
 
-fn needs_space(previous: Kind, next: &Tok) -> bool {
+fn needs_space(previous: Kind, next: Kind) -> bool {
     let word = |k: Kind| matches!(k, Kind::Ident | Kind::Number);
-    (word(previous) && word(next.kind)) || (previous == Kind::Punct && next.kind == Kind::Punct)
+    (word(previous) && word(next)) || (previous == Kind::Punct && next == Kind::Punct)
 }
 
 fn split_word(s: &str) -> (&str, &str) {
@@ -1261,7 +1262,7 @@ mod tests {
             concat!(
                 "static const uint s[][4] = { {2, 'N',' ','.'} };\n",
                 "uint e[] = { '\\n', '\\'', '\\\\', '\\x41', '\\101', '\\0', '\\1012' };\n",
-                "#define W(a) a\nint w = W('A')W(b);\n",
+                "#define W(a) a\nint w = W('A')W(b);\nint x = W(b)W('A');\n",
                 "#if 'A' == 65 && '\\n' == 10\nint yes;\n#endif\n",
                 "string t = \"it's\";\n",
             ),
@@ -1270,7 +1271,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             words(&out.text),
-            "static const uint s[ ] [4] = { {2, 78,32,46} } ; uint e[ ] = { 10, 39, 92, 65, 65, 0, '\\1012' } ; int w = 65 b; int yes; string t = \"it's\";"
+            "static const uint s[ ] [4] = { {2, 78,32,46} } ; uint e[ ] = { 10, 39, 92, 65, 65, 0, '\\1012' } ; int w = 65 b; int x = b 65; int yes; string t = \"it's\";"
         );
     }
 
