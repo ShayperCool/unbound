@@ -146,8 +146,7 @@ namespace ControlsProbe
 
         static string F(float value) => value.ToString("0.###", Inv);
 
-        /// <summary>An exception's type, parameter and message (without the runtime's own parameter
-        /// suffix), or "none".</summary>
+        /// <summary>An exception's type, parameter and whole message, or "none".</summary>
         static string Throws(Action action)
         {
             try
@@ -157,10 +156,7 @@ namespace ControlsProbe
             }
             catch (Exception e)
             {
-                string message = FirstLine(e.Message);
-                int suffix = message.IndexOf(" (Parameter '", StringComparison.Ordinal);
-                if (suffix >= 0) message = message.Substring(0, suffix);
-                return e.GetType().Name + " param " + ((e as ArgumentException)?.ParamName ?? "-") + ": " + message;
+                return e.GetType().Name + " param " + ((e as ArgumentException)?.ParamName ?? "-") + ": " + e.Message.Replace("\r", "");
             }
         }
 

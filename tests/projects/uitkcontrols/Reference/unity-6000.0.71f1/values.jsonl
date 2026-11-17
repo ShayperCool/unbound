@@ -12,10 +12,10 @@
 {"k":"state.full64","v":"1111111111111111111111111111111111111111111111111111111111111111/64"}
 {"k":"state.zeroLength","v":"0/0"}
 {"k":"state.default","v":"0/0"}
-{"k":"state.ctor65","v":"ArgumentOutOfRangeException param length: length of 65 should be greater than or equal to 0 and less than or equal to 64."}
-{"k":"state.ctorNegative","v":"ArgumentOutOfRangeException param length: length of -1 should be greater than or equal to 0 and less than or equal to 64."}
-{"k":"state.getPastEnd","v":"ArgumentOutOfRangeException param index: index of 3 should be in the range of 0 and 2 inclusively."}
-{"k":"state.setNegative","v":"ArgumentOutOfRangeException param index: index of -1 should be in the range of 0 and 2 inclusively."}
+{"k":"state.ctor65","v":"ArgumentOutOfRangeException param length: length of 65 should be greater than or equal to 0 and less than or equal to 64.\u000aParameter name: length"}
+{"k":"state.ctorNegative","v":"ArgumentOutOfRangeException param length: length of -1 should be greater than or equal to 0 and less than or equal to 64.\u000aParameter name: length"}
+{"k":"state.getPastEnd","v":"ArgumentOutOfRangeException param index: index of 3 should be in the range of 0 and 2 inclusively.\u000aParameter name: index"}
+{"k":"state.setNegative","v":"ArgumentOutOfRangeException param index: index of -1 should be in the range of 0 and 2 inclusively.\u000aParameter name: index"}
 {"k":"state.spanShort","v":"ArgumentException param -: indices' length (2) should be equal to or greater than the ToggleButtonGroupState's length (3)."}
 {"k":"state.active","v":"0,1"}
 {"k":"state.inactive","v":"2"}
@@ -32,7 +32,7 @@
 {"k":"state.fromShort64","v":"1111111111111111111111111111111111111111111111111000000000000001/64"}
 {"k":"state.compareNarrow","v":"True False False"}
 {"k":"state.fromNotFlags","v":"ArgumentException param -: Enum type T is not a flag enum type."}
-{"k":"state.fromTooLong","v":"ArgumentOutOfRangeException param length: length of 70 should be greater than or equal to 0 and less than or equal to 64."}
+{"k":"state.fromTooLong","v":"ArgumentOutOfRangeException param length: length of 70 should be greater than or equal to 0 and less than or equal to 64.\u000aParameter name: length"}
 {"k":"state.toIntFlags","v":"A, C"}
 {"k":"state.toIntFlagsStrict","v":"ArgumentException param -: Cannot sync to enum flag since the ToggleButtonGroupState has a different amount of options."}
 {"k":"state.toByteFlagsStrict","v":"A, B"}

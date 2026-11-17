@@ -56,16 +56,16 @@
 {"key":"connection.connected.initial","value":"False"}
 {"key":"connection.ordinary","value":"ok"}
 {"key":"connection.register","value":"ok"}
-{"key":"connection.register.empty","value":"ArgumentException:Cant be Guid.Empty:messageId"}
+{"key":"connection.register.empty","value":"ArgumentException:Cant be Guid.Empty\nParameter name: messageId:messageId"}
 {"key":"connection.register.null","value":"ok"}
 {"key":"connection.unregister","value":"NullReferenceException"}
 {"key":"connection.unregister.unknown","value":"ok"}
 {"key":"connection.unregister.null","value":"NullReferenceException"}
 {"key":"connection.send","value":"ok"}
 {"key":"connection.send.null","value":"ok"}
-{"key":"connection.send.empty","value":"ArgumentException:Cant be Guid.Empty:messageId"}
+{"key":"connection.send.empty","value":"ArgumentException:Cant be Guid.Empty\nParameter name: messageId:messageId"}
 {"key":"connection.trySend","value":"False"}
-{"key":"connection.trySend.empty","value":"ArgumentException:Cant be Guid.Empty:messageId"}
+{"key":"connection.trySend.empty","value":"ArgumentException:Cant be Guid.Empty\nParameter name: messageId:messageId"}
 {"key":"connection.subscribe","value":"ok"}
 {"key":"connection.disconnect","value":"False"}
 {"key":"connection.unsubscribe","value":"ok"}
@@ -169,12 +169,12 @@
 {"key":"editorConnection.initialize","value":"ok"}
 {"key":"editorConnection.register","value":"ArgumentException:Could not register callback <Run>b__5_0 on . The class null does not derive from UnityEngine.Object"}
 {"key":"editorConnection.registerNull","value":"ok"}
-{"key":"editorConnection.registerEmpty","value":"ArgumentException:Cant be Guid.Empty:messageId"}
+{"key":"editorConnection.registerEmpty","value":"ArgumentException:Cant be Guid.Empty\nParameter name: messageId:messageId"}
 {"key":"editorConnection.send","value":"ok"}
 {"key":"editorConnection.sendNull","value":"ok"}
 {"key":"editorConnection.trySend","value":"False"}
 {"key":"editorConnection.trySendNull","value":"False"}
-{"key":"editorConnection.trySendEmpty","value":"ArgumentException:Can not be Guid.Empty:messageId"}
+{"key":"editorConnection.trySendEmpty","value":"ArgumentException:Can not be Guid.Empty\nParameter name: messageId:messageId"}
 {"key":"editorConnection.subscribe","value":"ArgumentException:Could not register callback <Run>b__5_1 on . The class null does not derive from UnityEngine.Object"}
 {"key":"editorConnection.unregister","value":"ok"}
 {"key":"editorConnection.unregisterNull","value":"NullReferenceException"}

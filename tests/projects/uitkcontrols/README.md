@@ -9,8 +9,8 @@ exactly (tolerance 0). `Assets/Scripts/ControlsProbe.cs` records:
   label, and leaves the hierarchy for None and undefined values), a null text, a game child;
 - `popup.*`: PopupWindow's content container, title and children;
 - `state.*`: ToggleButtonGroupState: the constructor's masking of bits past the length, ToString,
-  the indexer and its exceptions (type, parameter and message; the runtime's own parameter suffix
-  is not compared), active and inactive options, set/toggle/reset all, CreateFromOptions,
+  the indexer and its exceptions (type, parameter and whole message, in the Editor's layout
+  with the parameter name on its own line), active and inactive options, set/toggle/reset all, CreateFromOptions,
   FromEnumFlags/ToEnumFlags/Compare with byte, short, int and long flag enums (also at the full
   length of 64, where a short's sign extension shows; these narrow-enum rows were measured with the
   macOS arm64 Editor only) and a non-flag enum,

@@ -43,11 +43,7 @@ public class EditorApiProbe : MonoBehaviour
             if (e is ArgumentNullException nullError) Value(key, "ArgumentNullException:" + nullError.ParamName);
             else if (e is ArgumentException argument && argument.ParamName != null)
             {
-                string message = argument.Message.Replace("\r", "");
-                int end = message.IndexOf("\nParameter name:", StringComparison.Ordinal);
-                if (end < 0) end = message.IndexOf(" (Parameter '", StringComparison.Ordinal);
-                if (end >= 0) message = message.Substring(0, end);
-                Value(key, "ArgumentException:" + message + ":" + argument.ParamName);
+                Value(key, "ArgumentException:" + argument.Message.Replace("\r", "") + ":" + argument.ParamName);
             }
             else if (e is NullReferenceException) Value(key, "NullReferenceException");
             else Value(key, e.GetType().Name + ":" + e.Message.Replace("\r", "")); }

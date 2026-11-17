@@ -19,7 +19,8 @@ python3 tests/projects/editortuples/run.py unbound --release 6000.0.71f1 --label
 The shared runner stages authored files into the validation cache, checks completion,
 GPU use and repeat equality, and retains every missing, extra or differing row in the
 comparison report. Engine captures use an immutable runtime snapshot. Argument exceptions
-retain their message and parameter name while normalizing Mono/CoreCLR parameter suffixes.
+record their whole message (in the Editor's layout, the parameter name on its own line) and
+their parameter name.
 The measured resource-key error messages apply to 6000.0.71f1; other releases retain their
 previous descriptive messages until measured. Hash grouping and tail selection apply to
 the general tuple structure, with custom comparers exercised separately from default hashes.
