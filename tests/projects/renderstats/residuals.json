@@ -1,0 +1,33 @@
+{
+  "the Editor batches the three small cubes into one draw (dynamic batching); Unbound draws each renderer, two draw calls and batches more, and its SetPass count follows its own draw order": [
+    "cubesOneMaterial.Batches Count",
+    "cubesOneMaterial.Draw Calls Count",
+    "litDirectional.Batches Count",
+    "litDirectional.Draw Calls Count",
+    "litPoint.SetPass Calls Count",
+    "skybox.Batches Count",
+    "skybox.Draw Calls Count",
+    "twoMaterials.Batches Count",
+    "twoMaterials.Draw Calls Count",
+    "twoRenders.Batches Count",
+    "twoRenders.Draw Calls Count"
+  ],
+  "Triangles Count and Vertices Count are not provided (their recorders are not valid; follow-up)": [
+    "cubesOneMaterial.Triangles Count",
+    "cubesOneMaterial.Vertices Count",
+    "empty.Triangles Count",
+    "empty.Vertices Count",
+    "litDirectional.Triangles Count",
+    "litDirectional.Vertices Count",
+    "litPoint.Triangles Count",
+    "litPoint.Vertices Count",
+    "nothingRendered.Triangles Count",
+    "nothingRendered.Vertices Count",
+    "skybox.Triangles Count",
+    "skybox.Vertices Count",
+    "twoMaterials.Triangles Count",
+    "twoMaterials.Vertices Count",
+    "twoRenders.Triangles Count",
+    "twoRenders.Vertices Count"
+  ]
+}

@@ -1,0 +1,41 @@
+{"k":"empty.Draw Calls Count","v":1}
+{"k":"empty.Batches Count","v":1}
+{"k":"empty.SetPass Calls Count","v":1}
+{"k":"empty.Triangles Count","v":2}
+{"k":"empty.Vertices Count","v":4}
+{"k":"cubesOneMaterial.Draw Calls Count","v":2}
+{"k":"cubesOneMaterial.Batches Count","v":2}
+{"k":"cubesOneMaterial.SetPass Calls Count","v":2}
+{"k":"cubesOneMaterial.Triangles Count","v":38}
+{"k":"cubesOneMaterial.Vertices Count","v":76}
+{"k":"twoMaterials.Draw Calls Count","v":4}
+{"k":"twoMaterials.Batches Count","v":4}
+{"k":"twoMaterials.SetPass Calls Count","v":3}
+{"k":"twoMaterials.Triangles Count","v":1574}
+{"k":"twoMaterials.Vertices Count","v":1106}
+{"k":"twoRenders.Draw Calls Count","v":8}
+{"k":"twoRenders.Batches Count","v":8}
+{"k":"twoRenders.SetPass Calls Count","v":6}
+{"k":"twoRenders.Triangles Count","v":3148}
+{"k":"twoRenders.Vertices Count","v":2212}
+{"k":"skybox.Draw Calls Count","v":5}
+{"k":"skybox.Batches Count","v":5}
+{"k":"skybox.SetPass Calls Count","v":4}
+{"k":"skybox.Triangles Count","v":3254}
+{"k":"skybox.Vertices Count","v":6146}
+{"k":"litDirectional.Draw Calls Count","v":4}
+{"k":"litDirectional.Batches Count","v":4}
+{"k":"litDirectional.SetPass Calls Count","v":2}
+{"k":"litDirectional.Triangles Count","v":1574}
+{"k":"litDirectional.Vertices Count","v":1106}
+{"k":"litPoint.Draw Calls Count","v":10}
+{"k":"litPoint.Batches Count","v":10}
+{"k":"litPoint.SetPass Calls Count","v":8}
+{"k":"litPoint.Triangles Count","v":3134}
+{"k":"litPoint.Vertices Count","v":2184}
+{"k":"nothingRendered.Draw Calls Count","v":0}
+{"k":"nothingRendered.Batches Count","v":0}
+{"k":"nothingRendered.SetPass Calls Count","v":0}
+{"k":"nothingRendered.Triangles Count","v":0}
+{"k":"nothingRendered.Vertices Count","v":0}
+{"k":"complete","v":true}
