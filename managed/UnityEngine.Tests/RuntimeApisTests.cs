@@ -103,6 +103,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(transfer, ColorGamutUtility.GetTransferFunction(gamut));
             }
             Assert.Equal(Enum.GetValues(typeof(ColorGamut)).Length, table.Length);
+            Assert.Equal(ColorPrimaries.Unknown, ColorGamutUtility.GetColorPrimaries((ColorGamut)7));
+            Assert.Equal(WhitePoint.Unknown, ColorGamutUtility.GetWhitePoint((ColorGamut)(-1)));
+            Assert.Equal(TransferFunction.Unknown, ColorGamutUtility.GetTransferFunction((ColorGamut)7));
         }
 
         [Fact]
@@ -113,6 +116,7 @@ namespace UnityEngine.Tests
                 GraphicsSettings.LoadShaderModes(new Dictionary<string, int> { ["m_DeferredReflections"] = 0, ["m_LensFlare"] = 2 });
                 Assert.Equal(BuiltinShaderMode.Disabled, GraphicsSettings.GetShaderMode(BuiltinShaderType.DeferredReflections));
                 Assert.Equal(BuiltinShaderMode.UseCustom, GraphicsSettings.GetShaderMode(BuiltinShaderType.LensFlare));
+                Assert.Equal(new[] { "Assert: Unknown builtin shader type 8" }, Logs(() => GraphicsSettings.GetShaderMode((BuiltinShaderType)8)));
                 // Control: a type the settings do not list uses the built-in shader, quietly.
                 Assert.Empty(Logs(() => Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals))));
                 BuiltinShaderMode mode = default;
@@ -155,6 +159,23 @@ namespace UnityEngine.Tests
             // localEulerAngles sets no hint.
             t.localEulerAngles = new Vector3(400f, 0f, 0f);
             Assert.Equal(new Vector3(40f, 0f, 0f), t.GetLocalEulerAngles(RotationOrder.OrderZXY));
+
+            // Gimbal lock (the middle angle's sine at least 0.999998): the last angle is zero and
+            // the first carries the rest, in single precision; the hint does not move it.
+            t.SetLocalEulerHint(Vector3.zero);
+            t.localRotation = Quaternion.Euler(90f, 30f, 20f);
+            Assert.Equal(new Vector3(90f, 0f, -10f), t.GetLocalEulerAngles(RotationOrder.OrderZXY));
+            t.localRotation = Quaternion.Euler(-90f, 30f, 0f);
+            Assert.Equal(new Vector3(-90f, 0f, 30f), t.GetLocalEulerAngles(RotationOrder.OrderZXY));
+            t.localRotation = Quaternion.Euler(89.9f, 30f, 0f);
+            Assert.Equal(new Vector3(89.905f, 0f, -29.95f), t.GetLocalEulerAngles(RotationOrder.OrderZXY));
+            t.localRotation = Quaternion.AngleAxis(90f, Vector3.up) * Quaternion.AngleAxis(30f, Vector3.right);
+            Assert.Equal(new Vector3(30f, 90f, 0f), t.GetLocalEulerAngles(RotationOrder.OrderXYZ));
+            t.SetLocalEulerHint(new Vector3(90f, 10f, 20f));
+            t.localRotation = Quaternion.Euler(90f, 30f, 0f);
+            Assert.Equal(new Vector3(90f, 0f, -30f), t.GetLocalEulerAngles(RotationOrder.OrderZXY));
+            // Control: outside the lock the same rotation keeps its own angles in its own order.
+            Assert.Equal(new Vector3(90f, 30f, 0f), t.GetLocalEulerAngles(RotationOrder.OrderXYZ));
 
             // The order changes no rotation.
             var rotation = t.localRotation;

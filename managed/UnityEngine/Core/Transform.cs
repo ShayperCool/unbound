@@ -140,11 +140,15 @@ namespace UnityEngine
         internal void SetRotationOrderInternal(RotationOrder rotationOrder) => m_RotationOrder = rotationOrder;
 
         /// <summary>The local rotation as angles about the axes applied in the order's sequence (the
-        /// first letter first): of the two sets of angles that make the rotation, each angle turned
-        /// by whole turns to the one nearest the Euler hint's, the set nearer the hint, rounded to a
-        /// thousandth of a degree (measured: tests/projects/runtimeapis transform.*euler_order*).</summary>
+        /// first letter first), in single precision from the normalized rotation: the middle angle
+        /// from its sine; in gimbal lock (|sine| at least 0.999998) the last angle is zero and the
+        /// first is twice the half-angle of the rotation's own component. Of the two sets of angles
+        /// that make the rotation, each angle turned by whole turns to the one nearest the Euler
+        /// hint's, the set nearer the hint, rounded to a thousandth of a degree (measured:
+        /// tests/projects/runtimeapis transform.*euler_order*).</summary>
         internal Vector3 GetLocalEulerAngles(RotationOrder order)
         {
+            const float gimbalLock = 0.999998f;
             var (i, j, k) = order switch
             {
                 RotationOrder.OrderXYZ => (0, 1, 2),
@@ -154,31 +158,33 @@ namespace UnityEngine
                 RotationOrder.OrderZYX => (2, 1, 0),
                 _ => (2, 0, 1),
             };
-            // The rotation matrix, then the angles of R(k) * R(j) * R(i): the middle one from its
-            // sine; in gimbal lock the last one is zero and the first carries the rest.
-            Quaternion q = m_LocalRotation.normalized;
-            double x = q.x, y = q.y, z = q.z, w = q.w;
-            double m00 = 1 - 2 * (y * y + z * z), m01 = 2 * (x * y - z * w), m02 = 2 * (x * z + y * w);
-            double m10 = 2 * (x * y + z * w), m11 = 1 - 2 * (x * x + z * z), m12 = 2 * (y * z - x * w);
-            double m20 = 2 * (x * z - y * w), m21 = 2 * (y * z + x * w), m22 = 1 - 2 * (x * x + y * y);
-            double M(int r, int c) => r switch
+            Quaternion r = m_LocalRotation;
+            float length = MathF.Sqrt(r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w);
+            Quaternion q = length < RotationMatrix.MinimumLength ? Quaternion.identity
+                : new Quaternion(r.x / length, r.y / length, r.z / length, r.w / length);
+            float x = q.x, y = q.y, z = q.z, w = q.w;
+            // The rotation matrix, then the angles of R(k) * R(j) * R(i).
+            float m00 = 1f - 2f * (y * y + z * z), m01 = 2f * (x * y - z * w), m02 = 2f * (x * z + y * w);
+            float m10 = 2f * (x * y + z * w), m11 = 1f - 2f * (x * x + z * z), m12 = 2f * (y * z - x * w);
+            float m20 = 2f * (x * z - y * w), m21 = 2f * (y * z + x * w), m22 = 1f - 2f * (x * x + y * y);
+            float M(int row, int column) => row switch
             {
-                0 => c == 0 ? m00 : c == 1 ? m01 : m02,
-                1 => c == 0 ? m10 : c == 1 ? m11 : m12,
-                _ => c == 0 ? m20 : c == 1 ? m21 : m22,
+                0 => column == 0 ? m00 : column == 1 ? m01 : m02,
+                1 => column == 0 ? m10 : column == 1 ? m11 : m12,
+                _ => column == 0 ? m20 : column == 1 ? m21 : m22,
             };
-            double parity = (j - i + 3) % 3 == 1 ? 1 : -1;
-            double sinMiddle = Math.Clamp(-parity * M(k, i), -1, 1);
-            double first, middle = Math.Asin(sinMiddle), last;
-            if (Math.Abs(sinMiddle) < 0.9999999)
+            float parity = (j - i + 3) % 3 == 1 ? 1f : -1f;
+            float sinMiddle = Math.Clamp(-parity * M(k, i), -1f, 1f);
+            float first, middle = MathF.Asin(sinMiddle), last;
+            if (MathF.Abs(sinMiddle) < gimbalLock)
             {
-                first = Math.Atan2(parity * M(k, j), M(k, k));
-                last = Math.Atan2(parity * M(j, i), M(i, i));
+                first = MathF.Atan2(parity * M(k, j), M(k, k));
+                last = MathF.Atan2(parity * M(j, i), M(i, i));
             }
             else
             {
-                first = Math.Atan2(-parity * M(j, k), M(j, j));
-                last = 0;
+                first = 2f * MathF.Atan2(q[i], w);
+                last = 0f;
             }
             const double toDegrees = 180 / Math.PI;
             Span<double> angles = stackalloc double[3], other = stackalloc double[3];
