@@ -3707,6 +3707,8 @@
 {"key":"UnityEngine.HashUtilities/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.HeaderAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.HelpURLAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.HideInCallstackAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.HideInCallstackAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.HideInCallstackAttribute"}
 {"key":"UnityEngine.HideInInspector/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.HideInInspector/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.HideInInspector"}
 {"key":"UnityEngine.HingeJoint/@factory","status":"value","value":"component"}
@@ -7146,6 +7148,7 @@
 {"key":"UnityEngine.SpriteRenderer/Property/UnityEngine.SpriteRenderer/spriteSortPoint","status":"value","value":"enum:0"}
 {"key":"UnityEngine.SpriteRenderer/Property/UnityEngine.SpriteRenderer/tileMode","status":"value","value":"enum:0"}
 {"key":"UnityEngine.Sprites.DataUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.StackTraceUtility/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.StateMachineBehaviour/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEngine.StaticBatchingUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.SubsystemManager/@factory","status":"excluded","value":"static"}

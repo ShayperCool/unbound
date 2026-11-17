@@ -3742,6 +3742,12 @@
       "category": "class",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
+      "type": "UnityEngine.HideInCallstackAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
       "type": "UnityEngine.HideInInspector"
     },
     {
@@ -6797,6 +6803,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.Sprites.DataUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.StackTraceUtility"
     },
     {
       "category": "scriptable",
