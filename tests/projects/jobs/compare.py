@@ -4,8 +4,8 @@
 usage: compare.py REFERENCE.json CANDIDATE.json [--scenario PREFIX] [--details N]
 
 Exception messages are compared after normalizing what the .NET runtime itself formats
-differently from Mono (not the engine): the NullReferenceException text. Values that differ because of the runtime, not the engine, are
-listed in RUNTIME_DIFFERENCES and reported apart.
+differently from Mono (not the engine): the NullReferenceException text. Values that differ
+because of the runtime, not the engine, are listed in RUNTIME_DIFFERENCES and reported apart.
 """
 import json
 import sys

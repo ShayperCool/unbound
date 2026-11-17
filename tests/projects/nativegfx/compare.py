@@ -4,8 +4,7 @@
     compare.py REFERENCE.jsonl ACTUAL.jsonl [--device opengl|vulkan|metal]
 
 Every value compares exactly over the union of keys (pixels as runs, plugin records, pointer
-relations, log messages); Mono's argument exception messages are compared in
-CoreCLR's wording. Every missing, extra and failing value is printed; the exit status is nonzero
+relations, log messages). Every missing, extra and failing value is printed; the exit status is nonzero
 when anything differs, except for the keys `residuals.json` (next to this file) lists with their
 cause and follow-up: those are printed with their reason, and printed as resolved once they match.
 """
