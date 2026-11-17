@@ -94,7 +94,12 @@ namespace UnityEngine.Tests
                 Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.ExtractAnglesFromMatrix, 2),
             }, new[] { Constant(0, Matrix4x4.zero), Constant(2, Matrix4x4.TRS(at, turn, new Vector3(2f, 0f, 3f))) });
             var values = Evaluated(data);
-            Assert.Equal(new[] { 0xc207a65du, 0xc218130cu, 0xc218130cu }, Words(values.GetVector(1, 3)));
+            // The angles go through MathF.Atan2, the platform's math library: on macOS it rounds the
+            // last bit of these two the other way (the C library's arithmetic, not emulated).
+            var zeroFrame = OperatingSystem.IsMacOS()
+                ? new[] { 0xc207a65du, 0xc218130du, 0xc218130du }
+                : new[] { 0xc207a65du, 0xc218130cu, 0xc218130cu };
+            Assert.Equal(zeroFrame, Words(values.GetVector(1, 3)));
             Assert.Equal(new[] { 0x41f00001u, 0xc2f00001u, 0xc3200000u }, Words(values.GetVector(3, 3)));
             var normalized = Quaternion.ToEulerRad(Matrix4x4.zero.rotation) * Mathf.Rad2Deg;
             Assert.NotEqual(0xc207a65du, BitConverter.SingleToUInt32Bits(normalized.x));
