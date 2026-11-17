@@ -1,0 +1,11 @@
+{
+  "commands": ["python3 tests/projects/uitkimmediate/run.py gate"],
+  "summary": "uitkimmediate: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/ImmediateModeElement.cs",
+    "managed/UnityEngine/UIElements/Rendering/PanelRendering.cs",
+    "managed/UnityEngine/UIElements/Rendering/UaPainter.cs",
+    "managed/UnityEngine/UIElements/Rendering/UaPainter.Retained.cs",
+    "managed/UnityEngine/Graphics/Immediate.cs"
+  ]
+}

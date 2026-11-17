@@ -1,0 +1,55 @@
+{"k":"calls.threeFrames","v":"spill=3 clipped=3 scaled=3 under=3 over=3 ortho=3 culledOutside=0 drawnOutside=3 culledPartly=3 hidden=0 beforeThrow=3 thrower=3 afterThrow=3"}
+{"k":"state.spill","v":"modelview 1 0 0 40 / 0 1 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.clipped","v":"modelview 1 0 0 220 / 0 1 0 60 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.scaled","v":"modelview 2 0 0 340 / 0 3 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.under","v":"modelview 1 0 0 450 / 0 1 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.over","v":"modelview 1 0 0 630 / 0 1 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.ortho","v":"modelview 1 0 0 40 / 0 1 0 200 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.drawnOutside","v":"modelview 1 0 0 900 / 0 1 0 360 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.culledPartly","v":"modelview 1 0 0 780 / 0 1 0 420 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.beforeThrow","v":"modelview 1 0 0 200 / 0 1 0 400 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.thrower","v":"modelview 1 0 0 240 / 0 1 0 400 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"state.afterThrow","v":"modelview 1 0 0 280 / 0 1 0 400 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"pixels.spill.inside","v":"255 0 0 255"}
+{"k":"pixels.spill.leftMargin","v":"255 0 0 255"}
+{"k":"pixels.spill.topMargin","v":"255 0 0 255"}
+{"k":"pixels.spill.beyond","v":"0 0 0 255"}
+{"k":"pixels.clipped.inside","v":"0 255 0 255"}
+{"k":"pixels.clipped.parentCorner","v":"0 255 0 255"}
+{"k":"pixels.clipped.outsideParent","v":"0 0 0 255"}
+{"k":"pixels.clipped.belowParent","v":"0 0 0 255"}
+{"k":"pixels.scaled.far","v":"0 0 255 255"}
+{"k":"pixels.scaled.beyondX","v":"0 0 0 255"}
+{"k":"pixels.scaled.beyondY","v":"0 0 0 255"}
+{"k":"pixels.under.alone","v":"0 255 255 255"}
+{"k":"pixels.under.overlap","v":"255 235 4 255"}
+{"k":"pixels.cover.alone","v":"255 235 4 255"}
+{"k":"pixels.base.alone","v":"255 255 255 255"}
+{"k":"pixels.over.overlap","v":"255 0 255 255"}
+{"k":"pixels.over.alone","v":"255 0 255 255"}
+{"k":"pixels.ortho.element","v":"0 0 0 255"}
+{"k":"pixels.ortho.topRight","v":"255 128 0 255"}
+{"k":"pixels.ortho.bottomRight","v":"0 0 0 255"}
+{"k":"pixels.after.alone","v":"255 235 4 255"}
+{"k":"pixels.culledPartly.inside","v":"0 255 0 255"}
+{"k":"pixels.hidden.inside","v":"0 0 0 255"}
+{"k":"pixels.beforeThrow.inside","v":"0 255 0 255"}
+{"k":"logs.drawing","v":""}
+{"k":"throw.calls","v":"spill=1 clipped=1 scaled=1 under=1 over=1 ortho=1 culledOutside=0 drawnOutside=1 culledPartly=1 hidden=0 beforeThrow=1 thrower=1 afterThrow=0"}
+{"k":"throw.logs","v":"Exception: InvalidOperationException: probe failure in thrower"}
+{"k":"afterThrow.calls","v":"spill=1 clipped=1 scaled=1 under=1 over=1 ortho=1 culledOutside=0 drawnOutside=1 culledPartly=1 hidden=0 beforeThrow=1 thrower=1 afterThrow=1"}
+{"k":"afterThrow.logs","v":""}
+{"k":"cullingSwapped.calls","v":"spill=1 clipped=1 scaled=1 under=1 over=1 ortho=1 culledOutside=1 drawnOutside=0 culledPartly=1 hidden=0 beforeThrow=1 thrower=1 afterThrow=1"}
+{"k":"scale2.calls","v":"spill=2 clipped=2 scaled=2 under=2 over=2 ortho=2 culledOutside=0 drawnOutside=2 culledPartly=0 hidden=0 beforeThrow=2 thrower=2 afterThrow=2"}
+{"k":"scale2.state.spill","v":"modelview 1 0 0 40 / 0 1 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"scale2.state.scaled","v":"modelview 2 0 0 340 / 0 3 0 40 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"scale2.state.clipped","v":"modelview 1 0 0 220 / 0 1 0 60 / 0 0 1 0 / 0 0 0 1; active target; camera null"}
+{"k":"scale2.spill.inside","v":"255 0 0 255"}
+{"k":"scale2.spill.leftMargin","v":"255 0 0 255"}
+{"k":"scale2.spill.beyond","v":"0 0 0 255"}
+{"k":"scale2.clipped.inside","v":"0 255 0 255"}
+{"k":"scale2.clipped.outsideParent","v":"0 0 0 255"}
+{"k":"scale2.scaled.far","v":"0 0 255 255"}
+{"k":"scale2.ortho.topRight","v":"255 128 0 255"}
+{"k":"scale2.logs","v":""}
+{"k":"complete","v":true}
