@@ -30,8 +30,9 @@ material made by a script and the built-in default material.
     python3 tests/projects/materialvalidation/run.py publish L1 L2
     python3 tests/projects/materialvalidation/run.py check
 
-The reference is two byte-identical captures of the macOS Editor in batch mode (validation does not
-depend on the OS or the graphics device). Measured: every material of the project's files is
+The reference is two byte-identical captures of the macOS Editor in batch mode (assumed independent
+of the OS and graphics device, not measured; a windowed Linux Editor with URP does not validate
+URP materials on load, tests/projects/graphqueue, and which condition decides is open). Measured: every material of the project's files is
 validated as its editor says (the Standard editor's blend states, render queue range with its
 logged message, texture keywords, the emissive GI flag and `_EMISSION`; the project's editors by
 either name); the built-in default material (GI flags 5, which the Standard editor would make 1
