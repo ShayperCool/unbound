@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -123,6 +124,26 @@ class PrivateDisplayTest(unittest.TestCase):
         refused = subprocess.run([sys.executable, str(SCRIPT), '--'], capture_output=True, text=True)
         self.assertEqual(refused.returncode, 2)
         self.assertIn('name the command', refused.stderr)
+
+    def test_missing_programs_are_named(self):
+        real = shutil.which
+        def which(name, *args, **kwargs):
+            return None if name in self.absent else real(name, *args, **kwargs)
+        for absent, gpu, named in [(('vglrun',), True, 'vglrun'), (('Xvfb', 'vglrun'), True, 'Xvfb and vglrun'),
+                                   (('Xvfb',), False, 'Xvfb')]:
+            self.absent = absent
+            with self.subTest(absent=absent), unittest.mock.patch.object(pd.shutil, 'which', which):
+                with self.assertRaisesRegex(RuntimeError, f'needs {named} '):
+                    pd.run(['true'], screen='64x64x24', gpu=gpu)
+        # Without --gpu VirtualGL is not needed.
+        self.absent = ('vglrun',)
+        with unittest.mock.patch.object(pd.shutil, 'which', which):
+            self.assertEqual(pd.run(['true'], screen='64x64x24'), 0)
+        refused = subprocess.run([sys.executable, '-c', 'import sys, shutil; sys.path.insert(0, sys.argv[1]); '
+                                  'shutil.which = lambda *a, **k: None; import private_display as p; '
+                                  'sys.exit(p.main(["--", "true"]))', str(HERE)], capture_output=True, text=True)
+        self.assertEqual(refused.returncode, 127)
+        self.assertIn('private_display: a private X display needs Xvfb (X11 on Linux)', refused.stderr)
 
     def start_wrapper(self, command):
         """The wrapper running `command` (which writes $DISPLAY to `display`), and that display."""

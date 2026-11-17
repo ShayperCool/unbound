@@ -67,8 +67,17 @@ def environment(base, display):
     return env
 
 
+def missing_tools(gpu):
+    """The programs a run needs that are not installed."""
+    return [tool for tool in ('Xvfb', GPU_PREFIX[0]) if (gpu or tool == 'Xvfb') and not shutil.which(tool)]
+
+
 def run(command, *, screen='1280x720x24', gpu=False, base=None):
     """Runs `command` on a private display; returns its exit status (128+N for signal N)."""
+    missing = missing_tools(gpu)
+    if missing:
+        raise RuntimeError(f'a private X display needs {" and ".join(missing)} (X11 on Linux), '
+                           'which this machine does not have')
     display = Display(screen)
     stopping = []
     child = None
@@ -104,7 +113,11 @@ def main(argv=None):
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     if not command:
         parser.error('name the command to run after --')
-    return run(command, screen=args.screen, gpu=args.gpu)
+    try:
+        return run(command, screen=args.screen, gpu=args.gpu)
+    except RuntimeError as error:
+        print(f'private_display: {error}', file=sys.stderr)
+        return 127
 
 
 if __name__ == '__main__':

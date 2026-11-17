@@ -79,7 +79,8 @@ RECORDED_LIMIT_MAX_SECONDS = 3600
 # (suite.py's DURATIONS beside the summary). A baseline that ran beside other heavy work then does
 # not double a limit or put a check beyond the cap (audiopitch took 9186 s in one, most of it
 # waiting for engine slots, and 4736 s in the one before); a run cut short by a failure does not
-# shorten it.
+# shorten it. A probe that really got longer keeps its older, shorter time for up to two more
+# promotions: a check then over its limit is run again alone before it is reported.
 RECENT_BASELINES = 3
 COMPLETE = ('pass', 'report')
 
