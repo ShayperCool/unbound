@@ -135,14 +135,17 @@ namespace UnityEngine.UIElements
             _ => otherwise,
         };
 
-        /// <summary>An enum value's options: its low 32 bits, sign-extended (the release reads the value
-        /// as a 32-bit integer); narrower enums read their own bits.</summary>
-        static ulong BitsOf<T>(T value) where T : Enum => Unsafe.SizeOf<T>() switch
+        /// <summary>An enum value's options: the value as a 32-bit integer (narrower values widened as
+        /// their underlying type is, wider ones cut to their low 32 bits), sign-extended to 64 bits, as
+        /// the Unity 6000.0.71f1 Editor reads it (tests/projects/uitkcontrols state.from*).</summary>
+        static ulong BitsOf<T>(T value) where T : Enum => (ulong)(long)(Type.GetTypeCode(typeof(T)) switch
         {
-            1 => Unsafe.As<T, byte>(ref value),
-            2 => Unsafe.As<T, ushort>(ref value),
-            _ => (ulong)(long)Unsafe.As<T, int>(ref value),
-        };
+            TypeCode.SByte => Unsafe.As<T, sbyte>(ref value),
+            TypeCode.Byte => Unsafe.As<T, byte>(ref value),
+            TypeCode.Int16 => Unsafe.As<T, short>(ref value),
+            TypeCode.UInt16 => Unsafe.As<T, ushort>(ref value),
+            _ => Unsafe.As<T, int>(ref value),
+        });
 
         void ResetOptions(int startingIndex)
         {

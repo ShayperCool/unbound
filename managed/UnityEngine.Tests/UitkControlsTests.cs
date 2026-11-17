@@ -19,12 +19,22 @@ namespace UnityEngine.Tests
         [Flags] enum ShortFlags : short { A = 1, Top = unchecked((short)0x8000) }
         [Flags] enum ULongFlags : ulong { A = 1, Top = 1UL << 63 }
         [Flags] enum IntFlags { A = 1, Top = int.MinValue }
+        [Flags] enum SByteFlags : sbyte { A = 1, Top = sbyte.MinValue }
+        [Flags] enum UShortFlags : ushort { A = 1, Top = 0x8000 }
 
-        // The probe reads byte, int and long enums at their default lengths: other widths read their
-        // own bits, wider ones only their low 32 bits, sign-extended.
+        // An enum value is read as a 32-bit integer, widened as its underlying type is, then
+        // sign-extended (the probe measures byte, short, int and long enums): signed and unsigned
+        // widths here, the wide ones cut to their low 32 bits.
         [Fact]
         public void EnumFlagsReadTheLow32BitsSignExtended()
         {
+            var signedNarrow = ToggleButtonGroupState.FromEnumFlags(SByteFlags.A | SByteFlags.Top, 64);
+            Assert.True(signedNarrow[0] && signedNarrow[7] && signedNarrow[40]);
+            var unsignedNarrow = ToggleButtonGroupState.FromEnumFlags(UShortFlags.A | UShortFlags.Top, 64);
+            Assert.True(unsignedNarrow[0] && unsignedNarrow[15]);
+            Assert.False(unsignedNarrow[16]);
+            Assert.True(ToggleButtonGroupState.Compare(new ToggleButtonGroupState(0x8001, 16), UShortFlags.A | UShortFlags.Top));
+            Assert.False(ToggleButtonGroupState.Compare(new ToggleButtonGroupState(0x81, 8), SByteFlags.A | SByteFlags.Top));
             var narrow = ToggleButtonGroupState.FromEnumFlags(ShortFlags.A | ShortFlags.Top);
             Assert.Equal(16, narrow.length);
             Assert.True(narrow[0] && narrow[15]);
