@@ -265,15 +265,15 @@ class Checker:
         print(f'postland: managed tests in Debug at {target[:10]}; log {log}', flush=True)
         try:
             _, build = gate.build()
-            code, failed = gate.managed_test_failures(build, 'Debug')
+            code, failed, aborted = gate.managed_test_failures(build, 'Debug')
         except SystemExit:
             self.report(DEBUG_TESTS, 'undecided', at=target, result='Debug tests could not run', logs=[str(log)],
                         range=[base, target])
             return
-        if code and not failed:
+        if code and (aborted or not failed):
             # A test host that crashed (an assertion on another thread) lists only finished tests.
-            self.report(DEBUG_TESTS, 'undecided', at=target, result=f'Debug tests exited {code} without failing tests',
-                        logs=[str(log)], range=[base, target])
+            self.report(DEBUG_TESTS, 'undecided', at=target, result=f'Debug test run aborted (exit {code})',
+                        failures=sorted(failed), logs=[str(log)], range=[base, target])
             return
         failed -= land.known_test_failures()
         new = sorted(failed-set(self.state().get('debug_failures', [])))

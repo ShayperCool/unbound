@@ -50,6 +50,8 @@ SERVICE_SCAN_SECONDS = 2700
 SERVICE_RUN_SECONDS = 3000
 # Links found by a walk protect removals for this long; the walk is repeated after it.
 LINK_SNAPSHOT_SECONDS = 900
+# The runtime collector (a few seconds) runs with a walk at most this old.
+RUNTIME_WALK_SECONDS = 300
 # Reading every live process's paths takes 4-8 s on the loaded machine; removals reuse one
 # reading for at most this long (every candidate is idle for a day or more).
 PROCESS_GUARD_SECONDS = 60
@@ -67,8 +69,6 @@ GATE_HANDOFF_SECONDS = 2
 HARD_STOP_FREE_GIB = 10
 # A run instance or suite label with one of these in its name is never a candidate.
 RETAINED_NAMES = ('sheriff', 'baseline')
-# Candidates checked before each settlement against links between them.
-REMOVAL_BATCH_SIZE = 32
 # Times the link walk lists again the places that changed while it walked them.
 RECHECK_ROUNDS = 3
 
@@ -76,10 +76,6 @@ RECHECK_ROUNDS = 3
 def inside(path, root):
     value, prefix = str(path), str(root)
     return value == prefix or value.startswith(prefix.rstrip(os.sep)+os.sep)
-
-
-def overlaps(a, b):
-    return inside(a, b) or inside(b, a)
 
 
 def task_states(queue):
@@ -284,15 +280,6 @@ def ancestors(path):
         path = parent
 
 
-def overlapping(keys, paths):
-    """The keys (path strings) that lie inside one of paths or hold one of them, without
-    comparing every pair."""
-    values = {os.fspath(path) for path in paths}
-    hits = {parent for value in values for parent in ancestors(value) if parent in keys}
-    hits.update(key for key in keys if key not in hits and any(parent in values for parent in ancestors(key)))
-    return hits
-
-
 def gone(error):
     return error.errno in (errno.ENOENT, errno.ESRCH, errno.ENOTDIR)
 
@@ -392,9 +379,9 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
     compiler stores are excluded.
 
     Workers write meanwhile. A directory that vanishes is skipped, and one that changes while it
-    is listed is listed directly; after the walk, the parents of vanished directories and the
-    changed directories are listed again (up to RECHECK_ROUNDS times), so that a folder renamed in
-    place (an Editor rotating its cache folders) is walked under its new name. A directory moved
+    is listed is listed directly; after the walk, the nearest listed place above each vanished
+    directory and the changed directories are listed again (up to RECHECK_ROUNDS times), so that a
+    folder renamed in place (an Editor rotating its cache folders) is walked under its new name. A directory moved
     elsewhere during the walk can be missed (see the module docstring). Raises TimeoutError when
     the walk does not finish in seconds: an incomplete walk permits no removal. The walk visits
     millions of directories, so it keeps paths as strings."""
@@ -409,9 +396,14 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
     listed_paths = set()
 
     def vanished(directory):
+        """Look again at the nearest listed place above a directory that vanished (one renamed
+        after its own listing has vanished with it)."""
         parent = os.path.dirname(directory)
-        if parent in listed_paths:
-            changed.add(parent)
+        while parent in listed_paths:
+            if os.path.lexists(parent):
+                changed.add(parent)
+                return
+            parent = os.path.dirname(parent)
 
     def walked(directory, identity):
         """Whether the directory with this identity was walked already (perhaps under another path)."""
@@ -486,8 +478,14 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             rounds += 1
             recheck = sorted(changed)
             changed.clear()
-            listed = [current_entries(directory) for directory in recheck
-                      if not any(inside(directory, path) for path in excluded)]
+            listed = []
+            for directory in recheck:
+                if any(inside(directory, path) for path in excluded):
+                    continue
+                if not os.path.lexists(directory):
+                    vanished(directory)
+                    continue
+                listed.append(current_entries(directory))
             follow(listed)
         if prune:
             index.finish()
@@ -601,8 +599,12 @@ class Janitor:
         try:
             self.discover()
             self.remove_candidates()
+            # The runtime collector holds the snapshot lock that land gates and suites wait for:
+            # walk before it, never while it runs.
+            if time.monotonic()-self.links_at >= RUNTIME_WALK_SECONDS:
+                self.walk_links()
             runtime_snapshot.cleanup(days=self.idle_hours/24, cache=self.runtimes, repo=self.repo,
-                                     remove=lambda path: self.remove(path, 'runtime', self.idle_hours),
+                                     remove=lambda path: self.remove(path, 'runtime', self.idle_hours, walk=False),
                                      dry_run=not self.apply)
         except TimeoutError as error:
             self.partial = True
@@ -724,6 +726,8 @@ class Janitor:
                 yield path
                 continue
             for parent in (path, path/'runs'):
+                if parent.is_symlink():
+                    continue  # its runs lie elsewhere, under other names
                 instances = []
                 for child in children(parent):
                     try:
@@ -866,14 +870,15 @@ class Janitor:
         except FileNotFoundError:
             return
 
-    def remove(self, path, kind, hours):
+    def remove(self, path, kind, hours, walk=True):
         """Check path again with fresh guards and remove it; True when it was removed (or would be,
-        in a dry run). Every removal goes through here, the runtime collector's too."""
+        in a dry run). Every removal goes through here, the runtime collector's too (walk=False: a
+        stale walk is not repeated there, see collect)."""
         path = Path(os.path.abspath(path))
         self.budget()
         if self.links_at is None:
             self.discover()  # nothing is removed without a walk
-        elif time.monotonic()-self.links_at >= LINK_SNAPSHOT_SECONDS:
+        elif walk and time.monotonic()-self.links_at >= LINK_SNAPSHOT_SECONDS:
             self.walk_links()
         self.refresh_processes()
         self.refresh_queue()
@@ -908,7 +913,6 @@ class Janitor:
         if reason:
             self.keep(path, reason)
             return False
-        self.removed_paths.add(os.fspath(path))
         if self.apply:
             self.emit('removing', path=str(path), kind=kind, allocated_bytes=allocated,
                       reclaimable_bytes=reclaimable)
@@ -919,9 +923,11 @@ class Janitor:
                     path.unlink()
             except FileNotFoundError:
                 if os.path.lexists(path):
-                    # Something inside went during the removal: what is left stays.
+                    # Something inside went during the removal: what is left stays, and its links
+                    # protect as before.
                     self.keep(path, 'modified during the removal')
                     return False
+        self.removed_paths.add(os.fspath(path))
         self.emit('removed' if self.apply else 'would_remove', path=str(path), kind=kind,
                   allocated_bytes=allocated, reclaimable_bytes=reclaimable)
         self.removed += 1

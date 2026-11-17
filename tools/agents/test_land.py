@@ -2162,5 +2162,47 @@ class GateLaneTests(unittest.TestCase):
             self.assertEqual(events, ['snapshot', 'generated stubs', 'probe runtime', 'probes', 'automatic'])
             self.assertFalse((root/'gate.rust-tests.log').exists())
 
+class ManagedTestResultTests(unittest.TestCase):
+    """The managed test step reads failures and aborted runs from the trx file."""
+    TRX = ('''<?xml version="1.0" encoding="utf-8"?>
+<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Results><UnitTestResult testName="A" outcome="Failed" /><UnitTestResult testName="B" outcome="Passed" /></Results>
+  <ResultSummary outcome="{summary}"><RunInfos>{info}</RunInfos></ResultSummary>
+</TestRun>''')
+
+    def gate(self, summary, info=''):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        (root/'gate.log').write_text('')
+        gate = land.Gate(root, 'base', [], False, root/'gate.log')
+        def step(name, command, **kwargs):
+            name = next(value for value in command if value.startswith('trx;')).split('=', 1)[1]
+            results = Path(command[command.index('--results-directory')+1])
+            results.mkdir(parents=True, exist_ok=True)
+            (results/name).write_text(self.TRX.format(summary=summary, info=info))
+            return 1
+        gate.step = step
+        return gate, root
+
+    def test_failures_and_an_aborted_run_are_read(self):
+        crash = '<RunInfo outcome="Error"><Text>The active test run was aborted. Reason: Test host process crashed</Text></RunInfo>'
+        for summary, info, aborted in (('Failed', '', False), ('Failed', crash, True), ('Aborted', '', True)):
+            with self.subTest(summary=summary, info=bool(info)):
+                gate, root = self.gate(summary, info)
+                self.assertEqual(gate.managed_test_failures(root/'target', 'Debug'), (1, {'A'}, aborted))
+                self.assertTrue((root/'target/land-test-results/land-debug.trx').is_file())
+
+    def test_an_aborted_release_run_fails_the_gate_beside_known_failures(self):
+        crash = '<RunInfo outcome="Error"><Text>Test host process crashed</Text></RunInfo>'
+        with mock.patch.object(land, 'known_test_failures', return_value={'A'}), \
+             contextlib.redirect_stderr(io.StringIO()):
+            gate, root = self.gate('Failed')
+            gate.managed_tests(root/'target')  # only a known failure: passes
+            gate, root = self.gate('Failed', crash)
+            with self.assertRaises(SystemExit):
+                gate.managed_tests(root/'target')
+
+
 if __name__ == '__main__':
     unittest.main()

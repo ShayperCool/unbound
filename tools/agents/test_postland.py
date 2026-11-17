@@ -249,7 +249,9 @@ class PostlandTests(unittest.TestCase):
                 result = results.pop(0)
                 if isinstance(result, BaseException):
                     raise result
-                return 1, set(result)
+                if isinstance(result, tuple):
+                    return 1, set(result[0]), result[1]
+                return 1, set(result), False
         self_root = self.root
         return Gate, runs
 
@@ -280,17 +282,18 @@ class PostlandTests(unittest.TestCase):
         check = ['probe', 'probe-check', 'fast check', 'r']
         checker = self.checker(lambda *args: False)
         checker.save(debug_failures=['A'])
-        # A build that fails, and a test host that exits non-zero without a failing test (crashed).
-        Gate, runs = self.debug_gate([SystemExit(5), set()])
+        # A build that fails, a test host that exits non-zero without a failing test, and an aborted
+        # run beside a known failure (a crashed host lists only the tests that finished).
+        Gate, runs = self.debug_gate([SystemExit(5), set(), (['A'], True)])
         with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate):
-            self.land_branch('first', {'managed/x.cs': '1'}, [check])
-            self.assertTrue(checker.round())
-            self.land_branch('second', {'managed/x.cs': '2'}, [check])
-            self.assertTrue(checker.round())
+            for number in range(3):
+                self.land_branch(f'b{number}', {'managed/x.cs': str(number)}, [check])
+                self.assertTrue(checker.round())
         self.assertEqual(sorted((r['probe'], r['kind'], r['result']) for r in self.reports()),
-                         [('managed-tests-debug', 'undecided', 'Debug tests could not run'),
-                          ('managed-tests-debug', 'undecided', 'Debug tests exited 1 without failing tests')])
-        self.assertEqual([names for _, names, _ in checker.calls], [['probe'], ['probe']])
+                         [('managed-tests-debug', 'undecided', 'Debug test run aborted (exit 1)'),
+                          ('managed-tests-debug', 'undecided', 'Debug test run aborted (exit 1)'),
+                          ('managed-tests-debug', 'undecided', 'Debug tests could not run')])
+        self.assertEqual([names for _, names, _ in checker.calls], [['probe']]*3)
         self.assertEqual(checker.state()['debug_failures'], ['A'])  # nothing learned from either run
 
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):

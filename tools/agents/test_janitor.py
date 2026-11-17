@@ -372,6 +372,27 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(renamed)
         self.assertTrue(old.is_dir())
 
+    def test_a_folder_renamed_after_its_listing_is_walked_under_its_new_name(self):
+        # Listed as 02, renamed to 03 before its subfolder (holding the link) is reached.
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        holder = self.directory('holder')
+        (holder/'02/sub').mkdir(parents=True)
+        (holder/'02/sub/link').symlink_to(old/'output')
+        original = run_cache_index.DirectoryIndex.stat_many
+        renamed = []
+        def rename_parent(index, paths):
+            if str(holder/'02/sub') in map(str, paths) and not renamed:
+                (holder/'02').rename(holder/'03')
+                renamed.append(True)
+            return original(index, paths)
+        # One recheck suffices: the walk looks again at the nearest listed place that still exists.
+        with patch.object(run_cache_index.DirectoryIndex, 'stat_many', rename_parent), \
+             patch.object(janitor, 'RECHECK_ROUNDS', 1):
+            self.collect_applied()
+        self.assertTrue(renamed)
+        self.assertTrue(old.is_dir())
+        self.assertEqual(self.rows('links')[0]['unsettled'], 0)
+
     def test_a_link_in_a_directory_changing_while_listed_still_protects(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])
         holder = self.directory('holder')
@@ -465,6 +486,52 @@ class JanitorTests(unittest.TestCase):
                 self.assertFalse(self.j.remove(second, 'run', 24))
             self.assertTrue(self.j.remove(first, 'run', 24))
         self.assertTrue(second.is_dir())
+
+    def test_a_run_whose_removal_stopped_midway_keeps_what_its_links_name(self):
+        first, second, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
+        (second/'link').symlink_to(first/'output')
+        original = janitor.shutil.rmtree
+        def interrupted(path):
+            if Path(path) == second:
+                raise FileNotFoundError(2, 'No such file or directory', str(second/'gone'))
+            original(path)
+        with patch.object(janitor.shutil, 'rmtree', side_effect=interrupted):
+            self.collect_applied()
+        self.assertTrue(second.is_dir())
+        self.assertTrue(first.is_dir())  # still named from the part of second that stayed
+
+    def test_the_runtime_collector_never_waits_for_a_walk(self):
+        snapshot = self.j.runtimes/'snapshots'/('a'*64)
+        snapshot.mkdir(parents=True)
+        walks = []
+        original = janitor.Janitor.walk_links
+        def walk(janitor_self):
+            walks.append(janitor_self.runtime_lock)
+            original(janitor_self)
+        def cleanup(remove, **options):
+            self.j.runtime_lock = True
+            try:
+                remove(snapshot)
+            finally:
+                self.j.runtime_lock = False
+        self.j.runtime_lock = False
+        with self.guards(), patch.object(janitor.runtime_snapshot, 'cleanup', side_effect=cleanup), \
+             patch.object(janitor.Janitor, 'walk_links', walk), patch.object(janitor, 'LINK_SNAPSHOT_SECONDS', 0), \
+             patch.object(janitor, 'RUNTIME_WALK_SECONDS', 0):
+            self.j.apply = True
+            self.j.collect()
+        self.assertEqual(walks, [False, False])  # discovery, then right before the collector
+        self.assertFalse(snapshot.exists())
+
+    def test_runs_behind_a_linked_runs_folder_stay(self):
+        elsewhere = self.directory('elsewhere')
+        runs = [self.directory(f'elsewhere/runs/gate-{n}') for n in (1, 2)]
+        probe = self.volume/'unbound-validation/runs/probe'
+        probe.mkdir(parents=True)
+        (probe/'runs').symlink_to(elsewhere/'runs')
+        self.collect_applied()
+        for path in runs:
+            self.assertTrue(path.is_dir())
 
     def test_processes_are_read_again_after_the_guard_interval(self):
         paths = [self.directory(f'q1/old-{n}') for n in range(3)]

@@ -922,7 +922,8 @@ class Gate:
             self.fail('API tooling tests')
 
     def managed_test_failures(self, target, configuration='Release'):
-        """Run the managed unit tests built in configuration: (exit code, failing test names)."""
+        """Run the managed unit tests built in configuration: (exit code, failing test names, whether
+        the run was aborted: a crashed test host lists only the tests that finished)."""
         dotnet = Path.home()/'.dotnet/dotnet'
         dotnet = str(dotnet) if dotnet.is_file() else 'dotnet'
         results = target/'land-test-results'
@@ -939,14 +940,18 @@ class Gate:
             raise LaneStopped(step)
         if not trx.is_file():
             self.fail(f'{step} (no results: build error?)')
-        failed = set()
+        failed, aborted = set(), False
         for result in ET.parse(trx).getroot().iter():
             if result.tag.endswith('UnitTestResult') and result.get('outcome') == 'Failed':
                 failed.add(result.get('testName'))
-        return code, failed
+            elif result.tag.endswith('ResultSummary') and result.get('outcome') in ('Aborted', 'Error', 'Timeout'):
+                aborted = True
+            elif result.tag.endswith('RunInfo') and result.get('outcome') == 'Error':
+                aborted = True  # "The active test run was aborted", "Test host process crashed"
+        return code, failed, aborted
 
     def managed_tests(self, target):
-        code, failed = self.managed_test_failures(target)
+        code, failed, aborted = self.managed_test_failures(target)
         known = known_test_failures()
         new = sorted(failed - known)
         fixed = sorted(known - failed)
@@ -956,7 +961,7 @@ class Gate:
         if new:
             print('land: new managed test failures:\n  ' + '\n  '.join(new), file=sys.stderr)
             die(5, f'gate failed at managed tests; full log: {self.log}')
-        if code and not failed:
+        if code and (aborted or not failed):
             self.fail('managed tests')
 
     def touched_crates(self, changed):
