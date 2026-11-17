@@ -441,8 +441,60 @@ namespace UnityEngine
             m_TransparencySortAxis = GraphicsSettings.transparencySortAxis;
         }
 
-        public Matrix4x4 GetStereoViewMatrix(StereoscopicEye eye) => worldToCameraMatrix;
-        public Matrix4x4 GetStereoProjectionMatrix(StereoscopicEye eye) => projectionMatrix;
+        // Stereo matrices of a camera without an XR device: each eye keeps the matrices game code
+        // set, identity until then, apart from the camera's own matrices; the non-jittered
+        // projection is the set projection, and the resets and the device copy change nothing
+        // (measured: tests/projects/runtimeapis camera.*).
+        EyeMatrices m_StereoProjection, m_StereoView;
+
+        /// <summary>A matrix per eye, unset until game code sets it.</summary>
+        struct EyeMatrices
+        {
+            Matrix4x4? m_Left, m_Right;
+
+            public Matrix4x4? this[StereoscopicEye eye]
+            {
+                get => eye == StereoscopicEye.Left ? m_Left : m_Right;
+                set
+                {
+                    if (eye == StereoscopicEye.Left) m_Left = value;
+                    else m_Right = value;
+                }
+            }
+        }
+
+        public Matrix4x4 GetStereoViewMatrix(StereoscopicEye eye) => m_StereoView[eye] ?? Matrix4x4.identity;
+        public void SetStereoViewMatrix(StereoscopicEye eye, Matrix4x4 matrix) => m_StereoView[eye] = matrix;
+
+        /// <summary>The eye's projection; unset, identity with a warning.</summary>
+        public Matrix4x4 GetStereoProjectionMatrix(StereoscopicEye eye)
+        {
+            if (m_StereoProjection[eye] is Matrix4x4 matrix) return matrix;
+            Log.Engine(LogType.Warning, "Camera.GetStereoProjectionMatrix is returning an invalid valid value since the value has not been set.\n", this);
+            return Matrix4x4.identity;
+        }
+
+        public void SetStereoProjectionMatrix(StereoscopicEye eye, Matrix4x4 matrix) => m_StereoProjection[eye] = matrix;
+        public Matrix4x4 GetStereoNonJitteredProjectionMatrix(StereoscopicEye eye) => m_StereoProjection[eye] ?? Matrix4x4.identity;
+
+        [Unbound.EditorFaithful("measured: tests/projects/runtimeapis camera.copy_device_to_nonjittered_* (no XR device)")]
+        public void CopyStereoDeviceProjectionMatrixToNonJittered(StereoscopicEye eye) { }
+
+        [Unbound.EditorFaithful("measured: tests/projects/runtimeapis camera.reset_stereo_projection (no XR device: the set matrices stay)")]
+        public void ResetStereoProjectionMatrices() { }
+
+        [Unbound.EditorFaithful("measured: tests/projects/runtimeapis camera.reset_stereo_view (no XR device: the set matrices stay)")]
+        public void ResetStereoViewMatrices() { }
+
+        /// <summary>Only the Scene view filters what a camera shows.</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/runtimeapis camera.scene_view_filter_mode")]
+        public SceneViewFilterMode sceneViewFilterMode => SceneViewFilterMode.Off;
+
+        public enum SceneViewFilterMode
+        {
+            Off = 0,
+            ShowFiltered = 1,
+        }
 
         /// <summary>A gate fit's parameters: the mode and the aspect of the image to fit.</summary>
         public partial struct GateFitParameters

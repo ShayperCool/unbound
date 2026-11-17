@@ -157,6 +157,11 @@ namespace UnityEngine.Rendering
 
         void Add(Action<Context> command) => m_Commands.Add(command);
 
+        /// <summary>Records a command that does nothing on this device (it still takes space in the
+        /// buffer).</summary>
+        internal void AddWithoutEffect() => m_Commands.Add(s_WithoutEffect);
+        static readonly Action<Context> s_WithoutEffect = _ => { };
+
         /// <summary>Runs the commands now (Graphics.ExecuteCommandBuffer): temporaries it does not
         /// release are released after.</summary>
         internal void Execute(Camera camera)

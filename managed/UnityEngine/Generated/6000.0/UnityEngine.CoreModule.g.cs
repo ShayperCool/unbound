@@ -324,12 +324,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssemblyFullName.GetHashCode"); return default; }
         [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssemblyFullName.ToString"); return default; }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1)]
-    [global::Unbound.Stub]
-    public unsafe partial class AssemblyIsEditorAssembly : global::System.Attribute
-    {
-        [global::Unbound.Stub] public AssemblyIsEditorAssembly() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssemblyIsEditorAssembly.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial struct AssemblyVersion
     {
@@ -539,12 +533,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetLocalSpaceAim() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetLocalSpaceAim"); return default; }
         [global::Unbound.Stub] internal string[] GetCameraBufferWarnings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetCameraBufferWarnings"); return global::System.Array.Empty<string>(); }
         [global::Unbound.Stub] internal global::UnityEngine.Vector2 GetFrustumPlaneSizeAt(float distance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetFrustumPlaneSizeAt"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Matrix4x4 GetStereoNonJitteredProjectionMatrix(global::UnityEngine.Camera.StereoscopicEye eye) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.GetStereoNonJitteredProjectionMatrix"); return default; }
-        [global::Unbound.Stub] public void CopyStereoDeviceProjectionMatrixToNonJittered(global::UnityEngine.Camera.StereoscopicEye eye) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.CopyStereoDeviceProjectionMatrixToNonJittered"); }
-        [global::Unbound.Stub] public void SetStereoProjectionMatrix(global::UnityEngine.Camera.StereoscopicEye eye, global::UnityEngine.Matrix4x4 matrix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetStereoProjectionMatrix"); }
-        [global::Unbound.Stub] public void ResetStereoProjectionMatrices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.ResetStereoProjectionMatrices"); }
-        [global::Unbound.Stub] public void SetStereoViewMatrix(global::UnityEngine.Camera.StereoscopicEye eye, global::UnityEngine.Matrix4x4 matrix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetStereoViewMatrix"); }
-        [global::Unbound.Stub] public void ResetStereoViewMatrices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.ResetStereoViewMatrices"); }
         [global::System.Obsolete("SubmitRenderRequests is obsolete, use SubmitRenderRequest with RequestData of supported types such as RenderPipeline.StandardRequest")] [global::Unbound.Stub] public void SubmitRenderRequests(global::System.Collections.Generic.List<global::UnityEngine.Camera.RenderRequest> renderRequests) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SubmitRenderRequests"); }
         [global::Unbound.Stub] public void SubmitRenderRequest<RequestData>(RequestData renderRequest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SubmitRenderRequest"); }
         [global::Unbound.Stub] public static void SetupCurrent(global::UnityEngine.Camera cur) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.SetupCurrent"); }
@@ -568,7 +556,6 @@ namespace UnityEngine
         public float anamorphism { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.anamorphism"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.anamorphism"); } }
         public bool areVRStereoViewMatricesWithinSingleCullTolerance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.areVRStereoViewMatricesWithinSingleCullTolerance"); return default; } }
         internal global::UnityEngine.StereoTargetEyeMask stereoTargetEyeInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.stereoTargetEyeInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.stereoTargetEyeInternal"); } }
-        public global::UnityEngine.Camera.SceneViewFilterMode sceneViewFilterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.sceneViewFilterMode"); return default; } }
         [global::System.Obsolete("Property isOrthoGraphic has been deprecated. Use orthographic (UnityUpgradable) -> orthographic")] public bool isOrthoGraphic { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.isOrthoGraphic"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.isOrthoGraphic"); } }
         [global::System.Obsolete("Property mainCamera has been deprecated. Use Camera.main instead (UnityUpgradable) -> main")] public static global::UnityEngine.Camera mainCamera { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.mainCamera"); return default; } }
         [global::System.Obsolete("Property stereoMirrorMode is no longer supported. Please use single pass stereo rendering instead.")] public bool stereoMirrorMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.stereoMirrorMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Camera.stereoMirrorMode"); } }
@@ -582,11 +569,6 @@ namespace UnityEngine
         {
             Vertical = 0,
             Horizontal = 1,
-        }
-        public enum SceneViewFilterMode
-        {
-            Off = 0,
-            ShowFiltered = 1,
         }
         [global::System.Obsolete("The RenderRequest struct is obsolete, use the function overload with RequestData of supported types such as RenderPipeline.StandardRequest")]
         public enum RenderRequestMode
@@ -646,21 +628,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal global::UnityEngine.Color AlphaMultiplied(float multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.AlphaMultiplied"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Color RGBMultiplied(global::UnityEngine.Color multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.RGBMultiplied"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ColorGamutUtility
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.ColorPrimaries GetColorPrimaries(global::UnityEngine.ColorGamut gamut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorGamutUtility.GetColorPrimaries"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.WhitePoint GetWhitePoint(global::UnityEngine.ColorGamut gamut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorGamutUtility.GetWhitePoint"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TransferFunction GetTransferFunction(global::UnityEngine.ColorGamut gamut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorGamutUtility.GetTransferFunction"); return default; }
-        [global::Unbound.Stub] public ColorGamutUtility() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorGamutUtility.ctor"); }
-    }
-    public enum ColorPrimaries
-    {
-        Unknown = -1,
-        Rec709 = 0,
-        Rec2020 = 1,
-        P3 = 2,
     }
     unsafe partial class ColorUsageAttribute
     {
@@ -1456,12 +1423,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void EditorPrefsSetInt(string key, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsSetInt"); }
         [global::Unbound.Stub] internal static int EditorPrefsGetInt(string key, int defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsGetInt"); return default; }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PreferBinarySerialization : global::System.Attribute
-    {
-        [global::Unbound.Stub] public PreferBinarySerialization() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PreferBinarySerialization.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class PreloadData : global::UnityEngine.Object
     {
@@ -1668,15 +1629,6 @@ namespace UnityEngine
             internal unsafe delegate void AdditionalRootsHandlerDelegate(global::System.IntPtr state);
         }
     }
-    internal enum RotationOrder
-    {
-        OrderXYZ = 0,
-        OrderXZY = 1,
-        OrderYZX = 2,
-        OrderYXZ = 3,
-        OrderZXY = 4,
-        OrderZYX = 5,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class RuntimeUndo
     {
@@ -1688,7 +1640,6 @@ namespace UnityEngine
     }
     unsafe partial class Screen
     {
-        [global::Unbound.Stub] public static void SetMSAASamples(int numSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Screen.SetMSAASamples"); }
         [global::System.Obsolete("Property GetResolution has been deprecated. Use resolutions instead (UnityUpgradable) -> resolutions")] public static global::UnityEngine.Resolution[] GetResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Screen.GetResolution"); return global::System.Array.Empty<global::UnityEngine.Resolution>(); } }
         [global::System.Obsolete("Property showCursor has been deprecated. Use Cursor.visible instead (UnityUpgradable) -> UnityEngine.Cursor.visible")] public static bool showCursor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Screen.showCursor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Screen.showCursor"); } }
     }
@@ -1728,12 +1679,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.ScriptableObject CreateInstance(global::System.Type type, global::System.Action<global::UnityEngine.ScriptableObject> initialize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ScriptableObject.CreateInstance"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.ScriptableObject CreateScriptableObjectInstanceFromType(global::System.Type type, bool applyDefaultsAndReset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ScriptableObject.CreateScriptableObjectInstanceFromType"); return default; }
         [global::Unbound.Stub] internal static void ResetAndApplyDefaultInstances(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ScriptableObject.ResetAndApplyDefaultInstances"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class ScriptingRuntime
-    {
-        [global::Unbound.Stub] public static string[] GetAllUserAssemblies() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ScriptingRuntime.GetAllUserAssemblies"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public ScriptingRuntime() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ScriptingRuntime.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ScriptingUtility
@@ -1873,11 +1818,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static float Snap(float val, float snap) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Snapping.Snap"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 Snap(global::UnityEngine.Vector2 val, global::UnityEngine.Vector2 snap) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Snapping.Snap"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector3 Snap(global::UnityEngine.Vector3 val, global::UnityEngine.Vector3 snap, global::UnityEngine.SnapAxis axis = (global::UnityEngine.SnapAxis)7) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Snapping.Snap"); return default; }
-    }
-    unsafe partial struct SortingLayer
-    {
-        [global::Unbound.Stub] internal static global::UnityEngine.SortingLayer.LayerChangedCallback onLayerChanged;
-        internal unsafe delegate void LayerChangedCallback();
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class SparseTexture : global::UnityEngine.Texture
@@ -2102,8 +2042,6 @@ namespace UnityEngine
     unsafe partial class Texture
     {
         [global::System.Obsolete("Use GetNativeTexturePtr instead.")] [global::Unbound.Stub] public int GetNativeTextureID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.GetNativeTextureID"); return default; }
-        [global::Unbound.Stub] public static void SetStreamingTextureMaterialDebugProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.SetStreamingTextureMaterialDebugProperties"); }
-        [global::Unbound.Stub] public static void SetStreamingTextureMaterialDebugProperties(int materialTextureSlot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.SetStreamingTextureMaterialDebugProperties"); }
         [global::Unbound.Stub] internal ulong GetPixelDataSize(int mipLevel, int element = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.GetPixelDataSize"); return default; }
         [global::Unbound.Stub] internal ulong GetPixelDataOffset(int mipLevel, int element = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.GetPixelDataOffset"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.TextureColorSpace GetTextureColorSpace(bool linear) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.GetTextureColorSpace"); return default; }
@@ -2241,22 +2179,9 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
     }
-    public enum TransferFunction
-    {
-        Unknown = -1,
-        sRGB = 0,
-        BT1886 = 1,
-        PQ = 2,
-        Linear = 3,
-        Gamma22 = 4,
-    }
     unsafe partial class Transform
     {
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetLocalEulerAngles(global::UnityEngine.RotationOrder order) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.GetLocalEulerAngles"); return default; }
         [global::Unbound.Stub] internal void SetLocalEulerAngles(global::UnityEngine.Vector3 euler, global::UnityEngine.RotationOrder order) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.SetLocalEulerAngles"); }
-        [global::Unbound.Stub] internal void SetLocalEulerHint(global::UnityEngine.Vector3 euler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.SetLocalEulerHint"); }
-        [global::Unbound.Stub] internal int GetRotationOrderInternal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.GetRotationOrderInternal"); return default; }
-        [global::Unbound.Stub] internal void SetRotationOrderInternal(global::UnityEngine.RotationOrder rotationOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.SetRotationOrderInternal"); }
         [global::Unbound.Stub] internal void TransformDirectionsInternal(global::System.ReadOnlySpan<global::UnityEngine.Vector3> directions, global::System.Span<global::UnityEngine.Vector3> transformedDirections) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.TransformDirectionsInternal"); }
         [global::Unbound.Stub] internal void InverseTransformDirectionsInternal(global::System.ReadOnlySpan<global::UnityEngine.Vector3> directions, global::System.Span<global::UnityEngine.Vector3> transformedDirections) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.InverseTransformDirectionsInternal"); }
         [global::Unbound.Stub] internal void TransformVectorsInternal(global::System.ReadOnlySpan<global::UnityEngine.Vector3> vectors, global::System.Span<global::UnityEngine.Vector3> transformedVectors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.TransformVectorsInternal"); }
@@ -2266,7 +2191,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void MoveAfterSibling(global::UnityEngine.Transform transform, bool notifyEditorAndMarkDirty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.MoveAfterSibling"); }
         [global::Unbound.Stub] internal void SendTransformChangedScale() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.SendTransformChangedScale"); }
         [global::Unbound.Stub] internal bool IsNonUniformScaleTransform() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.IsNonUniformScaleTransform"); return default; }
-        internal global::UnityEngine.RotationOrder rotationOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.rotationOrder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.rotationOrder"); } }
         internal bool constrainProportionsScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.constrainProportionsScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Transform.constrainProportionsScale"); } }
     }
     [global::Unbound.Stub]
@@ -2345,11 +2269,6 @@ namespace UnityEngine
     unsafe partial class WaitWhile
     {
         [global::Unbound.Stub] public WaitWhile(global::System.Func<bool> predicate, global::System.TimeSpan timeout, global::System.Action onTimeout, global::UnityEngine.WaitTimeoutMode timeoutMode = (global::UnityEngine.WaitTimeoutMode)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.WaitWhile.ctor"); }
-    }
-    public enum WhitePoint
-    {
-        Unknown = -1,
-        D65 = 0,
     }
     [global::System.Obsolete("iPhone class is deprecated. Please use iOS.Device instead (UnityUpgradable) -> UnityEngine.iOS.Device")]
     [global::Unbound.Stub]
@@ -2866,10 +2785,6 @@ namespace UnityEngine.DedicatedServer
 }
 namespace UnityEngine.Device
 {
-    unsafe static partial class Screen
-    {
-        [global::Unbound.Stub] public static void SetMSAASamples(int numSamples) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Device.Screen.SetMSAASamples"); }
-    }
     unsafe static partial class SystemInfo
     {
         [global::Unbound.Stub] public static bool SupportsVertexAttributeFormat(global::UnityEngine.Rendering.VertexAttributeFormat format, int dimension) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Device.SystemInfo.SupportsVertexAttributeFormat"); return default; }
@@ -3705,23 +3620,6 @@ namespace UnityEngine.Rendering
         PerShape = 0,
         PerVertex = 1,
     }
-    public enum BuiltinShaderMode
-    {
-        Disabled = 0,
-        UseBuiltin = 1,
-        UseCustom = 2,
-    }
-    public enum BuiltinShaderType
-    {
-        DeferredShading = 0,
-        DeferredReflections = 1,
-        [global::System.Obsolete("LegacyDeferredLighting has been removed.")] LegacyDeferredLighting = 2,
-        ScreenSpaceShadows = 3,
-        DepthNormals = 4,
-        MotionVectors = 5,
-        LightHalo = 6,
-        LensFlare = 7,
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class CameraEventUtils
     {
@@ -3767,12 +3665,6 @@ namespace UnityEngine.Rendering
             [global::Unbound.Stub] public static global::UnityEngine.Rendering.CommandBuffer ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.BindingsMarshaller.ConvertToManaged"); return default; }
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.Rendering.CommandBuffer commandBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBuffer.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class CommandBufferExtensions
-    {
-        [global::Unbound.Stub] public static void SwitchIntoFastMemory(this global::UnityEngine.Rendering.CommandBuffer cmd, global::UnityEngine.Rendering.RenderTargetIdentifier rid, global::UnityEngine.Rendering.FastMemoryFlags fastMemoryFlags, float residency, bool copyContents) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBufferExtensions.SwitchIntoFastMemory"); }
-        [global::Unbound.Stub] public static void SwitchOutOfFastMemory(this global::UnityEngine.Rendering.CommandBuffer cmd, global::UnityEngine.Rendering.RenderTargetIdentifier rid, bool copyContents) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.CommandBufferExtensions.SwitchOutOfFastMemory"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial struct CoreCameraValues : global::System.IEquatable<global::UnityEngine.Rendering.CoreCameraValues>
@@ -3824,13 +3716,6 @@ namespace UnityEngine.Rendering
         None = 0,
         EnableDynamicBatching = 1,
         EnableInstancing = 2,
-    }
-    [global::System.Flags]
-    public enum FastMemoryFlags
-    {
-        None = 0,
-        SpillTop = 1,
-        SpillBottom = 2,
     }
     [global::Unbound.Stub]
     internal unsafe static partial class GPUDrivenCallbacks
@@ -3928,7 +3813,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal static void Internal_SetAllRenderPipelineSettingsDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.Internal_SetAllRenderPipelineSettingsDirty"); }
         [global::Unbound.Stub] public static global::UnityEngine.Object GetGraphicsSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetGraphicsSettings"); return default; }
         [global::Unbound.Stub] public static void SetShaderMode(global::UnityEngine.Rendering.BuiltinShaderType type, global::UnityEngine.Rendering.BuiltinShaderMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.SetShaderMode"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.BuiltinShaderMode GetShaderMode(global::UnityEngine.Rendering.BuiltinShaderType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetShaderMode"); return default; }
         [global::Unbound.Stub] public static void SetCustomShader(global::UnityEngine.Rendering.BuiltinShaderType type, global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.SetCustomShader"); }
         [global::Unbound.Stub] public static global::UnityEngine.Shader GetCustomShader(global::UnityEngine.Rendering.BuiltinShaderType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetCustomShader"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Shader GetDefaultShader(global::UnityEngine.Rendering.DefaultShaderType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetDefaultShader"); return default; }
@@ -3985,11 +3869,6 @@ namespace UnityEngine.Rendering
         InitializedOnRenderThread = 2,
         DestroyQueued = 3,
         Destroyed = 4,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class InvalidImportException : global::System.Exception
-    {
-        [global::Unbound.Stub] public InvalidImportException(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.InvalidImportException.ctor"); }
     }
     public enum LightProbeOutsideHullStrategy
     {
@@ -4316,12 +4195,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingSubMeshFlags transparentMaterials;
         [global::Unbound.Stub] public global::UnityEngine.Rendering.RayTracingSubMeshFlags alphaTestedMaterials;
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256, AllowMultiple = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class RecreatePipelineOnChangeAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public RecreatePipelineOnChangeAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RecreatePipelineOnChangeAttribute.ctor"); }
-    }
     public enum ReflectionCubemapCompression
     {
         Uncompressed = 0,
@@ -4360,8 +4233,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal static void InitializeSortSettings(global::UnityEngine.Camera camera, out global::UnityEngine.Rendering.SortingSettings sortingSettings) { sortingSettings = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.InitializeSortSettings"); }
         [global::Unbound.Stub] public static void PushDisableApiRenderers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.PushDisableApiRenderers"); }
         [global::Unbound.Stub] public static void PopDisableApiRenderers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.PopDisableApiRenderers"); }
-        [global::Unbound.Stub] public static void EmitWorldGeometryForSceneView(global::UnityEngine.Camera cullingCamera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.EmitWorldGeometryForSceneView"); }
-        [global::Unbound.Stub] public static void EmitGeometryForCamera(global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.EmitGeometryForCamera"); }
         [global::Unbound.Stub] internal ScriptableRenderContext(global::System.IntPtr ptr, global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle safety) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.ctor"); }
         [global::Unbound.Stub] public global::UnityEngine.Rendering.ScopedRenderPass BeginScopedRenderPass(int width, int height, int samples, global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.AttachmentDescriptor> attachments, int depthAttachmentIndex = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.BeginScopedRenderPass"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Rendering.ScopedSubPass BeginScopedSubPass(global::Unity.Collections.NativeArray<int> colors, global::Unity.Collections.NativeArray<int> inputs, bool isDepthReadOnly, bool isStencilReadOnly) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ScriptableRenderContext.BeginScopedSubPass"); return default; }
@@ -4716,11 +4587,6 @@ namespace UnityEngine.TestTools
 }
 namespace UnityEngine.U2D
 {
-    [global::Unbound.Stub]
-    public unsafe abstract partial class Light2DBase : global::UnityEngine.MonoBehaviour
-    {
-        [global::Unbound.Stub] protected Light2DBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.U2D.Light2DBase.ctor"); }
-    }
     internal enum Light2DType
     {
         Parametric = 0,

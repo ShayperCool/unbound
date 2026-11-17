@@ -351,3 +351,36 @@ namespace UnityEngine.Bindings
         public VisibleToOtherModulesAttribute(params string[] modules) { }
     }
 }
+
+namespace UnityEngine
+{
+    // Markers read by the Editor's serialization and assembly handling; at run time they only exist
+    // (measured: tests/projects/runtimeapis attribute.*).
+    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
+    public sealed partial class PreferBinarySerialization : Attribute
+    {
+        public PreferBinarySerialization() { }
+    }
+
+    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1)]
+    public partial class AssemblyIsEditorAssembly : Attribute
+    {
+        public AssemblyIsEditorAssembly() { }
+    }
+}
+
+namespace UnityEngine.Rendering
+{
+    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256, AllowMultiple = false)]
+    public partial class RecreatePipelineOnChangeAttribute : Attribute
+    {
+        public RecreatePipelineOnChangeAttribute() { }
+    }
+
+    /// <summary>An importer's failure, an exception with the message given (measured:
+    /// tests/projects/runtimeapis exception.invalid_import).</summary>
+    public partial class InvalidImportException : Exception
+    {
+        public InvalidImportException(string message) : base(message) { }
+    }
+}

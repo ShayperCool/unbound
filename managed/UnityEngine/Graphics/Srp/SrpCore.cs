@@ -588,6 +588,37 @@ namespace UnityEngine.Rendering
             }
         }
 
+        /// <summary>Each built-in shader type's setting in the project's graphics settings, by type
+        /// (none for the removed legacy deferred lighting).</summary>
+        static readonly string[] s_ShaderModeSettings =
+        {
+            "m_Deferred", "m_DeferredReflections", null, "m_ScreenSpaceShadows", "m_DepthNormals",
+            "m_MotionVectors", "m_LightHalo", "m_LensFlare",
+        };
+        static readonly BuiltinShaderMode[] s_ShaderModes =
+        {
+            BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin,
+            BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin,
+        };
+
+        /// <summary>Takes the project's built-in shader modes; a type the settings do not list uses
+        /// the built-in shader.</summary>
+        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes)
+        {
+            for (int i = 0; i < s_ShaderModes.Length; i++)
+                s_ShaderModes[i] = s_ShaderModeSettings[i] != null && modes.TryGetValue(s_ShaderModeSettings[i], out int mode)
+                    ? (BuiltinShaderMode)mode : BuiltinShaderMode.UseBuiltin;
+        }
+
+        /// <summary>The project's mode of a built-in shader; a type without a setting asserts and
+        /// answers the built-in shader (measured: tests/projects/runtimeapis shader_mode.*).</summary>
+        public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type)
+        {
+            if ((uint)type < (uint)s_ShaderModeSettings.Length && s_ShaderModeSettings[(int)type] != null) return s_ShaderModes[(int)type];
+            Unbound.Runtime.Log.Engine(LogType.Assert, $"Unknown builtin shader type {(int)type}", null);
+            return BuiltinShaderMode.UseBuiltin;
+        }
+
         public static bool lightsUseLinearIntensity { get; set; }
         public static bool lightsUseColorTemperature { get; set; }
         public static bool useScriptableRenderPipelineBatching { get; set; }

@@ -130,6 +130,86 @@ namespace UnityEngine
             set => localRotation = Quaternion.Euler(value);
         }
 
+        /// <summary>The rotation order the Inspector shows Euler angles in; Unity's own order
+        /// (Z, then X, then Y) by default. It changes no rotation (measured: tests/projects/runtimeapis
+        /// transform.*).</summary>
+        internal RotationOrder rotationOrder { get => m_RotationOrder; set => m_RotationOrder = value; }
+        RotationOrder m_RotationOrder = RotationOrder.OrderZXY;
+
+        internal int GetRotationOrderInternal() => (int)m_RotationOrder;
+        internal void SetRotationOrderInternal(RotationOrder rotationOrder) => m_RotationOrder = rotationOrder;
+
+        /// <summary>The local rotation as angles about the axes applied in the order's sequence (the
+        /// first letter first): of the two sets of angles that make the rotation, each angle turned
+        /// by whole turns to the one nearest the Euler hint's, the set nearer the hint, rounded to a
+        /// thousandth of a degree (measured: tests/projects/runtimeapis transform.*euler_order*).</summary>
+        internal Vector3 GetLocalEulerAngles(RotationOrder order)
+        {
+            var (i, j, k) = order switch
+            {
+                RotationOrder.OrderXYZ => (0, 1, 2),
+                RotationOrder.OrderXZY => (0, 2, 1),
+                RotationOrder.OrderYZX => (1, 2, 0),
+                RotationOrder.OrderYXZ => (1, 0, 2),
+                RotationOrder.OrderZYX => (2, 1, 0),
+                _ => (2, 0, 1),
+            };
+            // The rotation matrix, then the angles of R(k) * R(j) * R(i): the middle one from its
+            // sine; in gimbal lock the last one is zero and the first carries the rest.
+            Quaternion q = m_LocalRotation.normalized;
+            double x = q.x, y = q.y, z = q.z, w = q.w;
+            double m00 = 1 - 2 * (y * y + z * z), m01 = 2 * (x * y - z * w), m02 = 2 * (x * z + y * w);
+            double m10 = 2 * (x * y + z * w), m11 = 1 - 2 * (x * x + z * z), m12 = 2 * (y * z - x * w);
+            double m20 = 2 * (x * z - y * w), m21 = 2 * (y * z + x * w), m22 = 1 - 2 * (x * x + y * y);
+            double M(int r, int c) => r switch
+            {
+                0 => c == 0 ? m00 : c == 1 ? m01 : m02,
+                1 => c == 0 ? m10 : c == 1 ? m11 : m12,
+                _ => c == 0 ? m20 : c == 1 ? m21 : m22,
+            };
+            double parity = (j - i + 3) % 3 == 1 ? 1 : -1;
+            double sinMiddle = Math.Clamp(-parity * M(k, i), -1, 1);
+            double first, middle = Math.Asin(sinMiddle), last;
+            if (Math.Abs(sinMiddle) < 0.9999999)
+            {
+                first = Math.Atan2(parity * M(k, j), M(k, k));
+                last = Math.Atan2(parity * M(j, i), M(i, i));
+            }
+            else
+            {
+                first = Math.Atan2(-parity * M(j, k), M(j, j));
+                last = 0;
+            }
+            const double toDegrees = 180 / Math.PI;
+            Span<double> angles = stackalloc double[3], other = stackalloc double[3];
+            angles[i] = first * toDegrees;
+            angles[j] = middle * toDegrees;
+            angles[k] = last * toDegrees;
+            // The other set: the first and last angles a half turn on, the middle one mirrored.
+            other[i] = angles[i] + 180;
+            other[j] = 180 - angles[j];
+            other[k] = angles[k] + 180;
+            var hint = m_LocalEulerAnglesHint;
+            double distance = 0, otherDistance = 0;
+            for (int axis = 0; axis < 3; axis++)
+            {
+                angles[axis] = Near(angles[axis], hint[axis]);
+                other[axis] = Near(other[axis], hint[axis]);
+                distance += (angles[axis] - hint[axis]) * (angles[axis] - hint[axis]);
+                otherDistance += (other[axis] - hint[axis]) * (other[axis] - hint[axis]);
+            }
+            var nearest = otherDistance < distance ? other : angles;
+            return new Vector3(Thousandths(nearest[0]), Thousandths(nearest[1]), Thousandths(nearest[2]));
+
+            static double Near(double degrees, float hint) => degrees + 360 * Math.Round((hint - degrees) / 360);
+            static float Thousandths(double degrees) => (float)(Math.Round(degrees * 1000) / 1000);
+        }
+
+        /// <summary>Keeps the Euler angles the Inspector shows: GetLocalEulerAngles answers the
+        /// angles nearest them; the rotation and localEulerAngles stay (measured:
+        /// tests/projects/runtimeapis transform.after_hint.*).</summary>
+        internal void SetLocalEulerHint(Vector3 euler) => m_LocalEulerAnglesHint = euler;
+
         // ------------------------------------------------------------------ world state
 
         public Vector3 position
@@ -831,4 +911,13 @@ namespace UnityEngine
             Debug.LogError($"transform.{property} assign attempt for '{name}' is not valid. Input {property} is {{ {value.x}, {value.y}, {value.z} }}.", this);
     }
 
+    internal enum RotationOrder
+    {
+        OrderXYZ = 0,
+        OrderXZY = 1,
+        OrderYZX = 2,
+        OrderYXZ = 3,
+        OrderZXY = 4,
+        OrderZYX = 5,
+    }
 }

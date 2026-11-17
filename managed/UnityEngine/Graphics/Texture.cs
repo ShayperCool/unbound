@@ -9,6 +9,15 @@ namespace UnityEngine
     public partial class Texture : Object
     {
         public static readonly int GenerateAllMips = -1;
+
+        /// <summary>Sets the mipmap streaming debug view's material properties: Unbound streams no
+        /// mipmaps, so there is nothing to show (measured to return: tests/projects/runtimeapis
+        /// texture.streaming_debug_properties).</summary>
+        [Unbound.EditorFaithful("no mipmap streaming: no streaming debug data; measured: tests/projects/runtimeapis texture.streaming_debug_properties")]
+        public static void SetStreamingTextureMaterialDebugProperties() { }
+
+        [Unbound.EditorFaithful("no mipmap streaming: no streaming debug data; measured: tests/projects/runtimeapis texture.streaming_debug_properties")]
+        public static void SetStreamingTextureMaterialDebugProperties(int materialTextureSlot) { }
         /// <summary>The renderer's id of the texture (0: none yet).</summary>
         internal ulong m_NativeHandle;
         internal int m_Width;

@@ -93,6 +93,7 @@ namespace UnityEngine.Device
         public static global::UnityEngine.Vector2Int mainWindowPosition { get => global::UnityEngine.Screen.mainWindowPosition; }
         public static global::UnityEngine.DisplayInfo mainWindowDisplayInfo { get => global::UnityEngine.Screen.mainWindowDisplayInfo; }
         public static int msaaSamples { get => global::UnityEngine.Screen.msaaSamples; }
+        public static void SetMSAASamples(int numSamples) => global::UnityEngine.Screen.SetMSAASamples(numSamples);
     }
     public static partial class SystemInfo
     {

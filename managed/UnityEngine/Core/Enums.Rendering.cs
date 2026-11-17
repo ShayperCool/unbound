@@ -1,11 +1,35 @@
 // Generated from the metadata of Unity 6000.0's reference assemblies (the rendering enums the
 // hand-written graphics code uses): names and values must match exactly. Do not edit by hand;
 // regenerate with the enum dumper:
-//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType UnityEngine.Rendering.BatchCullingViewType UnityEngine.Rendering.BatchCullingFlags UnityEngine.Rendering.BatchDrawCommandFlags UnityEngine.Rendering.BatchDrawCommandType UnityEngine.Rendering.CameraHDRMode UnityEngine.Rendering.RealtimeGICPUUsage
+//   dotnet run --project managed/Unbound.EnumDumper -- <Editor>/Data/Managed/UnityEngine UnityEngine.RenderTextureMemoryless UnityEngine.VRTextureUsage UnityEngine.RenderTextureCreationFlags UnityEngine.Rendering.RenderBufferLoadAction UnityEngine.Rendering.RenderBufferStoreAction UnityEngine.Rendering.RTClearFlags UnityEngine.Rendering.CommandBufferExecutionFlags UnityEngine.Rendering.FormatSwizzle UnityEngine.Rendering.LightEvent UnityEngine.Rendering.SinglePassStereoMode UnityEngine.Rendering.FoveatedRenderingMode UnityEngine.Rendering.ShadowMapPass UnityEngine.Rendering.RenderTargetFlags UnityEngine.Rendering.ComputeQueueType UnityEngine.Rendering.SynchronisationStageFlags UnityEngine.Rendering.GraphicsFenceType UnityEngine.Rendering.DistanceMetric UnityEngine.Rendering.PerObjectData UnityEngine.Rendering.CullingOptions UnityEngine.Rendering.ReflectionProbeSortingCriteria UnityEngine.Rendering.RenderStateMask UnityEngine.Rendering.SubPassFlags UnityEngine.Rendering.GizmoSubset UnityEngine.Rendering.UISubset UnityEngine.ShadowObjectsFilter UnityEngine.Rendering.BatchCullingProjectionType UnityEngine.Rendering.RendererListStatus UnityEngine.Rendering.RenderingThreadingMode UnityEngine.MixedLightingMode UnityEngine.LODFadeMode UnityEngine.LightmapsMode UnityEngine.Rendering.ShaderKeywordType UnityEngine.ColorGamut UnityEngine.Experimental.Rendering.GraphicsFormatUsage UnityEngine.HDRDisplaySupportFlags UnityEngine.Rendering.BuiltinShaderDefine UnityEngine.Rendering.GraphicsTier UnityEngine.Rendering.ReflectionProbeClearFlags UnityEngine.Rendering.ReflectionProbeMode UnityEngine.Rendering.ReflectionProbeRefreshMode UnityEngine.Rendering.ReflectionProbeTimeSlicingMode UnityEngine.Rendering.ReflectionProbeType UnityEngine.Rendering.BatchCullingViewType UnityEngine.Rendering.BatchCullingFlags UnityEngine.Rendering.BatchDrawCommandFlags UnityEngine.Rendering.BatchDrawCommandType UnityEngine.Rendering.CameraHDRMode UnityEngine.Rendering.RealtimeGICPUUsage UnityEngine.ColorPrimaries UnityEngine.WhitePoint UnityEngine.TransferFunction UnityEngine.Rendering.BuiltinShaderMode UnityEngine.Rendering.BuiltinShaderType UnityEngine.Rendering.FastMemoryFlags
 using System;
 
 namespace UnityEngine
 {
+    public enum ColorPrimaries
+    {
+        Unknown = -1,
+        Rec709 = 0,
+        Rec2020 = 1,
+        P3 = 2,
+    }
+
+    public enum WhitePoint
+    {
+        Unknown = -1,
+        D65 = 0,
+    }
+
+    public enum TransferFunction
+    {
+        Unknown = -1,
+        sRGB = 0,
+        BT1886 = 1,
+        PQ = 2,
+        Linear = 3,
+        Gamma22 = 4,
+    }
+
     public enum ColorGamut
     {
         sRGB = 0,
@@ -119,6 +143,33 @@ namespace UnityEngine.Experimental.Rendering
 
 namespace UnityEngine.Rendering
 {
+    public enum BuiltinShaderMode
+    {
+        Disabled = 0,
+        UseBuiltin = 1,
+        UseCustom = 2,
+    }
+
+    public enum BuiltinShaderType
+    {
+        DeferredShading = 0,
+        DeferredReflections = 1,
+        [global::System.Obsolete("LegacyDeferredLighting has been removed.", false)] LegacyDeferredLighting = 2,
+        ScreenSpaceShadows = 3,
+        DepthNormals = 4,
+        MotionVectors = 5,
+        LightHalo = 6,
+        LensFlare = 7,
+    }
+
+    [Flags]
+    public enum FastMemoryFlags
+    {
+        None = 0,
+        SpillTop = 1,
+        SpillBottom = 2,
+    }
+
     public enum CameraHDRMode
     {
         FP16 = 1,

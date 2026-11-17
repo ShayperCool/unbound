@@ -1543,6 +1543,10 @@ namespace UnityEngine
         public delegate void LayerCallback(SortingLayer layer);
         public static LayerCallback onLayerAdded;
         public static LayerCallback onLayerRemoved;
+        /// <summary>Called when the project's sorting layers change in the Editor's settings; nothing
+        /// sets it at run time (measured: tests/projects/runtimeapis sorting_layer.on_layer_changed).</summary>
+        internal static LayerChangedCallback onLayerChanged;
+        internal delegate void LayerChangedCallback();
 
         internal static readonly List<(string Name, int Id)> s_Layers = new List<(string, int)> { ("Default", 0) };
 

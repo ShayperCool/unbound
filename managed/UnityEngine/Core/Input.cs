@@ -167,8 +167,25 @@ namespace UnityEngine
         public static Rect safeArea => new Rect(0, 0, s_Width, s_Height);
         [Unbound.EditorFaithful("measured: tests/projects/platform (no cutouts)")]
         public static Rect[] cutouts => Array.Empty<Rect>();
-        [Unbound.EditorFaithful("the Editor's window has no multisampled back buffer (the Game view renders to a texture)")]
-        public static int msaaSamples => 1;
+        /// <summary>The back buffer's sample count: QualitySettings.antiAliasing until a scriptable
+        /// render pipeline sets one with <see cref="SetMSAASamples"/>, then that count, unchecked,
+        /// also when the anti-aliasing level changes or the pipeline is gone (measured:
+        /// tests/projects/runtimeapis screen.*, srp.*).</summary>
+        public static int msaaSamples => s_MsaaSamples ?? QualitySettings.antiAliasing;
+        internal static int? s_MsaaSamples;
+
+        /// <summary>Sets the back buffer's sample count for a scriptable render pipeline; with the
+        /// built-in renderer it logs an error and changes nothing (measured: tests/projects/runtimeapis
+        /// screen.set_msaa_*, srp.set_msaa_*).</summary>
+        public static void SetMSAASamples(int numSamples)
+        {
+            if (Rendering.GraphicsSettings.currentRenderPipeline == null)
+            {
+                Log.Engine(LogType.Error, "SetMSAASamples is only available when using a scriptable render pipeline. Please use the Graphics Settings for the built-in renderer.", null);
+                return;
+            }
+            s_MsaaSamples = numSamples;
+        }
         [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
         /// <summary>The host's actual refresh rate for frame pacing, read quietly (as
