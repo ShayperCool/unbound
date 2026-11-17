@@ -1361,6 +1361,12 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         Some(size) => parse_size(size)?,
         None => project.settings.default_screen_for(&args.target),
     };
+    // A window the host would shrink starts at its shrunk size (headless runs have no window).
+    let (width, height) = if run.headless.is_none() {
+        unbound_app::fitted_window_size(width, height)
+    } else {
+        (width, height)
+    };
     let options = unbound_runtime::GameOptions {
         target: args.target.clone(),
         mode: mode(args),

@@ -693,6 +693,19 @@ fn finish_run(
     }
 }
 
+/// The window size the host gives a window asked for at `width` x `height` pixels: on macOS a
+/// titled window's content is kept within the main screen's usable area, so a larger request
+/// gets that; elsewhere the request itself. Called before the window opens, so scripts see the
+/// window's size from the first callback (tests/projects/screenboot).
+pub fn fitted_window_size(width: i32, height: i32) -> (i32, i32) {
+    match host_display::largest_window_content() {
+        Some((largest_width, largest_height)) => {
+            (width.min(largest_width), height.min(largest_height))
+        }
+        None => (width, height),
+    }
+}
+
 /// Makes host display answers available to Awake/OnEnable before the window is created.
 /// If no display can be queried, keep the explicit unavailable answer until window discovery.
 pub fn initialize_display() {
@@ -737,12 +750,6 @@ fn publish_display(
         return;
     }
     *published = Some(key);
-    let Some((entity, monitor, _)) = found else {
-        display::publish(Display::Unavailable(
-            "the window system reports no monitor".into(),
-        ));
-        return;
-    };
     let view = handles
         .single()
         .ok()
@@ -751,6 +758,20 @@ fn publish_display(
             wgpu::rwh::RawWindowHandle::AppKit(appkit) => Some(appkit.ns_view),
             _ => None,
         });
+    let Some((entity, monitor, _)) = found else {
+        // Before the window system reports its monitors, the window itself tells its screen
+        // (macOS), so the display known at startup is not dropped.
+        if view.is_some()
+            && let Ok(snapshot) = host_display::snapshot(None, host_display::WindowView(view))
+        {
+            display::publish(Display::Known(snapshot));
+            return;
+        }
+        display::publish(Display::Unavailable(
+            "the window system reports no monitor".into(),
+        ));
+        return;
+    };
     match host_display::snapshot(monitor.name.as_deref(), host_display::WindowView(view)) {
         Ok(snapshot) => {
             host_display::watch();

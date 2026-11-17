@@ -418,6 +418,40 @@ pub(crate) fn snapshot(
     })
 }
 
+/// The largest content a titled, resizable window can have on the main screen, in pixels: the
+/// screen's usable area (`NSScreen.visibleFrame`) less the window's frame (its title bar), at
+/// the screen's backing scale. AppKit keeps a window within it. None where unknown. Reads AppKit:
+/// called on the main thread, before the window opens.
+#[cfg(target_os = "macos")]
+pub(crate) fn largest_window_content() -> Option<(i32, i32)> {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyClass, AnyObject};
+    use objc2_foundation::NSRect;
+    // NSWindowStyleMask: titled, closable, miniaturizable, resizable (the game window's).
+    const STYLE: usize = 1 | 2 | 4 | 8;
+    objc2::rc::autoreleasepool(|_| {
+        let screen_class = AnyClass::get(c"NSScreen")?;
+        let window_class = AnyClass::get(c"NSWindow")?;
+        let screen: *mut AnyObject = unsafe { msg_send![screen_class, mainScreen] };
+        if screen.is_null() {
+            return None;
+        }
+        let visible: NSRect = unsafe { msg_send![screen, visibleFrame] };
+        let scale: f64 = unsafe { msg_send![screen, backingScaleFactor] };
+        let content: NSRect =
+            unsafe { msg_send![window_class, contentRectForFrameRect: visible, styleMask: STYLE] };
+        Some((
+            (content.size.width * scale).floor() as i32,
+            (content.size.height * scale).floor() as i32,
+        ))
+    })
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn largest_window_content() -> Option<(i32, i32)> {
+    None
+}
+
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub(crate) fn snapshot(
     _name: Option<&str>,

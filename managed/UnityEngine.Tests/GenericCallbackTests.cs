@@ -65,6 +65,9 @@ public static class Probe
             qsort((IntPtr)first, (UIntPtr)3, (UIntPtr)4, (a, b) => *(int*)a - *(int*)b);
         return string.Join("","", items);
     }
+    // A null delegate of a generic type passed to the P/Invoke (no item to compare, so qsort
+    // never calls it): it reaches the native function as 0.
+    public static void SortNothing() => qsort(IntPtr.Zero, UIntPtr.Zero, (UIntPtr)4, null);
     public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
 }";
 
@@ -159,6 +162,14 @@ public static class Probe
         {
             Assert.Equal("1,2,3", Call(Compiled(redirected: true), "Sorted"));
             Assert.Throws<MarshalDirectiveException>(() => Call(Compiled(redirected: false), "Sorted"));
+        }
+
+        [Fact]
+        public void ANullDelegateOfAGenericTypeReachesThePInvokeAsZero()
+        {
+            Assert.Null(Call(Compiled(redirected: true), "SortNothing"));
+            Assert.Equal(IntPtr.Zero, Unbound.MonoMarshal.ToNative(null));
+            Assert.Throws<MarshalDirectiveException>(() => Call(Compiled(redirected: false), "SortNothing"));
         }
 
         [Fact]
