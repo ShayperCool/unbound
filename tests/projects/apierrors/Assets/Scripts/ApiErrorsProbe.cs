@@ -459,5 +459,16 @@ public class ApiErrorsProbe : MonoBehaviour
         // Actual values whose texts differ between the number formats of the runtimes.
         Shape("format.game_range_actual_third", () => throw new ArgumentOutOfRangeException("p", 1f / 3f, "Too big."));
         Shape("format.game_range_actual_third_double", () => throw new ArgumentOutOfRangeException("p", 1.0 / 3.0, "Too big."));
+        // A game exception whose Message is its ToString(), which reads base.Message and its inner
+        // exception (as the Addressables' remote provider exception does).
+        Shape("format.game_message_from_string", () => throw new MessageFromString("Remote failed.", new InvalidOperationException("Inner.")));
+        Row("format.game_message_from_string.message", new MessageFromString("Remote failed.", null).Message);
+    }
+
+    sealed class MessageFromString : Exception
+    {
+        public MessageFromString(string message, Exception inner) : base(message, inner) { }
+        public override string Message => ToString();
+        public override string ToString() => GetType().Name + " : " + base.Message + "\nresult : 4\n" + InnerException;
     }
 }

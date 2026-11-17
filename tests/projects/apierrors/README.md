@@ -25,7 +25,9 @@ log messages it writes with their log type (`.logs`; logs written on other threa
   probe's own code (`game_*`), by the class library (`library_*`) and by Unity (`unity_*`): the
   type and Message, ParamName (`.param`), ActualValue (`.actual`), ObjectName (`.object`),
   ToString() without its stack lines (`.string`) and Debug.LogException's line (`.log`); and the
-  log line of such an exception a callback does not catch (`unhandled_*`).
+  log line of such an exception a callback does not catch (`unhandled_*`); and a game exception
+  whose Message is its own ToString(), which reads base.Message and its inner exception, as the
+  Addressables' remote provider exception does (`game_message_from_string`).
 
 Measured in the Unity 6000.0.71f1 Editor on macOS in batch mode (two byte-identical captures;
 none of the values depends on the OS or the graphics device); the reference with the `format.*`

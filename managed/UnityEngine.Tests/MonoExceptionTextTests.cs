@@ -23,6 +23,13 @@ public sealed class Suffixed : ArgumentException
     public Suffixed() : base(""Bad."", ""p"") { }
     public override string Message => base.Message + ""!"";
 }
+public sealed class MessageFromString : Exception
+{
+    public MessageFromString(string message, Exception inner) : base(message, inner) { }
+    public override string Message => ToString();
+    public override string ToString() => GetType().Name + "" : "" + base.Message + ""\nresult : 4\n"" + InnerException;
+    public static Exception Make(string message) => new MessageFromString(message, new InvalidOperationException(""Inner.""));
+}
 public static class Probe
 {
     public static string Message(Exception e) => e.Message;
@@ -97,6 +104,22 @@ public static class Probe
             Assert.Contains(nameof(ToStringWritesEveryMessageInTheChainAndKeepsTheStack), text);
             // The class name holds the message's first word: the message is found after it.
             Assert.Equal("System.ArgumentException: Argument\nParameter name: p", MonoExceptions.ToStringOf(new ArgumentException("Argument", "p")));
+        }
+
+        /// <summary>A game exception whose Message is its own ToString() (as Addressables' remote
+        /// provider exception's is) reads as in the Editor instead of overflowing the stack:
+        /// tests/projects/apierrors <c>format.game_message_from_string</c>.</summary>
+        [Theory]
+        [MemberData(nameof(WideFloatsTests.Modes), MemberType = typeof(WideFloatsTests))]
+        public void AMessageMadeOfItsOwnTextIsWrittenOnce(OptimizationLevel optimization)
+        {
+            var probe = Redirected(optimization);
+            var exception = (Exception)probe.GetType("MessageFromString")!.GetMethod("Make")!.Invoke(null, new object[] { "Remote failed." })!;
+            const string Text = "MessageFromString : Remote failed.\nresult : 4\nSystem.InvalidOperationException: Inner.";
+            Assert.Equal(Text, Run(probe, "Message", exception));
+            Assert.Equal(Text, Run(probe, "Text", exception));
+            Assert.Equal(Text, MonoExceptions.ToStringOf(exception));
+            Assert.Equal(Text, MonoExceptions.MessageOf(exception));
         }
 
         static Assembly Redirected(OptimizationLevel optimization)

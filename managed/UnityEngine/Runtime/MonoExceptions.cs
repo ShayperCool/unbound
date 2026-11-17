@@ -23,10 +23,26 @@ namespace Unbound.Runtime
         /// <summary>An exception's message as Mono writes it.</summary>
         internal static string MessageOf(Exception exception) => Mono(exception, exception.Message);
 
+        /// <summary>The exception whose ToString() this thread is writing. A game exception can
+        /// define its Message by its own ToString() (Addressables' remote provider exception does),
+        /// and game code's ToString() calls come back here: such a call, made while its exception
+        /// is being written, takes the runtime's text instead of looping until the stack overflows
+        /// (tests/projects/apierrors <c>format.game_message_from_string</c>).</summary>
+        [ThreadStatic] static Exception s_Writing;
+
         /// <summary>An exception's ToString() as Mono writes the head of each exception in it
         /// ("Class: message", Mono's messages) and joins an inner exception on the same line
         /// (" ---> ", where .NET starts a new line). The stack lines stay the runtime's.</summary>
         internal static string ToStringOf(Exception exception)
+        {
+            if (ReferenceEquals(s_Writing, exception)) return exception.ToString();
+            var outer = s_Writing;
+            s_Writing = exception;
+            try { return WriteMono(exception); }
+            finally { s_Writing = outer; }
+        }
+
+        static string WriteMono(Exception exception)
         {
             string text = exception.ToString();
             int from = 0;

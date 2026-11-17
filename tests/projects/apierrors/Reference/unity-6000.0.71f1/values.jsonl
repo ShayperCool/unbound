@@ -407,4 +407,8 @@
 {"k":"format.game_range_actual_third_double.actual","v":"0.333333333333333"}
 {"k":"format.game_range_actual_third_double.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.333333333333333."}
 {"k":"format.game_range_actual_third_double.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.333333333333333."}
+{"k":"format.game_message_from_string","v":"throws ApiErrorsProbe+MessageFromString: MessageFromString : Remote failed.\nresult : 4\nSystem.InvalidOperationException: Inner."}
+{"k":"format.game_message_from_string.string","v":"MessageFromString : Remote failed.\nresult : 4\nSystem.InvalidOperationException: Inner."}
+{"k":"format.game_message_from_string.log","v":"Exception: InvalidOperationException: Inner."}
+{"k":"format.game_message_from_string.message","v":"MessageFromString : Remote failed.\nresult : 4\n"}
 {"k":"complete","v":true}
