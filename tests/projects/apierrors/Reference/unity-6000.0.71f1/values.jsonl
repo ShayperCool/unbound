@@ -293,4 +293,108 @@
 {"k":"playable_bound.layer_name_bad.logs","v":"Warning: Invalid Layer Index '5'"}
 {"k":"playable_bound.state_info_bad_layer","v":"returns state hash=0"}
 {"k":"playable_bound.state_info_bad_layer.logs","v":"Warning: Invalid Layer Index '5'"}
+{"k":"format.game_argument","v":"throws System.ArgumentException: Bad thing.\nParameter name: p"}
+{"k":"format.game_argument.param","v":"p"}
+{"k":"format.game_argument.string","v":"System.ArgumentException: Bad thing.\nParameter name: p"}
+{"k":"format.game_argument.log","v":"Exception: ArgumentException: Bad thing.\nParameter name: p"}
+{"k":"format.game_argument_no_name","v":"throws System.ArgumentException: Bad thing."}
+{"k":"format.game_argument_no_name.param","v":"null"}
+{"k":"format.game_argument_no_name.string","v":"System.ArgumentException: Bad thing."}
+{"k":"format.game_argument_no_name.log","v":"Exception: ArgumentException: Bad thing."}
+{"k":"format.game_argument_empty_name","v":"throws System.ArgumentException: Bad thing."}
+{"k":"format.game_argument_empty_name.param","v":""}
+{"k":"format.game_argument_empty_name.string","v":"System.ArgumentException: Bad thing."}
+{"k":"format.game_argument_empty_name.log","v":"Exception: ArgumentException: Bad thing."}
+{"k":"format.game_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: p"}
+{"k":"format.game_null.param","v":"p"}
+{"k":"format.game_null.string","v":"System.ArgumentNullException: Value cannot be null.\nParameter name: p"}
+{"k":"format.game_null.log","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: p"}
+{"k":"format.game_null_message","v":"throws System.ArgumentNullException: Must be set.\nParameter name: p"}
+{"k":"format.game_null_message.param","v":"p"}
+{"k":"format.game_null_message.string","v":"System.ArgumentNullException: Must be set.\nParameter name: p"}
+{"k":"format.game_null_message.log","v":"Exception: ArgumentNullException: Must be set.\nParameter name: p"}
+{"k":"format.game_null_no_name","v":"throws System.ArgumentNullException: Value cannot be null."}
+{"k":"format.game_null_no_name.param","v":"null"}
+{"k":"format.game_null_no_name.string","v":"System.ArgumentNullException: Value cannot be null."}
+{"k":"format.game_null_no_name.log","v":"Exception: ArgumentNullException: Value cannot be null."}
+{"k":"format.game_range","v":"throws System.ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: p"}
+{"k":"format.game_range.param","v":"p"}
+{"k":"format.game_range.actual","v":"null"}
+{"k":"format.game_range.string","v":"System.ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: p"}
+{"k":"format.game_range.log","v":"Exception: ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: p"}
+{"k":"format.game_range_message","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p"}
+{"k":"format.game_range_message.param","v":"p"}
+{"k":"format.game_range_message.actual","v":"null"}
+{"k":"format.game_range_message.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p"}
+{"k":"format.game_range_message.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p"}
+{"k":"format.game_range_actual","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 8."}
+{"k":"format.game_range_actual.param","v":"p"}
+{"k":"format.game_range_actual.actual","v":"8"}
+{"k":"format.game_range_actual.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 8."}
+{"k":"format.game_range_actual.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 8."}
+{"k":"format.game_range_actual_float","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2.5."}
+{"k":"format.game_range_actual_float.param","v":"p"}
+{"k":"format.game_range_actual_float.actual","v":"2.5"}
+{"k":"format.game_range_actual_float.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2.5."}
+{"k":"format.game_range_actual_float.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 2.5."}
+{"k":"format.game_range_actual_no_name","v":"throws System.ArgumentOutOfRangeException: Too big.\nActual value was 8."}
+{"k":"format.game_range_actual_no_name.param","v":"null"}
+{"k":"format.game_range_actual_no_name.actual","v":"8"}
+{"k":"format.game_range_actual_no_name.string","v":"System.ArgumentOutOfRangeException: Too big.\nActual value was 8."}
+{"k":"format.game_range_actual_no_name.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nActual value was 8."}
+{"k":"format.game_disposed","v":"throws System.ObjectDisposedException: Cannot access a disposed object.\nObject name: 'Thing'."}
+{"k":"format.game_disposed.object","v":"Thing"}
+{"k":"format.game_disposed.string","v":"System.ObjectDisposedException: Cannot access a disposed object.\nObject name: 'Thing'."}
+{"k":"format.game_disposed.log","v":"Exception: ObjectDisposedException: Cannot access a disposed object.\nObject name: 'Thing'."}
+{"k":"format.game_disposed_message","v":"throws System.ObjectDisposedException: Gone.\nObject name: 'Thing'."}
+{"k":"format.game_disposed_message.object","v":"Thing"}
+{"k":"format.game_disposed_message.string","v":"System.ObjectDisposedException: Gone.\nObject name: 'Thing'."}
+{"k":"format.game_disposed_message.log","v":"Exception: ObjectDisposedException: Gone.\nObject name: 'Thing'."}
+{"k":"format.game_inner","v":"throws System.InvalidOperationException: Outer."}
+{"k":"format.game_inner.string","v":"System.InvalidOperationException: Outer. ---> System.ArgumentNullException: Value cannot be null.\nParameter name: p\n   --- End of inner exception stack trace ---"}
+{"k":"format.game_inner.log","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: p"}
+{"k":"format.library_list_index","v":"throws System.ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.\nParameter name: index"}
+{"k":"format.library_list_index.param","v":"index"}
+{"k":"format.library_list_index.actual","v":"null"}
+{"k":"format.library_list_index.string","v":"System.ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.\nParameter name: index"}
+{"k":"format.library_list_index.log","v":"Exception: ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.\nParameter name: index"}
+{"k":"format.library_dictionary_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: key"}
+{"k":"format.library_dictionary_null.param","v":"key"}
+{"k":"format.library_dictionary_null.string","v":"System.ArgumentNullException: Value cannot be null.\nParameter name: key"}
+{"k":"format.library_dictionary_null.log","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: key"}
+{"k":"format.library_substring","v":"throws System.ArgumentOutOfRangeException: startIndex cannot be larger than length of string.\nParameter name: startIndex"}
+{"k":"format.library_substring.param","v":"startIndex"}
+{"k":"format.library_substring.actual","v":"null"}
+{"k":"format.library_substring.string","v":"System.ArgumentOutOfRangeException: startIndex cannot be larger than length of string.\nParameter name: startIndex"}
+{"k":"format.library_substring.log","v":"Exception: ArgumentOutOfRangeException: startIndex cannot be larger than length of string.\nParameter name: startIndex"}
+{"k":"format.unity_load_null_type","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"format.unity_load_null_type.param","v":"systemTypeInstance"}
+{"k":"format.unity_load_null_type.string","v":"System.ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"format.unity_load_null_type.log","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"format.unity_uvs_bad_channel","v":"throws System.ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
+{"k":"format.unity_uvs_bad_channel.param","v":"uvIndex"}
+{"k":"format.unity_uvs_bad_channel.actual","v":"8"}
+{"k":"format.unity_uvs_bad_channel.string","v":"System.ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
+{"k":"format.unity_uvs_bad_channel.log","v":"Exception: ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
+{"k":"format.unity_triangles_null","v":"throws System.ArgumentNullException: The result triangles list cannot be null.\nParameter name: triangles"}
+{"k":"format.unity_triangles_null.param","v":"triangles"}
+{"k":"format.unity_triangles_null.string","v":"System.ArgumentNullException: The result triangles list cannot be null.\nParameter name: triangles"}
+{"k":"format.unity_triangles_null.log","v":"Exception: ArgumentNullException: The result triangles list cannot be null.\nParameter name: triangles"}
+{"k":"format.unity_stream_null","v":"throws System.ArgumentNullException: stream\nParameter name: ManagedStream object must be non-null"}
+{"k":"format.unity_stream_null.param","v":"ManagedStream object must be non-null"}
+{"k":"format.unity_stream_null.string","v":"System.ArgumentNullException: stream\nParameter name: ManagedStream object must be non-null"}
+{"k":"format.unity_stream_null.log","v":"Exception: ArgumentNullException: stream\nParameter name: ManagedStream object must be non-null"}
+{"k":"format.unity_create_scene_null","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: sceneName"}
+{"k":"format.unity_create_scene_null.param","v":"sceneName"}
+{"k":"format.unity_create_scene_null.string","v":"System.ArgumentNullException: Value cannot be null.\nParameter name: sceneName"}
+{"k":"format.unity_create_scene_null.log","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: sceneName"}
+{"k":"format.unity_instantiate_null","v":"throws System.ArgumentException: The Object you want to instantiate is null."}
+{"k":"format.unity_instantiate_null.param","v":"null"}
+{"k":"format.unity_instantiate_null.string","v":"System.ArgumentException: The Object you want to instantiate is null."}
+{"k":"format.unity_instantiate_null.log","v":"Exception: ArgumentException: The Object you want to instantiate is null."}
+{"k":"format.unhandled_game_null","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: p"}
+{"k":"format.unhandled_game_range_actual","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 8."}
+{"k":"format.unhandled_library_list_index","v":"Exception: ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.\nParameter name: index"}
+{"k":"format.unhandled_unity_load_null_type","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
+{"k":"format.unhandled_unity_uvs_bad_channel","v":"Exception: ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
 {"k":"complete","v":true}

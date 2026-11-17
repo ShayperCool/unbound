@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -94,6 +95,7 @@ public class ApiErrorsProbe : MonoBehaviour
         }
         catch (Exception e) { Row("aborted", Thrown(e)); }
         yield return Animators();
+        yield return Formats();
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
         output.Dispose();
 #if UNITY_EDITOR
@@ -380,5 +382,79 @@ public class ApiErrorsProbe : MonoBehaviour
         Destroy(host.gameObject);
         Destroy(go);
         Destroy(bare.gameObject);
+    }
+
+    static Action pendingThrow;
+
+    /// <summary>Throws the pending action's exception out of a callback once (unhandled).</summary>
+    void Update()
+    {
+        var action = pendingThrow;
+        if (action == null) return;
+        pendingThrow = null;
+        action();
+    }
+
+    /// <summary>What game code and the log see of one exception: its type and message, parameter
+    /// name, actual value, ToString() without the stack lines, and Debug.LogException's line.</summary>
+    static void Shape(string key, Action action)
+    {
+        Exception thrown = null;
+        try { action(); }
+        catch (Exception e) { thrown = e; }
+        if (thrown == null) { Row(key, "returns"); return; }
+        Row(key, Thrown(thrown));
+        if (thrown is ArgumentException argument) Row(key + ".param", argument.ParamName ?? "null");
+        if (thrown is ArgumentOutOfRangeException range) Row(key + ".actual", range.ActualValue?.ToString() ?? "null");
+        if (thrown is ObjectDisposedException disposed) Row(key + ".object", disposed.ObjectName ?? "null");
+        Row(key + ".string", Regex.Split(thrown.ToString(), "\n\\s+at ")[0]);
+        logs.Clear();
+        Debug.LogException(thrown);
+        Row(key + ".log", string.Join("\n---\n", logs));
+    }
+
+    /// <summary>The log line of an exception a callback does not catch.</summary>
+    static IEnumerator Unhandled(string key, Action action)
+    {
+        logs.Clear();
+        pendingThrow = action;
+        yield return null;
+        yield return null;
+        Row(key, string.Join("\n---\n", logs));
+    }
+
+    static IEnumerator Formats()
+    {
+        // Thrown by the game's own code.
+        Shape("format.game_argument", () => throw new ArgumentException("Bad thing.", "p"));
+        Shape("format.game_argument_no_name", () => throw new ArgumentException("Bad thing."));
+        Shape("format.game_argument_empty_name", () => throw new ArgumentException("Bad thing.", ""));
+        Shape("format.game_null", () => throw new ArgumentNullException("p"));
+        Shape("format.game_null_message", () => throw new ArgumentNullException("p", "Must be set."));
+        Shape("format.game_null_no_name", () => throw new ArgumentNullException());
+        Shape("format.game_range", () => throw new ArgumentOutOfRangeException("p"));
+        Shape("format.game_range_message", () => throw new ArgumentOutOfRangeException("p", "Too big."));
+        Shape("format.game_range_actual", () => throw new ArgumentOutOfRangeException("p", 8, "Too big."));
+        Shape("format.game_range_actual_float", () => throw new ArgumentOutOfRangeException("p", 2.5f, "Too big."));
+        Shape("format.game_range_actual_no_name", () => throw new ArgumentOutOfRangeException(null, 8, "Too big."));
+        Shape("format.game_disposed", () => throw new ObjectDisposedException("Thing"));
+        Shape("format.game_disposed_message", () => throw new ObjectDisposedException("Thing", "Gone."));
+        Shape("format.game_inner", () => throw new InvalidOperationException("Outer.", new ArgumentNullException("p")));
+        // Thrown by the class library.
+        Shape("format.library_list_index", () => new List<int>()[3].ToString());
+        Shape("format.library_dictionary_null", () => new Dictionary<string, int>()[null].ToString());
+        Shape("format.library_substring", () => "abc".Substring(5));
+        // Thrown by Unity.
+        Shape("format.unity_load_null_type", () => Resources.Load("Ctrl", null));
+        Shape("format.unity_uvs_bad_channel", () => new Mesh().SetUVs(8, new Vector2[3]));
+        Shape("format.unity_triangles_null", () => new Mesh().GetTriangles(null, 0));
+        Shape("format.unity_stream_null", () => AssetBundle.LoadFromStream(null));
+        Shape("format.unity_create_scene_null", () => SceneManager.CreateScene(null));
+        Shape("format.unity_instantiate_null", () => Instantiate((UnityEngine.Object)null));
+        yield return Unhandled("format.unhandled_game_null", () => throw new ArgumentNullException("p"));
+        yield return Unhandled("format.unhandled_game_range_actual", () => throw new ArgumentOutOfRangeException("p", 8, "Too big."));
+        yield return Unhandled("format.unhandled_library_list_index", () => new List<int>()[3].ToString());
+        yield return Unhandled("format.unhandled_unity_load_null_type", () => Resources.Load("Ctrl", null));
+        yield return Unhandled("format.unhandled_unity_uvs_bad_channel", () => new Mesh().SetUVs(8, new Vector2[3]));
     }
 }
