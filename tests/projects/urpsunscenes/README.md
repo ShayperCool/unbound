@@ -34,8 +34,11 @@ light is used." The rest is observed behaviour of this release; other releases a
 
 `residuals.json` lists the known differences: the lighting settings of a scene made with
 `CreateScene` (Unbound keeps those in effect), and sky pixels within 3e-3 of the Editor's. The gate
-does not enforce that bound on the listed sky pixels; the light the sky is drawn with
-(`skyLightColor`, `skyLightPos`) is compared exactly in every state.
+does not enforce that bound on the listed sky pixels. The light the sky is drawn with
+(`skyLightColor`, `skyLightPos`) is compared exactly in every state but those of the scene made
+last with `CreateScene` (`thirdActive`, `thirdBrightSky`, `thirdActiveAgain`), where the
+Editor's `RenderSettings.sun` is that scene's own (none: the brightest light) and Unbound's the
+base scene's named one.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
