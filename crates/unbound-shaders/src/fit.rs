@@ -1365,6 +1365,15 @@ fn finite_float_literals(module: &mut Module) {
 }
 
 /// The module's functions, its entry points' included.
+fn functions(module: &Module) -> impl Iterator<Item = &naga::Function> {
+    module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|e| &e.function))
+}
+
+/// [`functions`], to change.
 fn module_functions(module: &mut Module) -> impl Iterator<Item = &mut naga::Function> {
     module
         .functions
@@ -1380,13 +1389,7 @@ fn module_functions(module: &mut Module) -> impl Iterator<Item = &mut naga::Func
 fn vector_logical_operators(module: &mut Module) {
     let types = &module.types;
     let mut found: Vec<(bool, usize, Handle<Expression>)> = Vec::new();
-    let functions: Vec<&naga::Function> = module
-        .functions
-        .iter()
-        .map(|(_, f)| f)
-        .chain(module.entry_points.iter().map(|e| &e.function))
-        .collect();
-    for (index, function) in functions.iter().enumerate() {
+    for (index, function) in functions(module).enumerate() {
         let context = naga::proc::ResolveContext::with_locals(
             module,
             &function.local_variables,
@@ -1411,7 +1414,15 @@ fn vector_logical_operators(module: &mut Module) {
                     found.push((op == BinaryOperator::LogicalOr, index, handle));
                     resolved[left.index()].clone()
                 }
-                _ => match context.resolve(expression, |h| Ok(&resolved[h.index()])) {
+                _ => match context.resolve(expression, |h| {
+                    resolved
+                        .get(h.index())
+                        // An expression read before it is made: not typed, so left alone.
+                        .ok_or(naga::proc::ResolveError::InvalidAccess {
+                            expr: h,
+                            indexed: false,
+                        })
+                }) {
                     Ok(resolution) => resolution,
                     // A program naga cannot type is left as it is (validation says why).
                     Err(_) => break,
@@ -1420,7 +1431,6 @@ fn vector_logical_operators(module: &mut Module) {
             resolved.push(resolution);
         }
     }
-    drop(functions);
     let mut functions: Vec<&mut naga::Function> = module_functions(module).collect();
     for (or, index, handle) in found {
         if let Expression::Binary { op, .. } = &mut functions[index].expressions[handle] {

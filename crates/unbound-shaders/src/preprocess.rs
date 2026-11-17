@@ -308,10 +308,15 @@ impl<'a> Preprocessor<'a> {
             // none, would read `'N'` as the name `N` (URP's mipmap debug legend is an array of
             // them).
             match char_literal(&t) {
-                Some(value) => out.push_str(&value.to_string()),
-                None => out.push_str(&t.text),
+                Some(value) => {
+                    out.push_str(&value.to_string());
+                    previous = Some(Kind::Number);
+                }
+                None => {
+                    out.push_str(&t.text);
+                    previous = Some(t.kind);
+                }
             }
-            previous = Some(t.kind);
         }
         Ok(())
     }
@@ -1108,9 +1113,19 @@ fn char_literal(t: &Tok) -> Option<i64> {
                 chars = "".chars();
                 i64::from_str_radix(digits, 16).ok()?
             }
+            // Up to three octal digits, as in C.
             d @ '0'..='7' => {
-                let digits: String = std::iter::once(d).chain(chars.by_ref()).collect();
-                i64::from_str_radix(&digits, 8).ok()?
+                let mut value = d as i64 - '0' as i64;
+                for _ in 0..2 {
+                    match chars.clone().next() {
+                        Some(o @ '0'..='7') => {
+                            chars.next();
+                            value = value * 8 + (o as i64 - '0' as i64);
+                        }
+                        _ => break,
+                    }
+                }
+                value
             }
             other => other as i64,
         },
@@ -1245,7 +1260,8 @@ mod tests {
         let out = run(
             concat!(
                 "static const uint s[][4] = { {2, 'N',' ','.'} };\n",
-                "uint e[] = { '\\n', '\\'', '\\\\', '\\x41', '\\101', '\\0' };\n",
+                "uint e[] = { '\\n', '\\'', '\\\\', '\\x41', '\\101', '\\0', '\\1012' };\n",
+                "#define W(a) a\nint w = W('A')W(b);\n",
                 "#if 'A' == 65 && '\\n' == 10\nint yes;\n#endif\n",
                 "string t = \"it's\";\n",
             ),
@@ -1254,7 +1270,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             words(&out.text),
-            "static const uint s[ ] [4] = { {2, 78,32,46} } ; uint e[ ] = { 10, 39, 92, 65, 65, 0 } ; int yes; string t = \"it's\";"
+            "static const uint s[ ] [4] = { {2, 78,32,46} } ; uint e[ ] = { 10, 39, 92, 65, 65, 0, '\\1012' } ; int w = 65 b; int yes; string t = \"it's\";"
         );
     }
 
