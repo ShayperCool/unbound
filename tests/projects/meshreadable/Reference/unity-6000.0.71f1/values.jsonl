@@ -1,0 +1,315 @@
+{"k":"layers.readable","v":true}
+{"k":"layers.vertexCount","v":9}
+{"k":"layers.subMeshCount","v":1}
+{"k":"layers.indexFormat","v":"UInt16"}
+{"k":"layers.bounds","v":[[-0.01,0.01,0],[0.02,0.02,0]]}
+{"k":"layers.attributes","v":["Position:Float32x3@0","Normal:Float32x3@0","Tangent:Float32x4@0","Color:UNorm8x4@0","TexCoord0:Float32x2@0","TexCoord1:Float32x2@0","TexCoord2:Float32x2@0","TexCoord3:Float32x2@0","TexCoord4:Float32x2@0","TexCoord5:Float32x2@0","TexCoord6:Float32x2@0","TexCoord7:Float32x2@0"]}
+{"k":"layers.vertexAttributeCount","v":12}
+{"k":"layers.vertexBufferCount","v":1}
+{"k":"layers.strides","v":[108]}
+{"k":"layers.attribute.Position","v":["Float32",3,0,0]}
+{"k":"layers.attribute.Normal","v":["Float32",3,0,12]}
+{"k":"layers.attribute.Tangent","v":["Float32",4,0,24]}
+{"k":"layers.attribute.Color","v":["UNorm8",4,0,40]}
+{"k":"layers.attribute.TexCoord0","v":["Float32",2,0,44]}
+{"k":"layers.attribute.TexCoord1","v":["Float32",2,0,52]}
+{"k":"layers.attribute.TexCoord2","v":["Float32",2,0,60]}
+{"k":"layers.attribute.TexCoord3","v":["Float32",2,0,68]}
+{"k":"layers.attribute.TexCoord4","v":["Float32",2,0,76]}
+{"k":"layers.attribute.TexCoord5","v":["Float32",2,0,84]}
+{"k":"layers.attribute.TexCoord6","v":["Float32",2,0,92]}
+{"k":"layers.attribute.TexCoord7","v":["Float32",2,0,100]}
+{"k":"layers.indexCount0","v":24}
+{"k":"layers.subMesh0","v":[0,24,0,0,9]}
+{"k":"layers.vertices","v":[9,[-0.01,0,0],[0,0.02,0]]}
+{"k":"layers.normals","v":[9,[0,0,1],[0,0,1]]}
+{"k":"layers.tangents","v":[9,[-1,0,0,-1],[-1,0,0,-1]]}
+{"k":"layers.colors","v":[9,[0.1254902,0.8745098,0.5019608,1],[0.7490196,0.2509804,0.2509804,0.5019608]]}
+{"k":"layers.colors32","v":[9,[32,223,128,255],[191,64,64,128]]}
+{"k":"layers.uv","v":[9,[0.25,0],[0,0.25]]}
+{"k":"layers.uv2","v":[9,[1.25,0.5],[1,0.75]]}
+{"k":"layers.uv5","v":[9,[4.25,2],[4,2.25]]}
+{"k":"layers.uv8","v":[9,[7.25,3.5],[7,3.75]]}
+{"k":"layers.triangles","v":[24,0,7]}
+{"k":"layers.GetTriangles","v":[24,0,7]}
+{"k":"layers.GetIndices","v":[24,0,7]}
+{"k":"layers.boneWeights","v":[0]}
+{"k":"layers.GetVertices","v":[9,[-0.01,0,0],[0,0.02,0]]}
+{"k":"layers.GetNormals","v":[9,[0,0,1],[0,0,1]]}
+{"k":"layers.GetColors","v":[9,[0.1254902,0.8745098,0.5019608,1],[0.7490196,0.2509804,0.2509804,0.5019608]]}
+{"k":"layers.GetColors32","v":[9,[32,223,128,255],[191,64,64,128]]}
+{"k":"layers.GetUVs0","v":[9,[0.25,0],[0,0.25]]}
+{"k":"layers.GetUVs1","v":[9,[1.25,0.5],[1,0.75]]}
+{"k":"layers.GetUVs2","v":[9,[2.25,1],[2,1.25]]}
+{"k":"layers.GetUVs3","v":[9,[3.25,1.5],[3,1.75]]}
+{"k":"layers.GetUVs4","v":[9,[4.25,2],[4,2.25]]}
+{"k":"layers.GetUVs5","v":[9,[5.25,2.5],[5,2.75]]}
+{"k":"layers.GetUVs6","v":[9,[6.25,3],[6,3.25]]}
+{"k":"layers.GetUVs7","v":[9,[7.25,3.5],[7,3.75]]}
+{"k":"layers.GetUVs4d","v":[9,[4.25,2,0,0],[4,2.25,0,0]]}
+{"k":"layers.GetTrianglesList","v":[24,0,7]}
+{"k":"layers.GetIndicesList","v":[24,0,7]}
+{"k":"layers.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"layers.meshData","v":[9,1,1,[-0.01,0,0]]}
+{"k":"layersLocked.readable","v":false}
+{"k":"layersLocked.vertexCount","v":9}
+{"k":"layersLocked.subMeshCount","v":1}
+{"k":"layersLocked.indexFormat","v":"UInt16"}
+{"k":"layersLocked.bounds","v":[[-0.01,0.01,0],[0.02,0.02,0]]}
+{"k":"layersLocked.attributes","v":["Position:Float32x3@0","Normal:Float32x3@0","Tangent:Float32x4@0","Color:UNorm8x4@0","TexCoord0:Float32x2@0","TexCoord1:Float32x2@0","TexCoord2:Float32x2@0","TexCoord3:Float32x2@0","TexCoord4:Float32x2@0","TexCoord5:Float32x2@0","TexCoord6:Float32x2@0","TexCoord7:Float32x2@0"]}
+{"k":"layersLocked.vertexAttributeCount","v":12}
+{"k":"layersLocked.vertexBufferCount","v":1}
+{"k":"layersLocked.strides","v":[108]}
+{"k":"layersLocked.attribute.Position","v":["Float32",3,0,0]}
+{"k":"layersLocked.attribute.Normal","v":["Float32",3,0,12]}
+{"k":"layersLocked.attribute.Tangent","v":["Float32",4,0,24]}
+{"k":"layersLocked.attribute.Color","v":["UNorm8",4,0,40]}
+{"k":"layersLocked.attribute.TexCoord0","v":["Float32",2,0,44]}
+{"k":"layersLocked.attribute.TexCoord1","v":["Float32",2,0,52]}
+{"k":"layersLocked.attribute.TexCoord2","v":["Float32",2,0,60]}
+{"k":"layersLocked.attribute.TexCoord3","v":["Float32",2,0,68]}
+{"k":"layersLocked.attribute.TexCoord4","v":["Float32",2,0,76]}
+{"k":"layersLocked.attribute.TexCoord5","v":["Float32",2,0,84]}
+{"k":"layersLocked.attribute.TexCoord6","v":["Float32",2,0,92]}
+{"k":"layersLocked.attribute.TexCoord7","v":["Float32",2,0,100]}
+{"k":"layersLocked.indexCount0","v":24}
+{"k":"layersLocked.subMesh0","v":[0,24,0,0,9]}
+{"k":"layersLocked.vertices","v":[0]}
+{"k":"layersLocked.vertices.log","v":["Error: Not allowed to access vertices on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.normals","v":[0]}
+{"k":"layersLocked.normals.log","v":["Error: Not allowed to access normals on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.tangents","v":[0]}
+{"k":"layersLocked.tangents.log","v":["Error: Not allowed to access tangents on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.colors","v":[0]}
+{"k":"layersLocked.colors.log","v":["Error: Not allowed to access colors on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.colors32","v":[0]}
+{"k":"layersLocked.colors32.log","v":["Error: Not allowed to access colors on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.uv","v":[0]}
+{"k":"layersLocked.uv.log","v":["Error: Not allowed to access uv on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.uv2","v":[0]}
+{"k":"layersLocked.uv2.log","v":["Error: Not allowed to access uv2 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.uv5","v":[0]}
+{"k":"layersLocked.uv5.log","v":["Error: Not allowed to access uv5 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.uv8","v":[0]}
+{"k":"layersLocked.uv8.log","v":["Error: Not allowed to access uv8 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.triangles","v":[0]}
+{"k":"layersLocked.triangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetTriangles","v":[0]}
+{"k":"layersLocked.GetTriangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetIndices","v":[0]}
+{"k":"layersLocked.GetIndices.log","v":["Error: Not allowed to access triangles/indices on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.boneWeights","v":[0]}
+{"k":"layersLocked.GetVertices","v":[0]}
+{"k":"layersLocked.GetVertices.log","v":["Error: Not allowed to access vertices on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetNormals","v":[0]}
+{"k":"layersLocked.GetNormals.log","v":["Error: Not allowed to access normals on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetColors","v":[0]}
+{"k":"layersLocked.GetColors.log","v":["Error: Not allowed to access colors on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetColors32","v":[0]}
+{"k":"layersLocked.GetColors32.log","v":["Error: Not allowed to access colors on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs0","v":[0]}
+{"k":"layersLocked.GetUVs0.log","v":["Error: Not allowed to access uv on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs1","v":[0]}
+{"k":"layersLocked.GetUVs1.log","v":["Error: Not allowed to access uv2 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs2","v":[0]}
+{"k":"layersLocked.GetUVs2.log","v":["Error: Not allowed to access uv3 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs3","v":[0]}
+{"k":"layersLocked.GetUVs3.log","v":["Error: Not allowed to access uv4 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs4","v":[0]}
+{"k":"layersLocked.GetUVs4.log","v":["Error: Not allowed to access uv5 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs5","v":[0]}
+{"k":"layersLocked.GetUVs5.log","v":["Error: Not allowed to access uv6 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs6","v":[0]}
+{"k":"layersLocked.GetUVs6.log","v":["Error: Not allowed to access uv7 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs7","v":[0]}
+{"k":"layersLocked.GetUVs7.log","v":["Error: Not allowed to access uv8 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetUVs4d","v":[0]}
+{"k":"layersLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"layersLocked.GetTrianglesList","v":[24,0,7]}
+{"k":"layersLocked.GetIndicesList","v":[24,0,7]}
+{"k":"layersLocked.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"layersLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"}
+{"k":"plainLocked.readable","v":false}
+{"k":"plainLocked.vertexCount","v":9}
+{"k":"plainLocked.subMeshCount","v":1}
+{"k":"plainLocked.indexFormat","v":"UInt16"}
+{"k":"plainLocked.bounds","v":[[-0.01,0.01,0],[0.02,0.02,0]]}
+{"k":"plainLocked.attributes","v":["Position:Float32x3@0","Normal:Float32x3@0","Tangent:Float32x4@0","TexCoord0:Float32x2@0"]}
+{"k":"plainLocked.vertexAttributeCount","v":4}
+{"k":"plainLocked.vertexBufferCount","v":1}
+{"k":"plainLocked.strides","v":[48]}
+{"k":"plainLocked.attribute.Position","v":["Float32",3,0,0]}
+{"k":"plainLocked.attribute.Normal","v":["Float32",3,0,12]}
+{"k":"plainLocked.attribute.Tangent","v":["Float32",4,0,24]}
+{"k":"plainLocked.attribute.TexCoord0","v":["Float32",2,0,40]}
+{"k":"plainLocked.indexCount0","v":24}
+{"k":"plainLocked.subMesh0","v":[0,24,0,0,9]}
+{"k":"plainLocked.vertices","v":[0]}
+{"k":"plainLocked.vertices.log","v":["Error: Not allowed to access vertices on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.normals","v":[0]}
+{"k":"plainLocked.normals.log","v":["Error: Not allowed to access normals on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.tangents","v":[0]}
+{"k":"plainLocked.tangents.log","v":["Error: Not allowed to access tangents on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.colors","v":[0]}
+{"k":"plainLocked.colors.log","v":["Error: Not allowed to access colors on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.colors32","v":[0]}
+{"k":"plainLocked.colors32.log","v":["Error: Not allowed to access colors on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.uv","v":[0]}
+{"k":"plainLocked.uv.log","v":["Error: Not allowed to access uv on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.uv2","v":[0]}
+{"k":"plainLocked.uv2.log","v":["Error: Not allowed to access uv2 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.uv5","v":[0]}
+{"k":"plainLocked.uv5.log","v":["Error: Not allowed to access uv5 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.uv8","v":[0]}
+{"k":"plainLocked.uv8.log","v":["Error: Not allowed to access uv8 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.triangles","v":[0]}
+{"k":"plainLocked.triangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetTriangles","v":[0]}
+{"k":"plainLocked.GetTriangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetIndices","v":[0]}
+{"k":"plainLocked.GetIndices.log","v":["Error: Not allowed to access triangles/indices on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.boneWeights","v":[0]}
+{"k":"plainLocked.GetVertices","v":[0]}
+{"k":"plainLocked.GetVertices.log","v":["Error: Not allowed to access vertices on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetNormals","v":[0]}
+{"k":"plainLocked.GetNormals.log","v":["Error: Not allowed to access normals on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetColors","v":[0]}
+{"k":"plainLocked.GetColors.log","v":["Error: Not allowed to access colors on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetColors32","v":[0]}
+{"k":"plainLocked.GetColors32.log","v":["Error: Not allowed to access colors on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs0","v":[0]}
+{"k":"plainLocked.GetUVs0.log","v":["Error: Not allowed to access uv on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs1","v":[0]}
+{"k":"plainLocked.GetUVs1.log","v":["Error: Not allowed to access uv2 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs2","v":[0]}
+{"k":"plainLocked.GetUVs2.log","v":["Error: Not allowed to access uv3 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs3","v":[0]}
+{"k":"plainLocked.GetUVs3.log","v":["Error: Not allowed to access uv4 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs4","v":[0]}
+{"k":"plainLocked.GetUVs4.log","v":["Error: Not allowed to access uv5 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs5","v":[0]}
+{"k":"plainLocked.GetUVs5.log","v":["Error: Not allowed to access uv6 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs6","v":[0]}
+{"k":"plainLocked.GetUVs6.log","v":["Error: Not allowed to access uv7 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs7","v":[0]}
+{"k":"plainLocked.GetUVs7.log","v":["Error: Not allowed to access uv8 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetUVs4d","v":[0]}
+{"k":"plainLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"plainLocked.GetTrianglesList","v":[24,0,7]}
+{"k":"plainLocked.GetIndicesList","v":[24,0,7]}
+{"k":"plainLocked.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"plainLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"}
+{"k":"scripted.readable","v":true}
+{"k":"scripted.vertexCount","v":3}
+{"k":"scripted.subMeshCount","v":1}
+{"k":"scripted.indexFormat","v":"UInt16"}
+{"k":"scripted.bounds","v":[[0.5,0.5,0],[1,1,0]]}
+{"k":"scripted.attributes","v":["Position:Float32x3@0","Color:UNorm8x4@0","TexCoord4:Float32x2@0"]}
+{"k":"scripted.vertexAttributeCount","v":3}
+{"k":"scripted.vertexBufferCount","v":1}
+{"k":"scripted.strides","v":[24]}
+{"k":"scripted.attribute.Position","v":["Float32",3,0,0]}
+{"k":"scripted.attribute.Color","v":["UNorm8",4,0,12]}
+{"k":"scripted.attribute.TexCoord4","v":["Float32",2,0,16]}
+{"k":"scripted.indexCount0","v":3}
+{"k":"scripted.subMesh0","v":[0,3,0,0,3]}
+{"k":"scripted.vertices","v":[3,[0,0,0],[0,1,0]]}
+{"k":"scripted.normals","v":[0]}
+{"k":"scripted.tangents","v":[0]}
+{"k":"scripted.colors","v":[3,[0.0392156877,0.0784313753,0.117647059,0.156862751],[0.3529412,0.392156869,0.431372553,0.470588237]]}
+{"k":"scripted.colors32","v":[3,[10,20,30,40],[90,100,110,120]]}
+{"k":"scripted.uv","v":[0]}
+{"k":"scripted.uv2","v":[0]}
+{"k":"scripted.uv5","v":[3,[1,1],[0,1]]}
+{"k":"scripted.uv8","v":[0]}
+{"k":"scripted.triangles","v":[3,0,2]}
+{"k":"scripted.GetTriangles","v":[3,0,2]}
+{"k":"scripted.GetIndices","v":[3,0,2]}
+{"k":"scripted.boneWeights","v":[0]}
+{"k":"scripted.GetVertices","v":[3,[0,0,0],[0,1,0]]}
+{"k":"scripted.GetNormals","v":[0]}
+{"k":"scripted.GetColors","v":[3,[0.0392156877,0.0784313753,0.117647059,0.156862751],[0.3529412,0.392156869,0.431372553,0.470588237]]}
+{"k":"scripted.GetColors32","v":[3,[10,20,30,40],[90,100,110,120]]}
+{"k":"scripted.GetUVs0","v":[0]}
+{"k":"scripted.GetUVs1","v":[0]}
+{"k":"scripted.GetUVs2","v":[0]}
+{"k":"scripted.GetUVs3","v":[0]}
+{"k":"scripted.GetUVs4","v":[3,[1,1],[0,1]]}
+{"k":"scripted.GetUVs5","v":[0]}
+{"k":"scripted.GetUVs6","v":[0]}
+{"k":"scripted.GetUVs7","v":[0]}
+{"k":"scripted.GetUVs4d","v":[3,[1,1,0,0],[0,1,0,0]]}
+{"k":"scripted.GetTrianglesList","v":[3,0,2]}
+{"k":"scripted.GetIndicesList","v":[3,0,2]}
+{"k":"scripted.colliderHit","v":false}
+{"k":"scripted.meshData","v":[3,1,1,[0,0,0]]}
+{"k":"scriptedLocked.readable","v":false}
+{"k":"scriptedLocked.vertexCount","v":3}
+{"k":"scriptedLocked.subMeshCount","v":1}
+{"k":"scriptedLocked.indexFormat","v":"UInt16"}
+{"k":"scriptedLocked.bounds","v":[[0.5,0.5,0],[1,1,0]]}
+{"k":"scriptedLocked.attributes","v":["Position:Float32x3@0","Color:UNorm8x4@0","TexCoord4:Float32x2@0"]}
+{"k":"scriptedLocked.vertexAttributeCount","v":3}
+{"k":"scriptedLocked.vertexBufferCount","v":1}
+{"k":"scriptedLocked.strides","v":[24]}
+{"k":"scriptedLocked.attribute.Position","v":["Float32",3,0,0]}
+{"k":"scriptedLocked.attribute.Color","v":["UNorm8",4,0,12]}
+{"k":"scriptedLocked.attribute.TexCoord4","v":["Float32",2,0,16]}
+{"k":"scriptedLocked.indexCount0","v":3}
+{"k":"scriptedLocked.subMesh0","v":[0,3,0,0,3]}
+{"k":"scriptedLocked.vertices","v":[0]}
+{"k":"scriptedLocked.vertices.log","v":["Error: Not allowed to access vertices on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.normals","v":[0]}
+{"k":"scriptedLocked.normals.log","v":["Error: Not allowed to access normals on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.tangents","v":[0]}
+{"k":"scriptedLocked.tangents.log","v":["Error: Not allowed to access tangents on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.colors","v":[0]}
+{"k":"scriptedLocked.colors.log","v":["Error: Not allowed to access colors on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.colors32","v":[0]}
+{"k":"scriptedLocked.colors32.log","v":["Error: Not allowed to access colors on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.uv","v":[0]}
+{"k":"scriptedLocked.uv.log","v":["Error: Not allowed to access uv on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.uv2","v":[0]}
+{"k":"scriptedLocked.uv2.log","v":["Error: Not allowed to access uv2 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.uv5","v":[0]}
+{"k":"scriptedLocked.uv5.log","v":["Error: Not allowed to access uv5 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.uv8","v":[0]}
+{"k":"scriptedLocked.uv8.log","v":["Error: Not allowed to access uv8 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.triangles","v":[0]}
+{"k":"scriptedLocked.triangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetTriangles","v":[0]}
+{"k":"scriptedLocked.GetTriangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetIndices","v":[0]}
+{"k":"scriptedLocked.GetIndices.log","v":["Error: Not allowed to access triangles/indices on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.boneWeights","v":[0]}
+{"k":"scriptedLocked.GetVertices","v":[0]}
+{"k":"scriptedLocked.GetVertices.log","v":["Error: Not allowed to access vertices on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetNormals","v":[0]}
+{"k":"scriptedLocked.GetNormals.log","v":["Error: Not allowed to access normals on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetColors","v":[0]}
+{"k":"scriptedLocked.GetColors.log","v":["Error: Not allowed to access colors on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetColors32","v":[0]}
+{"k":"scriptedLocked.GetColors32.log","v":["Error: Not allowed to access colors on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs0","v":[0]}
+{"k":"scriptedLocked.GetUVs0.log","v":["Error: Not allowed to access uv on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs1","v":[0]}
+{"k":"scriptedLocked.GetUVs1.log","v":["Error: Not allowed to access uv2 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs2","v":[0]}
+{"k":"scriptedLocked.GetUVs2.log","v":["Error: Not allowed to access uv3 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs3","v":[0]}
+{"k":"scriptedLocked.GetUVs3.log","v":["Error: Not allowed to access uv4 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs4","v":[0]}
+{"k":"scriptedLocked.GetUVs4.log","v":["Error: Not allowed to access uv5 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs5","v":[0]}
+{"k":"scriptedLocked.GetUVs5.log","v":["Error: Not allowed to access uv6 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs6","v":[0]}
+{"k":"scriptedLocked.GetUVs6.log","v":["Error: Not allowed to access uv7 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs7","v":[0]}
+{"k":"scriptedLocked.GetUVs7.log","v":["Error: Not allowed to access uv8 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetUVs4d","v":[0]}
+{"k":"scriptedLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"scriptedLocked.GetTrianglesList","v":[3,0,2]}
+{"k":"scriptedLocked.GetIndicesList","v":[3,0,2]}
+{"k":"scriptedLocked.colliderHit","v":false}
+{"k":"scriptedLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"}
+{"k":"complete","v":true}

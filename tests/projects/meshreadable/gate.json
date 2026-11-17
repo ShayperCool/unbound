@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/meshreadable/run.py gate"
+  ],
+  "summary": "meshreadable: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Graphics/MeshFromModel.cs",
+    "managed/UnityEngine/Graphics/MeshBuffers.cs",
+    "managed/UnityEngine/Graphics/MeshData.cs",
+    "crates/unbound-assets/src/model.rs"
+  ]
+}
