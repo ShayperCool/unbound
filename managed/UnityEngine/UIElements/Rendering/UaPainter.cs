@@ -179,10 +179,10 @@ namespace Unbound.UIElements
                 return;
             }
             float opacity = parentOpacity * Mathf.Clamp01(style.opacity);
-            // A fully transparent subtree draws nothing, but its content is still generated (its
-            // generateVisualContent callbacks run, its text is generated) and its ImmediateModeElements
-            // are called (they draw with GL, which UI opacity does not affect), as in Unity
-            // (tests/projects/uitkimmediate transparent, underTransparent).
+            // A fully transparent subtree draws nothing, but its ImmediateModeElements are called (they
+            // draw with GL, which UI opacity does not affect), as in Unity (tests/projects/uitkimmediate
+            // transparent, underTransparent). They reach their callback through generateVisualContent,
+            // so the subtree's content is generated alike (its other callbacks, its text).
             bool callbacksOnly = opacity <= 0f;
 
             var savedScissor = m_Scissor;
