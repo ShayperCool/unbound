@@ -1731,6 +1731,8 @@
 {"key":"UnityEngine.AreaEffector2D/Property/UnityEngine.Effector2D/useColliderMask","status":"value","value":"true"}
 {"key":"UnityEngine.AreaEffector2D/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
 {"key":"UnityEngine.AreaEffector2D/Property/UnityEngine.Object/name","status":"value","value":"string:default-UnityEngine.AreaEffector2D"}
+{"key":"UnityEngine.AssemblyIsEditorAssembly/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.AssemblyIsEditorAssembly/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.AssemblyIsEditorAssembly"}
 {"key":"UnityEngine.Assertions.Assert/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.Assertions.AssertionException/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AssetBundle/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
@@ -2759,6 +2761,7 @@
 {"key":"UnityEngine.Color32/Field/UnityEngine.Color32/g","status":"value","value":"0"}
 {"key":"UnityEngine.Color32/Field/UnityEngine.Color32/r","status":"value","value":"0"}
 {"key":"UnityEngine.Color32/Property/UnityEngine.Color32/Item(System.Int32)","status":"not-readable","value":"indexer-requires-arguments"}
+{"key":"UnityEngine.ColorGamutUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.ColorUsageAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.ColorUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.CombineInstance/@factory","status":"value","value":"struct"}
@@ -5658,6 +5661,8 @@
 {"key":"UnityEngine.Pose/Property/UnityEngine.Pose/forward","status":"value","value":"UnityEngine.Vector3{x=0;y=0;z=1}"}
 {"key":"UnityEngine.Pose/Property/UnityEngine.Pose/right","status":"value","value":"UnityEngine.Vector3{x=1;y=0;z=0}"}
 {"key":"UnityEngine.Pose/Property/UnityEngine.Pose/up","status":"value","value":"UnityEngine.Vector3{x=0;y=1;z=0}"}
+{"key":"UnityEngine.PreferBinarySerialization/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.PreferBinarySerialization/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.PreferBinarySerialization"}
 {"key":"UnityEngine.Profiling.CustomSampler/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Profiling.Profiler/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Profiling.Recorder/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
@@ -6142,6 +6147,7 @@
 {"key":"UnityEngine.Rendering.CommandBuffer/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.Rendering.CommandBuffer/Property/UnityEngine.Rendering.CommandBuffer/name","status":"value","value":"string:Unnamed command buffer"}
 {"key":"UnityEngine.Rendering.CommandBuffer/Property/UnityEngine.Rendering.CommandBuffer/sizeInBytes","status":"value","value":"0"}
+{"key":"UnityEngine.Rendering.CommandBufferExtensions/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.Rendering.CullingResults/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/lightAndReflectionProbeIndexCount","status":"getter-threw","value":"System.InvalidOperationException"}
 {"key":"UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/lightIndexCount","status":"getter-threw","value":"System.InvalidOperationException"}
@@ -6184,6 +6190,7 @@
 {"key":"UnityEngine.Rendering.GraphicsFence/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.Rendering.GraphicsFence/Property/UnityEngine.Rendering.GraphicsFence/passed","status":"getter-threw","value":"System.InvalidOperationException"}
 {"key":"UnityEngine.Rendering.GraphicsSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.Rendering.InvalidImportException/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Rendering.LODParameters/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.Rendering.LODParameters/Property/UnityEngine.Rendering.LODParameters/cameraPixelHeight","status":"value","value":"0"}
 {"key":"UnityEngine.Rendering.LODParameters/Property/UnityEngine.Rendering.LODParameters/cameraPosition","status":"value","value":"UnityEngine.Vector3{x=0;y=0;z=0}"}
@@ -6219,6 +6226,8 @@
 {"key":"UnityEngine.Rendering.RayTracingAccelerationStructure+BuildSettings/Property/UnityEngine.Rendering.RayTracingAccelerationStructure+BuildSettings/buildFlags","status":"value","value":"enum:1"}
 {"key":"UnityEngine.Rendering.RayTracingAccelerationStructure+BuildSettings/Property/UnityEngine.Rendering.RayTracingAccelerationStructure+BuildSettings/relativeOrigin","status":"value","value":"UnityEngine.Vector3{x=0;y=0;z=0}"}
 {"key":"UnityEngine.Rendering.RayTracingShader/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.Rendering.RecreatePipelineOnChangeAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.Rendering.RecreatePipelineOnChangeAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.Rendering.RecreatePipelineOnChangeAttribute"}
 {"key":"UnityEngine.Rendering.ReflectionProbeBlendInfo/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.Rendering.ReflectionProbeBlendInfo/Field/UnityEngine.Rendering.ReflectionProbeBlendInfo/probe","status":"value","value":"null"}
 {"key":"UnityEngine.Rendering.ReflectionProbeBlendInfo/Field/UnityEngine.Rendering.ReflectionProbeBlendInfo/weight","status":"value","value":"0"}
@@ -7933,6 +7942,7 @@
 {"key":"UnityEngine.U2D.AngleRangeInfo/Field/UnityEngine.U2D.AngleRangeInfo/order","status":"value","value":"0"}
 {"key":"UnityEngine.U2D.AngleRangeInfo/Field/UnityEngine.U2D.AngleRangeInfo/sprites","status":"value","value":"null"}
 {"key":"UnityEngine.U2D.AngleRangeInfo/Field/UnityEngine.U2D.AngleRangeInfo/start","status":"value","value":"0"}
+{"key":"UnityEngine.U2D.Light2DBase/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEngine.U2D.PixelPerfectRendering/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.U2D.ShapeControlPoint/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.U2D.ShapeControlPoint/Field/UnityEngine.U2D.ShapeControlPoint/leftTangent","status":"value","value":"UnityEngine.Vector3{x=0;y=0;z=0}"}

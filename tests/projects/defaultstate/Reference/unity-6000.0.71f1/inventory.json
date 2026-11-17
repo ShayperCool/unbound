@@ -2415,6 +2415,12 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.AssemblyIsEditorAssembly"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "static",
       "type": "UnityEngine.Assertions.Assert"
     },
@@ -2951,6 +2957,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.Color32"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.ColorGamutUtility"
     },
     {
       "category": "class",
@@ -5673,6 +5685,12 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.PreferBinarySerialization"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.Profiling.CustomSampler"
     },
@@ -6013,6 +6031,12 @@
       "type": "UnityEngine.Rendering.CommandBuffer"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Rendering.CommandBufferExtensions"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
@@ -6059,6 +6083,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.Rendering.GraphicsSettings"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.Rendering.InvalidImportException"
     },
     {
       "category": "struct",
@@ -6119,6 +6149,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.Rendering.RayTracingShader"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Rendering.RecreatePipelineOnChangeAttribute"
     },
     {
       "category": "struct",
@@ -7157,6 +7193,12 @@
       "module": "UnityEngine.SpriteShapeModule",
       "status": "candidate",
       "type": "UnityEngine.U2D.AngleRangeInfo"
+    },
+    {
+      "category": "component",
+      "module": "UnityEngine.CoreModule",
+      "status": "abstract",
+      "type": "UnityEngine.U2D.Light2DBase"
     },
     {
       "category": "class",
