@@ -2769,9 +2769,6 @@ namespace UnityEngine.UIElements
     }
     unsafe static partial class RuntimePanelUtils
     {
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 ScreenToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector2 screenPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ScreenToPanel"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2 CameraTransformWorldToPanel(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.CameraTransformWorldToPanel"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rect CameraTransformWorldToPanelRect(global::UnityEngine.UIElements.IPanel panel, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector2 worldSize, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.CameraTransformWorldToPanelRect"); return default; }
         [global::Unbound.Stub] public static void ResetRenderer(this global::UnityEngine.UIElements.IPanel panel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RuntimePanelUtils.ResetRenderer"); }
     }
     [global::Unbound.Stub]
@@ -3763,8 +3760,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MultiDisplayBottomLeftToPanelPosition(global::UnityEngine.Vector2 position, out global::System.Nullable<int> targetDisplay) { targetDisplay = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.MultiDisplayBottomLeftToPanelPosition"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MultiDisplayToLocalScreenPosition(global::UnityEngine.Vector2 position, out global::System.Nullable<int> targetDisplay) { targetDisplay = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.MultiDisplayToLocalScreenPosition"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 PanelToScreenBottomLeftPosition(global::UnityEngine.Vector2 panelPosition, int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.PanelToScreenBottomLeftPosition"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2 FlipY(global::UnityEngine.Vector2 p, float displayHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.FlipY"); return default; }
-        [global::Unbound.Stub] internal static float GetEditorDisplayHeight(int targetDisplay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.GetEditorDisplayHeight"); return default; }
         [global::Unbound.Stub] internal static void OnEnteredPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnEnteredPlayMode"); }
         [global::Unbound.Stub] internal static void OnExitingPlayMode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UIElementsRuntimeUtility.OnExitingPlayMode"); }
     }

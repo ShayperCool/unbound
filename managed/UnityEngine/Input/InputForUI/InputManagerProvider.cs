@@ -704,7 +704,7 @@ namespace UnityEngine.InputForUI
         {
             var local = MultiDisplayToLocalScreenPosition(position, out var display);
             targetDisplay = display.GetValueOrDefault();
-            return ScreenBottomLeftToPanelPosition(local, targetDisplay);
+            return UnityEngine.UIElements.UIElementsRuntimeUtility.ScreenBottomLeftToPanelPosition(local, targetDisplay);
         }
 
         static Vector2 MultiDisplayToLocalScreenPosition(Vector2 position, out int? targetDisplay)
@@ -716,14 +716,6 @@ namespace UnityEngine.InputForUI
                 return relative;
             }
             targetDisplay = Display.activeEditorGameViewTarget;
-            return position;
-        }
-
-        static Vector2 ScreenBottomLeftToPanelPosition(Vector2 position, int targetDisplay)
-        {
-            int height = Screen.height;
-            if (targetDisplay > 0 && targetDisplay < Display.displays.Length) height = Display.displays[targetDisplay].systemHeight;
-            position.y = height - position.y;
             return position;
         }
 

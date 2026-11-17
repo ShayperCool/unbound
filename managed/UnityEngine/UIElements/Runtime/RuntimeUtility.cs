@@ -166,7 +166,22 @@ namespace UnityEngine.UIElements
         public static void RenderPanel(BaseRuntimePanel panel, bool restoreState = true) => panel.Render();
 
         internal static Vector2 ScreenBottomLeftToPanelPosition(Vector2 position, int targetDisplay) =>
-            new Vector2(position.x, Screen.height - position.y);
+            FlipY(position, GetRuntimeDisplayHeight(targetDisplay));
+
+        /// <summary>A display's height: a further display's own, else the screen's.</summary>
+        internal static float GetRuntimeDisplayHeight(int targetDisplay) =>
+            targetDisplay > 0 && targetDisplay < Display.displays.Length ? Display.displays[targetDisplay].systemHeight : Screen.height;
+
+        /// <summary>A display's height as the Editor sees it: the Game view's for the display it shows
+        /// (the screen, display 0, here), else as at runtime.</summary>
+        internal static float GetEditorDisplayHeight(int targetDisplay) =>
+            targetDisplay == 0 ? Screen.height : GetRuntimeDisplayHeight(targetDisplay);
+
+        internal static Vector2 FlipY(Vector2 p, float displayHeight)
+        {
+            p.y = displayHeight - p.y;
+            return p;
+        }
 
         internal static Vector2 ScreenBottomLeftToPanelDelta(Vector2 delta) => new Vector2(delta.x, -delta.y);
     }
