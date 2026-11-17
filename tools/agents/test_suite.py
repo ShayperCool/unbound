@@ -442,6 +442,126 @@ class ContinuationTests(unittest.TestCase):
         self.assertIsNone(suite.worse(failing, self.probe()))
 
 
+def ps_listing(rows):
+    """A fake probe_runtime.ps: the process listing of rows (pid, parent, state, start, comm,
+    args) answering the columns ps_snapshot asks for."""
+    def ps(*columns):
+        if 'lstart=' in columns:
+            return ''.join(f'{pid:>6} {parent:>6} {state:<4} {start} {comm}\n'
+                           for pid, parent, state, start, comm, _ in rows)
+        return ''.join(f'{pid:>6} {args}\n' for pid, _, _, _, _, args in rows)
+    return ps
+
+
+class PsBackendTests(unittest.TestCase):
+    """The macOS process guard (ps snapshots), exercised on every platform with a fake ps."""
+    START = 'Tue Nov 17 07:35:09 2026'
+    LATER = 'Tue Nov 17 07:35:41 2026'
+
+    def test_snapshot_reads_names_with_spaces_and_zombies(self):
+        rows = [(100, 1, 'Ss', self.START, '/Applications/Unity Hub.app/Contents/MacOS/Unity Hub', '/x/Unity Hub --a'),
+                (101, 100, 'Z', self.LATER, '<defunct>', '<defunct>')]
+        with unittest.mock.patch.object(probe_runtime, 'ps', ps_listing(rows)):
+            snapshot = probe_runtime.ps_snapshot()
+        self.assertEqual(snapshot[100].executable, '/Applications/Unity Hub.app/Contents/MacOS/Unity Hub')
+        self.assertEqual((snapshot[100].start, snapshot[100].argv), (self.START, ['/x/Unity', 'Hub', '--a']))
+        self.assertEqual((snapshot[101].parent, snapshot[101].state), (100, 'Z'))
+
+    def test_snapshot_refuses_a_row_it_cannot_read(self):
+        # A start time of another word count (a locale's date) must not shift the columns.
+        listing = '   100      1 Ss   2026年11月17日 火曜日 10:35:09 /bin/sh\n'
+        with unittest.mock.patch.object(probe_runtime, 'ps', lambda *columns: listing):
+            with self.assertRaisesRegex(OSError, 'unreadable ps row'):
+                probe_runtime.ps_snapshot()
+
+    def test_ps_runs_in_the_c_locale_and_utc(self):
+        if not shutil.which('ps'):
+            self.skipTest('no ps')
+        starts = []
+        for zone in ('Asia/Tokyo', 'America/Los_Angeles'):
+            with unittest.mock.patch.dict(os.environ, {'LANG': 'ja_JP.UTF-8', 'LC_ALL': 'ru_RU.UTF-8', 'TZ': zone}):
+                starts.append(probe_runtime.ps_snapshot()[os.getpid()].start)
+        # The same five C-locale words whatever the caller's locale and zone.
+        self.assertEqual(starts[0], starts[1])
+        self.assertRegex(starts[0], r'^[A-Z][a-z]{2} [A-Z][a-z]{2} +\d+ \d\d:\d\d:\d\d \d{4}$')
+
+    def test_tree_never_signals_a_pid_used_again(self):
+        tree = probe_runtime.PsTree(100)
+        tree.fds = {100: self.START, 101: self.START}
+        # 101 is now another process (a later start); 102 is the root's new child.
+        rows = [(100, 1, 'S', self.START, 'sh', 'sh'), (101, 1, 'S', self.LATER, 'other', 'other'),
+                (102, 100, 'S', self.LATER, 'child', 'child')]
+        with unittest.mock.patch.object(probe_runtime, 'ps', ps_listing(rows)), \
+                unittest.mock.patch.object(probe_runtime, 'pidfd_backend', lambda: False), \
+                unittest.mock.patch.object(probe_runtime.os, 'kill') as kill, \
+                unittest.mock.patch.object(probe_runtime.os, 'killpg') as killpg:
+            tree.signal(signal.SIGTERM)
+            tree.prune()
+        self.assertEqual(sorted(call.args for call in kill.call_args_list), [(100, signal.SIGTERM), (102, signal.SIGTERM)])
+        killpg.assert_called_once_with(100, signal.SIGTERM)
+        self.assertEqual(set(tree.fds), {100, 102})
+
+    def test_a_failed_listing_signals_the_group_only_and_keeps_the_watch(self):
+        def failing(*columns):
+            raise OSError('ps exited 1')
+        tree = probe_runtime.PsTree(100)
+        tree.fds = {100: self.START, 101: self.START}
+        watch = probe_runtime.EditorWatch()
+        watch.trees[100] = tree
+        with unittest.mock.patch.object(probe_runtime, 'ps', failing), \
+                unittest.mock.patch.object(probe_runtime, 'pidfd_backend', lambda: False), \
+                unittest.mock.patch.object(probe_runtime.os, 'kill') as kill, \
+                unittest.mock.patch.object(probe_runtime.os, 'killpg') as killpg, \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            tree.signal(signal.SIGKILL)
+            self.assertTrue(tree.alive())
+            watch.scan()
+        kill.assert_not_called()
+        killpg.assert_called_once_with(100, signal.SIGKILL)
+        self.assertEqual(watch.found, {})
+        self.assertIn('ps exited 1', err.getvalue())
+
+    @unittest.skipIf(probe_runtime.pidfd_backend(), 'Linux holds processes by pidfd')
+    def test_an_exited_unreaped_child_is_not_alive(self):
+        process = subprocess.Popen([sys.executable, '-c', 'pass'])
+        try:
+            tree = probe_runtime.Tree(process.pid)
+            tree.collect()
+            self.assertIn(process.pid, tree.fds)
+            deadline = time.monotonic() + 10
+            while tree.alive() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertFalse(tree.alive())
+            self.assertIsNone(process.returncode)  # still a zombie: never reaped above
+        finally:
+            process.wait()
+
+    def test_stop_groups_reaches_descendants_in_the_callers_group(self):
+        if not shutil.which('ps'):
+            self.skipTest('no ps')
+        with tempfile.TemporaryDirectory() as temp:
+            pidfile = Path(temp)/'grandchild.pid'
+            # Without a session of its own the step shares this test's process group.
+            process = subprocess.Popen(['bash', '-c', f'sleep 60 & echo $! > {shlex.quote(str(pidfile))}; wait'])
+            deadline = time.monotonic() + 10
+            while not pidfile.exists() or not pidfile.read_text().strip():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(0.02)
+            grandchild = int(pidfile.read_text())
+            self.assertEqual(os.getpgid(grandchild), os.getpgrp())
+            probe_runtime.stop_groups(process, 5)
+            self.assertIsNotNone(process.returncode)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                try:
+                    os.kill(grandchild, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(0.02)
+            else:
+                self.fail('the grandchild in the caller\'s group still runs')
+
+
 class SharedGuardTests(unittest.TestCase):
     @unittest.skipUnless(probe_runtime.pidfd_backend(), 'pidfd process handles are Linux-only')
     def test_process_liveness_handles_large_descriptors_and_exited_children(self):

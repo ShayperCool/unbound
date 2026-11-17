@@ -120,10 +120,17 @@ def probe_release(command, root, environment=None):
     return releases.pop() if releases else default_release()
 
 
+# ps's dates and column words follow the locale and the time zone: fix both, so that a start
+# time is always five words and stays the same while a run's zone changes.
+PS_ENVIRONMENT = {'LC_ALL': 'C', 'TZ': 'UTC0'}
+
+
 def ps(*columns):
-    """The output of `ps -A` with these arguments. Popen directly: a caller that replaces
-    subprocess.run (a test's mock) must not leave the process guard without a listing."""
-    with subprocess.Popen(['ps', '-A', *columns], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True) as listing:
+    """The output of `ps -A` with these arguments (OSError when ps fails). Popen directly: a
+    caller that replaces subprocess.run (a test's mock) must not leave the process guard without
+    a listing."""
+    with subprocess.Popen(['ps', '-A', *columns], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                          env=dict(os.environ, **PS_ENVIRONMENT)) as listing:
         out, _ = listing.communicate()
     if listing.returncode:
         raise OSError(f'ps exited {listing.returncode}')
@@ -146,13 +153,17 @@ PS_LOCK = threading.Lock()
 
 def ps_snapshot():
     """{pid: PsRow} of every process, from two ps listings (macOS ps prints the executable's path
-    and the arguments in separate columns; lstart is five words)."""
+    and the arguments in separate columns; lstart is five words in the C locale). OSError when ps
+    fails or prints a row it cannot read."""
     rows = {}
     listing = ps('-o', 'pid=', '-o', 'ppid=', '-o', 'stat=', '-o', 'lstart=', '-o', 'comm=')
     for line in listing.splitlines():
         fields = line.split(None, 8)
-        if len(fields) == 9:
-            rows[int(fields[0])] = PsRow(int(fields[1]), fields[2], ' '.join(fields[3:8]), fields[8])
+        if not fields:
+            continue
+        if len(fields) != 9 or not (fields[0].isdigit() and fields[1].isdigit()):
+            raise OSError(f'unreadable ps row: {line!r}')
+        rows[int(fields[0])] = PsRow(int(fields[1]), fields[2], ' '.join(fields[3:8]), fields[8])
     arguments = ps('-ww', '-o', 'pid=', '-o', 'args=')
     for line in arguments.splitlines():
         fields = line.split()
@@ -214,33 +225,47 @@ class PsTree:
                 continue
             pending += parents.get(pid, [])
 
-    def live(self):
-        """The tracked processes that still run: the same pid and start time, not a zombie."""
-        rows = ps_snapshot()
+    def live(self, rows=None):
+        """The tracked processes that still run: the same pid and start time, not a zombie (in a
+        new snapshot unless rows are given)."""
+        rows = ps_snapshot() if rows is None else rows
         return [pid for pid, start in self.fds.items()
                 if pid in rows and rows[pid].start == start and not rows[pid].state.startswith('Z')]
 
     def prune(self):
-        """Forget the processes that have exited."""
-        running = set(self.live())
+        """Forget the processes that have exited (in the snapshot the last collect() took)."""
+        with PS_LOCK:
+            rows = dict(PS_SNAPSHOT)
+        running = set(self.live(rows))
         for pid in list(self.fds):
             if pid != self.root and pid not in running:
                 del self.fds[pid]
 
     def signal(self, number):
-        self.collect()
+        """The group and every tracked process still running. Without a listing (ps failed)
+        only the group: a pid is never signalled unless its start time was confirmed."""
+        try:
+            self.collect()
+            running = self.live()
+        except OSError as error:
+            print(f'process guard: {error}; signalling process group {self.root} only', file=sys.stderr)
+            running = []
         try:
             os.killpg(self.root, number)
         except OSError:
             pass
-        for pid in self.live():
+        for pid in running:
             try:
                 os.kill(pid, number)
             except OSError:
                 pass
 
     def alive(self):
-        return bool(self.live())
+        """Whether a tracked process still runs; without a listing it is taken to run."""
+        try:
+            return bool(self.live())
+        except OSError:
+            return True
 
     def close(self):
         self.fds = {}
@@ -309,11 +334,19 @@ class PidfdTree:
 def stop_groups(process, grace):
     """Portable cleanup of a process and its descendants: their process groups are signalled,
     and the tracked processes in the caller's own group (a process started without a session of
-    its own) one by one, so that the caller is never signalled."""
+    its own) one by one, so that the caller is never signalled. Pids are not checked against
+    start times here (PsTree does that for the Editor guard): within the grace period a pid is
+    used again only after the system's pid counter wraps around."""
     tracked, groups, own = {process.pid}, {process.pid}, set()
 
     def collect():
-        rows = ps('-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=')
+        """Whether a tracked process still runs; without a listing (ps failed) the groups and
+        processes already known stay signalled and the tree is taken to run."""
+        try:
+            rows = ps('-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=')
+        except OSError as error:
+            print(f'process guard: {error}; signalling the known groups only', file=sys.stderr)
+            return True
         records = [line.split() for line in rows.splitlines() if line.strip()]
         parents = {}
         for pid, parent, group, state in records:
@@ -352,6 +385,9 @@ def stop_groups(process, grace):
                 os.kill(pid, number)
             except ProcessLookupError:
                 pass
+        if process.poll() is None:
+            # The step's own process, even before its group is known: Popen holds its pid.
+            process.send_signal(number)
 
     collect()
     signal_groups(signal.SIGTERM)
@@ -474,10 +510,16 @@ class EditorWatch:
     def scan(self):
         with self.lock:
             trees = [(pid, tree) for pid, tree in self.trees.items() if pid not in self.found]
-            parents = children() if trees else {}
+            try:
+                parents = children() if trees else {}
+                for _, tree in trees:
+                    tree.collect(parents)
+                    tree.prune()
+            except OSError as error:
+                # A listing failed (macOS ps): the watch keeps running and scans again next poll.
+                print(f'process guard: {error}; scanning again', file=sys.stderr)
+                return
             for pid, tree in trees:
-                tree.collect(parents)
-                tree.prune()
                 found = next(filter(None, map(editor_process, tree.fds)), None)
                 if found:
                     self.found[pid] = found
