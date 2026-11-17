@@ -167,8 +167,13 @@ namespace Unbound.Runtime
             m_StepLists = stepLists.ToArray();
             SetUpEvents(systems);
             SetUpStrips();
+            SetUpBounds();
             if (HasKill) m_Alive = VFXAliveReadback.Join(this);
             m_CameraLists = cameraLists.ToArray();
+            // The update kernel that computes the bounds writes a buffer the compiled graph
+            // lists with the system, not with the task.
+            if (m_ComputesBounds)
+                foreach (var update in m_Updates) update.AlsoBind(BoundsBufferName, m_BoundsBuffer);
             var stepSorts = new List<SortTask>();
             var cameraSorts = new List<SortTask>();
             foreach (var task in sorts)
@@ -281,6 +286,12 @@ namespace Unbound.Runtime
         internal bool LocalBounds(VisualEffectState state, out Bounds bounds)
         {
             bounds = default;
+            // Bounds computed from the particles are in the effect's space already.
+            if (m_AutomaticBounds)
+            {
+                bounds = ComputedBounds;
+                return true;
+            }
             if (m_BoundsCenter < 0 || m_BoundsSize < 0) return false;
             var values = Effect.Values;
             Vector3 center = values.GetVector(m_BoundsCenter, 3), size = values.GetVector(m_BoundsSize, 3);
@@ -298,6 +309,7 @@ namespace Unbound.Runtime
             m_Sleeping = true;
             m_ReadAlive = -1;
             ForgetAsked();
+            ResetBounds();
             m_PrefixWords[0] = m_PrefixWords[1] = 0;
             m_PreparedCamera = null;
             ResetEvents();
@@ -403,6 +415,7 @@ namespace Unbound.Runtime
         {
             if (!KernelsUsable()) return;
             m_UpdatedFrame = VFXManager.Frame;
+            if (state.LastStep) EmptyBounds();
             foreach (var spawner in m_Spawners) TakeEvent(spawner.State.Attribute.Words);
             m_Total += m_Spawned;
             UpdateSleepState(state.FrameIndex);
@@ -683,6 +696,10 @@ namespace Unbound.Runtime
             /// makes (its first, `outputBuffer0`); -1 for another kernel.</summary>
             internal readonly int List = -1;
             int m_DispatchWidth = -1, m_PrefixOffset = -1;
+            /// <summary>A buffer of the system's the kernel may declare beyond its task's own
+            /// (-1: none).</summary>
+            int m_SystemBufferName, m_SystemBuffer = -1;
+            GraphicsBuffer m_SystemBufferBound;
             Texture2D m_Baked;
             bool m_Checked, m_Failed;
 
@@ -709,6 +726,16 @@ namespace Unbound.Runtime
                 // A camera's views as an output-update kernel reads them: one view in all, one
                 // drawn at once, from the first (what a camera without XR has).
                 m_Shader.SetVector(s_CameraXRSettings, new Vector4(one, one, 0f, 0f));
+            }
+
+            /// <summary>Gives the kernel a buffer of its system's under <paramref name="name"/>
+            /// as well, unless its task names that buffer itself.</summary>
+            internal void AlsoBind(string name, int buffer)
+            {
+                foreach (var own in m_Task.buffers ?? Array.Empty<VFXMapping>())
+                    if (own.name == name) return;
+                m_SystemBufferName = Shader.PropertyToID(name);
+                m_SystemBuffer = buffer;
             }
 
             /// <summary>Whether the kernel compiles here; said once when it does not (a system
@@ -779,6 +806,11 @@ namespace Unbound.Runtime
                     m_Bound[i] = buffer;
                     m_Shader.SetBuffer(m_Kernel, m_BufferNames[i], buffer);
                 }
+                if (m_SystemBuffer < 0) return;
+                var ofSystem = effect.GpuBuffer(m_SystemBuffer, 0);
+                if (ReferenceEquals(ofSystem, m_SystemBufferBound)) return;
+                m_SystemBufferBound = ofSystem;
+                m_Shader.SetBuffer(m_Kernel, m_SystemBufferName, ofSystem);
             }
 
             /// <summary>The camera a per-camera kernel runs for.</summary>

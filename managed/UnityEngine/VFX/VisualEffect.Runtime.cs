@@ -144,10 +144,10 @@ namespace UnityEngine.VFX
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
                 if (system.type != VFXSystemType.Particle) continue;
-                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasDirectLink
-                    | VFXSystemFlag.SystemNeedsComputeBounds | VFXSystemFlag.SystemAutomaticBounds | VFXSystemFlag.SystemIsRayTraced;
+                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasDirectLink | VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
                 if (VFXParticleSystem.StripRefusal(system) is string strips) return strips;
+                if (VFXParticleSystem.BoundsRefusal(system) is string bounds) return bounds;
                 // Spawned by GPU events: the graph compiler gives such a system particles that
                 // can die and a list of the dead when it has an update or an output context,
                 // also when no block ever kills one. One without (a system of an initialize
@@ -325,7 +325,11 @@ namespace UnityEngine.VFX
             float delta = state.DeltaTime, unscaled = state.UnscaledDeltaTime;
             state.DeltaTime = state.UnscaledDeltaTime = deltaTime;
             state.NeedsEvaluation = true;
-            for (uint i = 0; i < steps; i++) Step(StepFlags.Evaluate | StepFlags.Simulate);
+            for (uint i = 0; i < steps; i++)
+            {
+                m_State.LastStep = i + 1 == steps;
+                Step(StepFlags.Evaluate | StepFlags.Simulate);
+            }
             state.DeltaTime = delta;
             state.UnscaledDeltaTime = unscaled;
         }
@@ -427,20 +431,24 @@ namespace UnityEngine.VFX
         }
 
         /// <summary>The union of the systems' bounds, in the effect's space: what the renderer
-        /// is culled by.</summary>
+        /// is culled by. The union is of the boxes' corners (each a centre less and plus its
+        /// extents), and the box is taken back from the corners: its centre halfway between
+        /// them and its extents half the way, which rounds a single system's box too
+        /// (tests/projects/vfxbounds, `renderer=` against `bounds=`).</summary>
         void UpdateBounds()
         {
             bool any = false;
-            var union = default(Bounds);
+            Vector3 least = default, greatest = default;
             foreach (var system in m_ParticleSystems)
             {
                 if (!system.LocalBounds(m_State, out var bounds)) continue;
-                if (any) union.Encapsulate(bounds);
-                else union = bounds;
+                Vector3 min = bounds.center - bounds.extents, max = bounds.center + bounds.extents;
+                least = any ? Vector3.Min(least, min) : min;
+                greatest = any ? Vector3.Max(greatest, max) : max;
                 any = true;
             }
             m_HasBounds = any;
-            m_LocalBounds = union;
+            m_LocalBounds = any ? VFXParticleSystem.Box(least, greatest) : default;
         }
 
         /// <summary>The effect's bounds for its renderer; false while no system has any.</summary>
@@ -533,9 +541,15 @@ namespace UnityEngine.VFX
             state.FrameIndex = VFXManager.Frame;
             state.Seed = m_Seed;
             state.NeedsEvaluation = true;
-            for (uint step = 0; step < steps; step++) Step(flags);
+            for (uint step = 0; step < steps; step++)
+            {
+                state.LastStep = step + 1 == steps;
+                Step(flags);
+            }
             m_TotalTime = state.TotalTime;
             m_AdvanceOneFrame = false;
+            if (simulate)
+                foreach (var system in m_ParticleSystems) system.AskBounds();
         }
 
         // ----------------------------------------------------------------------- the state
@@ -593,6 +607,17 @@ namespace UnityEngine.VFX
         }
 
         public VFXParticleSystemInfo GetParticleSystemInfo(string name) => GetParticleSystemInfo(Shader.PropertyToID(name));
+
+        /// <summary>The bounds computed from a system's particles, grown by its padding, in the
+        /// effect's space: zero for a system that computes none, and for no system.</summary>
+        internal Bounds GetComputedBounds(int nameID) => SystemNamed(nameID) is VFXParticleSystem system ? system.ComputedBounds : default;
+
+        internal Bounds GetComputedBounds(string name) => GetComputedBounds(Shader.PropertyToID(name));
+
+        /// <summary>A system's bounds padding as the effect has it now.</summary>
+        internal Vector3 GetCurrentBoundsPadding(int nameID) => SystemNamed(nameID) is VFXParticleSystem system ? system.BoundsPadding : Vector3.zero;
+
+        internal Vector3 GetCurrentBoundsPadding(string name) => GetCurrentBoundsPadding(Shader.PropertyToID(name));
 
         public void GetSpawnSystemInfo(int nameID, VFXSpawnerState spawnState)
         {

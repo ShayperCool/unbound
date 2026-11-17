@@ -18,6 +18,8 @@ namespace Unbound.Runtime
         internal UnityEngine.Random.State Random;
         /// <summary>Whether a step ran since the expressions were last evaluated.</summary>
         internal bool NeedsEvaluation = true;
+        /// <summary>Whether the step is the last of its frame (of the steps simulated at once).</summary>
+        internal bool LastStep = true;
         /// <summary>Where the effect's curves and gradients are baked for its programs; null
         /// for a graph that bakes none.</summary>
         internal VFXBakedTexture Baked;

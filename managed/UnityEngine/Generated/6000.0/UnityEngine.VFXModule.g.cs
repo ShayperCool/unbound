@@ -94,13 +94,9 @@ namespace UnityEngine.VFX
         [global::Unbound.Stub] internal void RegisterForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.RegisterForProfiling"); }
         [global::Unbound.Stub] internal void UnregisterForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.UnregisterForProfiling"); }
         [global::Unbound.Stub] internal bool IsRegisteredForProfiling() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.IsRegisteredForProfiling"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Bounds GetComputedBounds(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetComputedBounds"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetCurrentBoundsPadding(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCurrentBoundsPadding"); return default; }
         [global::Unbound.Stub] internal string GetGPUTaskMarkerName(string systemName, int taskIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetGPUTaskMarkerName"); return default; }
         [global::Unbound.Stub] internal string GetCPUSystemMarkerName(string systemName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCPUSystemMarkerName"); return default; }
         [global::Unbound.Stub] internal string GetCPUEffectMarkerName(global::UnityEngine.VFX.VisualEffect.VFXCPUEffectMarkers markerId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCPUEffectMarkerName"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Bounds GetComputedBounds(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetComputedBounds"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Vector3 GetCurrentBoundsPadding(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.VFX.VisualEffect.GetCurrentBoundsPadding"); return default; }
         internal enum VFXCPUEffectMarkers
         {
             FullUpdate = 0,
