@@ -16,7 +16,7 @@ touch) under its path of names, with the logs of each clone.
   and one it lacks, two overrides of one attribute in the instance, an override of the name of one of
   the instance's own children), fills both slots and a missing one, and defines a slot itself;
 - `Outer.uxml` instances Middle with overrides of the same elements (an outer override wins over
-  Middle's; under a former name too), overrides of `name`, `class` and `style` (reported, dropped), of
+  Middle's; under a former name too, on the factory element and on the `[UxmlElement]` one), overrides of `name`, `class` and `style` (reported, dropped), of
   the nested instance element and of a name no element has, and fills Middle's slot and one of Leaf's
   (not reachable from Outer);
 - `Host.uxml`: an instance of a template with a `content-container`, and a template container written
@@ -35,8 +35,8 @@ touch) under its path of names, with the logs of each clone.
 - `SlotClash.uxml` defines a slot its nested instance's document defines again (the clone throws);
   `EarlyHost.uxml` instances `EarlySlot.uxml`, whose slot defined before its nested instance is no
   longer reachable and whose later one is;
-- `Odd.uxml`: overrides without `element-name`, `<AttributeOverrides>` under a plain element and
-  `slot` on a child of a plain element;
+- `Odd.uxml`: overrides without `element-name`, `<AttributeOverrides>` under a plain element,
+  `slot` on a child of a plain element and an unknown element in a namespace;
 - `import.flags.*`: each document's `importedWithWarnings` and `importedWithErrors`.
 
 The importer's id of an element in its messages (`(Type)(id)`) is an internal number and is recorded

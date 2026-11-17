@@ -2,7 +2,7 @@
     <ui:Template name="Middle" src="Middle.uxml" />
     <ui:Instance template="Middle" name="middleInOuter">
         <AttributeOverrides element-name="title" text="outer title" />
-        <AttributeOverrides element-name="custom" note="outer note" />
+        <AttributeOverrides element-name="custom" note="outer note" former-my-value="3" />
         <AttributeOverrides element-name="legacy" former-value="3" />
         <AttributeOverrides element-name="toggle" label="outer toggle" />
         <AttributeOverrides element-name="box" name="renamed" class="added" style="width: 7px;" />

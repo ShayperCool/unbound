@@ -174,6 +174,28 @@ namespace UnityEngine.Tests
             Assert.Equal(3, root.Q<TemplateOverrideGauge>("g").level);
         }
 
+        // On a [UxmlElement], an outer instance's override under a former name wins over an inner
+        // instance's under the current name, as through a factory's traits.
+        [Fact]
+        public void AnOuterOverrideUnderAFormerNameWinsOnAUxmlElement()
+        {
+            var ns = typeof(TemplateOverrideGauge).Namespace;
+            var leaf = Import("GaugeLeaf2", $"<ui:UXML {Ns} xmlns:t=\"{ns}\"><t:TemplateOverrideGauge name=\"g\" level=\"1\" /></ui:UXML>");
+            var middle = Host("GaugeMiddle", "Leaf", leaf,
+                "<ui:Instance template=\"Leaf\"><AttributeOverrides element-name=\"g\" level=\"2\" /></ui:Instance>");
+            var outer = Host("GaugeOuter", "Middle", middle,
+                "<ui:Instance template=\"Middle\"><AttributeOverrides element-name=\"g\" old-level=\"3\" /></ui:Instance>");
+            var root = new VisualElement();
+            outer.CloneTree(root);
+            Assert.Equal(3, root.Q<TemplateOverrideGauge>("g").level);
+            // Within one instance the first override wins, whichever name it uses.
+            var first = Host("GaugeFirst", "Leaf", leaf,
+                "<ui:Instance template=\"Leaf\"><AttributeOverrides element-name=\"g\" old-level=\"5\" /><AttributeOverrides element-name=\"g\" level=\"6\" /></ui:Instance>");
+            root = new VisualElement();
+            first.CloneTree(root);
+            Assert.Equal(5, root.Q<TemplateOverrideGauge>("g").level);
+        }
+
         sealed class Bag : IUxmlAttributes
         {
             readonly string m_Name, m_Value;

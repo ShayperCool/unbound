@@ -15,7 +15,7 @@ namespace TemplatesProbe
     [UxmlElement]
     public partial class NewElement : VisualElement
     {
-        [UxmlAttribute] public int myValue { get; set; }
+        [UxmlAttribute("my-value", "former-my-value")] public int myValue { get; set; }
         [UxmlAttribute] public string note { get; set; }
         [UxmlAttribute] public VisualTreeAsset tree { get; set; }
     }

@@ -1,4 +1,4 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="TemplatesProbe">
     <ui:Template name="Panel" src="Panel.uxml" />
     <ui:Instance template="Panel" name="noElementName">
         <AttributeOverrides text="no element name" />
@@ -7,4 +7,5 @@
         <AttributeOverrides element-name="header" text="under a plain element" />
         <ui:Label name="slotOutside" text="slot outside" slot="a" />
     </ui:VisualElement>
+    <p:NoSuchElement name="ghost" />
 </ui:UXML>

@@ -60,7 +60,7 @@
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/0:title","v":"Label [unity-text-element unity-label leaf] tooltip 'middle tip' focusable False tab -1 text 'outer title'"}
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/1:title","v":"Label [unity-text-element unity-label] tooltip 'middle tip' focusable False tab -1 text 'outer title'"}
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/2:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'unnamed'"}
-{"k":"Outer/0:middleInOuter/0:leafInMiddle/3:custom","v":"NewElement [] myValue 2 note 'outer note'"}
+{"k":"Outer/0:middleInOuter/0:leafInMiddle/3:custom","v":"NewElement [] myValue 3 note 'outer note'"}
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/4:legacy","v":"OldElement [] oldValue 3 raw 'leaf raw'"}
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle","v":"Toggle [unity-base-field unity-toggle] focusable True tab 0 label 'outer toggle' value True"}
 {"k":"Outer/0:middleInOuter/0:leafInMiddle/5:toggle/0:-","v":"Label [unity-text-element unity-label unity-base-field__label unity-toggle__label] focusable False tab -1 text 'outer toggle'"}
@@ -148,13 +148,14 @@
 {"k":"EarlyHost/0:early/2:lateM","v":"VisualElement []"}
 {"k":"EarlyHost/0:early/2:lateM/0:intoL","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into l'"}
 {"k":"EarlyHost/0:early/3:intoE","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'into e'"}
-{"k":"Odd.logs","v":"Error: Element 'AttributeOverrides' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."}
+{"k":"Odd.logs","v":"Error: Element 'AttributeOverrides' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported. | Error: Element 'TemplatesProbe.NoSuchElement' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."}
 {"k":"Odd/0:noElementName","v":"TemplateContainer [] template 'Panel' content 'body'"}
 {"k":"Odd/0:noElementName/0:header","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'header'"}
 {"k":"Odd/0:noElementName/1:body","v":"VisualElement []"}
 {"k":"Odd/1:notInstance","v":"VisualElement []"}
 {"k":"Odd/1:notInstance/0:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'Unknown type: 'AttributeOverrides''"}
 {"k":"Odd/1:notInstance/1:slotOutside","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'slot outside'"}
+{"k":"Odd/2:-","v":"Label [unity-text-element unity-label] focusable False tab -1 text 'Unknown type: 'TemplatesProbe.NoSuchElement''"}
 {"k":"instantiate.logs","v":"Error: Slot 'zzz' was not found. Existing slots: a, b"}
 {"k":"instantiate.root","v":"TemplateContainer [] template 'Middle' content self children 3"}
 {"k":"complete","v":true}
