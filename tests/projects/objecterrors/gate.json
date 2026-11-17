@@ -12,6 +12,7 @@
     "managed/UnityEngine/Core/Transform.cs",
     "managed/UnityEngine/Core/Debug.cs",
     "managed/Unbound.Host/LifetimeChecks.cs",
-    "managed/Unbound.ApiTools/CheckedMembers.cs"
+    "managed/Unbound.ApiTools/CheckedMembers.cs",
+    "managed/UnityEngine/Runtime/MonoExceptions.cs"
   ]
 }

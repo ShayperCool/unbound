@@ -38,9 +38,9 @@ answers a placeholder of that class, a field the scene does not write is a place
 written one, and a GUIStyle's own references (its states' backgrounds, its font) stay null. Fields
 of classes C# declares abstract (unmeasured) keep null references in Unbound.
 
-Unbound gives all of these. The two `*.nested.instantiate` values remain (`residuals.json`):
-their ArgumentNullException carries the Editor's parameter name, but .NET then writes the name
-into the message as " (Parameter 'data')" where Mono writes "\nParameter name: data".
+Unbound gives all of these. The `*.nested.instantiate` values are an ArgumentNullException with
+the Editor's parameter name whose message the probe reads as Mono writes it ("\nParameter name:
+data"; see tests/projects/apierrors `format.*`).
 
     export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
     python3 tests/projects/objecterrors/run.py record --label A     # macOS: batch-mode Editor

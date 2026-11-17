@@ -1,6 +1,0 @@
-{
- "An ArgumentNullException cannot carry both the parameter name and the Mono runtime's message on .NET: Unbound keeps the name, which tests/projects/vfx reads (docs/COMPATIBILITY_GAPS.md, Object API errors)": [
-  "asset.nested.instantiate",
-  "unassigned.nested.instantiate"
- ]
-}

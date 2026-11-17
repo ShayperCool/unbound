@@ -1,15 +1,4 @@
 {
- "An ArgumentException cannot carry both the parameter name and the Mono runtime's message on .NET: Unbound keeps the name (docs/COMPATIBILITY_GAPS.md, Object API errors)": [
-  "bundle.load_stream_null",
-  "mesh.get_triangles_list_null",
-  "mesh.get_uvs_null_list",
-  "mesh.set_uvs_array_bad_channel",
-  "resources.load_all_null",
-  "resources.load_all_null_type",
-  "resources.load_null_type",
-  "scene.create_null",
-  "scene.move_null"
- ],
  "A null reference in the probe's own code: the Mono runtime's message has no full stop, CoreCLR's has one (the request itself is null in both, bundle.load_memory_async_null_request)": [
   "bundle.load_memory_async_null"
  ]

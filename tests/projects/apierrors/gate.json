@@ -18,6 +18,10 @@
     "managed/UnityEngine/Runtime/ObjectErrors.cs",
     "managed/UnityEngine/Graphics/Immediate.cs",
     "managed/UnityEngine/Graphics/Texture2D.CopyStorage.cs",
-    "managed/UnityEngine/Graphics/Procedural.cs"
+    "managed/UnityEngine/Graphics/Procedural.cs",
+    "managed/UnityEngine/Runtime/MonoExceptions.cs",
+    "managed/UnityEngine/Runtime/MonoNumberFormat.cs",
+    "managed/UnityEngine/Core/ExceptionStackTraces.cs",
+    "managed/Unbound.Host/NumberFormatShims.cs"
   ]
 }
