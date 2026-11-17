@@ -34,4 +34,8 @@ laid out text, which a batch-mode Editor sometimes lays out a frame later.
   selection and shows at the cursor) needs a composing input method, which batch mode lacks; the
   managed tests cover it with a stand-in input method.
 
+The probe puts the clipboard text it found back when it ends (after its last row), so the desktop
+clipboard that other programs and probes read is left as it was; a non-text clipboard comes back
+empty.
+
 Other releases are unmeasured.

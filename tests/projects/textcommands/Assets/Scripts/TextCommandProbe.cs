@@ -37,6 +37,9 @@ public class TextCommandProbe : MonoBehaviour
     {
         string path = Environment.GetEnvironmentVariable("TEXT_COMMAND_OUT"); if (string.IsNullOrEmpty(path)) yield break;
         output = new StreamWriter(path);
+        // The steps below copy to the system clipboard, which other programs on the same desktop
+        // (and probes that read it) share; its text is put back when the probe ends.
+        string clipboardBefore = GUIUtility.systemCopyBuffer;
         bool failed = false;
         var settings = ScriptableObject.CreateInstance<PanelSettings>();
         if (Screen.dpi > 0) settings.scale = 96f / Screen.dpi;
@@ -72,6 +75,7 @@ public class TextCommandProbe : MonoBehaviour
             yield return steps.Current;
         }
         if (!failed) Put("complete", 1);
+        GUIUtility.systemCopyBuffer = clipboardBefore;
         output.Dispose();
         EditorApplication.Exit(failed ? 1 : 0);
     }
