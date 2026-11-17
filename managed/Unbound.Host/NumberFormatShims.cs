@@ -21,8 +21,9 @@ namespace Unbound.Host;
 /// enum texts (<c>Enum.ToString</c>, <c>Enum.GetName</c>, <c>Enum.Format</c>,
 /// <c>Type.GetEnumName</c>) are redirected to it when an assembly loads, and again in the IL of
 /// every hot-reload delta. Every rewritten instruction keeps its size, so the assembly's PDB
-/// still matches. A ToString called directly on an enum value, a nullable or a generic parameter's
-/// value (<c>constrained. T callvirt object::ToString()</c>, the usual <c>e.ToString()</c>), and
+/// still matches. A ToString called directly on an enum value, a value tuple, a nullable or a
+/// generic parameter's value (<c>constrained. T callvirt object::ToString()</c>, the usual
+/// <c>e.ToString()</c>), and
 /// string.Join, string.Concat and StringBuilder.AppendJoin of a generic sequence, are redirected
 /// at load only: a delta cannot be given the
 /// generic shims' instantiations, so edited code prints those calls as .NET does.
@@ -124,7 +125,8 @@ static class NumberFormatShims
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
                     var constrained = instruction.Previous is { OpCode.Code: Code.Constrained } prefix ? prefix : null;
-                    if (constrained?.Operand is Mono.Cecil.TypeReference receiver && ConstrainedShim(target) is { } constrainedShim && MayBeEnum(receiver))
+                    if (constrained?.Operand is Mono.Cecil.TypeReference receiver && ConstrainedShim(target) is { } constrainedShim
+                        && (MayBeEnum(receiver) || IsValueTuple(receiver)))
                     {
                         // constrained. T callvirt object::ToString() -> call ConstrainedToString<T>(ref T),
                         // IFormattable::ToString(string, IFormatProvider) likewise: the receiver is
@@ -187,6 +189,10 @@ static class NumberFormatShims
 
     /// <summary>Assemblies already reported unresolvable (images may be filtered on several threads).</summary>
     static readonly HashSet<string> s_Unresolved = new(StringComparer.Ordinal);
+
+    /// <summary>Whether a constrained call's type is a value tuple (its items may be floats).</summary>
+    static bool IsValueTuple(Mono.Cecil.TypeReference type) =>
+        type is GenericInstanceType { ElementType: { Namespace: "System" } element } && element.Name.StartsWith("ValueTuple`", StringComparison.Ordinal);
 
     /// <summary>Whether a constrained call's type may hold an enum value: a generic parameter, a
     /// nullable or an enum (false when it cannot be resolved).</summary>

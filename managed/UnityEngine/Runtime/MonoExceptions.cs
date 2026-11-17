@@ -71,12 +71,12 @@ namespace Unbound.Runtime
         static readonly string NetInner = Environment.NewLine + " ---> ";
 
         /// <summary>A message with .NET's " (Parameter 'x')" of an argument exception with a
-        /// parameter name written as Mono writes it, and an out-of-range float or double actual
-        /// value in Mono's number format.</summary>
+        /// parameter name written as Mono writes it, and an out-of-range actual value of floats
+        /// (a float, a double, a tuple) in Mono's number format.</summary>
         static string Mono(Exception exception, string message)
         {
             if (exception is not ArgumentException argument || message == null) return message;
-            if (argument is ArgumentOutOfRangeException { ActualValue: float or double } range)
+            if (argument is ArgumentOutOfRangeException { ActualValue: float or double or System.Runtime.CompilerServices.ITuple } range)
             {
                 // The class library writes the value with the current culture's default format.
                 string net = ActualValue + string.Format(CultureInfo.CurrentCulture, "{0}", range.ActualValue) + ".";

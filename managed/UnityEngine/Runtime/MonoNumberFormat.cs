@@ -340,14 +340,7 @@ namespace Unbound
 
         // Virtual calls whose receiver may be a boxed float or double, or an exception.
 
-        public static string VirtualToString(object value) => value switch
-        {
-            float f => Format(f, null, null),
-            double d => Format(d, null, null),
-            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
-            Enum e => MonoEnumNames.ToString(e, null),
-            _ => value.ToString(),
-        };
+        public static string VirtualToString(object value) => MonoText(value) ?? value.ToString();
 
         /// <summary>A virtual call of Exception.Message (a non-virtual one is base.Message in an
         /// override: it stays).</summary>
@@ -385,6 +378,9 @@ namespace Unbound
         {
             if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), null, null);
             if (typeof(T) == typeof(double)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, double>(ref value), null, null);
+            // A value tuple called directly ((a, b).ToString()).
+            if (typeof(System.Runtime.CompilerServices.ITuple).IsAssignableFrom(typeof(T)) && typeof(T).IsValueType)
+                return TupleToString((System.Runtime.CompilerServices.ITuple)value);
             return MonoEnumNames.ToString(ref value);
         }
         public static string ToString(Enum value) => MonoEnumNames.ToString(value, null);
@@ -401,21 +397,12 @@ namespace Unbound
         public static string ToString(float value, IFormatProvider provider) => Format(value, null, provider);
         public static string ToString(double value) => Format(value, null, null);
         public static string ToString(double value, IFormatProvider provider) => Format(value, null, provider);
-        public static string ToString(object value) => value switch
-        {
-            float f => Format(f, null, null),
-            double d => Format(d, null, null),
-            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
-            Enum e => MonoEnumNames.ToString(e, null),
-            _ => Convert.ToString(value),
-        };
+        public static string ToString(object value) => MonoText(value) ?? Convert.ToString(value);
         public static string ToString(object value, IFormatProvider provider) => value switch
         {
             float f => Format(f, null, provider),
             double d => Format(d, null, provider),
-            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
-            Enum e => MonoEnumNames.ToString(e, null),
-            _ => Convert.ToString(value, provider),
+            _ => MonoText(value) ?? Convert.ToString(value, provider),
         };
 
         public static string Format(string format, object arg0) => string.Format(format, Wrap(arg0));
@@ -479,15 +466,33 @@ namespace Unbound
         public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object[] args) =>
             Fallback(provider) is { } fallback ? builder.AppendFormat(fallback, format, args) : builder.AppendFormat(provider, format, Wrap(args));
 
-        /// <summary>An object's string as Mono makes it (floats and doubles by the rules above).</summary>
-        public static string ObjectToString(object value) => value switch
+        /// <summary>An object's string as Mono makes it.</summary>
+        public static string ObjectToString(object value) => MonoText(value) ?? value?.ToString();
+
+        /// <summary>The string Mono makes of a value whose string differs from .NET's (null for any
+        /// other): floats and doubles by the rules above, exceptions, enums, and a tuple's items each
+        /// so, "(a, b)" (tests/projects/apierrors `format.number.*tuple*`).</summary>
+        static string MonoText(object value) => value switch
         {
             float f => Format(f, null, null),
             double d => Format(d, null, null),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             Enum e => MonoEnumNames.ToString(e, null),
-            _ => value?.ToString(),
+            System.Runtime.CompilerServices.ITuple tuple => TupleToString(tuple),
+            _ => null,
         };
+
+        /// <summary>A tuple as ValueTuple and Tuple write it, each item as Mono writes it.</summary>
+        static string TupleToString(System.Runtime.CompilerServices.ITuple tuple)
+        {
+            var text = new StringBuilder("(");
+            for (int i = 0; i < tuple.Length; i++)
+            {
+                if (i != 0) text.Append(", ");
+                text.Append(ObjectToString(tuple[i]));
+            }
+            return text.Append(')').ToString();
+        }
 
         static object Wrap(object value) => value switch
         {
@@ -495,6 +500,7 @@ namespace Unbound
             double d => new Boxed(d, false),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             Enum e => new BoxedEnum(e),
+            System.Runtime.CompilerServices.ITuple tuple => TupleToString(tuple),
             _ => value,
         };
 
