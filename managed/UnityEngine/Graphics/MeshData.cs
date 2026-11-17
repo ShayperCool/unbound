@@ -468,7 +468,7 @@ namespace UnityEngine
                 for (int i = 0; i < meshesCount; i++)
                 {
                     if (meshes[i] == null) throw new ArgumentNullException(nameof(meshes), $"Mesh at index {i} is null");
-                    if (checkReadWrite && !meshes[i].isReadable) throw new InvalidOperationException($"Not allowed to access vertex data on mesh '{meshes[i].name}' (isReadable is false; Read/Write must be enabled in import settings)");
+                    if (checkReadWrite && !meshes[i].isReadable) throw new InvalidOperationException(Mesh.NotReadable("vertex data", meshes[i].name));
                 }
                 Allocate(meshesCount, !createAsCopy);
                 for (int i = 0; i < meshesCount; i++)

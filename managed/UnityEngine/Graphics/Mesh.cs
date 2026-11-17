@@ -186,9 +186,13 @@ namespace UnityEngine
         bool Readable(string what)
         {
             if (m_IsReadable || s_EngineReads > 0) return true;
-            Debug.LogError($"Not allowed to access {what} on mesh '{name}' (isReadable is false; Read/Write must be enabled in import settings)");
+            Debug.LogError(NotReadable(what, name));
             return false;
         }
+
+        /// <summary>The Editor's text for a refused read of <paramref name="what"/>.</summary>
+        internal static string NotReadable(string what, string meshName) =>
+            $"Not allowed to access {what} on mesh '{meshName}' (isReadable is false; Read/Write must be enabled in import settings)";
 
         /// <summary>A scope in which the engine's own systems (collider cooking, navigation mesh
         /// building, cloth, baking) read meshes through Mesh's script API, readable or not, as
@@ -268,6 +272,10 @@ namespace UnityEngine
                 // added). Only a shorter array needs the indices read: indices set without
                 // validation (MeshUpdateFlags.DontValidateIndices) past the current vertices are not
                 // checked against a longer array (unmeasured).
+                // Refused on a mesh scripts cannot read, with the read's error (matches the Unity
+                // 6000.0.71f1 Editor, tests/projects/meshreadable `set.lockedVertices`; the other
+                // setters are unmeasured there).
+                if (!Readable("vertices")) return;
                 int length = value?.Length ?? 0;
                 if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
                 {
@@ -988,8 +996,16 @@ namespace UnityEngine
         public void CombineMeshes(CombineInstance[] combine, [Internal.DefaultValue("true")] bool mergeSubMeshes, [Internal.DefaultValue("true")] bool useMatrices) =>
             CombineMeshes(combine, mergeSubMeshes, useMatrices, false);
 
+        /// <summary>A mesh scripts cannot read is neither combined from (warned, left out) nor into
+        /// (refused) (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
+        /// `combine.*`).</summary>
         public void CombineMeshes(CombineInstance[] combine, [Internal.DefaultValue("true")] bool mergeSubMeshes, [Internal.DefaultValue("true")] bool useMatrices, [Internal.DefaultValue("false")] bool hasLightmapData)
         {
+            if (!m_IsReadable)
+            {
+                Debug.LogError($"Cannot combine into mesh that does not allow access: {name}");
+                return;
+            }
             var positions = new List<Vector3>();
             var normals = new List<Vector3>();
             var uvs = new List<Vector4>();
@@ -998,6 +1014,11 @@ namespace UnityEngine
             foreach (var c in combine)
             {
                 if (c.mesh == null) continue;
+                if (!c.mesh.m_IsReadable)
+                {
+                    Debug.LogWarning($"Cannot combine mesh that does not allow access: {c.mesh.name}");
+                    continue;
+                }
                 int offset = positions.Count;
                 var m = useMatrices ? c.transform : Matrix4x4.identity;
                 var src = c.mesh;

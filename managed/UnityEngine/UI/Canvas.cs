@@ -495,6 +495,14 @@ namespace UnityEngine
         /// every graphic.</summary>
         public void SetMesh(Mesh mesh)
         {
+            // A mesh scripts cannot read is refused (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/meshreadable `canvasRenderer.setMesh`; what the renderer keeps then is
+            // unmeasured: its mesh stays as it was).
+            if (mesh != null && !mesh.isReadable)
+            {
+                Debug.LogError($"Mesh '{mesh.name}' is not readable and can not be used. The CanvasRenderer requires read access to the mesh.");
+                return;
+            }
             m_MeshVersion++;
             m_Assigned = mesh;
             if (mesh == null)

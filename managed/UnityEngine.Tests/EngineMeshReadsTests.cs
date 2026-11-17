@@ -5,10 +5,10 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>The engine's own systems read meshes that scripts cannot (Mesh.EngineReads): a
-    /// mesh made no longer readable builds the same navigation mesh, skins and combines the same,
-    /// and logs nothing (the Unity 6000.0.71f1 Editor's MeshCollider of such a mesh collides,
-    /// tests/projects/meshreadable `*.colliderHit`; Unbound's other engine readers follow it;
-    /// CombineMeshes and BakeMesh of such meshes are unmeasured).</summary>
+    /// mesh made no longer readable builds the same navigation mesh and skins the same, and logs
+    /// nothing (the Unity 6000.0.71f1 Editor's MeshCollider of such a mesh collides and BakeMesh
+    /// of it bakes, tests/projects/meshreadable `*.colliderHit`, `bake.locked`; Unbound's other
+    /// engine readers follow them).</summary>
     public class EngineMeshReadsTests
     {
         static Mesh Floor(bool readable)
@@ -48,14 +48,19 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void CombiningAndSkinningReadMeshesScriptsCannotRead()
+        public void SkinningReadsMeshesScriptsCannotReadAndCombiningRefusesThem()
         {
-            var combined = new Mesh();
+            // CombineMeshes leaves such a source out, warned, and refuses such a target (the Unity
+            // 6000.0.71f1 Editor, tests/projects/meshreadable `combine.*`).
+            var combined = new Mesh { name = "Combined" };
             var source = Floor(false);
-            Assert.Empty(Logs(() => combined.CombineMeshes(new[] { new CombineInstance { mesh = source, transform = Matrix4x4.Translate(Vector3.up) } })));
+            source.name = "Locked";
+            Assert.Equal(new[] { "Warning: Cannot combine mesh that does not allow access: Locked" },
+                Logs(() => combined.CombineMeshes(new[] { new CombineInstance { mesh = source }, new CombineInstance { mesh = Floor(true), transform = Matrix4x4.Translate(Vector3.up) } })));
             Assert.Equal(4, combined.vertexCount);
-            Assert.Equal(6u, combined.GetIndexCount(0));
             Assert.Equal(new Vector3(-5f, 1f, -5f), combined.vertices[0]);
+            Assert.Equal(new[] { "Error: Cannot combine into mesh that does not allow access: Locked" },
+                Logs(() => source.CombineMeshes(new[] { new CombineInstance { mesh = Floor(true) } })));
 
             var go = new GameObject("locked skin");
             var baked = new Mesh();

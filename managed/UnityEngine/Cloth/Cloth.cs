@@ -773,6 +773,8 @@ namespace UnityEngine
         /// moved to their particles, in the cloth's frame (draw with <see cref="RenderMatrix"/>).</summary>
         internal Mesh RenderMesh()
         {
+            // The rendered copy keeps its source's readability; the engine writes it all the same.
+            using var engineReads = Mesh.EngineReads();
             if (m_Native == 0 || m_Source == null) return null;
             if (m_Rendered == null || m_RenderedVersion != m_Version)
             {
