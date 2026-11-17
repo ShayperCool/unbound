@@ -2913,15 +2913,21 @@ pub(crate) fn order_types(module: &mut Module) {
     }
 }
 
+/// What a fitted program may use beyond the validator's defaults: half floats kept in floats
+/// (HLSL's `f16tof32` and `f32tof16`, WGSL's `unpack2x16float` and `pack2x16float`), which
+/// desktop devices have. The Visual Effect Graph's curve sampling unpacks a curve's scale and
+/// start with them, in any program that samples a curve: an output's vertex program too.
+fn fitted_capabilities() -> naga::valid::Capabilities {
+    naga::valid::Capabilities::default() | naga::valid::Capabilities::SHADER_FLOAT16_IN_FLOAT32
+}
+
 /// WGSL for a fitted module, checked by reading it back: validation, and the uniform block at
 /// the offsets the uniforms are filled at.
 fn to_wgsl(module: &Module) -> Result<String> {
-    let info = naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::default(),
-    )
-    .validate(module)
-    .map_err(|e| anyhow!("invalid after fitting: {}", e.emit_to_string("")))?;
+    let info =
+        naga::valid::Validator::new(naga::valid::ValidationFlags::all(), fitted_capabilities())
+            .validate(module)
+            .map_err(|e| anyhow!("invalid after fitting: {}", e.emit_to_string("")))?;
     let wgsl =
         naga::back::wgsl::write_string(module, &info, naga::back::wgsl::WriterFlags::empty())
             .map_err(|e| anyhow!("writing WGSL: {e}"))?;
@@ -2932,12 +2938,9 @@ fn to_wgsl(module: &Module) -> Result<String> {
         }
         anyhow!("reading the WGSL back: {}", e.emit_to_string(&wgsl))
     })?;
-    naga::valid::Validator::new(
-        naga::valid::ValidationFlags::all(),
-        naga::valid::Capabilities::default(),
-    )
-    .validate(&back)
-    .map_err(|e| anyhow!("the WGSL does not validate: {}", e.emit_to_string(&wgsl)))?;
+    naga::valid::Validator::new(naga::valid::ValidationFlags::all(), fitted_capabilities())
+        .validate(&back)
+        .map_err(|e| anyhow!("the WGSL does not validate: {}", e.emit_to_string(&wgsl)))?;
     // Members keep their order (the WGSL writer may rename them: `x0` becomes `x0_`).
     for (ours, theirs) in uniform_blocks(module).zip(uniform_blocks(&back)) {
         let (

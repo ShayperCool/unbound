@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 63;
+pub const FORMAT_VERSION: u32 = 64;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -3981,6 +3981,30 @@ float4 frag() : SV_Target { float4x4 d = abs(unity_MatrixVP - _GameVP); return d
         compiler
             .compile(&program(source, false), &[], false)
             .unwrap();
+    }
+
+    #[test]
+    fn half_floats_kept_in_floats_unpack_in_any_stage() {
+        // The Visual Effect Graph's curve sampling unpacks a curve's scale and start so, also
+        // in the vertex program of an output that samples a curve.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+float4 _Curve;
+float4 vert(float4 v : POSITION) : SV_POSITION
+{
+    float scale = f16tof32(asuint(_Curve.x));
+    float start = f16tof32(asuint(_Curve.x) >> 16);
+    return mul(unity_MatrixVP, v * scale + start);
+}
+float4 frag() : SV_Target { return f16tof32(f32tof16(_Curve.y)); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert!(compiled.vertex.contains("unpack2x16float"));
     }
 
     #[test]
