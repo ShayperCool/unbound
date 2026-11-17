@@ -2,7 +2,8 @@
 
 Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderKeywordsProbe.cs`). The canonical
 `Reference/unity-6000.0.71f1.jsonl` contains 1510 rows from two independent, byte-identical
-batchmode GPU captures. Both exited 0 without a forced stop on NVIDIA RTX 4060. This is a
+windowed GPU captures (first recorded in batch mode; the windowed re-record changes exactly
+`context.isBatchMode` from true to false). Both exited 0 without a forced stop on NVIDIA RTX 4060. This is a
 measured API contract for that capture context. The matching Unbound package is admitted for
 the measured declarations, keyword and material-variant behavior, with the gaps below retained.
 
@@ -37,7 +38,7 @@ Groups:
 
 * `context.*`: Unity version, batchmode, platform, graphics device type and shader level,
   active quality level/name/shadows, color space, render pipeline. The enabled global keywords
-  and platform-conditional declarations hold for the recorded context only: batchmode
+  and platform-conditional declarations hold for the recorded context only: windowed
   LinuxEditor, OpenGLCore shader level 50, NVIDIA RTX 4060, Ultra quality level 5, All shadows,
   Linear color space and the built-in pipeline.
 * `probe.<shader>.*` (five probe shaders) and `builtin.<shader>.*` (32 built-in shaders):
@@ -92,7 +93,8 @@ color spaces and windowed captures remain unmeasured.
 The matching-runtime comparison at source `fd64c55d` passes 1499/1510 canonical keys.
 The public passCount correction resolves exactly eight more keys from the previous1491,
 with no lost match, missing key, extra key or changed retained value. The eleven retained
-keys are ten exception-message strings and `context.isBatchMode`; exact comparison stays red.
+keys were ten exception-message strings and `context.isBatchMode` (closed by the windowed
+re-record below); exact comparison stays red on the ten messages.
 Built-ins with no Properties block expose zero properties, and serialized UsePass entries
 resolve their target LightMode tags, including terrain Picking and SceneSelectionPass.
 The separate declarations cache is version3; the old v2 entry is unchanged and unused by
@@ -172,9 +174,10 @@ also showed that the draft wrote `global.all.contains[STRING_ENABLED_KW]` twice 
 
 ## Capture
 
-The Editor runs in batchmode with graphics: `EditorJob(batch=True, graphics=True)` from
-`tests/editor_runner.py`, i.e. `vglrun -d egl Unity -batchmode -projectPath P -executeMethod
-ProbeRunner.Record -logFile L` on a private Xvfb inside one installed GPU lease, with no
+The Editor runs windowed with graphics: `EditorJob(batch=False, graphics=True,
+private_display=False)` from `tests/editor_runner.py`, i.e. `vglrun -d egl Unity -force-glcore
+-projectPath P -executeMethod ProbeRunner.Record -logFile L` on the existing GPU display inside
+one installed GPU lease (no -batchmode; `ProbeRunner.cs` still names its batch-mode origin), with no
 `-nographics` and no `-quit` (Play mode is asynchronous; `ProbeRunner` quits). Nothing depends
 on a Game view. `ProbeRunner.Record` opens the scene and asks for Play mode from a delayCall. The
 probe writes its record and then sets `ShaderKeywordsProbe.finishedCode`. Only an
@@ -206,14 +209,14 @@ no Editor starts without a passing preflight whose compiled sources equal the ch
 `guards.py` (used by `check` and `publish`) refuses a capture on any of: an Editor result with
 a forced stop of any kind (the shutdown guard included), an exit status other than 0, a renderer
 that is not the NVIDIA GPU, no logged shutdown, a launcher failure; a command that is not the
-planned batchmode GPU Record command of the selected release (no `-quit`, no `-nographics`);
+planned windowed GPU Record command of the selected release (no `-batchmode`, no `-quit`, no `-nographics`);
 a prelaunch receipt whose release, capture directory or input bytes differ from the prepared
 fixture; runner events other than record, enter, finished 0, leave, exit 0 in order; an
 Editor-side watchdog or a partial record; compile errors, shader errors or native faults in the
 Editor log; a changed fixture file under Assets; and a record that does not follow the schema
 case by case (missing/extra/duplicate key, wrong value type, probe fault, missing group or
 block log, marker not single and last, fatal, unscoped error logs, a probe shader or fixture
-asset not found, context not the selected release/batchmode/OpenGLCore/built-in). The schema is
+asset not found, context not the selected release/windowed/OpenGLCore/built-in). The schema is
 derived from the probe source, not from any capture; no observed keyword, order or answer is
 gated. `publish` additionally requires both repeats byte-identical and never overwrites.
 `compare.py` compares the whole key union exactly (no tolerance) and keeps every missing, extra
@@ -231,10 +234,10 @@ only.
 
 ## Status (2026-11-17)
 
-1 of 1510 keys fails, `context.isBatchMode`, which is a property of the capture: the reference
-was recorded in batch mode and Unbound runs as the interactive Editor. The ten `subshaderTag`
-exception messages of the eleven retained above match since game code reads argument exception
-messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception texts").
-Closing that key needs a windowed Linux Editor re-record, as activationorder's did. A run on
-macOS also differs in the OS-decided `context.platform` and `context.graphicsDeviceType`.
+The ten `subshaderTag` exception messages match since game code reads argument exception
+messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception texts"), which left
+`context.isBatchMode` alone failing: a property of the batch-mode capture. The windowed re-record
+(two byte-identical Linux GPU captures, every other key unchanged) closes it, so Linux is expected
+to fail none; a Mac run of 2026-11-17 failed 12 before the message change, the two OS-decided keys
+`context.platform` and `context.graphicsDeviceType` among them.
 Anything else is a regression.
