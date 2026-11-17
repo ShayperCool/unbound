@@ -37,20 +37,6 @@ pub struct StencilState {
     pub back: [u8; 4],
 }
 
-impl StencilState {
-    /// The faces swapped (a mirrored draw's front faces are its back faces as drawn).
-    pub fn swapped(self) -> Self {
-        StencilState {
-            comp: self.back[0],
-            pass: self.back[1],
-            fail: self.back[2],
-            zfail: self.back[3],
-            back: [self.comp, self.pass, self.fail, self.zfail],
-            ..self
-        }
-    }
-}
-
 /// A render target's own blending and write mask (`Blend N ...`, `ColorMask mask N`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TargetState {
@@ -82,6 +68,12 @@ pub struct RenderState {
     pub zclip: bool,
     /// Triangles drawn as their edges (`GL.wireframe`, set per draw by the camera's state).
     pub wireframe: bool,
+    /// The faces as drawn are the other way round (a mirrored matrix the draw corrects, inverted
+    /// culling, a target stored the other way up; set per draw): the pipeline's front faces wind
+    /// the other way, which turns the culled faces, the stencil's face states and the program's
+    /// front-facing input together, as Unity's do (tests/projects/samplerstates `StencilFaces`,
+    /// `RendererFaces`, `FrontFaces`).
+    pub faces_turned: bool,
 }
 
 impl Default for RenderState {
@@ -100,6 +92,7 @@ impl Default for RenderState {
             alpha_to_mask: false,
             zclip: true,
             wireframe: false,
+            faces_turned: false,
         }
     }
 }
@@ -910,9 +903,6 @@ SubShader {
         let both = m.passes[1].state.stencil.expect("a test");
         assert_eq!([both.comp, both.pass], [8, 1]);
         assert_eq!(both.back, [3, 1, 0, 0]);
-        let mirrored = back_only.swapped();
-        assert_eq!([mirrored.comp, mirrored.pass], [3, 1]);
-        assert_eq!(mirrored.back, [8, 0, 0, 0]);
     }
 
     #[test]

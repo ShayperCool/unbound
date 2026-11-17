@@ -157,15 +157,7 @@ impl UnityRenderer {
             state.ztest = super::mirror_compare(state.ztest);
             state.offset = state.offset.map(|o| -o);
         }
-        if self.state.invert_culling != mirrored {
-            state.cull = match state.cull {
-                1 => 2,
-                2 => 1,
-                c => c,
-            };
-            // The faces as drawn are the other way round: so are their stencil settings.
-            state.stencil = state.stencil.map(crate::materials::StencilState::swapped);
-        }
+        state.faces_turned = self.state.invert_culling != mirrored;
         (state, stencil_ref)
     }
 }

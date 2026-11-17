@@ -9,6 +9,8 @@
   "crates/unbound-shaders/src/fit.rs",
   "crates/unbound-shaders/src/lib.rs",
   "crates/unbound-app/src/render/resources.rs",
-  "crates/unbound-app/src/render/executor.rs"
+  "crates/unbound-app/src/render/executor.rs",
+  "crates/unbound-app/src/render/pipelines.rs",
+  "crates/unbound-app/src/render/executor/warmup.rs"
  ]
 }

@@ -418,8 +418,13 @@ pub fn create_pipeline(
             topology: key.topology.wgpu(),
             strip_index_format: None,
             // Targets are stored bottom-up (clip y negated), which turns Unity's clockwise
-            // front faces counter-clockwise.
-            front_face: wgpu::FrontFace::Ccw,
+            // front faces counter-clockwise; a draw whose faces are turned round winds them the
+            // other way.
+            front_face: if s.faces_turned {
+                wgpu::FrontFace::Cw
+            } else {
+                wgpu::FrontFace::Ccw
+            },
             cull_mode: match (triangles, s.cull) {
                 (true, 1) => Some(wgpu::Face::Front),
                 (true, 2) => Some(wgpu::Face::Back),
