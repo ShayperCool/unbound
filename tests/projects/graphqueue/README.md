@@ -9,7 +9,8 @@ in its file, the state a material saved in a working project has (Transparent 30
 `StrayState` is `OffsetStored` with a `RenderType` override tag and its `DepthOnly` pass disabled,
 which URP's editor would clear on validation. `LitStray` (written as text, a control outside
 Shader Graph) is that file with URP's Lit shader and a `RenderType` tag of `Stray`: URP's Lit editor
-would make it Opaque at 2000 with its DepthOnly pass on.
+would make it Opaque at 1950 (Geometry 2000 with its -50 queue offset) with its DepthOnly pass on.
+`StrayState` and `LitStray` are kept by hand: `ProbeRunner.Create` does not write them.
 
 `ProbeRunner.Record` imports the graph and the materials again, renders the scene once in Edit
 mode (as an Editor that has drawn its views: the pipeline is made and the quad's shader compiled)
@@ -29,9 +30,11 @@ its Transparent 3000; the scene's material holds 3000 - 50 = 2950. Without the r
 control as well: in this windowed Editor with URP active neither URP's Shader Graph editor nor its
 Lit editor validates a material on load (exploratory runs outside the probe found the same for
 the materials loaded afresh after `Resources.UnloadAsset`, and for the Lit material loaded in Edit
-mode). tests/projects/materialvalidation measured the opposite for Standard materials in a
-batch-mode Editor with the built-in pipeline; which of the two conditions decides is not
-measured. Unbound validates every loaded project material, see `residuals.json`.
+mode), though [ShaderGUI.ValidateMaterial](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ShaderGUI.ValidateMaterial.html)
+says the Editor validates a material it loads into memory. tests/projects/materialvalidation
+measured validation for Standard materials in a macOS batch-mode Editor with the built-in
+pipeline; the captures also differ in OS, graphics device and this probe's render and re-import
+before Play, and which condition decides is not resolved. Unbound validates every loaded project material, see `residuals.json`.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back
