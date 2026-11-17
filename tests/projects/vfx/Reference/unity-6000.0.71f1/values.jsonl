@@ -1935,6 +1935,8 @@
 {"k":"math/inverse affine/small","v":"1 461c4000,80000000,00000000,00000000,80000000,461c4000,80000000,00000000,00000000,80000000,461c4000,00000000,c7c35000,c8435000,c8927c00,3f800000"}
 {"k":"math/inverse affine/smaller","v":"0 00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"}
 {"k":"math/inverse affine/not a number","v":"1 nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,3f800000"}
+{"k":"mesh operations/mixed/before","v":"readable=1 vertexBufferTarget=1 indexBufferTarget=2"}
+{"k":"mesh operations/wide/before","v":"readable=1 vertexBufferTarget=1 indexBufferTarget=2"}
 {"k":"camera/needed/f001","v":"main None, ortho None, scene None"}
 {"k":"sim/override timing/f001 1 update","v":"40e00000 none"}
 {"k":"sim/time/f001","v":"3d088889"}
@@ -2171,6 +2173,11 @@
 {"k":"sim/override timing/f005 3 end of frame","v":"40e00000 41100000"}
 {"k":"draw/many/f005","v":"alive=20000 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/textured/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh stride/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh wide/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh surface/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh surface wide/f005","v":"alive=5 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"camera/needed/f006","v":"main Depth, ortho None, scene None"}
 {"k":"sim/time/f006","v":"3d088889"}
 {"k":"sim/rate/f006","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e2aaaab before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -2208,6 +2215,10 @@
 {"k":"events/events throwing/f006/2","v":"after late update Tick spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3e800000 lifetime=3f800000 same"}
 {"k":"events/events throwing/f006/3","v":"after late update Fast spawnCount=3f800000 color=3f800000 3f800000 3f800000 00000000 size=3dcccccd lifetime=3f800000 same"}
 {"k":"camera/needed/f007","v":"main Depth, ortho None, scene None"}
+{"k":"mesh operations/set none/logs","v":""}
+{"k":"mesh operations/set none/thrown","v":"ArgumentNullException m"}
+{"k":"mesh operations/set no texture/logs","v":""}
+{"k":"mesh operations/set no texture/thrown","v":"ArgumentNullException t"}
 {"k":"sim/time/f007","v":"3d088889"}
 {"k":"sim/rate/f007","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e4ccccd before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f007","v":"alive=1 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3e4ccccd before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
@@ -7690,6 +7701,334 @@
 {"k":"operations/update16/u01","v":"0"}
 {"k":"operations/update16/u02","v":"0"}
 {"k":"operations/lines","v":"17"}
+{"k":"mesh operations/mixed/after","v":"readable=1 vertexBufferTarget=17 indexBufferTarget=18"}
+{"k":"mesh operations/wide/after","v":"readable=1 vertexBufferTarget=17 indexBufferTarget=18"}
+{"k":"mesh operations/unreadable/after","v":"readable=0 vertexBufferTarget=1 indexBufferTarget=2"}
+{"k":"mesh operations/made/after","v":"readable=1 vertexBufferTarget=17 indexBufferTarget=2"}
+{"k":"mesh operations/play/u00","v":"5"}
+{"k":"mesh operations/play/u01","v":"9"}
+{"k":"mesh operations/play/u02","v":"3"}
+{"k":"mesh operations/play/u03","v":"1"}
+{"k":"mesh operations/play/u04","v":"0"}
+{"k":"mesh operations/play/u05","v":"0"}
+{"k":"mesh operations/play/u06","v":"0"}
+{"k":"mesh operations/play/u07","v":"0"}
+{"k":"mesh operations/play/u08","v":"0"}
+{"k":"mesh operations/play/v00","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/play/v01","v":"3f800000,00000000,00000000"}
+{"k":"mesh operations/play/v02","v":"38000100,38800100,38c00180"}
+{"k":"mesh operations/play/v03","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/play/v04","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/play/v05","v":"3f000000,00000000,3e000000"}
+{"k":"mesh operations/play/q00","v":"00000000,00000000,3f800000,3e808081"}
+{"k":"mesh operations/play/q01","v":"3dccc000,3e4cc000,00000000,00000000"}
+{"k":"mesh operations/play/q02","v":"3e40e4c1,3f5431d4,00000000,00000000"}
+{"k":"mesh operations/play/q03","v":"3d5d0a8b,3f034800,3e81d94c,3f105050"}
+{"k":"mesh operations/update1/u00","v":"5"}
+{"k":"mesh operations/update1/u01","v":"9"}
+{"k":"mesh operations/update1/u02","v":"3"}
+{"k":"mesh operations/update1/u03","v":"1"}
+{"k":"mesh operations/update1/u04","v":"0"}
+{"k":"mesh operations/update1/u05","v":"0"}
+{"k":"mesh operations/update1/u06","v":"0"}
+{"k":"mesh operations/update1/u07","v":"0"}
+{"k":"mesh operations/update1/u08","v":"0"}
+{"k":"mesh operations/update1/v00","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update1/v01","v":"3f800000,00000000,00000000"}
+{"k":"mesh operations/update1/v02","v":"38000100,38800100,38c00180"}
+{"k":"mesh operations/update1/v03","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update1/v04","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update1/v05","v":"3f000000,00000000,3e000000"}
+{"k":"mesh operations/update1/q00","v":"00000000,00000000,3f800000,3e808081"}
+{"k":"mesh operations/update1/q01","v":"3dccc000,3e4cc000,00000000,00000000"}
+{"k":"mesh operations/update1/q02","v":"3e40e4c1,3f5431d4,00000000,00000000"}
+{"k":"mesh operations/update1/q03","v":"3d5d0a8b,3f034800,3e81d94c,3f105050"}
+{"k":"mesh operations/update2/u00","v":"5"}
+{"k":"mesh operations/update2/u01","v":"9"}
+{"k":"mesh operations/update2/u02","v":"3"}
+{"k":"mesh operations/update2/u03","v":"1"}
+{"k":"mesh operations/update2/u04","v":"0"}
+{"k":"mesh operations/update2/u05","v":"0"}
+{"k":"mesh operations/update2/u06","v":"0"}
+{"k":"mesh operations/update2/u07","v":"0"}
+{"k":"mesh operations/update2/u08","v":"0"}
+{"k":"mesh operations/update2/v00","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update2/v01","v":"3f800000,00000000,00000000"}
+{"k":"mesh operations/update2/v02","v":"38000100,38800100,38c00180"}
+{"k":"mesh operations/update2/v03","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update2/v04","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update2/v05","v":"3f000000,00000000,3e000000"}
+{"k":"mesh operations/update2/q00","v":"00000000,00000000,3f800000,3e808081"}
+{"k":"mesh operations/update2/q01","v":"3dccc000,3e4cc000,00000000,00000000"}
+{"k":"mesh operations/update2/q02","v":"3e40e4c1,3f5431d4,00000000,00000000"}
+{"k":"mesh operations/update2/q03","v":"3d5d0a8b,3f034800,3e81d94c,3f105050"}
+{"k":"mesh operations/update3/u00","v":"5"}
+{"k":"mesh operations/update3/u01","v":"9"}
+{"k":"mesh operations/update3/u02","v":"3"}
+{"k":"mesh operations/update3/u03","v":"1"}
+{"k":"mesh operations/update3/u04","v":"4"}
+{"k":"mesh operations/update3/u05","v":"2"}
+{"k":"mesh operations/update3/u06","v":"3"}
+{"k":"mesh operations/update3/u07","v":"5"}
+{"k":"mesh operations/update3/u08","v":"12"}
+{"k":"mesh operations/update3/v00","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update3/v01","v":"3f800000,00000000,00000000"}
+{"k":"mesh operations/update3/v02","v":"38000100,38800100,38c00180"}
+{"k":"mesh operations/update3/v03","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update3/v04","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update3/v05","v":"3f000000,00000000,3e000000"}
+{"k":"mesh operations/update3/q00","v":"00000000,00000000,3f800000,3e808081"}
+{"k":"mesh operations/update3/q01","v":"3dccc000,3e4cc000,00000000,00000000"}
+{"k":"mesh operations/update3/q02","v":"3e40e4c1,3f5431d4,00000000,00000000"}
+{"k":"mesh operations/update3/q03","v":"3d5d0a8b,3f034800,3e81d94c,3f105050"}
+{"k":"mesh operations/update4/u00","v":"5"}
+{"k":"mesh operations/update4/u01","v":"9"}
+{"k":"mesh operations/update4/u02","v":"3"}
+{"k":"mesh operations/update4/u03","v":"2"}
+{"k":"mesh operations/update4/u04","v":"4"}
+{"k":"mesh operations/update4/u05","v":"2"}
+{"k":"mesh operations/update4/u06","v":"3"}
+{"k":"mesh operations/update4/u07","v":"5"}
+{"k":"mesh operations/update4/u08","v":"12"}
+{"k":"mesh operations/update4/v00","v":"00000000,3e99999a,3f800000"}
+{"k":"mesh operations/update4/v01","v":"bf13cd3b,bf13cd3b,bf13cd3b"}
+{"k":"mesh operations/update4/v02","v":"00000000,00000000,3f800000"}
+{"k":"mesh operations/update4/v03","v":"bf800000,3f800000,00000000"}
+{"k":"mesh operations/update4/v04","v":"3f800000,bf800000,3f000000"}
+{"k":"mesh operations/update4/v05","v":"3fa66666,be428f5a,be800001"}
+{"k":"mesh operations/update4/q00","v":"3f13dc51,3e9c274e,3e027f07,3e48c8c9"}
+{"k":"mesh operations/update4/q01","v":"40490000,402e0000,00000000,00000000"}
+{"k":"mesh operations/update4/q02","v":"3ac800c8,3b4800c8,00000000,00000000"}
+{"k":"mesh operations/update4/q03","v":"bd333b6c,3f23a6e6,bcf2324e,3f647e19"}
+{"k":"mesh operations/update5/u00","v":"4"}
+{"k":"mesh operations/update5/u01","v":"9"}
+{"k":"mesh operations/update5/u02","v":"3"}
+{"k":"mesh operations/update5/u03","v":"2"}
+{"k":"mesh operations/update5/u04","v":"8"}
+{"k":"mesh operations/update5/u05","v":"4"}
+{"k":"mesh operations/update5/u06","v":"6"}
+{"k":"mesh operations/update5/u07","v":"5"}
+{"k":"mesh operations/update5/u08","v":"12"}
+{"k":"mesh operations/update5/v00","v":"3f99999a,bf99999a,00000000"}
+{"k":"mesh operations/update5/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update5/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update5/v03","v":"3f99999a,bf99999a,00000000"}
+{"k":"mesh operations/update5/v04","v":"3f99999a,bf99999a,00000000"}
+{"k":"mesh operations/update5/v05","v":"bf75c28f,3f75c291,00000000"}
+{"k":"mesh operations/update5/q00","v":"3f800000,3e5b2d9a,3d506372,3f000000"}
+{"k":"mesh operations/update5/q01","v":"bf800000,c0000000,c0400000,c0800000"}
+{"k":"mesh operations/update5/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update5/q03","v":"3f223055,3d2eefd9,3f1d6b2d,3f800000"}
+{"k":"mesh operations/update6/u00","v":"5"}
+{"k":"mesh operations/update6/u01","v":"9"}
+{"k":"mesh operations/update6/u02","v":"3"}
+{"k":"mesh operations/update6/u03","v":"4294967295"}
+{"k":"mesh operations/update6/u04","v":"8"}
+{"k":"mesh operations/update6/u05","v":"4"}
+{"k":"mesh operations/update6/u06","v":"6"}
+{"k":"mesh operations/update6/u07","v":"5"}
+{"k":"mesh operations/update6/u08","v":"12"}
+{"k":"mesh operations/update6/v00","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update6/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update6/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update6/v03","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update6/v04","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update6/v05","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update6/q00","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update6/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update6/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update6/q03","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update7/u00","v":"0"}
+{"k":"mesh operations/update7/u01","v":"0"}
+{"k":"mesh operations/update7/u02","v":"0"}
+{"k":"mesh operations/update7/u03","v":"4294967295"}
+{"k":"mesh operations/update7/u04","v":"0"}
+{"k":"mesh operations/update7/u05","v":"0"}
+{"k":"mesh operations/update7/u06","v":"0"}
+{"k":"mesh operations/update7/u07","v":"0"}
+{"k":"mesh operations/update7/u08","v":"0"}
+{"k":"mesh operations/update7/v00","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update7/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update7/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update7/v03","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update7/v04","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update7/v05","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update7/q00","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update7/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update7/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update7/q03","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update8/u00","v":"3"}
+{"k":"mesh operations/update8/u01","v":"3"}
+{"k":"mesh operations/update8/u02","v":"1"}
+{"k":"mesh operations/update8/u03","v":"2"}
+{"k":"mesh operations/update8/u04","v":"0"}
+{"k":"mesh operations/update8/u05","v":"0"}
+{"k":"mesh operations/update8/u06","v":"0"}
+{"k":"mesh operations/update8/u07","v":"0"}
+{"k":"mesh operations/update8/u08","v":"0"}
+{"k":"mesh operations/update8/v00","v":"40800000,40a00000,40c00000"}
+{"k":"mesh operations/update8/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update8/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update8/v03","v":"40800000,40a00000,40c00000"}
+{"k":"mesh operations/update8/v04","v":"40800000,40a00000,40c00000"}
+{"k":"mesh operations/update8/v05","v":"40c33332,40e33333,4101999a"}
+{"k":"mesh operations/update8/q00","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update8/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update8/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update8/q03","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update9/u00","v":"3"}
+{"k":"mesh operations/update9/u01","v":"3"}
+{"k":"mesh operations/update9/u02","v":"1"}
+{"k":"mesh operations/update9/u03","v":"2"}
+{"k":"mesh operations/update9/u04","v":"0"}
+{"k":"mesh operations/update9/u05","v":"0"}
+{"k":"mesh operations/update9/u06","v":"0"}
+{"k":"mesh operations/update9/u07","v":"0"}
+{"k":"mesh operations/update9/u08","v":"0"}
+{"k":"mesh operations/update9/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update9/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update9/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update9/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update9/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update9/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update9/q00","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update9/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update9/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update9/q03","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update10/u00","v":"3"}
+{"k":"mesh operations/update10/u01","v":"3"}
+{"k":"mesh operations/update10/u02","v":"1"}
+{"k":"mesh operations/update10/u03","v":"2"}
+{"k":"mesh operations/update10/u04","v":"0"}
+{"k":"mesh operations/update10/u05","v":"0"}
+{"k":"mesh operations/update10/u06","v":"0"}
+{"k":"mesh operations/update10/u07","v":"0"}
+{"k":"mesh operations/update10/u08","v":"0"}
+{"k":"mesh operations/update10/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update10/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update10/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update10/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update10/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update10/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update10/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update10/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update10/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update10/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update11/u00","v":"3"}
+{"k":"mesh operations/update11/u01","v":"3"}
+{"k":"mesh operations/update11/u02","v":"1"}
+{"k":"mesh operations/update11/u03","v":"2"}
+{"k":"mesh operations/update11/u04","v":"0"}
+{"k":"mesh operations/update11/u05","v":"0"}
+{"k":"mesh operations/update11/u06","v":"0"}
+{"k":"mesh operations/update11/u07","v":"0"}
+{"k":"mesh operations/update11/u08","v":"0"}
+{"k":"mesh operations/update11/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update11/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update11/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update11/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update11/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update11/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update11/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update11/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update11/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update11/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update12/u00","v":"3"}
+{"k":"mesh operations/update12/u01","v":"3"}
+{"k":"mesh operations/update12/u02","v":"1"}
+{"k":"mesh operations/update12/u03","v":"2"}
+{"k":"mesh operations/update12/u04","v":"0"}
+{"k":"mesh operations/update12/u05","v":"0"}
+{"k":"mesh operations/update12/u06","v":"0"}
+{"k":"mesh operations/update12/u07","v":"0"}
+{"k":"mesh operations/update12/u08","v":"0"}
+{"k":"mesh operations/update12/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update12/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update12/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update12/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update12/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update12/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update12/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update12/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update12/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update12/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update13/u00","v":"3"}
+{"k":"mesh operations/update13/u01","v":"3"}
+{"k":"mesh operations/update13/u02","v":"1"}
+{"k":"mesh operations/update13/u03","v":"2"}
+{"k":"mesh operations/update13/u04","v":"0"}
+{"k":"mesh operations/update13/u05","v":"0"}
+{"k":"mesh operations/update13/u06","v":"0"}
+{"k":"mesh operations/update13/u07","v":"0"}
+{"k":"mesh operations/update13/u08","v":"0"}
+{"k":"mesh operations/update13/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update13/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update13/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update13/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update13/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update13/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update13/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update13/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update13/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update13/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update14/u00","v":"3"}
+{"k":"mesh operations/update14/u01","v":"3"}
+{"k":"mesh operations/update14/u02","v":"1"}
+{"k":"mesh operations/update14/u03","v":"2"}
+{"k":"mesh operations/update14/u04","v":"0"}
+{"k":"mesh operations/update14/u05","v":"0"}
+{"k":"mesh operations/update14/u06","v":"0"}
+{"k":"mesh operations/update14/u07","v":"0"}
+{"k":"mesh operations/update14/u08","v":"0"}
+{"k":"mesh operations/update14/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update14/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update14/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update14/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update14/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update14/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update14/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update14/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update14/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update14/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update15/u00","v":"3"}
+{"k":"mesh operations/update15/u01","v":"3"}
+{"k":"mesh operations/update15/u02","v":"1"}
+{"k":"mesh operations/update15/u03","v":"2"}
+{"k":"mesh operations/update15/u04","v":"0"}
+{"k":"mesh operations/update15/u05","v":"0"}
+{"k":"mesh operations/update15/u06","v":"0"}
+{"k":"mesh operations/update15/u07","v":"0"}
+{"k":"mesh operations/update15/u08","v":"0"}
+{"k":"mesh operations/update15/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update15/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update15/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update15/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update15/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update15/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update15/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update15/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update15/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update15/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/update16/u00","v":"3"}
+{"k":"mesh operations/update16/u01","v":"3"}
+{"k":"mesh operations/update16/u02","v":"1"}
+{"k":"mesh operations/update16/u03","v":"2"}
+{"k":"mesh operations/update16/u04","v":"0"}
+{"k":"mesh operations/update16/u05","v":"0"}
+{"k":"mesh operations/update16/u06","v":"0"}
+{"k":"mesh operations/update16/u07","v":"0"}
+{"k":"mesh operations/update16/u08","v":"0"}
+{"k":"mesh operations/update16/v00","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update16/v01","v":"ffc00000,ffc00000,ffc00000"}
+{"k":"mesh operations/update16/v02","v":"00000000,00000000,00000000"}
+{"k":"mesh operations/update16/v03","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update16/v04","v":"c0800000,c0a00000,c0c00000"}
+{"k":"mesh operations/update16/v05","v":"c0c33332,c0e33333,c101999a"}
+{"k":"mesh operations/update16/q00","v":"3d02a569,3d39152b,3d7add29,3ea0a0a1"}
+{"k":"mesh operations/update16/q01","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update16/q02","v":"00000000,00000000,00000000,00000000"}
+{"k":"mesh operations/update16/q03","v":"3daeaab4,3ddb7b11,3e075605,3ed8d8d9"}
+{"k":"mesh operations/lines","v":"17"}
 {"k":"sim/time/f020","v":"3d088889"}
 {"k":"sim/rate/f020","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f222224 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
 {"k":"sim/rate delta/f020","v":"alive=4 culled=0 | System: Looping playing=1 new=0 count=3e792c61 dt=3d088889 t=3f222224 before=00000000 loop=bf800000 after=00000000 index=0 of=-1"}
