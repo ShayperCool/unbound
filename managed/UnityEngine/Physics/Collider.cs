@@ -661,6 +661,7 @@ namespace UnityEngine
 
         internal override unsafe ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
         {
+            using var engineReads = Mesh.EngineReads();
             var mesh = m_Mesh;
             if (mesh == null) return 0;
             var source = mesh.m_Vertices;

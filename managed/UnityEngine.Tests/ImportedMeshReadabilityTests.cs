@@ -13,10 +13,8 @@ namespace UnityEngine.Tests
     /// and "When Unity creates a Mesh from script, this value is initially set to true".
     /// Mesh.AcquireReadOnlyMeshData (same release): "This method will throw an
     /// InvalidOperationException if Mesh.isReadable is false for one or more input meshes."
-    /// Not a measured Unity contract here: the Mesh-isReadable note that data arrays error "from script
-    /// at runtime" but are "always allowed in the Unity Editor outside of the game and rendering loop";
-    /// what Play mode in the Editor does with them is unmeasured, and the one test about it below only
-    /// preserves Unbound's current behaviour.</summary>
+    /// In Play mode the Unity 6000.0.71f1 Editor refuses scripts' reads of such a mesh's data
+    /// (tests/projects/meshreadable).</summary>
     public class ImportedMeshReadabilityTests
     {
         static string Floats(params float[] values) => Convert.ToBase64String(MemoryMarshal.AsBytes(values.AsSpan()).ToArray());
@@ -195,17 +193,50 @@ namespace UnityEngine.Tests
             Assert.True(mesh.isReadable);
         }
 
-        /// <summary>Preservation only, not a Unity contract: Unbound plays in the Editor, where the
-        /// documented data-array error "from script at runtime" and the "outside of the game and
-        /// rendering loop" exemption leave Play mode unmeasured. Until that is measured, a
-        /// Read/Write-disabled imported mesh keeps answering its data arrays as before.</summary>
+        /// <summary>Scripts' reads of a Read/Write-disabled mesh log the Editor's error and return
+        /// nothing, also for a channel the mesh lacks; the index list readers still return the
+        /// indices; the engine's own readers (<see cref="Mesh.EngineReads"/>) read it (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/meshreadable).</summary>
         [Fact]
-        public void ReadWriteDisabledMeshesKeepAnsweringDataArrays()
+        public void ReadWriteDisabledMeshesRefuseScriptReads()
         {
             var off = Imported(false);
-            Assert.Equal(3, off.vertices.Length);
-            Assert.Equal(new[] { 0, 1, 2 }, off.GetTriangles(0));
-            Assert.Equal(3, off.boneWeights.Length);
+            var logs = new List<string>();
+            Application.LogCallback log = (condition, _, type) => logs.Add(type + ": " + condition);
+            Application.logMessageReceived += log;
+            try
+            {
+                Assert.Empty(off.vertices);
+                Assert.Empty(off.GetTriangles(0));
+                Assert.Empty(off.uv8);
+                var uvs = new List<Vector2> { Vector2.one };
+                off.GetUVs(1, uvs);
+                Assert.Empty(uvs);
+                Assert.Equal(new[]
+                {
+                    "Error: Not allowed to access vertices on mesh 'Tri' (isReadable is false; Read/Write must be enabled in import settings)",
+                    "Error: Not allowed to access triangles/indices on mesh 'Tri' (isReadable is false; Read/Write must be enabled in import settings)",
+                    "Error: Not allowed to access uv8 on mesh 'Tri' (isReadable is false; Read/Write must be enabled in import settings)",
+                    "Error: Not allowed to access uv2 on mesh 'Tri' (isReadable is false; Read/Write must be enabled in import settings)",
+                }, logs);
+                logs.Clear();
+                var triangles = new List<int>();
+                off.GetTriangles(triangles, 1);
+                Assert.Equal(new[] { 2, 1, 0 }, triangles);
+                Assert.Equal(3, off.vertexCount);
+                using (Mesh.EngineReads())
+                {
+                    Assert.Equal(3, off.vertices.Length);
+                    Assert.Equal(new[] { 0, 1, 2 }, off.GetTriangles(0));
+                }
+                Assert.Empty(logs);
+                Assert.Empty(off.normals);
+                Assert.Single(logs);
+            }
+            finally
+            {
+                Application.logMessageReceived -= log;
+            }
         }
     }
 }

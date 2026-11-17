@@ -95,8 +95,15 @@ namespace UnityEngine
                     channel++;
                 }
             }
+            // The importer keeps colors as bytes (Color: UNorm8 x4, matches the Unity 6000.0.71f1
+            // Editor, tests/projects/meshreadable `layers.attribute.Color`).
             var colors = Decoded<Color>(m, "colors");
-            if (colors.Length == positions.Length) this.colors = colors;
+            if (colors.Length == positions.Length)
+            {
+                var bytes = new Color32[colors.Length];
+                for (int i = 0; i < bytes.Length; i++) bytes[i] = colors[i];
+                colors32 = bytes;
+            }
             if (m.TryGetProperty("submeshes", out var submeshes))
             {
                 subMeshCount = Math.Max(1, submeshes.GetArrayLength());

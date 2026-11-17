@@ -218,6 +218,7 @@ namespace Unbound.Runtime
 
         static Geometry Gather(List<NavMeshBuildSource> sources, Matrix4x4 worldToData)
         {
+            using var engineReads = Mesh.EngineReads();
             var g = new Geometry();
             foreach (var source in sources)
             {

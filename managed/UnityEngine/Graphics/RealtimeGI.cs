@@ -737,6 +737,7 @@ namespace UnityEngine
         /// of their matrices it is made of). Returns why they could not be made, or null.</summary>
         static unsafe string RealtimeUVs(GIScene scene, int index, GISystem system, LightingSettings settings, Dictionary<Renderer, string> unshared)
         {
+            using var engineReads = Mesh.EngineReads();
             float resolution = settings != null ? settings.indirectResolution : 2f;
             for (int r = 0; r < system.Renderers.Length; r++)
             {
@@ -765,6 +766,7 @@ namespace UnityEngine
         /// made, or null.</summary>
         static unsafe string MakeUVs(GIScene scene, int index, int r, MeshRenderer renderer, Mesh mesh, float resolution, out float[] output)
         {
+            using var engineReads = Mesh.EngineReads();
             output = null;
             bool automatic = MakesAutomaticCharts(renderer);
             for (int sub = 0; sub < mesh.subMeshCount; sub++)
@@ -1017,6 +1019,7 @@ namespace UnityEngine
         /// tests/projects/realtimegi RoomTurned, SharedTurned and SharedFlat.)</summary>
         internal static string AutomaticChartsRefusal(MeshRenderer renderer, Mesh mesh, Dictionary<Renderer, string> unshared)
         {
+            using var engineReads = Mesh.EngineReads();
             if (unshared.TryGetValue(renderer, out var shared)) return shared;
             if (!(renderer.m_AutoUVMaxAngle < 90f))
                 return $"'{renderer.name}' has Optimize Realtime UVs with Max Angle {renderer.m_AutoUVMaxAngle} (a right angle or more is not measured)";

@@ -505,6 +505,7 @@ namespace UnityEngine
         /// uvs) or at white.</summary>
         static void BakeMeshDetails(TerrainData data, MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements, DetailTexture place)
         {
+            using var engineReads = Mesh.EngineReads();
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;

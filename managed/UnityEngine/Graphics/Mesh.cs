@@ -29,10 +29,12 @@ namespace UnityEngine
         /// mesh already has (<see cref="AdoptVertices"/>): caches of them compare it, not only
         /// the arrays.</summary>
         internal int m_PositionsVersion;
+        /// <summary>Whether scripts may read the data (the renderer and the engine's own systems
+        /// always can).</summary>
         bool m_IsReadable = true;
-        // Model import's Editor-only CPU access remains unchanged until measured. An explicit
-        // UploadMeshData(true) removes script access; renderers still own the retained geometry.
-        bool m_CpuAccess = true;
+        /// <summary>Reads by the engine's own systems (<see cref="EngineReads"/>) in progress on
+        /// this thread.</summary>
+        [ThreadStatic] static int s_EngineReads;
         IndexFormat m_IndexFormat = IndexFormat.UInt16;
 
         internal sealed class SubMesh
@@ -91,7 +93,6 @@ namespace UnityEngine
             var m = new Mesh();
             m.CopyGeometryFrom(this);
             m.m_IsReadable = m_IsReadable;
-            m.m_CpuAccess = m_CpuAccess;
             return m;
         }
 
@@ -165,7 +166,6 @@ namespace UnityEngine
         {
             CopyGeometryFrom(saved);
             m_IsReadable = saved.m_IsReadable;
-            m_CpuAccess = saved.m_CpuAccess;
         }
 
         void Changed(bool vertices = true, bool indices = true)
@@ -178,6 +178,32 @@ namespace UnityEngine
         }
 
         public bool isReadable => m_IsReadable;
+
+        /// <summary>A script's read of a mesh that is not readable: an error naming
+        /// <paramref name="what"/>, and nothing read (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/meshreadable; Mesh.isReadable: a mesh without Read/Write has no
+        /// CPU-addressable data for scripts). The engine's own systems still read it.</summary>
+        bool Readable(string what)
+        {
+            if (m_IsReadable || s_EngineReads > 0) return true;
+            Debug.LogError($"Not allowed to access {what} on mesh '{name}' (isReadable is false; Read/Write must be enabled in import settings)");
+            return false;
+        }
+
+        /// <summary>A scope in which the engine's own systems (collider cooking, navigation mesh
+        /// building, cloth, baking) read meshes through Mesh's script API, readable or not, as
+        /// Unity's do (a MeshCollider of a mesh without Read/Write collides:
+        /// tests/projects/meshreadable `*.colliderHit`).</summary>
+        internal static EngineReadScope EngineReads()
+        {
+            s_EngineReads++;
+            return default;
+        }
+
+        internal readonly struct EngineReadScope : IDisposable
+        {
+            public void Dispose() => s_EngineReads--;
+        }
         public int vertexCount => m_Vertices.Length;
         /// <summary>Changing the format sets subMeshCount to one and clears the index buffer
         /// (documented, 6000.0 Mesh.indexFormat). Assigning the current format is not a change and
@@ -230,11 +256,7 @@ namespace UnityEngine
         {
             get
             {
-                if (!m_CpuAccess)
-                {
-                    Debug.LogError($"Not allowed to access vertices on mesh '{name}' (isReadable is false; Read/Write must be enabled in import settings)");
-                    return Array.Empty<Vector3>();
-                }
+                if (!Readable("vertices")) return Array.Empty<Vector3>();
                 return (Vector3[])m_Vertices.Clone();
             }
             set
@@ -301,7 +323,7 @@ namespace UnityEngine
 
         public Vector3[] normals
         {
-            get => m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
+            get => Readable("normals") && m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
             set => AdoptNormals(Checked(value, "normals"));
         }
 
@@ -313,7 +335,7 @@ namespace UnityEngine
 
         public Vector4[] tangents
         {
-            get => m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
+            get => Readable("tangents") && m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
             set => AdoptTangents(Checked(value, "tangents"));
         }
 
@@ -327,7 +349,7 @@ namespace UnityEngine
         {
             get
             {
-                if (m_Colors == null) return Array.Empty<Color>();
+                if (!Readable("colors") || m_Colors == null) return Array.Empty<Color>();
                 var result = new Color[m_Colors.Length];
                 var colors = RenderColors();
                 for (int i = 0; i < result.Length; i++) result[i] = colors[i];
@@ -347,7 +369,7 @@ namespace UnityEngine
 
         public Color32[] colors32
         {
-            get => m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
+            get => Readable("colors") && m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
             set { m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); SetColorFormat(VertexAttributeFormat.UNorm8); Changed(indices: false); }
         }
 
@@ -371,10 +393,13 @@ namespace UnityEngine
         public Vector2[] uv7 { get => GetUV2(6); set => SetUV2(6, value); }
         public Vector2[] uv8 { get => GetUV2(7); set => SetUV2(7, value); }
 
+        /// <summary>A UV channel's name in the read errors (uv, uv2 ... uv8).</summary>
+        static readonly string[] s_UVNames = { "uv", "uv2", "uv3", "uv4", "uv5", "uv6", "uv7", "uv8" };
+
         Vector2[] GetUV2(int channel)
         {
             var src = m_UVs[channel];
-            if (src == null) return Array.Empty<Vector2>();
+            if (!Readable(s_UVNames[channel]) || src == null) return Array.Empty<Vector2>();
             var r = new Vector2[src.Length];
             for (int i = 0; i < r.Length; i++) r[i] = src[i];
             return r;
@@ -406,7 +431,7 @@ namespace UnityEngine
         public void GetVertices(List<Vector3> vertices)
         {
             vertices.Clear();
-            vertices.AddRange(m_Vertices);
+            if (Readable("vertices")) vertices.AddRange(m_Vertices);
         }
 
         public void SetNormals(List<Vector3> inNormals) => normals = inNormals.ToArray();
@@ -417,7 +442,7 @@ namespace UnityEngine
         public void GetNormals(List<Vector3> normals)
         {
             normals.Clear();
-            if (m_Normals != null) normals.AddRange(m_Normals);
+            if (Readable("normals") && m_Normals != null) normals.AddRange(m_Normals);
         }
 
         public void SetTangents(List<Vector4> inTangents) => tangents = inTangents.ToArray();
@@ -428,7 +453,7 @@ namespace UnityEngine
         public void GetTangents(List<Vector4> tangents)
         {
             tangents.Clear();
-            if (m_Tangents != null) tangents.AddRange(m_Tangents);
+            if (Readable("tangents") && m_Tangents != null) tangents.AddRange(m_Tangents);
         }
 
         // A null list or array is an empty one: the channel is cleared
@@ -451,7 +476,7 @@ namespace UnityEngine
         public void GetColors(List<Color32> colors)
         {
             colors.Clear();
-            if (m_Colors != null) colors.AddRange(m_Colors);
+            if (Readable("colors") && m_Colors != null) colors.AddRange(m_Colors);
         }
 
         const string InvalidUVChannel = "The uv index is invalid. Must be in the range 0 to 7.";
@@ -528,7 +553,7 @@ namespace UnityEngine
         {
             if (uvs == null) throw new ArgumentNullException(nameof(uvs), "The result uvs list cannot be null.");
             if (!IsUVChannel(channel)) throw new IndexOutOfRangeException(InvalidUVChannel);
-            return m_UVs[channel];
+            return Readable(s_UVNames[channel]) ? m_UVs[channel] : null;
         }
 
         public void GetUVs(int channel, List<Vector2> uvs)
@@ -558,6 +583,7 @@ namespace UnityEngine
         {
             get
             {
+                if (!Readable(TrianglesOrIndices)) return Array.Empty<int>();
                 var all = new List<int>();
                 foreach (var s in m_SubMeshes)
                     if (s.Topology == MeshTopology.Triangles)
@@ -575,9 +601,19 @@ namespace UnityEngine
 
         public int[] GetTriangles(int submesh) => GetTriangles(submesh, true);
 
+        /// <summary>The read errors' name of index reads.</summary>
+        const string TrianglesOrIndices = "triangles/indices";
+
         public int[] GetTriangles(int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
-            if (!CanAccessSubmesh(submesh, triangles: true)) return Array.Empty<int>();
+            if (!CanAccessSubmesh(submesh, triangles: true) || !Readable(TrianglesOrIndices)) return Array.Empty<int>();
+            return TrianglesOf(submesh, applyBaseVertex);
+        }
+
+        /// <summary>A sub-mesh's triangles, readable or not (the list getters read them so:
+        /// tests/projects/meshreadable `*.GetTrianglesList`).</summary>
+        int[] TrianglesOf(int submesh, bool applyBaseVertex)
+        {
             var s = m_SubMeshes[submesh];
             if (s.Topology != MeshTopology.Triangles) return Array.Empty<int>();
             var r = (int[])s.Indices.Clone();
@@ -592,14 +628,20 @@ namespace UnityEngine
             if (triangles == null) throw new ArgumentNullException(nameof(triangles), "The result triangles list cannot be null.");
             CheckSubmesh(submesh);
             triangles.Clear();
-            triangles.AddRange(GetTriangles(submesh, applyBaseVertex));
+            triangles.AddRange(TrianglesOf(submesh, applyBaseVertex));
         }
 
         public int[] GetIndices(int submesh) => GetIndices(submesh, true);
 
         public int[] GetIndices(int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
-            if (!CanAccessSubmesh(submesh, triangles: false)) return Array.Empty<int>();
+            if (!CanAccessSubmesh(submesh, triangles: false) || !Readable(TrianglesOrIndices)) return Array.Empty<int>();
+            return IndicesOf(submesh, applyBaseVertex);
+        }
+
+        /// <summary>A sub-mesh's indices, readable or not (`*.GetIndicesList`).</summary>
+        int[] IndicesOf(int submesh, bool applyBaseVertex)
+        {
             var s = m_SubMeshes[submesh];
             var r = (int[])s.Indices.Clone();
             if (applyBaseVertex && s.BaseVertex != 0) for (int i = 0; i < r.Length; i++) r[i] += s.BaseVertex;
@@ -613,7 +655,7 @@ namespace UnityEngine
             if (indices == null) throw new ArgumentNullException(nameof(indices), "The result indices list cannot be null.");
             CheckSubmesh(submesh);
             indices.Clear();
-            indices.AddRange(GetIndices(submesh, applyBaseVertex));
+            indices.AddRange(IndicesOf(submesh, applyBaseVertex));
         }
 
         public uint GetIndexStart(int submesh)
@@ -936,7 +978,7 @@ namespace UnityEngine
         public void UploadMeshData(bool markNoLongerReadable)
         {
             Sync();
-            if (markNoLongerReadable) { m_IsReadable = false; m_CpuAccess = false; }
+            if (markNoLongerReadable) m_IsReadable = false;
         }
 
         public void CombineMeshes(CombineInstance[] combine) => CombineMeshes(combine, true, true, false);
@@ -967,7 +1009,8 @@ namespace UnityEngine
                     colors.Add(src.m_Colors != null ? src.m_Colors[i] : new Color32(255, 255, 255, 255));
                 }
                 int sub = Math.Max(0, c.subMeshIndex);
-                var tris = src.GetTriangles(Math.Min(sub, src.subMeshCount - 1));
+                int part = Math.Min(sub, src.subMeshCount - 1);
+                var tris = src.CanAccessSubmesh(part, triangles: true) ? src.TrianglesOf(part, true) : Array.Empty<int>();
                 if (mergeSubMeshes || submeshes.Count == 0)
                 {
                     if (submeshes.Count == 0) submeshes.Add(new List<int>());

@@ -360,6 +360,7 @@ namespace UnityEngine
         /// particle) and takes the skinned rest pose.</summary>
         void EnsureMesh()
         {
+            using var engineReads = Mesh.EngineReads();
             var renderer = Renderer;
             var mesh = renderer != null ? renderer.sharedMesh : null;
             if (mesh == m_Source && m_Coefficients != null) return;
@@ -416,6 +417,7 @@ namespace UnityEngine
         /// <summary>The skinned pose of the particles in the cloth's frame.</summary>
         void UpdateTargets()
         {
+            using var engineReads = Mesh.EngineReads();
             var renderer = Renderer;
             var mesh = m_Source;
             if (renderer == null || mesh == null) return;

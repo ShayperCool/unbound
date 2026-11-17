@@ -242,6 +242,7 @@ namespace UnityEngine
         /// cannot be baked.</summary>
         static object BakeRequestOf(long id, MeshRenderer renderer, float resolution, LightingSettings settings, out string why)
         {
+            using var engineReads = Mesh.EngineReads();
             why = null;
             var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
             if (mesh == null) { why = "it has no mesh"; return null; }

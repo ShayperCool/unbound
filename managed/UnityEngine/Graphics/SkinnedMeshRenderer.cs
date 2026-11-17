@@ -726,6 +726,7 @@ namespace UnityEngine
         /// <summary>The current pose in the renderer's space (with its scale only when asked).</summary>
         public void BakeMesh(Mesh mesh, bool useScale)
         {
+            using var engineReads = Mesh.EngineReads();
             if (mesh == null) throw new ArgumentNullException(nameof(mesh), "The mesh to bake into is null");
             if (m_Mesh == null) return;
             var t = transform;
