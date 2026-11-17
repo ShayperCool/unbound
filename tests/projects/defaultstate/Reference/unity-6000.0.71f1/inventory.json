@@ -2101,6 +2101,12 @@
       "type": "UnityEngine.Analytics.Analytics"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UnityAnalyticsModule",
+      "status": "static",
+      "type": "UnityEngine.Analytics.AnalyticsSessionInfo"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.Physics2DModule",
       "status": "candidate",
@@ -2723,6 +2729,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.BackgroundThreadAwaitable"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.BeforeRenderOrderAttribute"
     },
     {
       "category": "component",
@@ -5879,6 +5891,12 @@
       "module": "UnityEngine.Physics2DModule",
       "status": "candidate",
       "type": "UnityEngine.RelativeJoint2D"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UnityAnalyticsModule",
+      "status": "static",
+      "type": "UnityEngine.RemoteSettings"
     },
     {
       "category": "struct",
@@ -9803,6 +9821,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.UnassignedReferenceException"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.UnityAPICompatibilityVersionAttribute"
     },
     {
       "category": "struct",

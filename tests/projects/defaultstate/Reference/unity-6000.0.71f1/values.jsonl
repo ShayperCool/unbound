@@ -1267,6 +1267,7 @@
 {"key":"UnityEngine.AndroidJavaObject/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AndroidJavaProxy/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Analytics.Analytics/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.Analytics.AnalyticsSessionInfo/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.CrashReportHandler.CrashReportHandler/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Identifiers.Identifiers/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.Networking.PlayerConnection.PlayerConnection/@factory","status":"value","value":"scriptable"}
@@ -1943,6 +1944,7 @@
 {"key":"UnityEngine.Awaitable`1+Awaiter/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEngine.BackgroundThreadAwaitable/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.BackgroundThreadAwaitable/Property/UnityEngine.BackgroundThreadAwaitable/IsCompleted","status":"value","value":"true"}
+{"key":"UnityEngine.BeforeRenderOrderAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.Behaviour/@factory","status":"factory-null","value":""}
 {"key":"UnityEngine.BillboardAsset/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.BillboardAsset/Property/UnityEngine.BillboardAsset/bottom","status":"value","value":"0"}
@@ -5943,6 +5945,7 @@
 {"key":"UnityEngine.RelativeJoint2D/Property/UnityEngine.RelativeJoint2D/maxForce","status":"value","value":"10000"}
 {"key":"UnityEngine.RelativeJoint2D/Property/UnityEngine.RelativeJoint2D/maxTorque","status":"value","value":"10000"}
 {"key":"UnityEngine.RelativeJoint2D/Property/UnityEngine.RelativeJoint2D/target","status":"value","value":"UnityEngine.Vector2{x=0;y=0}"}
+{"key":"UnityEngine.RemoteSettings/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.RenderBuffer/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.RenderParams/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.RenderParams/Property/UnityEngine.RenderParams/camera","status":"value","value":"null"}
@@ -11422,6 +11425,7 @@
 {"key":"UnityEngine.UnassignedReferenceException/Property/System.Exception/Source","status":"value","value":"null"}
 {"key":"UnityEngine.UnassignedReferenceException/Property/System.Exception/StackTrace","status":"value","value":"null"}
 {"key":"UnityEngine.UnassignedReferenceException/Property/System.Exception/TargetSite","status":"value","value":"null"}
+{"key":"UnityEngine.UnityAPICompatibilityVersionAttribute/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.UnityException/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.UnityException/Property/System.Exception/Data","status":"value","value":"[]"}
 {"key":"UnityEngine.UnityException/Property/System.Exception/HResult","status":"value","value":"-2147467261"}
