@@ -51,17 +51,16 @@ namespace Unbound.Runtime
             {
                 // No control records these yet: a matrix's axis is made by blocks of
                 // initialize and update contexts only (collision shapes, a position on a mesh),
-                // whose values no control reads; an event attribute read in a spawn context is
-                // among the expressions evaluated per spawn event, which Unbound does not
-                // evaluate yet; no operator of the package makes a texture's format.
+                // whose values no control reads; no operator of the package makes a texture's
+                // format.
                 case VFXExpressionOperation.MatrixToAxis:
-                case VFXExpressionOperation.ReadEventAttribute:
                 case VFXExpressionOperation.TextureFormat:
                 // A skinned mesh renderer's mesh, vertices and root bone are not done yet.
                 case VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer:
                 case VFXExpressionOperation.MeshFromSkinnedMeshRenderer:
                 case VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer:
                     return false;
+                case VFXExpressionOperation.ReadEventAttribute:
                 case VFXExpressionOperation.MeshVertexCount:
                 case VFXExpressionOperation.MeshChannelOffset:
                 case VFXExpressionOperation.MeshChannelInfos:
@@ -92,6 +91,11 @@ namespace Unbound.Runtime
             RenderTexture target => (uint)target.volumeDepth,
             _ => 1u,
         };
+
+        /// <summary>Whether an event attribute of the type can be read in a spawn context (the
+        /// types attributes have).</summary>
+        internal static bool ReadableEventAttribute(VFXValueType type) =>
+            type is >= VFXValueType.Float and <= VFXValueType.Uint32 or VFXValueType.Boolean;
 
         /// <summary>Evaluates the expressions <paramref name="begin"/>..<paramref name="end"/>.
         /// <paramref name="spawner"/> is the spawner whose blocks are being evaluated, null
@@ -508,6 +512,22 @@ namespace Unbound.Runtime
                     case VFXExpressionOperation.GenerateRandom: w[at] = Bits(state.Random.NextValue()); break;
                     case VFXExpressionOperation.GenerateFixedRandom: w[at] = Bits(FixedRandom(w[p0])); break;
 
+                    // An attribute of the spawn context's own event as its blocks left it, at
+                    // the element the third operand names (the fourth is its type); a bool is
+                    // its word's low byte (measured for false and true only). Outside a spawn
+                    // context the value stays.
+                    case VFXExpressionOperation.ReadEventAttribute:
+                    {
+                        if (spawner == null) break;
+                        var source = spawner.EventAttribute.Words;
+                        int element = operands[d + 2];
+                        var type = (VFXValueType)operands[d + 3];
+                        int size = type == VFXValueType.Boolean ? 1 : VFXExpressionHelper.GetSizeOfType(type);
+                        if (element < 0 || element + size > source.Length || !ReadableEventAttribute(type)) break;
+                        if (type == VFXValueType.Boolean) w[at] = source[element] & 0xffu;
+                        else Array.Copy(source, element, w, at, size);
+                        break;
+                    }
                     case VFXExpressionOperation.SpawnerStateNewLoop: if (spawner != null) w[at] = spawner.NewLoop ? 1u : 0u; break;
                     case VFXExpressionOperation.SpawnerStateLoopState: if (spawner != null) w[at] = (uint)spawner.LoopState; break;
                     case VFXExpressionOperation.SpawnerStateSpawnCount: if (spawner != null) w[at] = Bits(spawner.SpawnCount); break;

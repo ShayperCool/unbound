@@ -134,8 +134,13 @@ namespace UnityEngine.VFX
         internal static string Unsupported(VisualEffectCompiledData data)
         {
             if (data.BuiltRefusal != null) return data.BuiltRefusal;
-            foreach (var op in data.Operations)
+            for (int i = 0; i < data.Operations.Length; i++)
+            {
+                var op = data.Operations[i];
                 if (!VFXExpressionEvaluator.Supported(op)) return $"the expression operation {op}";
+                if (op == VFXExpressionOperation.ReadEventAttribute && !VFXExpressionEvaluator.ReadableEventAttribute((VFXValueType)data.Operands[i * 4 + 3]))
+                    return $"an event attribute of the type {(VFXValueType)data.Operands[i * 4 + 3]} read in a spawn context";
+            }
             if (data.UnplacedBake) return "a curve or gradient baked among the expressions of a spawn event";
             // What the programs read in them is not measured (the effects still ask for them).
             foreach (var op in data.Operations)
