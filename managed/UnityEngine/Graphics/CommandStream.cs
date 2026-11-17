@@ -34,7 +34,12 @@ namespace Unbound.Runtime
             // NativeApi 50.
             ScreenStandInOp = 35,
             // NativeApi 59.
-            DotsDrawOp = 36;
+            DotsDrawOp = 36,
+            // NativeApi 85.
+            DrawShapeOp = 37;
+
+        /// <summary><see cref="DrawShape"/>'s topology byte for the drawn submesh's own.</summary>
+        const byte DrawShapeMeshTopology = 0xFF;
 
         /// <summary>The kinds of <see cref="PluginOp"/> (render_commands.rs's PluginCall).</summary>
         const byte PluginEventKind = 0, PluginEventAndDataKind = 1, PluginTextureUpdateV1Kind = 2,
@@ -367,6 +372,16 @@ namespace Unbound.Runtime
             Reserve(count * 4);
             new ReadOnlySpan<byte>(visible, count * 4).CopyTo(new Span<byte>(s_Buffer, s_Length, count * 4));
             s_Length += count * 4;
+        }
+
+        /// <summary>How the next draw reads its indices: as <paramref name="topology"/> (Triangles,
+        /// Lines or Points; null: its submesh's own topology), with <paramref name="baseVertex"/>
+        /// added to the indices a <see cref="DrawSetup"/> gives it from a buffer.</summary>
+        internal static void DrawShape(MeshTopology? topology, int baseVertex)
+        {
+            U8(DrawShapeOp);
+            U8(topology is MeshTopology t ? (byte)t : DrawShapeMeshTopology);
+            I32(baseVertex);
         }
 
         /// <summary>The next draw's <c>unity_BaseCommandID</c> (<see cref="Unbound.Runtime.DrawSetup.Command"/>).</summary>

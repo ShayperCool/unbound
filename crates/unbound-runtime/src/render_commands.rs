@@ -168,6 +168,14 @@ pub const DOTS_HEADER_FLAGS: usize = 1;
 /// The DOTS instancing flag of mirrored instances (`kDOTSInstancingFlagFlipWinding`).
 pub const DOTS_FLAG_FLIP_WINDING: u32 = 1;
 
+/// [`Command::DrawShape`]'s topology: the drawn submesh's own.
+pub const DRAW_SHAPE_MESH_TOPOLOGY: u8 = 0xFF;
+/// [`Command::DrawShape`]'s topologies (`MeshTopology` values): the list topologies a mesh's
+/// indices can be read as.
+pub const DRAW_SHAPE_TRIANGLES: u8 = 0;
+pub const DRAW_SHAPE_LINES: u8 = 3;
+pub const DRAW_SHAPE_POINTS: u8 = 5;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     /// Publish a multisampled target for later readback and compute reads.
@@ -235,6 +243,15 @@ pub enum Command {
         size: u8,
         first: u32,
         count: u32,
+    },
+    /// How the next `Draw` reads its indices (NativeApi 85): as `topology` (a `MeshTopology`
+    /// value, [`DRAW_SHAPE_TRIANGLES`], [`DRAW_SHAPE_LINES`] or [`DRAW_SHAPE_POINTS`];
+    /// [`DRAW_SHAPE_MESH_TOPOLOGY`]: its submesh's own), and with `base_vertex` added to the
+    /// indices a `DrawIndices` gives it (else 0). BatchRendererGroup's indirect commands of a
+    /// mesh read as lines or points, and its procedural commands' base vertex.
+    DrawShape {
+        topology: u8,
+        base_vertex: i32,
     },
     /// Clears the viewport of the target ([`clear`] flags).
     Clear {
@@ -427,6 +444,8 @@ mod op {
     pub const SCREEN_STAND_IN: u8 = 35;
     // NativeApi 60.
     pub const DOTS_DRAW: u8 = 36;
+    // NativeApi 85.
+    pub const DRAW_SHAPE: u8 = 37;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -675,6 +694,23 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 offset: r.u32()?,
                 indexed: r.u8()? != 0,
             },
+            op::DRAW_SHAPE => {
+                let topology = r.u8()?;
+                let base_vertex = r.i32()?;
+                if !matches!(
+                    topology,
+                    DRAW_SHAPE_TRIANGLES
+                        | DRAW_SHAPE_LINES
+                        | DRAW_SHAPE_POINTS
+                        | DRAW_SHAPE_MESH_TOPOLOGY
+                ) {
+                    return Err(format!("DrawShape of topology {topology}"));
+                }
+                Command::DrawShape {
+                    topology,
+                    base_vertex,
+                }
+            }
             op::DRAW_INDICES if INDEXED_DRAWS => {
                 let buffer = r.u64()?;
                 let size = r.u8()?;
@@ -1106,6 +1142,14 @@ impl Writer {
                 self.u32(*offset);
                 self.bytes.push(*indexed as u8);
             }
+            Command::DrawShape {
+                topology,
+                base_vertex,
+            } => {
+                self.bytes.push(op::DRAW_SHAPE);
+                self.bytes.push(*topology);
+                self.u32(*base_vertex as u32);
+            }
             Command::DrawIndices {
                 buffer,
                 size,
@@ -1524,6 +1568,14 @@ mod tests {
                 indirect: 0x8000_0040,
                 visible: vec![],
             }),
+            Command::DrawShape {
+                topology: DRAW_SHAPE_LINES,
+                base_vertex: -4,
+            },
+            Command::DrawShape {
+                topology: DRAW_SHAPE_MESH_TOPOLOGY,
+                base_vertex: 65536,
+            },
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {
@@ -1880,16 +1932,41 @@ mod tests {
         }
     }
 
+    /// A `DrawShape` of a topology other than the list ones or the mesh's own is an error, and so
+    /// is one cut short.
+    #[test]
+    fn malformed_draw_shapes_are_rejected() {
+        let shape = |topology: u8| {
+            let mut bytes = vec![op::DRAW_SHAPE, topology];
+            bytes.extend_from_slice(&4i32.to_le_bytes());
+            bytes
+        };
+        for topology in [1u8, 2, 4, 6, 0xFE] {
+            assert!(parse(&shape(topology)).is_err(), "topology {topology}");
+        }
+        let good = shape(DRAW_SHAPE_POINTS);
+        assert_eq!(
+            parse(&good).unwrap(),
+            vec![Command::DrawShape {
+                topology: DRAW_SHAPE_POINTS,
+                base_vertex: 4
+            }]
+        );
+        for end in 1..good.len() {
+            assert!(parse(&good[..end]).is_err(), "truncated at {end}");
+        }
+    }
+
     /// `DrawIndices` is decoded from NativeApi 18 on, the version render protocol 8 has with the
     /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`).
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 84);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 85);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

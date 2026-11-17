@@ -598,6 +598,9 @@ struct State {
     dots: Option<commands::DotsDraw>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
+    /// How the next draw reads its indices (`DrawShape`): the topology they are read as (none:
+    /// its submesh's) and the base vertex of its external indices.
+    draw_shape: Option<(Option<resources::Topology>, i32)>,
 }
 
 /// A draw's place in a mesh-instancing call replayed as one draw per instance.
@@ -911,6 +914,7 @@ impl UnityRenderer {
                 mesh_instance: None,
                 dots: None,
                 draw_indices: None,
+                draw_shape: None,
             },
             presented,
             fixed_game_view: false,
@@ -1054,16 +1058,15 @@ impl UnityRenderer {
     }
 
     /// The buffer a draw's external indices are read from (`DrawIndices`, render protocols 8 and
-    /// 10): `count` indices of `size` bytes from `first`, drawn with base vertex 0 (or the
-    /// arguments' of an indirect draw). None, warned once, when the planned draws cannot read them
-    /// safely ([`external_index_refusal`]): the draw is skipped.
+    /// 10): `count` indices of `size` bytes from `first`, drawn with `base_vertex` (a
+    /// `DrawShape`'s, else 0; an indirect draw's arguments give their own). None, warned once,
+    /// when the planned draws cannot read them safely ([`external_index_refusal`]): the draw is
+    /// skipped.
     fn external_indices(
         &mut self,
         draw: &commands::Draw,
-        handle: u64,
-        size: u8,
-        first: u32,
-        count: u32,
+        (handle, size, first, count): (u64, u8, u32, u32),
+        base_vertex: i32,
         planned: &[Planned],
     ) -> Option<wgpu::Buffer> {
         let buffer = self
@@ -1090,7 +1093,9 @@ impl UnityRenderer {
         let source = buffer
             .as_ref()
             .map(|(b, size)| (*size, b.usage().contains(wgpu::BufferUsages::INDEX)));
-        if let Some(why) = external_index_refusal(source, size, first, count, strip, &draws) {
+        if let Some(why) =
+            external_index_refusal(source, (size, first, count), base_vertex, strip, &draws)
+        {
             self.warn_once(format!("indices{handle}:{why}"), || {
                 format!(
                     "a draw's {}-bit indices from buffer {handle}: {why}; skipped",
@@ -3373,6 +3378,12 @@ impl UnityRenderer {
                     first,
                     count,
                 } => self.state.draw_indices = Some((buffer, size, first, count)),
+                Command::DrawShape {
+                    topology,
+                    base_vertex,
+                } => {
+                    self.state.draw_shape = Some((shape_topology(topology), base_vertex));
+                }
                 Command::Camera {
                     view,
                     projection,
@@ -3597,8 +3608,9 @@ impl UnityRenderer {
                     let mesh_instance = self.state.mesh_instance.take();
                     let first_instance = mesh_instance.map_or(0, |m| m.index);
                     let dots = self.state.dots.take();
-                    // Taken first: a draw's indices never pass to a later draw.
+                    // Taken first: a draw's indices and shape never pass to a later draw.
                     let indices = self.state.draw_indices.take();
+                    let (topology, base_vertex) = self.state.draw_shape.take().unwrap_or((None, 0));
                     let Some(target) = self.state.target.clone() else {
                         self.warn_once("draw-no-target".into(), || {
                             "a draw came before any render target was set: skipped".into()
@@ -3616,8 +3628,14 @@ impl UnityRenderer {
                     self.depth_reads.clear();
                     self.pre_draw.clear();
                     self.pre_copies.clear();
-                    let mut planned =
-                        self.plan_draw(&draw, &target, time, mesh_instance, dots.as_ref());
+                    let mut planned = self.plan_draw(
+                        &draw,
+                        &target,
+                        time,
+                        mesh_instance,
+                        dots.as_ref(),
+                        topology,
+                    );
                     if let Some(dots) = &dots {
                         // One instance per visible instance (an empty command draws nothing); an
                         // indirect command's count comes from its arguments buffer (DrawSetup).
@@ -3697,9 +3715,12 @@ impl UnityRenderer {
                         }
                     }
                     if let Some((handle, size, first, count)) = indices {
-                        let Some(index) =
-                            self.external_indices(&draw, handle, size, first, count, &planned)
-                        else {
+                        let Some(index) = self.external_indices(
+                            &draw,
+                            (handle, size, first, count),
+                            base_vertex,
+                            &planned,
+                        ) else {
                             continue;
                         };
                         for p in &mut planned {
@@ -3711,7 +3732,7 @@ impl UnityRenderer {
                                     wgpu::IndexFormat::Uint16
                                 };
                                 p.range = first..first + count;
-                                p.base_vertex = 0;
+                                p.base_vertex = base_vertex;
                             }
                         }
                     }
@@ -4106,6 +4127,7 @@ impl UnityRenderer {
         time: f32,
         mesh_instance: Option<MeshInstanceSlot>,
         dots: Option<&commands::DotsDraw>,
+        topology: Option<resources::Topology>,
     ) -> Vec<Planned> {
         let mut planned = Vec::new();
         let device = self.device.clone();
@@ -4124,7 +4146,7 @@ impl UnityRenderer {
             });
             return planned;
         };
-        let Some(sub) = mesh.submeshes.get(draw.submesh.max(0) as usize).cloned() else {
+        let Some(mut sub) = mesh.submeshes.get(draw.submesh.max(0) as usize).cloned() else {
             self.warn_once(format!("sub{}/{}", draw.mesh, draw.submesh), || {
                 format!(
                     "a draw uses missing submesh {} of mesh {}; skipped",
@@ -4135,6 +4157,10 @@ impl UnityRenderer {
         };
         if sub.count == 0 {
             return planned;
+        }
+        // The indices read as another list topology (`DrawShape`).
+        if let Some(topology) = topology {
+            sub.topology = topology;
         }
         let (vertex, index) = (mesh.vertex.clone(), mesh.index.clone());
         let mesh_extra = mesh.extra.clone();
@@ -5966,6 +5992,17 @@ struct DrawInputs {
     extra_bytes: Option<u64>,
 }
 
+/// The topology a `DrawShape` reads a draw's indices as (none: its submesh's own; the decoder
+/// admits only the list topologies and that).
+fn shape_topology(topology: u8) -> Option<resources::Topology> {
+    match topology {
+        commands::DRAW_SHAPE_TRIANGLES => Some(resources::Topology::Triangles),
+        commands::DRAW_SHAPE_LINES => Some(resources::Topology::Lines),
+        commands::DRAW_SHAPE_POINTS => Some(resources::Topology::Points),
+        _ => None,
+    }
+}
+
 /// The vertices a draw of 16-bit indices with base vertex 0 can fetch: one per index value,
 /// 0..=0xFFFF.
 const INDEXED_VERTICES: u64 = 1 << 16;
@@ -5978,12 +6015,11 @@ const INDEXED_VERTICES: u64 = 1 << 16;
 /// indexed DrawProcedural 6000.0, so any index, base vertex or indirect count is safe) or is a
 /// direct draw of 16-bit indices whose every vertex buffer holds a vertex for each of the 2^16
 /// index values (the procedural stand-in's 65536): with base vertex 0, no index fetches past
-/// vertex 0xFFFF.
+/// vertex 0xFFFF (another base vertex could, so such a draw is refused).
 fn external_index_refusal(
     buffer: Option<(u64, bool)>,
-    size: u8,
-    first: u32,
-    count: u32,
+    (size, first, count): (u8, u32, u32),
+    base_vertex: i32,
     strip: bool,
     draws: &[DrawInputs],
 ) -> Option<&'static str> {
@@ -6007,6 +6043,9 @@ fn external_index_refusal(
         }
         if d.indirect {
             return Some("an indirect draw's base vertex is read on the GPU");
+        }
+        if base_vertex != 0 {
+            return Some("the program reads vertex inputs, which a base vertex can pass");
         }
         if d.vertex_bytes / vertex < INDEXED_VERTICES
             || d.extra_bytes.is_some_and(|e| e / extra < INDEXED_VERTICES)
@@ -6165,15 +6204,21 @@ mod tests {
         let index = Some((12, true));
         assert_eq!(INDEXED_VERTICES, u64::from(u16::MAX) + 1);
         assert_eq!(
-            external_index_refusal(index, 2, 0, 6, false, &[stand_in(false)]),
+            external_index_refusal(index, (2, 0, 6), 0, false, &[stand_in(false)]),
             None
         );
         assert_eq!(
-            external_index_refusal(index, 2, 3, 3, false, &[stand_in(true)]),
+            external_index_refusal(index, (2, 3, 3), 0, false, &[stand_in(true)]),
             None
         );
         assert_eq!(
-            external_index_refusal(index, 2, 0, 6, false, &[stand_in(false), stand_in(true)]),
+            external_index_refusal(
+                index,
+                (2, 0, 6),
+                0,
+                false,
+                &[stand_in(false), stand_in(true)]
+            ),
             None
         );
     }
@@ -6196,14 +6241,16 @@ mod tests {
             vec![short_extra],
             vec![stand_in(false), indirect],
         ] {
-            assert!(external_index_refusal(index, 2, 0, 6, false, &draws).is_some());
+            assert!(external_index_refusal(index, (2, 0, 6), 0, false, &draws).is_some());
         }
         let covered = [stand_in(false)];
-        assert!(external_index_refusal(index, 2, 0, 6, true, &covered).is_some());
-        assert!(external_index_refusal(None, 2, 0, 6, false, &covered).is_some());
-        assert!(external_index_refusal(Some((12, false)), 2, 0, 6, false, &covered).is_some());
-        assert!(external_index_refusal(index, 2, 4, 3, false, &covered).is_some());
-        assert!(external_index_refusal(index, 2, 0, 7, false, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 0, 6), 0, true, &covered).is_some());
+        assert!(external_index_refusal(None, (2, 0, 6), 0, false, &covered).is_some());
+        assert!(external_index_refusal(Some((12, false)), (2, 0, 6), 0, false, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 4, 3), 0, false, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 0, 7), 0, false, &covered).is_some());
+        // A base vertex can move a 16-bit index past the stand-in's vertices.
+        assert!(external_index_refusal(index, (2, 0, 6), 1, false, &covered).is_some());
     }
 
     /// A draw whose program reads no vertex inputs binds no vertex buffer: it reads 32-bit
@@ -6219,16 +6266,18 @@ mod tests {
         indirect.indirect = true;
         for draws in [vec![procedural], vec![indirect]] {
             for size in [2, 4] {
-                assert_eq!(
-                    external_index_refusal(index, size, 0, 6, false, &draws),
-                    None
-                );
+                for base_vertex in [0, 4, -2] {
+                    assert_eq!(
+                        external_index_refusal(index, (size, 0, 6), base_vertex, false, &draws),
+                        None
+                    );
+                }
             }
         }
         let mut procedural = stand_in(false);
         procedural.vertex_inputs = false;
-        assert!(external_index_refusal(index, 4, 1, 6, false, &[procedural]).is_some());
-        assert!(external_index_refusal(index, 4, 0, 6, true, &[stand_in(false)]).is_some());
-        assert!(external_index_refusal(index, 4, 0, 6, false, &[stand_in(false)]).is_some());
+        assert!(external_index_refusal(index, (4, 1, 6), 0, false, &[procedural]).is_some());
+        assert!(external_index_refusal(index, (4, 0, 6), 0, true, &[stand_in(false)]).is_some());
+        assert!(external_index_refusal(index, (4, 0, 6), 0, false, &[stand_in(false)]).is_some());
     }
 }
