@@ -325,11 +325,15 @@ namespace UnityEngine.VFX
             float delta = state.DeltaTime, unscaled = state.UnscaledDeltaTime;
             state.DeltaTime = state.UnscaledDeltaTime = deltaTime;
             state.NeedsEvaluation = true;
+            // The steps simulated at once have a last one of their own; the step that asked
+            // for them keeps its place in its frame.
+            bool last = m_State.LastStep;
             for (uint i = 0; i < steps; i++)
             {
                 m_State.LastStep = i + 1 == steps;
                 Step(StepFlags.Evaluate | StepFlags.Simulate);
             }
+            m_State.LastStep = last;
             state.DeltaTime = delta;
             state.UnscaledDeltaTime = unscaled;
         }

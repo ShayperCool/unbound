@@ -5,7 +5,7 @@
   "sim/shared second/f010",
   "sim/shared second/f030"
  ],
- "A system in world space of an effect that is turned: the update kernel takes each particle into the effect's space by a matrix product whose terms cancel (the effect stands at x = 1300), and the product's last places depend on how the shader compiler orders and fuses its multiplications: the Editor's OpenGL program and Unbound's differ by up to 6e-5 in the box (the matrices given to the kernel are the same: `matrix/world turned/*`; the same system on an effect that is not turned, `world`, is exact)": [
+ "A system in world space of an effect that is turned: the update kernel takes each particle into the effect's space by a matrix product, and the box's last places depend on how the shader compiler orders and fuses its multiplications: the Editor's OpenGL program and Unbound's differ by up to 6e-5 in the box's centre and extents along x and y, where the product's terms cancel (the effect stands at x = 1300), and by one unit in the last place of the extent along z (the particles' radius). `matrix/world turned/*` are the effect's matrices as a script reads them from its Transform, the same in both; what the kernel is given of them is not recorded. The same system on an effect that is not turned, `world`, is exact, and so is a system in local space on a turned effect, `turned`": [
   "sim/world turned/f004",
   "sim/world turned/f010",
   "sim/world turned/f030"

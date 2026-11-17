@@ -7,6 +7,9 @@
     "managed/UnityEngine/VFX/",
     "managed/UnityEngine/Graphics/ComputeShader.cs",
     "managed/UnityEngine/Graphics/AsyncReadback.cs",
+    "managed/UnityEngine/Runtime/Native.cs",
+    "crates/unbound-app/src/render/executor/compute.rs",
+    "crates/unbound-app/src/render/executor/readback.rs",
     "managed/UnityEngine/Graphics/FrameBuilder.cs",
     "managed/UnityEngine/Graphics/IndirectDraws.cs",
     "crates/unbound-shaders/src/lib.rs"

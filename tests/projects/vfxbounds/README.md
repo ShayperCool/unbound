@@ -89,10 +89,12 @@ Linux Editor on OpenGL Core).
   every particle in the group, each in its own effect's space, and the others none. Unbound
   gives each effect the box of its own particles. (Effects whose particles die have a thread
   group of their own each: `dying` and `stopped` are exact.)
-- `world turned` (three rows): the box differs from the Editor's by up to 6e-5: the kernel's
-  matrix product cancels terms of the size of the effect's place (x = 1300), and its last
-  places depend on the shader compiler's arithmetic. `world`, the same system on an effect
-  that is not turned, is exact.
+- `world turned` (three rows): the box differs from the Editor's by up to 6e-5 along x and y,
+  where the kernel's matrix product cancels terms of the size of the effect's place
+  (x = 1300), and by one unit in the last place of the extent along z: last places that
+  depend on the shader compiler's arithmetic. `world`, the same system on an effect that is
+  not turned, is exact, and so is `turned`, a system in local space on a turned effect. A
+  residual row is left out whole: nothing else checks a world-space system on a turned effect.
 
 ## Not covered
 
