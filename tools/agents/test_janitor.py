@@ -421,6 +421,23 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(old.is_dir())
         self.assertEqual(self.rows('links')[0]['unsettled'], 0)
 
+    def test_a_changing_folder_gone_before_its_direct_listing_is_looked_for_higher_up(self):
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        holder = self.directory('holder')
+        (holder/'02/late').mkdir(parents=True)
+        (holder/'02/late/link').symlink_to(old/'output')
+        original = run_cache_index.DirectoryIndex.entries
+        def renamed_while_listed(index, path, info):
+            if path == str(holder/'02'):
+                (holder/'02').rename(holder/'03')
+                raise run_cache_index.DirectoryChanged(f'run-cache directory changed during indexing: {path}')
+            return original(index, path, info)
+        with patch.object(run_cache_index.DirectoryIndex, 'entries', renamed_while_listed), \
+             patch.object(janitor, 'RECHECK_ROUNDS', 1):
+            self.collect_applied()
+        self.assertTrue(old.is_dir())
+        self.assertEqual(self.rows('links')[0]['unsettled'], 0)
+
     def test_a_link_in_a_directory_changing_while_listed_still_protects(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])
         holder = self.directory('holder')
