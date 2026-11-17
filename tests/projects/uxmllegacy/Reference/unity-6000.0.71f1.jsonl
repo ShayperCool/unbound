@@ -375,6 +375,24 @@
 {"key":"traits.UnityEngine.UIElements.Hash128Field+UxmlTraits.20","value":"UxmlBoolAttributeDescription \"readonly\" default \"false\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.Hash128Field+UxmlTraits.21","value":"UxmlBoolAttributeDescription \"is-delayed\" default \"false\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.Hash128Field+UxmlTraits.count","value":"22 anyAttribute True children VisualElement"}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.3","value":"UxmlEnumAttributeDescription`1 \"picking-mode\" default \"Position\" obsolete pickingMode use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.4","value":"UxmlStringAttributeDescription \"tooltip\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.5","value":"UxmlEnumAttributeDescription`1 \"usage-hints\" default \"None\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.6","value":"UxmlIntAttributeDescription <null> default \"-1\" obsolete focus-index|focusIndex use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.7","value":"UxmlIntAttributeDescription \"tabindex\" default \"0\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.8","value":"UxmlBoolAttributeDescription \"focusable\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.9","value":"UxmlStringAttributeDescription \"class\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.10","value":"UxmlStringAttributeDescription \"content-container\" default \"\" obsolete contentContainer use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.11","value":"UxmlStringAttributeDescription \"style\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.12","value":"UxmlAssetAttributeDescription`1 \"data-source\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.13","value":"UxmlStringAttributeDescription \"data-source-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.14","value":"UxmlTypeAttributeDescription`1 \"data-source-type\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.15","value":"UxmlStringAttributeDescription \"text\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.16","value":"UxmlEnumAttributeDescription`1 \"message-type\" default \"None\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.HelpBox+UxmlTraits.count","value":"17 anyAttribute True children VisualElement"}
 {"key":"traits.UnityEngine.UIElements.IMGUIContainer+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.IMGUIContainer+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.IMGUIContainer+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
@@ -592,6 +610,31 @@
 {"key":"traits.UnityEngine.UIElements.MultiColumnTreeView+UxmlTraits.23","value":"UxmlBoolAttributeDescription \"auto-expand\" default \"false\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.MultiColumnTreeView+UxmlTraits.24","value":"UxmlEnumAttributeDescription`1 \"sorting-mode\" default \"None\" obsolete sorting-enabled use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.MultiColumnTreeView+UxmlTraits.count","value":"25 anyAttribute True children "}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.3","value":"UxmlEnumAttributeDescription`1 \"picking-mode\" default \"Position\" obsolete pickingMode use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.4","value":"UxmlStringAttributeDescription \"tooltip\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.5","value":"UxmlEnumAttributeDescription`1 \"usage-hints\" default \"None\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.6","value":"UxmlIntAttributeDescription <null> default \"-1\" obsolete focus-index|focusIndex use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.7","value":"UxmlIntAttributeDescription \"tabindex\" default \"0\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.8","value":"UxmlBoolAttributeDescription \"focusable\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.9","value":"UxmlStringAttributeDescription \"class\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.10","value":"UxmlStringAttributeDescription \"content-container\" default \"\" obsolete contentContainer use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.11","value":"UxmlStringAttributeDescription \"style\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.12","value":"UxmlAssetAttributeDescription`1 \"data-source\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.13","value":"UxmlStringAttributeDescription \"data-source-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.14","value":"UxmlTypeAttributeDescription`1 \"data-source-type\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.15","value":"UxmlStringAttributeDescription \"binding-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.16","value":"UxmlStringAttributeDescription \"text\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.17","value":"UxmlBoolAttributeDescription \"enable-rich-text\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.18","value":"UxmlBoolAttributeDescription \"emoji-fallback-support\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.19","value":"UxmlBoolAttributeDescription \"parse-escape-sequences\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.20","value":"UxmlBoolAttributeDescription \"selectable\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.21","value":"UxmlBoolAttributeDescription \"select-word-by-double-click\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.22","value":"UxmlBoolAttributeDescription \"select-line-by-triple-click\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.23","value":"UxmlBoolAttributeDescription \"display-tooltip-when-elided\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.PopupWindow+UxmlTraits.count","value":"24 anyAttribute True children VisualElement"}
 {"key":"traits.UnityEngine.UIElements.RadioButton+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.RadioButton+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.RadioButton+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
@@ -936,6 +979,26 @@
 {"key":"traits.UnityEngine.UIElements.Toggle+UxmlTraits.17","value":"UxmlBoolAttributeDescription \"value\" default \"false\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.Toggle+UxmlTraits.18","value":"UxmlStringAttributeDescription \"text\" default \"\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.Toggle+UxmlTraits.count","value":"19 anyAttribute True children VisualElement"}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.3","value":"UxmlEnumAttributeDescription`1 \"picking-mode\" default \"Position\" obsolete pickingMode use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.4","value":"UxmlStringAttributeDescription \"tooltip\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.5","value":"UxmlEnumAttributeDescription`1 \"usage-hints\" default \"None\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.6","value":"UxmlIntAttributeDescription <null> default \"0\" obsolete focus-index|focusIndex use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.7","value":"UxmlIntAttributeDescription \"tabindex\" default \"0\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.8","value":"UxmlBoolAttributeDescription \"focusable\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.9","value":"UxmlStringAttributeDescription \"class\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.10","value":"UxmlStringAttributeDescription \"content-container\" default \"\" obsolete contentContainer use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.11","value":"UxmlStringAttributeDescription \"style\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.12","value":"UxmlAssetAttributeDescription`1 \"data-source\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.13","value":"UxmlStringAttributeDescription \"data-source-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.14","value":"UxmlTypeAttributeDescription`1 \"data-source-type\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.15","value":"UxmlStringAttributeDescription \"binding-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.16","value":"UxmlStringAttributeDescription \"label\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.17","value":"UxmlBoolAttributeDescription \"is-multiple-selection\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.18","value":"UxmlBoolAttributeDescription \"allow-empty-selection\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits.count","value":"19 anyAttribute True children VisualElement"}
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
@@ -962,6 +1025,25 @@
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.23","value":"UxmlBoolAttributeDescription \"auto-expand\" default \"false\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.24","value":"UxmlAssetAttributeDescription`1 \"item-template\" default \"null\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.TreeView+UxmlTraits.count","value":"25 anyAttribute True children "}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.3","value":"UxmlEnumAttributeDescription`1 \"picking-mode\" default \"Position\" obsolete pickingMode use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.4","value":"UxmlStringAttributeDescription \"tooltip\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.5","value":"UxmlEnumAttributeDescription`1 \"usage-hints\" default \"None\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.6","value":"UxmlIntAttributeDescription <null> default \"-1\" obsolete focus-index|focusIndex use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.7","value":"UxmlIntAttributeDescription \"tabindex\" default \"0\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.8","value":"UxmlBoolAttributeDescription \"focusable\" default \"false\" obsolete  use Optional type \"boolean\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.9","value":"UxmlStringAttributeDescription \"class\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.10","value":"UxmlStringAttributeDescription \"content-container\" default \"\" obsolete contentContainer use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.11","value":"UxmlStringAttributeDescription \"style\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.12","value":"UxmlAssetAttributeDescription`1 \"data-source\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.13","value":"UxmlStringAttributeDescription \"data-source-path\" default \"\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.14","value":"UxmlTypeAttributeDescription`1 \"data-source-type\" default \"null\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.15","value":"UxmlIntAttributeDescription \"fixed-pane-index\" default \"0\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.16","value":"UxmlIntAttributeDescription \"fixed-pane-initial-dimension\" default \"100\" obsolete  use Optional type \"int\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.17","value":"UxmlEnumAttributeDescription`1 \"orientation\" default \"Horizontal\" obsolete  use Optional type \"string\""}
+{"key":"traits.UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits.count","value":"18 anyAttribute True children "}
 {"key":"traits.UnityEngine.UIElements.UnsignedIntegerField+UxmlTraits.0","value":"UxmlStringAttributeDescription \"name\" default \"\" obsolete  use Optional type \"string\""}
 {"key":"traits.UnityEngine.UIElements.UnsignedIntegerField+UxmlTraits.1","value":"UxmlBoolAttributeDescription \"enabled\" default \"true\" obsolete  use Optional type \"boolean\""}
 {"key":"traits.UnityEngine.UIElements.UnsignedIntegerField+UxmlTraits.2","value":"UxmlStringAttributeDescription \"view-data-key\" default \"\" obsolete  use Optional type \"string\""}

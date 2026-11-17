@@ -259,9 +259,6 @@ public class UxmlLegacyProbe : MonoBehaviour
         EditorApplication.Exit(failed ? 1 : 0);
     }
 
-    // Controls Unbound does not implement (generated stubs): their traits are not compared.
-    static readonly HashSet<Type> s_UnimplementedControls = new HashSet<Type> { typeof(HelpBox), typeof(ToggleButtonGroup), typeof(TwoPaneSplitView), typeof(UnityEngine.UIElements.PopupWindow) };
-
     void Record()
     {
         var root = new VisualElement();
@@ -290,7 +287,7 @@ public class UxmlLegacyProbe : MonoBehaviour
 
         // The descriptions of every built-in traits class, in the order they are listed.
         var traitsTypes = typeof(VisualElement).Assembly.GetTypes()
-            .Where(t => t.Namespace == "UnityEngine.UIElements" && !s_UnimplementedControls.Contains(t.DeclaringType) && typeof(UxmlTraits).IsAssignableFrom(t) && !t.IsAbstract && !t.ContainsGenericParameters && t.IsPublic | t.IsNestedPublic && t.GetConstructor(Type.EmptyTypes) != null)
+            .Where(t => t.Namespace == "UnityEngine.UIElements" && typeof(UxmlTraits).IsAssignableFrom(t) && !t.IsAbstract && !t.ContainsGenericParameters && t.IsPublic | t.IsNestedPublic && t.GetConstructor(Type.EmptyTypes) != null)
             .OrderBy(t => t.FullName, StringComparer.Ordinal);
         foreach (var type in traitsTypes)
         {

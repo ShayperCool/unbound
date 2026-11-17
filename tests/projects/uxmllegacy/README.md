@@ -32,5 +32,4 @@ once with them:
   (base classes first): type, name, default, former names, use, XML type; and their child
   descriptions.
 
-The traits of HelpBox, ToggleButtonGroup, TwoPaneSplitView and PopupWindow are not compared: Unbound
-does not implement those controls. Other releases are unmeasured.
+Other releases are unmeasured.
