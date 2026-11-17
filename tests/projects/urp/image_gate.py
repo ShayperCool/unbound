@@ -6,15 +6,21 @@ image may differ from its reference in at most N pixels by at most W (the larges
 difference, 0-255); every other image must match pixel for pixel. A listed image that matches
 again is named (NOW MATCHES) so that its entry can be withdrawn.
 """
-import json
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+import residuals as residual_lists  # noqa: E402
 
 
 def load(path):
-    """The residual list at `path`, or none."""
+    """The residual list at `path`, or none (tests/residuals.py, with integer image bounds)."""
     if not path:
         return {}
-    with open(path) as handle:
-        residuals = json.load(handle)
+    try:
+        residuals = residual_lists.load(path)
+    except residual_lists.ResidualListError as error:
+        raise SystemExit(str(error))
     for key, entry in residuals.items():
         if not (isinstance(entry, dict) and isinstance(entry.get("pixels"), int) and isinstance(entry.get("worst"), int)
                 and entry.get("reason")):
@@ -27,7 +33,7 @@ def judge(key, differing, worst, residuals):
     allowed = residuals.get(key)
     if differing == 0:
         return True, (f"NOW MATCHES {key}: its recorded residual can be withdrawn" if allowed else None)
-    if allowed is not None and differing <= allowed["pixels"] and worst <= allowed["worst"]:
+    if residual_lists.admits(allowed, {"pixels": differing, "worst": worst}):
         return True, f"recorded {key}: {differing} pixels differ by up to {worst} ({allowed['reason']})"
     bound = f"recorded {allowed['pixels']} pixels up to {allowed['worst']}" if allowed else "not recorded"
     return False, f"FAIL {key}: {differing} pixels differ by up to {worst} ({bound})"

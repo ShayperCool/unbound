@@ -80,6 +80,7 @@ class CommittedListsTests(unittest.TestCase):
     DIRECTORIES = {
         "grass/image-residuals.json": "grass/Reference",
         "video/image-residuals.json": "video/Reference",
+        "terrain/image-residuals.json": "terrain/Reference",
         "particles/image-residuals.json": "particles/Reference/images",
         "lighting/image-residuals.json": "lighting/Reference/images",
         "lighting/image-residuals-vulkan.json": "lighting/Reference/unity-6000.0.71f1/vulkan",
