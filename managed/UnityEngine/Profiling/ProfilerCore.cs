@@ -534,6 +534,9 @@ namespace Unbound.Runtime.Profiling
                 AddEngineStat("GC Allocated In Frame", ProfilerUnsafeUtility.CategoryAllocation, ProfilerMarkerDataUnit.Bytes, () => s_AllocatedInLastFrame);
                 AddEngineStat("System Used Memory", ProfilerUnsafeUtility.CategoryAllocation, ProfilerMarkerDataUnit.Bytes, () => Environment.WorkingSet);
                 AddEngineStat("Total Used Memory", ProfilerUnsafeUtility.CategoryAllocation, ProfilerMarkerDataUnit.Bytes, () => Environment.WorkingSet);
+                AddEngineStat("Draw Calls Count", ProfilerUnsafeUtility.CategoryRender, ProfilerMarkerDataUnit.Count, () => RenderStats.LastDraws);
+                AddEngineStat("Batches Count", ProfilerUnsafeUtility.CategoryRender, ProfilerMarkerDataUnit.Count, () => RenderStats.LastDraws);
+                AddEngineStat("SetPass Calls Count", ProfilerUnsafeUtility.CategoryRender, ProfilerMarkerDataUnit.Count, () => RenderStats.LastSetPasses);
                 AddEngineStat("Total Reserved Memory", ProfilerUnsafeUtility.CategoryAllocation, ProfilerMarkerDataUnit.Bytes, () => Process.GetCurrentProcess().VirtualMemorySize64);
                 var gcAlloc = NewStat("GC.Alloc", ProfilerUnsafeUtility.CategoryAllocation, MarkerFlags.Default);
                 gcAlloc.Unit = ProfilerMarkerDataUnit.TimeNanoseconds;
@@ -550,6 +553,7 @@ namespace Unbound.Runtime.Profiling
         /// <summary>The end of a frame: running recorders take the frame's sample.</summary>
         internal static void EndFrame()
         {
+            RenderStats.EndFrame();
             long now = Stopwatch.GetTimestamp();
             s_LastFrameNanoseconds = (now - s_FrameStart) * 1_000_000_000L / Stopwatch.Frequency;
             s_FrameStart = now;

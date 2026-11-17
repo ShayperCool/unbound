@@ -767,6 +767,7 @@ namespace Unbound.Runtime
             if (s_State.Scissor is Rect scissor) clip = clip.HasValue ? Intersect(clip.Value, scissor) : scissor;
             Resolve(properties);
             if (OnScreen) ScreenWrites++;
+            Unbound.Runtime.Profiling.RenderStats.Draw(material, pass);
             U8(DrawOp);
             U64(mesh);
             I32(submesh);
