@@ -20,5 +20,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Coloured.unity
     guid: 16b9d300a66b0bb1dbb7599ceebef56d
+  - enabled: 1
+    path: Assets/Scenes/Textured.unity
+    guid: 8bfd0f33f063c230aab040a1a73442d4
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

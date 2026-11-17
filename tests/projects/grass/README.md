@@ -13,8 +13,10 @@ per patch, a count over 16, and a scatter mode switch after coverage values. The
 `Instanced`: two instanced slab layers share their patches, and the scene `Coloured`
 (an image only): grass textures and billboards whose healthy and dry colours lie outside [0, 1]
 with alpha below 1, and a slab with vertex colours of its own drawn without instancing in the
-VertexLit and Grass render modes. Then it records the terrain settings the
-quality level's overrides replace. What `Validate` says of each prototype is
+VertexLit and Grass render modes; and the scene `Textured` (an image only): a slab whose material
+shows an uncompressed checker, drawn without instancing in both modes, beside grass. Then it
+records the terrain settings the quality level's overrides replace, and Texture2D.PackTextures'
+layouts (the detail atlas is packed the same way) for sets of textures made in the script. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
@@ -28,8 +30,8 @@ shaders (`Hidden/TerrainEngine/Details/*`) by shaders that write every vertex th
 random-write buffer.
 
 Make the assets once (they are committed; `ProbeRunner.CreateDensity`, then `CreateRefusals`, make
-the scene `Density`, and `CreateAligned`, `CreateInstanced` and `CreateColoured` the scenes `Aligned`,
-`Instanced` and `Coloured`, without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
+the scene `Density`, and `CreateAligned`, `CreateInstanced`, `CreateColoured` and `CreateTextured`
+the scenes `Aligned`, `Instanced`, `Coloured` and `Textured`, without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
 copies of the project under the validation cache, twice, and publishes only identical captures whose
 committed rows and images are unchanged:
 
@@ -38,6 +40,7 @@ committed rows and images are unchanged:
     python3 tests/projects/grass/record.py create --method CreateAligned --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateInstanced --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateColoured --release 6000.0.71f1
+    python3 tests/projects/grass/record.py create --method CreateTextured --release 6000.0.71f1
     python3 tests/projects/grass/record.py record --release 6000.0.71f1
     python3 tests/projects/grass/record.py publish --release 6000.0.71f1
 
@@ -56,11 +59,14 @@ the textures. Before Q533 Unbound's atlas repeated at its edges and held a white
 first texture, so distant blades lost their edges (the differences once taken for the layerless
 terrains' checker, which matches).
 
-Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the eight images to
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the nine images to
 its recorded pixel count and largest difference: six texture-grass images differ by one level
-over part of their blades and in isolated pixels at the edges of distant blades (573 to 9549
-pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes, Q553;
-the quads' and painted slabs' vertex colours were checked by rendering them in the Editor), `Refusals` in one pixel by one level (its slab meshes drawn
+over part of their blades and in isolated pixels at the edges of distant blades (452 to 9549
+pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes and the
+atlas laid out as the Editor's, Q553; the quads' and painted slabs' vertex colours were checked
+by rendering them in the Editor; `Tilted`'s atlas is compressed in the Editor, not in Unbound),
+`Textured` in 570 pixels up to 194/255 on its textured slabs in the Grass render mode (drawn with
+the vertex-lit shader; its VertexLit slabs match), `Refusals` in one pixel by one level (its slab meshes drawn
 in the Grass render mode take the terrain's normal at every vertex, as the Editor draws them, since
 Q533; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
 fails.

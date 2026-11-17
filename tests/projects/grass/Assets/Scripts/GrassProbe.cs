@@ -15,9 +15,10 @@ using UnityEngine.SceneManagement;
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
 /// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
-/// scatter mode switch); then the scene `Instanced`; then an image of the scene `Coloured`; then
-/// the terrain settings under the quality level's overrides. Writes <c>grass.jsonl</c> and PNGs
-/// into <c>GRASS_PROBE_OUT</c>, then quits.
+/// scatter mode switch); then the scene `Instanced`; then images of the scenes `Coloured` and
+/// `Textured`; then the terrain settings under the quality level's overrides; then
+/// Texture2D.PackTextures' layouts. Writes <c>grass.jsonl</c> and PNGs into
+/// <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -154,6 +155,14 @@ public class GrassProbe : MonoBehaviour
         foreach (var terrain in coloured)
             Render(camera, target, terrain, dir);
 
+        // The scene `Textured`: meshes whose material has a texture of its own (an image only).
+        before = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        yield return SceneManager.LoadSceneAsync("Textured", LoadSceneMode.Additive);
+        var textured = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !before.Contains(t)).OrderBy(t => t.name).ToArray();
+        yield return null;
+        foreach (var terrain in textured)
+            Render(camera, target, terrain, dir);
+
         // The quality level's terrain overrides: what the terrain settings read without them,
         // with all of them, and with the terrain ignoring quality settings.
         var probe = terrains[0];
@@ -172,6 +181,8 @@ public class GrassProbe : MonoBehaviour
         RecordTerrainSettings(probe, "ignored");
         probe.ignoreQualitySettings = false;
         QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.None;
+
+        RecordPacking();
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -213,6 +224,43 @@ public class GrassProbe : MonoBehaviour
         }
         foreach (var density in terrain.name.StartsWith("Density") ? new[] { 1f, 0.5f, 0.3f } : new[] { 1f, 0.5f })
             RecordInstances("instances", terrain, density);
+    }
+
+    /// <summary>Texture2D.PackTextures (the detail atlas's packing): the atlas's size, format and
+    /// mip count and each rect in texels, for sets of textures made here, with and without padding;
+    /// with a texture given twice and a missing one; and over the maximum size (halved, then shrunk).</summary>
+    void RecordPacking()
+    {
+        Texture2D Make(int width, int height, bool mips)
+        {
+            var t = new Texture2D(width, height, TextureFormat.RGBA32, mips);
+            var px = new Color32[width * height];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32((byte)(width * 7), (byte)(height * 5), (byte)i, 255);
+            t.SetPixels32(px);
+            t.Apply();
+            return t;
+        }
+        var shared = Make(9, 9, true);
+        var sets = new (string name, Texture2D[] textures, int max)[]
+        {
+            ("blade_white", new[] { Make(16, 32, true), Make(4, 4, true) }, 2048),
+            ("squares", new[] { Make(64, 64, true), Make(32, 32, true), Make(32, 32, true), Make(16, 16, true) }, 2048),
+            ("wide_tall", new[] { Make(100, 50, true), Make(30, 70, true), Make(8, 8, true) }, 2048),
+            ("odd", new[] { Make(5, 3, true), Make(7, 9, true), Make(13, 2, true), Make(3, 3, true), Make(20, 20, true) }, 2048),
+            ("ties", new[] { Make(8, 8, true), Make(16, 4, true), Make(4, 16, true), Make(8, 8, true), Make(16, 4, true), Make(4, 16, true), Make(12, 12, true) }, 2048),
+            ("shared_missing", new[] { shared, null, Make(6, 10, false), shared }, 2048),
+            ("shrink", new[] { Make(50, 50, true), Make(50, 50, true), Make(40, 30, true), Make(60, 20, true) }, 64),
+            ("halve", new[] { Make(100, 20, true), Make(20, 300, true) }, 64),
+            ("no_mips", new[] { Make(10, 10, false), Make(20, 6, false) }, 2048),
+        };
+        foreach (var (name, textures, max) in sets)
+            foreach (int padding in new[] { 0, 2 })
+            {
+                var atlas = new Texture2D(1, 1);
+                var rects = atlas.PackTextures(textures, padding, max);
+                var list = rects == null ? "null" : string.Join(",", rects.Select(r => $"[{F(r.x * atlas.width)},{F(r.y * atlas.height)},{F(r.width * atlas.width)},{F(r.height * atlas.height)}]"));
+                Record("pack", $"\"set\":\"{name}\",\"padding\":{padding},\"size\":[{atlas.width},{atlas.height}],\"format\":\"{atlas.format}\",\"mips\":{atlas.mipmapCount},\"rects\":[{list}]");
+            }
     }
 
     void RecordTerrainSettings(Terrain t, string overrides) =>

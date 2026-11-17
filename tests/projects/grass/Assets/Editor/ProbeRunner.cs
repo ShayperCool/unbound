@@ -59,6 +59,7 @@ public static class ProbeRunner
         CreateAligned();
         CreateInstanced();
         CreateColoured();
+        CreateTextured();
     }
 
     /// <summary>
@@ -330,6 +331,86 @@ public static class ProbeRunner
             new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Coloured.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateTextured` adds, without touching the other assets, an
+    /// uncompressed checker texture, a material showing it, a slab with that material, and the
+    /// scene `Textured` with a terrain `Textured` (instance counts): a grass texture, and the
+    /// textured slab drawn without instancing in the VertexLit and Grass render modes.
+    /// </summary>
+    public static void CreateTextured()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
+        var checker = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                checker.SetPixel(x, y, ((x / 2 + y / 2) % 2 == 0) ? new Color(0.9f, 0.3f, 0.2f, 1f) : new Color(0.2f, 0.4f, 0.9f, 1f));
+        File.WriteAllBytes("Assets/Grass/Checker.png", checker.EncodeToPNG());
+        AssetDatabase.ImportAsset("Assets/Grass/Checker.png");
+        var importer = (TextureImporter)AssetImporter.GetAtPath("Assets/Grass/Checker.png");
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.filterMode = FilterMode.Point;
+        importer.SaveAndReimport();
+        var material = new Material(Shader.Find("Standard")) { mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Checker.png") };
+        AssetDatabase.CreateAsset(material, "Assets/Grass/Checker.mat");
+        var slab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Grass/Slab.prefab");
+        var go = new GameObject("SlabTextured");
+        go.AddComponent<MeshFilter>().sharedMesh = slab.GetComponent<MeshFilter>().sharedMesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = material;
+        var textured = PrefabUtility.SaveAsPrefabAsset(go, "Assets/Grass/SlabTextured.prefab");
+        Object.DestroyImmediate(go);
+
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Textured.asset");
+        SmallMaps(data);
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 2f, 32f);
+        data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        data.SetDetailResolution(32, 16);
+        DetailPrototype Mesh(DetailRenderMode mode, int seed) => new DetailPrototype
+        {
+            prototype = textured, usePrototypeMesh = true, useInstancing = false, renderMode = mode,
+            minWidth = 0.8f, maxWidth = 1.2f, minHeight = 0.8f, maxHeight = 1.2f, noiseSeed = seed,
+            healthyColor = Color.white, dryColor = new Color(0.8f, 0.9f, 0.7f),
+        };
+        data.detailPrototypes = new[]
+        {
+            new DetailPrototype
+            {
+                prototypeTexture = blade, renderMode = DetailRenderMode.Grass, minWidth = 0.5f, maxWidth = 0.8f,
+                minHeight = 0.6f, maxHeight = 1f, noiseSeed = 61,
+            },
+            Mesh(DetailRenderMode.VertexLit, 62), Mesh(DetailRenderMode.Grass, 63),
+        };
+        for (int layer = 0; layer < 3; layer++)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = (x + y * 2 + layer) % (layer == 0 ? 4 : 9) == 0 ? 1 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        data.wavingGrassAmount = 0f;
+        data.wavingGrassStrength = 0f;
+        data.wavingGrassSpeed = 0f;
+        EditorUtility.SetDirty(data);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.name = "Textured";
+        terrain.transform.position = new Vector3(-900f, 0f, 0f);
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Textured.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Coloured.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Textured.unity", true),
         };
         AssetDatabase.SaveAssets();
     }
