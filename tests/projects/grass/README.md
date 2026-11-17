@@ -65,8 +65,8 @@ over part of their blades and in isolated pixels at the edges of distant blades 
 pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes and the
 atlas laid out as the Editor's, Q553; the quads' and painted slabs' vertex colours were checked
 by rendering them in the Editor; `Tilted`'s atlas is compressed in the Editor, not in Unbound),
-`Textured` in 570 pixels up to 194/255 on its textured slabs in the Grass render mode (drawn with
-the vertex-lit shader; its VertexLit slabs match), `Refusals` in one pixel by one level (its slab meshes drawn
+`Textured` in 570 pixels up to 194/255 on its textured slabs in the Grass render mode (not traced;
+they are drawn with the vertex-lit shader; its VertexLit slabs match), `Refusals` in one pixel by one level (its slab meshes drawn
 in the Grass render mode take the terrain's normal at every vertex, as the Editor draws them, since
 Q533; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
 fails.

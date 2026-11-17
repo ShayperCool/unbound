@@ -103,6 +103,31 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 0, 6, 10, 10 }, Texels(atlas, rects)[0]);
         }
 
+        /// <summary>Textures that cannot fit (sides of 4 never shrink) give null and leave the
+        /// atlas as it was (the Scripting API: "or null if packing fails"); no texture at all
+        /// leaves it too.</summary>
+        [Fact]
+        public void UnpackableSetsGiveNull()
+        {
+            var atlas = Make(8, 8);
+            var tiny = new Texture2D[300];
+            for (int i = 0; i < tiny.Length; i++) tiny[i] = Make(4, 4, false);
+            Assert.Null(atlas.PackTextures(tiny, 0, 64));
+            Assert.Equal((8, 8), (atlas.width, atlas.height));
+            Assert.Equal(new Rect[2], atlas.PackTextures(new Texture2D[] { null, null }, 0, 64));
+            Assert.Equal((8, 8), (atlas.width, atlas.height));
+        }
+
+        /// <summary>A maximum size that is not a power of two is rounded up to one: 100 allows 128.</summary>
+        [Fact]
+        public void TheMaximumRoundsUpToAPowerOfTwo()
+        {
+            var atlas = Make(1, 1);
+            var rects = atlas.PackTextures(new[] { Make(120, 20), Make(20, 100) }, 0, 100);
+            Assert.Equal(128, atlas.width);
+            Assert.Equal(new[] { 0, 0, 120, 20 }, Texels(atlas, rects)[0]);
+        }
+
         /// <summary>The textures' pixels land at their places, transparent black elsewhere.</summary>
         [Fact]
         public void PixelsLandAtTheirPlaces()

@@ -157,6 +157,7 @@ namespace UnityEngine
             for (int i = 0; i < prototypes.Length; i++)
             {
                 var prototype = prototypes[i];
+                // Instanced prototypes take no place, refused ones included.
                 if (prototype == null || prototype.useInstancing) continue;
                 Texture2D texture = null;
                 if (prototype.Validate())
@@ -183,6 +184,11 @@ namespace UnityEngine
             m_DetailAtlas ??= new Texture2D(4, 4, TextureFormat.RGBA32, true, !srgb) { name = "Unbound Detail Atlas", hideFlags = HideFlags.HideAndDontSave };
             if (textures.Count == 0) return result;
             var rects = TexturePacker.Pack(m_DetailAtlas, textures.ToArray(), 0, DetailAtlasMaximumSize, false);
+            if (rects == null)
+            {
+                Warn("Unbound: the terrain's detail textures do not fit a 2048 × 2048 atlas; its texture details are drawn without them.");
+                return result;
+            }
             m_DetailAtlas.wrapMode = TextureWrapMode.Clamp;
             m_DetailAtlas.filterMode = FilterMode.Bilinear;
             for (int k = 0; k < owners.Count; k++) result[owners[k]].Rect = rects[k];
@@ -433,7 +439,8 @@ namespace UnityEngine
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;
             // With a texture of its own a mesh keeps its uvs, else every vertex samples the white
-            // texture's centre; both moved into the place in the atlas.
+            // texture's centre; both moved into the place in the atlas. (A mesh drawn without
+            // instancing has uvs: DetailPrototype.Validate refuses one without them.)
             var uvs = place.MeshTexture ? mesh.m_UVs[0] : null;
             var white = place.Place(new Vector2(0.5f, 0.5f));
             var normals = mesh.normals;

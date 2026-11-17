@@ -22,8 +22,10 @@ namespace Unbound.Runtime
     /// textures, and the pixels of shrunk textures (scaled bilinearly here).</summary>
     internal static class TexturePacker
     {
-        /// <summary>The fit tolerance and the rounding of a split for block-compressed atlases.</summary>
+        /// <summary>How close a free rectangle must be to a texture's size to take it as it is.</summary>
         const float Epsilon = 1e-5f;
+        /// <summary>Rounds of shrinking at the maximum size before packing gives up (PackTextures
+        /// then returns null).</summary>
         const int MaxShrinks = 100;
 
         /// <summary>Edges of the atlas a free rectangle touches: there it needs no padding.</summary>
@@ -39,8 +41,9 @@ namespace Unbound.Runtime
 
         /// <summary>Lays out textures of the given sizes. <paramref name="widths"/> and
         /// <paramref name="heights"/> may shrink (to fit the maximum size); <paramref name="x"/> and
-        /// <paramref name="y"/> receive each texture's corner in texels.</summary>
-        internal static void Layout(int[] widths, int[] heights, int padding, int maximumSize, int[] x, int[] y, out int atlasWidth, out int atlasHeight)
+        /// <paramref name="y"/> receive each texture's corner in texels. False when the textures
+        /// do not fit even after shrinking (textures of 4 texels or less in a side never shrink).</summary>
+        internal static bool Layout(int[] widths, int[] heights, int padding, int maximumSize, int[] x, int[] y, out int atlasWidth, out int atlasHeight)
         {
             int count = widths.Length;
             int max = NextPowerOfTwo(Math.Max(8, maximumSize));
@@ -78,7 +81,7 @@ namespace Unbound.Runtime
                     for (int i = 0; i < count; i++) { x[i] = (int)placed[i].X; y[i] = (int)placed[i].Y; }
                     atlasWidth = width;
                     atlasHeight = height;
-                    return;
+                    return true;
                 }
                 if (width == max && height == max)
                 {
@@ -95,7 +98,8 @@ namespace Unbound.Runtime
                 else if (width < height) width *= 2;
                 else height *= 2;
             }
-            throw new InvalidOperationException("Texture2D.PackTextures: the textures do not fit the maximum atlas size.");
+            atlasWidth = atlasHeight = 0;
+            return false;
         }
 
         /// <summary>A side over the maximum halves until it fits (a side of 9 or less halves once more at most).</summary>
@@ -207,7 +211,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Texture2D.PackTextures: the same texture given twice takes one place; a missing
-        /// one gets an empty rect. The atlas is RGBA32 (Unbound does not keep compressed atlases:
+        /// one gets an empty rect; without any texture the atlas stays as it was; null (the atlas
+        /// unchanged) when the textures do not fit. The atlas is RGBA32 (Unbound does not keep compressed atlases:
         /// see docs/COMPATIBILITY_GAPS.md), with mipmaps when any texture has them (rebuilt from the
         /// first level), its colour space its own. Returns the rects in [0, 1].</summary>
         internal static UnityEngine.Rect[] Pack(UnityEngine.Texture2D atlas, UnityEngine.Texture2D[] textures, int padding, int maximumSize, bool makeNoLongerReadable)
@@ -231,7 +236,7 @@ namespace Unbound.Runtime
             var xs = new int[n];
             var ys = new int[n];
             for (int i = 0; i < n; i++) { widths[i] = unique[i].width; heights[i] = unique[i].height; }
-            Layout(widths, heights, padding, maximumSize, xs, ys, out int width, out int height);
+            if (!Layout(widths, heights, padding, maximumSize, xs, ys, out int width, out int height)) return null;
             atlas.Reinitialize(width, height, UnityEngine.TextureFormat.RGBA32, mipmaps);
             var pixels = new UnityEngine.Color32[width * height];
             var placed = new UnityEngine.Rect[n];

@@ -37,7 +37,7 @@
  "Textured": {
   "pixels": 570,
   "worst": 194,
-  "reason": "the textured slabs in the Grass render mode (448 of the 453 pixels over 8 lie on them, the textured VertexLit slabs match): such meshes are still drawn with the vertex-lit detail shader, not the grass shader (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail meshes in the Grass render mode`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+  "reason": "the textured slabs in the Grass render mode (448 of the 453 pixels over 8 lie on them; the textured VertexLit slabs match); untraced, the candidate being that such meshes are still drawn with the vertex-lit detail shader, not the grass shader (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail meshes in the Grass render mode`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Tilted": {
   "pixels": 9549,
