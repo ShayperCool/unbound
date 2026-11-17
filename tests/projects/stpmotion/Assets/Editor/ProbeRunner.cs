@@ -81,6 +81,8 @@ public static class ProbeRunner
         // The reference must use the real shader variants, not async compilation's placeholders.
         EditorSettings.asyncShaderCompilation = false;
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        // The Rendering Debugger scenarios render to the screen: a game view of the probe's size.
+        PlayModeWindow.SetCustomRenderingResolution(320, 180, "StpMotionProbe");
         EditorApplication.EnterPlaymode();
     }
 }

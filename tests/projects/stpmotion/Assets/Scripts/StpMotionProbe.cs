@@ -69,6 +69,23 @@ public class StpMotionProbe : MonoBehaviour
         var offset = new Vector3(150f, 60f, 120f);
         Action away = () => { foreach (var r in renderers) r.transform.position += offset; homePosition += offset; camera.transform.position = homePosition; };
         Action back = () => { foreach (var r in renderers) r.transform.position -= offset; homePosition -= offset; };
+        // URP's Rendering Debugger STP views (Rendering > Map Overlays > STP); the view index is internal.
+        var rendering = UniversalRenderPipelineDebugDisplaySettings.Instance.renderingSettings;
+        var viewIndex = rendering.GetType().GetProperty("stpDebugViewIndex",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        // The Rendering Debugger's full-screen views are composed by URP's final post-processing
+        // pass (a renderer with post-processing data) into the screen: these scenarios render to
+        // the 320x180 game view through the probe's second renderer.
+        Action toScreen = () => { camera.targetTexture = null; data.SetRenderer(1); };
+        Action fromScreen = () => { data.SetRenderer(0); camera.targetTexture = small; };
+        Func<int, Action> debugView = view => () =>
+        {
+            toScreen();
+            rendering.fullScreenDebugMode = DebugFullScreenMode.STP;
+            rendering.fullScreenDebugModeOutputSizeScreenPercent = 100;
+            viewIndex.SetValue(rendering, view);
+        };
+        Action noDebugView = () => { rendering.fullScreenDebugMode = DebugFullScreenMode.None; viewIndex.SetValue(rendering, 0); fromScreen(); };
 
         var pan = new Vector3(0.023f, 0f, 0f);
         var drift = new Vector3(0.023f, 0.004f, 0.011f);
@@ -91,6 +108,14 @@ public class StpMotionProbe : MonoBehaviour
             ("stp_static_offset", 0.8f, UpscalingFilterSelection.STP, Vector3.zero, 0f, away, back),
             ("stp_turn_fast_720", 0.8f, UpscalingFilterSelection.STP, forward, 0.5f, toLarge, toSmall),
             ("stp_turn_fast_noise_720", 0.8f, UpscalingFilterSelection.STP, forward, 0.5f, () => { toLarge(); noisy(); }, () => { plain(); toSmall(); }),
+            ("stp_screen", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, toScreen, fromScreen),
+            ("stp_debug_input", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(0), noDebugView),
+            ("stp_debug_depth", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(1), noDebugView),
+            ("stp_debug_tonemapped", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(2), noDebugView),
+            ("stp_debug_motion", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(3), noDebugView),
+            ("stp_debug_reprojection", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(4), noDebugView),
+            ("stp_debug_sensitivity", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(5), noDebugView),
+            ("stp_debug_sensitivity_static", 0.5f, UpscalingFilterSelection.STP, Vector3.zero, 0f, debugView(5), noDebugView),
         };
         foreach (var s in scenarios)
         {
@@ -100,15 +125,26 @@ public class StpMotionProbe : MonoBehaviour
             s.setup();
             data.resetHistory = true;
             yield return null;
+            bool onScreen = camera.targetTexture == null;
             for (int i = 0; i < Frames; i++)
             {
                 camera.transform.position += s.step;
                 camera.transform.rotation = Quaternion.Euler(0f, s.yaw, 0f) * camera.transform.rotation;
-                yield return null;
+                // The screen is read at the end of the frame that rendered it.
+                if (onScreen && i == Frames - 1) yield return new WaitForEndOfFrame();
+                else yield return null;
             }
-            // The last frame rendered; it is read in the next one.
-            Value(s.name + ".frame", (Time.frameCount - 1).ToString());
-            Record(camera.targetTexture, s.name);
+            if (onScreen)
+            {
+                Value(s.name + ".frame", Time.frameCount.ToString());
+                Record(null, s.name);
+            }
+            else
+            {
+                // The last frame rendered; it is read in the next one.
+                Value(s.name + ".frame", (Time.frameCount - 1).ToString());
+                Record(camera.targetTexture, s.name);
+            }
             s.teardown();
         }
         camera.targetTexture = null;
@@ -153,16 +189,18 @@ public class StpMotionProbe : MonoBehaviour
         return (h & 0xFFFFFF) / 16777216f;
     }
 
+    /// <summary>Writes the target's pixels (the screen's when null, read at the end of a frame).</summary>
     void Record(RenderTexture target, string name)
     {
         if (string.IsNullOrEmpty(m_Dir)) return;
-        Directory.CreateDirectory(m_Dir);
-        var read = new Texture2D(target.width, target.height, TextureFormat.RGBA32, false);
+        int width = target != null ? target.width : Screen.width, height = target != null ? target.height : Screen.height;
+        var read = new Texture2D(width, height, TextureFormat.RGBA32, false);
         var previous = RenderTexture.active;
         RenderTexture.active = target;
-        read.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+        read.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         read.Apply();
         RenderTexture.active = previous;
+        Directory.CreateDirectory(m_Dir);
         File.WriteAllBytes(Path.Combine(m_Dir, name + ".png"), read.EncodeToPNG());
         Destroy(read);
     }

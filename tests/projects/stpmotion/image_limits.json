@@ -5,6 +5,48 @@
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
+ "stp_debug_depth.png": {
+  "mean": 0.0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_debug_input.png": {
+  "mean": 0.0053,
+  "worst": 6,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_debug_motion.png": {
+  "mean": 0.001,
+  "worst": 2,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_debug_reprojection.png": {
+  "mean": 65.874,
+  "worst": 255,
+  "over8": 14880,
+  "reason": "The view's blue channel (offscreen) is full over the whole render-scale region in the Editor and only along its top rows in Unbound. The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+ },
+ "stp_debug_sensitivity.png": {
+  "mean": 62.4,
+  "worst": 255,
+  "over8": 14178,
+  "reason": "The view's green channel (no motion match) is full over the whole render-scale region in the Editor and only along its top rows and moving edges in Unbound. The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+ },
+ "stp_debug_sensitivity_static.png": {
+  "mean": 65.874,
+  "worst": 255,
+  "over8": 14880,
+  "reason": "With a still camera: the view's green channel (no motion match) is full over the whole render-scale region in the Editor and only along its top rows in Unbound. The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+ },
+ "stp_debug_tonemapped.png": {
+  "mean": 0.0034,
+  "worst": 3,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
  "stp_pan.png": {
   "mean": 0.0006,
   "worst": 1,
@@ -46,6 +88,12 @@
   "worst": 1,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "stp_screen.png": {
+  "mean": 8.5685,
+  "worst": 116,
+  "over8": 19834,
+  "reason": "The Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
  },
  "stp_static.png": {
   "mean": 0.0008,

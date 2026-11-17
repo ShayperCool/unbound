@@ -43,6 +43,17 @@ it was rendered in.
 - `stp_turn_fast_720`, `stp_turn_fast_noise_720`: a 1280x720 target, `stp_turn_fast`'s forward
   step turning 0.5 degrees a frame (several pixels at that width), with the checker and the noise.
 
+- `stp_screen`: `stp_pan_08`'s drifting path at render scale 0.5 rendered to the screen (a
+  320x180 game view, read at the end of the frame) through the pipeline's second renderer, a copy
+  of the first with URP's post-processing data;
+- `stp_debug_input`, `stp_debug_depth`, `stp_debug_tonemapped`, `stp_debug_motion`,
+  `stp_debug_reprojection`, `stp_debug_sensitivity`: the same with the Rendering Debugger's STP
+  views (Rendering > Map Overlays > STP, views 0 to 5, at 100 % of the screen), and
+  `stp_debug_sensitivity_static` with a still camera. URP composes a full-screen debug view in
+  its final post-processing pass, which a renderer without post-processing data does not have
+  (the Editor then shows the plain image), and only on the screen, not in a camera's render
+  texture.
+
 Values compare exactly; `image_limits.json` holds each image's measured limits.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
@@ -51,7 +62,11 @@ rounding. Small clusters of edge pixels differ in `stp_pan_08`, `stp_pan_noise` 
 `stp_pan_offset` (their limits say where); the cause is not resolved. This parity on synthetic
 content does not extend to every scene: docs/COMPATIBILITY_GAPS.md (Q546) records a large URP
 scene whose STP output under camera motion keeps more of its history in Unbound than in the OpenGL
-Core Editor. Other devices, GPUs and drivers are unmeasured.
+Core Editor. Through the renderer with post-processing data the OpenGL Core Editor's STP views
+report every pixel offscreen with no motion match, even with a still camera, and its image keeps no
+history; Unbound draws the other four views as the Editor does and matches the motion there, so
+`stp_screen`, `stp_debug_reprojection` and the Sensitivity views differ (their limits say how
+much; docs/COMPATIBILITY_GAPS.md, Q546). Other devices, GPUs and drivers are unmeasured.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

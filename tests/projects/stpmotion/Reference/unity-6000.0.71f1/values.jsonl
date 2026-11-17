@@ -14,4 +14,12 @@
 {"k":"stp_static_offset.frame","v":350}
 {"k":"stp_turn_fast_720.frame","v":375}
 {"k":"stp_turn_fast_noise_720.frame","v":400}
+{"k":"stp_screen.frame","v":425}
+{"k":"stp_debug_input.frame","v":449}
+{"k":"stp_debug_depth.frame","v":473}
+{"k":"stp_debug_tonemapped.frame","v":497}
+{"k":"stp_debug_motion.frame","v":521}
+{"k":"stp_debug_reprojection.frame","v":545}
+{"k":"stp_debug_sensitivity.frame","v":569}
+{"k":"stp_debug_sensitivity_static.frame","v":593}
 {"k":"complete","v":true}
