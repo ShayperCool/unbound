@@ -167,6 +167,10 @@
 {"k":"set_mode.type2.mode.logs","v":"Assert: Unknown builtin shader type 2"}
 {"k":"set_mode.type8","v":"returns done"}
 {"k":"set_mode.type8.logs","v":"Assert: Unknown builtin shader type 8"}
+{"k":"set_mode.deferred_builtin","v":"returns done"}
+{"k":"set_mode.type8_custom","v":"returns done"}
+{"k":"set_mode.type8_custom.logs","v":"Assert: Unknown builtin shader type 8"}
+{"k":"set_mode.type8_custom.deferred","v":"returns UseCustom"}
 {"k":"set_custom.depth_unlit","v":"returns done"}
 {"k":"set_custom.depth_unlit.shader","v":"returns Unlit/Color"}
 {"k":"set_custom.depth_unlit.mode","v":"returns 5"}
@@ -178,6 +182,7 @@
 {"k":"set_custom.type2.logs","v":"Assert: Unknown builtin shader type 2"}
 {"k":"set_custom.type2.shader","v":"returns Unlit/Color"}
 {"k":"set_custom.type2.shader.logs","v":"Assert: Unknown builtin shader type 2"}
+{"k":"set_custom.type2.deferred","v":"returns Unlit/Color"}
 {"k":"size.named","v":"returns 0"}
 {"k":"size.named.twice","v":"returns 0"}
 {"k":"size.global_float_name","v":"returns 12"}
@@ -248,6 +253,18 @@
 {"k":"size.begin_sample_long.twice","v":"returns 32"}
 {"k":"size.end_sample","v":"returns 16"}
 {"k":"size.end_sample.twice","v":"returns 32"}
+{"k":"size.begin_sample_sampler","v":"returns 16"}
+{"k":"size.begin_sample_sampler.twice","v":"returns 32"}
+{"k":"size.end_sample_sampler","v":"returns 16"}
+{"k":"size.end_sample_sampler.twice","v":"returns 32"}
+{"k":"size.begin_sample_marker","v":"returns 16"}
+{"k":"size.begin_sample_marker.twice","v":"returns 32"}
+{"k":"size.end_sample_marker","v":"returns 16"}
+{"k":"size.end_sample_marker.twice","v":"returns 32"}
+{"k":"size.draw_multiple3","v":"returns 232"}
+{"k":"size.draw_multiple3.twice","v":"returns 464"}
+{"k":"size.draw_multiple","v":"returns 160"}
+{"k":"size.draw_multiple.twice","v":"returns 320"}
 {"k":"size.mixed","v":"returns 196"}
 {"k":"size.mixed.twice","v":"returns 392"}
 {"k":"size.cleared","v":"returns 0"}
