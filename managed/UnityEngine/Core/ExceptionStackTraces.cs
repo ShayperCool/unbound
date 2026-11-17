@@ -93,12 +93,7 @@ namespace Unbound.Runtime
                     separate = false;
                     text.Append("  at ");
                     AppendCapturedMethod(text, method);
-                    int offset = frame.GetILOffset();
-                    string file = frame.GetFileName();
-                    int line = frame.GetFileLineNumber();
-                    if (offset >= 0 && PortablePdb.Of(method.Module.Assembly) is PortablePdb pdb
-                        && pdb.Statement(method.MetadataToken, offset, out int start, out string document, out int statementLine))
-                        (offset, file, line) = (start, document, statementLine);
+                    var (offset, file, line) = Place(frame, method);
                     text.Append(" [0x").Append(Math.Max(offset, 0).ToString("x5")).Append("] in ");
                     if (file == null) text.Append('<').Append(method.Module.ModuleVersionId.ToString("N")).Append('>');
                     else text.Append(AbsoluteSourcePath(file, ProjectInfo.ProjectPath));
@@ -107,6 +102,18 @@ namespace Unbound.Runtime
                 if (frame != null && IsLastForeignFrame(frame) && text.Length != 0) separate = true;
             }
             return text.ToString();
+        }
+
+        /// <summary>Where a frame is: the start of the statement holding its instruction, that
+        /// statement's document and line, from the assembly's .pdb with any hot-reload edits applied
+        /// (the runtime's own answer without one).</summary>
+        static (int Offset, string File, int Line) Place(StackFrame frame, MethodBase method)
+        {
+            int offset = frame.GetILOffset();
+            if (offset >= 0 && method != null && PortablePdb.Of(method.Module.Assembly) is PortablePdb pdb
+                && pdb.Statement(method.MetadataToken, offset, out int start, out string document, out int line))
+                return (start, document, line);
+            return (offset, frame.GetFileName(), frame.GetFileLineNumber());
         }
 
         /// <summary>Mono's line after the frames of a stack captured elsewhere (a blank line follows).</summary>
@@ -217,10 +224,10 @@ namespace Unbound.Runtime
 
         internal static void AppendSource(StringBuilder text, StackFrame frame, string projectFolder)
         {
-            string file = frame.GetFileName();
+            var (_, file, line) = Place(frame, frame.GetMethod());
             if (string.IsNullOrEmpty(file)) return;
             text.Append(" (at ").Append(StackSourcePath(file, projectFolder, ProjectInfo.ProjectPath)).Append(':')
-                .Append(frame.GetFileLineNumber()).Append(')');
+                .Append(line).Append(')');
         }
 
         /// <summary>A frame's source path in Unity's stack texts: the path the Editor compiled

@@ -31,7 +31,6 @@ namespace Unbound.Runtime
                 string unitySource = UnitySource(method, out bool unity);
                 if (!unity && !IsGameMethod(method)) continue;
                 AppendMethod(text, method);
-                string file = frame.GetFileName();
                 if (unity)
                 {
                     if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');

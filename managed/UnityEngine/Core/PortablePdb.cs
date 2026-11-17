@@ -22,6 +22,11 @@ namespace Unbound.Runtime
         // Owns the memory m_Pdb reads.
         readonly MetadataReaderProvider m_Provider;
         readonly MetadataReader m_Pdb;
+        // Applied hot-reload edits, oldest first: the readers (kept with their providers), the
+        // edited methods' newest debug information by MethodDef row, and the documents they add.
+        readonly List<MetadataReaderProvider> m_Deltas = new();
+        readonly Dictionary<int, (MetadataReader Reader, MethodDebugInformationHandle Handle)> m_Edited = new();
+        readonly Dictionary<int, string> m_AddedDocuments = new();
 
         PortablePdb(PEReader image, MetadataReaderProvider provider)
         {
@@ -49,17 +54,30 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Stops reading an assembly's .pdb (its code was edited since it loaded): its
-        /// frames keep the runtime's own offsets and lines.</summary>
-        internal static void Forget(Assembly assembly)
+        /// <summary>Adds a hot-reload edit's .pdb delta to a loaded assembly's: the methods it
+        /// edits are read from it from then on.</summary>
+        internal static void ApplyDelta(Assembly assembly, byte[] delta)
         {
-            lock (s_Loaded) s_Loaded.AddOrUpdate(assembly, null);
+            var pdb = Of(assembly);
+            if (pdb == null || delta == null || delta.Length == 0) return;
+            lock (pdb) pdb.Add(delta);
         }
 
-        /// <summary>Reads an assembly's .pdb again at its next use.</summary>
-        internal static void Reload(Assembly assembly)
+        internal void Add(byte[] delta)
         {
-            lock (s_Loaded) s_Loaded.Remove(assembly);
+            var provider = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(delta));
+            var reader = provider.GetMetadataReader();
+            m_Deltas.Add(provider);
+            // A delta's rows of a table are listed, in order, by the rows they stand for (EncMap).
+            int methods = 0, documents = 0;
+            foreach (var entry in reader.GetEditAndContinueMapEntries())
+            {
+                int row = MetadataTokens.GetRowNumber(entry);
+                if (entry.Kind == HandleKind.MethodDebugInformation)
+                    m_Edited[row] = (reader, MetadataTokens.MethodDebugInformationHandle(++methods));
+                else if (entry.Kind == HandleKind.Document)
+                    m_AddedDocuments[row] = reader.GetString(reader.GetDocument(MetadataTokens.DocumentHandle(++documents)).Name);
+            }
         }
 
         /// <summary>The .pdb of an assembly file that is not loaded (null without one).</summary>
@@ -103,19 +121,34 @@ namespace Unbound.Runtime
             document = null;
             line = 0;
             if ((methodToken >> 24) != 0x06) return false;
-            var method = MetadataTokens.MethodDefinitionHandle(methodToken & 0xFFFFFF);
-            if (MetadataTokens.GetRowNumber(method) > m_Pdb.GetTableRowCount(TableIndex.MethodDebugInformation)) return false;
-            bool found = false;
-            foreach (var point in m_Pdb.GetMethodDebugInformation(method).GetSequencePoints())
+            int row = methodToken & 0xFFFFFF;
+            MethodDebugInformation information;
+            lock (this)
             {
-                if (point.Offset > ilOffset) break;
-                if (point.IsHidden) continue;
-                start = point.Offset;
-                document = m_Pdb.GetString(m_Pdb.GetDocument(point.Document).Name);
-                line = point.StartLine;
-                found = true;
+                if (m_Edited.TryGetValue(row, out var edited))
+                    information = edited.Reader.GetMethodDebugInformation(edited.Handle);
+                else if (row <= m_Pdb.GetTableRowCount(TableIndex.MethodDebugInformation))
+                    information = m_Pdb.GetMethodDebugInformation(MetadataTokens.MethodDebugInformationHandle(row));
+                else return false;
+                bool found = false;
+                foreach (var point in information.GetSequencePoints())
+                {
+                    if (point.Offset > ilOffset) break;
+                    if (point.IsHidden) continue;
+                    start = point.Offset;
+                    document = DocumentName(point.Document);
+                    line = point.StartLine;
+                    found = true;
+                }
+                return found;
             }
-            return found;
+        }
+
+        string DocumentName(DocumentHandle handle)
+        {
+            int row = MetadataTokens.GetRowNumber(handle);
+            if (m_AddedDocuments.TryGetValue(row, out var added)) return added;
+            return row <= m_Pdb.GetTableRowCount(TableIndex.Document) ? m_Pdb.GetString(m_Pdb.GetDocument(handle).Name) : null;
         }
 
         /// <summary>Where the method <paramref name="typeName"/>.<paramref name="methodName"/> with

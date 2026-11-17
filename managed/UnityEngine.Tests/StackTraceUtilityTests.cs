@@ -217,21 +217,62 @@ namespace Unbound.Tests
             Assert.Equal("/p/Assets/A.cs", UnityStackTrace.StackSourcePath("/p/Assets/A.cs", "Assets/", "/p"));
         }
 
-        /// <summary>After an edit is applied, a frame keeps the runtime's offset and line: the
-        /// loaded .pdb no longer describes the edited methods.</summary>
+        const string EditedSource = @"
+public static class Game
+{
+    public static int Unchanged(int x)
+    {
+        int y = x + 1;
+        return y * 2;
+    }
+
+    public static int Edited(int x)
+    {
+        return x + 1;
+    }
+}";
+
+        /// <summary>A hot-reload edit's .pdb places the methods it edits; the others keep the
+        /// loaded .pdb's places.</summary>
         [Fact]
-        public void AnEditedAssemblysFramesKeepTheRuntimesPlaces()
+        public void AnEditsPdbPlacesTheMethodsItEdits()
         {
-            var assembly = typeof(StackTraceUtilityTests).Assembly;
-            var exception = Caught(() => Throw(string.Concat("A", "B")));
-            var frame = new StackTrace(exception, true).GetFrame(0);
+            var original = UnityEngine.Tests.WideFloatsTests.Compilation(EditedSource, Microsoft.CodeAnalysis.OptimizationLevel.Debug, "EditedGame", engine: false);
+            var (image, pdbImage) = UnityEngine.Tests.WideFloatsTests.Emit(original);
+            var session = new Unbound.Compiler.EditAndContinue();
+            session.Begin("EditedGame", original, image, pdbImage);
+            var current = UnityEngine.Tests.WideFloatsTests.Compilation(EditedSource.Replace("return x + 1;", "x *= 3;\n        return x + 1;"),
+                Microsoft.CodeAnalysis.OptimizationLevel.Debug, "EditedGame", engine: false);
+            var delta = session.Emit("EditedGame", current);
+            Assert.NotNull(delta);
+
+            string directory = Path.Combine(Path.GetTempPath(), "unbound-pdb-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
             try
             {
-                PortablePdb.Forget(assembly);
-                var first = UnityStackTrace.MonoTrace(exception).Split('\n')[0];
-                Assert.EndsWith(" [0x" + frame.GetILOffset().ToString("x5") + "] in " + frame.GetFileName() + ":" + frame.GetFileLineNumber() + " ", first);
+                string dll = Path.Combine(directory, "EditedGame.dll");
+                File.WriteAllBytes(dll, image);
+                File.WriteAllBytes(Path.Combine(directory, "EditedGame.pdb"), pdbImage);
+                var pdb = PortablePdb.OfFile(dll);
+                Assert.NotNull(pdb);
+                using var reader = new PEReader(new MemoryStream(image));
+                var metadata = reader.GetMetadataReader();
+                int Token(string name) => MetadataTokens.GetToken(metadata.MethodDefinitions.Single(h => metadata.GetString(metadata.GetMethodDefinition(h).Name) == name));
+                int LastLine(int token)
+                {
+                    Assert.True(pdb.Statement(token, 1000, out _, out _, out int line));
+                    return line;
+                }
+                int unchanged = LastLine(Token("Unchanged"));
+                Assert.Equal(13, LastLine(Token("Edited")));
+                pdb.Add(delta!.Pdb);
+                Assert.Equal(unchanged, LastLine(Token("Unchanged")));
+                // The edit adds a line before the method's last statement and closing brace.
+                Assert.Equal(14, LastLine(Token("Edited")));
+                Assert.True(pdb.Statement(Token("Edited"), 1000, out _, out string document, out _));
+                Assert.NotNull(document);
             }
-            finally { PortablePdb.Reload(assembly); }
+            finally { Directory.Delete(directory, true); }
         }
 
         static int Callee(int value, [CallerLineNumber] int line = 0) => line + value;
