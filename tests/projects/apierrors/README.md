@@ -28,6 +28,14 @@ log messages it writes with their log type (`.logs`; logs written on other threa
   log line of such an exception a callback does not catch (`unhandled_*`); and a game exception
   whose Message is its own ToString(), which reads base.Message and its inner exception, as the
   Addressables' remote provider exception does (`game_message_from_string`).
+* `format.extract.*`: StackTraceUtility.ExtractStringFromException's text (the probe's project folder
+  reads `<project>`) for exceptions thrown by the probe's code: with Mono's message layouts, an inner
+  exception, nested rethrows, `throw;`, ExceptionDispatchInfo, a blank message, one never thrown, throws at
+  several places in a method (`frame_*`: first statement, branches, loop, switch, try, catch, using,
+  conditional expression, constructor, generic and constructed parameters); the first line only for
+  exceptions the class library and Unity throw (their stacks hold their own frames); a null and a
+  non-exception argument; asked from a coroutine, from LateUpdate and from a coroutine's first step
+  started there (`started_*`), each with StackTraceUtility.ExtractStackTrace's text.
 
 Measured in the Unity 6000.0.71f1 Editor on macOS in batch mode (two byte-identical captures;
 none of the values depends on the OS or the graphics device); the reference with the `format.*`
@@ -36,4 +44,8 @@ fail report later, at a moment that varies between runs, so only their synchrono
 recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
 Recorded residuals (`residuals.json`): a null reference in the probe's own code has the runtime's
-message, without a full stop on Mono and with one on CoreCLR.
+message, without a full stop on Mono and with one on CoreCLR. The `format.extract.*` residuals: frames of small
+methods the Editor's JIT inlines (Unbound lists them), throws in a branch that the Editor reports at
+the method's last statement, a rethrow (the Editor names the `throw;`), the frame that called
+ExceptionDispatchInfo.Throw (CoreCLR places it at the method's first statement), and
+MonoBehaviour.StartCoroutine's own frames below a coroutine's first step.

@@ -1,5 +1,27 @@
 {
  "A null reference in the probe's own code: the Mono runtime's message has no full stop, CoreCLR's has one (the request itself is null in both, bundle.load_memory_async_null_request)": [
   "bundle.load_memory_async_null"
+ ],
+ "StackTraceUtility.ExtractStringFromException: Mono's JIT inlines small game methods (a getter, an expression that throws), so their frames are missing from the Editor's exception stack; Unbound lists them (gap: stack formatting and runtime frames)": [
+  "format.extract.frame_coalesce",
+  "format.extract.frame_getter"
+ ],
+ "StackTraceUtility.ExtractStringFromException: for some throws in a branch the Editor names the method's last statement instead of the throw's (its JIT places that code after the rest of the method); 12 shapes were measured (frame_*, game_nested) and no rule over the IL explains all of them; Unbound names the throw's statement": [
+  "format.extract.frame_constructor",
+  "format.extract.frame_either_bound",
+  "format.extract.frame_guard",
+  "format.extract.frame_loop",
+  "format.extract.frame_switch",
+  "format.extract.game_nested"
+ ],
+ "StackTraceUtility.ExtractStringFromException: a rethrow (throw;) in the catching method: Mono's stack names the rethrow statement, CoreCLR's keeps the original throw's": [
+  "format.extract.game_rethrow"
+ ],
+ "StackTraceUtility.ExtractStringFromException: the frame that called ExceptionDispatchInfo.Throw: CoreCLR reports that call (which does not return) at the method's first statement": [
+  "format.extract.game_dispatch"
+ ],
+ "StackTrace texts below a coroutine's first step: Unity lists MonoBehaviour.StartCoroutine's own managed frames (StartCoroutine, StartCoroutineManaged2 and, in exception texts, StartCoroutineManaged2_Injected); Unbound lists none of an API's internal frames (gap: stack formatting and runtime frames)": [
+  "format.extract.started_game_argument",
+  "format.extract.started_stack"
  ]
 }

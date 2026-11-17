@@ -463,6 +463,10 @@ public class ApiErrorsProbe : MonoBehaviour
         // exception (as the Addressables' remote provider exception does).
         Shape("format.game_message_from_string", () => throw new MessageFromString("Remote failed.", new InvalidOperationException("Inner.")));
         Row("format.game_message_from_string.message", new MessageFromString("Remote failed.", null).Message);
+        Extractions();
+        pendingExtract = true;
+        yield return null;
+        yield return null;
     }
 
     sealed class MessageFromString : Exception
@@ -470,5 +474,196 @@ public class ApiErrorsProbe : MonoBehaviour
         public MessageFromString(string message, Exception inner) : base(message, inner) { }
         public override string Message => ToString();
         public override string ToString() => GetType().Name + " : " + base.Message + "\nresult : 4\n" + InnerException;
+    }
+
+    static string project;
+
+    /// <summary>The project's path, which differs between machines, as "<project>".</summary>
+    static string Paths(string text) => text.Replace(project, "<project>");
+
+    /// <summary>The exception an action throws (null when it returns).</summary>
+    static Exception Caught(Action action)
+    {
+        try { action(); }
+        catch (Exception e) { return e; }
+        return null;
+    }
+
+    /// <summary>StackTraceUtility.ExtractStringFromException's text for an exception (whole, or
+    /// only its first line where its stack lines are the class library's or Unity's).</summary>
+    static void Extract(string key, object exception, bool firstLineOnly = false)
+    {
+        string text;
+        try { text = StackTraceUtility.ExtractStringFromException(exception); }
+        catch (Exception e) { Row(key, Thrown(e)); return; }
+        if (firstLineOnly) text = text.Substring(0, text.IndexOf('\n'));
+        Row(key, Paths(text));
+    }
+
+    static void ThrowNested(int depth)
+    {
+        if (depth == 0) throw new ArgumentNullException("p");
+        try { ThrowNested(depth - 1); }
+        catch (Exception e) { throw new InvalidOperationException("Level " + depth + ".", e); }
+    }
+
+    static void Rethrow()
+    {
+        try { throw new ArgumentException("Bad thing.", "p"); }
+        catch (ArgumentException) { throw; }
+    }
+
+    static void Dispatch()
+    {
+        var info = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(Caught(() => throw new InvalidOperationException("Captured.")));
+        info.Throw();
+    }
+
+    static int counter;
+
+    static int Guard(int x)
+    {
+        if (x < 0) throw new ArgumentOutOfRangeException(nameof(x));
+        counter += x;
+        return counter * 2;
+    }
+
+    static void ThrowLast()
+    {
+        counter++;
+        throw new InvalidOperationException("Last.");
+    }
+
+    static void ThrowInTryFinally()
+    {
+        try { throw new InvalidOperationException("In try."); }
+        finally { counter++; }
+    }
+
+    static void ThrowInLoop()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (i == 1) throw new InvalidOperationException("In loop.");
+            counter++;
+        }
+    }
+
+    static string Coalesce(string s) => s ?? throw new ArgumentNullException(nameof(s));
+
+    static void Generic<T>(T value, ref int r, int[] a, List<T> list) => ThrowLast();
+
+    class Holder<T>
+    {
+        public T Value => throw new NotSupportedException("Getter.");
+        public Holder(bool fail) { if (fail) throw new InvalidOperationException("Constructor."); }
+    }
+
+    static void Floats(List<float> values, Dictionary<string, int[]> map) => ThrowLast();
+
+    static int ThrowInSwitch(int x)
+    {
+        switch (x)
+        {
+            case 0: counter++; break;
+            case 1: counter += 2; break;
+            default: throw new InvalidOperationException("In switch.");
+        }
+        return counter;
+    }
+
+    static void ThrowInElse(int x)
+    {
+        if (x > 0) counter++;
+        else throw new InvalidOperationException("In else.");
+        counter += 2;
+    }
+
+    static void ThrowInUsingBranch(int x)
+    {
+        using (var stream = new MemoryStream())
+        {
+            if (x < 0) throw new InvalidOperationException("In using.");
+            counter++;
+        }
+        counter += 2;
+    }
+
+    static void ThrowOutOfRange(int x)
+    {
+        if (x < 0 || x > 10) throw new ArgumentOutOfRangeException(nameof(x));
+        counter += x;
+    }
+
+    static int ThrowInConditional(int x)
+    {
+        counter++;
+        return x > 0 ? x : throw new InvalidOperationException("In conditional.");
+    }
+
+    static void ThrowInCatchBranch(int x)
+    {
+        try { counter /= x; }
+        catch (DivideByZeroException)
+        {
+            if (counter >= 0) throw new InvalidOperationException("In catch.");
+            counter++;
+        }
+        counter += 2;
+    }
+
+    static void Extractions()
+    {
+        project = Path.GetDirectoryName(Application.dataPath).Replace('\\', '/');
+        Extract("format.extract.game_argument", Caught(() => throw new ArgumentException("Bad thing.", "p")));
+        Extract("format.extract.game_range_actual", Caught(() => throw new ArgumentOutOfRangeException("p", 8, "Too big.")));
+        Extract("format.extract.game_inner_not_thrown", Caught(() => throw new InvalidOperationException("Outer.", new ArgumentNullException("p"))));
+        Extract("format.extract.game_nested", Caught(() => ThrowNested(2)));
+        Extract("format.extract.game_rethrow", Caught(Rethrow));
+        Extract("format.extract.game_dispatch", Caught(Dispatch));
+        Extract("format.extract.game_blank_message", Caught(() => throw new Exception(" ")));
+        Extract("format.extract.not_thrown", new InvalidOperationException("Never thrown."));
+        Extract("format.extract.library_list_index", Caught(() => new List<int>()[3].ToString()), true);
+        Extract("format.extract.unity_load_null_type", Caught(() => Resources.Load("Ctrl", null)), true);
+        Extract("format.extract.not_exception", "text");
+        Extract("format.extract.null", null);
+        // Where the throwing frame's offset and line point, by the throw's place in its method.
+        Extract("format.extract.frame_guard", Caught(() => Guard(-1)));
+        Extract("format.extract.frame_last", Caught(ThrowLast));
+        Extract("format.extract.frame_try_finally", Caught(ThrowInTryFinally));
+        Extract("format.extract.frame_loop", Caught(ThrowInLoop));
+        Extract("format.extract.frame_coalesce", Caught(() => Coalesce(null)));
+        int r = 0;
+        Extract("format.extract.frame_generic", Caught(() => Generic(2.5f, ref r, null, null)));
+        Extract("format.extract.frame_getter", Caught(() => new Holder<int>(false).Value.ToString()));
+        Extract("format.extract.frame_constructor", Caught(() => new Holder<string>(true)));
+        Extract("format.extract.frame_constructed_parameters", Caught(() => Floats(null, null)));
+        Extract("format.extract.frame_switch", Caught(() => ThrowInSwitch(5)));
+        Extract("format.extract.frame_else", Caught(() => ThrowInElse(-1)));
+        Extract("format.extract.frame_using_branch", Caught(() => ThrowInUsingBranch(-1)));
+        Extract("format.extract.frame_catch_branch", Caught(() => ThrowInCatchBranch(0)));
+        Extract("format.extract.frame_either_bound", Caught(() => ThrowOutOfRange(-1)));
+        Extract("format.extract.frame_conditional", Caught(() => ThrowInConditional(-1)));
+        Row("format.extract.coroutine_stack", Paths(StackTraceUtility.ExtractStackTrace()));
+    }
+
+    /// <summary>The texts asked from the first step of a coroutine a callback starts.</summary>
+    IEnumerator Started()
+    {
+        Extract("format.extract.started_game_argument", Caught(() => throw new ArgumentException("Bad thing.", "p")));
+        Row("format.extract.started_stack", Paths(StackTraceUtility.ExtractStackTrace()));
+        yield break;
+    }
+
+    static bool pendingExtract;
+
+    /// <summary>StackTraceUtility's texts asked from a callback (Update) rather than a coroutine.</summary>
+    void LateUpdate()
+    {
+        if (!pendingExtract) return;
+        pendingExtract = false;
+        Extract("format.extract.update_game_argument", Caught(() => throw new ArgumentException("Bad thing.", "p")));
+        Row("format.extract.update_stack", Paths(StackTraceUtility.ExtractStackTrace()));
+        StartCoroutine(Started());
     }
 }

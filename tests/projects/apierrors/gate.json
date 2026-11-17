@@ -22,6 +22,10 @@
     "managed/UnityEngine/Runtime/MonoExceptions.cs",
     "managed/UnityEngine/Runtime/MonoNumberFormat.cs",
     "managed/UnityEngine/Core/ExceptionStackTraces.cs",
-    "managed/Unbound.Host/NumberFormatShims.cs"
+    "managed/Unbound.Host/NumberFormatShims.cs",
+    "managed/UnityEngine/Core/StackTraceUtility.cs",
+    "managed/UnityEngine/Core/StackTraces.cs",
+    "managed/UnityEngine/Core/PortablePdb.cs",
+    "managed/UnityEngine/Runtime/Coroutines.cs"
   ]
 }
