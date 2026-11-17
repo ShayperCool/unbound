@@ -2,6 +2,8 @@
 {"k":"start.integrated_descriptors","v":"returns 0"}
 {"k":"start.subsystems","v":"returns 0:"}
 {"k":"start.integrated_subsystems","v":"returns 0"}
+{"k":"start.null_list","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"start.null_descriptor_list","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
 {"k":"start.list_cleared","v":"returns 0"}
 {"k":"register.descriptor","v":"returns 1:probe.a/ProbeDescriptor"}
 {"k":"register.typed","v":"returns 1:probe.a/ProbeDescriptor"}
@@ -41,6 +43,9 @@
 {"k":"destroy.again","v":"returns done"}
 {"k":"destroy.start","v":"returns done"}
 {"k":"destroy.start.calls","v":"OnStart,Provider.Start"}
+{"k":"destroy.restarted","v":"returns done"}
+{"k":"destroy.restarted.calls","v":"OnStop,Provider.Stop"}
+{"k":"destroy.restarted.state","v":"returns False|False"}
 {"k":"recreate","v":"returns ProbeSubsystem"}
 {"k":"recreate.calls","v":"Provider.ctor,Provider.TryInitialize,ProbeSubsystem.ctor,OnCreate"}
 {"k":"recreate.subsystems","v":"returns 1:ProbeSubsystem-"}
