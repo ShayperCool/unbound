@@ -386,9 +386,10 @@ def current_entries(directory):
 
 
 def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
-    """Every link at any depth under roots, following links to directories: [(link, destination)],
-    with the lexical and the resolved destination of each link (lexical paths protect the
-    intermediate links of a chain). Installations and compiler stores are excluded.
+    """Every link at any depth under roots, following links to directories: ([(link, destination)],
+    places still changing after the last recheck), with the lexical and the resolved destination of
+    each link (lexical paths protect the intermediate links of a chain). Installations and
+    compiler stores are excluded.
 
     Workers write meanwhile. A directory that vanishes is skipped, and one that changes while it
     is listed is listed directly; after the walk, the parents of vanished directories and the
@@ -403,6 +404,14 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
     # One shared index of listings for every scan root; no index files in checkouts.
     index = DirectoryIndex(Path(index_root or roots[0]), seconds=seconds)
     found, visited, pending, known, changed = [], {}, list(roots), set(), set()
+    # Directories listed so far: only their vanished children are looked for again (a link
+    # target outside the roots that vanished leaves no listing of its own place to read again).
+    listed_paths = set()
+
+    def vanished(directory):
+        parent = os.path.dirname(directory)
+        if parent in listed_paths:
+            changed.add(parent)
 
     def walked(directory, identity):
         """Whether the directory with this identity was walked already (perhaps under another path)."""
@@ -452,7 +461,7 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                     if isinstance(info, OSError):
                         if not gone(info):
                             raise info
-                        changed.add(os.path.dirname(directory))
+                        vanished(directory)
                         continue
                     identity = (info.st_dev, info.st_ino)
                     if walked(directory, identity):
@@ -465,9 +474,10 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                     except OSError as error:
                         if not gone(error):
                             raise
-                        changed.add(os.path.dirname(directory))
+                        vanished(directory)
                         continue
                     visited[identity] = directory
+                    listed_paths.add(directory)
                     listed.append(entries)
                 follow(listed)
             if not changed or rounds == RECHECK_ROUNDS:
@@ -483,7 +493,7 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             index.finish()
     finally:
         index.close()
-    return found
+    return found, sorted(changed)
 
 
 class PathSet:
@@ -647,8 +657,8 @@ class Janitor:
         started = time.monotonic()
         # The promoted suite's metadata is read again with every walk (a promotion at once).
         self.refresh_baseline(force=self.links_at is not None)
-        self.links = link_walk([*self.scan_roots, *sorted(self.suite_roots)], excluded=self.excluded, index_root=self.cache,
-                               seconds=min(self.scan_seconds, self.budget()))
+        self.links, unsettled = link_walk([*self.scan_roots, *sorted(self.suite_roots)], excluded=self.excluded,
+                                          index_root=self.cache, seconds=min(self.scan_seconds, self.budget()))
         self.links_at = started
         # Per candidate, the links outside it that name something inside it.
         self.incoming = {}
@@ -659,7 +669,9 @@ class Janitor:
         for link, destination in self.links:
             if self.within_removed(destination) and not self.within_removed(link):
                 self.emit('error', link=link, destination=destination, reason='a link names a directory removed in this run')
+        # Places still changing after the last recheck: a link created there may be unseen.
         self.emit('links', links=len(self.links), candidates_named=len(self.incoming),
+                  unsettled=len(unsettled), unsettled_examples=unsettled[:5],
                   seconds=round(time.monotonic()-started, 3))
 
     def refresh_processes(self, force=False):
@@ -706,9 +718,10 @@ class Janitor:
         for path in children(root):
             if not path.is_dir() or path.is_symlink():
                 continue
+            if retained_name(path.name):
+                continue
             if re.search(r'(?<!\d)20\d{6}(?!\d)', path.name) or re.search(r'-t3-[0-9a-f]+', path.name):
-                if not retained_name(path.name):
-                    yield path
+                yield path
                 continue
             for parent in (path, path/'runs'):
                 instances = []

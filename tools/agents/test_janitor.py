@@ -382,6 +382,19 @@ class JanitorTests(unittest.TestCase):
             self.collect_applied()
         self.assertTrue(old.is_dir())
         self.assertFalse(self.j.partial)
+        self.assertEqual(self.rows('links')[0]['unsettled'], 0)  # each changed place was listed again
+
+    def test_places_still_changing_after_the_last_recheck_are_logged(self):
+        holder = self.directory('holder')
+        def changing(index, path, stamp):
+            raise run_cache_index.DirectoryChanged(f'run-cache directory changed during indexing: {path}')
+        with patch.object(run_cache_index.DirectoryIndex, 'read', changing), \
+             patch.object(janitor, 'RECHECK_ROUNDS', 0):
+            self.collect_applied()
+        links = self.rows('links')[0]
+        self.assertGreater(links['unsettled'], 0)
+        self.assertEqual(len(links['unsettled_examples']), min(5, links['unsettled']))
+        self.assertTrue(holder.is_dir())
 
     def test_a_directory_vanishing_during_the_walk_is_skipped(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])
@@ -395,6 +408,32 @@ class JanitorTests(unittest.TestCase):
             self.collect_applied()
         self.assertFalse(old.exists())
         self.assertFalse(self.j.partial)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
+    def test_a_vanished_link_target_outside_the_roots_does_not_list_its_parent(self):
+        # Its parent was never listed (an unreadable /tmp sibling must not fail the walk).
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        outside = self.root/'outside'
+        (outside/'target').mkdir(parents=True)
+        (outside/'private').mkdir()
+        (outside/'private').chmod(0)
+        self.addCleanup((outside/'private').chmod, 0o755)
+        (self.cache/'build').symlink_to(outside/'target')
+        original = run_cache_index.DirectoryIndex.stat_many
+        def vanishing(index, paths):
+            infos = original(index, paths)
+            return [FileNotFoundError(2, 'No such file or directory', path) if path == str(outside/'target') else info
+                    for path, info in zip(paths, infos)]
+        with patch.object(run_cache_index.DirectoryIndex, 'stat_many', vanishing):
+            self.collect_applied()
+        self.assertFalse(old.exists())
+        self.assertEqual(self.rows('links')[0]['unsettled'], 0)
+
+    def test_runs_in_a_sheriff_or_baseline_probe_folder_stay(self):
+        first, newest = self.instances('baseline-probe', ['gate-1', 'gate-2'])
+        self.collect_applied()
+        self.assertTrue(first.is_dir())
+        self.assertTrue(newest.is_dir())
 
     def test_a_link_walk_out_of_time_removes_nothing_and_still_runs_cache_gc(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])
@@ -515,7 +554,7 @@ class JanitorTests(unittest.TestCase):
         alias = self.cache/'alias'
         alias.symlink_to(path, target_is_directory=True)
         (self.cache/'chain').symlink_to(alias/'output')
-        self.j.links = janitor.link_walk([self.cache])
+        self.j.links, _ = janitor.link_walk([self.cache])
         self.assertTrue(self.j.check(path, 72)[0].startswith('symlink reference'))
         self.j.links = []
         self.j.processes = janitor.PathSet([path/'output'])
