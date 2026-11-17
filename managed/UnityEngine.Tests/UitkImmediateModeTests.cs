@@ -6,7 +6,8 @@ using Xunit;
 
 // ImmediateModeElement (Unity 6000.0.71f1, tests/projects/uitkimmediate). Controls outside the
 // probe: the callback's place among the panel's draws, kept across repaints without generating
-// the element again, its scissor from clipping ancestors, and no callback for hidden elements.
+// the element again, its scissor from clipping ancestors, no callback for hidden elements, and
+// transparent subtrees that generate their content but draw nothing.
 
 namespace UnityEngine.Tests
 {
@@ -125,11 +126,33 @@ namespace UnityEngine.Tests
             Assert.Same(probe, immediate.ImmediateOwner);
             Assert.Equal(new RectInt(10, 20, 60, 60), immediate.ImmediateScissor);
             Assert.Equal(0, painter.Batches.Sum(b => b.IndexCount));
-            Assert.Equal(1, panel.uaImmediateElements);
-            // Without ImmediateModeElements a transparent subtree is not visited at all.
-            probe.RemoveFromHierarchy();
-            Assert.Equal(0, panel.uaImmediateElements);
-            Assert.Empty(Paint(panel).Batches);
+        }
+
+        // Content generation does not depend on ImmediateModeElements: a transparent element's
+        // generateVisualContent runs in a panel without any, and what it draws is not drawn.
+        [Fact]
+        public void TransparentElementsGenerateTheirContent()
+        {
+            using var panel = NewPanel();
+            var faded = Place(new VisualElement(), 10, 20, 60, 60);
+            faded.style.opacity = 0f;
+            int calls = 0;
+            faded.generateVisualContent += mgc =>
+            {
+                calls++;
+                mgc.painter2D.BeginPath();
+                mgc.painter2D.MoveTo(Vector2.zero);
+                mgc.painter2D.LineTo(new Vector2(10f, 10f));
+                mgc.painter2D.LineTo(new Vector2(0f, 10f));
+                mgc.painter2D.Fill();
+            };
+            panel.visualTree.Add(faded);
+            var painter = Paint(panel);
+            Assert.Equal(1, calls);
+            Assert.Equal(0, painter.Batches.Sum(b => b.IndexCount));
+            faded.style.opacity = 1f;
+            painter = Paint(panel);
+            Assert.True(painter.Batches.Sum(b => b.IndexCount) > 0);
         }
     }
 }

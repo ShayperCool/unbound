@@ -111,8 +111,6 @@ namespace Unbound.UIElements
         RectInt? m_Scissor;
         /// <summary>The element's clip (UIR's worldClip) while its content is drawn.</summary>
         Rect? m_Clip;
-        /// <summary>Whether the panel being painted holds ImmediateModeElements.</summary>
-        bool m_HasImmediateElements;
         float m_PixelsPerPoint = 1f;
         float m_ViewportHeight;
         internal UaDynamicAtlas Atlas;
@@ -144,7 +142,6 @@ namespace Unbound.UIElements
             }
             m_PixelsPerPoint = panel.scaledPixelsPerPoint;
             m_ViewportHeight = viewportHeight;
-            m_HasImmediateElements = panel.uaImmediateElements > 0;
             Opacities.Add(1f);
             TextSettings.Add(default);
             PaintElement(panel.visualTree, 1f, null);
@@ -182,11 +179,11 @@ namespace Unbound.UIElements
                 return;
             }
             float opacity = parentOpacity * Mathf.Clamp01(style.opacity);
-            // A fully transparent subtree draws nothing, but its ImmediateModeElements are still
-            // called (and draw with GL, which UI opacity does not affect), as in Unity
+            // A fully transparent subtree draws nothing, but its content is still generated (its
+            // generateVisualContent callbacks run, its text is generated) and its ImmediateModeElements
+            // are called (they draw with GL, which UI opacity does not affect), as in Unity
             // (tests/projects/uitkimmediate transparent, underTransparent).
             bool callbacksOnly = opacity <= 0f;
-            if (callbacksOnly && !m_HasImmediateElements) return;
 
             var savedScissor = m_Scissor;
             m_Matrix = ve.worldTransform;

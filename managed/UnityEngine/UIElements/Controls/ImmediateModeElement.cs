@@ -52,13 +52,6 @@ namespace UnityEngine.UIElements
         protected abstract void ImmediateRepaint();
     }
 
-    internal abstract partial class BaseVisualElementPanel
-    {
-        /// <summary>How many ImmediateModeElements the panel holds: while there are any, its
-        /// painting visits fully transparent subtrees for their callbacks.</summary>
-        internal int uaImmediateElements;
-    }
-
     /// <summary>What a panel's rendering throws after it finished when an ImmediateRepaint threw
     /// (the first such exception, inside it).</summary>
     internal partial class ImmediateModeException : Exception
