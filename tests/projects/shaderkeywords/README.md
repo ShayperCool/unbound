@@ -81,12 +81,14 @@ The compute space contains `CS_LOCAL`, `CS_GLOBAL_A`, `CS_GLOBAL_B`, `CS_DYN` an
 in that order. The exact keyword, material and variant answers are in the canonical.
 
 The runner disables asynchronous shader compilation through `EditorSettings`. At shutdown,
-both private Editor copies saved that change to `ProjectSettings/EditorSettings.asset`.
-Prelaunch settings were byte-identical to the fixture, and Assets were unchanged. Both actual
-batch compiler rsp graphs match the preflight: references, sources, defines, analyzers and
-compiler bytes are equal; only the private project path is rebound. The Editor uses its
-compiler server, which the offline preflight omits. Other releases, backends, quality settings,
-color spaces and windowed captures remain unmeasured.
+both private Editor copies of the batch-mode captures saved that change to
+`ProjectSettings/EditorSettings.asset`; the windowed copies also create
+`ProjectSettings/PackageManagerSettings.asset`. Prelaunch settings were byte-identical to the
+fixture, and Assets were unchanged. In the batch-mode captures both actual compiler rsp graphs
+matched the preflight: references, sources, defines, analyzers and compiler bytes are equal; only
+the private project path is rebound (the windowed re-record's preflight compiled against a fresh
+compile of the fixture). The Editor uses its compiler server, which the offline preflight omits.
+Other releases, backends, quality settings and color spaces remain unmeasured.
 
 ## Measured implementation and limits
 
