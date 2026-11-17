@@ -29,6 +29,24 @@ namespace UnityEngine.Tests
         public int count;
     }
 
+    /// <summary>A game factory whose traits throw, for UxmlTemplateOverrideTests.</summary>
+    public sealed class ThrowingElement : VisualElement
+    {
+        public new sealed class UxmlFactory : UxmlFactory<ThrowingElement, UxmlTraits> { }
+
+        public new sealed class UxmlTraits : VisualElement.UxmlTraits
+        {
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc) => throw new InvalidOperationException("traits");
+        }
+    }
+
+    /// <summary>A [UxmlElement] with a renamed attribute, for UxmlTemplateOverrideTests.</summary>
+    [UxmlElement]
+    public partial class TemplateOverrideGauge : VisualElement
+    {
+        [UxmlAttribute("level", "old-level")] public int level { get; set; }
+    }
+
     [Collection("UXML custom controls")]
     public class UxmlTemplateOverrideTests
     {
@@ -126,9 +144,34 @@ namespace UnityEngine.Tests
             Assert.Equal(1, container.childCount);
             var overridden = Unbound.UIElements.UxmlCloneScope.Root().Enter(new System.Collections.Generic.List<Unbound.UIElements.UxmlAttributeOverride>
             {
-                new Unbound.UIElements.UxmlAttributeOverride("nobody", "text", "x"),
+                new Unbound.UIElements.UxmlAttributeOverride("nobody", "text", "x", panel),
             });
             Assert.Throws<NullReferenceException>(() => traits.Init(new TemplateContainer(), bag, new CreationContext(overridden, panel, null)));
+        }
+
+        // A game factory's exception leaves the clone; the target gets none of the element's document.
+        [Fact]
+        public void AFactoryExceptionLeavesTheClone()
+        {
+            var ns = typeof(ThrowingElement).Namespace;
+            var asset = Import("Throwing", $"<ui:UXML {Ns} xmlns:t=\"{ns}\"><ui:Label name=\"before\" /><ui:VisualElement><t:ThrowingElement /></ui:VisualElement></ui:UXML>");
+            var root = new VisualElement();
+            Assert.Throws<InvalidOperationException>(() => asset.CloneTree(root));
+            Assert.Equal(new[] { "before" }, System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(root.Children(), c => c.name)));
+        }
+
+        // On a [UxmlElement] an override under a former name wins over the element's own attribute
+        // under the current name, as through a factory's traits.
+        [Fact]
+        public void AnOverrideUnderAFormerNameWinsOnAUxmlElement()
+        {
+            var ns = typeof(TemplateOverrideGauge).Namespace;
+            var leaf = Import("GaugeLeaf", $"<ui:UXML {Ns} xmlns:t=\"{ns}\"><t:TemplateOverrideGauge name=\"g\" level=\"1\" /></ui:UXML>");
+            var host = Host("GaugeHost", "Leaf", leaf,
+                "<ui:Instance template=\"Leaf\"><AttributeOverrides element-name=\"g\" old-level=\"3\" /></ui:Instance>");
+            var root = new VisualElement();
+            host.CloneTree(root);
+            Assert.Equal(3, root.Q<TemplateOverrideGauge>("g").level);
         }
 
         sealed class Bag : IUxmlAttributes
