@@ -236,6 +236,57 @@ class PostlandTests(unittest.TestCase):
             checker.run(self.base, checks, 'alone')
             self.assertEqual(gates[1].automatic_limits[land.automatic_limit_key(gates[1].automatic[0])], 800)
 
+    def debug_gate(self, results):
+        """A gate whose Debug managed tests fail with the next of results (a set, or an exception)."""
+        runs = []
+        class Gate:
+            def __init__(self, worktree, commit, *args, **kwargs):
+                self.commit = commit
+            def build(self):
+                return None, self_root/'target'
+            def managed_test_failures(self, target, configuration='Release'):
+                runs.append((self.commit, configuration))
+                result = results.pop(0)
+                if isinstance(result, BaseException):
+                    raise result
+                return 1, set(result)
+        self_root = self.root
+        return Gate, runs
+
+    def test_managed_changes_run_the_debug_tests_and_report_new_failures(self):
+        (self.repo/'managed').mkdir()
+        check = ['probe', 'probe-check', 'fast check', 'r']
+        checker = self.checker(lambda *args: False)
+        Gate, runs = self.debug_gate([{'A', 'B', 'Known'}, {'B', 'C'}])
+        with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate), \
+             mock.patch.object(land, 'known_test_failures', return_value={'Known'}):
+            first = self.land_branch('first', {'managed/x.cs': '1'}, [check])
+            self.assertTrue(checker.round())
+            self.land_branch('second', {'value.txt': '2\n'}, [check])  # no managed change: no Debug run
+            self.assertTrue(checker.round())
+            third = self.land_branch('third', {'managed/x.cs': '3'}, [])
+            self.assertTrue(checker.round())
+        self.assertEqual(runs, [(first['new'], 'Debug'), (third['new'], 'Debug')])
+        reports = sorted(self.reports(), key=lambda report: report['failures'])
+        self.assertEqual([(r['kind'], r['failures']) for r in reports],
+                         [('managed Debug test failures', ['A', 'B']), ('managed Debug test failures', ['C'])])
+        self.assertEqual(reports[0]['range'], [self.base, first['new']])
+        self.assertEqual(reports[1]['range'], [self.rows[1]['new'], third['new']])
+        self.assertEqual(checker.state()['debug_failures'], ['B', 'C'])
+        self.assertEqual(checker.state()['checked'], third['new'])
+
+    def test_debug_tests_that_cannot_run_are_reported_and_the_checks_still_run(self):
+        (self.repo/'managed').mkdir()
+        check = ['probe', 'probe-check', 'fast check', 'r']
+        checker = self.checker(lambda *args: False)
+        Gate, runs = self.debug_gate([SystemExit(5)])
+        with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate):
+            self.land_branch('first', {'managed/x.cs': '1'}, [check])
+            self.assertTrue(checker.round())
+        self.assertEqual([(r['probe'], r['kind'], r['result']) for r in self.reports()],
+                         [('managed-tests-debug', 'undecided', 'Debug tests could not run')])
+        self.assertEqual([names for _, names, _ in checker.calls], [['probe']])
+
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):
         check = ['old', 'old-check', 'fast check', 'r']
         self.land_branch('first', {'a.txt': '1'}, [check])

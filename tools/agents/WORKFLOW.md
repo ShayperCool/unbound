@@ -381,6 +381,10 @@ reverted or not, is written to
 `~/.cache/unbound/agents/postland/<time>-<probe>.json` with the probe, the commits and the logs,
 and a checker that cannot build writes `<time>-checker.json`; the orchestrator turns them into
 queue rows. Suite output uses fresh labels; sheriff suites and the baseline are only read.
+When the range changes `managed/`, the checker also runs the managed unit tests built in Debug,
+where `Debug.Assert` is compiled in (gates build them in Release); tests that fail there, are not
+in `known-test-failures.txt` and did not fail at its previous Debug run are written as one
+`managed-tests-debug` finding (no bisection or revert).
 `UNBOUND_POSTLAND=0` keeps a landing from starting the checker; the next landing's checker still
 covers the skipped range. `slot.py reap` keeps locked worktrees, including the checker's.
 

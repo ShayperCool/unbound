@@ -445,6 +445,12 @@ class LaneStopped(Exception):
     """A gate lane whose commands were stopped because another lane failed: not a failure."""
 
 
+def known_test_failures():
+    """Managed tests listed as failing in tools/agents/known-test-failures.txt."""
+    return {line.strip() for line in (HERE/'known-test-failures.txt').read_text().splitlines()
+            if line.strip() and not line.startswith('#')}
+
+
 class Gate:
     def __init__(self, worktree, base, probes, full, log, priority=False, *,
                  changed=None, crates=None, releases=None, environment=None, automatic=None, probe_owners=None):
@@ -915,27 +921,33 @@ class Gate:
         if self.step('API tooling tests', tools_tests, env=env):
             self.fail('API tooling tests')
 
-    def managed_tests(self, target):
+    def managed_test_failures(self, target, configuration='Release'):
+        """Run the managed unit tests built in configuration: (exit code, failing test names)."""
         dotnet = Path.home()/'.dotnet/dotnet'
         dotnet = str(dotnet) if dotnet.is_file() else 'dotnet'
         results = target/'land-test-results'
-        trx = results/'land.trx'
+        name = 'land.trx' if configuration == 'Release' else f'land-{configuration.lower()}.trx'
+        trx = results/name
         trx.unlink(missing_ok=True)
-        command = [dotnet, 'test', 'managed/UnityEngine.Tests/UnityEngine.Tests.csproj', '-c', 'Release',
-                   '--logger', 'trx;LogFileName=land.trx', '--results-directory', str(results)]
+        command = [dotnet, 'test', 'managed/UnityEngine.Tests/UnityEngine.Tests.csproj', '-c', configuration,
+                   '--logger', f'trx;LogFileName={name}', '--results-directory', str(results)]
         if LAUNCHER.is_file():
             command = [str(LAUNCHER), '--kind', 'test', *command]
-        code = self.step('managed tests', command)
+        step = 'managed tests' if configuration == 'Release' else f'managed tests ({configuration})'
+        code = self.step(step, command)
         if self.cancelled:
-            raise LaneStopped('managed tests')
+            raise LaneStopped(step)
         if not trx.is_file():
-            self.fail('managed tests (no results: build error?)')
+            self.fail(f'{step} (no results: build error?)')
         failed = set()
         for result in ET.parse(trx).getroot().iter():
             if result.tag.endswith('UnitTestResult') and result.get('outcome') == 'Failed':
                 failed.add(result.get('testName'))
-        known = {line.strip() for line in (HERE/'known-test-failures.txt').read_text().splitlines()
-                 if line.strip() and not line.startswith('#')}
+        return code, failed
+
+    def managed_tests(self, target):
+        code, failed = self.managed_test_failures(target)
+        known = known_test_failures()
         new = sorted(failed - known)
         fixed = sorted(known - failed)
         if fixed:

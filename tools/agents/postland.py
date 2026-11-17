@@ -28,7 +28,11 @@ turns the check from passing to failing, confirmed by two failing runs at its ti
 runs at its parent, its commits are reverted on a branch and landed through land.py (at normal
 priority, as it may lead a train) if the revert applies cleanly and that landing was not reverted
 before. Every finding, revert or not, is written to
-~/.cache/unbound/agents/postland/<time>-<probe>.json for the orchestrator. Suite output uses
+~/.cache/unbound/agents/postland/<time>-<probe>.json for the orchestrator.
+
+When the range changes managed/, the managed unit tests also run built in Debug (DEBUG_TESTS):
+gates build them in Release, where Debug.Assert is compiled out. Tests that fail there and did not
+fail at the previous such run are a finding (no bisection or revert). Suite output uses
 fresh labels; sheriff suites and baselines are only read.
 """
 import argparse
@@ -55,6 +59,11 @@ BACKGROUND_NICE = 15
 WORKTREE = 'postland-checker'
 BUILD_ENVIRONMENT = ('CARGO_TARGET_DIR', 'CARGO_BUILD_BUILD_DIR', 'UNBOUND_MANAGED_DIR',
                      'UNBOUND_RUNTIME', 'UNBOUND', 'UNBOUND_CLI', 'UNBOUND_LAND_GATE')
+# The managed unit tests built in Debug, where Debug.Assert is compiled in: land gates build them
+# in Release only. Run when a checked range changes managed/; a finding names the tests that fail
+# in Debug and did not fail at the last check (known-test-failures.txt still applies).
+DEBUG_TESTS = ['managed-tests-debug', 'dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj -c Debug',
+               'Debug-only assertions (land gates run Release)', None]
 # Hardware threads one automatic check keeps busy (an engine run plus its driver); the checker
 # runs as many checks at once as the free threads allow, at least one, at most the engine pool.
 THREADS_PER_CHECK = 2
@@ -243,6 +252,31 @@ class Checker:
             return failed
         return []
 
+    def debug_tests(self, base, target):
+        """The managed unit tests in Debug at target when the range from base changes managed/;
+        tests failing there that did not fail at the previous run are a finding."""
+        changed = self.git('diff', '--name-only', f'{base}..{target}').splitlines()
+        if not any(path.startswith('managed/') for path in changed):
+            return
+        self.checkout(target)
+        log = land.STATE/'logs'/f'{stamp()}-postland-debug-{target[:10]}.log'
+        log.parent.mkdir(parents=True, exist_ok=True)
+        gate = land.Gate(self.worktree, target, [], False, log, environment=self.environment())
+        print(f'postland: managed tests in Debug at {target[:10]}; log {log}', flush=True)
+        try:
+            _, build = gate.build()
+            _, failed = gate.managed_test_failures(build, 'Debug')
+        except SystemExit:
+            self.report(DEBUG_TESTS, 'undecided', at=target, result='Debug tests could not run', logs=[str(log)],
+                        range=[base, target])
+            return
+        failed -= land.known_test_failures()
+        new = sorted(failed-set(self.state().get('debug_failures', [])))
+        if new:
+            self.report(DEBUG_TESTS, 'managed Debug test failures', failures=new, logs=[str(log)],
+                        range=[base, target])
+        self.save(debug_failures=sorted(failed))
+
     def outcome(self, commit, check, label):
         """('pass' | 'fail' | 'time limit' | 'unchecked', log) of one check alone at commit."""
         try:
@@ -405,6 +439,8 @@ class Checker:
         target = self.git('rev-parse', 'main')
         checked = self.state().get('checked')
         rows = self.pending(checked, target)
+        if rows:
+            self.debug_tests(checked or rows[0]['old'], target)
         checks = land.automatic_union([[tuple(row) for row in item['automatic']] for item in rows])
         if not checks:
             self.save(checked=target, reported={})
