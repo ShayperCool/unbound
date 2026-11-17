@@ -20,5 +20,18 @@ class ReportTests(unittest.TestCase):
                     'line.color.Blend', 'space.trail.far.mesh', 'simplify.closed.positions'):
             self.assertFalse(gate.open_residual(key), key)
 
+class ResidualMeasureTests(unittest.TestCase):
+    def test_counts_every_differing_leaf(self):
+        a = {'c': [0.0078, 0.5, 0.0078, 0.5], 'w': 1.0}
+        b = {'c': [0.0117, 0.5, 0.0117, 0.5], 'w': 1.0}
+        self.assertEqual(2, gate.compare.differing(a, b))
+        self.assertEqual(0, gate.compare.differing(a, a))
+
+    def test_the_gradient_residual_is_listed_with_its_count(self):
+        from residuals import load
+        entry = load(gate.RESIDUALS)['line.color.PerceptualBlend']
+        self.assertEqual(14, entry['values'])
+
+
 if __name__ == '__main__':
     unittest.main()

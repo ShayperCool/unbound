@@ -44,6 +44,11 @@ class GateTests(unittest.TestCase):
             gate = residuals.Gate(self.LIST)
             self.assertFalse(gate.differs('a', measured), measured)
 
+    def test_a_value_measure_must_be_equal_even_when_it_is_a_number(self):
+        gate = residuals.Gate({'k': {'actual': 5, 'reason': 'value'}})
+        self.assertTrue(gate.differs('k', {'actual': 5}))
+        self.assertFalse(gate.differs('k', {'actual': -100}))
+
     def test_an_unlisted_difference_fails(self):
         gate = residuals.Gate(self.LIST)
         self.assertFalse(gate.differs('c', {'max_abs': 0}))

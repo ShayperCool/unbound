@@ -7,7 +7,8 @@ A residual list is a JSON object, one entry per comparison key:
 A comparator measures each key that differs from the reference (an image's differing "pixels" and
 "worst" difference, a value's largest absolute difference "max_abs", its "actual" text, ...). The
 gate admits a difference only when the list names its key and bounds every measure the comparator
-took: a number bounds a number from above, anything else must be equal. The strict comparison,
+took: a number bounds a number from above, anything else, and a value measure ("actual",
+"capture", "candidate", "missing", "pinned") whatever its type, must be equal. The strict comparison,
 its counts and its report stay as they are; the verdict is separate:
 
 * a key that differs and is not listed, or goes beyond a bound, fails;
@@ -42,7 +43,13 @@ def load(path):
     return entries
 
 
-def within(measured, bound):
+# Measures that are values, not sizes: they must equal the recorded one whatever their type.
+VALUES = {'actual', 'capture', 'candidate', 'missing', 'pinned'}
+
+
+def within(measured, bound, name=None):
+    if name in VALUES:
+        return measured == bound
     if isinstance(bound, Real) and not isinstance(bound, bool):
         return (isinstance(measured, Real) and not isinstance(measured, bool)
                 and not math.isnan(measured) and measured <= bound)
@@ -55,7 +62,7 @@ def admits(entry, measured):
     if entry is None or not measured:
         return False
     bounds = {k: v for k, v in entry.items() if k != 'reason'}
-    return set(measured) <= set(bounds) and all(within(measured[k], bounds[k]) for k in measured)
+    return set(measured) <= set(bounds) and all(within(measured[k], bounds[k], k) for k in measured)
 
 
 class Gate:

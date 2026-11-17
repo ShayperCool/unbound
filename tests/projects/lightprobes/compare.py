@@ -8,8 +8,8 @@ Values are compared token by token. Numbers must be equal as single-precision fl
 `pixels ...` (8-bit channels, which may differ by --pixel-tolerance, default 1). Every missing,
 extra and differing value is listed; the exit code is the number of failing keys (capped at 100).
 With --residuals (tests/residuals.py) the exit code is 0 when every differing key is listed there
-within its bounds ("tokens": how many tokens differ; "max_abs": their largest absolute difference,
-when all of them are numbers, else "candidate": the candidate's text), 1 otherwise.
+within its bounds (the tokens that differ by at most 1e-6: "rounding_tokens", how many, and
+"max_abs", their largest difference; every other differing token exactly, "pinned"), 1 otherwise.
 .NET's "(Parameter 'x')" exception suffix is compared in Mono's form ("Parameter name: x").
 """
 import argparse
@@ -51,13 +51,28 @@ def number(token):
         return None
 
 
+# A token that differs by more than this is not float rounding: a residual list pins it exactly.
+ROUNDING = 1e-6
+
+
 def measure(key, a, b, pixel_tolerance):
-    """What a residual list bounds for a differing value."""
+    """What a residual list bounds for a differing value: the tokens that differ by float rounding
+    (how many, and their largest absolute difference) and, exactly, every other differing token
+    with its position ("pinned")."""
     ta, tb = a.split(' '), b.split(' ')
-    differing = [(x, y) for x, y in zip(ta, tb) if compare_value(key, x, y, pixel_tolerance)]
-    if len(ta) != len(tb) or any(number(x) is None or number(y) is None for x, y in differing):
-        return {'tokens': len(differing), 'candidate': b}
-    return {'tokens': len(differing), 'max_abs': max(abs(number(y) - number(x)) for x, y in differing)}
+    if len(ta) != len(tb):
+        return {'pinned': b}
+    small, worst, pinned = 0, 0.0, []
+    for i, (x, y) in enumerate(zip(ta, tb)):
+        if not compare_value(key, x, y, pixel_tolerance):
+            continue
+        fx, fy = number(x), number(y)
+        if fx is not None and fy is not None and abs(fy - fx) <= ROUNDING:
+            small += 1
+            worst = max(worst, abs(fy - fx))
+        else:
+            pinned.append(f'{i}={y}')
+    return {'rounding_tokens': small, 'max_abs': worst, 'pinned': ' '.join(pinned)}
 
 
 def compare_value(key, a, b, pixel_tolerance):

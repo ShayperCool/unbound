@@ -1,1212 +1,1454 @@
 {
  "additive calculated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "additive calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive calculated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive calculated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "additive interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "additive query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "additive renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized calculated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "additive tetrahedralized calculated 3": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 13
+  "rounding_tokens": 13
  },
  "additive tetrahedralized calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized calculated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "additive tetrahedralized calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized calculated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "additive tetrahedralized calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized interpolated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "additive tetrahedralized interpolated 3": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 25
+  "rounding_tokens": 25
  },
  "additive tetrahedralized interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized interpolated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "additive tetrahedralized interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized interpolated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "additive tetrahedralized interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized occlusion 0": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 1
  },
  "additive tetrahedralized occlusion 8": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 1
  },
  "additive tetrahedralized occlusion at probes": {
-  "max_abs": 1.0,
+  "max_abs": 1.2e-07,
+  "pinned": "89=0",
   "reason": "combined probe 22's occlusion channel 1 is 0 where the Editor has 1: the boundary-cell choice of the combined scenes' mesh (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 15
  },
  "additive tetrahedralized query 0": {
-  "max_abs": 53.0,
+  "max_abs": 5.97e-08,
+  "pinned": "0=32",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 26
+  "rounding_tokens": 25
  },
  "additive tetrahedralized query 1": {
-  "max_abs": 17.0,
+  "max_abs": 0.0,
+  "pinned": "0=10",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 0
  },
  "additive tetrahedralized query 2": {
-  "max_abs": 34.0,
+  "max_abs": 0.0,
+  "pinned": "0=25",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 0
  },
  "additive tetrahedralized query 3": {
-  "max_abs": 5.0,
+  "max_abs": 1.2e-07,
+  "pinned": "0=4",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 28
+  "rounding_tokens": 27
  },
  "additive tetrahedralized query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized query 6": {
-  "max_abs": 27.0,
+  "max_abs": 7.46e-09,
+  "pinned": "0=49",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 22
  },
  "additive tetrahedralized query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized query 8": {
-  "max_abs": 39.0,
+  "max_abs": 5.97e-08,
+  "pinned": "0=82",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 25
+  "rounding_tokens": 24
  },
  "additive tetrahedralized query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized renderer interpolated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "additive tetrahedralized renderer interpolated 3": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 13
+  "rounding_tokens": 13
  },
  "additive tetrahedralized renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized renderer interpolated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "additive tetrahedralized renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "additive tetrahedralized renderer interpolated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "additive tetrahedralized renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main retetrahedralized calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main retetrahedralized interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main retetrahedralized query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "main retetrahedralized renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "main retetrahedralized renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb array unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 16
  },
  "mpb array unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 17
+  "rounding_tokens": 17
  },
  "mpb array unity_SHAr": {
   "max_abs": 1.2e-07,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 17
+  "rounding_tokens": 17
  },
  "mpb array unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb array unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb array unity_SHBr": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 11
+  "rounding_tokens": 11
  },
  "mpb array unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 6
+  "rounding_tokens": 6
  },
  "mpb list unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 16
  },
  "mpb list unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 17
+  "rounding_tokens": 17
  },
  "mpb list unity_SHAr": {
   "max_abs": 1.2e-07,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 17
+  "rounding_tokens": 17
  },
  "mpb list unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb list unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb list unity_SHBr": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 11
+  "rounding_tokens": 11
  },
  "mpb list unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 6
+  "rounding_tokens": 6
  },
  "mpb preset unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 16
  },
  "mpb preset unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 17
+  "rounding_tokens": 17
  },
  "mpb preset unity_SHAr": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 9
+  "rounding_tokens": 9
  },
  "mpb preset unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb preset unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb preset unity_SHBr": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 11
+  "rounding_tokens": 11
  },
  "mpb preset unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 6
+  "rounding_tokens": 6
  },
  "mpb range again unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb range again unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb range again unity_SHAr": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 7
+  "rounding_tokens": 7
  },
  "mpb range again unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 5
+  "rounding_tokens": 5
  },
  "mpb range again unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 7
+  "rounding_tokens": 7
  },
  "mpb range again unity_SHBr": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 3
+  "rounding_tokens": 3
  },
  "mpb range again unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 3
+  "rounding_tokens": 3
  },
  "mpb range into full unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 18
+  "rounding_tokens": 18
  },
  "mpb range into full unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 16
  },
  "mpb range into full unity_SHAr": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 18
+  "rounding_tokens": 18
  },
  "mpb range into full unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb range into full unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 14
+  "rounding_tokens": 14
  },
  "mpb range into full unity_SHBr": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "mpb range into full unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 8
+  "rounding_tokens": 8
  },
  "mpb range unity_SHAb": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 6
+  "rounding_tokens": 6
  },
  "mpb range unity_SHAg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 7
+  "rounding_tokens": 7
  },
  "mpb range unity_SHAr": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 5
+  "rounding_tokens": 5
  },
  "mpb range unity_SHBb": {
   "max_abs": 2.99e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 4
+  "rounding_tokens": 4
  },
  "mpb range unity_SHBg": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 4
+  "rounding_tokens": 4
  },
  "mpb range unity_SHBr": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 2
+  "rounding_tokens": 2
  },
  "mpb range unity_SHC": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 1
  },
  "query batch 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "query batch 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query batch 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query batch 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query batch 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query batch 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query batch 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "query chain 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "query chain 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded calculated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "unloaded calculated 3": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 13
+  "rounding_tokens": 13
  },
  "unloaded calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded calculated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "unloaded calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded calculated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "unloaded calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded interpolated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "unloaded interpolated 3": {
   "max_abs": 4.48e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 25
+  "rounding_tokens": 25
  },
  "unloaded interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded interpolated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "unloaded interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded interpolated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "unloaded interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded occlusion 0": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 1
  },
  "unloaded occlusion 8": {
   "max_abs": 5.97e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 1
  },
  "unloaded occlusion at probes": {
-  "max_abs": 1.0,
+  "max_abs": 1.2e-07,
+  "pinned": "89=0",
   "reason": "combined probe 22's occlusion channel 1 is 0 where the Editor has 1: the boundary-cell choice of the combined scenes' mesh (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 16
+  "rounding_tokens": 15
  },
  "unloaded query 0": {
-  "max_abs": 53.0,
+  "max_abs": 5.97e-08,
+  "pinned": "0=32",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 26
+  "rounding_tokens": 25
  },
  "unloaded query 1": {
-  "max_abs": 17.0,
+  "max_abs": 0.0,
+  "pinned": "0=10",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 0
  },
  "unloaded query 2": {
-  "max_abs": 34.0,
+  "max_abs": 0.0,
+  "pinned": "0=25",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 1
+  "rounding_tokens": 0
  },
  "unloaded query 3": {
-  "max_abs": 5.0,
+  "max_abs": 1.2e-07,
+  "pinned": "0=4",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 28
+  "rounding_tokens": 27
  },
  "unloaded query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded query 6": {
-  "max_abs": 27.0,
+  "max_abs": 7.46e-09,
+  "pinned": "0=49",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 22
  },
  "unloaded query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded query 8": {
-  "max_abs": 39.0,
+  "max_abs": 5.97e-08,
+  "pinned": "0=82",
   "reason": "the returned tetrahedron index: the combined scenes' mesh has the Editor's 121 cells in another order; the SH and occlusion values differ only by rounding (gap row `MaterialPropertyBlock.CopySHCoefficientArraysFrom, LightProbesQuery`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 25
+  "rounding_tokens": 24
  },
  "unloaded query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded renderer interpolated 0": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 24
+  "rounding_tokens": 24
  },
  "unloaded renderer interpolated 3": {
   "max_abs": 1.5e-08,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 13
+  "rounding_tokens": 13
  },
  "unloaded renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded renderer interpolated 6": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 22
+  "rounding_tokens": 22
  },
  "unloaded renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded renderer interpolated 8": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 23
+  "rounding_tokens": 23
  },
  "unloaded renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "unloaded tetrahedralized calculated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized calculated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "unloaded tetrahedralized interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "unloaded tetrahedralized query 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized query 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 3": {
   "max_abs": 7.46e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 19
+  "rounding_tokens": 19
  },
  "unloaded tetrahedralized renderer interpolated 4": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 5": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 6": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 7": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 8": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  },
  "unloaded tetrahedralized renderer interpolated 9": {
   "max_abs": 3.73e-09,
+  "pinned": "",
   "reason": "SH, ambient-probe and barycentric accumulation rounding (cause table `lightprobes / 6000.0.71f1`); Linux NVIDIA OpenGL Core, 2026-11-16",
-  "tokens": 12
+  "rounding_tokens": 12
  }
 }

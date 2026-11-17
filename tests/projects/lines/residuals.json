@@ -1,6 +1,7 @@
 {
  "line.color.PerceptualBlend": {
-  "max_abs": 0.0039216,
-  "reason": "one colour byte of the PerceptualBlend gradient, c[101]: 0.07058824 in the reference, 0.07450981 in Unbound (gap row `LineRenderer/TrailRenderer geometry`, the perceptual-gradient precision residual; no rule found); Linux NVIDIA OpenGL Core, 2026-11-16"
+  "values": 14,
+  "max_abs": 0.00393,
+  "reason": "two colours of the PerceptualBlend gradient one byte apart, each on seven vertices (c[2] to c[26]: 2/255 in the reference, 3/255 in Unbound; c[101] to c[125]: 18/255 and 19/255); gap row `LineRenderer/TrailRenderer geometry`, the perceptual-gradient precision residual, no rule found; Linux NVIDIA OpenGL Core, 2026-11-16"
  }
 }

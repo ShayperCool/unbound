@@ -17,8 +17,8 @@ directory (see capcount_layout.py). The capture is always read whole.
 `miter` also includes the disjoint reversal controls and their image.
 `shadow` adds the opt-in shadow-caster diagnostics, with the same strict comparison.
 With --residuals (tests/residuals.py) the exit status is 0 when every failing key is listed there
-within its bounds: a number's largest difference "max_abs" (other values: the capture's "actual"),
-an image's differing "pixels".
+within its bounds: a value's differing leaves "values" and their largest difference "max_abs"
+(values of another shape: the capture's "actual"), an image's differing "pixels" and "max_delta".
 """
 import argparse
 import gzip
@@ -86,6 +86,15 @@ def differ(a, b, path=''):
     return (path, f'{type(a).__name__} != {type(b).__name__}', math.inf)
 
 
+def differing(a, b):
+    """How many leaves of two values of the same shape differ beyond the tolerance."""
+    if isinstance(a, list) and isinstance(b, list):
+        return sum(differing(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return sum(differing(a[k], b[k]) for k in a)
+    return 1 if differ(a, b) else 0
+
+
 def load_reference(directory, mode='canonical'):
     if mode == 'canonical':
         return load(directory)
@@ -121,12 +130,13 @@ def failures(reference, capture, mode='canonical', measures=None):
             bad = sum(1 for i in range(0, len(a), 4) if any(abs(a[i+c]-b[i+c]) > PIXEL for c in range(4)))
             if bad:
                 out[k] = f'{bad} of {len(a)//4} pixels differ by more than 2/255'
-                measures[k] = {'pixels': bad}
+                measures[k] = {'pixels': bad, 'max_delta': max(abs(x-y) for x, y in zip(a, b))}
             continue
         r = differ(ref[k], cap[k])
         if r:
             out[k] = f'{r[0]}: {r[1]}'
-            measures[k] = {'max_abs': r[2]} if math.isfinite(r[2]) else {'actual': cap[k]}
+            measures[k] = ({'values': differing(ref[k], cap[k]), 'max_abs': r[2]} if math.isfinite(r[2])
+                           else {'actual': cap[k]})
     return out, len(set(ref) | set(cap))
 
 
