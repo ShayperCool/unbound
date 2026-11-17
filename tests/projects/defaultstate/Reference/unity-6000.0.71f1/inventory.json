@@ -3243,6 +3243,12 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Diagnostics.Utils"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.DisallowMultipleComponent"
     },
