@@ -49,6 +49,7 @@ public static class GraphAuthoring
         Meshes();
         MeshOperations();
         DrawnFromMeshes();
+        EventReadings();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -592,6 +593,49 @@ public static class GraphAuthoring
             }
             Save(graph);
         }
+    }
+
+    /// <summary>The graph of the controls of event attributes read in a spawn context (README.md,
+    /// "Event attributes read in a spawn context"): a spawn context whose blocks, in order, are a
+    /// script block reading its event attributes through Get Attribute (Current), blocks setting
+    /// the lifetime (exposed), the colour (from the lifetime as read), the seed and alive
+    /// (exposed), and a second script block reading them again.</summary>
+    static void EventReadings()
+    {
+        var graph = NewGraph("OpsEvent", OperationFolder);
+        var (spawn, _, _, _) = System(graph, 8);
+        ConstantRate(spawn, 1f);
+        VFXSlot Current(string attribute)
+        {
+            var get = Make<VFXAttributeParameter>();
+            get.SetSettingValue("attribute", attribute);
+            get.SetSettingValue("location", VFXAttributeLocation.Current);
+            graph.AddChild(get);
+            return get.outputSlots[0];
+        }
+        void Reads(Type type)
+        {
+            var block = Make<VFXSpawnerCustomWrapper>();
+            block.SetSettingValue("m_customType", new SerializableType(type));
+            spawn.AddChild(block);
+            foreach (var (attribute, input) in new[] { ("lifetime", "f00"), ("color", "v00"), ("seed", "u00"), ("alive", "b00") })
+                Link(Current(attribute), Input(block, input));
+        }
+        void SetFrom(string attribute, VFXSlot from)
+        {
+            var block = Make<VFXSpawnerSetAttribute>();
+            block.SetSettingValue("attribute", attribute);
+            spawn.AddChild(block);
+            Link(from, block.inputSlots[0]);
+        }
+        Reads(typeof(EventReadsFirst));
+        SetFrom("lifetime", Parameter(graph, typeof(float), "L", 2f).outputSlots[0]);
+        SetFrom("color", Current("lifetime"));
+        SetFrom("seed", Parameter(graph, typeof(uint), "S", 5u).outputSlots[0]);
+        SetFrom("alive", Parameter(graph, typeof(bool), "A", true).outputSlots[0]);
+        Reads(typeof(EventReadsSecond));
+        graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
+        Save(graph);
     }
 
     /// <summary>A block that sets an attribute from a curve sampled at a time given.</summary>

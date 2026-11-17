@@ -42,6 +42,8 @@ public class OpsInputs : VFXSpawnerCallbacks
     {
         string name = input.Name;
         if (input.FieldType == typeof(uint)) return values.GetUInt(name).ToString();
+        if (input.FieldType == typeof(float)) return F(values.GetFloat(name));
+        if (input.FieldType == typeof(bool)) return values.GetBool(name) ? "true" : "false";
         if (input.FieldType == typeof(Vector3)) { var v = values.GetVector3(name); return F(v.x) + "," + F(v.y) + "," + F(v.z); }
         if (input.FieldType == typeof(Vector4)) { var q = values.GetVector4(name); return F(q.x) + "," + F(q.y) + "," + F(q.z) + "," + F(q.w); }
         var m = values.GetMatrix4x4(name);
@@ -50,7 +52,8 @@ public class OpsInputs : VFXSpawnerCallbacks
         return string.Join(",", cells);
     }
 
-    static void Write(string what, VFXExpressionValues values, VisualEffect effect, FieldInfo[] inputs)
+    /// <summary>Writes down the inputs as one row named <paramref name="what"/>.</summary>
+    public static void Write(string what, VFXExpressionValues values, VisualEffect effect, FieldInfo[] inputs)
     {
         if (!Logs.TryGetValue(effect.name, out var log)) Logs[effect.name] = log = new List<string>();
         var row = new StringBuilder(what);

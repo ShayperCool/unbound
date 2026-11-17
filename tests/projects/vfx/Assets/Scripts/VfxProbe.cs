@@ -94,6 +94,7 @@ public sealed class VfxProbe : MonoBehaviour
             SpawnerStates(m_Running[0].Effect);
             AffineInverse();
             BeginMeshOperations();
+            m_EventReads = Effect("event reads", "Assets/OpGraphs/OpsEvent.vfx", new Vector3(0f, 10f, 0f));
         }
         catch (Exception e)
         {
@@ -708,6 +709,52 @@ public sealed class VfxProbe : MonoBehaviour
         if (m_VolumeTarget != null) m_VolumeTarget.Release();
     }
 
+    // --------------------------------------------------- event attributes read in a spawn context
+
+    VisualEffect m_EventReads;
+
+    /// <summary>The controls of event attributes read in a spawn context (README.md): from frame
+    /// 3 the exposed lifetime changes; at frame 5 the effect plays again with attributes of its
+    /// own; at frame 6 the seed and alive change; at frame 8 it stops; at frame 10 it plays again
+    /// without attributes. The rows are written at frame 20.</summary>
+    void EventReadFrame()
+    {
+        if (m_EventReads == null) return;
+        var effect = m_EventReads;
+        switch (m_Frame)
+        {
+            case 3:
+                effect.SetFloat("L", 3.5f);
+                break;
+            case 5:
+                var payload = effect.CreateVFXEventAttribute();
+                payload.SetFloat("lifetime", 11f);
+                payload.SetVector3("color", new Vector3(9f, 8f, 7f));
+                payload.SetUint("seed", 77);
+                payload.SetBool("alive", false);
+                effect.SendEvent("OnPlay", payload);
+                break;
+            case 6:
+                effect.SetUInt("S", 12);
+                effect.SetBool("A", false);
+                break;
+            case 8:
+                effect.SendEvent("OnStop");
+                break;
+            case 10:
+                effect.SendEvent("OnPlay");
+                break;
+        }
+        if (m_Frame != 20) return;
+        foreach (var line in OpsInputs.Logs.TryGetValue("event reads", out var log) ? log : new List<string>())
+        {
+            var parts = line.Split(' ');
+            foreach (var part in parts)
+                if (part.Contains("=")) Rec("event reads/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
+        }
+        Rec("event reads/lines", OpsInputs.Logs.TryGetValue("event reads", out var all) ? all.Count : -1);
+    }
+
     // ---------------------------------------------------------------------------- bundle
 
     VisualEffect m_Bundled;
@@ -787,6 +834,7 @@ public sealed class VfxProbe : MonoBehaviour
             OutputEventFrame();
             OperationFrame();
             MeshOperationFrame();
+            EventReadFrame();
             Simulate();
             if (m_Frame < k_LastFrame) return;
         }

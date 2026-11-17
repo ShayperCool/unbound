@@ -40,6 +40,8 @@ own models; its assembly carries the name of one of the package's friend assembl
   (below).
 - `OutEvents` (`Assets/EventGraphs`): the output event controls' graph (below).
 - `OpsValues` (`Assets/OpGraphs`): the operation controls' graph (below).
+- `OpsEvent` (`Assets/OpGraphs`): the graph of the controls of event attributes read in a spawn
+  context (below).
 - `OpsMesh` (`Assets/OpGraphs`), `DrawMesh`, `DrawMeshSurface` (`Assets/DrawGraphs`): the mesh
   controls' graphs (below), over the meshes `MeshMixed` and `MeshWide` the authoring script makes
   in `Assets/Objects`.
@@ -388,6 +390,21 @@ barycentric coordinates, coloured by the mesh's colours sampled there; `mesh loc
 (the particles all at the origin). The programs read the meshes' vertex and index buffers as the
 effects' values hand them over.
 
+## Event attributes read in a spawn context
+
+`OpsEvent`'s spawn context has, in order: a block written as a script (`EventReadsFirst`,
+`Assets/Callbacks/EventReads*.cs`) whose inputs are its event attributes read with Get Attribute
+(Current): the lifetime (`f00`), the colour (`v00`), the seed (`u00`) and alive (`b00`); blocks
+setting the lifetime (the exposed `L`), the colour (from the lifetime as read there), the seed
+(`S`) and alive (`A`); and a second script block (`EventReadsSecond`) with the same inputs.
+`event reads/<block>-<play or update><n>/*` is what each read when the context played and in its
+first twenty updates, counted across plays. At frame 3 `L` changes; at frame 5 the effect plays
+again with attributes of its own (`SendEvent("OnPlay", attributes)`); at frame 6 `S` and `A`
+change; at frame 8 it stops and at frame 10 plays again, both without attributes. A block reads
+what the blocks before it left, in this update or the last; an event's attributes replace the
+spawn context's (one sent without them gives the asset's initial values); when the context
+plays, the inputs hold what was last evaluated (nothing yet at the first play: every bit set).
+
 ## A built asset
 
 The authoring step builds an AssetBundle with the asset of a graph of its own
@@ -415,9 +432,8 @@ controlled by `tests/projects/vfxoutputs`; lit outputs, outputs that draw meshes
 shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU events by
 `tests/projects/vfxevents`. Motion vectors, Shader Graph outputs, bounds computed on the GPU. Expression operations without a control: a matrix's axis
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
-texture's format (no operator makes it), and the ones the runtime does not do yet: an event
-attribute read in a spawn context (it is evaluated per spawn event), noise, and a skinned mesh
-renderer's mesh, vertices and root bone. Not measured of meshes: no mesh, and a mesh without the
+texture's format (no operator makes it), and the ones the runtime does not do yet:
+noise, and a skinned mesh renderer's mesh, vertices and root bone. Not measured of meshes: no mesh, and a mesh without the
 channel a program reads, read by a program (Unbound gives them zeros, as for a mesh without
 read/write access); a copy whose data was given up read by a program (taken to read as
 `MeshLocked`); a mesh without read/write access whose buffers a script gave a target for compute
