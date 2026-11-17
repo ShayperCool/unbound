@@ -7,13 +7,14 @@ using UnityEngine;
 /// <summary>
 /// Reads the render queues of materials of a transparent URP Shader Graph saved with a queue
 /// offset and Auto or User queue control, and one saved with a RenderType override tag and its
-/// DepthOnly pass disabled: their queues, tag and pass states right after <c>Resources.Load</c>
+/// DepthOnly pass disabled, and a URP Lit material saved in that state (a control outside Shader
+/// Graph): their queues, tag and pass states right after <c>Resources.Load</c>
 /// and two frames later, the scene quad's material, and the shader's own queue. Writes values.jsonl into
 /// GRAPH_QUEUE_OUT and exits.
 /// </summary>
 public sealed class GraphQueueProbe : MonoBehaviour
 {
-    static readonly string[] Materials = { "OffsetStored", "OffsetStale", "NoOffsetStale", "UserQueue", "StrayState" };
+    static readonly string[] Materials = { "OffsetStored", "OffsetStale", "NoOffsetStale", "UserQueue", "StrayState", "LitStray" };
 
     readonly StringBuilder m_Out = new StringBuilder();
     static string s_Early = "";

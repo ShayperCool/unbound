@@ -7,7 +7,9 @@ Editor saved each material's queue as its URP editor computed it while the graph
 exist yet (Geometry 2000 plus the material's `_QueueOffset`); `OffsetStored` was then set to 2950
 in its file, the state a material saved in a working project has (Transparent 3000 - 50).
 `StrayState` is `OffsetStored` with a `RenderType` override tag and its `DepthOnly` pass disabled,
-which URP's editor would clear on validation.
+which URP's editor would clear on validation. `LitStray` (written as text, a control outside
+Shader Graph) is that file with URP's Lit shader and a `RenderType` tag of `Stray`: URP's Lit editor
+would make it Opaque at 2000 with its DepthOnly pass on.
 
 `ProbeRunner.Record` imports the graph and the materials again, renders the scene once in Edit
 mode (as an Editor that has drawn its views: the pipeline is made and the quad's shader compiled)
@@ -23,8 +25,13 @@ pipeline exists yet, so URP's Terrain/Lit answers its own queue (Geometry-100, 1
 its Transparent 3000; the scene's material holds 3000 - 50 = 2950. Without the render before Play
 (a capture that enters Play right after the Editor starts) the tag is empty and those queues read
 2000: an Editor that has drawn its views is the case Unbound plays. The materials loaded with
-`Resources.Load` keep their saved queues, tags and passes at load and two frames later; Unbound
-validates every loaded project material (tests/projects/materialvalidation), see `residuals.json`.
+`Resources.Load` keep their saved queues, tags and passes at load and two frames later, the Lit
+control as well: in this windowed Editor with URP active neither URP's Shader Graph editor nor its
+Lit editor validates a material on load (exploratory runs outside the probe found the same for
+the materials loaded afresh after `Resources.UnloadAsset`, and for the Lit material loaded in Edit
+mode). tests/projects/materialvalidation measured the opposite for Standard materials in a
+batch-mode Editor with the built-in pipeline; which of the two conditions decides is not
+measured. Unbound validates every loaded project material, see `residuals.json`.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

@@ -1,5 +1,12 @@
 {
-  "In Play mode the Unity 6000.0.71f1 Editor keeps the saved queue, tag and passes of a material of this Shader Graph that Resources.Load reads (URP's editor does not validate it), while Unbound validates every loaded project material as measured for the Standard editor (tests/projects/materialvalidation); which materials the Editor validates on load is not resolved: follow-up": [
-    "NoOffsetStale.load", "NoOffsetStale.later", "OffsetStale.load", "OffsetStale.later", "StrayState.load", "StrayState.later"
+  "In the windowed Unity 6000.0.71f1 Editor with URP active, a material that Resources.Load reads in Play mode keeps its saved queue, tag and passes, for this Shader Graph and for URP's Lit shader alike (neither URP editor validates it on load), while Unbound validates every loaded project material as measured for the Standard editor in a batch-mode built-in-pipeline Editor (tests/projects/materialvalidation); whether the Editor mode or the pipeline decides is not measured: follow-up": [
+    "NoOffsetStale.load",
+    "NoOffsetStale.later",
+    "OffsetStale.load",
+    "OffsetStale.later",
+    "StrayState.load",
+    "StrayState.later",
+    "LitStray.load",
+    "LitStray.later"
   ]
 }
