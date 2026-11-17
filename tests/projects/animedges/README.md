@@ -10,8 +10,9 @@ records, in Play mode:
   playing it through a controller (`Animator.Update`), by a manually evaluated
   AnimationClipPlayable, and as the curves themselves (`AnimationCurve.Evaluate`).
 * `curvetime.*`: `AnimationCurve.Evaluate` at NaN, ±Infinity and ±`float.MaxValue` for stepped,
-  smooth, linear, one-key and empty curves and for looping and ping-pong wrap modes on both sides or
-  on one, each time on a new curve. Evaluating one curve at these times in turn can give other
+  smooth, linear, one-key and empty curves, for looping and ping-pong wrap modes on both sides or on
+  one (a stepped curve among them), and for two keys at one time clamped, looping and ping-ponging,
+  each time on a new curve. Evaluating one curve at these times in turn can give other
   answers in the Editor (seen once: −MaxValue NaN after other extreme times, the first key on a new
   curve); that history is not covered.
 * `entry.*`: script-playable graphs created and played before the first scene loads, in game time
@@ -41,7 +42,9 @@ What the Editor does (measured):
 - A time that is no number reads NaN on a curve with two keys or more (one key: its value; no key:
   0). A clamped side holds its end key's value for every finite time (±MaxValue included) and
   reads NaN at an infinite time; a looping side reads NaN there; a side that ping-pongs reads the
-  last key's value at an infinite time, before the keys too. Games reach these times by dividing by
+  last key's value at an infinite time, before the keys too. With all keys at one time, a side that
+  ping-pongs reads the last key's value at every time outside them, a looping side the first key's
+  value after them and NaN before them, a clamped side its end keys. Games reach these times by dividing by
   a zero `Screen.dpi` (the Editor answers 0 on displays without a physical size).
 - Graphs playing at Play entry, in game and in unscaled time, take a zero interval in the first
   frame's update (time 0), then advance.

@@ -28,6 +28,10 @@
 {"k":"curvetime.pingPongBefore","v":{"NaN":"NaN","+Infinity":"NaN","-Infinity":5,"+Max":5,"-Max":7}}
 {"k":"curvetime.pingPongAfter","v":{"NaN":"NaN","+Infinity":5,"-Infinity":"NaN","+Max":7,"-Max":7}}
 {"k":"curvetime.pingPongStepped","v":{"NaN":"NaN","+Infinity":5,"-Infinity":5,"+Max":7,"-Max":7}}
+{"k":"curvetime.loopStepped","v":{"NaN":"NaN","+Infinity":"NaN","-Infinity":"NaN","+Max":7,"-Max":7}}
+{"k":"curvetime.oneTimeClamp","v":{"NaN":"NaN","+Infinity":"NaN","-Infinity":"NaN","+Max":5,"-Max":2}}
+{"k":"curvetime.oneTimeLoop","v":{"NaN":"NaN","+Infinity":"NaN","-Infinity":"NaN","+Max":2,"-Max":"NaN"}}
+{"k":"curvetime.oneTimePingPong","v":{"NaN":"NaN","+Infinity":5,"-Infinity":5,"+Max":5,"-Max":5}}
 {"k":"play.manual.0","v":{"x":10,"B":true,"t":0}}
 {"k":"play.manual.1","v":{"x":10.1,"B":true,"t":0.1}}
 {"k":"play.manualTime.0","v":{"x":10.5,"B":true,"t":0.5}}

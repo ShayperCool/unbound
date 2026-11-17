@@ -96,6 +96,18 @@ namespace Unbound.Tests
             Assert.Equal(5f, bounce.Evaluate(float.NegativeInfinity));
             Assert.True(float.IsNaN(bounce.Evaluate(float.PositiveInfinity)));
             Assert.Equal(7f, bounce.Evaluate(-float.MaxValue));
+            // A looping stepped curve at an infinite time: NaN, not the held key.
+            var steppedLoop = new AnimationCurve(new Keyframe(1f, 7f, 0f, float.PositiveInfinity), new Keyframe(2f, 2f, float.PositiveInfinity, 0f),
+                new Keyframe(4f, 5f)) { preWrapMode = WrapMode.Loop, postWrapMode = WrapMode.Loop };
+            Assert.True(float.IsNaN(steppedLoop.Evaluate(float.PositiveInfinity)));
+            Assert.True(float.IsNaN(steppedLoop.Evaluate(float.NegativeInfinity)));
+            // Keys all at one time: ping-pong reads the last key outside them; a loop the first key
+            // after them and NaN before them; a clamp its end keys.
+            AnimationCurve OneTime(WrapMode mode) => new AnimationCurve(new Keyframe(1f, 2f), new Keyframe(1f, 5f)) { preWrapMode = mode, postWrapMode = mode };
+            Assert.Equal((5f, 5f), (OneTime(WrapMode.PingPong).Evaluate(-3f), OneTime(WrapMode.PingPong).Evaluate(9f)));
+            Assert.Equal(2f, OneTime(WrapMode.Loop).Evaluate(9f));
+            Assert.True(float.IsNaN(OneTime(WrapMode.Loop).Evaluate(-3f)));
+            Assert.Equal((2f, 5f), (OneTime(WrapMode.ClampForever).Evaluate(-3f), OneTime(WrapMode.ClampForever).Evaluate(9f)));
         }
 
         [Fact]

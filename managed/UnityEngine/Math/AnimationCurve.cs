@@ -383,23 +383,11 @@ namespace UnityEngine
             float last = m_Keys[count - 1].time;
             float duration = last - first;
 
-            // An infinite time on a side that ping-pongs reads the last key's value, before the
-            // keys too; a clamped side holds its end key's value for any finite time beyond it and
-            // reads NaN at an infinite time; a looping side reads NaN there (animedges
-            // curvetime.*: -float.MaxValue reads the first key, -Infinity NaN).
-            if (time < first)
+            if (time < first || time > last)
             {
-                if (m_PreWrapMode == WrapMode.PingPong && float.IsInfinity(time))
-                    return m_Keys[count - 1].value;
-                if (!WrapTime(ref time, m_PreWrapMode, first, duration))
-                    return float.IsInfinity(time) ? float.NaN : m_Keys[0].value;
-            }
-            else if (time > last)
-            {
-                if (m_PostWrapMode == WrapMode.PingPong && float.IsInfinity(time))
-                    return m_Keys[count - 1].value;
-                if (!WrapTime(ref time, m_PostWrapMode, first, duration))
-                    return float.IsInfinity(time) ? float.NaN : m_Keys[count - 1].value;
+                bool before = time < first;
+                if (!OutsideKeys(ref time, before ? m_PreWrapMode : m_PostWrapMode, before, first, duration, out float held))
+                    return held;
             }
 
             // Last segment whose start key is at or before time.
@@ -415,6 +403,37 @@ namespace UnityEngine
             if (time >= last)
                 return m_Keys[count - 1].value;
             return EvaluateSegment(m_Keys[lo], m_Keys[lo + 1], time);
+        }
+
+        /// <summary>
+        /// A time before (<paramref name="before"/>) or after the keys, by the side's wrap mode:
+        /// true with <paramref name="time"/> wrapped into the keys, or false with the answer in
+        /// <paramref name="held"/>. A clamped side holds its end key's value for every finite time
+        /// and reads NaN at an infinite one. Where the wrap gives no number (an infinite time, or
+        /// keys all at one time): a side that ping-pongs reads the last key's value, a looping side
+        /// NaN, except that after keys all at one time it reads the first key's value. Matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/animedges curvetime.*.
+        /// </summary>
+        private bool OutsideKeys(ref float time, WrapMode mode, bool before, float first, float duration, out float held)
+        {
+            int count = m_Keys.Count;
+            held = 0f;
+            bool noWrap = float.IsInfinity(time) || !(duration > 0f);
+            switch (mode)
+            {
+                case WrapMode.PingPong when noWrap:
+                    held = m_Keys[count - 1].value;
+                    return false;
+                case WrapMode.Loop when noWrap:
+                    held = !before && !float.IsInfinity(time) ? m_Keys[0].value : float.NaN;
+                    return false;
+                case WrapMode.Loop:
+                case WrapMode.PingPong:
+                    return WrapTime(ref time, mode, first, duration);
+                default:
+                    held = float.IsInfinity(time) ? float.NaN : before ? m_Keys[0].value : m_Keys[count - 1].value;
+                    return false;
+            }
         }
 
         // Returns false when the mode clamps (the caller uses the end key's value).

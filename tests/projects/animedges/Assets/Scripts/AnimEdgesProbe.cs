@@ -159,6 +159,11 @@ public class AnimEdgesProbe : MonoBehaviour
             ("pingPongAfter", () => wrapped(three(), Clamp, WrapMode.PingPong)),
             ("pingPongStepped", () => wrapped(new[] { new Keyframe(1f, 7f, 0f, float.PositiveInfinity), new Keyframe(2f, 2f, float.PositiveInfinity, 0f),
                 new Keyframe(4f, 5f) }, WrapMode.PingPong, WrapMode.PingPong)),
+            ("loopStepped", () => wrapped(new[] { new Keyframe(1f, 7f, 0f, float.PositiveInfinity), new Keyframe(2f, 2f, float.PositiveInfinity, 0f),
+                new Keyframe(4f, 5f) }, WrapMode.Loop, WrapMode.Loop)),
+            ("oneTimeClamp", () => new AnimationCurve(new Keyframe(1f, 2f), new Keyframe(1f, 5f))),
+            ("oneTimeLoop", () => wrapped(new[] { new Keyframe(1f, 2f), new Keyframe(1f, 5f) }, WrapMode.Loop, WrapMode.Loop)),
+            ("oneTimePingPong", () => wrapped(new[] { new Keyframe(1f, 2f), new Keyframe(1f, 5f) }, WrapMode.PingPong, WrapMode.PingPong)),
         };
         var times = new (string Name, float Time)[]
         {
