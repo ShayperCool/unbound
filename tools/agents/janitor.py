@@ -50,8 +50,9 @@ SERVICE_SCAN_SECONDS = 2700
 SERVICE_RUN_SECONDS = 3000
 # Links found by a walk protect removals for this long; the walk is repeated after it.
 LINK_SNAPSHOT_SECONDS = 900
-# The runtime collector (a few seconds) runs with a walk at most this old.
-RUNTIME_WALK_SECONDS = 300
+# The runtime collector (seconds) runs on the walk taken before it, walked again first when older
+# than this, so that it stays within LINK_SNAPSHOT_SECONDS without walking under its lock.
+RUNTIME_WALK_SECONDS = 600
 # Reading every live process's paths takes 4-8 s on the loaded machine; removals reuse one
 # reading for at most this long (every candidate is idle for a day or more).
 PROCESS_GUARD_SECONDS = 60
@@ -361,14 +362,15 @@ def link_target(path):
 
 
 def current_entries(directory):
-    """A directory's links and subdirectories as listed now, outside the index (it is changing)."""
+    """A directory's links and subdirectories as listed now, outside the index (it is changing);
+    None when it is gone."""
     try:
         with os.scandir(directory) as entries:
             return [Entry(directory, entry.name, 'link' if entry.is_symlink() else 'dir') for entry in entries
                     if entry.is_symlink() or entry.is_dir(follow_symlinks=False)]
     except OSError as error:
         if gone(error):
-            return []
+            return None
         raise
 
 
@@ -462,6 +464,9 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                         entries = index.entries(directory, info)
                     except DirectoryChanged:
                         entries = current_entries(directory)
+                        if entries is None:
+                            vanished(directory)
+                            continue
                         changed.add(directory)
                     except OSError as error:
                         if not gone(error):
@@ -482,10 +487,11 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             for directory in recheck:
                 if any(inside(directory, path) for path in excluded):
                     continue
-                if not os.path.lexists(directory):
-                    vanished(directory)
-                    continue
-                listed.append(current_entries(directory))
+                entries = current_entries(directory)
+                if entries is None:
+                    vanished(directory)  # renamed or removed since: look higher up
+                else:
+                    listed.append(entries)
             follow(listed)
         if prune:
             index.finish()

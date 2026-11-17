@@ -393,6 +393,34 @@ class JanitorTests(unittest.TestCase):
         self.assertTrue(old.is_dir())
         self.assertEqual(self.rows('links')[0]['unsettled'], 0)
 
+    def test_a_changing_folder_renamed_before_its_recheck_is_walked_under_its_new_name(self):
+        # 02 changes while it is listed (listed directly, looked at again later); a link appears in
+        # it right after that listing and it is renamed before the recheck reaches it.
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        holder = self.directory('holder')
+        (holder/'02').mkdir()
+        original_entries, original_listing = run_cache_index.DirectoryIndex.entries, janitor.current_entries
+        def changing(index, path, info):
+            if path == str(holder/'02'):
+                raise run_cache_index.DirectoryChanged(f'run-cache directory changed during indexing: {path}')
+            return original_entries(index, path, info)
+        renamed = []
+        def listing(directory):
+            entries = original_listing(directory)
+            if directory == str(holder/'02') and not renamed:
+                (holder/'02/late').mkdir()
+                (holder/'02/late/link').symlink_to(old/'output')
+                (holder/'02').rename(holder/'03')
+                renamed.append(True)
+            return entries
+        with patch.object(run_cache_index.DirectoryIndex, 'entries', changing), \
+             patch.object(janitor, 'current_entries', side_effect=listing), \
+             patch.object(janitor, 'RECHECK_ROUNDS', 2):
+            self.collect_applied()
+        self.assertTrue(renamed)
+        self.assertTrue(old.is_dir())
+        self.assertEqual(self.rows('links')[0]['unsettled'], 0)
+
     def test_a_link_in_a_directory_changing_while_listed_still_protects(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])
         holder = self.directory('holder')
