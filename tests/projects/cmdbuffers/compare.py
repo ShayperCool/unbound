@@ -4,22 +4,11 @@
     compare.py REFERENCE.jsonl ACTUAL.jsonl
 
 Every value compares exactly over the union of keys (buffer words, readback bytes as hex,
-descriptors, exceptions, log messages); Mono's argument exception messages are compared in
-CoreCLR's wording. Every missing, extra and failing value is printed; the exit status is nonzero
-when anything differs.
+descriptors, exceptions, log messages). Every missing, extra and failing value is printed; the
+exit status is nonzero when anything differs.
 """
 import json
-import re
 import sys
-
-
-def normalize(value):
-    """Mono's "message\\nParameter name: x" as CoreCLR's "message (Parameter 'x')"."""
-    if isinstance(value, str):
-        return re.sub(r"\nParameter name: (.*)$", r" (Parameter '\1')", value)
-    if isinstance(value, list):
-        return [normalize(v) for v in value]
-    return value
 
 
 def rows(path):
@@ -29,7 +18,7 @@ def rows(path):
             row = json.loads(line)
             if row['k'] in result:
                 raise SystemExit(f'{path}: duplicate key {row["k"]}')
-            result[row['k']] = normalize(row['v'])
+            result[row['k']] = row['v']
     return result
 
 

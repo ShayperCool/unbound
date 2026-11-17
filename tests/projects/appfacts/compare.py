@@ -22,7 +22,6 @@ import json
 import os
 from pathlib import Path
 import platform
-import re
 import sys
 import xml.etree.ElementTree as ElementTree
 

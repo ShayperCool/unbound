@@ -6,18 +6,11 @@
 Keys in EXPECTED differ by design and are listed apart.
 """
 import json
-import re
 import sys
 
 EXPECTED = {
 }
 
-
-def normalize(value):
-    """.NET runtime, not engine: CoreCLR words ArgumentException's parameter differently from Mono."""
-    if isinstance(value, str):
-        return re.sub(r" \(Parameter '([^']*)'\)", r"\nParameter name: \1", value)
-    return value
 
 EXPECTED_EXTRA = set()
 
@@ -30,8 +23,8 @@ def main():
         if key not in actual:
             missing.append(key)
             continue
-        got = normalize(actual[key])
-        if got == normalize(want):
+        got = actual[key]
+        if got == want:
             continue
         (expected if key in EXPECTED else differences).append((key, want, got))
     extra = [k for k in actual if k not in reference and k not in EXPECTED_EXTRA]

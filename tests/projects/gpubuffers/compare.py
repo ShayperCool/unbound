@@ -5,8 +5,7 @@
 
 REFERENCE and ACTUAL are capture directories (values.jsonl, timing.jsonl). Every value compares
 exactly over the union of keys (buffer words, readback bytes as hex, exceptions, log messages,
-event sequences with the request's frame told from later ones); Mono's
-argument exception messages are compared in CoreCLR's wording (see normalize). timing.jsonl holds each readback's
+event sequences with the request's frame told from later ones). timing.jsonl holds each readback's
 events with their exact frames; the reference lists every sequence the Editor captures observed.
 When a request completes depends on the GPU (the same request completed one frame after it was
 made in one capture and two in another), so an actual sequence passes when it has the events of
@@ -21,18 +20,6 @@ from pathlib import Path
 import sys
 
 
-def normalize(value):
-    """Mono's argument exception messages ("message\\nParameter name: x") as CoreCLR writes them
-    ("message (Parameter 'x')"), as tests/projects/jobs compares them."""
-    if isinstance(value, str):
-        return re.sub(r"\nParameter name: (.*)$", r" (Parameter '\1')", value)
-    if isinstance(value, list):
-        return [normalize(v) for v in value]
-    if isinstance(value, dict):
-        return {k: normalize(v) for k, v in value.items()}
-    return value
-
-
 def rows(path):
     result = {}
     for line in path.read_text().splitlines():
@@ -40,7 +27,7 @@ def rows(path):
             row = json.loads(line)
             if row['k'] in result:
                 raise SystemExit(f'{path}: duplicate key {row["k"]}')
-            result[row['k']] = normalize(row['v'])
+            result[row['k']] = row['v']
     return result
 
 

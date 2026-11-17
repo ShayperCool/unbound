@@ -46,10 +46,6 @@ class ContractComparisonTests(unittest.TestCase):
         second = ['r0:returned', 'a2:main:d-', 'c2:main:d-']
         self.assertFalse(any(run.differences({}, {}, {'k': [first, second]}, {'k': second}).values()))
 
-    def test_argument_wording_uses_existing_normalizer_only(self):
-        self.assertEqual(run.compare.normalize('bad\nParameter name: buffer'), "bad (Parameter 'buffer')")
-        self.assertNotEqual(run.compare.normalize('InvalidOperationException: failed'), 'request')
-
 
 class CaptureValidationTests(unittest.TestCase):
     def setUp(self):

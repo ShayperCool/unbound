@@ -10,23 +10,15 @@ extra and differing value is listed; the exit code is the number of failing keys
 With --residuals (tests/residuals.py) the exit code is 0 when every differing key is listed there
 within its bounds (the tokens that differ by at most 1e-6: "rounding_tokens", how many, and
 "max_abs", their largest difference; every other differing token exactly, "pinned"), 1 otherwise.
-.NET's "(Parameter 'x')" exception suffix is compared in Mono's form ("Parameter name: x").
 """
 import argparse
 import json
 from pathlib import Path
-import re
 import struct
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import residuals as residual_lists  # noqa: E402
-
-
-def mono_message(value):
-    """.NET's argument exception suffix in Mono's form (the probe joins lines with spaces):
-    the class libraries differ, not the engine."""
-    return re.sub(r" \(Parameter '([^']*)'\)", r" Parameter name: \1", value)
 
 
 def load(path):
@@ -40,7 +32,7 @@ def load(path):
                 while key in out:
                     key = f"{entry['key']} #{n}"
                     n += 1
-                out[key] = mono_message(entry['value'])
+                out[key] = entry['value']
     return out
 
 

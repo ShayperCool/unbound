@@ -11,20 +11,10 @@ cause and follow-up: those are printed with their reason, and printed as resolve
 """
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
 RESIDUALS = Path(__file__).resolve().parent/'residuals.json'
-
-
-def normalize(value):
-    """Mono's "message\\nParameter name: x" as CoreCLR's "message (Parameter 'x')"."""
-    if isinstance(value, str):
-        return re.sub(r"\nParameter name: (.*)$", r" (Parameter '\1')", value)
-    if isinstance(value, list):
-        return [normalize(v) for v in value]
-    return value
 
 
 def rows(path):
@@ -34,7 +24,7 @@ def rows(path):
             row = json.loads(line)
             if row['k'] in result:
                 raise SystemExit(f'{path}: duplicate key {row["k"]}')
-            result[row['k']] = normalize(row['v'])
+            result[row['k']] = row['v']
     return result
 
 

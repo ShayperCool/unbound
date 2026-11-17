@@ -4,12 +4,10 @@
 usage: compare.py REFERENCE.json CANDIDATE.json [--scenario PREFIX] [--details N]
 
 Exception messages are compared after normalizing what the .NET runtime itself formats
-differently from Mono (not the engine): ArgumentException's parameter name suffix and the
-NullReferenceException text. Values that differ because of the runtime, not the engine, are
+differently from Mono (not the engine): the NullReferenceException text. Values that differ because of the runtime, not the engine, are
 listed in RUNTIME_DIFFERENCES and reported apart.
 """
 import json
-import re
 import sys
 
 
@@ -29,8 +27,6 @@ RUNTIME_DIFFERENCES = {
 def normalize(value):
     if not isinstance(value, str):
         return value
-    # Mono: "message\nParameter name: x"; CoreCLR: "message (Parameter 'x')".
-    value = re.sub(r"\nParameter name: (\w+)", r" (Parameter '\1')", value)
     value = value.replace("Object reference not set to an instance of an object.", "Object reference not set to an instance of an object")
     return value
 
