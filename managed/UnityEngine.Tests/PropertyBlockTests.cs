@@ -218,6 +218,24 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>The drawn copy made again in place takes the material's arrays again, filled
+        /// into the arrays it has, and stays independent of the material.</summary>
+        [Fact]
+        public void TheDrawnCopyFollowsTheMaterialsArrays()
+        {
+            var (go, renderer, material) = Make(Color.red);
+            material.SetFloatArray("_Weights", new[] { 1f, 2f });
+            renderer.SetPropertyBlock(Block(Color.green));
+            var drawn = renderer.DrawnMaterial(0, material);
+            Assert.Equal(new[] { 1f, 2f }, drawn.GetFloatArray("_Weights"));
+            material.SetFloatArray("_Weights", new[] { 3f, 4f });
+            Assert.Same(drawn, renderer.DrawnMaterial(0, material));
+            Assert.Equal(new[] { 3f, 4f }, drawn.GetFloatArray("_Weights"));
+            drawn.SetFloatArray("_Weights", new[] { 5f, 6f });
+            Assert.Equal(new[] { 3f, 4f }, material.GetFloatArray("_Weights"));
+            Object.DestroyImmediate(go);
+        }
+
         /// <summary>Terrain.SetSplatMaterialPropertyBlock copies the block as SetPropertyBlock does
         /// (tests/projects/propertyblocks `edited.get.terrain`).</summary>
         [Fact]
