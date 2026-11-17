@@ -345,8 +345,8 @@ namespace Unbound.Runtime
         internal static uint s_Warned;
 
         // Unsupported parts of draw commands (bits of s_Warned).
-        const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2, UnsupportedLightmap = 3,
-            UnsupportedCrossFadeKeyword = 4, UnsupportedMissingArrays = 5, UnsupportedSortingPosition = 6, UnsupportedSplit = 7;
+        const int UnsupportedIndirectTopology = 0, UnsupportedProcedural = 1, UnsupportedProceduralIndirect = 2,
+            UnsupportedCrossFadeKeyword = 3, UnsupportedMissingArrays = 4, UnsupportedSortingPosition = 5, UnsupportedSplit = 6;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -357,7 +357,6 @@ namespace Unbound.Runtime
             "BatchRendererGroup indirect draw commands of a topology other than triangles are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural draw commands are not supported yet; they are not drawn.",
             "BatchRendererGroup procedural indirect draw commands are not supported yet; they are not drawn.",
-            "BatchRendererGroup draw commands flagged IsLightMapped without UseLegacyLightmapsKeyword (lightmap texture arrays) draw without their lightmaps; the legacy lightmaps keyword's commands draw with the lightmap of their lightmapIndex.",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
             "a BatchRendererGroup culling callback gave draw commands or visible instances without allocating their arrays; its output is not drawn.",
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
@@ -573,11 +572,13 @@ namespace Unbound.Runtime
             bool lit = main != null && (main.cullingMask & (1 << filter.layer)) != 0;
             var flags = (uint)commandFlags;
             // The legacy lightmaps keyword's commands (URP's GPU Resident Drawer sets it on every
-            // command) sample the scene lightmap of their index; commands flagged IsLightMapped
-            // alone are for lightmap texture arrays, which are not supported.
+            // command) sample the scene lightmap of their index. Without it a command's lightmaps
+            // are texture arrays its material carries with LIGHTMAP_ON, as Entities Graphics
+            // makes them: the material's keywords and textures and the instances'
+            // unity_LightmapIndex and unity_LightmapST draw them, the IsLightMapped flag or not
+            // (tests/projects/brg lightmap_arrays).
             bool legacy = (commandFlags & BatchDrawCommandFlags.UseLegacyLightmapsKeyword) != 0;
             int lightmap = legacy && BakedLighting.IsLightmapIndex(lightmapIndex) ? lightmapIndex : -1;
-            if ((commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0 && !legacy) WarnOnce(UnsupportedLightmap);
             bool lightmapped = lightmap >= 0 || (commandFlags & BatchDrawCommandFlags.IsLightMapped) != 0;
             if ((commandFlags & BatchDrawCommandFlags.LODCrossFadeKeyword) == BatchDrawCommandFlags.LODCrossFadeKeyword) WarnOnce(UnsupportedCrossFadeKeyword);
             var bounds = mesh.bounds;

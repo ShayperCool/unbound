@@ -72,6 +72,16 @@ view type how many callbacks ran. Scenarios:
   at 1/20 of the shadow distance, so the shadows fall in the second cascade: only masks 2 and 3
   cast. URP makes one shadow list per cascade from the same settings, whose split index is
   unset (-1), so the light's lists take its splits in the order they are made.
+- `lightmap_arrays`: lightmap texture arrays as Entities Graphics draws them: eight white Lit cubes
+  in a row above the scene's sphere, each its own command over a batch that adds per-instance
+  `unity_LightmapST` and `unity_LightmapIndex`. Their materials are copies of Lit carrying
+  `unity_Lightmaps`, `unity_LightmapsInd` and `unity_ShadowMasks` (2x2 RGBAHalf arrays of three
+  slices, a colour per slice and texel), with LIGHTMAP_ON, without it, or with LIGHTMAP_ON and
+  DIRLIGHTMAP_COMBINED. A zero lightmap scale samples the texel the offset names; the last cube's
+  scale reads its lightmap UVs. Cubes 3 and 6 are not flagged IsLightMapped, cubes 4 and 6 have
+  no LIGHTMAP_ON. `lightmap_arrays.c<i>.body`: each cube's colour at its centre. The Editor lights
+  cube 3 (keyword, no flag) from its slice and cube 4 (flag, no keyword) like cube 6, by the
+  ambient probe: the material's keyword decides, not the flag.
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 

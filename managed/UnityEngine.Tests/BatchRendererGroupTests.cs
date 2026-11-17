@@ -500,10 +500,10 @@ namespace UnityEngine.Tests
             Assert.Equal(0u, Assert.Single(Collect(Cull(), all, sun)).Dots.Value.Header.Flags);
         }
 
-        /// <summary>What is not drawn as Unity draws it is said once: a command flagged
-        /// IsLightMapped alone (lightmap texture arrays) draws without its lightmap, a cross-fade
-        /// keyword command without the keyword, and an output
-        /// that counts commands it did not allocate is not drawn at all.</summary>
+        /// <summary>What is not drawn as Unity draws it is said once: a cross-fade keyword command
+        /// draws without the keyword, and an output that counts commands it did not allocate is
+        /// not drawn at all. IsLightMapped (lightmap texture arrays its material carries) is drawn
+        /// as the Editor draws it, without a warning.</summary>
         [Fact]
         public void UnsupportedCommandPartsAreWarnedOnce()
         {
@@ -536,8 +536,11 @@ namespace UnityEngine.Tests
             {
                 Assert.Single(Collect(Cull(), all));
                 Assert.Single(Collect(Cull(), all));
-                Assert.Equal(1, logged.FindAll(m => m.Contains("IsLightMapped")).Count);
+                Assert.Empty(logged.FindAll(m => m.Contains("IsLightMapped")));
                 Assert.Equal(1, logged.FindAll(m => m.Contains("LODCrossFadeKeyword")).Count);
+                // The cross-fade keyword is the only part warned about.
+                Assert.Single(logged);
+                Assert.Equal(1, System.Numerics.BitOperations.PopCount(BatchCulling.s_Warned));
                 mode = 1;
                 Assert.Empty(Collect(Cull(), all));
                 Assert.Contains(logged, m => m.Contains("without allocating"));
@@ -552,7 +555,9 @@ namespace UnityEngine.Tests
         /// <summary>A command with the legacy lightmaps keyword draws with the scene lightmap of its
         /// index (URP's GPU Resident Drawer: tests/projects/residentdrawer lightmaps); without the
         /// keyword, or with an index that names no lightmap (0xFFFE: influences lightmaps only;
-        /// 0xFFFF: none), it draws without one, and IsLightMapped alone is warned about once.</summary>
+        /// 0xFFFF: none), it draws without one, as does IsLightMapped alone, whose lightmaps are
+        /// texture arrays its material carries (tests/projects/brg lightmap_arrays), without a
+        /// warning.</summary>
         [Fact]
         public void LegacyLightmapCommandsDrawWithTheirIndexsLightmap()
         {
@@ -585,7 +590,8 @@ namespace UnityEngine.Tests
             {
                 for (current = 0; current < cases.Length; current++)
                     Assert.Equal(cases[current].Expected, Assert.Single(Collect(Cull(), all)).Lighting.LightmapIndex);
-                Assert.Equal(1, logged.FindAll(m => m.Contains("IsLightMapped")).Count);
+                Assert.Empty(logged);
+                Assert.Equal(0u, BatchCulling.s_Warned);
             }
             finally
             {
