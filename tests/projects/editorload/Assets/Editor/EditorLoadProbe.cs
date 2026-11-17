@@ -193,6 +193,11 @@ public static class EditorLoadProbe
         Try("tools.current_view.state", ToolsNow);
         Do("tools.current_none", () => Tools.current = Tool.None);
         Try("tools.current_none.state", ToolsNow);
+        foreach (var other in new[] { Tool.Scale, Tool.Rect, Tool.Transform, Tool.Custom })
+        {
+            Do("tools.current_" + other, () => Tools.current = other);
+            Try("tools.current_" + other + ".state", ToolsNow);
+        }
         Do("tools.current_back", () => Tools.current = tool);
         Try("tools.end", ToolsNow);
     }
