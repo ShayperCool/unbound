@@ -142,11 +142,20 @@ namespace UnityEngine.Rendering
 
         public string name { get => m_Name; set => m_Name = value ?? ""; }
 
-        public int sizeInBytes => m_Commands.Count * 64;
+        // The commands' encoded size: each command starts on a 4-byte boundary and takes the size
+        // the Editor gives that kind of command; a kind not measured counts 64 bytes (measured:
+        // tests/projects/runtimeapis size.*).
+        int m_Size;
+        const int UnmeasuredCommandSize = 64;
+
+        public int sizeInBytes => m_Size;
+
+        void Grow(int size) => m_Size = ((m_Size + 3) & ~3) + size;
 
         public void Clear()
         {
             m_Commands.Clear();
+            m_Size = 0;
             m_ColorClears = m_OtherClears = m_GlobalFloats = 0;
             ReleaseOwnedArrays();
         }
@@ -155,11 +164,15 @@ namespace UnityEngine.Rendering
 
         public void Release() => Dispose();
 
-        void Add(Action<Context> command) => m_Commands.Add(command);
+        void Add(Action<Context> command, int size = UnmeasuredCommandSize)
+        {
+            m_Commands.Add(command);
+            Grow(size);
+        }
 
         /// <summary>Records a command that does nothing on this device (it still takes space in the
         /// buffer).</summary>
-        internal void AddWithoutEffect() => m_Commands.Add(s_WithoutEffect);
+        internal void AddWithoutEffect(int size) => Add(s_WithoutEffect, size);
         static readonly Action<Context> s_WithoutEffect = _ => { };
 
         /// <summary>Runs the commands now (Graphics.ExecuteCommandBuffer): temporaries it does not
@@ -272,7 +285,7 @@ namespace UnityEngine.Rendering
             ulong handle = TextureHandles.Of(color);
             RenderTexture.SetActiveQuietly(color as RenderTexture);
             GfxStream.SetTarget(handle, 0, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(color));
-        });
+        }, 36);
 
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth)
         {
@@ -345,7 +358,7 @@ namespace UnityEngine.Rendering
                     | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
                     | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
                 if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
-            });
+            }, 148);
         }
 
         public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth = 1f, [Internal.DefaultValue("0")] uint stencil = 0U)
@@ -369,13 +382,13 @@ namespace UnityEngine.Rendering
             });
         }
 
-        public void SetViewport(Rect pixelRect) => Add(c => GfxStream.Viewport(pixelRect));
+        public void SetViewport(Rect pixelRect) => Add(c => GfxStream.Viewport(pixelRect), 20);
 
-        public void EnableScissorRect(Rect scissor) => Add(c => GfxStream.Scissor(scissor));
+        public void EnableScissorRect(Rect scissor) => Add(c => GfxStream.Scissor(scissor), 20);
 
-        public void DisableScissorRect() => Add(c => GfxStream.Scissor(null));
+        public void DisableScissorRect() => Add(c => GfxStream.Scissor(null), 4);
 
-        public void SetViewProjectionMatrices(Matrix4x4 view, Matrix4x4 proj) => Add(c => GfxStream.Camera(view, proj, GfxStream.Current.Flags));
+        public void SetViewProjectionMatrices(Matrix4x4 view, Matrix4x4 proj) => Add(c => GfxStream.Camera(view, proj, GfxStream.Current.Flags), 136);
         public void SetViewMatrix(Matrix4x4 view) => Add(c => GfxStream.Camera(view, GfxStream.Current.Projection, GfxStream.Current.Flags));
         public void SetProjectionMatrix(Matrix4x4 proj) => Add(c => GfxStream.Camera(GfxStream.Current.View, proj, GfxStream.Current.Flags));
 
@@ -392,7 +405,7 @@ namespace UnityEngine.Rendering
             rt.filterMode = filter;
             NamedTemporaries[nameID] = rt;
             Shader.SetGlobalTexture(nameID, rt);
-        });
+        }, 68);
 
         public void GetTemporaryRT(int nameID, RenderTextureDescriptor desc) => GetTemporaryRT(nameID, desc, FilterMode.Point);
 
@@ -499,7 +512,7 @@ namespace UnityEngine.Rendering
                 RenderTexture.ReleaseTemporary(rt);
                 NamedTemporaries.Remove(nameID);
             }
-        });
+        }, 8);
 
         // ------------------------------------------------------------ drawing
 
@@ -513,7 +526,7 @@ namespace UnityEngine.Rendering
                 ulong meshHandle = mesh.Sync();
                 ulong materialHandle = material.Sync();
                 GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values, rawWinding: Unbound.Runtime.Compat.ImmediateMeshKeepsWinding);
-            });
+            }, 84);
         }
 
         /// <summary>The first <paramref name="count"/> meshes, each with its matrix and submesh, in one
@@ -609,7 +622,7 @@ namespace UnityEngine.Rendering
             }
             Immediate.BlitWith(TextureHandles.Of(target), mat ?? Immediate.BlitCopy, pass, properties, destSlice);
             RenderTexture.SetActiveQuietly(target as RenderTexture);
-        });
+        }, 60);
 
         public void Blit(Texture source, RenderTargetIdentifier dest) => BlitCommand(null, source, dest, null, -1, Vector2.one, Vector2.zero);
         public void Blit(Texture source, RenderTargetIdentifier dest, Vector2 scale, Vector2 offset) => BlitCommand(null, source, dest, null, -1, scale, offset);
@@ -659,7 +672,7 @@ namespace UnityEngine.Rendering
             }
             ulong source = TextureHandles.Of(sourceTexture), destination = TextureHandles.Of(destinationTexture);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
-        });
+        }, 72);
 
         public void ConvertTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => ConvertTexture(src, 0, dst, 0);
         public void ConvertTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) =>
@@ -935,35 +948,35 @@ namespace UnityEngine.Rendering
         public void SetGlobalFloat(int nameID, float value)
         {
             m_GlobalFloats++;
-            Add(c => Shader.SetGlobalFloat(nameID, value));
+            Add(c => Shader.SetGlobalFloat(nameID, value), 12);
         }
         public void SetGlobalFloat(string name, float value) => SetGlobalFloat(Shader.PropertyToID(name), value);
-        public void SetGlobalInt(int nameID, int value) => Add(c => Shader.SetGlobalInt(nameID, value));
+        public void SetGlobalInt(int nameID, int value) => Add(c => Shader.SetGlobalInt(nameID, value), 12);
         public void SetGlobalInt(string name, int value) => SetGlobalInt(Shader.PropertyToID(name), value);
         public void SetGlobalInteger(int nameID, int value) => Add(c => Shader.SetGlobalInteger(nameID, value));
         public void SetGlobalInteger(string name, int value) => SetGlobalInteger(Shader.PropertyToID(name), value);
-        public void SetGlobalVector(int nameID, Vector4 value) => Add(c => Shader.SetGlobalVector(nameID, value));
+        public void SetGlobalVector(int nameID, Vector4 value) => Add(c => Shader.SetGlobalVector(nameID, value), 24);
         public void SetGlobalVector(string name, Vector4 value) => SetGlobalVector(Shader.PropertyToID(name), value);
-        public void SetGlobalColor(int nameID, Color value) => Add(c => Shader.SetGlobalColor(nameID, value));
+        public void SetGlobalColor(int nameID, Color value) => Add(c => Shader.SetGlobalColor(nameID, value), 24);
         public void SetGlobalColor(string name, Color value) => SetGlobalColor(Shader.PropertyToID(name), value);
-        public void SetGlobalMatrix(int nameID, Matrix4x4 value) => Add(c => Shader.SetGlobalMatrix(nameID, value));
+        public void SetGlobalMatrix(int nameID, Matrix4x4 value) => Add(c => Shader.SetGlobalMatrix(nameID, value), 72);
         public void SetGlobalMatrix(string name, Matrix4x4 value) => SetGlobalMatrix(Shader.PropertyToID(name), value);
-        public void SetGlobalFloatArray(int nameID, float[] values) => Add(c => Shader.SetGlobalFloatArray(nameID, values));
+        public void SetGlobalFloatArray(int nameID, float[] values) => Add(c => Shader.SetGlobalFloatArray(nameID, values), 12 + 4 * (values?.Length ?? 0));
         public void SetGlobalFloatArray(string propertyName, float[] values) => SetGlobalFloatArray(Shader.PropertyToID(propertyName), values);
         public void SetGlobalFloatArray(int nameID, List<float> values) => SetGlobalFloatArray(nameID, values.ToArray());
         public void SetGlobalFloatArray(string propertyName, List<float> values) => SetGlobalFloatArray(Shader.PropertyToID(propertyName), values.ToArray());
-        public void SetGlobalVectorArray(int nameID, Vector4[] values) => Add(c => Shader.SetGlobalVectorArray(nameID, values));
+        public void SetGlobalVectorArray(int nameID, Vector4[] values) => Add(c => Shader.SetGlobalVectorArray(nameID, values), 12 + 16 * (values?.Length ?? 0));
         public void SetGlobalVectorArray(string propertyName, Vector4[] values) => SetGlobalVectorArray(Shader.PropertyToID(propertyName), values);
         public void SetGlobalVectorArray(int nameID, List<Vector4> values) => SetGlobalVectorArray(nameID, values.ToArray());
         public void SetGlobalVectorArray(string propertyName, List<Vector4> values) => SetGlobalVectorArray(Shader.PropertyToID(propertyName), values.ToArray());
-        public void SetGlobalMatrixArray(int nameID, Matrix4x4[] values) => Add(c => Shader.SetGlobalMatrixArray(nameID, values));
+        public void SetGlobalMatrixArray(int nameID, Matrix4x4[] values) => Add(c => Shader.SetGlobalMatrixArray(nameID, values), 12 + 64 * (values?.Length ?? 0));
         public void SetGlobalMatrixArray(string propertyName, Matrix4x4[] values) => SetGlobalMatrixArray(Shader.PropertyToID(propertyName), values);
         public void SetGlobalMatrixArray(int nameID, List<Matrix4x4> values) => SetGlobalMatrixArray(nameID, values.ToArray());
         public void SetGlobalMatrixArray(string propertyName, List<Matrix4x4> values) => SetGlobalMatrixArray(Shader.PropertyToID(propertyName), values.ToArray());
 
         public void SetGlobalTexture(int nameID, RenderTargetIdentifier value) => SetGlobalTexture(nameID, value, RenderTextureSubElement.Default);
         public void SetGlobalTexture(string name, RenderTargetIdentifier value) => SetGlobalTexture(Shader.PropertyToID(name), value);
-        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value, RenderTextureSubElement element) => Add(c => GlobalTexture(nameID, value, element, c));
+        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value, RenderTextureSubElement element) => Add(c => GlobalTexture(nameID, value, element, c), 24);
         public void SetGlobalTexture(string name, RenderTargetIdentifier value, RenderTextureSubElement element) => SetGlobalTexture(Shader.PropertyToID(name), value, element);
 
         /// <summary>A global texture from a target identifier, as Unity binds it (measured:
@@ -1000,20 +1013,19 @@ namespace UnityEngine.Rendering
         static readonly HashSet<int> s_WarnedDepthMode = new HashSet<int>();
         static readonly HashSet<string> s_NotFoundWarned = new HashSet<string>();
 
-        public void EnableShaderKeyword(string keyword) => Add(c => Shader.EnableKeyword(keyword));
-        public void DisableShaderKeyword(string keyword) => Add(c => Shader.DisableKeyword(keyword));
+        public void EnableShaderKeyword(string keyword) => Add(c => Shader.EnableKeyword(keyword), 12);
+        public void DisableShaderKeyword(string keyword) => Add(c => Shader.DisableKeyword(keyword), 12);
 
-        public void SetGlobalDepthBias(float bias, float slopeBias) => Add(c => GfxStream.DepthBias(bias, slopeBias));
+        public void SetGlobalDepthBias(float bias, float slopeBias) => Add(c => GfxStream.DepthBias(bias, slopeBias), 12);
 
-        public void SetInvertCulling(bool invertCulling) => Add(c => GL.invertCulling = invertCulling);
+        public void SetInvertCulling(bool invertCulling) => Add(c => GL.invertCulling = invertCulling, 5);
         public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable);
         [Unbound.EditorFaithful("no-op is equivalent: the flags only restrict which commands a buffer may hold (async compute validation)")]
         public void SetExecutionFlags(CommandBufferExecutionFlags flags) { }
         public void SetInstanceMultiplier(uint multiplier) => Add(c => GfxStream.InstanceMultiplier(multiplier));
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
-        public void BeginSample(string name) { }
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
-        public void EndSample(string name) { }
+        // Profiler samples: nothing a game observes (no profiler is attached) but their size.
+        public void BeginSample(string name) => Grow(16);
+        public void EndSample(string name) => Grow(16);
 
         public void IssuePluginEvent(IntPtr callback, int eventID)
         {

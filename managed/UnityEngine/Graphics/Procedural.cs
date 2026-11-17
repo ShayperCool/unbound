@@ -74,7 +74,7 @@ namespace UnityEngine.Rendering
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             var values = properties != null && !properties.isEmpty ? new Dictionary<int, object>(properties.m_Values) : null;
-            Add(c => ProceduralMeshes.Draw(matrix, material, shaderPass, topology, vertexCount, instanceCount, values));
+            Add(c => ProceduralMeshes.Draw(matrix, material, shaderPass, topology, vertexCount, instanceCount, values), 92);
         }
 
         public void DrawProcedural(Matrix4x4 matrix, Material material, int shaderPass, MeshTopology topology, int vertexCount, int instanceCount) =>
