@@ -17,13 +17,16 @@ The Editor records in a window (not in batch mode), after letting five editor up
 models (its assembly carries the name of a friend assembly of the package). Every system draws
 opaque unlit quads.
 
-- `BoundsAuto`, `BoundsReinit`, `BoundsMoved`, `BoundsShared`: one graph four times: six
-  particles of different sizes and turns that fly apart and never die; automatic bounds.
+- `BoundsAuto`, `BoundsReinit`, `BoundsMoved`, `BoundsShared`, `BoundsTurned`: one graph five
+  times: six particles of different sizes and turns that fly apart and never die; automatic
+  bounds. `BoundsMany`: the same with a hundred and fifty particles, more than the threads of
+  one group of the kernel.
 - `BoundsPadded`: the same with a bounds padding, an exposed property `Padding` of the effect.
 - `BoundsWorld`, `BoundsWorldTurned`: the same in world space.
-- `BoundsDying`: ten particles a second that move right and live half a second.
+- `BoundsDying`: ten particles a second that move right and live half a second;
+  `BoundsDyingPadded`: the same with a padding.
 - `BoundsAway`: four particles that fly out of view to the right; `ManualAway`: the same with
-  bounds the graph gives (`Manual`).
+  bounds the graph gives (`Manual`): a box whose numbers are not round.
 
 The graph compiler sets the culling flags of an asset with automatic bounds to none (such an
 effect goes on simulating and recomputing its bounds when culled); `ManualAway` keeps the
@@ -52,14 +55,22 @@ written as centre and extents, floats with every digit.
   matrices).
 - `dying`, `stopped`: two effects of `BoundsDying`, the second's spawner stopped at frame 20:
   each has the box of its own particles alive, and once none is left a zero box at the effect's
-  place.
+  place. `stopped padded`: the same of `BoundsDyingPadded`: once none is left the box is the
+  padding around the effect's origin. Before the system first wakes (frame 3: it has spawned
+  nothing yet) its box is zero, without the padding, and at frame 2 the padding it answers is
+  zero too.
 - `away`, `manual away`: the effect with automatic bounds is culled from frame 20 on, when its
   renderer's box has left the view, and goes on simulating; the one with the graph's bounds
   never is. (`manual away` computes no bounds: `computed=` is zero, and its padding is not
-  asked, a question the Editor does not survive.)
+  asked, a question the Editor does not survive.) Its `renderer=` box is not its `bounds=` box
+  in the last place of the centre: an effect's box is the union of its systems' corners, taken
+  back as a centre and extents; so is every other control's.
 - `reinit`: `Reinit()` at frame 20: the box is zero until the new particles' box arrives.
 - `moved`: the effect moved half a unit at frame 20: the box stays (it is in the effect's
   space) and the renderer's follows.
+- `turned`: the effect turned 30 degrees, its system in local space: the box is along the
+  effect's axes, the renderer's world box around it.
+- `many`: a hundred and fifty particles: the box of them all.
 - `shared`, `shared second`: two effects of `BoundsShared`, the second half a unit up and with
   another seed (three rows each): see the residuals.
 
@@ -93,8 +104,9 @@ Linux Editor on OpenGL Core).
   scaled particles and effects, a system with several update contexts.
 - An effect culled with culling flags that stop its simulation or its bounds update (an asset
   with automatic bounds has none of them unless they are set again by hand).
-- More particles than one thread group holds (64): the reduction across groups.
 - The effects of a batch beyond two in one thread group.
+- A system that falls asleep with particles' box still standing, and the padding a system
+  answers after a reinitialisation, before it wakes again.
 - Other devices than OpenGL Core in the Editor.
 
 ## Running

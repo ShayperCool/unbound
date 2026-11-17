@@ -45,10 +45,10 @@ public static class BoundsAuthoring
         return (graph, spawn, init, update);
     }
 
-    /// <summary>Six particles of different sizes and turns that fly apart.</summary>
-    static void Spreading(VFXBasicSpawner spawn, VFXBasicInitialize init)
+    /// <summary>Particles of different sizes and turns that fly apart: six unless told.</summary>
+    static void Spreading(VFXBasicSpawner spawn, VFXBasicInitialize init, float count = 6f)
     {
-        Burst(spawn, 6f);
+        Burst(spawn, count);
         SetRandom(init, "position", new Vector3(-0.4f, -0.4f, 0f), new Vector3(0.4f, 0.4f, 0f));
         SetRandom(init, "velocity", new Vector3(-0.8f, -0.8f, 0f), new Vector3(0.8f, 0.8f, 0f));
         SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 90f));
@@ -87,14 +87,27 @@ public static class BoundsAuthoring
         }
 
         // Particles that are born all the time, move right and die: the bounds follow the
-        // ones alive.
-        var dying = Bounded("BoundsDying", BoundsSettingMode.Automatic);
-        ConstantRate(dying.Spawn, 10f);
-        SetRandom(dying.Init, "position", new Vector3(-1.2f, -1f, 0f), new Vector3(-1f, 1f, 0f));
-        SetVector(dying.Init, "velocity", new Vector3(2f, 0f, 0f));
-        Set(dying.Init, "lifetime", 0.5f);
-        Set(dying.Init, "size", 0.2f);
-        Save(dying.Graph);
+        // ones alive. Once more with a padding.
+        foreach (var name in new[] { "BoundsDying", "BoundsDyingPadded" })
+        {
+            var dying = Bounded(name, BoundsSettingMode.Automatic);
+            ConstantRate(dying.Spawn, 10f);
+            SetRandom(dying.Init, "position", new Vector3(-1.2f, -1f, 0f), new Vector3(-1f, 1f, 0f));
+            SetVector(dying.Init, "velocity", new Vector3(2f, 0f, 0f));
+            Set(dying.Init, "lifetime", 0.5f);
+            Set(dying.Init, "size", 0.2f);
+            if (name == "BoundsDyingPadded") Input(dying.Init, "boundsPadding").value = new Vector3(0.5f, 0.25f, 0.125f);
+            Save(dying.Graph);
+        }
+
+        // Six particles on an effect that is turned, and a hundred and fifty: more than the
+        // threads of one group of the kernel.
+        var turned = Bounded("BoundsTurned", BoundsSettingMode.Automatic);
+        Spreading(turned.Spawn, turned.Init);
+        Save(turned.Graph);
+        var many = Bounded("BoundsMany", BoundsSettingMode.Automatic, 200);
+        Spreading(many.Spawn, many.Init, 150f);
+        Save(many.Graph);
 
         // Four particles that fly out of view to the right: with computed bounds, and with
         // bounds the graph gives.
@@ -105,6 +118,9 @@ public static class BoundsAuthoring
             SetRandom(away.Init, "position", new Vector3(-0.4f, -0.4f, 0f), new Vector3(0.4f, 0.4f, 0f));
             SetVector(away.Init, "velocity", new Vector3(4f, 0f, 0f));
             Set(away.Init, "size", 0.3f);
+            // The graph's own bounds: a box whose numbers are not round.
+            if (mode == BoundsSettingMode.Manual)
+                Input(away.Init, "bounds").value = new AABox { center = new Vector3(0.1234567f, -0.0288367569f, 0.3f), size = new Vector3(1.1149996f, 1.173260928f, 0.61604631f) };
             Save(away.Graph);
         }
     }

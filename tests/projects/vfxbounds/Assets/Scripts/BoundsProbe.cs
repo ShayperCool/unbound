@@ -25,7 +25,7 @@ public sealed class BoundsProbe : MonoBehaviour
     readonly List<Stage> m_Stages = new List<Stage>();
     readonly List<string> m_Names = new List<string>();
     Texture2D m_Shot;
-    Stage m_Padded, m_Stopped, m_Reinit, m_Moved;
+    Stage m_Padded, m_Stopped, m_Reinit, m_Moved, m_StoppedPadded;
     readonly System.Reflection.MethodInfo m_ComputedBounds = typeof(VisualEffect).GetMethod("GetComputedBounds",
         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(int) }, null);
     readonly System.Reflection.MethodInfo m_BoundsPadding = typeof(VisualEffect).GetMethod("GetCurrentBoundsPadding",
@@ -111,6 +111,11 @@ public sealed class BoundsProbe : MonoBehaviour
             second.Effect.transform.position += new Vector3(0f, 0.5f, 0f);
             second.Effect.startSeed = 12;
             second.Effect.Reinit();
+            // Local space on a turned effect; a padded system whose particles all die after its
+            // spawner stops at frame 20; and more particles than one thread group.
+            Draw("turned", "BoundsTurned", 10, 30).Effect.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+            m_StoppedPadded = Draw("stopped padded", "BoundsDyingPadded", 10, 40);
+            Draw("many", "BoundsMany", 10, 30);
             // What the turned effect is given of its transform.
             Rec("matrix/world turned/to world", Matrix(turned.Effect.transform.localToWorldMatrix));
             Rec("matrix/world turned/to local", Matrix(turned.Effect.transform.worldToLocalMatrix));
@@ -213,6 +218,7 @@ public sealed class BoundsProbe : MonoBehaviour
             case 20:
                 m_Padded.Effect.SetVector3("Padding", new Vector3(0.1f, 1f, 0f));
                 m_Stopped.Effect.Stop();
+                m_StoppedPadded.Effect.Stop();
                 m_Reinit.Effect.Reinit();
                 m_Moved.Effect.transform.position += new Vector3(0.5f, 0f, 0f);
                 break;

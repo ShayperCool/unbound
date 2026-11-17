@@ -59,6 +59,18 @@
   "over8": 0,
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
+ "draw-many-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-many-f030.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
  "draw-moved-f010.png": {
   "mean": 0,
   "worst": 0,
@@ -119,6 +131,18 @@
   "over8": 0,
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
+ "draw-stopped padded-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-stopped padded-f040.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
  "draw-stopped-f010.png": {
   "mean": 0,
   "worst": 0,
@@ -132,6 +156,18 @@
   "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
  },
  "draw-stopped-f040.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-turned-f010.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The quads' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away."
+ },
+ "draw-turned-f030.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
