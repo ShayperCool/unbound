@@ -131,7 +131,7 @@ step in most pixels (means 0.46 to 0.98, worst 1) in the macOS Editor and in Unb
 is Metal's own rounding, which the device decides; the device also decides the batch buffer
 target (RawBuffer, as on Vulkan) and the refusals that follow from it. So on macOS every check
 compares Metal with the Metal reference at the same bounds (`check` and `check --device vulkan`
-alike, each saying so). The Metal values match Vulkan's (2301/2326) apart from `device` and a one-step
+alike, each saying so). The Metal values match Vulkan's (2301/2326, the rows before the `procedural` scenario) apart from `device` and a one-step
 rounding of read-back colours (`lightmap_arrays.c5.body` and 23 `sorting*` pixel rows). The
 `procedural` scenario is not recorded on Metal yet: `residuals-metal.json` lists its rows until
 the macOS Editor records them.
