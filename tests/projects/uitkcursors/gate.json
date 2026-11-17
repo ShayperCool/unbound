@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/uitkcursors/run.py gate"],
+  "summary": "uitkcursors: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Core/CursorManager.cs",
+    "managed/UnityEngine/UIElements/Events/Events.cs",
+    "managed/UnityEngine/UIElements/Style/StyleReader.cs"
+  ]
+}

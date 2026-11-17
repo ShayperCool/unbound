@@ -1,0 +1,3 @@
+{
+  "Unbound's USS importer does not validate property values against their syntax: the Editor reports a cursor keyword USS does not know (and drops the declaration, which Unbound reads as the default cursor); listed in docs/COMPATIBILITY_GAPS.md": ["import.logs"]
+}

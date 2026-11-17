@@ -1,0 +1,48 @@
+{"k":"import.logs","v":"Warning: Assets/Resources/Cursors.uss (line 19): warning: Expected ([ [ <resource> | <url> ] [ <integer> <integer> ]? ] | [ arrow | text | resize-vertical | resize-horizontal | link | slide-arrow | resize-up-right | resize-up-left | move-arrow | rotate-arrow | scale-arrow | arrow-plus | arrow-minus | pan | orbit | zoom | fps | split-resize-up-down | split-resize-left-right | not-allowed ]) but found 'custom-cursor' |     cursor: custom-cursor | Warning: Assets/Resources/Cursors.uss (line 23): warning: Expected ([ [ <resource> | <url> ] [ <integer> <integer> ]? ] | [ arrow | text | resize-vertical | resize-horizontal | link | slide-arrow | resize-up-right | resize-up-left | move-arrow | rotate-arrow | scale-arrow | arrow-plus | arrow-minus | pan | orbit | zoom | fps | split-resize-up-down | split-resize-left-right | not-allowed ]) but found 'not-a-cursor' |     cursor: not-a-cursor"}
+{"k":"start","v":"overridden False"}
+{"k":"hover.arrow","v":"overridden False logs []"}
+{"k":"hover.text","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.resize-vertical","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.resize-horizontal","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.link","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.slide-arrow","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.resize-up-right","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.resize-up-left","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.move-arrow","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.rotate-arrow","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.scale-arrow","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.arrow-plus","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.arrow-minus","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.pan","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.orbit","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.zoom","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.fps","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.custom-cursor","v":"overridden False logs []"}
+{"k":"hover.split-resize-up-down","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.split-resize-left-right","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.not-allowed","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"hover.not-a-cursor","v":"overridden False logs []"}
+{"k":"hover.texture","v":"overridden True logs []"}
+{"k":"hover.plain","v":"overridden False logs []"}
+{"k":"hover.texturePlain","v":"overridden True logs []"}
+{"k":"hover.inline","v":"overridden True logs []"}
+{"k":"hover.empty","v":"overridden False logs []"}
+{"k":"hover.parent","v":"overridden True logs []"}
+{"k":"hover.child","v":"overridden False logs []"}
+{"k":"hover.parentAgain","v":"overridden True logs []"}
+{"k":"hover.resizeFromTexture","v":"overridden False logs [Warning: Runtime cursors other than the default cursor need to be defined using a texture.]"}
+{"k":"capture.texture.over","v":"overridden True logs []"}
+{"k":"capture.texture.capture","v":"overridden True logs []"}
+{"k":"capture.texture.toPlain","v":"overridden True logs []"}
+{"k":"capture.texture.release","v":"overridden False logs []"}
+{"k":"capture.plain.capture","v":"overridden False logs []"}
+{"k":"capture.plain.toTexture","v":"overridden False logs []"}
+{"k":"capture.plain.release","v":"overridden True logs []"}
+{"k":"capture.empty.capture","v":"overridden True logs []"}
+{"k":"capture.empty.toEmpty","v":"overridden True logs []"}
+{"k":"capture.empty.release","v":"overridden False logs []"}
+{"k":"restyle.over","v":"overridden False logs []"}
+{"k":"restyle.set","v":"overridden False logs []"}
+{"k":"restyle.away","v":"overridden False logs []"}
+{"k":"restyle.back","v":"overridden True logs []"}
+{"k":"complete","v":true}

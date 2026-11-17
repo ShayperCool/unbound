@@ -1,3 +1,0 @@
-{
-  "Runtime panels do not apply USS cursors yet (no runtime cursor manager), so the Editor's warning for a keyword cursor (the drag line's) under a dragged pointer is not logged; listed in docs/COMPATIBILITY_GAPS.md": ["split.dragLogs"]
-}

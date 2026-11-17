@@ -1,0 +1,25 @@
+.cell { position: absolute; width: 20px; height: 20px; }
+.c-arrow { cursor: arrow; }
+.c-text { cursor: text; }
+.c-resize-vertical { cursor: resize-vertical; }
+.c-resize-horizontal { cursor: resize-horizontal; }
+.c-link { cursor: link; }
+.c-slide-arrow { cursor: slide-arrow; }
+.c-resize-up-right { cursor: resize-up-right; }
+.c-resize-up-left { cursor: resize-up-left; }
+.c-move-arrow { cursor: move-arrow; }
+.c-rotate-arrow { cursor: rotate-arrow; }
+.c-scale-arrow { cursor: scale-arrow; }
+.c-arrow-plus { cursor: arrow-plus; }
+.c-arrow-minus { cursor: arrow-minus; }
+.c-pan { cursor: pan; }
+.c-orbit { cursor: orbit; }
+.c-zoom { cursor: zoom; }
+.c-fps { cursor: fps; }
+.c-custom-cursor { cursor: custom-cursor; }
+.c-split-resize-up-down { cursor: split-resize-up-down; }
+.c-split-resize-left-right { cursor: split-resize-left-right; }
+.c-not-allowed { cursor: not-allowed; }
+.c-not-a-cursor { cursor: not-a-cursor; }
+.c-texture { cursor: url("cursor.png") 4 8; }
+.c-texture-plain { cursor: url("cursor.png"); }

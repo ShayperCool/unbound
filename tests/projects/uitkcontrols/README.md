@@ -33,6 +33,5 @@ exactly (tolerance 0). `Assets/Scripts/ControlsProbe.cs` records:
   through game subclasses whose deprecated UxmlFactory uses the built-in UxmlTraits
   (`fixed-pane-initial-dimension` is read as an integer there, so `80.5` gives the default 100).
 
-`split.dragLogs` is a known residual (residuals.json): the Editor warns that a runtime keyword
-cursor needs a texture when the dragged pointer is over the drag line; Unbound's runtime panels do
-not apply USS cursors yet. Other releases are unmeasured.
+`split.dragLogs`: the Editor warns that a runtime keyword cursor (the drag line's) needs a texture
+when the dragged pointer enters the drag line (tests/projects/uitkcursors). Other releases are unmeasured.
