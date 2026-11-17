@@ -89,6 +89,7 @@ namespace UnityEngine.SubsystemsImplementation
 
         public static void RegisterDescriptor(SubsystemDescriptorWithProvider descriptor)
         {
+            if (descriptor == null) throw Unbound.Runtime.MonoExceptions.NullReference();
             descriptor.ThrowIfInvalid();
             RegisterDescriptor(descriptor, s_StandaloneDescriptors);
         }
