@@ -231,7 +231,7 @@ namespace UnityEngine
         }
 
         /// <summary>A grass quad's vertex colours: 160/255 grey and transparent at its foot (no
-        /// waving there), white at its top.</summary>
+        /// waving there), white at its top (matches the Unity 6000.0.71f1 Editor, tests/projects/grass).</summary>
         static readonly Color32 s_QuadBottom = new Color32(160, 160, 160, 0), s_QuadTop = new Color32(255, 255, 255, 255);
 
         internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
@@ -406,7 +406,7 @@ namespace UnityEngine
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;
             var normals = mesh.normals;
-            var colors = mesh.colors32;
+            var colors = mesh.m_Colors ?? Array.Empty<Color32>();
             var triangles = mesh.triangles;
             bool grass = prototype.renderMode == DetailRenderMode.Grass;
             foreach (var model in placements)
