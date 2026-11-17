@@ -673,21 +673,29 @@ impl CompiledPrograms {
     }
 
     /// Writes a BatchRendererGroup draw's DOTS instancing data into the uniform block pushed at
-    /// `offset` ([`super::dots::write`]).
+    /// `offset` ([`super::dots::write`]). Returns the batch buffer's window to copy into the
+    /// frame's uniform buffer, in uniform buffer mode ([`super::dots::window`]): the destination
+    /// byte offset, the buffer's byte offset and the bytes.
     pub fn write_dots(
         &mut self,
         id: u32,
         offset: u32,
         draw: &unbound_runtime::render_commands::DotsDraw,
         overrides: &[(String, PropertyValue)],
-        instance_data: Option<&[u8]>,
-    ) {
+        buffer_size: u64,
+    ) -> Option<(u64, u64, u64)> {
         let gpu = &self.programs[id as usize];
         let start = offset as usize;
         let end = start + gpu.program.uniform_size as usize;
-        if let Some(out) = self.data.get_mut(start..end) {
-            super::dots::write(&gpu.dots, draw, overrides, instance_data, out);
-        }
+        let out = self.data.get_mut(start..end)?;
+        super::dots::write(&gpu.dots, draw, overrides, out);
+        super::dots::window(&gpu.dots, draw, buffer_size)
+            .map(|(at, source, bytes)| (u64::from(offset) + at, source, bytes))
+    }
+
+    /// The frame's uniform buffer, once [`Self::upload`] has made it.
+    pub fn uniform_buffer(&self) -> Option<&wgpu::Buffer> {
+        self.buffer.as_ref()
     }
 
     /// The part of a program's uniform block a material decides, made once per material: the

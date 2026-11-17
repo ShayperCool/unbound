@@ -14,8 +14,10 @@
 //!   index in the `unity_DOTSInstancing_IndirectInstanceVisibility` buffer (`SV_InstanceID`
 //!   past it), and the arguments buffer gives the instance count;
 //! - in uniform buffer mode (OpenGL devices) the cbuffer `unity_DOTSInstanceData` is the window of
-//!   the batch's buffer AddBatch gave; on the others `unity_DOTSInstanceData` is a byte address
-//!   buffer, bound by name to the whole buffer.
+//!   the batch's buffer AddBatch gave, copied on the GPU into the draw's uniform block before its
+//!   pass ([`window`]), so what compute kernels or copies wrote into the buffer is drawn as well as
+//!   what scripts set; on the others `unity_DOTSInstanceData` is a byte address buffer, bound by
+//!   name to the whole buffer.
 
 use unbound_runtime::render_commands::{DOTS_HEADER_WORDS, DotsDraw};
 use unbound_runtime::render_protocol::owned::PropertyValue;
@@ -114,14 +116,33 @@ fn put(out: &mut [u8], at: usize, value: u32) {
     }
 }
 
+/// The part of a batch buffer a draw's uniform block reads in uniform buffer mode: the block's
+/// byte offset of the instance data cbuffer, the buffer's byte offset and the bytes copied. The
+/// cbuffer reads the window, zeros past it and past the buffer's end ([`write`] zeros the whole
+/// cbuffer); the copy covers whole 4-byte words (`wgpu::COPY_BUFFER_ALIGNMENT`), so a window size
+/// that is not a multiple of 4 reads its last partial word as zeros (the shader library reads
+/// whole float4s). None without such a cbuffer or bytes to read.
+pub fn window(layout: &DotsLayout, draw: &DotsDraw, buffer_size: u64) -> Option<(u64, u64, u64)> {
+    let (offset, size) = layout.instance_data?;
+    let start = u64::from(draw.window_offset);
+    let mut bytes = u64::from(size).min(buffer_size.saturating_sub(start));
+    if draw.window_size > 0 {
+        bytes = bytes.min(u64::from(draw.window_size));
+    }
+    let bytes = bytes / wgpu::COPY_BUFFER_ALIGNMENT * wgpu::COPY_BUFFER_ALIGNMENT;
+    (bytes > 0 && start % wgpu::COPY_BUFFER_ALIGNMENT == 0).then_some((
+        u64::from(offset),
+        start,
+        bytes,
+    ))
+}
+
 /// Writes a draw command's DOTS instancing data into a program's uniform block (`out`, filled
-/// for the draw otherwise). `instance_data` is the batch buffer's contents, for the uniform
-/// buffer mode's window.
+/// for the draw otherwise); the instance data cbuffer is zeroed for its [`window`] copy.
 pub fn write(
     layout: &DotsLayout,
     draw: &DotsDraw,
     overrides: &[(String, PropertyValue)],
-    instance_data: Option<&[u8]>,
     out: &mut [u8],
 ) {
     for (offset, property) in &layout.metadata {
@@ -155,21 +176,10 @@ pub fn write(
             );
         }
     }
-    if let Some((offset, size)) = layout.instance_data {
-        // The cbuffer reads the window, zeros past it (and past the buffer's end).
-        let (offset, size) = (offset as usize, size as usize);
-        let Some(region) = out.get_mut(offset..offset + size) else {
-            return;
-        };
-        let mut source = instance_data
-            .and_then(|data| data.get(draw.window_offset as usize..))
-            .unwrap_or(&[]);
-        if draw.window_size > 0 {
-            source = &source[..source.len().min(draw.window_size as usize)];
-        }
-        let n = source.len().min(region.len());
-        region[..n].copy_from_slice(&source[..n]);
-        region[n..].fill(0);
+    if let Some((offset, size)) = layout.instance_data
+        && let Some(region) = out.get_mut(offset as usize..(offset + size) as usize)
+    {
+        region.fill(0);
     }
 }
 
@@ -228,7 +238,6 @@ mod tests {
             // A material property of the same name is no metadata.
             ("_Missing".to_string(), PropertyValue::Int(7)),
         ];
-        let data: Vec<u8> = (0..64u8).collect();
         let draw = DotsDraw {
             header: [3, 0x11, 10, 11, 12, 13, 14, 15],
             window_offset: 16,
@@ -237,7 +246,7 @@ mod tests {
             visible: vec![5, 9, 11],
         };
         let mut out = vec![0xAAu8; 80];
-        write(&layout(), &draw, &overrides, Some(&data), &mut out);
+        write(&layout(), &draw, &overrides, &mut out);
         let word = |at: usize| u32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(word(0), 0x8000_0060, "exact metadata past 2^24");
         assert_eq!(word(4), 0x8000_0420);
@@ -246,28 +255,32 @@ mod tests {
         // past their z and w.
         assert_eq!([word(16), word(20), word(24), word(28)], [5, 0, 3, 0x11]);
         assert_eq!([word(32), word(36), word(40), word(44)], [9, 0, 10, 11]);
-        // The window: 24 bytes from byte 16, the rest of the cbuffer zero.
-        assert_eq!(&out[48..72], &data[16..40]);
-        assert!(out[72..80].iter().all(|b| *b == 0));
+        // The instance data cbuffer is zero until its window is copied in.
+        assert!(out[48..80].iter().all(|b| *b == 0));
+        // The window: 24 bytes from byte 16 into the cbuffer at 48 (the rest stays zero).
+        assert_eq!(window(&layout(), &draw, 64), Some((48, 16, 24)));
     }
 
     #[test]
-    fn window_past_the_buffer_reads_zeros() {
-        let draw = DotsDraw {
+    fn windows_end_at_the_cbuffer_and_the_buffer() {
+        let draw = |window_offset, window_size| DotsDraw {
             header: [0; DOTS_HEADER_WORDS],
-            window_offset: 60,
-            window_size: 0,
+            window_offset,
+            window_size,
             indirect: 0,
             visible: vec![0],
         };
-        let data = vec![1u8; 64];
-        let mut out = vec![0xAAu8; 80];
-        write(&layout(), &draw, &[], Some(&data), &mut out);
-        assert_eq!(&out[48..52], &[1, 1, 1, 1]);
-        assert!(out[52..80].iter().all(|b| *b == 0));
-        let mut out = vec![0xAAu8; 80];
-        write(&layout(), &draw, &[], None, &mut out);
-        assert!(out[48..80].iter().all(|b| *b == 0));
+        // No window size: the cbuffer's 32 bytes, or what the buffer holds past the offset.
+        assert_eq!(window(&layout(), &draw(0, 0), 64), Some((48, 0, 32)));
+        assert_eq!(window(&layout(), &draw(60, 0), 64), Some((48, 60, 4)));
+        // A window larger than the cbuffer copies the cbuffer's bytes.
+        assert_eq!(window(&layout(), &draw(16, 4096), 8192), Some((48, 16, 32)));
+        // At or past the buffer's end, or a partial word: nothing (the cbuffer reads zeros).
+        assert_eq!(window(&layout(), &draw(64, 0), 64), None);
+        assert_eq!(window(&layout(), &draw(80, 16), 64), None);
+        assert_eq!(window(&layout(), &draw(16, 3), 64), None);
+        // A program without the cbuffer (raw buffer devices) copies nothing.
+        assert_eq!(window(&DotsLayout::default(), &draw(0, 0), 64), None);
     }
 
     #[test]
@@ -280,7 +293,7 @@ mod tests {
             visible: vec![],
         };
         let mut out = vec![0xAAu8; 80];
-        write(&layout(), &draw, &[], None, &mut out);
+        write(&layout(), &draw, &[], &mut out);
         let word = |at: usize| u32::from_le_bytes(out[at..at + 4].try_into().unwrap());
         assert_eq!(
             [word(16), word(20), word(24), word(28)],
@@ -295,7 +308,7 @@ mod tests {
         assert!(!plain.instanced());
         assert!(layout().instanced());
         let mut out = vec![0xAAu8; 16];
-        write(&plain, &DotsDraw::default(), &[], None, &mut out);
+        write(&plain, &DotsDraw::default(), &[], &mut out);
         assert!(out.iter().all(|b| *b == 0xAA));
     }
 }

@@ -216,6 +216,9 @@ struct PlannedDraw {
     first_instance: u32,
     /// Counts read on the GPU: the arguments buffer, its offset, whether indexed.
     indirect: Option<(wgpu::Buffer, u64, bool)>,
+    /// A BatchRendererGroup draw's instance data window, copied into its uniform block before
+    /// the draw (uniform buffer mode, [`super::dots::window`]).
+    window: Option<WindowCopy>,
 }
 
 /// What a draw plans, in its passes' order.
@@ -413,6 +416,31 @@ fn raw_copy_compatible(
     }
 }
 
+/// A batch buffer's window copied on the GPU into a draw's uniform block, after the work before
+/// the draw: the instance data a BatchRendererGroup draw reads in uniform buffer mode, whoever
+/// wrote it (SetData, a compute kernel, a copy).
+struct WindowCopy {
+    source: wgpu::Buffer,
+    source_offset: u64,
+    /// The byte offset in the frame's uniform buffer ([`compiled::CompiledPrograms::uniform_buffer`]).
+    offset: u64,
+    size: u64,
+}
+
+impl WindowCopy {
+    fn encode(&self, encoder: &mut wgpu::CommandEncoder, uniforms: Option<&wgpu::Buffer>) {
+        if let Some(uniforms) = uniforms {
+            encoder.copy_buffer_to_buffer(
+                &self.source,
+                self.source_offset,
+                uniforms,
+                self.offset,
+                self.size,
+            );
+        }
+    }
+}
+
 /// The work of a submission, in order.
 enum Op {
     Pass(Pass),
@@ -424,6 +452,8 @@ enum Op {
     /// An indirect draw's arguments copied into the pooled arguments buffer before the draw,
     /// where nothing earlier in the open pass could have written them.
     IndirectArgs(ArgsCopy),
+    /// A draw's instance data window, where it could not be hoisted before the draw's pass.
+    Window(WindowCopy),
     Mips(wgpu::Texture, wgpu::TextureFormat, u32),
 }
 
@@ -531,6 +561,8 @@ struct Pass {
     items: Vec<PassItem>,
     /// Indirect arguments copied before the pass begins (see [`ArgsCopy`]).
     args: Vec<ArgsCopy>,
+    /// Instance data windows copied before the pass begins (see [`WindowCopy`]).
+    windows: Vec<WindowCopy>,
     /// A draw in the pass binds a buffer it can write: later indirect arguments may depend on
     /// it, so they are copied after the pass instead.
     writes_buffers: bool,
@@ -3038,6 +3070,7 @@ impl UnityRenderer {
             depth_clear: None,
             items: Vec::new(),
             args: Vec::new(),
+            windows: Vec::new(),
             writes_buffers: false,
         };
         if pass.target.screen {
@@ -3727,6 +3760,20 @@ impl UnityRenderer {
                                     let pass = self.new_pass(target.clone());
                                     passes.push(Op::Pass(pass));
                                     open = true;
+                                }
+                                // The window is copied after what came before the draw: before
+                                // its pass unless a draw in it could have written the buffer;
+                                // then the pass ends here.
+                                if let Some(copy) = d.window.take() {
+                                    match passes.last_mut() {
+                                        Some(Op::Pass(pass)) if !pass.writes_buffers => {
+                                            pass.windows.push(copy)
+                                        }
+                                        _ => {
+                                            passes.push(Op::Window(copy));
+                                            passes.push(Op::Pass(self.new_pass(target.clone())));
+                                        }
+                                    }
                                 }
                                 self.mark_msaa_written(&target);
                                 draws += 1;
@@ -4591,16 +4638,28 @@ impl UnityRenderer {
                 }
             };
             let program_offset = self.compiled.push(id, &values, Some(&block));
+            let mut window = None;
             if let Some(dots) = dots {
-                let data = draw.properties.iter().rev().find_map(|(n, v)| match v {
-                    owned::PropertyValue::Buffer(h) if n == DOTS_INSTANCE_DATA => Some(*h),
-                    _ => None,
-                });
-                let data = data
-                    .and_then(|h| self.buffers.get(&h))
-                    .and_then(|b| b.shadow.as_deref());
-                self.compiled
-                    .write_dots(id, program_offset, dots, &draw.properties, data);
+                let data = draw
+                    .properties
+                    .iter()
+                    .rev()
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if n == DOTS_INSTANCE_DATA => Some(*h),
+                        _ => None,
+                    })
+                    .and_then(|h| self.buffers.get(&h));
+                let size = data.map_or(0, |b| b.size);
+                window = self
+                    .compiled
+                    .write_dots(id, program_offset, dots, &draw.properties, size)
+                    .zip(data)
+                    .map(|((offset, source_offset, size), b)| WindowCopy {
+                        source: b.buffer.clone(),
+                        source_offset,
+                        offset,
+                        size,
+                    });
             }
             planned.push(Planned::Draw(PlannedDraw {
                 pipeline,
@@ -4621,6 +4680,7 @@ impl UnityRenderer {
                 instances: 1,
                 first_instance: 0,
                 indirect: None,
+                window,
             }));
         }
         planned
@@ -5052,6 +5112,10 @@ impl UnityRenderer {
                     copy.encode(&mut encoder);
                     continue;
                 }
+                Op::Window(copy) => {
+                    copy.encode(&mut encoder, self.compiled.uniform_buffer());
+                    continue;
+                }
                 Op::BufferCopy(c) => {
                     compute::encode_copy(&mut encoder, c);
                     continue;
@@ -5198,6 +5262,9 @@ impl UnityRenderer {
             };
             for copy in &pass.args {
                 copy.encode(&mut encoder);
+            }
+            for copy in &pass.windows {
+                copy.encode(&mut encoder, self.compiled.uniform_buffer());
             }
             if let (Some(seed), wgpu::LoadOp::Load) = (&pass.seed, pass.color_load)
                 && let Some((texture, ..)) = &pass.target.texture

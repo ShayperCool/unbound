@@ -82,6 +82,12 @@ view type how many callbacks ran. Scenarios:
   no LIGHTMAP_ON. `lightmap_arrays.c<i>.body`: each cube's colour at its centre. The Editor lights
   cube 3 (keyword, no flag) from its slice and cube 4 (flag, no keyword) like cube 6, by the
   ambient probe: the material's keyword decides, not the flag.
+- `gpu_written`: instance data a compute shader writes, as Entities Graphics uploads it: a raw
+  buffer (given to AddBatch with a window on OpenGL Core, which reads constant buffers) holding
+  the eight cubes' matrices and a grey colour from SetData, then `Assets/Shaders/Resources/BrgWrite.compute`
+  writes the first four cubes' colours (`gpu_written.c<i>.body`). The batch ID differs by device
+  (9 on OpenGL Core, 8 on Vulkan): the `errors` scenario's AddBatch calls make one more batch on
+  OpenGL Core (`errors.add.twiceMaxWindow`).
 
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
@@ -92,6 +98,6 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (2063 records on OpenGL Core, 2060 on Vulkan), the cascades'
+the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (2329 records on OpenGL Core, 2326 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
