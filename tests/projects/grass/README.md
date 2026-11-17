@@ -56,7 +56,7 @@ the textures. Before Q533 Unbound's atlas repeated at its edges and held a white
 first texture, so distant blades lost their edges (the differences once taken for the layerless
 terrains' checker, which matches).
 
-Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the seven images to
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the eight images to
 its recorded pixel count and largest difference: six texture-grass images differ by one level
 over part of their blades and in isolated pixels at the edges of distant blades (573 to 9549
 pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes, Q553;

@@ -24,7 +24,8 @@ namespace UnityEngine
     // axis, its colour the dry colour lerped to the healthy one by the size noise in bytes (top;
     // the bottom scaled by 160/255 in bytes, alpha 0 for no waving), its normal the terrain's; a billboard's four
     // corners sit at the instance with their offsets in the tangent; meshes are baked through their
-    // instance's transform (turned, tilted to the ground, scaled), coloured its colour. The
+    // instance's transform (turned, tilted to the ground, scaled), their vertex colours (white
+    // without them) tinted by its colour. The
     // shaders' globals: _WaveAndDistance (frame time × speed × 0.04, strength × 0.5, amount × 6,
     // distance²), _CameraPosition (the camera less the terrain's position, 1 / distance²), the
     // camera's right and up, the waving tint.
