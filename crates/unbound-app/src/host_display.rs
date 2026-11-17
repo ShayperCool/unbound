@@ -1,5 +1,10 @@
 //! Host display details that the window abstraction does not retain. Queried only when a
 //! monitor description changes, never by a managed Screen getter.
+/// The game window's native view, from which the host can tell the window's screen (the
+/// AppKit `NSView` on macOS); None before the window exists. Used on the main thread only.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct WindowView(pub Option<std::ptr::NonNull<std::ffi::c_void>>);
+
 #[derive(Debug, Default)]
 pub(crate) struct Details {
     pub refresh_numerator: u32,
@@ -136,6 +141,7 @@ mod tests {
 #[cfg(target_os = "linux")]
 pub(crate) fn snapshot(
     name: Option<&str>,
+    _window: WindowView,
 ) -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
     use x11rb::connection::Connection;
     use x11rb::protocol::randr::ConnectionExt as _;
@@ -188,6 +194,7 @@ pub(crate) fn snapshot(
                 details.refresh_numerator,
                 details.refresh_denominator,
             ),
+            refresh_ratio: None,
             scale_factor: 1.0,
             modes: info
                 .modes
@@ -201,6 +208,7 @@ pub(crate) fn snapshot(
                         u32::from(mode.htotal) * u32::from(mode.vtotal),
                     )
                     .unwrap_or(0),
+                    refresh_ratio: None,
                 })
                 .collect(),
         });
@@ -208,9 +216,212 @@ pub(crate) fn snapshot(
     anyhow::bail!("the X server reports no active monitor")
 }
 
-#[cfg(not(target_os = "linux"))]
+/// The display the window is on, as the macOS Editor reports it (matches the Unity 6000.0.71f1
+/// macOS Editor, tests/projects/macdisplay): the desktop's usable area (the screen without the
+/// menu bar and Dock, `NSScreen.visibleFrame`) in pixels as the current resolution, at the
+/// display link's nominal refresh period as an exact ratio; one resolution per display mode's
+/// pixel size at that rate, the current mode's as the usable area, plus the desktop's size in
+/// points without a rate; the density of the current mode's pixels over the screen's width.
+/// Reads AppKit: called on the main thread.
+#[cfg(target_os = "macos")]
+pub(crate) fn snapshot(
+    name: Option<&str>,
+    window: WindowView,
+) -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
+    use objc2::msg_send;
+    use objc2::rc::{Retained, autoreleasepool};
+    use objc2::runtime::{AnyClass, AnyObject};
+    use objc2_foundation::{NSRect, NSString};
+    use std::ffi::c_void;
+    use unbound_runtime::display::{DisplayMode, DisplaySnapshot};
+
+    #[repr(C)]
+    struct CGSize {
+        width: f64,
+        height: f64,
+    }
+    #[repr(C)]
+    struct CVTime {
+        value: i64,
+        scale: i32,
+        flags: i32,
+    }
+    #[link(name = "CoreGraphics", kind = "framework")]
+    unsafe extern "C" {
+        fn CGDisplayPixelsWide(display: u32) -> usize;
+        fn CGDisplayPixelsHigh(display: u32) -> usize;
+        fn CGDisplayCopyDisplayMode(display: u32) -> *mut c_void;
+        fn CGDisplayCopyAllDisplayModes(display: u32, options: *const c_void) -> *mut c_void;
+        fn CGDisplayModeGetPixelWidth(mode: *const c_void) -> usize;
+        fn CGDisplayModeGetPixelHeight(mode: *const c_void) -> usize;
+        fn CGDisplayModeGetRefreshRate(mode: *const c_void) -> f64;
+        fn CGDisplayModeRelease(mode: *mut c_void);
+        fn CGDisplayScreenSize(display: u32) -> CGSize;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    unsafe extern "C" {
+        fn CFArrayGetCount(array: *const c_void) -> isize;
+        fn CFArrayGetValueAtIndex(array: *const c_void, index: isize) -> *const c_void;
+        fn CFRelease(object: *const c_void);
+    }
+    #[link(name = "CoreVideo", kind = "framework")]
+    unsafe extern "C" {
+        fn CVDisplayLinkCreateWithCGDisplay(display: u32, link: *mut *mut c_void) -> i32;
+        fn CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link: *mut c_void) -> CVTime;
+        fn CVDisplayLinkRelease(link: *mut c_void);
+    }
+
+    autoreleasepool(|_| {
+        let class =
+            AnyClass::get(c"NSScreen").ok_or_else(|| anyhow::anyhow!("AppKit has no NSScreen"))?;
+        let key = NSString::from_str("NSScreenNumber");
+        let number_of = |screen: *mut AnyObject| -> Option<u32> {
+            let description: *mut AnyObject = unsafe { msg_send![screen, deviceDescription] };
+            let number: *mut AnyObject = unsafe { msg_send![description, objectForKey: &*key] };
+            (!number.is_null()).then(|| unsafe { msg_send![number, unsignedIntValue] })
+        };
+        let screens: *mut AnyObject = unsafe { msg_send![class, screens] };
+        let count: usize = if screens.is_null() {
+            0
+        } else {
+            unsafe { msg_send![screens, count] }
+        };
+        // The window's own screen when the window is known; else the screen of the monitor's
+        // name; else the main screen.
+        let mut screen: *mut AnyObject = match window.0 {
+            Some(view) => {
+                let ns_window: *mut AnyObject =
+                    unsafe { msg_send![view.as_ptr().cast::<AnyObject>(), window] };
+                if ns_window.is_null() {
+                    std::ptr::null_mut()
+                } else {
+                    unsafe { msg_send![ns_window, screen] }
+                }
+            }
+            None => std::ptr::null_mut(),
+        };
+        let mut screen_name = None;
+        if !screen.is_null() {
+            let localized: Option<Retained<NSString>> = unsafe { msg_send![screen, localizedName] };
+            screen_name = localized.map(|n| n.to_string());
+        }
+        for index in 0..if screen.is_null() { count } else { 0 } {
+            let candidate: *mut AnyObject = unsafe { msg_send![screens, objectAtIndex: index] };
+            let localized: Option<Retained<NSString>> =
+                unsafe { msg_send![candidate, localizedName] };
+            let localized = localized.map(|n| n.to_string());
+            if name.is_none() || localized.as_deref() == name {
+                screen = candidate;
+                screen_name = localized;
+                break;
+            }
+        }
+        if screen.is_null() {
+            screen = unsafe { msg_send![class, mainScreen] };
+            if screen.is_null() {
+                anyhow::bail!("AppKit reports no screen");
+            }
+            let localized: Option<Retained<NSString>> = unsafe { msg_send![screen, localizedName] };
+            screen_name = localized.map(|n| n.to_string());
+        }
+        let frame: NSRect = unsafe { msg_send![screen, frame] };
+        let visible: NSRect = unsafe { msg_send![screen, visibleFrame] };
+        let scale: f64 = unsafe { msg_send![screen, backingScaleFactor] };
+        let Some(display) = number_of(screen) else {
+            anyhow::bail!("the screen has no display number");
+        };
+        let pixels = |points: f64| (points * scale).round() as i64;
+        let width = pixels(visible.size.width) as u32;
+        let height = pixels(visible.size.height) as u32;
+        // Cocoa's origin: the desktop's bottom-left corner.
+        let work_area = [
+            pixels(visible.origin.x - frame.origin.x) as i32,
+            pixels(visible.origin.y - frame.origin.y) as i32,
+            width as i32,
+            height as i32,
+        ];
+        let mut link = std::ptr::null_mut();
+        let period = (unsafe { CVDisplayLinkCreateWithCGDisplay(display, &mut link) } == 0
+            && !link.is_null())
+        .then(|| {
+            let time = unsafe { CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link) };
+            unsafe { CVDisplayLinkRelease(link) };
+            time
+        })
+        .filter(|time| time.value > 0 && time.scale > 0 && time.value <= i64::from(u32::MAX));
+        let current = unsafe { CGDisplayCopyDisplayMode(display) };
+        if current.is_null() {
+            anyhow::bail!("CoreGraphics reports no mode for display {display}");
+        }
+        let current_size = unsafe {
+            (
+                CGDisplayModeGetPixelWidth(current),
+                CGDisplayModeGetPixelHeight(current),
+            )
+        };
+        let current_rate = unsafe { CGDisplayModeGetRefreshRate(current) };
+        unsafe { CGDisplayModeRelease(current) };
+        let millihertz = (current_rate * 1000.0).round() as u32;
+        let ratio = period.map(|time| (time.scale as u32, time.value as u32));
+        let (info_numerator, info_denominator) = ratio.unwrap_or((millihertz, 1000));
+        let mut modes = vec![DisplayMode {
+            width: unsafe { CGDisplayPixelsWide(display) } as u32,
+            height: unsafe { CGDisplayPixelsHigh(display) } as u32,
+            refresh_rate_millihertz: 0,
+            refresh_ratio: Some((0, 1)),
+        }];
+        let all = unsafe { CGDisplayCopyAllDisplayModes(display, std::ptr::null()) };
+        if !all.is_null() {
+            for index in 0..unsafe { CFArrayGetCount(all) } {
+                let mode = unsafe { CFArrayGetValueAtIndex(all, index) };
+                let size = unsafe {
+                    (
+                        CGDisplayModeGetPixelWidth(mode),
+                        CGDisplayModeGetPixelHeight(mode),
+                    )
+                };
+                let (mode_width, mode_height) = if size == current_size {
+                    (width, height)
+                } else {
+                    (size.0 as u32, size.1 as u32)
+                };
+                modes.push(DisplayMode {
+                    width: mode_width,
+                    height: mode_height,
+                    refresh_rate_millihertz: millihertz,
+                    refresh_ratio: ratio,
+                });
+            }
+            unsafe { CFRelease(all) };
+        }
+        let millimetres = unsafe { CGDisplayScreenSize(display) };
+        // A display without a physical size cannot supply a density: zero, as on Linux.
+        let dpi = if millimetres.width > 0.0 {
+            (current_size.0 as f64 * 25.4 / millimetres.width) as f32
+        } else {
+            0.0
+        };
+        Ok(DisplaySnapshot {
+            id: u64::from(display),
+            dpi,
+            info_refresh_numerator: info_numerator,
+            info_refresh_denominator: info_denominator,
+            work_area,
+            name: screen_name,
+            width,
+            height,
+            refresh_rate_millihertz: Some(millihertz),
+            refresh_ratio: ratio,
+            scale_factor: scale,
+            modes,
+        })
+    })
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub(crate) fn snapshot(
     _name: Option<&str>,
+    _window: WindowView,
 ) -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
     anyhow::bail!(
         "physical density, exact refresh ratio and desktop work area are not supplied by this host backend"

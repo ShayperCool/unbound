@@ -696,7 +696,7 @@ fn finish_run(
 /// Makes host display answers available to Awake/OnEnable before the window is created.
 /// If no display can be queried, keep the explicit unavailable answer until window discovery.
 pub fn initialize_display() {
-    match host_display::snapshot(None) {
+    match host_display::snapshot(None, host_display::WindowView::default()) {
         Ok(display) => {
             unbound_runtime::display::publish(unbound_runtime::display::Display::Known(display));
             host_display::watch();
@@ -712,7 +712,10 @@ pub fn initialize_display() {
 /// primary monitor. These APIs describe the host desktop, including in a remote session.
 /// Republished when the window changes monitor or the monitor's description changes.
 fn publish_display(
+    // On the main thread, where macOS's host display query reads AppKit.
+    _main: NonSend<Driver>,
     windows: Query<Option<&bevy::window::OnMonitor>, With<PrimaryWindow>>,
+    handles: Query<&bevy::window::RawHandleWrapper, With<PrimaryWindow>>,
     monitors: Query<(
         Entity,
         Ref<bevy::window::Monitor>,
@@ -740,7 +743,15 @@ fn publish_display(
         ));
         return;
     };
-    match host_display::snapshot(monitor.name.as_deref()) {
+    let view = handles
+        .single()
+        .ok()
+        .and_then(|handle| match handle.get_window_handle() {
+            #[cfg(target_os = "macos")]
+            wgpu::rwh::RawWindowHandle::AppKit(appkit) => Some(appkit.ns_view),
+            _ => None,
+        });
+    match host_display::snapshot(monitor.name.as_deref(), host_display::WindowView(view)) {
         Ok(snapshot) => {
             host_display::watch();
             display::publish(Display::Known(snapshot));
@@ -772,6 +783,7 @@ fn publish_display(
         width: monitor.physical_width,
         height: monitor.physical_height,
         refresh_rate_millihertz: monitor.refresh_rate_millihertz,
+        refresh_ratio: None,
         scale_factor: monitor.scale_factor,
         modes: monitor
             .video_modes
@@ -780,6 +792,7 @@ fn publish_display(
                 width: mode.physical_size.x,
                 height: mode.physical_size.y,
                 refresh_rate_millihertz: mode.refresh_rate_millihertz,
+                refresh_ratio: None,
             })
             .collect(),
     }));

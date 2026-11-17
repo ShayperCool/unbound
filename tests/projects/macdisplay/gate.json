@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/macdisplay/run.py check"
+  ],
+  "summary": "macdisplay: .*",
+  "engine_paths": [
+    "crates/unbound-app/src/host_display.rs",
+    "crates/unbound-runtime/src/display.rs",
+    "managed/UnityEngine/Core/Input.cs"
+  ]
+}

@@ -14,6 +14,9 @@ pub struct DisplayMode {
     pub width: u32,
     pub height: u32,
     pub refresh_rate_millihertz: u32,
+    /// The refresh rate as an exact ratio (numerator, denominator), when the host gives one; it
+    /// replaces `refresh_rate_millihertz` (0/1: the host reports a mode without a rate).
+    pub refresh_ratio: Option<(u32, u32)>,
 }
 
 /// A monitor, as the window system reports it.
@@ -31,6 +34,9 @@ pub struct DisplaySnapshot {
     pub height: u32,
     /// None: the window system does not know it.
     pub refresh_rate_millihertz: Option<u32>,
+    /// The current refresh rate as an exact ratio, when the host gives one; it replaces
+    /// `refresh_rate_millihertz`.
+    pub refresh_ratio: Option<(u32, u32)>,
     /// The window system's scale factor for the monitor (1 on an unscaled desktop).
     pub scale_factor: f64,
     /// In the window system's order.
@@ -106,12 +112,12 @@ pub fn encode(version: u64, display: Option<&Display>, since: Option<u64>) -> Js
             "name": d.name,
             "width": d.width,
             "height": d.height,
-            "refreshRate": d.refresh_rate_millihertz.and_then(refresh_rate),
+            "refreshRate": d.refresh_ratio.map(ratio).or_else(|| d.refresh_rate_millihertz.and_then(refresh_rate)),
             "scaleFactor": d.scale_factor,
             "modes": d.modes.iter().map(|m| json!({
                 "width": m.width,
                 "height": m.height,
-                "refreshRate": refresh_rate(m.refresh_rate_millihertz),
+                "refreshRate": m.refresh_ratio.map(ratio).or_else(|| refresh_rate(m.refresh_rate_millihertz)),
             })).collect::<Vec<_>>(),
         }),
     }
@@ -125,6 +131,11 @@ pub fn refresh_rate(millihertz: u32) -> Option<Json> {
     }
     let divisor = gcd(millihertz, 1000);
     Some(json!({ "numerator": millihertz / divisor, "denominator": 1000 / divisor }))
+}
+
+/// An exact ratio as given (not reduced: the host's own terms).
+fn ratio((numerator, denominator): (u32, u32)) -> Json {
+    json!({ "numerator": numerator, "denominator": denominator })
 }
 
 fn gcd(mut a: u32, mut b: u32) -> u32 {
@@ -149,17 +160,20 @@ mod tests {
             width: 2560,
             height: 1440,
             refresh_rate_millihertz: Some(59_951),
+            refresh_ratio: None,
             scale_factor: 1.5,
             modes: vec![
                 DisplayMode {
                     width: 2560,
                     height: 1440,
                     refresh_rate_millihertz: 59_951,
+                    refresh_ratio: None,
                 },
                 DisplayMode {
                     width: 1920,
                     height: 1080,
                     refresh_rate_millihertz: 60_000,
+                    refresh_ratio: None,
                 },
             ],
         }
@@ -202,6 +216,26 @@ mod tests {
         assert_eq!(json["name"], Json::Null);
         assert_eq!(json["refreshRate"], Json::Null);
         assert_eq!(json["modes"][0]["refreshRate"], Json::Null);
+    }
+
+    #[test]
+    fn exact_ratios_replace_millihertz() {
+        let mut d = monitor();
+        d.refresh_ratio = Some((24_000_000, 199_999));
+        d.modes[0].refresh_ratio = Some((0, 1));
+        let json = encode(1, Some(&Display::Known(d)), None);
+        assert_eq!(
+            json["refreshRate"],
+            json!({ "numerator": 24_000_000, "denominator": 199_999 })
+        );
+        assert_eq!(
+            json["modes"][0]["refreshRate"],
+            json!({ "numerator": 0, "denominator": 1 })
+        );
+        assert_eq!(
+            json["modes"][1]["refreshRate"],
+            json!({ "numerator": 60, "denominator": 1 })
+        );
     }
 
     #[test]

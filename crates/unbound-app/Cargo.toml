@@ -51,7 +51,7 @@ winit = { version = "0.30", default-features = false, features = ["wayland-dlope
 # The Metal device's plugin interface (render/executor/plugins_metal.rs): the renderer's own
 # Metal objects, as wgpu's Metal backend has them.
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSBundle", "NSRange", "NSString"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSBundle", "NSGeometry", "NSRange", "NSString"] }
 objc2-metal = { version = "0.3", default-features = false, features = [
     "std",
     "MTLAllocation",
