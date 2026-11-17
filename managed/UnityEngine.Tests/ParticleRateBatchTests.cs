@@ -6,6 +6,46 @@ namespace UnityEngine.Tests
 {
     public class ParticleRateBatchTests
     {
+        /// <summary>A looping step longer than its loop emits its rate only for its advance within
+        /// the loop (Unity 6000.0.71f1, tests/projects/particlerender prewarm/maxdelta/*): one
+        /// 0.25 s step of a 0.1 s loop at 100 per second emits a 0.05 s window's births, five 0.05 s
+        /// steps over the same time all 25 (the control); a non-looping system emits the same in
+        /// either.</summary>
+        [Fact]
+        public void ALoopingStepLongerThanItsLoopEmitsForItsAdvanceWithinTheLoop()
+        {
+            Assert.InRange(Births(0.25f, true), 4, 5);
+            Assert.Equal(25, Births(0.05f, true));
+            Assert.Equal(Births(0.05f, false), Births(0.25f, false));
+        }
+
+        static int Births(float maxDelta, bool loop)
+        {
+            string previousVersion = ProjectInfo.UnityVersion;
+            float previousMax = Time.maximumParticleDeltaTime;
+            var go = new GameObject("long steps");
+            go.SetActive(false);
+            var ps = go.AddComponent<ParticleSystem>();
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.maximumParticleDeltaTime = maxDelta;
+                var m = ps.main;
+                m.playOnAwake = false; m.duration = 0.1f; m.loop = loop; m.startLifetime = 5f;
+                var s = ps.shape; s.enabled = false;
+                var e = ps.emission; e.rateOverTime = 100f;
+                go.SetActive(true);
+                ps.Simulate(0.25f, false, true, false);
+                return ps.particleCount;
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                ProjectInfo.UnityVersion = previousVersion;
+                Time.maximumParticleDeltaTime = previousMax;
+            }
+        }
+
         // Measured buffer contents and per-seed motion, Unity 6000.0.71f1,
         // tests/projects/particlerandom ratebatch/3/constant/plain, second step.
         [Fact]
