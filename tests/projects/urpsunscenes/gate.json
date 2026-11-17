@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/urpsunscenes/run.py gate"],
+  "summary": "urpsunscenes: .*",
+  "engine_paths": ["managed/UnityEngine/Graphics/FrameBuilder.cs", "managed/UnityEngine/Graphics/Lighting.cs"]
+}

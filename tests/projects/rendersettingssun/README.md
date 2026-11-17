@@ -34,8 +34,8 @@ directional light is used." It defines neither "brightest" nor what the forward 
   zero-intensity, empty-culling-mask and cookie lights are not it. Between equal lights the
   Editor's choice varies between runs, so the tie cases record no forward readback.
 
-Not measured: a scriptable render pipeline (URP reads `RenderSettings.sun` in its own code),
-lights in another scene than the active one, a named light of an unloaded scene, area lights, a
+Not measured here (tests/projects/urpsunscenes measures URP, lights of other scenes than the
+active one and an unloaded sun's scene): area lights, a
 fully baked light (one a bake marks baked) beside realtime ones, a Not Important directional
 light with no other directional light, and the colour temperature (this project's lights do not
 apply it: the `color temperature` case cannot tell the colour as set from the final colour).
