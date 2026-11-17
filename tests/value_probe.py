@@ -93,7 +93,8 @@ def same(expected, actual, tolerance):
     if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
         if math.isnan(expected) or math.isnan(actual):
             return math.isnan(expected) and math.isnan(actual)
-        return abs(expected-actual) <= tolerance
+        # Equal numbers match, infinities of one sign included (their difference is NaN).
+        return expected == actual or abs(expected-actual) <= tolerance
     if isinstance(expected, list) and isinstance(actual, list):
         return len(expected) == len(actual) and all(same(e, a, tolerance) for e, a in zip(expected, actual))
     if isinstance(expected, dict) and isinstance(actual, dict):
