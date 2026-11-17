@@ -22,6 +22,62 @@ namespace UnityEngine.Tests
             Assert.InRange(Births(0.25f, true, release: "6000.0.0f1"), 24, 26);
         }
 
+        /// <summary>A long step emits and carries the emission phase as its advance within the loop:
+        /// steps just past one and three loops of a 1.5-birth loop go on as one that took only that
+        /// advance (its births, time and phase: an odd count of loop ends would move it). Steps of
+        /// whole loops follow the Editor's float ties instead (tests/projects/particlerender
+        /// prewarm/maxdelta/0.2/*).</summary>
+        [Theory]
+        [InlineData(0.1f, 15f, 0.10001f, 0.00001f)]
+        [InlineData(0.1f, 15f, 0.30001f, 0.00001f)]
+        public void ALongStepGoesOnAsItsAdvanceWithinTheLoop(float duration, float rate, float longStep, float advance)
+        {
+            var (longAges, longTime) = Continue(duration, rate, longStep);
+            var (shortAges, shortTime) = Continue(duration, rate, advance);
+            Assert.Equal(shortAges, longAges);
+            Assert.Equal(shortTime, longTime, 5);
+        }
+
+        /// <summary>One first step, then a hundred of 0.01 s: the ages (to 0.1 ms) of the particles
+        /// born after the first step, and the final time.</summary>
+        static (int[] ages, float time) Continue(float duration, float rate, float first)
+        {
+            string previousVersion = ProjectInfo.UnityVersion;
+            float previousMax = Time.maximumParticleDeltaTime;
+            var go = new GameObject("continue");
+            go.SetActive(false);
+            var ps = go.AddComponent<ParticleSystem>();
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Time.maximumParticleDeltaTime = 0.5f; // each first call is one step
+                var m = ps.main;
+                m.playOnAwake = false; m.duration = duration; m.loop = true; m.startLifetime = 50f;
+                var s = ps.shape; s.enabled = false;
+                var e = ps.emission; e.rateOverTime = rate;
+                go.SetActive(true);
+                ps.Simulate(first, false, true, false);
+                int start = ps.particleCount;
+                for (int i = 0; i < 100; i++) ps.Simulate(0.01f, false, false, false);
+                var particles = new ParticleSystem.Particle[ps.particleCount];
+                ps.GetParticles(particles);
+                var ages = new int[particles.Length - start];
+                for (int i = 0; i < ages.Length; i++)
+                {
+                    var p = particles[start + i];
+                    ages[i] = (int)Math.Round((p.startLifetime - p.remainingLifetime) * 10000f);
+                }
+                Array.Sort(ages);
+                return (ages, ps.time);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                ProjectInfo.UnityVersion = previousVersion;
+                Time.maximumParticleDeltaTime = previousMax;
+            }
+        }
+
         static int Births(float maxDelta, bool loop, float time = 0.25f, string release = "6000.0.71f1")
         {
             string previousVersion = ProjectInfo.UnityVersion;

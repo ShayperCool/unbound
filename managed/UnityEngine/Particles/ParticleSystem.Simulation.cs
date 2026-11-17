@@ -501,8 +501,9 @@ namespace UnityEngine
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
             if (planned) m_StepRateDt = ageSpan;
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
-            // The loops the plan passes over whole carry no emission phase either.
-            int skipped = planned && m_UseRateBatch ? SkippedLoops(dt, duration) : 0;
+            // The step's loop ends carry the emission phase as far as the rate plan crossed them
+            // (RateSpan: the loops a long step passes over carry none).
+            int carries = planned && m_UseRateBatch ? m_StepPlanWraps : int.MaxValue;
             int guard = 0;
             var segment = BurstSegment.Within;
             m_StepBursts.Clear();
@@ -532,12 +533,12 @@ namespace UnityEngine
                 }
                 else if (passBursts) CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration, fire: false);
                 m_Loop++;
-                if (skipped > 0)
+                if (carries > 0)
                 {
-                    skipped--;
-                    m_LoopStart = true;
+                    carries--;
+                    CarryEmissionPhase(duration);
                 }
-                else CarryEmissionPhase(duration);
+                else m_LoopStart = true;
                 Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
                 t0 = 0f;
                 t1 = rest;
@@ -556,6 +557,8 @@ namespace UnityEngine
         }
 
         int m_StepRateBirths;
+        /// <summary>How many loop ends the step's rate plan crossed (<see cref="RateSpan"/>).</summary>
+        int m_StepPlanWraps;
         float m_StepRateRemainder, m_StepRateInvGain, m_StepRateDt;
         bool m_RateBatchEmitted, m_UseRateBatch;
 
@@ -567,29 +570,23 @@ namespace UnityEngine
         /// so the next update removes it (6000.0.71f1).</summary>
         const float DiscardedAgePercent = 100.00001f;
 
-        /// <summary>The whole loops a looping system's step longer than its loop passes over without
-        /// emitting: its rate emits only for the rest of the step, more than none and at most one
-        /// loop, its births still spread over the whole step (the Unity 6000.0.71f1 Editor,
-        /// tests/projects/particlerender `prewarm/maxdelta/*`: steps of Time.maximumParticleDeltaTime
-        /// above the duration, a step of whole loops emitting one loop). A step of up to one loop
-        /// emits for all of it. Measured with the rate batch (<see cref="StartsInBatches"/>), the
-        /// only path that uses it.</summary>
-        int SkippedLoops(float dt, float duration)
-        {
-            if (!m_Main.loop || !(dt > duration)) return 0;
-            // A step within a rounding error above a whole number of loops counts as that number.
-            return Math.Max(0, (int)Math.Ceiling(dt / (double)duration - 1e-4) - 1);
-        }
-
-        /// <summary>What a step longer than its loop emits for (see <see cref="SkippedLoops"/>): the
-        /// loop time it advances, its end's place in the loop less its start's, a loop added when
-        /// the end lies before the start, and a whole loop when it ends where it started (in float
-        /// arithmetic, so ties fall as the Editor's do).</summary>
+        /// <summary>What a looping system's step longer than its loop emits rate for: the loop time it
+        /// advances, its end's place in the loop less its start's, a loop added when the end lies
+        /// before the start, and a whole loop when it ends where it started (in float arithmetic, so
+        /// ties fall as the Editor's do). The loops it passes over emit nothing, and the step's loop
+        /// ends carry the emission phase only as far as this span crosses them
+        /// (<see cref="m_StepPlanWraps"/>); its clock and its particles' ages still take the whole
+        /// step, and its rate births spread over it. The Unity 6000.0.71f1 Editor,
+        /// tests/projects/particlerender `prewarm/maxdelta/*` (steps of Time.maximumParticleDeltaTime
+        /// above the duration); only the measured release's rate batch uses it
+        /// (<see cref="StartsInBatches"/>). A step of up to one loop emits for all of it.</summary>
         float RateSpan(float t0, float dt, float duration)
         {
-            if (SkippedLoops(dt, duration) == 0) return dt;
+            if (!m_Main.loop || !(dt > duration)) return dt;
             float advance = (t0 + dt) % duration - t0;
             if (advance < 0f) advance += duration;
+            // A step that ends where it started emits a loop; one ending a float rounding short of
+            // its start keeps that span (0.2 s steps of a 0.05 s loop: the Editor's seed order).
             return advance > 1e-6f ? advance : duration;
         }
 
@@ -603,10 +600,12 @@ namespace UnityEngine
             float counted = m_RateAccumulator, whole = counted, gain = 0f, phase = m_EmitPhase;
             float t1 = t0 + RateSpan(t0, dt, duration);
             int guard = 0;
+            m_StepPlanWraps = 0;
             while (t1 >= duration && guard++ < 10000)
             {
                 AddRateSegment(curve, rateRandom, t0, duration, false, duration, phase, ref counted, ref whole, ref gain);
                 if (!m_Main.loop) break;
+                m_StepPlanWraps++;
                 float rest = t1 - duration;
                 if (curve.mode == ParticleSystemCurveMode.Constant && curve.scalar > 0f)
                 {
