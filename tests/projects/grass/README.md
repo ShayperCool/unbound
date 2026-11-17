@@ -55,6 +55,7 @@ terrains' checker, which matches).
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): `compare_images.py --gate image-residuals.json` holds each of the seven images to
 its recorded pixel count and largest difference: five texture-grass images differ by one level
 over most of their blades and in isolated pixels at the edges of distant blades (4215 to 10523
-pixels, up to 139/255; not traced), `Refusals` in its slab meshes drawn in the Grass render mode
-(2153 pixels, up to 133/255; open in docs/COMPATIBILITY_GAPS.md), `Instanced` within 1/255. Any
-other difference fails.
+pixels, up to 139/255; not traced), `Refusals` in one pixel by one level (its slab meshes drawn
+in the Grass render mode take the terrain's normal at every vertex, as the Editor draws them, since
+Q533; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
+fails.

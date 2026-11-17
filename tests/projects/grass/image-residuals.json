@@ -25,9 +25,9 @@
   "reason": "small: 63 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Refusals": {
-  "pixels": 2153,
-  "worst": 133,
-  "reason": "the slab meshes drawn in the Grass render mode without instancing are thinner, with a darker lower edge, than the Editor's (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail meshes in the Grass render mode`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "pixels": 1,
+  "worst": 1,
+  "reason": "one pixel one level apart (not traced); the slab meshes drawn in the Grass render mode match since they take the terrain's normal (Q533); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Tilted": {
   "pixels": 10523,
