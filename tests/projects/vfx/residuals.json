@@ -2,7 +2,7 @@
  "A coroutine waiting for the end of the frame resumes in the first Play frame in this capture; Unbound resumes it from the second frame, as tests/projects/eofstartup measured. What makes the two captures differ is not isolated: that probe uses the built-in render pipeline, settles for another number of editor updates and focuses the Game view (follow-up: measure the first frame's end of frame with each of those changed alone)": [
   "sim/override timing/f001 3 end of frame"
  ],
- "A frame holding a NaN: Matrix4x4.rotation gives a NaN with the sign bit set in z where the Editor's rotation has none in any component, and the x angle taken from it keeps that sign. Matrix4x4.rotation is measured for finite matrices only (tests/projects/floatrounding native/matrixDecompose; follow-up: a control of NaN matrices there)": [
+ "A frame holding a NaN: Unbound's x angle is a NaN with the sign bit set, the Editor's has none. In Unbound the sign comes from negating the arcsine of the rotation's NaN (it does not depend on the sign of the rotation's z). Whether the Editor's rotation of such a matrix holds NaNs of other signs or its angle step treats a NaN otherwise is not isolated: Matrix4x4.rotation is measured for finite matrices only (tests/projects/floatrounding native/matrixDecompose; follow-up: an Editor control of the bits of Matrix4x4.rotation for a matrix holding a NaN, which separates the two)": [
   "operations/update14/v05",
   "operations/update15/v05",
   "operations/update16/v05"
