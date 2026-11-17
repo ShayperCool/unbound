@@ -1310,46 +1310,4 @@ namespace Unbound.Runtime
             }
         }
     }
-
-    /// <summary>Texture2D.PackTextures: a shelf packer.</summary>
-    internal static class TexturePacker
-    {
-        internal static UnityEngine.Rect[] Pack(UnityEngine.Texture2D atlas, UnityEngine.Texture2D[] textures, int padding, int maxSize, bool makeNoLongerReadable)
-        {
-            int width = 1, height = 1;
-            var rects = new UnityEngine.Rect[textures.Length];
-            int x = 0, y = 0, rowHeight = 0, size = 64;
-            while (true)
-            {
-                x = y = rowHeight = 0;
-                bool fits = true;
-                for (int i = 0; i < textures.Length && fits; i++)
-                {
-                    var t = textures[i];
-                    if (x + t.width > size) { x = 0; y += rowHeight + padding; rowHeight = 0; }
-                    if (y + t.height > size || t.width > size) { fits = false; break; }
-                    rects[i] = new UnityEngine.Rect(x, y, t.width, t.height);
-                    x += t.width + padding;
-                    rowHeight = Math.Max(rowHeight, t.height);
-                }
-                if (fits || size >= maxSize) break;
-                size *= 2;
-            }
-            width = height = Math.Min(size, maxSize);
-            atlas.Reinitialize(width, height);
-            var pixels = new UnityEngine.Color32[width * height];
-            for (int i = 0; i < textures.Length; i++)
-            {
-                var src = textures[i].GetPixels32();
-                var r = rects[i];
-                for (int j = 0; j < (int)r.height && (int)r.y + j < height; j++)
-                    for (int k = 0; k < (int)r.width && (int)r.x + k < width; k++)
-                        pixels[((int)r.y + j) * width + (int)r.x + k] = src[j * textures[i].width + k];
-                rects[i] = new UnityEngine.Rect(r.x / width, r.y / height, r.width / width, r.height / height);
-            }
-            atlas.SetPixels32(pixels);
-            atlas.Apply(true, makeNoLongerReadable);
-            return rects;
-        }
-    }
 }
