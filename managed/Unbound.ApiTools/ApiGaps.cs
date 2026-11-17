@@ -53,7 +53,7 @@ public static class ApiGaps
         var analysis = new Analysis(unity, games, gameNames, unityFiles.Select(f => Path.GetFileNameWithoutExtension(f)));
         foreach (var game in games)
             analysis.Run(game);
-        Evaluate(analysis, impl, report);
+        Evaluate(analysis, impl, unity, report);
         report.Milliseconds = watch.ElapsedMilliseconds;
         return report;
     }
@@ -313,7 +313,7 @@ public static class ApiGaps
     }
 
     /// <summary>Checks every collected use against the implementation and fills the report.</summary>
-    static void Evaluate(Analysis analysis, ApiIndex impl, GapReport report)
+    static void Evaluate(Analysis analysis, ApiIndex impl, ApiIndex unity, GapReport report)
     {
         var missingTypes = new HashSet<string>(StringComparer.Ordinal);
         foreach (var use in analysis.Types.Values)
@@ -347,8 +347,12 @@ public static class ApiGaps
                 }
                 : null;
             var stub = found?.IsStub == true;
-            // A stub body of an interface member counts only where an implementing type falls back on it.
-            if (stub && found!.Value.Type.IsInterface && !impl.InterfaceMemberReached(found.Value.Type, use.Name, use.Signature))
+            // A stub body of an interface member Unity declares abstract counts only where an
+            // implementing type of the implementation falls back on it (a game's implementers have
+            // their own); a Unity default method is reached by implementers that keep it.
+            if (stub && found!.Value.Type.IsInterface
+                && unity.Find(use.Type) is { } declared && unity.DeclaresAbstract(declared, use.Name, use.Signature)
+                && !impl.InterfaceMemberReached(found.Value.Type, use.Name, use.Signature))
                 stub = false;
             // A type forwarded elsewhere by the implementation is not ours to check.
             var satisfied = found != null ? !stub : impl.Find(use.Type) == null && impl.IsForwarded(use.Type);

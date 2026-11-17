@@ -153,9 +153,10 @@ public class ApiGapsTests
         }
     }
 
-    // A generated stub body of an interface member is a gap only where a type of the
-    // implementation that implements the interface falls back on it; a game's own implementer and
-    // an implementer with its own (implicit or explicit) member never reach it.
+    // A generated stub body of an interface member Unity declares abstract is a gap only where a
+    // type of the implementation that implements the interface falls back on it; a game's own
+    // implementer and an implementer with its own (implicit or explicit) member never reach it. A
+    // Unity default method stays a gap.
     [Fact]
     public void InterfaceStubsCountOnlyWhereAnImplementerFallsBackOnThem()
     {
@@ -164,7 +165,8 @@ public class ApiGapsTests
             {
                 public interface IConnection { void Send(); void Close(); }
                 public interface IGameSide { void Run(); }
-                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; }
+                public interface IWithDefault { void Reset() {} }
+                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; public static IWithDefault Default => null; }
             }
             """;
         const string implementation = """
@@ -177,7 +179,9 @@ public class ApiGapsTests
                     [Unbound.Stub] void Close() {}
                 }
                 public interface IGameSide { [Unbound.Stub] void Run() {} }
-                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; }
+                public interface IWithDefault { [Unbound.Stub] void Reset() {} }
+                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; public static IWithDefault Default => null; }
+                public class Resettable : IWithDefault { public void Reset() {} }
                 public class Player : IConnection { public void Send() {} }
                 public class Remote : IConnection { void IConnection.Send() {} void IConnection.Close() {} }
             }
@@ -191,6 +195,7 @@ public class ApiGapsTests
                     Connections.Current.Send();
                     Connections.Current.Close();
                     Connections.Side.Run();
+                    Connections.Default.Reset();
                 }
             }
             """;
@@ -204,10 +209,16 @@ public class ApiGapsTests
 
             var report = ApiGaps.Analyze(new[] { gameAssembly }, impl, managed);
 
-            // Player has no Close of its own: a call through the interface reaches the stub.
-            var member = Assert.Single(report.MissingMembers.SelectMany(g => g.Members.Select(m => (g.Type, m.Signature, m.Stub))));
-            Assert.Equal(("UnityEngine.IConnection", "Close() : System.Void", true), member);
-            Assert.Equal(1, report.Members.Stubbed);
+            // Player has no Close of its own: a call through the interface reaches the stub. Reset has
+            // a body in Unity, so a game implementer keeping it reaches the stub too.
+            var members = report.MissingMembers.SelectMany(g => g.Members.Select(m => (g.Type, m.Signature, m.Stub)))
+                .OrderBy(m => m.Type, StringComparer.Ordinal).ToList();
+            Assert.Equal(new[]
+            {
+                ("UnityEngine.IConnection", "Close() : System.Void", true),
+                ("UnityEngine.IWithDefault", "Reset() : System.Void", true),
+            }, members);
+            Assert.Equal(2, report.Members.Stubbed);
         }
         finally
         {

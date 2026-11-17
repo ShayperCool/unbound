@@ -238,8 +238,8 @@ sealed class ApiIndex
 
     /// <summary>Whether a call through an interface can reach the interface's own (stub) member:
     /// some type of the set implementing the interface has no member of its own for it, implicit or
-    /// explicit, in its class hierarchy. Types outside the set (a game's) implement every member of
-    /// the interfaces they take, so their calls never reach the interface's body.</summary>
+    /// explicit, in its class hierarchy. For a member Unity declares abstract, types outside the set
+    /// (a game's) implement it themselves, so their calls never reach the interface's body.</summary>
     public bool InterfaceMemberReached(ApiType iface, string name, string signature)
     {
         int dot = iface.FullName.LastIndexOfAny(new[] { '.', '/', '+' });
@@ -267,6 +267,11 @@ sealed class ApiIndex
         }
         return false;
     }
+
+    /// <summary>Whether the type declares the method abstract (an interface member without a body).</summary>
+    public bool DeclaresAbstract(ApiType type, string name, string signature) =>
+        type.Methods.TryGetValue(name, out var list)
+        && list.Exists(m => m.Signature == signature && (m.Attributes & MethodAttributes.Abstract) != 0);
 
     /// <summary>The type in the hierarchy that introduces the virtual method a method with this name
     /// and signature overrides (the least derived one declaring it).</summary>
