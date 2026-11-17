@@ -58,10 +58,10 @@ ROUNDING = 1e-6
 def measure(key, a, b, pixel_tolerance):
     """What a residual list bounds for a differing value: the tokens that differ by float rounding
     (how many, and their largest absolute difference) and, exactly, every other differing token
-    with its position ("pinned")."""
+    with its position ("pinned"); for a value of another token count, its text ("candidate")."""
     ta, tb = a.split(' '), b.split(' ')
     if len(ta) != len(tb):
-        return {'pinned': b}
+        return {'candidate': b}
     small, worst, pinned = 0, 0.0, []
     for i, (x, y) in enumerate(zip(ta, tb)):
         if not compare_value(key, x, y, pixel_tolerance):
