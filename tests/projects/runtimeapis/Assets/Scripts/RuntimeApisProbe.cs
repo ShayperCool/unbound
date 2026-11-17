@@ -346,6 +346,9 @@ public class RuntimeApisProbe : MonoBehaviour
         Do("set_mode.type2", () => GraphicsSettings.SetShaderMode((BuiltinShaderType)2, BuiltinShaderMode.Disabled));
         Try("set_mode.type2.mode", () => GraphicsSettings.GetShaderMode((BuiltinShaderType)2));
         Do("set_mode.type8", () => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.Disabled));
+        Do("set_mode.deferred_builtin", () => GraphicsSettings.SetShaderMode(BuiltinShaderType.DeferredShading, BuiltinShaderMode.UseBuiltin));
+        Do("set_mode.type8_custom", () => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.UseCustom));
+        Try("set_mode.type8_custom.deferred", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DeferredShading));
         var unlit = Shader.Find("Unlit/Color");
         Do("set_custom.depth_unlit", () => GraphicsSettings.SetCustomShader(BuiltinShaderType.DepthNormals, unlit));
         Try("set_custom.depth_unlit.shader", () => ShaderName(BuiltinShaderType.DepthNormals));
@@ -356,6 +359,7 @@ public class RuntimeApisProbe : MonoBehaviour
         Try("set_custom.depth_null.shader", () => ShaderName(BuiltinShaderType.DepthNormals));
         Do("set_custom.type2", () => GraphicsSettings.SetCustomShader((BuiltinShaderType)2, unlit));
         Try("set_custom.type2.shader", () => ShaderName((BuiltinShaderType)2));
+        Try("set_custom.type2.deferred", () => ShaderName(BuiltinShaderType.DeferredShading));
     }
 
     static void Size(string key, Action<CommandBuffer> record)
@@ -409,6 +413,13 @@ public class RuntimeApisProbe : MonoBehaviour
         Size("begin_sample", cb => cb.BeginSample("a"));
         Size("begin_sample_long", cb => cb.BeginSample("probe sample with a longer name"));
         Size("end_sample", cb => cb.EndSample("a"));
+        var sampler = UnityEngine.Profiling.CustomSampler.Create("probe sampler");
+        Size("begin_sample_sampler", cb => cb.BeginSample(sampler));
+        Size("end_sample_sampler", cb => cb.EndSample(sampler));
+        var marker = new Unity.Profiling.ProfilerMarker("probe marker");
+        Size("begin_sample_marker", cb => cb.BeginSample(marker));
+        Size("end_sample_marker", cb => cb.EndSample(marker));
+        Size("draw_multiple", cb => cb.DrawMultipleMeshes(new[] { Matrix4x4.identity, Matrix4x4.identity }, new[] { mesh, mesh }, new[] { 0, 0 }, 2, material, 0, null));
         Size("mixed", cb => { cb.SetGlobalFloat(id, 1f); cb.SetRenderTarget(target); cb.ClearRenderTarget(true, true, Color.black); });
         var cleared = new CommandBuffer();
         cleared.SetGlobalFloat(id, 1f);
