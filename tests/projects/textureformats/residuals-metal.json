@@ -1,0 +1,8 @@
+{
+ "readback.A2B10G10R10_UNormPack32.async": "Unbound's AsyncGPUReadback has no raw encoding of packed formats: a request in the target's own format fails, logged (Unbound: AsyncGPUReadback into this format is not supported)",
+ "readback.B4G4R4A4_UNormPack16.async": "Unbound's AsyncGPUReadback has no raw encoding of packed formats: a request in the target's own format fails, logged (Unbound: AsyncGPUReadback into this format is not supported)",
+ "readback.B4G4R4A4_UNormPack16.asyncfloat": "Unbound stores a B4G4R4A4 target at 8 bits per channel (no 4-bit render format on its device), so its texels keep 8-bit precision",
+ "readback.B4G4R4A4_UNormPack16.read.RGBA32": "Unbound stores a B4G4R4A4 target at 8 bits per channel (no 4-bit render format on its device), so its texels keep 8-bit precision",
+ "readback.B4G4R4A4_UNormPack16.read.RGBAFloat": "Unbound stores a B4G4R4A4 target at 8 bits per channel (no 4-bit render format on its device), so its texels keep 8-bit precision",
+ "readback.E5B9G9R9_UFloatPack32.async": "Unbound's AsyncGPUReadback has no raw encoding of packed formats: a request in the target's own format fails, logged (Unbound: AsyncGPUReadback into this format is not supported)"
+}

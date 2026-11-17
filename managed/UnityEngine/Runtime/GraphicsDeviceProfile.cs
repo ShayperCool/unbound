@@ -84,6 +84,20 @@ namespace Unbound.Runtime
         /// tests/projects/nativegfx `metal.jsonl` volume.compressed3d); null elsewhere (a stub).</summary>
         internal bool? Compressed3DTextures { get; init; }
 
+        /// <summary>Whether Texture2D.ReadPixels and AsyncGPUReadback read a render texture whose
+        /// format answers no ReadPixels usage. Metal reads B8G8R8A8 (its LDR targets), B4G4R4A4,
+        /// E5B9G9R9 and A2B10G10R10 targets, whose usages leave ReadPixels out, and refuses only
+        /// <see cref="UnreadableTargets"/> and A2B10G10R10 into float texels
+        /// (tests/projects/textureformats `metal.jsonl` readback.*, two macOS Editor captures on an
+        /// Apple M2 Pro). False: such a target is refused (Vulkan's ReadPixels and every device's
+        /// AsyncGPUReadback, tests/projects/textureformats).</summary>
+        internal bool ReadsTargetsWithoutReadPixelsUsage { get; init; }
+        /// <summary>The render texture formats the device reads back from no target, by the name its
+        /// AsyncGPUReadback error gives the format (Metal: A1R5G5B5, measured with
+        /// <see cref="ReadsTargetsWithoutReadPixelsUsage"/>).</summary>
+        internal System.Collections.Generic.IReadOnlyDictionary<GraphicsFormat, string> UnreadableTargets { get; init; }
+            = new System.Collections.Generic.Dictionary<GraphicsFormat, string>();
+
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
         /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
         /// null on Vulkan, where it stays a stub. On OpenGL Core GetTiledRenderTargetStorageSize is
@@ -183,6 +197,11 @@ namespace Unbound.Runtime
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
             Compressed3DTextures = true,
+            ReadsTargetsWithoutReadPixelsUsage = true,
+            UnreadableTargets = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
+            {
+                [GraphicsFormat.A1R5G5B5_UNormPack16] = "A1RGB5 UNorm",
+            },
             RefusedVolumeFormats = new System.Collections.Generic.Dictionary<TextureFormat, string>
             {
                 [TextureFormat.PVRTC_RGB2] = "RGB Compressed PVRTC 2BPP UNorm",

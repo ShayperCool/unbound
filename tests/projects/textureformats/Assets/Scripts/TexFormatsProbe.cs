@@ -147,6 +147,65 @@ public static class TexFormatsProbe
     static RenderTextureDescriptor Descriptor(GraphicsFormat format) =>
         new RenderTextureDescriptor(2, 1, format, 0) { msaaSamples = 1, useMipMap = false, sRGB = false };
 
+    // ------------------------------------------------------------------ readback of target formats
+
+    /// <summary>Targets read back whatever their ReadPixels usage answers: the default LDR
+    /// formats (B8G8R8A8 on Metal), packed and shared-exponent formats, and one- and two-channel
+    /// formats (what fills the channels they lack).</summary>
+    static readonly GraphicsFormat[] ReadbackFormats =
+    {
+        GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.B8G8R8A8_UNorm, GraphicsFormat.B8G8R8A8_SRGB,
+        GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormat.A1R5G5B5_UNormPack16, GraphicsFormat.A2B10G10R10_UNormPack32,
+        GraphicsFormat.E5B9G9R9_UFloatPack32, GraphicsFormat.R8_UNorm, GraphicsFormat.R16_SFloat, GraphicsFormat.R32G32_SFloat,
+    };
+    static readonly List<string> s_Logs = new List<string>();
+
+    static string Logged(Func<string> json)
+    {
+        s_Logs.Clear();
+        string value = json();
+        return "{\"value\":" + value + ",\"logs\":[" + string.Join(",", s_Logs.ConvertAll(Json)) + "]}";
+    }
+
+    static void ReadbackTarget(string key, GraphicsFormat format)
+    {
+        Support(key, format);
+        if (!SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return;
+        var rt = Own(new RenderTexture(2, 1, format, GraphicsFormat.None) { filterMode = FilterMode.Point });
+        Value(key + ".create", B2(rt.Create()));
+        Clear(rt, new Color(0.25f, 0.5f, 0.75f, 0.625f));
+        Application.LogCallback log = (message, stack, type) => { if (type != LogType.Log) s_Logs.Add(type + ": " + message); };
+        Application.logMessageReceived += log;
+        try
+        {
+            foreach (var destination in new[] { TextureFormat.RGBAFloat, TextureFormat.RGBA32 })
+                Try(key + ".read." + destination, () => Logged(() =>
+                {
+                    var t = Own(new Texture2D(2, 1, destination, false, true));
+                    t.SetPixels(new[] { new Color(0.1f, 0.2f, 0.3f, 0.4f), new Color(0.1f, 0.2f, 0.3f, 0.4f) });
+                    t.Apply();
+                    var active = RenderTexture.active;
+                    RenderTexture.active = rt;
+                    t.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+                    t.Apply();
+                    RenderTexture.active = active;
+                    return Texels(t);
+                }));
+            Try(key + ".async", () => Logged(() => Readback(AsyncGPUReadback.Request(rt))));
+            // Metal answers A2B10G10R10's float request with memory it never wrote (two captures
+            // differ): only whether it fails, and what it logs.
+            bool undefined = format == GraphicsFormat.A2B10G10R10_UNormPack32;
+            Try(key + ".asyncfloat", () => Logged(() =>
+            {
+                var request = AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBAFloat);
+                if (!undefined) return Readback(request);
+                request.WaitForCompletion();
+                return Json(request.hasError ? "error" : "data");
+            }));
+        }
+        finally { Application.logMessageReceived -= log; }
+    }
+
     // ------------------------------------------------------------------ normalized render textures
 
     static void NormTarget(string key, RenderTextureFormat format)
@@ -853,6 +912,8 @@ public static class TexFormatsProbe
                          RenderTextureFormat.ARGB64, RenderTextureFormat.ARGB2101010 })
                 if (Runs("rt." + format)) NormTarget("rt." + format, format);
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
+            foreach (var format in ReadbackFormats)
+                if (Runs("readback." + format)) ReadbackTarget("readback." + format, format);
             if (Runs("rt.msaaMips")) MsaaMips();
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             if (Runs("rt.arrayLoad")) ArrayLoad();

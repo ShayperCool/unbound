@@ -1,0 +1,91 @@
+{"k":"readback.R8G8B8A8_UNorm.graphicsFormat","v":"R8G8B8A8_UNorm"}
+{"k":"readback.R8G8B8A8_UNorm.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","SetPixels32","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R8G8B8A8_UNorm.compatible.render","v":"R8G8B8A8_UNorm"}
+{"k":"readback.R8G8B8A8_UNorm.compatible.sample","v":"R8G8B8A8_UNorm"}
+{"k":"readback.R8G8B8A8_UNorm.create","v":true}
+{"k":"readback.R8G8B8A8_UNorm.read.RGBAFloat","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.R8G8B8A8_UNorm.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.R8G8B8A8_UNorm.async","v":{"value":"4080bf9f4080bf9f","logs":[]}}
+{"k":"readback.R8G8B8A8_UNorm.asyncfloat","v":{"value":"8180803e8180003fc0bf3f3fa09f1f3f8180803e8180003fc0bf3f3fa09f1f3f","logs":[]}}
+{"k":"readback.B8G8R8A8_UNorm.graphicsFormat","v":"B8G8R8A8_UNorm"}
+{"k":"readback.B8G8R8A8_UNorm.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","SetPixels32","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B8G8R8A8_UNorm.compatible.render","v":"B8G8R8A8_UNorm"}
+{"k":"readback.B8G8R8A8_UNorm.compatible.sample","v":"B8G8R8A8_UNorm"}
+{"k":"readback.B8G8R8A8_UNorm.create","v":true}
+{"k":"readback.B8G8R8A8_UNorm.read.RGBAFloat","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.B8G8R8A8_UNorm.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.B8G8R8A8_UNorm.async","v":{"value":"bf80409fbf80409f","logs":[]}}
+{"k":"readback.B8G8R8A8_UNorm.asyncfloat","v":{"value":"8180803e8180003fc0bf3f3fa09f1f3f8180803e8180003fc0bf3f3fa09f1f3f","logs":["Error: 'B8G8R8A8_UNorm' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.B8G8R8A8_SRGB.graphicsFormat","v":"B8G8R8A8_SRGB"}
+{"k":"readback.B8G8R8A8_SRGB.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","SetPixels32","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B8G8R8A8_SRGB.compatible.render","v":"B8G8R8A8_SRGB"}
+{"k":"readback.B8G8R8A8_SRGB.compatible.sample","v":"B8G8R8A8_SRGB"}
+{"k":"readback.B8G8R8A8_SRGB.create","v":true}
+{"k":"readback.B8G8R8A8_SRGB.read.RGBAFloat","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.B8G8R8A8_SRGB.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,3f1f9fa0;3e808081,3f008081,3f3fbfc0,3f1f9fa0","logs":[]}}
+{"k":"readback.B8G8R8A8_SRGB.async","v":{"value":"bf80409fbf80409f","logs":[]}}
+{"k":"readback.B8G8R8A8_SRGB.asyncfloat","v":{"value":"8180803e8180003fc0bf3f3fa09f1f3f8180803e8180003fc0bf3f3fa09f1f3f","logs":["Error: 'B8G8R8A8_SRGB' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.B4G4R4A4_UNormPack16.graphicsFormat","v":"B4G4R4A4_UNormPack16"}
+{"k":"readback.B4G4R4A4_UNormPack16.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.B4G4R4A4_UNormPack16.compatible.render","v":"B4G4R4A4_UNormPack16"}
+{"k":"readback.B4G4R4A4_UNormPack16.compatible.sample","v":"B4G4R4A4_UNormPack16"}
+{"k":"readback.B4G4R4A4_UNormPack16.create","v":true}
+{"k":"readback.B4G4R4A4_UNormPack16.read.RGBAFloat","v":{"value":"3e888889,3f088889,3f3bbbbc,3f19999a;3e888889,3f088889,3f3bbbbc,3f19999a","logs":[]}}
+{"k":"readback.B4G4R4A4_UNormPack16.read.RGBA32","v":{"value":"3e888889,3f088889,3f3bbbbc,3f19999a;3e888889,3f088889,3f3bbbbc,3f19999a","logs":[]}}
+{"k":"readback.B4G4R4A4_UNormPack16.async","v":{"value":"8b948b94","logs":[]}}
+{"k":"readback.B4G4R4A4_UNormPack16.asyncfloat","v":{"value":"8988883e8988083fbcbb3b3f9a99193f8988883e8988083fbcbb3b3f9a99193f","logs":["Error: 'B4G4R4A4_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.A1R5G5B5_UNormPack16.graphicsFormat","v":"A1R5G5B5_UNormPack16"}
+{"k":"readback.A1R5G5B5_UNormPack16.usages","v":["Render","Blend","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.A1R5G5B5_UNormPack16.compatible.render","v":"A1R5G5B5_UNormPack16"}
+{"k":"readback.A1R5G5B5_UNormPack16.compatible.sample","v":"None"}
+{"k":"readback.A1R5G5B5_UNormPack16.create","v":true}
+{"k":"readback.A1R5G5B5_UNormPack16.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=72)","Assert: The texture format is not supported for Image operations (id=72)"]}}
+{"k":"readback.A1R5G5B5_UNormPack16.read.RGBA32","v":{"value":"3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd;3dd0d0d1,3e4ccccd,3e9a9a9b,3ecccccd","logs":["Assert: The texture format is not supported for Image operations (id=72)","Assert: The texture format is not supported for Image operations (id=72)"]}}
+{"k":"readback.A1R5G5B5_UNormPack16.async","v":{"value":"error","logs":["Error: AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A1R5G5B5_UNormPack16.asyncfloat","v":{"value":"error","logs":["Error: 'A1R5G5B5_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.","Error: AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back"]}}
+{"k":"readback.A2B10G10R10_UNormPack32.graphicsFormat","v":"A2B10G10R10_UNormPack32"}
+{"k":"readback.A2B10G10R10_UNormPack32.usages","v":["Render","Blend","GetPixels","SetPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.A2B10G10R10_UNormPack32.compatible.render","v":"A2B10G10R10_UNormPack32"}
+{"k":"readback.A2B10G10R10_UNormPack32.compatible.sample","v":"None"}
+{"k":"readback.A2B10G10R10_UNormPack32.create","v":true}
+{"k":"readback.A2B10G10R10_UNormPack32.read.RGBAFloat","v":{"value":"3dcccccd,3e4ccccd,3e99999a,3ecccccd;3dcccccd,3e4ccccd,3e99999a,3ecccccd","logs":["Error: Image blit conversion between formats 75 -> 52 is not supported"]}}
+{"k":"readback.A2B10G10R10_UNormPack32.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,3f2aaaab;3e808081,3f008081,3f3fbfc0,3f2aaaab","logs":[]}}
+{"k":"readback.A2B10G10R10_UNormPack32.async","v":{"value":"0001f8af0001f8af","logs":[]}}
+{"k":"readback.A2B10G10R10_UNormPack32.asyncfloat","v":{"value":"data","logs":["Error: 'A2B10G10R10_UNormPack32' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.E5B9G9R9_UFloatPack32.graphicsFormat","v":"E5B9G9R9_UFloatPack32"}
+{"k":"readback.E5B9G9R9_UFloatPack32.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.E5B9G9R9_UFloatPack32.compatible.render","v":"E5B9G9R9_UFloatPack32"}
+{"k":"readback.E5B9G9R9_UFloatPack32.compatible.sample","v":"E5B9G9R9_UFloatPack32"}
+{"k":"readback.E5B9G9R9_UFloatPack32.create","v":true}
+{"k":"readback.E5B9G9R9_UFloatPack32.read.RGBAFloat","v":{"value":"3e800000,3f000000,3f400000,3f800000;3e800000,3f000000,3f400000,3f800000","logs":[]}}
+{"k":"readback.E5B9G9R9_UFloatPack32.read.RGBA32","v":{"value":"3e808081,3f008081,3f3fbfc0,3f800000;3e808081,3f008081,3f3fbfc0,3f800000","logs":[]}}
+{"k":"readback.E5B9G9R9_UFloatPack32.async","v":{"value":"8000027e8000027e","logs":[]}}
+{"k":"readback.E5B9G9R9_UFloatPack32.asyncfloat","v":{"value":"0000803e0000003f0000403f0000803f0000803e0000003f0000403f0000803f","logs":["Error: 'E5B9G9R9_UFloatPack32' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}}
+{"k":"readback.R8_UNorm.graphicsFormat","v":"R8_UNorm"}
+{"k":"readback.R8_UNorm.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","SetPixels32","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R8_UNorm.compatible.render","v":"R8_UNorm"}
+{"k":"readback.R8_UNorm.compatible.sample","v":"R8_UNorm"}
+{"k":"readback.R8_UNorm.create","v":true}
+{"k":"readback.R8_UNorm.read.RGBAFloat","v":{"value":"3e808081,3f800000,3f800000,3f800000;3e808081,3f800000,3f800000,3f800000","logs":[]}}
+{"k":"readback.R8_UNorm.read.RGBA32","v":{"value":"3e808081,3f800000,3f800000,3f800000;3e808081,3f800000,3f800000,3f800000","logs":[]}}
+{"k":"readback.R8_UNorm.async","v":{"value":"4040","logs":[]}}
+{"k":"readback.R8_UNorm.asyncfloat","v":{"value":"8180803e0000803f0000803f0000803f8180803e0000803f0000803f0000803f","logs":[]}}
+{"k":"readback.R16_SFloat.graphicsFormat","v":"R16_SFloat"}
+{"k":"readback.R16_SFloat.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R16_SFloat.compatible.render","v":"R16_SFloat"}
+{"k":"readback.R16_SFloat.compatible.sample","v":"R16_SFloat"}
+{"k":"readback.R16_SFloat.create","v":true}
+{"k":"readback.R16_SFloat.read.RGBAFloat","v":{"value":"3e800000,3f800000,3f800000,3f800000;3e800000,3f800000,3f800000,3f800000","logs":[]}}
+{"k":"readback.R16_SFloat.read.RGBA32","v":{"value":"3e808081,3f800000,3f800000,3f800000;3e808081,3f800000,3f800000,3f800000","logs":[]}}
+{"k":"readback.R16_SFloat.async","v":{"value":"00340034","logs":[]}}
+{"k":"readback.R16_SFloat.asyncfloat","v":{"value":"0000803e0000803f0000803f0000803f0000803e0000803f0000803f0000803f","logs":[]}}
+{"k":"readback.R32G32_SFloat.graphicsFormat","v":"R32G32_SFloat"}
+{"k":"readback.R32G32_SFloat.usages","v":["Sample","Linear","Sparse","Render","Blend","GetPixels","SetPixels","ReadPixels","LoadStore","MSAA2x","MSAA4x"]}
+{"k":"readback.R32G32_SFloat.compatible.render","v":"R32G32_SFloat"}
+{"k":"readback.R32G32_SFloat.compatible.sample","v":"R32G32_SFloat"}
+{"k":"readback.R32G32_SFloat.create","v":true}
+{"k":"readback.R32G32_SFloat.read.RGBAFloat","v":{"value":"3e800000,3f000000,3f800000,3f800000;3e800000,3f000000,3f800000,3f800000","logs":[]}}
+{"k":"readback.R32G32_SFloat.read.RGBA32","v":{"value":"3e808081,3f008081,3f800000,3f800000;3e808081,3f008081,3f800000,3f800000","logs":[]}}
+{"k":"readback.R32G32_SFloat.async","v":{"value":"0000803e0000003f0000803e0000003f","logs":[]}}
+{"k":"readback.R32G32_SFloat.asyncfloat","v":{"value":"0000803e0000003f0000803f0000803f0000803e0000003f0000803f0000803f","logs":[]}}
+{"k":"complete","v":true}

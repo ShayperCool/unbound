@@ -174,3 +174,27 @@ other releases retain the earlier selection until recorded.
 Use `publish --append` when adding controls to this existing reference. The runner
 checks every earlier raw record before appending, and refuses any changed or
 missing record; both new Editor captures must also agree.
+
+## Reading targets back on Metal
+
+`--device metal` records the macOS Editor in batch mode (it draws with Metal) through
+`tests/macos_editor.py`; `Reference/unity-6000.0.71f1/metal.jsonl` holds the `readback.*` cases,
+two byte-identical captures on an Apple M2 Pro (macOS arm64). On macOS `unbound` and `verify`
+check Metal whatever device is named, since it is the one device there. Each case clears a 2x1
+target of one format to (0.25, 0.5, 0.75, 0.625) and reads it with ReadPixels into RGBAFloat and
+RGBA32 and with AsyncGPUReadback (its own format and RGBAFloat), with the errors each logs.
+
+- Metal reads B8G8R8A8 (its LDR and Default format), B4G4R4A4, E5B9G9R9 and A2B10G10R10 targets
+  although their usages leave ReadPixels out. ReadPixels refuses A1R5G5B5 (asserting twice
+  that the format is not supported for image operations) and A2B10G10R10 into RGBAFloat (an
+  image blit conversion error); A2B10G10R10 into RGBA32 reads, with 2-bit alpha.
+- AsyncGPUReadback refuses A1R5G5B5 with its own error. An RGBAFloat request of a target
+  without ReadPixels usage logs that it failed but returns the converted texels; for
+  A2B10G10R10 they are memory the Editor never wrote (the repeats differ), so only that the
+  request succeeds is recorded.
+- One- and two-channel targets read their missing channels as 1, as on Vulkan.
+
+`residuals-metal.json` lists Unbound's remaining differences: a request in a packed target's
+own format (no raw packed encoding; the request fails, logged) and B4G4R4A4 targets, which
+Unbound stores at 8 bits per channel. Whether the Vulkan Editor's ReadPixels reads a B8G8R8A8
+target is unmeasured; Unbound keeps refusing every target without ReadPixels usage there.

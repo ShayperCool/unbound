@@ -11,6 +11,13 @@
                                            (default; --cases all: every case) compared with the
                                            reference, the recorded residuals.json allowed
 
+--device selects the graphics device: opengl (the default: the Linux Editor's own device,
+Reference/unity-R.jsonl), vulkan (Reference/unity-R/vulkan-q58.jsonl) or metal (macOS arm64:
+the macOS Editor in batch mode, which draws with Metal, through tests/macos_editor.py;
+Reference/unity-R/metal.jsonl, the readback cases). Metal is the one device on macOS, so there
+`unbound` and `verify` check Metal whatever device is named (what the device decides follows
+the macOS Editor, AGENTS.md Platforms).
+
 Every capture runs on a fresh project under $XDG_CACHE_HOME/unbound/validation/runs/
 textureformats/<label>: the probe's Assets with the hello project's Packages, ProjectSettings
 and camera scene. Nothing is written here except by publish, which refuses to overwrite an
@@ -22,6 +29,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -29,6 +37,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_file, reference_root, run_root
 from editor_runner import EditorJob, jsonl_complete, publish as publish_repeats, run, run_parallel, summary
+import macos_editor
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -42,14 +51,24 @@ DEVICE = 'opengl'
 # This device's reference covers the added format/clear/feedback mechanisms. Older packed
 # UNorm async-to-float cases do not repeat on this device and have no canonical reference.
 VULKAN_CASES = 'rt.partial,rt.readControl,rt.R16_SNorm,rt.R16G16_SNorm,rt.R16G16B16_SNorm,rt.R16G16B16A16_SNorm,rt.A2B10G10R10_UIntPack32,feedback.integer'
+# The Metal reference's cases: reading targets back whatever their ReadPixels usage answers.
+METAL_CASES = 'readback'
+MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
+
+
+def device_cases():
+    """The cases the device's reference was recorded with (None: every case)."""
+    return {'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
 
 
 def reference():
-    return reference_file(PROBE, 'jsonl') if DEVICE == 'opengl' else reference_root(PROBE)/'vulkan-q58.jsonl'
+    if DEVICE == 'opengl':
+        return reference_file(PROBE, 'jsonl')
+    return reference_root(PROBE)/('vulkan-q58.jsonl' if DEVICE == 'vulkan' else 'metal.jsonl')
 
 
 def residuals():
-    return PROBE/('residuals.json' if DEVICE == 'opengl' else 'residuals-vulkan.json')
+    return PROBE/('residuals.json' if DEVICE == 'opengl' else f'residuals-{DEVICE}.json')
 
 
 def copy_project(dest, release):
@@ -87,6 +106,17 @@ def capture_problem(directory):
 
 
 def editor(work, release):
+    if DEVICE == 'metal':
+        codes = []
+        for repeat in REPEATS:
+            project, out = work/'projects'/repeat, work/repeat
+            copy_project(project, release)
+            fresh_output(out)
+            codes.append(macos_editor.capture(project, out, ['-executeMethod', 'TexFormatsRunner.Record'],
+                                              {'TEXTURE_FORMATS_PROBE_OUT': str(out/OUTPUT),
+                                               'TEXTURE_FORMATS_PROBE_ONLY': METAL_CASES}, timeout=900))
+            print(repeat, 'exit', codes[-1], capture_problem(out) or 'complete')
+        return int(any(codes))
     jobs = []
     for repeat in REPEATS:
         project, out = work/'projects'/repeat, work/repeat
@@ -126,6 +156,16 @@ def publish(work, append=False):
             shutil.copyfile(first/OUTPUT, target)
         print('published', target)
     target = reference()
+    if DEVICE == 'metal':
+        if append:
+            raise SystemExit('the Metal reference is published whole')
+        for repeat in REPEATS:
+            problem = capture_problem(work/repeat)
+            if problem:
+                raise SystemExit(f'{repeat}: {problem}; not publishing')
+        code = macos_editor.publish([work/r for r in REPEATS], target, OUTPUT)
+        print('published', target)
+        return code
     if append:
         # The repeat validator refuses overwriting a reference. Validate into a private candidate,
         # then append only new keys while keeping every earlier record byte for byte.
@@ -150,7 +190,7 @@ def unbound(work, release, only=None):
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '30', '--size', '64x64',
-                                 '--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')],
+                                 *([] if DEVICE == 'metal' else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     if result.returncode == 0:
@@ -162,7 +202,7 @@ def unbound(work, release, only=None):
 
 
 def verify(work, release, cases):
-    only = VULKAN_CASES if DEVICE == 'vulkan' else None if cases == 'all' else SUPPORTED
+    only = device_cases() or (None if cases == 'all' else SUPPORTED)
     code = unbound(work, release, only)
     if code:
         return code
@@ -178,21 +218,28 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
-    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     global DEVICE
     DEVICE = args.device
-    if DEVICE == 'vulkan' and args.cases == 'all':
-        parser.error('the Vulkan reference covers the Q58 cases; --cases all is not recorded')
+    if MACOS and DEVICE != 'metal':
+        if args.mode not in ('unbound', 'verify'):
+            parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
+        print(f'textureformats: macOS draws with Metal; checking the Metal reference, not {DEVICE}')
+        DEVICE = 'metal'
+    if DEVICE == 'metal' and not MACOS:
+        parser.error('--device metal runs on macOS arm64 only')
+    if DEVICE != 'opengl' and args.cases == 'all':
+        parser.error(f'the {DEVICE} reference covers its own cases; --cases all is not recorded')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.release)
     if args.mode == 'unbound':
-        return unbound(work, args.release, VULKAN_CASES if DEVICE == 'vulkan' else os.environ.get('TEXTURE_FORMATS_PROBE_ONLY'))
+        return unbound(work, args.release, device_cases() or os.environ.get('TEXTURE_FORMATS_PROBE_ONLY'))
     if args.mode == 'verify':
         return verify(work, args.release, args.cases)
     return publish(work, args.append)

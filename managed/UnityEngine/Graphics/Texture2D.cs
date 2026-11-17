@@ -487,11 +487,8 @@ namespace UnityEngine
                 return;
             }
             bool conversion = Compat.DeviceTextureReadback && !GraphicsDeviceProfile.Current.FramebufferReadback;
-            if (conversion && target != null && !SystemInfo.IsFormatSupported(target.graphicsFormat, GraphicsFormatUsage.ReadPixels))
-            {
-                Debug.LogError($"ReadPixels is unsupported for {target.graphicsFormat}; the texture is left unchanged.");
+            if (conversion && target != null && RefusesTarget(target.graphicsFormat))
                 return;
-            }
             int channels = target == null ? 4 : (int)GraphicsFormatUtility.GetComponentCount(target.graphicsFormat);
             bool signedTransfer = Compat.DeviceTextureReadback && !conversion && target != null
                 && GraphicsFormatUtility.IsSNormFormat(target.graphicsFormat);
@@ -560,6 +557,38 @@ namespace UnityEngine
                     Write((destY + row) * m_Width + destX + col, Color.clear);
             if (recalculateMipMaps) GenerateMipChain();
             CpuTexelsChanged();
+        }
+
+        /// <summary>Whether the device refuses to read a render texture of this format into this
+        /// texture (logged as the Editor logs it; the texels stay as they were).</summary>
+        bool RefusesTarget(GraphicsFormat source)
+        {
+            var device = GraphicsDeviceProfile.Current;
+            if (!device.ReadsTargetsWithoutReadPixelsUsage)
+            {
+                if (SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels))
+                    return false;
+                Debug.LogError($"ReadPixels is unsupported for {source}; the texture is left unchanged.");
+                return true;
+            }
+            if (device.UnreadableTargets.ContainsKey(source))
+            {
+                // Asserted twice (tests/projects/textureformats metal.jsonl readback.A1R5G5B5_UNormPack16).
+                string message = $"The texture format is not supported for Image operations (id={(int)source})";
+                Debug.LogAssertion(message);
+                Debug.LogAssertion(message);
+                return true;
+            }
+            // Packed 10-bit texels convert to 8-bit ones, not to floats (measured into RGBAFloat
+            // and RGBA32: readback.A2B10G10R10_UNormPack32.read.*; half floats are unmeasured and
+            // refused as floats are).
+            if (source == GraphicsFormat.A2B10G10R10_UNormPack32
+                && (GraphicsFormatUtility.IsIEEE754Format(graphicsFormat) || GraphicsFormatUtility.IsHDRFormat(graphicsFormat)))
+            {
+                Debug.LogError($"Image blit conversion between formats {(int)source} -> {(int)graphicsFormat} is not supported");
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Whether ReadPixels from a target of <paramref name="source"/> reads 8-bit

@@ -336,8 +336,18 @@ namespace Unbound.Runtime
                 return result;
             }
             // A render texture whose format the device cannot read pixels from (measured for
-            // A2B10G10R10_UNormPack32 and the integer formats: tests/projects/textureformats).
+            // A2B10G10R10_UNormPack32 and the integer formats: tests/projects/textureformats; on
+            // Metal only its unreadable formats and, unmeasured there, the integer ones:
+            // metal.jsonl readback.*).
+            var device = GraphicsDeviceProfile.Current;
+            if (src is RenderTexture && device.UnreadableTargets.TryGetValue(src.graphicsFormat, out var unreadable))
+            {
+                Debug.LogError($"AsyncGPUReadback - {unreadable} ({(int)src.graphicsFormat}) graphics format is not supported as source for async read back");
+                result.HasError = true;
+                return result;
+            }
             if (src is RenderTexture && src.graphicsFormat != GraphicsFormat.None
+                && (!device.ReadsTargetsWithoutReadPixelsUsage || GraphicsFormatUtility.IsIntegerFormat(src.graphicsFormat))
                 && !SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.ReadPixels))
             {
                 if (!reportedSource) UnsupportedReadPixels(src.graphicsFormat);

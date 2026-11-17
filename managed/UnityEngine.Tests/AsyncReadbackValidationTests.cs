@@ -121,6 +121,103 @@ namespace Unbound.Tests
             }
         }
 
+        const string BlitRefusal = "Image blit conversion between formats 75 -> 52 is not supported";
+
+        /// <summary>Metal reads targets whose format answers no ReadPixels usage, refusing only its
+        /// unreadable formats (tests/projects/textureformats metal.jsonl readback.*); Vulkan
+        /// refuses every such target.</summary>
+        [Theory]
+        [InlineData("Metal", GraphicsFormat.B8G8R8A8_UNorm, TextureFormat.RGBAFloat, null, false)]
+        [InlineData("Metal", GraphicsFormat.B8G8R8A8_SRGB, TextureFormat.RGBA32, null, false)]
+        [InlineData("Metal", GraphicsFormat.E5B9G9R9_UFloatPack32, TextureFormat.RGBAFloat, null, false)]
+        [InlineData("Metal", GraphicsFormat.A2B10G10R10_UNormPack32, TextureFormat.RGBA32, null, false)]
+        [InlineData("Metal", GraphicsFormat.A2B10G10R10_UNormPack32, TextureFormat.RGBAFloat, BlitRefusal, false)]
+        [InlineData("Metal", GraphicsFormat.A1R5G5B5_UNormPack16, TextureFormat.RGBA32,
+            "The texture format is not supported for Image operations (id=72)", true)]
+        [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm, TextureFormat.RGBAFloat,
+            "ReadPixels is unsupported for B8G8R8A8_UNorm; the texture is left unchanged.", false)]
+        [InlineData("Vulkan", GraphicsFormat.R8G8B8A8_UNorm, TextureFormat.RGBAFloat, null, false)]
+        public void TargetReadsFollowTheDevicesRule(string device, GraphicsFormat target, TextureFormat destination, string refusal, bool asserted)
+        {
+            var previousDevice = GraphicsDeviceProfile.Current;
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            var capture = new Capture();
+            RenderTexture rt = null;
+            Texture2D texture = null;
+            try
+            {
+                GraphicsDeviceProfile.Select(device);
+                rt = new RenderTexture(2, 1, target, GraphicsFormat.None);
+                texture = new Texture2D(2, 1, destination, false, true);
+                var sentinel = new Color(0.1f, 0.2f, 0.3f, 0.4f);
+                texture.SetPixels(new[] { sentinel, sentinel });
+                var before = texture.GetPixel(0, 0);
+                logger.logHandler = capture;
+                RenderTexture.active = rt;
+                texture.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+                RenderTexture.active = null;
+                var refusals = capture.Logs.FindAll(l => l.Type is LogType.Error or LogType.Assert);
+                if (refusal == null)
+                    Assert.Empty(refusals);
+                else
+                {
+                    var type = asserted ? LogType.Assert : LogType.Error;
+                    Assert.Equal(asserted ? new[] { (type, refusal), (type, refusal) } : new[] { (type, refusal) }, refusals);
+                    Assert.Equal(before, texture.GetPixel(0, 0));
+                }
+            }
+            finally
+            {
+                RenderTexture.active = null;
+                logger.logHandler = previousHandler;
+                if (texture != null) Object.DestroyImmediate(texture);
+                if (rt != null) Object.DestroyImmediate(rt);
+                GraphicsDeviceProfile.Select(previousDevice.Type.ToString());
+            }
+        }
+
+        /// <summary>AsyncGPUReadback of a target: Metal refuses only its unreadable formats, with
+        /// their own error; elsewhere a target without ReadPixels usage fails.</summary>
+        [Theory]
+        [InlineData("Metal", GraphicsFormat.A1R5G5B5_UNormPack16,
+            "AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back")]
+        [InlineData("Metal", GraphicsFormat.B8G8R8A8_UNorm, null)]
+        [InlineData("Metal", GraphicsFormat.R32G32B32A32_SInt,
+            "'R32G32B32A32_SInt' doesn't support ReadPixels usage on this platform. Async GPU readback failed.")]
+        [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm,
+            "'B8G8R8A8_UNorm' doesn't support ReadPixels usage on this platform. Async GPU readback failed.")]
+        public void TargetReadbacksFollowTheDevicesRule(string device, GraphicsFormat target, string refusal)
+        {
+            var previousDevice = GraphicsDeviceProfile.Current;
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            var capture = new Capture();
+            RenderTexture rt = null;
+            try
+            {
+                GraphicsDeviceProfile.Select(device);
+                rt = new RenderTexture(2, 1, target, GraphicsFormat.None);
+                logger.logHandler = capture;
+                var request = AsyncGPUReadback.Request(rt, 0);
+                var refused = capture.Logs.Exists(l => l.Type == LogType.Error && l.Text == refusal);
+                if (refusal == null)
+                    Assert.DoesNotContain(capture.Logs, l => l.Text.Contains("graphics format is not supported as source")
+                        || l.Text.Contains("doesn't support ReadPixels usage"));
+                else
+                {
+                    Assert.True(refused, string.Join("\n", capture.Logs));
+                    Assert.True(request.hasError);
+                }
+            }
+            finally
+            {
+                logger.logHandler = previousHandler;
+                if (rt != null) Object.DestroyImmediate(rt);
+                GraphicsDeviceProfile.Select(previousDevice.Type.ToString());
+            }
+        }
+
         [Fact]
         public void UnmeasuredReportedFormatKeepsEarlierDiagnosticPolicy() =>
             SourceValidationKeepsFailureOrderAndDimensions("6000.0.71f1", TextureFormat.ARGB32, true);
