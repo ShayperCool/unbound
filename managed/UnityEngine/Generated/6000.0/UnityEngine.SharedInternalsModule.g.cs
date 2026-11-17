@@ -26,12 +26,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] public UnityEngineModuleAssembly() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityEngineModuleAssembly.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class UnityString
-    {
-        [global::Unbound.Stub] public static string Format(string fmt, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityString.Format"); return default; }
-        [global::Unbound.Stub] public UnityString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityString.ctor"); }
-    }
 }
 namespace UnityEngine.Bindings
 {

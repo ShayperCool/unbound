@@ -1435,7 +1435,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static global::UnityEngine.ScriptableObject InternalGetRenderPipelineAssetAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.InternalGetRenderPipelineAssetAt"); return default; }
         [global::Unbound.Stub] internal static int GetStrippedMaximumLODLevel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.GetStrippedMaximumLODLevel"); return default; }
         [global::Unbound.Stub] internal static void SetStrippedMaximumLODLevel(int maximumLODLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.SetStrippedMaximumLODLevel"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Object GetQualitySettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.GetQualitySettings"); return default; }
         [global::Unbound.Stub] internal static bool IsTextureResReducedOnAnyPlatform() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.IsTextureResReducedOnAnyPlatform"); return default; }
         [global::Unbound.Stub] public static bool IsPlatformIncluded(string buildTargetGroupName, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.IsPlatformIncluded"); return default; }
         [global::Unbound.Stub] internal static void IncludePlatformAt(string buildTargetGroupName, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.QualitySettings.IncludePlatformAt"); }
@@ -2172,16 +2171,6 @@ namespace UnityEngine
     internal unsafe sealed partial class UnhandledExceptionHandler
     {
         [global::Unbound.Stub] public UnhandledExceptionHandler() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnhandledExceptionHandler.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)1, AllowMultiple = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class UnityAPICompatibilityVersionAttribute : global::System.Attribute
-    {
-        [global::System.Obsolete("This overload of the attribute has been deprecated. Use the constructor that takes the version and a boolean")] [global::Unbound.Stub] public UnityAPICompatibilityVersionAttribute(string version) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityAPICompatibilityVersionAttribute.ctor"); }
-        [global::Unbound.Stub] public UnityAPICompatibilityVersionAttribute(string version, bool checkOnlyUnityVersion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityAPICompatibilityVersionAttribute.ctor"); }
-        [global::Unbound.Stub] public UnityAPICompatibilityVersionAttribute(string version, string[] configurationAssembliesHashes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityAPICompatibilityVersionAttribute.ctor"); }
-        public string version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityAPICompatibilityVersionAttribute.version"); return default; } }
-        internal string[] configurationAssembliesHashes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UnityAPICompatibilityVersionAttribute.configurationAssembliesHashes"); return global::System.Array.Empty<string>(); } }
     }
     [global::Unbound.Stub]
     public unsafe static partial class UnityEventAwaitableExtensions
@@ -3777,7 +3766,6 @@ namespace UnityEngine.Rendering
     {
         [global::Unbound.Stub] internal static global::UnityEngine.Events.PropertyHelper<global::UnityEngine.Rendering.IRenderPipelineGraphicsSettings> s_PropertyHelper;
         [global::Unbound.Stub] internal static void Internal_SetAllRenderPipelineSettingsDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.Internal_SetAllRenderPipelineSettingsDirty"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Object GetGraphicsSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetGraphicsSettings"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Shader GetDefaultShader(global::UnityEngine.Rendering.DefaultShaderType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetDefaultShader"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Material GetDefaultMaterial(global::UnityEngine.Rendering.DefaultMaterialType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.GetDefaultMaterial"); return default; }
         public static global::UnityEngine.Camera.GateFitMode defaultGateFitMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.defaultGateFitMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsSettings.defaultGateFitMode"); } }
