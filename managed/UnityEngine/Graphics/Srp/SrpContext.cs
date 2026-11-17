@@ -1007,8 +1007,8 @@ namespace UnityEngine.Rendering
 
         [Unbound.EditorFaithful("the Game view draws no gizmos unless its Gizmos toggle is on (off by default; batch mode has none)")]
         public RendererList CreateGizmoRendererList(Camera camera, GizmoSubset gizmoSubset) => RendererLists.Empty();
-        public RendererList CreateUIOverlayRendererList(Camera camera) => RendererLists.UIOverlay(camera);
-        public RendererList CreateUIOverlayRendererList(Camera camera, UISubset uiSubset) => RendererLists.UIOverlay(camera);
+        public RendererList CreateUIOverlayRendererList(Camera camera) => RendererLists.UIOverlay(camera, UISubset.All);
+        public RendererList CreateUIOverlayRendererList(Camera camera, UISubset uiSubset) => RendererLists.UIOverlay(camera, uiSubset);
         [Unbound.EditorFaithful("wireframe overlays are drawn in the Scene view only, never in the Game view")]
         public RendererList CreateWireOverlayRendererList(Camera camera) => RendererLists.Empty();
 
@@ -1326,6 +1326,8 @@ namespace Unbound.Runtime
             /// takes the block of its material's tag value, else of the empty tag; null without.</summary>
             internal TaggedStates Tagged;
             internal Camera Camera;
+            /// <summary>A UI overlay list's part of the UI.</summary>
+            internal UISubset UISubset;
             internal ShadowDrawingSettings ShadowSettings;
             /// <summary>A shadow list's culling split (-1: none known).</summary>
             internal int Split;
@@ -1346,7 +1348,7 @@ namespace Unbound.Runtime
 
         internal static RendererList Empty() => Add(new Entry { Kind = Kind.Empty });
         internal static RendererList Skybox(Camera camera) => Add(new Entry { Kind = Kind.Skybox, Camera = camera });
-        internal static RendererList UIOverlay(Camera camera) => Add(new Entry { Kind = Kind.UIOverlay, Camera = camera });
+        internal static RendererList UIOverlay(Camera camera, UISubset subset) => Add(new Entry { Kind = Kind.UIOverlay, Camera = camera, UISubset = subset });
         /// <summary>A light's shadow caster list. Settings without a split index (URP makes one
         /// list per cascade or cube face from the same settings) take the light's splits in the
         /// order its lists are made in the culling: the first list the first split (measured:
@@ -1447,7 +1449,7 @@ namespace Unbound.Runtime
 
         internal static void EndFrame() => s_Lists.Clear();
 
-        internal static void DrawUIOverlay(Camera camera) => FrameBuilder.DrawOverlayCanvases(camera);
+        internal static void DrawUIOverlay(Camera camera, UISubset subset = UISubset.All) => FrameBuilder.DrawOverlayCanvases(camera, subset);
 
         /// <summary>Draws a list now (on the stream).</summary>
         internal static void Draw(RendererList list)
@@ -1457,7 +1459,7 @@ namespace Unbound.Runtime
             switch (e.Kind)
             {
                 case Kind.Renderers: DrawRenderers(e); break;
-                case Kind.UIOverlay: DrawUIOverlay(e.Camera); break;
+                case Kind.UIOverlay: DrawUIOverlay(e.Camera, e.UISubset); break;
                 case Kind.Skybox: FrameBuilder.DrawSkybox(e.Camera); break;
                 case Kind.Shadows: DrawShadowCasters(e.ShadowSettings, e.Split); break;
             }

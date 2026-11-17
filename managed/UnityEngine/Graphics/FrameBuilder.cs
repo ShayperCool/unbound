@@ -625,8 +625,11 @@ namespace Unbound.Runtime
 
         /// <summary>Screen-space overlay canvases over the screen (with no camera at all, black:
         /// "No cameras rendering"). A pipeline draws them into its own target
-        /// (<paramref name="camera"/> set).</summary>
-        internal static void DrawOverlayCanvases(Camera camera)
+        /// (<paramref name="camera"/> set), one <see cref="UISubset"/> at a time: uGUI's canvases
+        /// with UI Toolkit's panels, and IMGUI (Unity 6000.0 UISubset: UIToolkit_UGUI "includes
+        /// UI Toolkit and uGUI", LowLevel "includes IMGUI"; URP 17 draws the two in separate
+        /// passes, so a list draws only its subset).</summary>
+        internal static void DrawOverlayCanvases(Camera camera, UISubset subset = UISubset.All)
         {
             s_Items.Clear();
             int canvasStart = 0, canvasEnd = 0;
@@ -643,14 +646,14 @@ namespace Unbound.Runtime
             }
             var panels = OverlayPanels;
             if (Unbound.Runtime.Trace.RenderOn && Time.frameCount % 60 == 1)
-                Unbound.Runtime.Trace.Render($"overlay canvases for {(camera != null ? camera.name : "the screen")}: {s_Items.Count} draws");
+                Unbound.Runtime.Trace.Render($"overlay canvases for {(camera != null ? camera.name : "the screen")} ({subset}): {s_Items.Count} draws");
             if (camera != null)
             {
                 if (s_Items.Count == 0 && (panels == null || !panels.Any)) return;
                 var saved = GfxStream.Current;
                 GfxStream.Viewport(new Rect(0, 0, Screen.width, Screen.height));
                 GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
-                EmitOverlayItems(panels, canvasStart, canvasEnd, true);
+                EmitOverlayItems(panels, canvasStart, canvasEnd, true, subset);
                 GfxStream.Restore(saved);
                 return;
             }
@@ -660,7 +663,7 @@ namespace Unbound.Runtime
                     s_CameraCount == 0 ? CameraClearFlags.SolidColor : CameraClearFlags.Nothing, Color.black,
                     Matrix4x4.identity, Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -100000f, 100000f), GfxStream.CameraOverlay);
             }
-            EmitOverlayItems(panels, canvasStart, canvasEnd, false);
+            EmitOverlayItems(panels, canvasStart, canvasEnd, false, subset);
         }
 
         /// <summary>UI Toolkit's screen panels, drawn among the overlay canvases by sorting order (a
@@ -676,25 +679,32 @@ namespace Unbound.Runtime
 
         internal static IOverlayPanels OverlayPanels;
 
-        static void EmitOverlayItems(IOverlayPanels panels, int canvasStart, int canvasEnd, bool intoCurrentTarget)
+        /// <summary>The collected overlay draws of <paramref name="subset"/>: the canvases'
+        /// (<paramref name="canvasStart"/> to <paramref name="canvasEnd"/>) with the panels among
+        /// them, and the other sources' (IMGUI) before and after them.</summary>
+        static void EmitOverlayItems(IOverlayPanels panels, int canvasStart, int canvasEnd, bool intoCurrentTarget, UISubset subset)
         {
-            if (panels == null)
+            bool lowLevel = (subset & UISubset.LowLevel) != 0;
+            if (lowLevel) EmitItems(0, canvasStart);
+            if ((subset & UISubset.UIToolkit_UGUI) != 0)
             {
-                EmitItems(0, s_Items.Count);
-                return;
+                if (panels == null) EmitItems(canvasStart, canvasEnd);
+                else
+                {
+                    panels.Begin();
+                    int from = canvasStart;
+                    for (int i = canvasStart; i < canvasEnd; i++)
+                    {
+                        if (i > canvasStart && s_Items[i].SortingOrder == s_Items[i - 1].SortingOrder) continue;
+                        EmitItems(from, i);
+                        from = i;
+                        panels.RenderBefore(s_Items[i].SortingOrder, intoCurrentTarget);
+                    }
+                    EmitItems(from, canvasEnd);
+                    panels.RenderBefore(float.MaxValue, intoCurrentTarget);
+                }
             }
-            panels.Begin();
-            int from = 0;
-            for (int i = canvasStart; i < canvasEnd; i++)
-            {
-                if (i > canvasStart && s_Items[i].SortingOrder == s_Items[i - 1].SortingOrder) continue;
-                EmitItems(from, i);
-                from = i;
-                panels.RenderBefore(s_Items[i].SortingOrder, intoCurrentTarget);
-            }
-            EmitItems(from, canvasEnd);
-            panels.RenderBefore(float.MaxValue, intoCurrentTarget);
-            EmitItems(canvasEnd, s_Items.Count);
+            if (lowLevel) EmitItems(canvasEnd, s_Items.Count);
         }
 
         /// <summary>OnRenderObject on every script with it.</summary>
