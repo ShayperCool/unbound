@@ -28,6 +28,7 @@ static class FrameworkShims
         s_Names = new HashSet<string>(s_Shims.Select(m => m.Name), StringComparer.Ordinal);
         foreach (var replaced in s_Replaced.Keys) s_Names.Add(replaced.Name);
         foreach (var replaced in s_ReplacedFields.Keys) s_Names.Add(replaced.Name);
+        foreach (var replaced in s_ReplacedWithArguments.Keys) s_Names.Add(replaced.Name);
     }
 
     /// <summary>Members .NET has that must answer as in the Editor's process instead: the
@@ -40,6 +41,14 @@ static class FrameworkShims
         [("System.Environment", "get_CommandLine")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.get_CommandLine))!,
         [("System.Diagnostics.Stopwatch", "GetTimestamp")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.GetTimestamp))!,
         [("System.Diagnostics.Stopwatch", "get_ElapsedTicks")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_ElapsedTicks))!,
+    };
+
+    /// <summary>Members .NET has, with parameters, that must answer as the Editor's Mono does: the
+    /// replacement takes the same parameters (a generic method's the same type arguments).</summary>
+    static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo[]> s_ReplacedWithArguments = new()
+    {
+        [("System.Runtime.InteropServices.Marshal", "GetFunctionPointerForDelegate")] =
+            typeof(Unbound.MonoMarshal).GetMethods().Where(m => m.Name == nameof(Unbound.MonoMarshal.GetFunctionPointerForDelegate)).ToArray(),
     };
 
     /// <summary>Keep field loads and escaping readonly references on stable shared storage.</summary>
@@ -88,6 +97,13 @@ static class FrameworkShims
                         changed = true;
                         continue;
                     }
+                    if (ReplacedWithArguments(module, target) is MethodReference withArguments)
+                    {
+                        instruction.OpCode = OpCodes.Call;
+                        instruction.Operand = withArguments;
+                        changed = true;
+                        continue;
+                    }
                     if (Exists(target)) continue;
                     var shim = FindShim(target);
                     if (shim == null) continue;
@@ -101,6 +117,23 @@ static class FrameworkShims
         using var output = new MemoryStream();
         AccessChecks.Write(assembly, output);
         return output.ToArray();
+    }
+
+    /// <summary>The replacement of a call to a member in <see cref="s_ReplacedWithArguments"/>: the
+    /// shim of the same generic arity and parameter count, made generic with the call's type
+    /// arguments; null for other members.</summary>
+    static MethodReference? ReplacedWithArguments(Mono.Cecil.ModuleDefinition module, MethodReference target)
+    {
+        var element = target is GenericInstanceMethod instance ? instance.ElementMethod : target;
+        if (!s_ReplacedWithArguments.TryGetValue((element.DeclaringType.FullName, element.Name), out var shims)) return null;
+        int arity = target is GenericInstanceMethod generic ? generic.GenericArguments.Count : 0;
+        var shim = shims.FirstOrDefault(m => m.GetGenericArguments().Length == arity && m.GetParameters().Length == target.Parameters.Count);
+        if (shim == null) return null;
+        var imported = module.ImportReference(shim);
+        if (target is not GenericInstanceMethod call) return imported;
+        var replacement = new GenericInstanceMethod(imported);
+        foreach (var argument in call.GenericArguments) replacement.GenericArguments.Add(argument);
+        return replacement;
     }
 
     static bool ReferencesShimmedNames(byte[] image)

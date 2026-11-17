@@ -55,6 +55,77 @@ namespace Unbound
     }
 
     /// <summary>
+    /// <c>Marshal.GetFunctionPointerForDelegate</c> as the Editor's Mono answers it: a delegate of a
+    /// generic type (<c>Action&lt;string, int, string&gt;</c>) gets a native-callable pointer too,
+    /// while .NET refuses generic delegate types (tests/projects/genericcallback). Such a delegate is
+    /// called through a delegate of a non-generic type with its signature (one type per generic
+    /// type). As under Mono, where a native callback made from a delegate stays valid after the
+    /// delegate is collected (plugins pass temporary ones), the delegate called is kept alive, once
+    /// per equal delegate (Unbound.NativeCallbackRoots). Game assemblies' calls are redirected here
+    /// when they load (Unbound.Host.FrameworkShims).
+    /// </summary>
+    public static class MonoMarshal
+    {
+        static readonly System.Collections.Generic.Dictionary<Delegate, Delegate> s_Callable = new();
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, Type> s_Types = new();
+        static ModuleBuilder s_Module;
+        static int s_Defined;
+
+        public static IntPtr GetFunctionPointerForDelegate(Delegate d)
+        {
+            if (d == null) return System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(d);
+            if (!d.GetType().IsGenericType)
+            {
+                NativeCallbackRoots.Keep(d);
+                return System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(d);
+            }
+            Delegate callable;
+            lock (s_Callable)
+                if (!s_Callable.TryGetValue(d, out callable)) s_Callable[d] = callable = Callable(d);
+            return System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(callable);
+        }
+
+        public static IntPtr GetFunctionPointerForDelegate<TDelegate>(TDelegate d) where TDelegate : notnull =>
+            GetFunctionPointerForDelegate((Delegate)(object)d);
+
+        /// <summary>A delegate of a non-generic type with the signature of <paramref name="d"/>'s,
+        /// invoking it.</summary>
+        static Delegate Callable(Delegate d)
+        {
+            var invoke = d.GetType().GetMethod("Invoke");
+            var type = s_Types.GetOrAdd(d.GetType(), Define);
+            return Delegate.CreateDelegate(type, d, invoke);
+        }
+
+        static Type Define(Type generic)
+        {
+            var invoke = generic.GetMethod("Invoke");
+            lock (s_Types)
+            {
+                s_Module ??= AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Unbound.MonoMarshal.Callbacks"), AssemblyBuilderAccess.Run)
+                    .DefineDynamicModule("Callbacks");
+                var builder = s_Module.DefineType("Callback" + s_Defined++ + "_" + generic.Name.Replace('`', '_'),
+                    TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.AutoClass, typeof(MulticastDelegate));
+                // The generic type's own calling convention, when it names one.
+                var convention = (System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute)Attribute.GetCustomAttribute(
+                    generic, typeof(System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute));
+                if (convention != null)
+                    builder.SetCustomAttribute(new CustomAttributeBuilder(
+                        typeof(System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(System.Runtime.InteropServices.CallingConvention) }),
+                        new object[] { convention.CallingConvention }));
+                builder.DefineConstructor(MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
+                        CallingConventions.Standard, new[] { typeof(object), typeof(IntPtr) })
+                    .SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
+                var parameters = Array.ConvertAll(invoke.GetParameters(), p => p.ParameterType);
+                builder.DefineMethod("Invoke", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual,
+                        invoke.ReturnType, parameters)
+                    .SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);
+                return builder.CreateType();
+            }
+        }
+    }
+
+    /// <summary>
     /// .NET Framework / Mono members that .NET lacks, as static methods taking the instance first.
     /// Assemblies calling them are redirected here when they load (Unbound.Host.FrameworkShims).
     /// </summary>
