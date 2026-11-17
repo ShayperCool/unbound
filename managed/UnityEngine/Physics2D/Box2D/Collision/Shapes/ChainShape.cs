@@ -87,8 +87,9 @@ namespace Unbound.Box2D.Collision.Shapes
                 var v1 = vertices[i - 1];
                 var v2 = vertices[i];
 
-                // If the code crashes here, it means your vertices are too close together.
-                Debug.Assert(Vector2.DistanceSquared(v1, v2) > Settings.LinearSlop * Settings.LinearSlop);
+                // If the code crashes here, it means your vertices are too close together (a
+                // non-finite vertex passes, as in CreateChain).
+                Debug.Assert(!(Vector2.DistanceSquared(v1, v2) <= Settings.LinearSlop * Settings.LinearSlop));
             }
 
             Count = count + 1;
@@ -113,10 +114,12 @@ namespace Unbound.Box2D.Collision.Shapes
             Debug.Assert(count >= 2);
             for (var i = 1; i < count; ++i)
             {
-                // If the code crashes here, it means your vertices are too close together.
+                // If the code crashes here, it means your vertices are too close together. A
+                // non-finite vertex passes: EdgeCollider2D keeps such points, as the Unity
+                // 6000.0.71f1 Editor does (tests/projects/geometryframe2d edge controls).
                 Debug.Assert(
-                    Vector2.DistanceSquared(vertices[i - 1], vertices[i])
-                  > Settings.LinearSlop * Settings.LinearSlop);
+                    !(Vector2.DistanceSquared(vertices[i - 1], vertices[i])
+                      <= Settings.LinearSlop * Settings.LinearSlop));
             }
 
             Count = count;
