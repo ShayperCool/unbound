@@ -1198,6 +1198,7 @@ namespace UnityEngine.UIElements
         protected override void ClearDragAndDropUI(bool dragCancelled)
         {
             if (dragCancelled) dragAndDropController.DragCleanup();
+            targetView.elementPanel?.cursorManager.ResetCursor();
             m_LastDragPosition = default;
             foreach (var item in targetView.activeItems)
                 item.rootElement.RemoveFromClassList(BaseVerticalCollectionView.itemDragHoverUssClassName);

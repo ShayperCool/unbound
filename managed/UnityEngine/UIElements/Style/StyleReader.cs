@@ -538,12 +538,27 @@ namespace Unbound.UIElements
             return image;
         }
 
+        /// <summary>The USS cursor keywords, in the order of their ids (`arrow`, the default cursor, is
+        /// 0). A keyword outside the list has id 0: the importer drops such a value (tests/projects/
+        /// uitkcursors).</summary>
+        static readonly string[] s_CursorKeywords =
+        {
+            "arrow", "text", "resize-vertical", "resize-horizontal", "link", "slide-arrow", "resize-up-right", "resize-up-left",
+            "move-arrow", "rotate-arrow", "scale-arrow", "arrow-plus", "arrow-minus", "pan", "orbit", "zoom", "fps", null,
+            "split-resize-up-down", "split-resize-left-right", "not-allowed",
+        };
+
         public Cursor ReadCursor(int index)
         {
             var type = GetValueType(index);
             var cursor = new Cursor();
             if (type == StyleValueType.ResourcePath || type == StyleValueType.AssetReference || type == StyleValueType.ScalableImage || type == StyleValueType.MissingAssetReference)
             {
+                if (valueCount < 1)
+                {
+                    Debug.LogWarning($"USS 'cursor' has invalid value at {index}.");
+                    return cursor;
+                }
                 if (TryGetImage(GetValue(index), dpiScaling, out var image))
                 {
                     cursor.texture = image.texture;
@@ -553,8 +568,16 @@ namespace Unbound.UIElements
                         var y = GetValue(index + 2);
                         if (x.handle.valueType == StyleValueType.Float && y.handle.valueType == StyleValueType.Float)
                             cursor.hotspot = new Vector2(x.sheet.ReadFloat(x.handle), y.sheet.ReadFloat(y.handle));
+                        else
+                            Debug.LogWarning("USS 'cursor' property requires two integers for the hot spot value.");
                     }
                 }
+            }
+            else if (type == StyleValueType.Enum)
+            {
+                var v = GetValue(index);
+                int id = System.Array.IndexOf(s_CursorKeywords, v.sheet.ReadEnum(v.handle));
+                if (id > 0) cursor.defaultCursorId = id;
             }
             return cursor;
         }

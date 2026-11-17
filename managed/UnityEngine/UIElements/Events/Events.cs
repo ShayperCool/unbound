@@ -937,15 +937,22 @@ namespace UnityEngine.UIElements
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
 
-        /// <summary>(Unity updates the cursor here: player panels have no cursor styles to apply.)</summary>
-        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget?.UpdateCursorStyle(eventTypeId);
+        }
     }
 
     [global::UnityEngine.UIElements.@EventCategoryAttribute((global::UnityEngine.UIElements.EventCategory)4)] public partial class MouseOutEvent : MouseEventBase<MouseOutEvent>
     {
         internal override void Dispatch(BaseVisualElementPanel panel) => Unbound.UIElements.Dispatching.DispatchToAssignedTarget(this, panel);
 
-        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget?.UpdateCursorStyle(eventTypeId);
+        }
     }
 
     public partial class WheelEvent : MouseEventBase<WheelEvent>
@@ -1499,7 +1506,11 @@ namespace UnityEngine.UIElements
     public partial class MouseCaptureEvent : MouseCaptureEventBase<MouseCaptureEvent> { }
     public partial class MouseCaptureOutEvent : MouseCaptureEventBase<MouseCaptureOutEvent>
     {
-        protected internal override void PreDispatch(IPanel panel) => base.PreDispatch(panel);
+        protected internal override void PreDispatch(IPanel panel)
+        {
+            base.PreDispatch(panel);
+            elementTarget?.UpdateCursorStyle(eventTypeId);
+        }
     }
 }
 

@@ -327,7 +327,6 @@ namespace UnityEngine.UIElements
         internal virtual uint repaintVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintVersion"); return default; } }
         internal virtual uint hierarchyVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.hierarchyVersion"); return default; } }
         internal virtual global::UnityEngine.UIElements.RepaintData repaintData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.repaintData"); } }
-        internal virtual global::UnityEngine.UIElements.ICursorManager cursorManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.cursorManager"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.cursorManager"); } }
         internal virtual global::UnityEngine.UIElements.DataBindingManager dataBindingManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.dataBindingManager"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.dataBindingManager"); } }
         internal virtual global::UnityEngine.UIElements.IScheduler scheduler { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.scheduler"); return default; } }
         internal virtual global::UnityEngine.UIElements.IStylePropertyAnimationSystem styleAnimationSystem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.styleAnimationSystem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualElementPanel.styleAnimationSystem"); } }
@@ -814,14 +813,6 @@ namespace UnityEngine.UIElements
         {
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.PropertyBag.ctor"); }
         }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class CursorManager : global::UnityEngine.UIElements.ICursorManager
-    {
-        [global::Unbound.Stub] public void SetCursor(global::UnityEngine.UIElements.Cursor cursor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.SetCursor"); }
-        [global::Unbound.Stub] public void ResetCursor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.ResetCursor"); }
-        [global::Unbound.Stub] public CursorManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.ctor"); }
-        public bool isCursorOverriden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CursorManager.isCursorOverriden"); return default; } }
     }
     unsafe partial class CustomBinding
     {
@@ -1462,11 +1453,6 @@ namespace UnityEngine.UIElements
     {
         void Bind(global::UnityEngine.UIElements.VisualElement element);
         void Release();
-    }
-    internal unsafe partial interface ICursorManager
-    {
-        void SetCursor(global::UnityEngine.UIElements.Cursor cursor);
-        void ResetCursor();
     }
     public unsafe partial interface IDebugPanelChangeReceiver
     {
@@ -4561,7 +4547,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal void UpdateInlineRule(global::UnityEngine.UIElements.StyleSheet sheet, global::UnityEngine.UIElements.StyleRule rule) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateInlineRule"); }
         [global::Unbound.Stub] internal void SetComputedStyle(ref global::UnityEngine.UIElements.ComputedStyle newStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.SetComputedStyle"); }
         [global::Unbound.Stub] internal void ResetPositionProperties() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ResetPositionProperties"); }
-        [global::Unbound.Stub] internal void UpdateCursorStyle(long eventType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UpdateCursorStyle"); }
         [global::Unbound.Stub] internal void ApplyPlayerRenderingToEditorElement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.ApplyPlayerRenderingToEditorElement"); }
         [global::Unbound.Stub] internal void RegisterAnimation(global::UnityEngine.UIElements.Experimental.IValueAnimationUpdate anim) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.RegisterAnimation"); }
         [global::Unbound.Stub] internal void UnregisterAnimation(global::UnityEngine.UIElements.Experimental.IValueAnimationUpdate anim) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UnregisterAnimation"); }
