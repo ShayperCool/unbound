@@ -26,7 +26,8 @@ namespace Unbound.Runtime
         /// <summary>The exception whose ToString() this thread is writing. A game exception can
         /// define its Message by its own ToString() (Addressables' remote provider exception does),
         /// and game code's ToString() calls come back here: such a call, made while its exception
-        /// is being written, takes the runtime's text instead of looping until the stack overflows
+        /// is being written, takes the exception's own ToString() (the game's override, as Mono returns
+        /// it) instead of looping until the stack overflows
         /// (tests/projects/apierrors <c>format.game_message_from_string</c>).</summary>
         [ThreadStatic] static Exception s_Writing;
 

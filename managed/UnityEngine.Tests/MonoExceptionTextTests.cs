@@ -30,6 +30,13 @@ public sealed class MessageFromString : Exception
     public override string ToString() => GetType().Name + "" : "" + base.Message + ""\nresult : 4\n"" + InnerException;
     public static Exception Make(string message) => new MessageFromString(message, new InvalidOperationException(""Inner.""));
 }
+public sealed class InterpolatedText : Exception
+{
+    public InterpolatedText(string message, Exception inner) : base(message, inner) { }
+    public override string Message => this.ToString();
+    public override string ToString() => $""{GetType().Name} : {base.Message}\nresult : {4}\n{InnerException}"";
+    public static Exception Make(string message) => new InterpolatedText(message, new MessageFromString(""Inner."", null));
+}
 public static class Probe
 {
     public static string Message(Exception e) => e.Message;
@@ -120,6 +127,11 @@ public static class Probe
             Assert.Equal(Text, Run(probe, "Text", exception));
             Assert.Equal(Text, MonoExceptions.ToStringOf(exception));
             Assert.Equal(Text, MonoExceptions.MessageOf(exception));
+            // Interpolated (string.Format in game code), with an inner exception of the same kind.
+            var nested = (Exception)probe.GetType("InterpolatedText")!.GetMethod("Make")!.Invoke(null, new object[] { "Outer." })!;
+            const string Nested = "InterpolatedText : Outer.\nresult : 4\nMessageFromString : Inner.\nresult : 4\n";
+            Assert.Equal(Nested, Run(probe, "Message", nested));
+            Assert.Equal(Nested, Run(probe, "Text", nested));
         }
 
         static Assembly Redirected(OptimizationLevel optimization)
