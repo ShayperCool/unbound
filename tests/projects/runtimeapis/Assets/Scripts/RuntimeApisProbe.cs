@@ -105,6 +105,8 @@ public class RuntimeApisProbe : MonoBehaviour
     static void Cameras()
     {
         var cam = new GameObject("Cam").AddComponent<Camera>();
+        // The Game view's size differs between Editor sessions: the aspect is fixed here.
+        cam.aspect = 16f / 9f;
         var left = Camera.StereoscopicEye.Left;
         var right = Camera.StereoscopicEye.Right;
         Try("camera.stereo_enabled", () => cam.stereoEnabled);
@@ -419,6 +421,7 @@ public class RuntimeApisProbe : MonoBehaviour
         var marker = new Unity.Profiling.ProfilerMarker("probe marker");
         Size("begin_sample_marker", cb => cb.BeginSample(marker));
         Size("end_sample_marker", cb => cb.EndSample(marker));
+        Size("draw_multiple3", cb => cb.DrawMultipleMeshes(new[] { Matrix4x4.identity, Matrix4x4.identity, Matrix4x4.identity }, new[] { mesh, mesh, mesh }, new[] { 0, 0, 0 }, 3, material, 0, null));
         Size("draw_multiple", cb => cb.DrawMultipleMeshes(new[] { Matrix4x4.identity, Matrix4x4.identity }, new[] { mesh, mesh }, new[] { 0, 0 }, 2, material, 0, null));
         Size("mixed", cb => { cb.SetGlobalFloat(id, 1f); cb.SetRenderTarget(target); cb.ClearRenderTarget(true, true, Color.black); });
         var cleared = new CommandBuffer();
