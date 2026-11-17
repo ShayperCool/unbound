@@ -1002,10 +1002,12 @@ namespace UnityEngine.Tests
 
         /// <summary>
         /// Procedural commands draw stand-ins of no mesh bounds (tests/projects/brg procedural): a
-        /// non-indexed one its element count of vertex ids from 0, its base vertex left out
-        /// (procedural.c1); an indexed one the 65536-vertex stand-in with its buffer's indices from
-        /// its byte offset (at most the buffer's) plus its base vertex. An index buffer that is not
-        /// live, or an offset inside an index, is warned about and not drawn.
+        /// non-indexed one its element count of vertex ids from 0 over a stand-in other counts
+        /// share (65536 vertex ids, then powers of two up to 262144: past that it is warned about
+        /// and not drawn), its base vertex left out (procedural.c1); an indexed one the
+        /// 65536-vertex stand-in with its buffer's indices from its byte offset (at most the
+        /// buffer's) plus its base vertex. An index buffer that is not live, an offset inside an
+        /// index, or an unknown batch or material is warned about and not drawn.
         /// </summary>
         [Fact]
         public void ProceduralCommandsDrawStandInsWithTheirIndices()
@@ -1029,6 +1031,9 @@ namespace UnityEngine.Tests
                 Command(MeshTopology.Lines, 10, 4, indices.bufferHandle, 4),
                 Command(MeshTopology.Lines, 4, 0, new GraphicsBufferHandle(999999), 0),
                 Command(MeshTopology.Lines, 4, 0, indices.bufferHandle, 3),
+                Command(MeshTopology.Points, 70000, 0, default, 0),
+                Command(MeshTopology.Points, ProceduralMeshes.MaxSharedVertices + 1, 0, default, 0),
+                new BatchDrawCommandProcedural { batchID = batch, materialID = new BatchMaterialID { value = 77 }, visibleCount = 1, topology = MeshTopology.Points, elementCount = 3 },
             })(g, c, o, u));
             material = group.RegisterMaterial(m_Material);
             batch = AddBatch(group);
@@ -1038,21 +1043,26 @@ namespace UnityEngine.Tests
             try
             {
                 var items = Collect(Cull(), s_All);
-                Assert.Equal(2, items.Count);
-                Assert.Equal(ProceduralMeshes.Get(MeshTopology.Triangles, 6).Sync(), items[0].Mesh);
+                Assert.Equal(3, items.Count);
+                // Six vertex ids and 70000 over stand-ins of 65536 and 131072 that other counts share.
+                Assert.Equal(ProceduralMeshes.Get(MeshTopology.Triangles, 65536).Sync(), items[0].Mesh);
                 Assert.Equal(IndexedDraws.StandIn(MeshTopology.Lines).Sync(), items[1].Mesh);
+                Assert.Equal(ProceduralMeshes.Get(MeshTopology.Points, 131072).Sync(), items[2].Mesh);
                 Assert.All(items, item => Assert.Equal(BatchCulling.CommandKind.Procedural, item.Dots.Value.Kind));
                 Assert.Equal(Vector3.zero, items[0].Dots.Value.Header.Extent);
                 Assert.Single(logged, m => m.Contains("index buffer is not a live index buffer"));
+                Assert.Single(logged, m => m.Contains("shared stand-in holds"));
+                Assert.Single(logged, m => m.Contains("unknown batch or material"));
 
                 GfxStream.Flush();
                 BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
-                // No base vertex (the command's 6 is left out) and no indices of a buffer.
-                Assert.False(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 6)));
+                // Its six vertex ids, no base vertex (the command's 6 is left out) and no indices
+                // of a buffer.
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 0, 6u)));
                 Assert.False(Holds(GfxStream.Recorded, Bytes(DrawIndicesOp, (ulong)indices.bufferHandle.value)));
                 GfxStream.Flush();
                 BatchCulling.Draw(items[1], items[1].Dots.Value, 1, 0, null);
-                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 4)));
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 4, 0u)));
                 Assert.True(Holds(GfxStream.Recorded, Bytes(DrawIndicesOp, (ulong)indices.bufferHandle.value, (byte)2, 2u, 6u)));
                 GfxStream.Flush();
             }
@@ -1094,7 +1104,7 @@ namespace UnityEngine.Tests
                     return;
                 }
                 var drawn = device == "OpenGLCore" ? MeshTopology.Points : MeshTopology.Triangles;
-                Assert.Equal(ProceduralMeshes.Get(drawn, 8).Sync(), Assert.Single(items).Mesh);
+                Assert.Equal(ProceduralMeshes.SharedStandIn(drawn, 8).Sync(), Assert.Single(items).Mesh);
             }
             finally
             {
@@ -1211,10 +1221,10 @@ namespace UnityEngine.Tests
                 Assert.Single(logged, m => m.Contains("line strip or quads"));
                 GfxStream.Flush();
                 BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
-                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Lines, 0)));
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Lines, 0, 0u)));
                 GfxStream.Flush();
                 BatchCulling.Draw(items[1], items[1].Dots.Value, 1, 0, null);
-                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Points, 0)));
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Points, 0, 0u)));
                 GfxStream.Flush();
             }
             finally

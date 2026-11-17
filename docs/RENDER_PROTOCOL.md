@@ -48,11 +48,13 @@ An indirect command (NativeApi 73) has no visible instances: `indirect` is its p
 offset (bit 31 set), which the program reads from the first element's `y`, and the draw's
 `DrawSetup` arguments give its instance count.
 
-`DrawShape` (opcode 37, NativeApi 85: `u8 topology`, `i32 base_vertex`) says how the next `Draw`
-reads its indices: as `topology` (a `MeshTopology` value: 0 triangles, 3 lines, 5 points; 255 its
-submesh's own), whatever the submesh's, and with `base_vertex` added to the indices a
-`DrawIndices` gives it. BatchRendererGroup's indirect commands read their mesh's indices as their
-topology, and its indexed procedural commands add their base vertex.
+`DrawShape` (opcode 37, NativeApi 85: `u8 topology`, `i32 base_vertex`, `u32 count`) says how the
+next `Draw` reads its indices: as `topology` (a `MeshTopology` value: 0 triangles, 3 lines, 5
+points; 255 its submesh's own), whatever the submesh's, with `base_vertex` added to the indices a
+`DrawIndices` gives it, and at most the first `count` of its submesh's indices (0: all).
+BatchRendererGroup's indirect commands read their mesh's indices as their topology, its indexed
+procedural commands add their base vertex, and its other procedural commands draw their vertex
+count of a stand-in that commands of other counts share.
 
 ### Screen stand-in (NativeApi 50)
 
@@ -379,7 +381,7 @@ before and after it, as on Unity's render thread) and a read back.
 35 ScreenStandIn u64 texture                     // the screen's stand-in, 0 none (NativeApi 50)
 36 DotsDraw     u32 header[8], u32 window_offset, u32 window_size, u32 indirect, u32 count, u32 visible[count]
                                                 // next Draw is a BatchRendererGroup command's (NativeApi 60; indirect 73)
-37 DrawShape    u8 topology (0, 3, 5; 255 the submesh's), i32 base_vertex
+37 DrawShape    u8 topology (0, 3, 5; 255 the submesh's), i32 base_vertex, u32 count (0: all)
                                                 // next Draw's indices read as topology, plus base_vertex for DrawIndices (NativeApi 85)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,

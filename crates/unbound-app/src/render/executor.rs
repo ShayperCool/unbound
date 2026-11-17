@@ -598,9 +598,8 @@ struct State {
     dots: Option<commands::DotsDraw>,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
-    /// How the next draw reads its indices (`DrawShape`): the topology they are read as (none:
-    /// its submesh's) and the base vertex of its external indices.
-    draw_shape: Option<(Option<resources::Topology>, i32)>,
+    /// How the next draw reads its indices (`DrawShape`).
+    draw_shape: Option<DrawShape>,
 }
 
 /// A draw's place in a mesh-instancing call replayed as one draw per instance.
@@ -1058,7 +1057,7 @@ impl UnityRenderer {
     }
 
     /// The buffer a draw's external indices are read from (`DrawIndices`, render protocols 8 and
-    /// 10): `count` indices of `size` bytes from `first`, drawn with `base_vertex` (a
+    /// 10): `count` indices of `size` bytes from `first`, drawn with the base vertex of `shape` (a
     /// `DrawShape`'s, else 0; an indirect draw's arguments give their own). None, warned once,
     /// when the planned draws cannot read them safely ([`external_index_refusal`]): the draw is
     /// skipped.
@@ -1066,18 +1065,20 @@ impl UnityRenderer {
         &mut self,
         draw: &commands::Draw,
         (handle, size, first, count): (u64, u8, u32, u32),
-        base_vertex: i32,
+        shape: DrawShape,
         planned: &[Planned],
     ) -> Option<wgpu::Buffer> {
         let buffer = self
             .buffers
             .get(&handle)
             .map(|b| (b.buffer.clone(), b.size));
-        let strip = self
-            .meshes
-            .get(&draw.mesh)
-            .and_then(|m| m.submeshes.get(draw.submesh.max(0) as usize))
-            .is_some_and(|s| s.topology == resources::Topology::LineStrip);
+        // The topology the indices are read as: a `DrawShape`'s (a list one), else the submesh's.
+        let strip = shape.topology.is_none()
+            && self
+                .meshes
+                .get(&draw.mesh)
+                .and_then(|m| m.submeshes.get(draw.submesh.max(0) as usize))
+                .is_some_and(|s| s.topology == resources::Topology::LineStrip);
         let draws: Vec<DrawInputs> = planned
             .iter()
             .filter_map(|p| match p {
@@ -1093,9 +1094,13 @@ impl UnityRenderer {
         let source = buffer
             .as_ref()
             .map(|(b, size)| (*size, b.usage().contains(wgpu::BufferUsages::INDEX)));
-        if let Some(why) =
-            external_index_refusal(source, (size, first, count), base_vertex, strip, &draws)
-        {
+        if let Some(why) = external_index_refusal(
+            source,
+            (size, first, count),
+            shape.base_vertex,
+            strip,
+            &draws,
+        ) {
             self.warn_once(format!("indices{handle}:{why}"), || {
                 format!(
                     "a draw's {}-bit indices from buffer {handle}: {why}; skipped",
@@ -3381,8 +3386,13 @@ impl UnityRenderer {
                 Command::DrawShape {
                     topology,
                     base_vertex,
+                    count,
                 } => {
-                    self.state.draw_shape = Some((shape_topology(topology), base_vertex));
+                    self.state.draw_shape = Some(DrawShape {
+                        topology: shape_topology(topology),
+                        base_vertex,
+                        count,
+                    });
                 }
                 Command::Camera {
                     view,
@@ -3610,7 +3620,7 @@ impl UnityRenderer {
                     let dots = self.state.dots.take();
                     // Taken first: a draw's indices and shape never pass to a later draw.
                     let indices = self.state.draw_indices.take();
-                    let (topology, base_vertex) = self.state.draw_shape.take().unwrap_or((None, 0));
+                    let shape = self.state.draw_shape.take().unwrap_or_default();
                     let Some(target) = self.state.target.clone() else {
                         self.warn_once("draw-no-target".into(), || {
                             "a draw came before any render target was set: skipped".into()
@@ -3628,14 +3638,8 @@ impl UnityRenderer {
                     self.depth_reads.clear();
                     self.pre_draw.clear();
                     self.pre_copies.clear();
-                    let mut planned = self.plan_draw(
-                        &draw,
-                        &target,
-                        time,
-                        mesh_instance,
-                        dots.as_ref(),
-                        topology,
-                    );
+                    let mut planned =
+                        self.plan_draw(&draw, &target, time, mesh_instance, dots.as_ref(), shape);
                     if let Some(dots) = &dots {
                         // One instance per visible instance (an empty command draws nothing); an
                         // indirect command's count comes from its arguments buffer (DrawSetup).
@@ -3718,7 +3722,7 @@ impl UnityRenderer {
                         let Some(index) = self.external_indices(
                             &draw,
                             (handle, size, first, count),
-                            base_vertex,
+                            shape,
                             &planned,
                         ) else {
                             continue;
@@ -3732,7 +3736,7 @@ impl UnityRenderer {
                                     wgpu::IndexFormat::Uint16
                                 };
                                 p.range = first..first + count;
-                                p.base_vertex = base_vertex;
+                                p.base_vertex = shape.base_vertex;
                             }
                         }
                     }
@@ -4127,7 +4131,7 @@ impl UnityRenderer {
         time: f32,
         mesh_instance: Option<MeshInstanceSlot>,
         dots: Option<&commands::DotsDraw>,
-        topology: Option<resources::Topology>,
+        shape: DrawShape,
     ) -> Vec<Planned> {
         let mut planned = Vec::new();
         let device = self.device.clone();
@@ -4158,9 +4162,12 @@ impl UnityRenderer {
         if sub.count == 0 {
             return planned;
         }
-        // The indices read as another list topology (`DrawShape`).
-        if let Some(topology) = topology {
+        // The indices read as another list topology, and only the first ones (`DrawShape`).
+        if let Some(topology) = shape.topology {
             sub.topology = topology;
+        }
+        if shape.count > 0 {
+            sub.count = sub.count.min(shape.count);
         }
         let (vertex, index) = (mesh.vertex.clone(), mesh.index.clone());
         let mesh_extra = mesh.extra.clone();
@@ -5990,6 +5997,17 @@ struct DrawInputs {
     indirect: bool,
     vertex_bytes: u64,
     extra_bytes: Option<u64>,
+}
+
+/// How a draw reads its indices (`DrawShape`; the default: as its submesh says).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct DrawShape {
+    /// The topology they are read as (none: the submesh's).
+    topology: Option<resources::Topology>,
+    /// Added to external indices (`DrawIndices`).
+    base_vertex: i32,
+    /// At most this many of the submesh's indices (0: all).
+    count: u32,
 }
 
 /// The topology a `DrawShape` reads a draw's indices as (none: its submesh's own; the decoder

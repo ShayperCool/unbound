@@ -376,12 +376,14 @@ namespace Unbound.Runtime
 
         /// <summary>How the next draw reads its indices: as <paramref name="topology"/> (Triangles,
         /// Lines or Points; null: its submesh's own topology), with <paramref name="baseVertex"/>
-        /// added to the indices a <see cref="DrawSetup"/> gives it from a buffer.</summary>
-        internal static void DrawShape(MeshTopology? topology, int baseVertex)
+        /// added to the indices a <see cref="DrawSetup"/> gives it from a buffer, and at most the
+        /// first <paramref name="count"/> of its submesh's indices (0: all of them).</summary>
+        internal static void DrawShape(MeshTopology? topology, int baseVertex, uint count = 0)
         {
             U8(DrawShapeOp);
             U8(topology is MeshTopology t ? (byte)t : DrawShapeMeshTopology);
             I32(baseVertex);
+            U32(count);
         }
 
         /// <summary>The next draw's <c>unity_BaseCommandID</c> (<see cref="Unbound.Runtime.DrawSetup.Command"/>).</summary>

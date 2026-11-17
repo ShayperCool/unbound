@@ -33,6 +33,22 @@ namespace Unbound.Runtime
         /// <summary>The vertices an indirect procedural draw can use: its count comes from the GPU.</summary>
         internal const int IndirectVertices = 65536;
 
+        /// <summary>The most vertex ids a shared stand-in holds (<see cref="SharedStandIn"/>): its
+        /// vertex buffer takes 120 bytes a vertex, 30 MB at this size.</summary>
+        internal const int MaxSharedVertices = 1 << 18;
+
+        /// <summary>A stand-in for <paramref name="count"/> vertex ids that draws of other counts
+        /// share, drawn with that count (GfxStream.DrawShape): the 65536-vertex one, else one of the
+        /// next power of two, so a count that changes every frame makes no mesh; null past
+        /// <see cref="MaxSharedVertices"/>.</summary>
+        internal static UnityEngine.Mesh SharedStandIn(UnityEngine.MeshTopology topology, uint count)
+        {
+            if (count > MaxSharedVertices) return null;
+            int vertices = IndirectVertices;
+            while (vertices < count) vertices *= 2;
+            return Get(topology, vertices);
+        }
+
         internal static void Draw(UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int shaderPass, UnityEngine.MeshTopology topology, int vertexCount, int instanceCount, Dictionary<int, object> properties)
         {
             if (vertexCount <= 0 || instanceCount <= 0) return;

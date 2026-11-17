@@ -350,7 +350,7 @@ namespace Unbound.Runtime
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirectTopology = 0, UnsupportedQuads = 1, UnsupportedIndexBuffer = 2,
             UnsupportedCrossFadeKeyword = 3, UnsupportedMissingArrays = 4, UnsupportedSortingPosition = 5, UnsupportedSplit = 6,
-            UnsupportedVisibilityWindow = 7;
+            UnsupportedVisibilityWindow = 7, UnsupportedProceduralId = 8, UnsupportedVertexCount = 9;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -366,6 +366,8 @@ namespace Unbound.Runtime
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
             "a shadow caster list's split is not one of the six a BatchRendererGroup splitVisibilityMask covers; its commands are drawn whatever their mask.",
             "a BatchRendererGroup indirect draw command's visible instances start past the 16 KB a constant buffer window reads from the buffer's start; it is not drawn.",
+            "a BatchRendererGroup procedural draw command names an unknown batch or material; it is not drawn (the Editor's message for it is unmeasured).",
+            "a BatchRendererGroup procedural draw command draws more vertex ids without an index buffer than Unbound's shared stand-in holds (262144); it is not drawn.",
         };
 
         /// <summary>The visible instance indices an indirect command's constant buffer reads
@@ -373,10 +375,7 @@ namespace Unbound.Runtime
         /// four indices per float4).</summary>
         const uint IndirectVisibilityElements = 4096;
 
-        /// <summary>The Editor's error for an indirect command with a visible instance buffer window
-        /// where batches are raw buffers, by the window (kept: the message is logged again for
-        /// every list that reads the command, as the Editor's).</summary>
-        static readonly Dictionary<(uint, uint), string> s_RawWindowErrors = new Dictionary<(uint, uint), string>();
+
 
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
         internal static readonly HashSet<(long, long, int, uint, uint, uint)> s_InvalidIds = new HashSet<(long, long, int, uint, uint, uint)>();
@@ -552,9 +551,13 @@ namespace Unbound.Runtime
                 var group = output.Group;
                 var batch = group.GetBatch(command.batchID);
                 var material = group.GetRegisteredMaterial(command.materialID);
-                // An unknown batch or material is skipped without the invalid-ID error, which
-                // names a mesh (unmeasured for procedural commands).
-                if (batch == null || material == null) continue;
+                // An unknown batch or material is not drawn; the Editor's message for it is
+                // unmeasured (its invalid-ID error names a mesh).
+                if (batch == null || material == null)
+                {
+                    WarnOnce(UnsupportedProceduralId);
+                    continue;
+                }
                 if (command.visibleCount == 0 || command.elementCount == 0) continue;
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
@@ -566,13 +569,15 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// The stand-in mesh a procedural command draws and the indices it reads: vertex ids from
-        /// 0 (<see cref="ProceduralMeshes"/>; an indirect command's count from its arguments), or
+        /// 0 (<see cref="ProceduralMeshes"/>: a stand-in that commands of other counts share, drawn
+        /// with the command's count; an indirect command's count from its arguments), or
         /// its index buffer's indices over the 65536 zeroed vertices of <see cref="IndexedDraws"/>
         /// (a direct command's from its byte offset, at most its element count and the buffer's;
         /// an indirect command's first index and count from its arguments). Quads, which the
         /// devices have no primitive for, are drawn as the device draws them
         /// (<see cref="GraphicsDeviceProfile.ProceduralQuads"/>). False, warned once, when Unbound
-        /// cannot draw it: quads on a device where they are unmeasured, an index buffer that is not
+        /// cannot draw it: quads on a device where they are unmeasured, more vertex ids than a
+        /// shared stand-in holds (<see cref="ProceduralMeshes.MaxSharedVertices"/>), an index buffer that is not
         /// a live index buffer or a byte offset that does not start an index, index sizes and
         /// topologies <see cref="IndexedDraws"/> does not draw.
         /// </summary>
@@ -591,8 +596,10 @@ namespace Unbound.Runtime
             }
             if (indexBuffer.value == 0)
             {
-                mesh = ProceduralMeshes.Get(topology, indirect ? ProceduralMeshes.IndirectVertices : (int)Math.Min(count, int.MaxValue));
-                return true;
+                mesh = indirect ? ProceduralMeshes.Get(topology, ProceduralMeshes.IndirectVertices) : ProceduralMeshes.SharedStandIn(topology, count);
+                if (mesh != null) return true;
+                WarnOnce(UnsupportedVertexCount);
+                return false;
             }
             var indices = GpuBufferStorage.Find(indexBuffer.value);
             if (indices == null || indices.Released || !indices.Has(GraphicsBuffer.Target.Index) || indexOffsetBytes % (uint)indices.Stride != 0)
@@ -623,10 +630,8 @@ namespace Unbound.Runtime
         static bool RefusedWindow(uint offset, uint size)
         {
             if ((offset == 0 && size == 0) || BatchRendererGroup.BufferTarget != BatchBufferTarget.RawBuffer) return false;
-            if (!s_RawWindowErrors.TryGetValue((offset, size), out var message))
-                s_RawWindowErrors[(offset, size)] = message = "BatchRendererGroup had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. "
-                    + $"Pass zero for both visibleInstancesBufferWindowOffset and visibleInstancesBufferWindowSizeBytes in RawBuffer mode. (got {offset}, {size})";
-            Debug.LogError(message);
+            Debug.LogError("BatchRendererGroup had non-zero ConstantBuffer mode parameters when BufferTarget is RawBuffer. "
+                + $"Pass zero for both visibleInstancesBufferWindowOffset and visibleInstancesBufferWindowSizeBytes in RawBuffer mode. (got {offset}, {size})");
             return true;
         }
 
@@ -672,7 +677,11 @@ namespace Unbound.Runtime
                 var group = output.Group;
                 var batch = group.GetBatch(command.batchID);
                 var material = group.GetRegisteredMaterial(command.materialID);
-                if (batch == null || material == null) continue;
+                if (batch == null || material == null)
+                {
+                    WarnOnce(UnsupportedProceduralId);
+                    continue;
+                }
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if (RefusedWindow(command.visibleInstancesBufferWindowOffset, command.visibleInstancesBufferWindowSizeBytes)) continue;
                 if (!PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out _)) continue;
@@ -848,7 +857,12 @@ namespace Unbound.Runtime
                     var command = d.proceduralDrawCommands[dots.Command];
                     var batch = group?.GetBatch(command.batchID);
                     if (batch == null || !ProceduralShape(command.topology, command.indexBufferHandle, command.indexOffsetBytes, command.elementCount, false, out _, out var setup)) return;
-                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, setup, (int)command.baseVertex, material, pass, properties);
+                    // With an index buffer its indices plus the base vertex; without one the shared
+                    // stand-in's first vertex ids, the base vertex left out (tests/projects/brg
+                    // procedural.c1).
+                    bool indexed = setup.Indices != 0;
+                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, setup,
+                        indexed ? (int)command.baseVertex : 0, indexed ? 0u : command.elementCount, material, pass, properties);
                     return;
                 }
                 default:
@@ -856,7 +870,7 @@ namespace Unbound.Runtime
                     var command = d.drawCommands[dots.Command];
                     var batch = group?.GetBatch(command.batchID);
                     if (batch == null) return;
-                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, default, 0, material, pass, properties);
+                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, default, 0, 0, material, pass, properties);
                     return;
                 }
             }
@@ -865,20 +879,20 @@ namespace Unbound.Runtime
         /// <summary>A direct or procedural command's visible instances in draws of at most
         /// <see cref="MaxInstancesPerDraw"/> (a sorted instance's item draws that instance alone),
         /// each reading <paramref name="indices"/>' indices plus <paramref name="baseVertex"/> when it
-        /// has a buffer.</summary>
+        /// has a buffer, else the first <paramref name="count"/> of its mesh's (0: all).</summary>
         static void DrawInstances(in FrameBuilder.DrawItem item, DrawRef dots, BatchRendererGroup.Batch batch, int* visible, uint visibleCount, DrawSetup indices, int baseVertex,
-            ulong material, int pass, Dictionary<int, object> properties)
+            uint count, ulong material, int pass, Dictionary<int, object> properties)
         {
             uint begin = dots.Instance >= 0 ? (uint)dots.Instance : 0u;
             uint end = dots.Instance >= 0 ? Math.Min(begin + 1, visibleCount) : visibleCount;
             for (uint first = begin; first < end; first += MaxInstancesPerDraw)
             {
-                int count = (int)Math.Min(MaxInstancesPerDraw, end - first);
-                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + first, count);
+                int instances = (int)Math.Min(MaxInstancesPerDraw, end - first);
+                GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, 0, visible + first, instances);
+                if (baseVertex != 0 || count != 0) GfxStream.DrawShape(null, baseVertex, count);
                 if (indices.Indices != 0)
                 {
-                    if (baseVertex != 0) GfxStream.DrawShape(null, baseVertex);
-                    indices.Instances = (uint)count;
+                    indices.Instances = (uint)instances;
                     GfxStream.DrawSetup(indices);
                 }
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);

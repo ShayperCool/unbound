@@ -246,12 +246,14 @@ pub enum Command {
     },
     /// How the next `Draw` reads its indices (NativeApi 85): as `topology` (a `MeshTopology`
     /// value, [`DRAW_SHAPE_TRIANGLES`], [`DRAW_SHAPE_LINES`] or [`DRAW_SHAPE_POINTS`];
-    /// [`DRAW_SHAPE_MESH_TOPOLOGY`]: its submesh's own), and with `base_vertex` added to the
-    /// indices a `DrawIndices` gives it (else 0). BatchRendererGroup's indirect commands of a
-    /// mesh read as lines or points, and its procedural commands' base vertex.
+    /// [`DRAW_SHAPE_MESH_TOPOLOGY`]: its submesh's own), with `base_vertex` added to the indices a
+    /// `DrawIndices` gives it (else 0), and at most the first `count` of its submesh's indices (0:
+    /// all of them). BatchRendererGroup's indirect commands of a mesh read as lines or points,
+    /// and its procedural commands' base vertex and vertex count over a shared stand-in.
     DrawShape {
         topology: u8,
         base_vertex: i32,
+        count: u32,
     },
     /// Clears the viewport of the target ([`clear`] flags).
     Clear {
@@ -697,6 +699,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             op::DRAW_SHAPE => {
                 let topology = r.u8()?;
                 let base_vertex = r.i32()?;
+                let count = r.u32()?;
                 if !matches!(
                     topology,
                     DRAW_SHAPE_TRIANGLES
@@ -709,6 +712,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 Command::DrawShape {
                     topology,
                     base_vertex,
+                    count,
                 }
             }
             op::DRAW_INDICES if INDEXED_DRAWS => {
@@ -1145,10 +1149,12 @@ impl Writer {
             Command::DrawShape {
                 topology,
                 base_vertex,
+                count,
             } => {
                 self.bytes.push(op::DRAW_SHAPE);
                 self.bytes.push(*topology);
                 self.u32(*base_vertex as u32);
+                self.u32(*count);
             }
             Command::DrawIndices {
                 buffer,
@@ -1571,10 +1577,12 @@ mod tests {
             Command::DrawShape {
                 topology: DRAW_SHAPE_LINES,
                 base_vertex: -4,
+                count: 0,
             },
             Command::DrawShape {
                 topology: DRAW_SHAPE_MESH_TOPOLOGY,
                 base_vertex: 65536,
+                count: 7,
             },
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
@@ -1939,6 +1947,7 @@ mod tests {
         let shape = |topology: u8| {
             let mut bytes = vec![op::DRAW_SHAPE, topology];
             bytes.extend_from_slice(&4i32.to_le_bytes());
+            bytes.extend_from_slice(&9u32.to_le_bytes());
             bytes
         };
         for topology in [1u8, 2, 4, 6, 0xFE] {
@@ -1949,7 +1958,8 @@ mod tests {
             parse(&good).unwrap(),
             vec![Command::DrawShape {
                 topology: DRAW_SHAPE_POINTS,
-                base_vertex: 4
+                base_vertex: 4,
+                count: 9
             }]
         );
         for end in 1..good.len() {
