@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 from unittest import mock
 
 import run as capture_runner
 
-from compare import rows, entries, compare, check_constructor_stores, validate_controls, CONTROL_VALUES
+from compare import rows, entries, compare, check_constructor_stores, matches, validate_controls, CONTROL_VALUES
 
 
 def value(text):
@@ -50,6 +51,46 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result['differences'][0]['actual'], value('date:456:Local'))
         self.assertTrue(compare({'x': value('date:123:Local')}, {'x': value('date:456:Utc')}, debt)['failures'])
         self.assertTrue(compare({'x': value('date:123:Local')}, {'x': {'status': 'getter-threw', 'value': 'date:456:Local'}}, debt)['failures'])
+
+    def test_inactive_gradient_colors_are_the_only_variable_leaves(self):
+        # The unused colors of inactive MinMaxGradients vary between Editor repeats (values like
+        # uninitialized storage); their entries open exactly those Color leaves and keep the rest.
+        root = Path(__file__).resolve().parent
+        reference = rows(root/'Reference'/'unity-6000.0.71f1'/'values.jsonl')
+        debt = entries(json.loads((root/'debt.json').read_text()), '6000.0.71f1')
+        prefix = 'UnityEngine.ParticleSystem/Property/UnityEngine.ParticleSystem/'
+        for name, garbage in [('colorBySpeed', 'r=NaN;g=-1.5E+26;b=3.6E-41;a=-33437'),
+                              ('colorOverLifetime', 'r=-509083.5;g=NaN;b=0;a=3.39772839E-41'),
+                              ('main', 'r=NaN;g=4.27970564E-41;b=0;a=NaN'),
+                              ('trails', 'r=1.14859603E-30;g=0;b=NaN;a=3.48993383E-41')]:
+            with self.subTest(row=name):
+                key = prefix + name
+                entry = debt[key]
+                self.assertIn('expectedPattern', entry)
+                expected = reference[key]
+                self.assertTrue(matches(expected, entry, 'expected'))
+                text = expected['value']
+                # Active fields stay exact.
+                for active in ('enabled=false', 'mode=enum:', 'alpha=1'):
+                    if active in text:
+                        changed = text.replace(active, active.replace('false', 'true').replace('1', '0.5')
+                                               .replace('mode=enum:', 'mode=enum:9'), 1)
+                        self.assertFalse(matches(value(changed), entry, 'expected'), active)
+                # The opened Colors (color, colorMax, colorMin of colorBySpeed and
+                # colorOverLifetime; the first colorMin, the third Color, of main and trails)
+                # each accept other values; a closed one stays exact.
+                colors = [m.span(1) for m in re.finditer(r'UnityEngine\.Color\{([^}]*)\}', text)]
+                # All three Colors of colorBySpeed and colorOverLifetime are opened (none closed).
+                count, opened, closed = {'colorBySpeed': (3, {0, 1, 2}, []), 'colorOverLifetime': (3, {0, 1, 2}, []),
+                                         'main': (3, {2}, [0]), 'trails': (6, {2}, [5])}[name]
+                self.assertEqual(len(colors), count)
+                for index in sorted(opened) + closed:
+                    start, end = colors[index]
+                    changed = value(text[:start] + garbage + text[end:])
+                    self.assertEqual(matches(changed, entry, 'expected'), index in opened, (name, index))
+        terrain = debt['UnityEngine.Terrain/Property/UnityEngine.Terrain/freeUnusedRenderingResources']
+        self.assertTrue(matches(value('false'), terrain, 'expected'))
+        self.assertFalse(matches(value('1'), terrain, 'expected'))
 
     def test_invalid_debt_is_rejected(self):
         with self.assertRaises(ValueError): entries({'release': 'other', 'entries': []}, 'release')

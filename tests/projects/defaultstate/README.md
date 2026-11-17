@@ -636,3 +636,15 @@ is queued again).
 The group box slice (Q528) adds `GroupBox` to the handwritten inventory. The same two GPU Editor
 captures agree on all 45 of its rows, appended before the completion row; every earlier row and
 inventory entry is byte-identical (14350 rows).
+
+Four `ParticleSystem` module rows (`colorBySpeed`, `colorOverLifetime`, `main`, `trails`) hold the
+unused colors of an inactive `MinMaxGradient`, whose values vary between independent GPU Editor
+repeats like uninitialized storage (garbage floats and NaN): across the 42 Editor captures kept in the run cache
+on 2026-11-17, `colorBySpeed` takes 7 distinct values, `main` 4, `colorOverLifetime` and `trails` 3,
+and `publish` refused such pairs as unclassified differences. Their entries now carry anchored
+patterns (Q535) that open only those Color leaves (`color`, `colorMax`, `colorMin` of
+`colorBySpeed` and `colorOverLifetime`; the first `colorMin` of `main` and `trails`), each checked
+against the reference and every kept capture; the rest of each row stays exact and the
+implementation's value stays exact. `Terrain.freeUnusedRenderingResources` returns either value
+before TerrainData is assigned (one kept pair differed), as `keepUnusedRenderingResources` does,
+and gets the same two-value context entry.
