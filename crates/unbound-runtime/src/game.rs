@@ -386,12 +386,10 @@ impl Game {
         if self.pointer.is_some() && window_pointer != self.pointer_window {
             self.pointer = None;
         }
-        if let Some(delta) = self.fixed_delta
-            && frame > 0
-        {
-            scripted.real_delta_time = delta;
-        }
         if let Some(delta) = self.fixed_delta {
+            if frame > 0 {
+                scripted.real_delta_time = delta;
+            }
             scripted.paced = 0;
             scripted.fixed_step = delta;
         }

@@ -7,8 +7,6 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    // Sets the clocks: not beside other tests of them.
-    [Collection("Time")]
     public class AudioCaptureTimeTests
     {
         static string ClockReference(string profile, [System.Runtime.CompilerServices.CallerFilePath] string source = "") =>

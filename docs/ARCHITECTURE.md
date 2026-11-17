@@ -162,10 +162,12 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `unscaledTime`, the audio clock, and real time (`realtimeSinceStartup`,
   `EditorApplication.timeSinceStartup`, `WaitForSecondsRealtime`), which starts each frame where
   `unscaledTime` does and within the frame follows the wall clock up to just short of the next
-  frame's start (a script waiting longer in one frame sees it move by a microsecond per reading),
-  so a slow frame cannot make a tap read as a long press. The .NET clocks (`Stopwatch`,
-  `DateTime`, `Environment.TickCount`) keep wall time: games time their work and date things with
-  them. `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
+  frame's start, so a slow frame cannot make a tap read as a long press. A script waiting longer
+  in one frame sees it move by a microsecond per reading (a loop spending a time budget past
+  that point therefore runs a reading per microsecond of its budget); the frames after it hold
+  real time until `unscaledTime` catches up. The .NET clocks (`Stopwatch`, `DateTime`,
+  `Environment.TickCount`) keep wall time: games time their work and date things with them, and
+  the engine's own work budgets (`InstantiateAsync`'s integration time) use them too. `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
   instead of the clock, so random choices repeat too.
 * **Compute shaders**: a `.compute` asset is a `ComputeShader` whose kernels (`#pragma kernel`, with
   their defines and `multi_compile` sets) compile through the same pipeline as draw programs to WGSL

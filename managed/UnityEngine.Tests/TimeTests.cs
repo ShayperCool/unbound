@@ -74,7 +74,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A script that waits in one frame for more real time than the step still sees
-        /// it pass, and the next frame starts no earlier than what it saw.</summary>
+        /// it pass; the next frame starts no earlier than what it saw, and the following frames
+        /// hold the clock until unscaledTime catches up with it, even when each of them is read
+        /// late.</summary>
         [Fact]
         public void FixedStepRealTimeEndsAWaitLongerThanTheStep()
         {
@@ -91,7 +93,18 @@ namespace UnityEngine.Tests
                     Assert.True(++reads < 1_000_000, "the wait does not end");
                 }
                 Time.BeginFrame(Step, Step);
-                Assert.True(Time.realtimeSinceStartupAsDouble >= now);
+                double after = Time.realtimeSinceStartupAsDouble;
+                Assert.True(after >= now);
+                Assert.True(after - Time.unscaledTimeAsDouble > Step, "the wait moved real time ahead");
+                for (int frame = 0; frame < 4; frame++)
+                {
+                    System.Threading.Thread.Sleep(20); // read late in a slow frame
+                    double late = Time.realtimeSinceStartupAsDouble;
+                    Assert.True(late >= after, "real time went back");
+                    after = late;
+                    Time.BeginFrame(Step, Step);
+                }
+                Assert.InRange(Time.realtimeSinceStartupAsDouble - Time.unscaledTimeAsDouble, 0, 0.01);
             });
         }
 
