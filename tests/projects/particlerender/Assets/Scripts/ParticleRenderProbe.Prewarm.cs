@@ -202,6 +202,45 @@ public partial class ParticleRenderProbe
         Time.captureDeltaTime = 0f;
     }
 
+    /// <summary>Prewarms longer than 5 s under a Time.maximumParticleDeltaTime above the loop's
+    /// duration (0.25 s for loops of 0.1 s), where a long step by the duration is shorter than the
+    /// equal steps: without sub-emitters (a World-space rate under gravity) and with a Birth child
+    /// living 8 s; then two frames of 0.05 s.</summary>
+    IEnumerator MaxDeltaPrewarmControls()
+    {
+        Time.captureDeltaTime = 0.05f;
+        float maximum = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = 0.25f;
+        yield return null;
+        var systems = new List<(string, ParticleSystem)>();
+        var played = new List<ParticleSystem>();
+        var origin = new Vector3(0f, 400f, 0f);
+        var gravity = PrewarmParent("prewarm/maxdelta/plain_gravity8/parent", origin, s =>
+        {
+            var m = s.main; m.duration = 0.1f; m.startLifetime = 8f; m.startSpeed = 2f; m.gravityModifier = 0.3f;
+            m.simulationSpace = ParticleSystemSimulationSpace.World;
+            var e = s.emission; e.rateOverTime = 10f; e.SetBursts(new ParticleSystem.Burst[0]);
+        });
+        systems.Add(("prewarm/maxdelta/plain_gravity8/parent", gravity));
+        played.Add(gravity);
+        var parent = PrewarmParent("prewarm/maxdelta/birth_child8/parent", origin + new Vector3(3f, 0f, 0f),
+            s => { var m = s.main; m.duration = 0.1f; m.startLifetime = 0.07f; });
+        systems.Add(("prewarm/maxdelta/birth_child8/parent", parent));
+        played.Add(parent);
+        systems.Add(("prewarm/maxdelta/birth_child8/child", LinkedChild("prewarm/maxdelta/birth_child8/child", parent,
+            s => { var m = s.main; m.startLifetime = 8f; var e = s.emission; e.rateOverTime = 30f; })));
+        foreach (var ps in played) ps.Play();
+        foreach (var (key, ps) in systems) RecordPrewarm(key + "/start", ps);
+        for (int frame = 0; frame < 2; frame++)
+        {
+            yield return null;
+            foreach (var (key, ps) in systems) RecordPrewarm(key + "/" + frame, ps);
+        }
+        foreach (var ps in played) Done(ps);
+        Time.maximumParticleDeltaTime = maximum;
+        Time.captureDeltaTime = 0f;
+    }
+
     /// <summary>Birth children of a non-looping child that ends before its parent (rate × duration
     /// whole), and of children whose Emission module is disabled, played and simulated.</summary>
     IEnumerator BirthEndControls()

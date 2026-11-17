@@ -1199,6 +1199,7 @@ public partial class ParticleRenderProbe : MonoBehaviour
         MeshScale();
         MeshIndexFormats();
         yield return PrewarmControls();
+        yield return MaxDeltaPrewarmControls();
         yield return BirthEndControls();
         yield return InheritControls();
         yield return CollideControls();
