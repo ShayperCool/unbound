@@ -9,7 +9,8 @@ returns or throws, the events it raises (`.events`) and the log messages it writ
 * `subscribe.*`, `register.*`: the events and handlers subscribed when Play mode starts: an
   editor's header drawn, package imports, compilations, prefab reverts, the analytics build
   check, the tool context, the scene tools and the Build Settings window's build handler;
-  `later.events` lists which of them fired in the next 30 editor updates without any call here.
+  `later.events` lists which of them fired from their subscription to 30 editor updates later
+  (the probe's own tool queries included).
 * `drop.*`: DragAndDrop drop handlers: the views' ids, the handlers registered at the start
   (`dropHandlers` by view), adding, adding again, removing, null, and HasHandler for each view.
 * `tools.*`: ToolManager's tool and context types read first, then Tools.current, pivotMode and

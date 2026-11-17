@@ -54,6 +54,11 @@ namespace UnityEngine.Tests
             Action pivot = () => events.Add("pivot"), rotation = () => events.Add("rotation");
             var tool = Tools.current;
             var mode = Tools.pivotMode;
+            var savedRotation = Tools.pivotRotation;
+            // Unbound writes preferences to its own file under the cache: a private one here.
+            string cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+            string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "unbound-prefs-" + Guid.NewGuid().ToString("N"));
+            Environment.SetEnvironmentVariable("XDG_CACHE_HOME", directory);
             ToolManager.activeToolChanging += changing;
             ToolManager.activeToolChanged += changed;
             Tools.pivotModeChanged += pivot;
@@ -88,7 +93,9 @@ namespace UnityEngine.Tests
                 Tools.pivotRotationChanged -= rotation;
                 Tools.current = tool;
                 Tools.pivotMode = mode;
-                Tools.pivotRotation = PivotRotation.Local;
+                Tools.pivotRotation = savedRotation;
+                Environment.SetEnvironmentVariable("XDG_CACHE_HOME", cache);
+                if (System.IO.Directory.Exists(directory)) System.IO.Directory.Delete(directory, true);
             }
         }
 

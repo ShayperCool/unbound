@@ -95,9 +95,6 @@ namespace UnityEditor.SceneManagement
         public static event Action<PrefabStage> prefabStageClosing;
     }
 }
-namespace UnityEditor.EditorTools
-{
-}
 namespace UnityEditor.PackageManager
 {
     public static partial class Events { public static event Action<PackageRegistrationEventArgs> registeredPackages; }
