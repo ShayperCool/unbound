@@ -46,8 +46,8 @@ namespace Unbound.Runtime
     /// (<see cref="VFXIndirectArgs"/>); and meshes the output draws itself. The quads of a strip
     /// output go from each particle of a strip to the next: for all the strips' room (the
     /// vertex program leaves out those past a strip's last particle), or from each particle of
-    /// a sorted list. What an output draws
-    /// itself may be lit by the pipeline; what goes through an indirect buffer is unlit. An
+    /// a sorted list. What an output draws itself, or from a sorted list, may be lit by the
+    /// pipeline; what goes through a list that is not sorted is unlit. An
     /// output of another kind is not drawn and says so once (<see cref="Refusal"/>): the system
     /// is simulated all the same. The draws match the Unity 6000.0.71f1 Editor
     /// (tests/projects/vfx `draw-*`, tests/projects/vfxoutputs, tests/projects/vfxlit,

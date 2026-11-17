@@ -121,7 +121,9 @@ adds to that is not separated.
   indirect buffer (unlit quads through an unsorted one are `tests/projects/vfxoutputs`): not
   drawn; each says so once for its asset.
 - A sorted lit output with another sort criterion than the default, of quads that cut
-  through each other, of other primitives than quads, or that casts shadows; a curve or a
+  through each other, of other primitives than quads, that casts shadows, or that is not
+  blended over what is behind it (an opaque or additive one made to sort: its depth and
+  deferred passes then draw the sorted list too); a curve or a
   gradient sampled by a lit, mesh or strip output, or by other blocks than the two here.
 - Shadows cast by an output drawn through an indirect buffer (the casters here draw
   themselves): such an output's shadow pass is drawn from the list its colour is drawn from, a

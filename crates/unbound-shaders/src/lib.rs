@@ -4005,6 +4005,7 @@ float4 frag() : SV_Target { return f16tof32(f32tof16(_Curve.y)); }
             .compile(&program(source, false), &[], false)
             .unwrap();
         assert!(compiled.vertex.contains("unpack2x16float"));
+        assert!(compiled.fragment.contains("pack2x16float("));
     }
 
     #[test]

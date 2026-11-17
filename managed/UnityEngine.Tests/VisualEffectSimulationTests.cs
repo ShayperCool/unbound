@@ -1147,6 +1147,11 @@ namespace UnityEngine.Tests
                 new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 3), 0) } } },
                 new[] { new VFXShaderSourceDesc { source = lit } });
             Assert.Equal(new string[] { null }, litSorted[0]);
+            // Not a lit output of strips, also from a sorted list.
+            var litSortedStrips = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(Joined(Indirect(2, 3)), 0) } } },
+                new[] { new VFXShaderSourceDesc { source = lit } });
+            Assert.Equal(new[] { VFXOutput.LitStripRefusal }, litSortedStrips[0]);
             // Strips are measured unlit: a lit output of a strip system is not drawn.
             var litStrips = VFXOutput.SourceRefusals(
                 new[] { new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(quads, 0), From(quads, 1) } } },
