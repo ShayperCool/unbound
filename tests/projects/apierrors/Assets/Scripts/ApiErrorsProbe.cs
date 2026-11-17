@@ -456,5 +456,8 @@ public class ApiErrorsProbe : MonoBehaviour
         yield return Unhandled("format.unhandled_library_list_index", () => new List<int>()[3].ToString());
         yield return Unhandled("format.unhandled_unity_load_null_type", () => Resources.Load("Ctrl", null));
         yield return Unhandled("format.unhandled_unity_uvs_bad_channel", () => new Mesh().SetUVs(8, new Vector2[3]));
+        // Actual values whose texts differ between the number formats of the runtimes.
+        Shape("format.game_range_actual_third", () => throw new ArgumentOutOfRangeException("p", 1f / 3f, "Too big."));
+        Shape("format.game_range_actual_third_double", () => throw new ArgumentOutOfRangeException("p", 1.0 / 3.0, "Too big."));
     }
 }

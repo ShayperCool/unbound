@@ -397,4 +397,14 @@
 {"k":"format.unhandled_library_list_index","v":"Exception: ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.\nParameter name: index"}
 {"k":"format.unhandled_unity_load_null_type","v":"Exception: ArgumentNullException: Value cannot be null.\nParameter name: systemTypeInstance"}
 {"k":"format.unhandled_unity_uvs_bad_channel","v":"Exception: ArgumentOutOfRangeException: The uv index is invalid. Must be in the range 0 to 7.\nParameter name: uvIndex\nActual value was 8."}
+{"k":"format.game_range_actual_third","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.3333333."}
+{"k":"format.game_range_actual_third.param","v":"p"}
+{"k":"format.game_range_actual_third.actual","v":"0.3333333"}
+{"k":"format.game_range_actual_third.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.3333333."}
+{"k":"format.game_range_actual_third.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.3333333."}
+{"k":"format.game_range_actual_third_double","v":"throws System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.333333333333333."}
+{"k":"format.game_range_actual_third_double.param","v":"p"}
+{"k":"format.game_range_actual_third_double.actual","v":"0.333333333333333"}
+{"k":"format.game_range_actual_third_double.string","v":"System.ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.333333333333333."}
+{"k":"format.game_range_actual_third_double.log","v":"Exception: ArgumentOutOfRangeException: Too big.\nParameter name: p\nActual value was 0.333333333333333."}
 {"k":"complete","v":true}
