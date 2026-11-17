@@ -562,13 +562,25 @@ namespace UnityEngine
 
         // Count with the established float arithmetic, sharing the step's emission draw
         // across loops. Start curves use the final playback time of the whole batch.
+        /// <summary>The loop time a step's rate emits for: a looping system's step longer than its
+        /// loop emits only for its advance within the loop (the loops it passes over whole emit
+        /// nothing), its births still spread over the whole step; a shorter step emits for all of
+        /// it (the Unity 6000.0.71f1 Editor, tests/projects/particlerender `prewarm/maxdelta/*`:
+        /// steps of Time.maximumParticleDeltaTime above the duration).</summary>
+        float RateSpan(float t0, float dt, float duration)
+        {
+            if (!m_Main.loop || !(dt > duration)) return dt;
+            float advance = (t0 + dt) % duration - t0;
+            return advance < 0f ? advance + duration : advance;
+        }
+
         bool PlanRate(float t0, float dt, float duration, float rateRandom)
         {
             var curve = m_Emission.rateOverTime;
             m_RateBatchEmitted = false;
             m_StepRateBirths = 0;
             float counted = m_RateAccumulator, whole = counted, gain = 0f, phase = m_EmitPhase;
-            float t1 = t0 + dt;
+            float t1 = t0 + RateSpan(t0, dt, duration);
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
@@ -687,7 +699,7 @@ namespace UnityEngine
             float rate = curve.scalar;
             float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
             int births = 0;
-            float t1 = t0 + dt;
+            float t1 = t0 + RateSpan(t0, dt, duration);
             bool ended = false;
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
