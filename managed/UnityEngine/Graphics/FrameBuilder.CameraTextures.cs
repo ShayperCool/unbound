@@ -125,6 +125,7 @@ namespace Unbound.Runtime
                     var material = ReplacementMaterial(item.Material, replacement);
                     var draw = item;
                     draw.Material = material;
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     EmitDraw(draw, material.Sync(), GfxStream.AllPasses, false, false);
                 }
             }

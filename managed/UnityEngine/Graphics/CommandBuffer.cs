@@ -535,6 +535,7 @@ namespace UnityEngine.Rendering
             {
                 ulong meshHandle = mesh.Sync();
                 ulong materialHandle = material.Sync();
+                if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                 GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values, rawWinding: Unbound.Runtime.Compat.ImmediateMeshKeepsWinding);
             }, size);
         }
@@ -583,6 +584,7 @@ namespace UnityEngine.Rendering
                 var mesh = renderer.DrawGeometry(out var model);
                 if (mesh != null)
                 {
+                    if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(mesh.Sync(), submeshIndex, material.Sync(), pass, model, Color.white,
                         properties: Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, renderer.BlockFor(submeshIndex)?.m_Values), flipWinding: renderer.DrawFlipWinding(model));
                     return;
@@ -599,6 +601,7 @@ namespace UnityEngine.Rendering
                 {
                     var item = items[i];
                     if (items.Count > 1 && i != submeshIndex) continue;
+                    if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(item.Mesh, item.Submesh, handle, pass, item.Model, item.Color, item.MainTexture, item.ClipEnabled ? item.Clip : (Rect?)null,
                         Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, item.Properties));
                 }

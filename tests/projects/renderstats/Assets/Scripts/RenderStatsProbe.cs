@@ -91,6 +91,13 @@ public sealed class RenderStatsProbe : MonoBehaviour
         point.transform.position = new Vector3(-1.5f, 1f, -1f);
         yield return Case("litPoint");
         yield return Case("nothingRendered", 0);
+        // One sphere of a two-pass shader, nothing else.
+        foreach (var go in cubes) Destroy(go);
+        Destroy(spheres[1]);
+        Destroy(sun.gameObject);
+        Destroy(point.gameObject);
+        spheres[0].GetComponent<Renderer>().sharedMaterial = new Material(Resources.Load<Shader>("RenderStatsTwoPass"));
+        yield return Case("twoPassShader");
 
         foreach (var recorder in m_Recorders) recorder.Dispose();
         var dir = Environment.GetEnvironmentVariable("RENDER_STATS_OUT");

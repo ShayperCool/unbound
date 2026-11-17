@@ -1028,6 +1028,8 @@ namespace Unbound.Runtime
                     SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
                 if (motion) NextDrawMotion(item);
+                if (pass == GfxStream.TaggedPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo listed)
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(TaggedPasses(item.Material, listed, s_PassTagScratch).Count);
                 EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes);
             }
             if (block >= 0) GfxStream.StateOverride(null);
@@ -1098,6 +1100,7 @@ namespace Unbound.Runtime
             var info = item.Material.HasDisabledPasses ? ShaderPassInfo.Of(item.Material.shader) : null;
             if (info == null)
             {
+                Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(ShaderPassInfo.Of(item.Material.shader)?.ForwardPasses.Count ?? 1);
                 EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2, dispatch: dispatch);
                 return;
             }

@@ -103,6 +103,7 @@ namespace Unbound.Runtime
         {
             var mesh = StandIn(topology);
             GfxStream.DrawSetup(setup);
+            if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: properties);
         }
 
@@ -124,6 +125,7 @@ namespace Unbound.Runtime
         {
             int submesh = Math.Min(Math.Max(0, submeshIndex), Math.Max(0, mesh.subMeshCount - 1));
             GfxStream.DrawSetup(setup);
+            if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
             GfxStream.Draw(mesh.Sync(), submesh, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, Matrix4x4.identity, Color.white, properties: values);
         }
     }
@@ -250,6 +252,7 @@ namespace UnityEngine.Rendering
                 for (int i = 0; i < count; i++)
                 {
                     GfxStream.MeshInstance((uint)i, (uint)count);
+                    if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values);
                 }
             });

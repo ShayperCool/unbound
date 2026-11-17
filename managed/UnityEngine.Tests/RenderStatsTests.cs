@@ -1,3 +1,4 @@
+using Unbound.Runtime;
 using Unbound.Runtime.Profiling;
 using Unity.Profiling;
 using Xunit;
@@ -33,17 +34,34 @@ namespace UnityEngine.Tests
             RenderStats.Draw(9, 1);
             ProfilerCore.EndFrame();
             Assert.Equal(1, setPasses.LastValue);
-            // An instancing call of three instances through the stream is one draw call and batch.
+            // An instancing call of three instances through the stream (each instance a draw command
+            // after its DrawSetup) is one draw call; its forward-add draws for a light, one per
+            // instance likewise, another.
+            GfxStream.Flush();
             for (uint i = 0; i < 3; i++)
             {
-                RenderStats.MeshInstance(i);
-                RenderStats.Draw(9, 0);
+                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3 });
+                GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
             }
-            RenderStats.Draw(9, 0);
+            for (uint i = 0; i < 3; i++)
+            {
+                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3 });
+                GfxStream.Draw(1, 0, 9, 1, Matrix4x4.identity, Color.white);
+            }
+            GfxStream.Flush();
             ProfilerCore.EndFrame();
             Assert.Equal(2, draws.LastValue);
             Assert.Equal(2, batches.LastValue);
-            Assert.Equal(1, setPasses.LastValue);
+            Assert.Equal(2, setPasses.LastValue);
+            // A command for a two-pass shader's forward passes is two draws and two SetPass calls,
+            // and the same material's next single pass is a SetPass call again.
+            RenderStats.NextDrawPasses(2);
+            GfxStream.Draw(1, 0, 9, GfxStream.ForwardPasses, Matrix4x4.identity, Color.white);
+            GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            Assert.Equal(3, draws.LastValue);
+            Assert.Equal(3, setPasses.LastValue);
         }
     }
 }

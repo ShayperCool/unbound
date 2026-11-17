@@ -27,6 +27,8 @@
     "skybox.Vertices Count",
     "twoMaterials.Triangles Count",
     "twoMaterials.Vertices Count",
+    "twoPassShader.Triangles Count",
+    "twoPassShader.Vertices Count",
     "twoRenders.Triangles Count",
     "twoRenders.Vertices Count"
   ]

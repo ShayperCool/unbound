@@ -54,6 +54,7 @@ namespace Unbound.Runtime
             if (vertexCount <= 0 || instanceCount <= 0) return;
             var mesh = Get(topology, vertexCount);
             if (instanceCount > 1) GfxStream.DrawSetup(new DrawSetup { Instances = (uint)instanceCount });
+            if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);
         }
 
@@ -83,6 +84,7 @@ namespace Unbound.Runtime
             if (RefusesIndirect(topology)) return;
             var mesh = Get(topology, IndirectVertices);
             GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset });
+            if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);
         }
     }

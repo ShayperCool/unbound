@@ -5,20 +5,24 @@
 "Vertices Count", category Render) for frames in which a disabled camera is rendered by hand into
 a 64x64 render texture: nothing in view; three cubes of one unlit material; two unlit spheres of
 another material beside them; the camera rendered twice; a skybox clear; the shapes lit by a
-directional light (Standard); a point light over two of them; a frame that renders nothing. A
+directional light (Standard); a point light whose range reaches four of them; a frame that
+renders nothing; one sphere of a shader with two untagged passes. A
 frame's values are read in the next frame (`LastValue`), and written into values.jsonl in
 `$RENDER_STATS_OUT` (tests/value_probe.py).
 
 Measured in the Unity 6000.0.71f1 Editor (built-in render pipeline, two identical Linux GPU
-captures, NVIDIA driver). The Editor counts its own work: the colour clear of the render texture
-is a draw (two triangles), the three cubes are batched into one draw, each lit sphere gets a
-forward-add draw for the point light, and SetPass calls count material and pass changes.
+captures, NVIDIA driver). The Editor counts its own work: a render with nothing in view is one
+draw (two triangles: the render texture's colour clear), the three cubes are batched into one
+draw (the point light ends that batching), each object within the point light's range gets a
+forward-add draw, a two-pass shader draws twice, and SetPass calls count material and pass
+changes.
 
-Unbound counts the draw commands its renderer writes: each is one draw call and one batch, and a
-SetPass call when its material or pass differs from the draw before it. `residuals.json` lists
+Unbound counts the draw commands its renderer writes: each is one draw call and one batch per pass
+it draws (an instancing call once), and a SetPass call when its material or pass differs from the
+draw before it. A render with nothing in view is one draw in Unbound too. `residuals.json` lists
 where the work differs (the Editor's batching of small meshes) and the counters Unbound does not
-provide (triangles and vertices). Not covered: a draw command for several passes of a shader
-counts once in Unbound (the Editor counts each pass it draws), and URP's SRP Batcher. The Scripting API documents the counters' names
+provide (triangles and vertices). Not covered: static batching, automatic GPU instancing of renderers
+sharing a mesh and material (both lower the Editor's counts), and URP's SRP Batcher. The Scripting API documents the counters' names
 ([ProfilerRecorder](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.Profiling.ProfilerRecorder.html),
 Manual "Rendering Profiler module"), not how a given scene is counted.
 

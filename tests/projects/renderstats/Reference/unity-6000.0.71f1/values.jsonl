@@ -38,4 +38,9 @@
 {"k":"nothingRendered.SetPass Calls Count","v":0}
 {"k":"nothingRendered.Triangles Count","v":0}
 {"k":"nothingRendered.Vertices Count","v":0}
+{"k":"twoPassShader.Draw Calls Count","v":3}
+{"k":"twoPassShader.Batches Count","v":3}
+{"k":"twoPassShader.SetPass Calls Count","v":3}
+{"k":"twoPassShader.Triangles Count","v":1538}
+{"k":"twoPassShader.Vertices Count","v":1034}
 {"k":"complete","v":true}

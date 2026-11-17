@@ -197,6 +197,7 @@ namespace Unbound.Runtime
             GfxStream.SetTarget(target, 0, 0, slice);
             if (viewport is { } pixels) GfxStream.Viewport(pixels);
             GfxStream.Camera(UnityEngine.Matrix4x4.identity, Ortho);
+            if (pass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
             GfxStream.Draw(mesh, 0, handle, pass < 0 ? (Compat.RenderingMeasured ? GfxStream.BlitPasses : GfxStream.AllPasses) : pass, UnityEngine.Matrix4x4.identity, UnityEngine.Color.white,
                 properties: properties != null && properties.Count > 0 ? properties : null);
             GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
