@@ -279,13 +279,19 @@ class PostlandTests(unittest.TestCase):
         (self.repo/'managed').mkdir()
         check = ['probe', 'probe-check', 'fast check', 'r']
         checker = self.checker(lambda *args: False)
-        Gate, runs = self.debug_gate([SystemExit(5)])
+        checker.save(debug_failures=['A'])
+        # A build that fails, and a test host that exits non-zero without a failing test (crashed).
+        Gate, runs = self.debug_gate([SystemExit(5), set()])
         with mock.patch.object(checker, 'checkout'), mock.patch.object(land, 'Gate', Gate):
             self.land_branch('first', {'managed/x.cs': '1'}, [check])
             self.assertTrue(checker.round())
-        self.assertEqual([(r['probe'], r['kind'], r['result']) for r in self.reports()],
-                         [('managed-tests-debug', 'undecided', 'Debug tests could not run')])
-        self.assertEqual([names for _, names, _ in checker.calls], [['probe']])
+            self.land_branch('second', {'managed/x.cs': '2'}, [check])
+            self.assertTrue(checker.round())
+        self.assertEqual(sorted((r['probe'], r['kind'], r['result']) for r in self.reports()),
+                         [('managed-tests-debug', 'undecided', 'Debug tests could not run'),
+                          ('managed-tests-debug', 'undecided', 'Debug tests exited 1 without failing tests')])
+        self.assertEqual([names for _, names, _ in checker.calls], [['probe'], ['probe']])
+        self.assertEqual(checker.state()['debug_failures'], ['A'])  # nothing learned from either run
 
     def test_a_failure_before_the_range_is_reported_without_a_revert(self):
         check = ['old', 'old-check', 'fast check', 'r']
