@@ -48,6 +48,21 @@ namespace Unbound.Runtime
         internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
         /// <summary>The native plugins whose importer loads them on startup.</summary>
         internal static IReadOnlyList<string> PreloadedNativePlugins = Array.Empty<string>();
+
+        /// <summary>The name a plugin answers [DllImport] by: its file's, or for the executable of a
+        /// macOS bundle (`Foo.bundle/Contents/MacOS/<CFBundleExecutable>`) the bundle's, whatever
+        /// its executable is called (tests/projects/pluginbundle).</summary>
+        internal static string NativePluginName(string path)
+        {
+            var macOS = Path.GetDirectoryName(path);
+            var contents = Path.GetDirectoryName(macOS);
+            var bundle = Path.GetDirectoryName(contents);
+            if (Path.GetFileName(macOS) == "MacOS" && Path.GetFileName(contents) == "Contents"
+                && bundle != null && bundle.EndsWith(".bundle", StringComparison.Ordinal))
+                return Path.GetFileName(bundle);
+            return Path.GetFileName(path);
+        }
+
         /// <summary>Applied to every game assembly's image, with its portable PDB when it has one,
         /// before it loads (set by the host): the image and the PDB that goes with it.</summary>
         internal static Func<byte[], byte[], (byte[] Image, byte[] Symbols)> ImageFilter;
@@ -436,7 +451,7 @@ namespace Unbound.Runtime
             {
                 var wanted = NativeName(unmanagedDllName);
                 foreach (var path in NativePlugins)
-                    if (NativeName(Path.GetFileName(path)) == wanted)
+                    if (NativeName(NativePluginName(path)) == wanted)
                     {
                         var library = LoadUnmanagedDllFromPath(path);
                         Unbound.Runtime.NativePlugins.Loaded(library);
