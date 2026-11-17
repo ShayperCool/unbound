@@ -199,10 +199,10 @@ In dependency order; each item ends with an Editor-reference probe.
       motion vectors and Shader Graph outputs (such an output says once that it is not
       drawn; its system runs).
       Systems spawned by GPU events run (`tests/projects/vfxevents`), and particle strips,
-      drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`). Not
-      yet either:
-      output events, bounds computed on the GPU and part of the expression operations (an
-      effect using them does not simulate and says what); `unbound doctor` lists the effects.
+      drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`);
+      bounds set to Automatic are computed from the particles (`tests/projects/vfxbounds`).
+      Not yet either: part of the expression operations and a few system kinds (an effect
+      using them does not simulate and says what); `unbound doctor` lists the effects.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
       renderer's lightmap placement, light probes (tetrahedral interpolation), baked lights out of
       the realtime ones, the skybox reflection; cubemap textures from images (strips, crosses,
