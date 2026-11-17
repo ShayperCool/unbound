@@ -27,6 +27,9 @@
 {"k":"call.generic.float","v":"1850"}
 {"k":"call.nullable.float","v":"1850"}
 {"k":"call.join.float","v":"1850,0.1"}
+{"k":"call.customformatter","v":"C C AB 1850 1849.9999 localized"}
+{"k":"call.generic.formattable","v":"C 1850 C"}
+{"k":"call.generic.enumoverloads","v":"C C 2 C C|Alias, C Alias, C 5 Alias, C Alias, C"}
 {"k":"call.array","v":"C,C"}
 {"k":"call.list","v":"Q,X"}
 {"k":"call.parse","v":"C"}

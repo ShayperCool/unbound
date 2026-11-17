@@ -517,13 +517,15 @@ namespace Unbound
 
             public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : m_Provider.GetFormat(type);
 
-            // A null result leaves the argument to the class library's own fallback.
+            // What the game's formatter leaves prints as the class library would, with the game's
+            // provider (a type may test it); a null result leaves a plain object to ToString().
             public string Format(string format, object arg, IFormatProvider provider) => m_Custom.Format(format, arg, m_Provider) ?? arg switch
             {
                 float f => MonoNumberFormat.Format(f, format, m_Provider),
                 double d => MonoNumberFormat.Format(d, format, m_Provider),
                 Enum e => MonoEnumNames.ToString(e, format),
                 Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+                IFormattable formattable => formattable.ToString(format, m_Provider),
                 _ => null,
             };
         }

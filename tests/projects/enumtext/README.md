@@ -8,7 +8,9 @@
   reference, `ToString` with "G", "F", "D" and "X", concatenation, interpolation,
   `string.Format`, `StringBuilder.Append/AppendFormat`, `Convert.ToString`, `Enum.GetName`,
   `Type.GetEnumName`, `Enum.Format`, `Debug.Log`, a generic parameter's `ToString()`, a nullable
-  enum, `string.Join` of an array and a list; `call.direct.others` prints aliased values of the other enums and of
+  enum, `string.Join` of an array and a list, a format provider whose custom formatter leaves
+  most arguments to the class library, `IFormattable.ToString` and Enum's `ToString` overloads
+  through type parameters; `call.direct.others` prints aliased values of the other enums and of
   `CameraClearFlags`, `KeyCode` and `CollisionFlags` by a direct `ToString()`.
 - `enum.<Enum>.*`: for enums whose aliases are declared in and out of value order, with 3 to 24
   constants, [Flags] or not, signed, byte, short and ulong: the order of `Enum.GetNames` and

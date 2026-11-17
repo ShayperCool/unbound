@@ -36,6 +36,10 @@ public sealed class Localizer : IFormatProvider, ICustomFormatter
     public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : null;
     public string Format(string format, object arg, IFormatProvider provider) => arg is SortedAliases value ? ""enum "" + (int)value : null;
 }
+public struct Money : IFormattable
+{
+    public string ToString(string format, IFormatProvider provider) => provider is Localizer ? ""localized"" : ""plain"";
+}
 public struct Formattable : IFormattable
 {
     public int Calls;
@@ -60,7 +64,13 @@ public static class Probe
     public static string GenericEnum() => Generic(SortedAliases.C);
     public static string GenericObject() => Generic<object>(SortedAliases.C) + "" "" + Generic<Enum>(SortedAliases.C) + "" "" + Generic<object>(1849.9999f) + "" "" + Generic<IFormattable>(1849.9999);
     public static string CustomFormatter() => string.Format(new Localizer(), ""{0} {1} {2:F}"", SortedAliases.C, 1849.9999f, FlagAliases.AB)
-        + ""|"" + new StringBuilder().AppendFormat(new Localizer(), ""{0} {1}"", SortedAliases.C, ThreeUnsorted.N) + ""|"" + string.Format(new Localizer(), ""{0}"", new object[] { 1849.9999 });
+        + ""|"" + new StringBuilder().AppendFormat(new Localizer(), ""{0} {1}"", SortedAliases.C, ThreeUnsorted.N) + ""|"" + string.Format(new Localizer(), ""{0}"", new object[] { 1849.9999 })
+        + ""|"" + string.Format(new Localizer(), ""{0}"", new Money());
+    static string EnumOverloads<T>(T value) where T : Enum => value.ToString(""G"") + "" "" + value.ToString(""F"") + "" "" + value.ToString(""D"")
+#pragma warning disable 618
+        + "" "" + value.ToString((IFormatProvider)null) + "" "" + value.ToString();
+#pragma warning restore 618
+    public static string GenericEnumOverloads() => EnumOverloads(SortedAliases.C) + ""|"" + EnumOverloads(FlagAliases.A | FlagAliases.C);
     static string Formatted<T>(T value, string format) where T : IFormattable => value.ToString(format, null);
     static string FormattedEnum<T>(T value) where T : struct, Enum => value.ToString(""G"", null);
     static string FormattedRef<T>(ref T value) where T : IFormattable => value.ToString(""x"", null);
@@ -136,7 +146,10 @@ public static class Probe
             var probe = Redirected(optimization);
             // A custom formatter is given the enum itself (it may test its type), not a wrapper; what
             // it leaves to the class library prints as Mono does.
-            Assert.Equal("enum 2 1850 AB|enum 2 N|1849.9999", Run(probe, "CustomFormatter"));
+            // (A game type that tests the provider still sees the game's.)
+            Assert.Equal("enum 2 1850 AB|enum 2 N|1849.9999|localized", Run(probe, "CustomFormatter"));
+            // Enum's ToString overloads through a type parameter constrained to Enum.
+            Assert.Equal("C C 2 C C|Alias, C Alias, C 5 Alias, C Alias, C", Run(probe, "GenericEnumOverloads"));
             // IFormattable.ToString through a type parameter: enums and floats as Mono prints them,
             // other types their own (a struct's on the caller's storage).
             Assert.Equal("C C 1850 12,345 C x 1 1", Run(probe, "GenericFormattable"));

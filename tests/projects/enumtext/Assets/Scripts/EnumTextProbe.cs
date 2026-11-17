@@ -110,6 +110,11 @@ public class EnumTextProbe : MonoBehaviour
         Row("call.generic.float", Generic(1849.9999f));
         Row("call.nullable.float", ((float?)1849.9999f).ToString());
         Row("call.join.float", string.Join(",", new[] { 1849.9999f, 0.1f }));
+        // A format provider whose custom formatter takes one enum value and leaves the rest.
+        Row("call.customformatter", string.Format(new Localizer(), "{0} {1} {2:F} {3} {4} {5}", SortedAliases.C, SortedAliases.B, FlagAliases.AB, 1849.9999f, 1849.9999, new Money()));
+        // IFormattable's and Enum's ToString through type parameters.
+        Row("call.generic.formattable", Formattable(c, "G") + " " + Formattable(1849.9999f, null) + " " + Formattable<IFormattable>(c, null));
+        Row("call.generic.enumoverloads", EnumOverloads(c) + "|" + EnumOverloads(FlagAliases.A | FlagAliases.C));
         Row("call.array", string.Join(",", new[] { SortedAliases.B, SortedAliases.C }));
         Row("call.list", string.Join(",", new List<ThreeAliases> { ThreeAliases.P, ThreeAliases.X }));
         Row("call.parse", Enum.Parse(typeof(SortedAliases), "C").ToString());
@@ -164,6 +169,24 @@ public class EnumTextProbe : MonoBehaviour
     };
 
     static string Generic<T>(T value) => value.ToString();
+
+    static string Formattable<T>(T value, string format) where T : IFormattable => value.ToString(format, null);
+
+#pragma warning disable 618
+    static string EnumOverloads<T>(T value) where T : Enum =>
+        value.ToString("G") + " " + value.ToString("F") + " " + value.ToString("D") + " " + value.ToString((IFormatProvider)null) + " " + value.ToString();
+#pragma warning restore 618
+
+    sealed class Localizer : IFormatProvider, ICustomFormatter
+    {
+        public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : null;
+        public string Format(string format, object arg, IFormatProvider provider) => arg is SortedAliases value && value == SortedAliases.A ? "first" : null;
+    }
+
+    struct Money : IFormattable
+    {
+        public string ToString(string format, IFormatProvider provider) => provider is Localizer ? "localized" : "plain";
+    }
 
     static void Values<T>(params object[] unnamed) where T : struct
     {

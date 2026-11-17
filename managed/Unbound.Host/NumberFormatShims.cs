@@ -61,12 +61,11 @@ static class NumberFormatShims
 
     /// <summary>The shims of ToString calls that a <c>constrained.</c> prefix makes, by the called
     /// method's declaring type and parameter types: object's, IFormattable's and (through a type
-    /// parameter constrained to Enum) Enum's overloads.</summary>
+    /// parameter constrained to Enum) Enum's overloads with parameters (its ToString() is object's).</summary>
     static readonly Dictionary<string, System.Reflection.MethodInfo> s_ConstrainedShims = new(StringComparer.Ordinal)
     {
         ["System.Object()"] = ConstrainedShimTaking(),
         ["System.IFormattable(System.String,System.IFormatProvider)"] = ConstrainedShimTaking(typeof(string), typeof(IFormatProvider)),
-        ["System.Enum()"] = ConstrainedShimTaking(),
         ["System.Enum(System.String)"] = ConstrainedShimTaking(typeof(string)),
         ["System.Enum(System.IFormatProvider)"] = ConstrainedShimTaking(typeof(IFormatProvider)),
         ["System.Enum(System.String,System.IFormatProvider)"] = ConstrainedShimTaking(typeof(string), typeof(IFormatProvider)),
@@ -186,11 +185,11 @@ static class NumberFormatShims
             ? s_ConstrainedShims.GetValueOrDefault(target.DeclaringType.FullName + "(" + string.Join(",", target.Parameters.Select(p => p.ParameterType.FullName)) + ")")
             : null;
 
-    /// <summary>Whether a constrained call's type may hold an enum value: a generic parameter, a
-    /// nullable or an enum (false when it cannot be resolved).</summary>
     /// <summary>Assemblies already reported unresolvable (images may be filtered on several threads).</summary>
     static readonly HashSet<string> s_Unresolved = new(StringComparer.Ordinal);
 
+    /// <summary>Whether a constrained call's type may hold an enum value: a generic parameter, a
+    /// nullable or an enum (false when it cannot be resolved).</summary>
     static bool MayBeEnum(Mono.Cecil.TypeReference type)
     {
         if (type is Mono.Cecil.GenericParameter) return true;
