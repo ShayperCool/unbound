@@ -50,6 +50,21 @@ public static class Probe
     }
     static readonly Touch<int> s_Touch = Change;
     public static IntPtr TouchCallback() => Marshal.GetFunctionPointerForDelegate(s_Touch);
+    // Marshal.GetFunctionPointerForDelegate as a method group.
+    public static IntPtr Group()
+    {
+        Func<Delegate, IntPtr> pointer = Marshal.GetFunctionPointerForDelegate;
+        return pointer(s_Callback);
+    }
+    // A P/Invoke taking a delegate of a generic type: libc's qsort with its comparison.
+    [DllImport(""libc"")] static extern void qsort(IntPtr items, UIntPtr count, UIntPtr size, Func<IntPtr, IntPtr, int> compare);
+    public static unsafe string Sorted()
+    {
+        var items = new[] { 3, 1, 2 };
+        fixed (int* first = items)
+            qsort((IntPtr)first, (UIntPtr)3, (UIntPtr)4, (a, b) => *(int*)a - *(int*)b);
+        return string.Join("","", items);
+    }
     public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
 }";
 
@@ -57,8 +72,9 @@ public static class Probe
         {
             var image = WideFloatsTests.Emit(WideFloatsTests.Compilation(Source, OptimizationLevel.Release, "GenericCallbackProbe")).Image;
             // Not collectible, as the game's load context: the emitted callback types reference its types.
+            // As the game's loader filters images: P/Invokes first, then framework calls.
             return new System.Runtime.Loader.AssemblyLoadContext("generic callbacks " + Guid.NewGuid())
-                .LoadFromStream(new System.IO.MemoryStream(redirected ? FrameworkShims.Redirect(image) : image));
+                .LoadFromStream(new System.IO.MemoryStream(redirected ? FrameworkShims.Redirect(NativeCallbacks.KeepAlive(image)) : image));
         }
 
         static object Call(Assembly assembly, string method)
@@ -124,6 +140,25 @@ public static class Probe
             ((delegate* unmanaged<int*, int, void>)touch)(flags, 99);
             Assert.Equal("True/1/99", probe.GetType("Probe")!.GetField("Touched")!.GetValue(null));
             Assert.Equal(1, flags[1]);
+        }
+
+        [Fact]
+        public unsafe void AMethodGroupIsRedirectedToo()
+        {
+            var probe = Compiled(redirected: true);
+            var pointer = (IntPtr)Call(probe, "Group");
+            var text = Marshal.StringToHGlobalAnsi("group");
+            try { ((delegate* unmanaged<IntPtr, int, IntPtr, void>)pointer)(text, 1, text); }
+            finally { Marshal.FreeHGlobal(text); }
+            Assert.Equal("group|1|group", probe.GetType("Probe")!.GetField("Received")!.GetValue(null));
+            Assert.Throws<ArgumentException>(() => Call(Compiled(redirected: false), "Group"));
+        }
+
+        [Fact]
+        public void APInvokeTakesADelegateOfAGenericType()
+        {
+            Assert.Equal("1,2,3", Call(Compiled(redirected: true), "Sorted"));
+            Assert.Throws<MarshalDirectiveException>(() => Call(Compiled(redirected: false), "Sorted"));
         }
 
         [Fact]

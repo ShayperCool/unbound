@@ -87,6 +87,15 @@ static class FrameworkShims
                         changed = true;
                         continue;
                     }
+                    if (instruction.OpCode == OpCodes.Ldftn && instruction.Operand is MethodReference group
+                        && ReplacedWithArguments(module, group) is MethodReference groupReplacement)
+                    {
+                        // A delegate made of a member with parameters
+                        // (`Func<Delegate, IntPtr> f = Marshal.GetFunctionPointerForDelegate`).
+                        instruction.Operand = groupReplacement;
+                        changed = true;
+                        continue;
+                    }
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
                     if (!s_Names.Contains(target.Name)) continue;

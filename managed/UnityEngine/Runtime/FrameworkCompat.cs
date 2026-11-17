@@ -88,6 +88,11 @@ namespace Unbound
         public static IntPtr GetFunctionPointerForDelegate<TDelegate>(TDelegate d) where TDelegate : notnull =>
             GetFunctionPointerForDelegate((Delegate)(object)d);
 
+        /// <summary>A P/Invoke's delegate argument of a generic type as the native function gets it:
+        /// its callback pointer, 0 for null (Unbound.Host.NativeCallbacks passes such arguments
+        /// here).</summary>
+        public static IntPtr ToNative(Delegate d) => d == null ? IntPtr.Zero : GetFunctionPointerForDelegate(d);
+
         /// <summary>A delegate of a non-generic type with the signature of <paramref name="d"/>'s,
         /// invoking it.</summary>
         static Delegate Callable(Delegate d)

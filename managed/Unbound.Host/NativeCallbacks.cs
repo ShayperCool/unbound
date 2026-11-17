@@ -15,6 +15,9 @@ namespace Unbound.Host;
 /// <c>SetLogFunction(LogMessageFromCallback)</c> a temporary delegate. .NET frees the thunk with the
 /// delegate, so every P/Invoke taking a delegate gets a managed wrapper that roots the delegates
 /// it passes before calling the native entry point (kept as <c>&lt;name&gt;__native</c>).
+/// Mono also marshals a delegate of a generic type (<c>Action&lt;string, int&gt;</c>), which .NET
+/// refuses: such a parameter reaches the native entry point as the callback pointer
+/// <see cref="Unbound.MonoMarshal.ToNative"/> makes of it.
 /// </summary>
 static class NativeCallbacks
 {
@@ -24,7 +27,7 @@ static class NativeCallbacks
         using var input = new MemoryStream(image);
         using var assembly = AccessChecks.Read(input);
         var module = assembly.MainModule;
-        MethodReference? keep = null;
+        MethodReference? keep = null, toNative = null;
         bool changed = false;
         foreach (var type in module.GetTypes().ToList())
         {
@@ -32,7 +35,8 @@ static class NativeCallbacks
             {
                 if (!method.IsPInvokeImpl || !method.Parameters.Any(p => IsDelegate(p.ParameterType))) continue;
                 keep ??= module.ImportReference(typeof(Unbound.NativeCallbackRoots).GetMethod(nameof(Unbound.NativeCallbackRoots.Keep))!);
-                Wrap(type, method, keep);
+                toNative ??= module.ImportReference(typeof(Unbound.MonoMarshal).GetMethod(nameof(Unbound.MonoMarshal.ToNative))!);
+                Wrap(type, method, keep, toNative);
                 changed = true;
             }
         }
@@ -65,7 +69,10 @@ static class NativeCallbacks
     }
 
     /// <summary>Moves the P/Invoke to a new method and makes the original a managed wrapper.</summary>
-    static void Wrap(Mono.Cecil.TypeDefinition type, Mono.Cecil.MethodDefinition method, MethodReference keep)
+    /// <summary>A parameter of a generic delegate type passed by value.</summary>
+    static bool IsGenericDelegate(Mono.Cecil.TypeReference type) => type is GenericInstanceType && IsDelegate(type);
+
+    static void Wrap(Mono.Cecil.TypeDefinition type, Mono.Cecil.MethodDefinition method, MethodReference keep, MethodReference toNative)
     {
         var native = new Mono.Cecil.MethodDefinition(method.Name + "__native", method.Attributes, method.ReturnType)
         {
@@ -76,8 +83,9 @@ static class NativeCallbacks
         native.MethodReturnType.MarshalInfo = method.MethodReturnType.MarshalInfo;
         foreach (var p in method.Parameters)
         {
-            var copy = new ParameterDefinition(p.Name, p.Attributes, p.ParameterType);
-            if (p.HasMarshalInfo) copy.MarshalInfo = p.MarshalInfo;
+            bool generic = IsGenericDelegate(p.ParameterType);
+            var copy = new ParameterDefinition(p.Name, p.Attributes, generic ? type.Module.TypeSystem.IntPtr : p.ParameterType);
+            if (p.HasMarshalInfo && !generic) copy.MarshalInfo = p.MarshalInfo;
             native.Parameters.Add(copy);
         }
         native.IsPrivate = true;
@@ -97,11 +105,16 @@ static class NativeCallbacks
         var il = method.Body.GetILProcessor();
         foreach (var p in method.Parameters)
         {
-            if (!IsDelegate(p.ParameterType)) continue;
+            if (!IsDelegate(p.ParameterType) || IsGenericDelegate(p.ParameterType)) continue;
             il.Emit(OpCodes.Ldarg, p);
             il.Emit(OpCodes.Call, keep);
         }
-        foreach (var p in method.Parameters) il.Emit(OpCodes.Ldarg, p);
+        foreach (var p in method.Parameters)
+        {
+            il.Emit(OpCodes.Ldarg, p);
+            // ToNative roots the delegate it makes the pointer of.
+            if (IsGenericDelegate(p.ParameterType)) il.Emit(OpCodes.Call, toNative);
+        }
         il.Emit(OpCodes.Call, native);
         il.Emit(OpCodes.Ret);
     }
