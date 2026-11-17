@@ -2,7 +2,7 @@
 """Compares a line/trail probe capture with the Unity reference.
 
     compare.py <reference dir> <capture dir> [--report out.json] [--before <capture dir>]
-               [--mode canonical|capcount|miter|shadow]
+               [--mode canonical|capcount|miter|shadow] [--residuals RESIDUALS.json]
 
 Keeps the whole key union: every missing, extra and differing key is reported. Numbers match
 within an absolute 1e-5 plus a relative 1e-5 (float geometry); strings, booleans, list lengths
@@ -16,6 +16,9 @@ introduced (it passed before) or resolved (failed before, passes now).
 directory (see capcount_layout.py). The capture is always read whole.
 `miter` also includes the disjoint reversal controls and their image.
 `shadow` adds the opt-in shadow-caster diagnostics, with the same strict comparison.
+With --residuals (tests/residuals.py) the exit status is 0 when every failing key is listed there
+within its bounds: a number's largest difference "max_abs" (other values: the capture's "actual"),
+an image's differing "pixels".
 """
 import argparse
 import gzip
@@ -25,6 +28,9 @@ import math
 from pathlib import Path
 import struct
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import residuals as residual_lists  # noqa: E402
 
 ABS = 1e-5
 REL = 1e-5
@@ -93,7 +99,10 @@ def load_reference(directory, mode='canonical'):
     return layout.load_reference(directory, mode)
 
 
-def failures(reference, capture, mode='canonical'):
+def failures(reference, capture, mode='canonical', measures=None):
+    """Every failing key with its description, and the size of the key union. `measures`, when
+    given, receives what a residual list bounds for each differing value and image."""
+    measures = {} if measures is None else measures
     ref, cap = load_reference(reference, mode), load(capture)
     out = {}
     for k in sorted(set(ref) | set(cap)):
@@ -112,10 +121,12 @@ def failures(reference, capture, mode='canonical'):
             bad = sum(1 for i in range(0, len(a), 4) if any(abs(a[i+c]-b[i+c]) > PIXEL for c in range(4)))
             if bad:
                 out[k] = f'{bad} of {len(a)//4} pixels differ by more than 2/255'
+                measures[k] = {'pixels': bad}
             continue
         r = differ(ref[k], cap[k])
         if r:
             out[k] = f'{r[0]}: {r[1]}'
+            measures[k] = {'max_abs': r[2]} if math.isfinite(r[2]) else {'actual': cap[k]}
     return out, len(set(ref) | set(cap))
 
 
@@ -126,8 +137,11 @@ def main():
     parser.add_argument('--before')
     parser.add_argument('--report')
     parser.add_argument('--mode', choices=('canonical', 'capcount', 'miter', 'shadow'), default='canonical')
+    parser.add_argument('--residuals')
     args = parser.parse_args()
-    now, union = failures(args.reference, args.capture, args.mode)
+    listed = residual_lists.load(args.residuals)
+    measures = {}
+    now, union = failures(args.reference, args.capture, args.mode, measures)
     report = {'mode': args.mode, 'keys': union, 'failing': len(now), 'failures': now}
     if args.before:
         before, _ = failures(args.reference, args.before, args.mode)
@@ -142,7 +156,21 @@ def main():
     summary = f'{union - len(now)}/{union} keys match'
     if args.before:
         summary += f"; before {union - report['before_failing']}/{union}; introduced {len(report['introduced'])}, resolved {len(report['resolved'])}, retained {len(report['retained'])}"
+    if args.residuals:
+        verdict = residual_lists.Gate(listed)
+        reference = load_reference(args.reference, args.mode)
+        for k in sorted(set(reference) | set(now)):
+            if k not in now:
+                verdict.exact_key(k)
+            elif k in measures:
+                verdict.differs(k, measures[k])
+            else:
+                verdict.missing(k, now[k])
+        verdict.finish(reference)
+        print('\n'.join(verdict.lines()))
     print(summary)
+    if args.residuals:
+        return 0 if verdict.ok else 1
     return 1 if now else 0
 
 

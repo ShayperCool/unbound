@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Compare a flares capture with a reference: the full key union and every float channel.
 
-    compare.py REFERENCE ACTUAL [--report REPORT.json]
+    compare.py REFERENCE ACTUAL [--report REPORT.json] [--residuals RESIDUALS.json]
 
 REFERENCE and ACTUAL are capture directories (values.jsonl plus <key>.rgba or <key>.rgba.gz).
 Numbers inside values compare with the camera MSAA probe's float tolerance (absolute and
 relative 2e-4); strings, booleans and log lists compare exactly. Image channels use the same
 tolerance; NaN only matches NaN. Every missing, extra and failing value and image is kept in
-the report and printed; the exit status is nonzero when anything fails.
+the report and printed; the exit status is nonzero when anything fails. With --residuals
+(tests/residuals.py) it is nonzero only when a difference is not listed there within its bounds:
+an image's failing "pixels" and largest channel difference "max_delta", a value's "actual".
 """
 import argparse
 import gzip
@@ -17,6 +19,9 @@ from pathlib import Path
 import sys
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import residuals as residual_lists  # noqa: E402
 
 TOLERANCE = 2e-4
 
@@ -76,7 +81,9 @@ def main():
     parser.add_argument('reference', type=Path)
     parser.add_argument('actual', type=Path)
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--residuals', type=Path)
     args = parser.parse_args()
+    listed = residual_lists.load(args.residuals)
     a, b = values(args.reference), values(args.actual)
     rows = []
     for key in sorted(a.keys() | b.keys()):
@@ -108,7 +115,27 @@ def main():
     for r in image_rows:
         if r['status'] != 'pass':
             print(json.dumps(r, sort_keys=True))
+    if args.residuals:
+        verdict = residual_lists.Gate(listed)
+        for r in rows:
+            if r['status'] == 'pass':
+                verdict.exact_key(r['key'])
+            elif r['status'] == 'different':
+                verdict.differs(r['key'], {'actual': r['actual']})
+            else:
+                verdict.missing(r['key'], r['status'])
+        for r in image_rows:
+            if r['status'] == 'pass':
+                verdict.exact_key(r['key'])
+            elif r['status'] == 'different':
+                verdict.differs(r['key'], {'pixels': r['failingPixels'], 'max_delta': r['maxDelta']})
+            else:
+                verdict.missing(r['key'], r['status'])
+        verdict.finish(set(a) | set(ai))
+        print('\n'.join(verdict.lines()))
     print(json.dumps(summary, sort_keys=True))
+    if args.residuals:
+        return int(not verdict.ok)
     return int(any(r['status'] != 'pass' for r in rows + image_rows))
 
 

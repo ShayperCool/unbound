@@ -70,7 +70,10 @@ status or summary changed. --update-baseline copies this run's summary to agents
 Image comparators print measurements, not verdicts, except where a recipe gates them
 (particles/compare_images.py and urp/compare.py --gate: exact images apart from a probe's listed
 residuals, tests/projects/urp/image_gate.py; used by assetbundles, baked, blendshapes, grass,
-lighting, particles, shadergraph, urp, urp2d and video). Each run records them (`images` in the
+lighting, particles, shadergraph, terrain, urp, urp2d and video). Probes whose strict value
+comparison keeps recorded residuals pass their comparator the probe's residual list
+(tests/residuals.py: each listed key with its bounds and reason; any other difference fails):
+cameramsaa, flares, indirectspec, lightprobes, lines and terrain. Each run records them (`images` in the
 summary: every printed image mean, worst channel difference and count of pixels over 8, by
 comparator step (its script and first argument) and image); a probe with any status regresses when
 one of them gets worse against the baseline: a higher mean as printed (two decimals), more pixels
@@ -170,11 +173,13 @@ def gated_image(reference, candidate, residuals=None):
 
 
 def classic(variable, out, run_args, compare=None, images=None, verdict='summary', extra_env=None,
-            image_gate=False):
-    """The original probe layout: an *_OUT variable, `unbound run`, compare.py REFERENCE OUT."""
+            image_gate=False, residuals=None):
+    """The original probe layout: an *_OUT variable, `unbound run`, compare.py REFERENCE OUT.
+    residuals: the probe's residual list for its compare.py, whose exit status then decides."""
     target = '{work}/'+out
     steps = [run(*run_args, env={variable: target, **(extra_env or {})})]
-    steps.append(py('compare.py', *(compare or [ref(), target]), verdict=verdict))
+    arguments = [*(compare or [ref(), target]), *(('--residuals', residuals) if residuals else ())]
+    steps.append(py('compare.py', *arguments, verdict='exit' if residuals else verdict))
     if images:
         # compare_images.py prints means and exits 0: a measurement, not a verdict; with
         # image_gate (probes whose images are exact on the Linux GPU) every image must match its
@@ -441,7 +446,8 @@ def recipes(release):
         R['urp'] += [gated_image(str(png), out+'/'+png.name, '{probe}/image-residuals.json')
                      for png in sorted(paths.glob('*.png'))]
         R['urp'].append(py('compare_constants.py', str(paths/'modes.jsonl'), out+'/modes.jsonl'))
-    R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True)
+    R['terrain'] = classic('TERRAIN_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'], images=True,
+                           image_gate='{probe}/image-residuals.json', residuals='{probe}/residuals.json')
     R['lod'] = classic('LOD_PROBE_OUT', 'out', ['--frames', '20000', '--size', '320x180', '--no-watch'])
     R['assetbundles'] = classic('BUNDLE_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
                                 images=True, image_gate=True)
@@ -512,8 +518,10 @@ def recipes(release):
                            ('FocusedGamma', {'CAMERA_MSAA_FOCUSED': '1', 'CAMERA_MSAA_COLOR_SPACE': 'Gamma'})]:
         env = {'CAMERA_MSAA_OUTPUT': '{work}/'+profile, 'CAMERA_MSAA_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}',
                'UNBOUND_NATIVE_DIR': '{managed}', **extra}
+        listed = (('--residuals', '{probe}/residuals-'+profile+'.json')
+                  if (PROJECTS/'cameramsaa'/f'residuals-{profile}.json').is_file() else ())
         R['cameramsaa'] += [Step('driver', ['bash', '{probe}/run.sh', 'engine', 'suite'], env),
-                            py('compare.py', '{probe}/Reference/unity-{release}/'+profile, '{work}/'+profile)]
+                            py('compare.py', '{probe}/Reference/unity-{release}/'+profile, '{work}/'+profile, *listed)]
     R['materialcolortransfer'] = []
     R['terrainlightmaps'] = []
     for space in ('Linear', 'Gamma'):
@@ -563,8 +571,9 @@ def recipes(release):
                                              'NormArea,NormAngle,NormGroups,NormFromAngle,NormNoSplit,NormNone'])
     R['lightmapuvs'] += [py('compare_normals.py', single_ref(), '{runs}/unbound/lightmapuvs.jsonl', '--expect',
                               'Authored,Bare,Bridge,BridgeObj,Cross,Cube,Cylinder,Edges,Faces,FlatPoly,FlatQuad,FlatTri,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Pinch,Polys,Prism,Seam,Slit,SlitGroups,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV,WeldDiag,WeldQuad,WeldTri')]
-    for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
+    for name in ('appfacts', 'customrt', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
+    R['flares'] = guarded(lambda runs: [*folder(runs), '--residuals', '{probe}/residuals.json'])
     # rtdepth on the Vulkan device too (screen and render texture orientation, reversed depth).
     if (PROJECTS/'rtdepth/Reference'/f'unity-{release}'/'vulkan').is_dir():
         R['rtdepth'] += [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}-vulkan',
@@ -572,10 +581,11 @@ def recipes(release):
                          py('compare.py', '{probe}/Reference/unity-{release}/vulkan', '{runs}-vulkan/unbound',
                             '--report', '{work}/report-vulkan.json')]
     # Keep the full strict verdict, including the disjoint cap/reversal controls.
-    R['lines'] = guarded(lambda runs: [*folder(runs), '--mode', 'miter'])
+    R['lines'] = guarded(lambda runs: [*folder(runs), '--mode', 'miter', '--residuals', '{probe}/residuals.json'])
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
                                              '--report', '{work}/report.json'])
-    R['lightprobes'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/probe.jsonl', f'{runs}/probe.jsonl'])
+    R['lightprobes'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/probe.jsonl', f'{runs}/probe.jsonl',
+                                             '--residuals', '{probe}/residuals.json'])
     # These drivers compare inside `unbound` mode and exit nonzero on a difference.
     for name in ('cullinggroup', 'inputframes'):
         R[name] = [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}',
@@ -602,7 +612,7 @@ def recipes(release):
                    env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
             py('compare.py', f'{{probe}}/Reference/unity-{{release}}/{profile}.jsonl',
                f'{{runs}}-{profile}/{profile}/unbound/indirectspec.jsonl', '--profile', profile,
-               '--report', f'{{work}}/report-{profile}.json')]
+               '--report', f'{{work}}/report-{profile}.json', '--residuals', f'{{probe}}/residuals-{profile}.json')]
     for name, comparator, profiles in [('modelimport', 'compare.py', ('Gamma', 'Linear', 'URP')),
                                        ('texturearrays', 'compare.py', ('Android', 'Gamma', 'Linear')),
                                        ('textureimport', 'compare.py', ('Android', 'Gamma', 'Linear')),

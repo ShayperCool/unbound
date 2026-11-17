@@ -2,17 +2,25 @@
 """Compares an Unbound light probe capture with the Editor's: every key, every value.
 
     python3 tests/projects/lightprobes/compare.py REFERENCE.jsonl CANDIDATE.jsonl [--report OUT.json]
+        [--residuals RESIDUALS.json]
 
 Values are compared token by token. Numbers must be equal as single-precision floats, except
 `pixels ...` (8-bit channels, which may differ by --pixel-tolerance, default 1). Every missing,
 extra and differing value is listed; the exit code is the number of failing keys (capped at 100).
+With --residuals (tests/residuals.py) the exit code is 0 when every differing key is listed there
+within its bounds ("tokens": how many tokens differ; "max_abs": their largest absolute difference,
+when all of them are numbers, else "candidate": the candidate's text), 1 otherwise.
 .NET's "(Parameter 'x')" exception suffix is compared in Mono's form ("Parameter name: x").
 """
 import argparse
 import json
+from pathlib import Path
 import re
 import struct
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import residuals as residual_lists  # noqa: E402
 
 
 def mono_message(value):
@@ -43,6 +51,15 @@ def number(token):
         return None
 
 
+def measure(key, a, b, pixel_tolerance):
+    """What a residual list bounds for a differing value."""
+    ta, tb = a.split(' '), b.split(' ')
+    differing = [(x, y) for x, y in zip(ta, tb) if compare_value(key, x, y, pixel_tolerance)]
+    if len(ta) != len(tb) or any(number(x) is None or number(y) is None for x, y in differing):
+        return {'tokens': len(differing), 'candidate': b}
+    return {'tokens': len(differing), 'max_abs': max(abs(number(y) - number(x)) for x, y in differing)}
+
+
 def compare_value(key, a, b, pixel_tolerance):
     ta, tb = a.split(' '), b.split(' ')
     if len(ta) != len(tb):
@@ -66,7 +83,9 @@ def main():
     parser.add_argument('candidate')
     parser.add_argument('--pixel-tolerance', type=float, default=1)
     parser.add_argument('--report')
+    parser.add_argument('--residuals')
     args = parser.parse_args()
+    listed = residual_lists.load(args.residuals)
     ref, cand = load(args.reference), load(args.candidate)
     missing = [k for k in ref if k not in cand]
     extra = [k for k in cand if k not in ref]
@@ -87,10 +106,25 @@ def main():
         print('EXTRA', key)
     for key, f in failing.items():
         print('FAIL', key, '|', '; '.join(f['problems'][:6]), '...' if len(f['problems']) > 6 else '')
+    if args.residuals:
+        verdict = residual_lists.Gate(listed)
+        for key in ref:
+            if key in missing:
+                verdict.missing(key, 'missing')
+            elif key in failing:
+                verdict.differs(key, measure(key, ref[key], cand[key], args.pixel_tolerance))
+            else:
+                verdict.exact_key(key)
+        for key in extra:
+            verdict.missing(key, 'extra')
+        verdict.finish(ref)
+        print('\n'.join(verdict.lines()))
     print(f'{passed}/{len(ref)} keys pass; {len(failing)} differ, {len(missing)} missing, {len(extra)} extra')
     if args.report:
         with open(args.report, 'w') as f:
             json.dump({'passed': passed, 'total': len(ref), 'missing': missing, 'extra': extra, 'failing': failing}, f, indent=1)
+    if args.residuals:
+        return int(not verdict.ok)
     return min(len(failing) + len(missing) + len(extra), 100)
 
 

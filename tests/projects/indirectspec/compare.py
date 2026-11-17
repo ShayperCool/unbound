@@ -2,6 +2,7 @@
 """Compares one capture of the unity_IndirectSpecColor witness with a profile's Reference.
 
     compare.py REFERENCE.jsonl CAPTURE.jsonl --profile linear|gamma [--report REPORT.json]
+               [--residuals RESIDUALS.json]
 
 Strict: a key passes only if its value is the Reference's exact string. Every key of either
 side is kept: missing, extra and duplicate keys fail, and metadata the engine records
@@ -10,7 +11,9 @@ filtered, normalized or toleranced. For values whose tokens are all numbers on b
 report also holds the largest absolute token difference (information only: it never turns a
 key green). The witness's own output checks (gate.output_problems: every predeclared key,
 finite values, one completion marker, last) are recorded alongside. Exit 0 only if every key
-passes.
+passes; with --residuals (tests/residuals.py), only if every differing key is listed there within
+its bounds: the largest absolute token difference "max_abs" of an all-number value, otherwise its
+captured text "capture". Duplicate or unparsable capture lines fail either way.
 """
 import argparse
 import json
@@ -19,7 +22,9 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import gate  # noqa: E402
+import residuals as residual_lists  # noqa: E402
 
 
 def read(path):
@@ -101,7 +106,9 @@ def main():
     parser.add_argument('capture')
     parser.add_argument('--profile', required=True, choices=sorted(gate.COLOR))
     parser.add_argument('--report')
+    parser.add_argument('--residuals')
     args = parser.parse_args()
+    listed = residual_lists.load(args.residuals)
     report = compare(args.reference, args.capture, args.profile)
     if args.report:
         Path(args.report).write_text(json.dumps(report, indent=1) + '\n')
@@ -111,6 +118,19 @@ def main():
     for row in report['rows']:
         if row['status'] != 'pass':
             print(f"  {row['status']:7} {row['key']}" + (f"  max_abs {row['max_abs']}" if row.get('max_abs') is not None else ''))
+    if args.residuals:
+        verdict = residual_lists.Gate(listed)
+        for row in report['rows']:
+            if row['status'] == 'pass':
+                verdict.exact_key(row['key'])
+            elif row['status'] == 'differ':
+                verdict.differs(row['key'], {'max_abs': row['max_abs']} if row.get('max_abs') is not None
+                                else {'capture': row['capture']})
+            else:
+                verdict.missing(row['key'], row['status'])
+        verdict.finish([row['key'] for row in report['rows'] if row['status'] != 'extra'])
+        print('\n'.join(verdict.lines()))
+        return 0 if verdict.ok and not report['capture_duplicates'] and not report['capture_unparsable_lines'] else 1
     return 0 if report['ok'] else 1
 
 

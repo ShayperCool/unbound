@@ -7,7 +7,6 @@ is retained in components.json. No tolerance or existing assertion is changed.
 import argparse
 import json
 import os
-import re
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +14,9 @@ import time
 
 import compare
 import run
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import residuals as residual_lists  # noqa: E402
 
 
 def components(reference, capture, mode='miter'):
@@ -60,14 +62,14 @@ def components(reference, capture, mode='miter'):
     return out
 
 
-# Open residual (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer geometry): one byte
-# of a perceptual gradient. Q374 resolved the trail frame counts; they are strict requirements.
-# Every other key, missing or extra key fails the gate.
-OPEN = re.compile(r'line\.color\.PerceptualBlend')
+# The open residuals and their bounds (docs/COMPATIBILITY_GAPS.md, LineRenderer/TrailRenderer
+# geometry): residuals.json, shared with the suite's comparison. Every other key, missing or
+# extra key fails the gate.
+RESIDUALS = Path(__file__).with_name('residuals.json')
 
 
 def open_residual(key):
-    return OPEN.fullmatch(key) is not None
+    return key in residual_lists.load(RESIDUALS)
 
 
 def main():
@@ -97,7 +99,7 @@ def main():
     reference = run.reference_root(run.PROBE)
     report = args.capture/'comparison.json'
     command = [sys.executable, str(run.PROBE/'compare.py'), str(reference), str(args.capture),
-               '--mode', mode, '--report', str(report)]
+               '--mode', mode, '--report', str(report), '--residuals', str(RESIDUALS)]
     if args.before:
         command += ['--before', str(args.before)]
     code = subprocess.run(command).returncode
@@ -112,6 +114,8 @@ def main():
     (args.capture/'components.json').write_text(json.dumps(detail, indent=1)+'\n')
     failures = full['failures']
     bad = [k for k, v in failures.items() if not open_residual(k) or v in ('missing', 'extra')]
+    if code and not bad:
+        bad.append('a residual beyond its recorded bound')
     cap = compare.load(args.capture)
     if cap.get('complete') is not True or any(k == 'fatal' or k.endswith('.fatal') for k in cap):
         bad.append('incomplete capture')
