@@ -22,13 +22,16 @@ one JSON line per observation:
   reads `NeverSleep`, -1, whatever is set, `SystemSetting` and a number of seconds included), and a log handler added through one
   class and removed through the other.
 
-Measured: Unity 6000.0.71f1, Linux GPU Editor (NVIDIA), batchmode with graphics, Play mode, no Device
-Simulator. Every property and every recorded method call answers the same as its counterpart, and
-the writes listed above act on the counterpart. Not written cross-class: the other setters
-(`orientation`, `autorotate*`, `fullScreen`, `brightness`, `backgroundLoadingPriority`); not called:
-`SetResolution`, `MoveMainWindowTo`, `GetTiledRenderTargetStorageSize`, `HasUserAuthorization`,
-`RequestUserAuthorization`, `OpenURL`, `Quit` and `Unload`. Two independent captures were byte-identical; `Reference/unity-6000.0.71f1.jsonl` is one of them
-(346 records). Unmeasured: the Device Simulator (Unbound does not provide it) and the macOS Editor.
+Measured: Unity 6000.0.71f1, Linux GPU Editor (NVIDIA), batchmode with graphics, Play mode, no
+Device Simulator. Every property and every recorded method call answers the same as its counterpart,
+and the writes listed above act on the counterpart. Not written cross-class, among others: the other
+setters (`orientation`, `autorotate*`, `fullScreen`, `fullScreenMode`, `brightness`,
+`backgroundLoadingPriority`); not called, among others: `SetResolution`, `MoveMainWindowTo`,
+`GetTiledRenderTargetStorageSize`, `HasUserAuthorization`, `RequestUserAuthorization`,
+`RequestAdvertisingIdentifierAsync`, `GetBuildTags`, `SetBuildTags`, `OpenURL`, `Quit`, `Unload` and
+the obsolete `FormatUsage` overloads. Two independent captures were byte-identical;
+`Reference/unity-6000.0.71f1.jsonl` is one of them (346 records). Unmeasured: the Device Simulator
+(Unbound does not provide it) and the macOS Editor.
 
 ## Running
 
