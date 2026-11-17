@@ -41,9 +41,9 @@ Everything matches. What the probe established:
 - The renderer's weights start at the file's DeformPercent; clips animate `blendShape.<name>`.
 
 A `vertices` assignment smaller than the triangles reference logs Unity's error and leaves the
-mesh as it was (`misuse` `vertices change`). The macOS Editor gives the same for `SetVertices`, a
-null array, point indices and a submesh's base vertex (managed MeshVertexCountGuardTests); those
-cases are not in this reference yet and belong in the misuse capture when it is next recorded.
+mesh as it was (`misuse` `vertices change`), and so do `SetVertices` (list, array, range), a null
+array or list, point indices and a submesh's base vertex; an array shorter than the vertices but
+covering the indices is taken (`shorter covering`; each misuse record gives the vertex count).
 Known differences: the clip's samples are within 0.06 of the Editor's (Unity reduces the imported
 keys). The image (`blob.png`) matches the reference pixel for pixel on the Linux GPU (6000.0.71f1,
 two runs, 2026-11-16), and the suite gates it so (`compare_images.py --gate`).

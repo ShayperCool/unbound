@@ -78,8 +78,8 @@ raises `Time.maximumParticleDeltaTime` above the start delay left, and
 burst. `mixedRemainder/*` alternates fixed-step and variable-step calls and adds a
 fresh delayed playback with a long step; `stoppedLongStep/*/afterPlay{2,3,4}` follow
 a resumed system with delay left over longer and frame-length calls; `stoppedChild/*` stops a never-played
-Birth sub-emitter with its parent. `stoppedHeld/<maximum>/<delay>` (recorded later with the
-macOS Editor) resumes a never-played stopped system whose start delay is left and makes six calls
+Birth sub-emitter with its parent. `stoppedHeld/<maximum>/<delay>` (first recorded with the
+macOS Editor; two Linux Editor captures reproduce the whole reference byte for byte) resumes a never-played stopped system whose start delay is left and makes six calls
 of 0.05 s, shorter than the delay, then two of 0.3 s. The Editor runs in batch mode on the GPU (`run.py native` uses
 `tests/editor_runner.py`); two captures were identical and the earlier 16573
 records are byte-identical.
