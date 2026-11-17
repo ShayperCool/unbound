@@ -420,22 +420,31 @@ fn render_pipeline(project: &Project) -> Json {
                 .collect()
         })
         .unwrap_or_else(|| vec![0.0, 0.0, 1.0]);
-    // Each built-in shader's mode by its setting (`m_Deferred: {m_Mode: 1, m_Shader: ...}`).
-    let shader_modes: serde_json::Map<String, Json> = graphics
+    // Each built-in shader's mode and shader by its setting (`m_Deferred: {m_Mode: 1, m_Shader: ...}`).
+    let shader_settings: Vec<(String, i64, Json)> = graphics
         .as_ref()
         .and_then(Value::as_map)
         .map(|m| {
             m.iter()
                 .filter_map(|(k, v)| {
                     let mode = v.get("m_Mode").and_then(Value::as_i64)?;
-                    Some((k.to_string(), json!(mode)))
+                    Some((k.to_string(), mode, asset_ref(v.get("m_Shader"))))
                 })
                 .collect()
         })
         .unwrap_or_default();
+    let shader_modes: serde_json::Map<String, Json> = shader_settings
+        .iter()
+        .map(|(k, mode, _)| (k.clone(), json!(mode)))
+        .collect();
+    let shader_refs: serde_json::Map<String, Json> = shader_settings
+        .into_iter()
+        .map(|(k, _, shader)| (k, shader))
+        .collect();
     json!({
         "default": asset_ref(graphics.as_ref().and_then(|g| g.get("m_CustomRenderPipeline"))),
         "shaderModes": shader_modes,
+        "shaderRefs": shader_refs,
         "transparencySortMode": graphics.as_ref().and_then(|g| g.get("m_TransparencySortMode")).and_then(Value::as_i64).unwrap_or(0),
         "transparencySortAxis": sort_axis,
         "defaultRenderingPath": graphics.as_ref().and_then(|g| g.get("m_DefaultRenderingPath")).and_then(Value::as_i64).unwrap_or(1),

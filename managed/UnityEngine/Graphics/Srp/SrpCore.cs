@@ -600,24 +600,61 @@ namespace UnityEngine.Rendering
             BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin,
             BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin, BuiltinShaderMode.UseBuiltin,
         };
+        static readonly (string Guid, long FileId)?[] s_ShaderRefs = new (string, long)?[8];
+        static readonly Shader[] s_CustomShaders = new Shader[8];
+        static readonly bool[] s_CustomShaderLoaded = new bool[8];
 
-        /// <summary>Takes the project's built-in shader modes; a type the settings do not list uses
-        /// the built-in shader.</summary>
-        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes)
+        /// <summary>Takes the project's built-in shader modes and shaders; a type the settings do
+        /// not list uses the built-in shader, and its shader is none, as is a disabled type's
+        /// (measured: tests/projects/runtimeapis custom_shader.type1, the project's deferred
+        /// reflections disabled; disabling one later keeps its shader, set_mode.depth_disabled.shader).</summary>
+        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null)
         {
             for (int i = 0; i < s_ShaderModes.Length; i++)
-                s_ShaderModes[i] = s_ShaderModeSettings[i] != null && modes.TryGetValue(s_ShaderModeSettings[i], out int mode)
-                    ? (BuiltinShaderMode)mode : BuiltinShaderMode.UseBuiltin;
+            {
+                string setting = s_ShaderModeSettings[i];
+                s_ShaderModes[i] = setting != null && modes.TryGetValue(setting, out int mode) ? (BuiltinShaderMode)mode : BuiltinShaderMode.UseBuiltin;
+                s_ShaderRefs[i] = setting != null && s_ShaderModes[i] != BuiltinShaderMode.Disabled && shaders != null
+                    && shaders.TryGetValue(setting, out var reference) ? reference : null;
+                s_CustomShaders[i] = null;
+                s_CustomShaderLoaded[i] = false;
+            }
         }
 
-        /// <summary>The project's mode of a built-in shader; a type without a setting (the removed
-        /// legacy deferred lighting, values outside the enum) asserts and answers the built-in
-        /// shader (measured: tests/projects/runtimeapis shader_mode.*).</summary>
-        public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type)
+        /// <summary>The slot of a built-in shader type; a type without a setting (the removed legacy
+        /// deferred lighting, values outside the enum) asserts and shares the deferred shading
+        /// one (measured: tests/projects/runtimeapis shader_mode.*, set_mode.type*, custom_shader.type*).</summary>
+        static int ShaderSlot(BuiltinShaderType type)
         {
-            if ((uint)type < (uint)s_ShaderModeSettings.Length && s_ShaderModeSettings[(int)type] != null) return s_ShaderModes[(int)type];
+            if ((uint)type < (uint)s_ShaderModeSettings.Length && s_ShaderModeSettings[(int)type] != null) return (int)type;
             Unbound.Runtime.Log.Engine(LogType.Assert, $"Unknown builtin shader type {(int)type}", null);
-            return BuiltinShaderMode.UseBuiltin;
+            return (int)BuiltinShaderType.DeferredShading;
+        }
+
+        /// <summary>The project's mode of a built-in shader, as last set (any value is kept).</summary>
+        public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type) => s_ShaderModes[ShaderSlot(type)];
+
+        public static void SetShaderMode(BuiltinShaderType type, BuiltinShaderMode mode) => s_ShaderModes[ShaderSlot(type)] = mode;
+
+        /// <summary>The shader a built-in shader type uses: the project's (null when it does not
+        /// resolve), else the one set; setting one leaves the mode as it is (measured:
+        /// tests/projects/runtimeapis custom_shader.*, set_custom.*).</summary>
+        public static Shader GetCustomShader(BuiltinShaderType type)
+        {
+            int slot = ShaderSlot(type);
+            if (!s_CustomShaderLoaded[slot])
+            {
+                s_CustomShaderLoaded[slot] = true;
+                s_CustomShaders[slot] = LoadRef<Shader>(s_ShaderRefs[slot]);
+            }
+            return s_CustomShaders[slot];
+        }
+
+        public static void SetCustomShader(BuiltinShaderType type, Shader shader)
+        {
+            int slot = ShaderSlot(type);
+            s_CustomShaderLoaded[slot] = true;
+            s_CustomShaders[slot] = shader;
         }
 
         public static bool lightsUseLinearIntensity { get; set; }
