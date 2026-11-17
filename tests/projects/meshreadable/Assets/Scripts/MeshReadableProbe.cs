@@ -93,8 +93,7 @@ public class MeshReadableProbe : MonoBehaviour
             var collider = go.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
             Physics.SyncTransforms();
-            var center = mesh.bounds.center;
-            bool hit = Physics.Raycast(center + new Vector3(0.001f, 0.001f, 1f), Vector3.back, out var info, 10f);
+            bool hit = Physics.Raycast(Inside(mesh) + new Vector3(0f, 0f, 1f), Vector3.back, out var info, 10f);
             Destroy(go);
             return hit ? "[" + Vec(info.point) + "," + F(info.distance) + "]" : "false";
         });
@@ -109,6 +108,60 @@ public class MeshReadableProbe : MonoBehaviour
                 vertices.Dispose();
                 return "[" + m.vertexCount + "," + m.vertexBufferCount + "," + m.subMeshCount + "," + first + "]";
             }
+        });
+    }
+
+    /// <summary>A point a quarter in from the bounds' minimum corner, on the mesh's plane: inside
+    /// the grid and inside the scripted triangle (its positions need not be readable).</summary>
+    static Vector3 Inside(Mesh mesh)
+    {
+        var b = mesh.bounds;
+        return new Vector3(b.min.x + b.size.x * 0.25f, b.min.y + b.size.y * 0.25f, b.center.z);
+    }
+
+    /// <summary>The engine's other uses of meshes scripts cannot read.</summary>
+    void Uses(Mesh locked, Mesh readable, Mesh lockedScripted)
+    {
+        Read("combine.lockedSource", () =>
+        {
+            var into = new Mesh { name = "Combined" };
+            into.CombineMeshes(new[] { new CombineInstance { mesh = locked, transform = Matrix4x4.identity }, new CombineInstance { mesh = readable, transform = Matrix4x4.identity } });
+            return "[" + into.vertexCount + "," + into.subMeshCount + "," + into.GetIndexCount(0) + "]";
+        });
+        Read("combine.lockedTarget", () =>
+        {
+            var into = new Mesh { name = "LockedTarget" };
+            into.vertices = new[] { Vector3.zero, Vector3.right, Vector3.up };
+            into.triangles = new[] { 0, 1, 2 };
+            into.UploadMeshData(true);
+            into.CombineMeshes(new[] { new CombineInstance { mesh = readable, transform = Matrix4x4.identity } });
+            return "[" + into.vertexCount + "," + into.subMeshCount + "," + into.GetIndexCount(0) + "]";
+        });
+        Read("bake.locked", () =>
+        {
+            var go = new GameObject("bake");
+            var skin = go.AddComponent<SkinnedMeshRenderer>();
+            skin.sharedMesh = locked;
+            var baked = new Mesh { name = "Baked" };
+            skin.BakeMesh(baked);
+            var result = "[" + baked.vertexCount + "," + baked.isReadable.ToString().ToLowerInvariant() + "," + Count(baked.vertices, Vec) + "]";
+            Destroy(go);
+            return result;
+        });
+        Read("set.lockedVertices", () =>
+        {
+            var target = Instantiate(lockedScripted);
+            target.name = "SetTarget";
+            target.vertices = new[] { Vector3.one, Vector3.one, Vector3.one };
+            return "[" + target.vertexCount + "," + target.isReadable.ToString().ToLowerInvariant() + "]";
+        });
+        Read("canvasRenderer.setMesh", () =>
+        {
+            var go = new GameObject("canvas renderer", typeof(RectTransform));
+            var renderer = go.AddComponent<CanvasRenderer>();
+            renderer.SetMesh(locked);
+            Destroy(go);
+            return "true";
         });
     }
 
@@ -128,6 +181,7 @@ public class MeshReadableProbe : MonoBehaviour
         Probe("scripted", scripted);
         scripted.UploadMeshData(true);
         Probe("scriptedLocked", scripted);
+        Uses(Resources.Load<Mesh>("LayersLocked"), Resources.Load<Mesh>("Layers"), scripted);
         Application.logMessageReceived -= OnLog;
 
         Value("complete", "true");

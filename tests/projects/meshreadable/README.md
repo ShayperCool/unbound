@@ -16,7 +16,9 @@ with Read/Write Enabled and `LayersLocked` and `Plain` without.
 (`GetVertexAttributes`, formats, dimensions, streams, offsets, strides) and sub-mesh, then every
 read (arrays, `Get*` list readers of every UV channel, indices, `AcquireReadOnlyMeshData`) with
 the count and first and last element it returns, what it throws and what it logs, and whether a
-MeshCollider made of the mesh is hit by a ray.
+MeshCollider made of the mesh is hit by a ray. Then the engine's other uses of meshes that are not
+readable: `CombineMeshes` from one and into one, `SkinnedMeshRenderer.BakeMesh` of one, setting
+`vertices` on one and `CanvasRenderer.SetMesh` with one.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
 
@@ -30,11 +32,16 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
   `GetIndices(List<int>, …)` return the indices without an error; `AcquireReadOnlyMeshData`
   throws InvalidOperationException; a MeshCollider of it collides. `UploadMeshData(true)` does the
   same to a scripted mesh.
+- `CombineMeshes` leaves such a mesh out with the warning "Cannot combine mesh that does not allow
+  access: <name>" and refuses to combine into one ("Cannot combine into mesh that does not allow
+  access: <name>", an error); `BakeMesh` bakes it into a readable mesh; setting its `vertices`
+  logs the read error; `CanvasRenderer.SetMesh` refuses it ("Mesh '<name>' is not readable and can
+  not be used. The CanvasRenderer requires read access to the mesh.").
 
-Unbound matches every value. Unmeasured: other model formats than FBX; bone weights, bind poses
-and blend shapes of meshes that are not readable (Unbound does not refuse them); serialized mesh
-assets (Unbound refuses them alike); `CombineMeshes` and `BakeMesh` of such meshes (Unbound reads
-them, as the engine's own systems do).
+Unbound matches every value. Unmeasured: other model formats than FBX; colors that are not whole
+bytes (rounded to the nearest byte); bone weights, bind poses and blend shapes of meshes that are
+not readable and setters other than `vertices` on them (Unbound does not refuse those); serialized
+mesh assets (Unbound refuses them alike).
 
     blender -b --factory-startup --python tests/projects/meshreadable/make_models.py   # once
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy> \

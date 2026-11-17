@@ -49,7 +49,7 @@
 {"k":"layers.GetUVs4d","v":[9,[4.25,2,0,0],[4,2.25,0,0]]}
 {"k":"layers.GetTrianglesList","v":[24,0,7]}
 {"k":"layers.GetIndicesList","v":[24,0,7]}
-{"k":"layers.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"layers.colliderHit","v":[[-0.015,0.005,0],1]}
 {"k":"layers.meshData","v":[9,1,1,[-0.01,0,0]]}
 {"k":"layersLocked.readable","v":false}
 {"k":"layersLocked.vertexCount","v":9}
@@ -127,7 +127,7 @@
 {"k":"layersLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"]}
 {"k":"layersLocked.GetTrianglesList","v":[24,0,7]}
 {"k":"layersLocked.GetIndicesList","v":[24,0,7]}
-{"k":"layersLocked.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"layersLocked.colliderHit","v":[[-0.015,0.005,0],1]}
 {"k":"layersLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Layers' (isReadable is false; Read/Write must be enabled in import settings)"}
 {"k":"plainLocked.readable","v":false}
 {"k":"plainLocked.vertexCount","v":9}
@@ -197,7 +197,7 @@
 {"k":"plainLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"]}
 {"k":"plainLocked.GetTrianglesList","v":[24,0,7]}
 {"k":"plainLocked.GetIndicesList","v":[24,0,7]}
-{"k":"plainLocked.colliderHit","v":[[-0.008999999,0.011,0],1]}
+{"k":"plainLocked.colliderHit","v":[[-0.015,0.005,0],1]}
 {"k":"plainLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Plain' (isReadable is false; Read/Write must be enabled in import settings)"}
 {"k":"scripted.readable","v":true}
 {"k":"scripted.vertexCount","v":3}
@@ -241,7 +241,7 @@
 {"k":"scripted.GetUVs4d","v":[3,[1,1,0,0],[0,1,0,0]]}
 {"k":"scripted.GetTrianglesList","v":[3,0,2]}
 {"k":"scripted.GetIndicesList","v":[3,0,2]}
-{"k":"scripted.colliderHit","v":false}
+{"k":"scripted.colliderHit","v":[[0.25,0.25,0],1]}
 {"k":"scripted.meshData","v":[3,1,1,[0,0,0]]}
 {"k":"scriptedLocked.readable","v":false}
 {"k":"scriptedLocked.vertexCount","v":3}
@@ -310,6 +310,15 @@
 {"k":"scriptedLocked.GetUVs4d.log","v":["Error: Not allowed to access uv5 on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"]}
 {"k":"scriptedLocked.GetTrianglesList","v":[3,0,2]}
 {"k":"scriptedLocked.GetIndicesList","v":[3,0,2]}
-{"k":"scriptedLocked.colliderHit","v":false}
+{"k":"scriptedLocked.colliderHit","v":[[0.25,0.25,0],1]}
 {"k":"scriptedLocked.meshData","v":"throws InvalidOperationException: Not allowed to access vertex data on mesh 'Scripted' (isReadable is false; Read/Write must be enabled in import settings)"}
+{"k":"combine.lockedSource","v":[9,1,24]}
+{"k":"combine.lockedSource.log","v":["Warning: Cannot combine mesh that does not allow access: Layers"]}
+{"k":"combine.lockedTarget","v":[3,1,3]}
+{"k":"combine.lockedTarget.log","v":["Error: Cannot combine into mesh that does not allow access: LockedTarget"]}
+{"k":"bake.locked","v":[9,true,[9,[-0.01,0,0],[0,0.02,0]]]}
+{"k":"set.lockedVertices","v":[3,false]}
+{"k":"set.lockedVertices.log","v":["Error: Not allowed to access vertices on mesh 'SetTarget' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"canvasRenderer.setMesh","v":true}
+{"k":"canvasRenderer.setMesh.log","v":["Error: Mesh 'Layers' is not readable and can not be used. The CanvasRenderer requires read access to the mesh."]}
 {"k":"complete","v":true}
