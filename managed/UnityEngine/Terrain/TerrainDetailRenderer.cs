@@ -78,9 +78,10 @@ namespace UnityEngine
         static readonly int s_WaveAndDistanceId = Shader.PropertyToID("_WaveAndDistance"), s_CameraPositionId = Shader.PropertyToID("_CameraPosition"),
             s_CameraRightId = Shader.PropertyToID("_CameraRight"), s_CameraUpId = Shader.PropertyToID("_CameraUp"), s_WavingTintId = Shader.PropertyToID("_WavingTint");
 
-        /// <summary>The waving's phase: once in each frame the terrain's details are drawn in, the
-        /// frame's deltaTime × wavingGrassStrength × 0.05 is added (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/grass `Waving`).</summary>
+        /// <summary>The waving's phase, the terrain's own: in each frame its details are drawn in,
+        /// the frame's deltaTime × wavingGrassStrength × 0.05 is added (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/grass `Waving`, drawn once a frame; that several
+        /// draws in a frame add it once is not measured).</summary>
         float m_WavePhase;
         int m_WaveFrame = -1;
         /// <summary>The detail shaders' constants, the draws' own values: one set for each time the

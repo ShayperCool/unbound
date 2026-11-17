@@ -513,7 +513,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The waving's phase advances once a frame by the frame's time × wavingGrassStrength
-        /// × 0.05, however often the details are drawn in it (tests/projects/grass `Waving`).</summary>
+        /// × 0.05 (tests/projects/grass `Waving`, drawn once a frame), here once however often the
+        /// details are drawn in a frame (unmeasured).</summary>
         [Fact]
         public void TheWavingPhaseAdvancesOnceAFrame()
         {
