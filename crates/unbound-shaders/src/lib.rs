@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 62;
+pub const FORMAT_VERSION: u32 = 63;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1285,17 +1285,61 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// ([`scopes`]), half literals (`1.0h`, which glslang types as 16-bit floats that mix with no
 /// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]) or passed to functions
 /// with their counters ([`buffer_parameters`]), matrix
-/// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]).
+/// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]),
+/// functions declared to return a `const` value ([`plain_returns`]).
 fn fxc_compatible(source: &str) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
-                &exponents::exponent_calls(&buffer_parameters::buffer_parameters(
+                &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
                     &scopes::flatten_scopes(source),
-                )),
+                ))),
             ))),
         ))),
     )))
+}
+
+/// Functions declared to return a `const` value (`const StripData GetStripData(uint i) {..}`,
+/// the Visual Effect Graph's strip helpers) without the qualifier. To FXC it says nothing of a
+/// value returned by copy; glslang takes a call of such a function for a constant expression,
+/// and rejects `const StripData data = GetStripData(i);` as a constant of another type.
+fn plain_returns(source: &str) -> String {
+    use scopes::{Kind, edit, matching, text, tokens};
+    let toks = tokens(source);
+    let word = |k: usize| {
+        toks.get(k)
+            .filter(|t| t.kind == Kind::Word)
+            .map(|t| text(source, t))
+    };
+    let punct = |k: usize| {
+        toks.get(k)
+            .filter(|t| t.kind == Kind::Punct)
+            .map(|t| text(source, t))
+    };
+    let mut removed = Vec::new();
+    for (k, t) in toks.iter().enumerate() {
+        // `const Type name(parameters)` outside any braces, then a body, `;` or a semantic.
+        if t.depth != 0
+            || word(k) != Some("const")
+            || word(k + 1).is_none()
+            || word(k + 2).is_none()
+        {
+            continue;
+        }
+        if punct(k + 3) != Some("(") {
+            continue;
+        }
+        let Some(close) = matching(source, &toks, k + 3) else {
+            continue;
+        };
+        if matches!(punct(close + 1), Some("{" | ";" | ":")) {
+            removed.push(t.start..t.end);
+        }
+    }
+    if removed.is_empty() {
+        return source.to_string();
+    }
+    edit(source, removed, Vec::new())
 }
 
 /// Float literals with the `h` suffix (`1.0h`) written as plain float literals. FXC reads them as
@@ -1905,6 +1949,20 @@ fn resolve_include(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_function_returning_a_const_value_returns_a_plain_one() {
+        let source = "struct S { uint a; };\nconst S Get(uint i)\n{\n    S s; s.a = i; return s;\n}\nconst S Declared(uint i);\n\
+            static const float k = 2.0;\nconst float3 up = float3(0, 1, 0);\nvoid F(uint i) { const S s = Get(i); const float x = sin(k); }\n";
+        let plain = plain_returns(source);
+        assert_eq!(
+            plain,
+            "struct S { uint a; };\n S Get(uint i)\n{\n    S s; s.a = i; return s;\n}\n S Declared(uint i);\n\
+            static const float k = 2.0;\nconst float3 up = float3(0, 1, 0);\nvoid F(uint i) { const S s = Get(i); const float x = sin(k); }\n"
+        );
+        // Nothing to change: the same text.
+        assert_eq!(plain_returns(&plain), plain);
+    }
 
     #[test]
     fn forward_base_lightmap_keywords_exclude_probes_only_for_lightmapped_draws() {
