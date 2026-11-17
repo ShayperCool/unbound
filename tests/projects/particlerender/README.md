@@ -56,10 +56,11 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   at 1 unit/s, or a rate) without and with sub-emitters, right after Play and after two frames of
   0.05 s: every particle's age, position and seed; parent lifetime and duration, child lifetimes
   (constant, two constants, 6, 8 and 12 s), a grandchild, a Death child, child bursts, a looping child;
-  (recorded later with the macOS Editor, whose other prewarm records equal these but for one
-  equal-age order: `plain_gravity8`, `plain_gravity12`, World-space rates under gravity without
-  sub-emitters, and `birth_child12_dur05`, `birth_child8_dur01`, Birth children of parents whose
-  duration, 0.5 and 0.1 s, is below the long steps a prewarm takes);
+  `plain_gravity8`, `plain_gravity12`, World-space rates under gravity without sub-emitters, and
+  `birth_child12_dur05`, `birth_child8_dur01`, Birth children of parents whose duration, 0.5 and
+  0.1 s, is below the long steps a prewarm takes; `maxdelta/<maximum>/*`: the same World-space rates
+  and a Birth child under Time.maximumParticleDeltaTime 0.15, 0.25 and 0.4 s for loops of 0.1 to 1 s,
+  lifetimes of 3, 8 and 12 s and rates of 1 to 100 (each maximum its own pass);
   systems in procedural mode with bursts at and after a loop's start, a rate under gravity, and random
   start lifetimes, sizes and rotations (`proc_random/values`: their start values).
 - `birthend/*`: Birth children, played and simulated at 0.02 s, of a non-looping child whose duration

@@ -191,5 +191,29 @@
    "collide/cache/gone_low/38",
    "collide/cache/gone_low/39"
   ]
+ },
+ "prewarm-maxdelta-sweep": {
+  "reason": "Prewarms under a Time.maximumParticleDeltaTime above the default (prewarm/maxdelta/*, 42 records, 23 exact): the step lengths and the rate a step emits match (a looping step longer than its loop emits for its advance within the loop), but in these records births Unbound places inside long steps are up to 1e-3 s older than the Editor's (0.25/d0.1_l12_r10, 0.25/d0.1_l8_r100), and a birth due at the prewarm's end or at the first update's falls on the other side of it, one particle more or fewer (0.15/d0.1_l8_r10, 0.25/d0.2_l8_r10, 0.25/d0.3_l8_r10, 0.25/d1_l8_r1, 0.4/d0.1_l8_r10; also with steps shorter than the loop), with the seeds' order following (0.25/birth_child8). Open: the in-step birth times and the end tie under these steps.",
+  "keys": [
+   "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/0",
+   "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/1",
+   "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/start",
+   "prewarm/maxdelta/0.25/birth_child8/parent/0",
+   "prewarm/maxdelta/0.25/d0.1_l12_r10/parent/0",
+   "prewarm/maxdelta/0.25/d0.1_l12_r10/parent/1",
+   "prewarm/maxdelta/0.25/d0.1_l12_r10/parent/start",
+   "prewarm/maxdelta/0.25/d0.1_l8_r100/parent/0",
+   "prewarm/maxdelta/0.25/d0.1_l8_r100/parent/1",
+   "prewarm/maxdelta/0.25/d0.1_l8_r100/parent/start",
+   "prewarm/maxdelta/0.25/d0.2_l8_r10/parent/1",
+   "prewarm/maxdelta/0.25/d0.2_l8_r10/parent/start",
+   "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/0",
+   "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/1",
+   "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/start",
+   "prewarm/maxdelta/0.25/d1_l8_r1/parent/start",
+   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/0",
+   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/1",
+   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/start"
+  ]
  }
 }
