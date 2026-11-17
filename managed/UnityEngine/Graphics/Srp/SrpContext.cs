@@ -899,10 +899,11 @@ namespace UnityEngine.Rendering
     {
         IntPtr m_Ptr;
 
-        /// <summary>Hands Canvas UI geometry to a reflection or preview camera: Unbound renders no
-        /// such camera's UI (measured to accept any camera and null: tests/projects/runtimeapis
+        /// <summary>Hands world-space Canvas geometry to a reflection or preview camera: Unbound's
+        /// canvases already draw for every camera that renders them, so there is nothing to hand
+        /// over (measured to accept any camera and null: tests/projects/runtimeapis
         /// context.emit_geometry_*).</summary>
-        [Unbound.EditorFaithful("Unbound renders no UI for reflection or preview cameras; measured: tests/projects/runtimeapis context.emit_geometry_*")]
+        [Unbound.EditorFaithful("world-space canvases already draw for every camera; measured: tests/projects/runtimeapis context.emit_geometry_*")]
         public static void EmitGeometryForCamera(Camera camera) { }
 
         /// <summary>Hands Canvas UI geometry to the Scene view's camera: Unbound has no Scene view.</summary>

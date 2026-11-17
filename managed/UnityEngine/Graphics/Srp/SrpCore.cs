@@ -610,8 +610,9 @@ namespace UnityEngine.Rendering
                     ? (BuiltinShaderMode)mode : BuiltinShaderMode.UseBuiltin;
         }
 
-        /// <summary>The project's mode of a built-in shader; a type without a setting asserts and
-        /// answers the built-in shader (measured: tests/projects/runtimeapis shader_mode.*).</summary>
+        /// <summary>The project's mode of a built-in shader; a type without a setting (the removed
+        /// legacy deferred lighting, values outside the enum) asserts and answers the built-in
+        /// shader (measured: tests/projects/runtimeapis shader_mode.*).</summary>
         public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type)
         {
             if ((uint)type < (uint)s_ShaderModeSettings.Length && s_ShaderModeSettings[(int)type] != null) return s_ShaderModes[(int)type];

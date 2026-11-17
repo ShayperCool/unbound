@@ -1,7 +1,7 @@
 namespace UnityEngine
 {
-    /// <summary>The primaries, white point and transfer function of each color gamut (measured:
-    /// tests/projects/runtimeapis gamut.*).</summary>
+    /// <summary>The primaries, white point and transfer function of each color gamut, Unknown for
+    /// values outside the enum (measured: tests/projects/runtimeapis gamut.*).</summary>
     public partial class ColorGamutUtility
     {
         public ColorGamutUtility() { }
