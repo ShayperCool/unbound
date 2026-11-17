@@ -449,7 +449,7 @@ public sealed class VfxProbe : MonoBehaviour
     /// <summary>The operation controls (README.md, "Operations"): an effect of OpsValues whose
     /// script block reads what the operators give. From frame 3 one step a frame changes its
     /// colours, its frame and its camera; its texture and buffer change, are released or
-    /// destroyed while set, and are set to none.</summary>
+    /// destroyed while set, and are set to none; a buffer released before it is set.</summary>
     void BeginOperations() => m_Operations = Effect("operations", "Assets/OpGraphs/OpsValues.vfx", new Vector3(0f, 4f, 0f));
 
     /// <summary>A camera for one step of the controls: its frame, whether it is orthographic,
@@ -543,7 +543,8 @@ public sealed class VfxProbe : MonoBehaviour
             m_Operations.SetVector3("Viewport", eye.Viewport);
         }
         // A texture's size: a new one, a render texture, the first again and then destroyed
-        // while set. A buffer's count: released while set, set to none, another.
+        // while set. A buffer's count: released while set, set to none, another, one released
+        // before it is set.
         if (m_Frame == 5) m_Operations.SetTexture("Image", m_OperationsImage = new Texture2D(16, 4));
         if (m_Frame == 9) m_Operations.SetTexture("Image", m_OperationsTarget = new RenderTexture(32, 8, 0));
         if (m_Frame == 9) m_OperationsBuffer.Release();
@@ -551,6 +552,12 @@ public sealed class VfxProbe : MonoBehaviour
         if (m_Frame == 11) m_Operations.SetGraphicsBuffer("Buffer", null);
         if (m_Frame == 12) DestroyImmediate(m_OperationsImage);
         if (m_Frame == 13) m_Operations.SetGraphicsBuffer("Buffer", m_OperationsBufferB = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 4));
+        if (m_Frame == 15)
+        {
+            var released = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 9, 4);
+            released.Release();
+            m_Operations.SetGraphicsBuffer("Buffer", released);
+        }
         if (m_Frame != 20) return;
         foreach (var line in OpsInputs.Logs.TryGetValue("operations", out var log) ? log : new List<string>())
         {

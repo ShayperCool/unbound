@@ -339,7 +339,8 @@ cameras, scaled, sheared and turned, with planes and sizes at and past their lim
 projections have no inverse (a near plane of zero, equal planes, a size or an aspect of zero). The
 texture is a new one of 16x4 at frame 5, a render texture at frame 9, the first again at frame 11,
 destroyed while it is set at frame 12; the buffer is released while it is set at frame 9, set to
-none at frame 11 and another of five elements at frame 13. The rows are written at frame 20.
+none at frame 11, another of five elements at frame 13 and one of nine released before it is set at
+frame 15. The rows are written at frame 20.
 
 ## A built asset
 
