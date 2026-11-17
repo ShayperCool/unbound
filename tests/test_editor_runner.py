@@ -364,16 +364,5 @@ class PublishTest(unittest.TestCase):
         self.assertIn('exit with 0', er.result_problem(d))
 
 
-class DisplayTest(unittest.TestCase):
-    def test_private_xvfb(self):
-        display = er.Display('64x64x24')
-        try:
-            self.assertRegex(display.name, r'^:\d+$')
-            self.assertIsNone(display.server.poll())
-        finally:
-            display.close()
-        self.assertIsNotNone(display.server.poll())
-
-
 if __name__ == '__main__':
     unittest.main()

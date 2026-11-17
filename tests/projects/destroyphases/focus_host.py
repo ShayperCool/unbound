@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from editor_runner import Display
+from private_display import Display
 
 
 def main():

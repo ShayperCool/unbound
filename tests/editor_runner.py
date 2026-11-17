@@ -46,6 +46,7 @@ import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from probe_paths import editor_path  # noqa: E402
+from private_display import Display  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 RESULT = 'editor-run.json'
@@ -549,35 +550,6 @@ def write_json(path, value):
 
 
 # ---------------------------------------------------------------- runner side
-
-class Display:
-    """A private Xvfb; the server picks a free display number itself."""
-
-    def __init__(self, screen):
-        read, write = os.pipe()
-        self.server = subprocess.Popen(['Xvfb', '-displayfd', str(write), '-screen', '0', screen,
-                                        '-nolisten', 'tcp'], pass_fds=(write,),
-                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        os.close(write)
-        number = b''
-        with os.fdopen(read, 'rb') as handle:
-            while not number.endswith(b'\n'):
-                chunk = handle.read(1)
-                if not chunk:
-                    self.close()
-                    raise RuntimeError('Xvfb did not start')
-                number += chunk
-        self.name = ':'+number.decode().strip()
-
-    def close(self):
-        if self.server.poll() is None:
-            self.server.terminate()
-            try:
-                self.server.wait(10)
-            except subprocess.TimeoutExpired:
-                self.server.kill()
-                self.server.wait()
-
 
 def write_launch_inputs(spec, env):
     """Bind optional input bytes inside the lease, immediately before Editor creation.
