@@ -35,7 +35,7 @@ namespace UnityEngine.UIElements
         public void OnDestroy()
         {
             if (m_LinkCallbacksRegistered) UnregisterLinkCallbacks();
-            if (m_ATagCallbacksRegistered) UnregisterATagCallbacks();
+            if (m_ATagCallbacksRegistered || m_ATagCursorCallbacksRegistered) UnregisterATagCallbacks();
         }
 
         bool HasAllocatedLinkCallbacks() => m_LinkTagOnPointerDown != null;
@@ -72,14 +72,16 @@ namespace UnityEngine.UIElements
         void UnregisterATagCallbacks()
         {
             m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-            if (m_ATagCursorCallbacksRegistered)
-            {
-                m_TextElement.UnregisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
-                m_TextElement.UnregisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
-                m_TextElement.UnregisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
-                m_ATagCursorCallbacksRegistered = false;
-            }
             m_ATagCallbacksRegistered = false;
+            if (m_ATagCursorCallbacksRegistered) UnregisterATagCursorCallbacks();
+        }
+
+        void UnregisterATagCursorCallbacks()
+        {
+            m_TextElement.UnregisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
+            m_TextElement.UnregisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
+            m_TextElement.UnregisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
+            m_ATagCursorCallbacksRegistered = false;
         }
 
         /// <summary>The link under a pointer event's position (in the element's content box), or -1.</summary>
@@ -210,22 +212,30 @@ namespace UnityEngine.UIElements
             {
                 UnregisterLinkCallbacks();
             }
-            if (hasATag && !m_ATagCallbacksRegistered)
+            // The <a> cursor callbacks follow the panel each generation happens in: added in an
+            // Editor panel, and removed with the <a> links only there, as in Unity.
+            bool editor = panel.contextType == ContextType.Editor;
+            if (hasATag)
             {
-                AllocateATagCallbacks();
-                m_TextElement.RegisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
-                if (panel.contextType == ContextType.Editor)
+                if (!m_ATagCallbacksRegistered)
+                {
+                    AllocateATagCallbacks();
+                    m_TextElement.RegisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
+                    m_ATagCallbacksRegistered = true;
+                }
+                if (editor && !m_ATagCursorCallbacksRegistered)
                 {
                     m_TextElement.RegisterCallback(m_ATagOnPointerMove, TrickleDown.TrickleDown);
                     m_TextElement.RegisterCallback(m_ATagOnPointerOver, TrickleDown.TrickleDown);
                     m_TextElement.RegisterCallback(m_ATagOnPointerOut, TrickleDown.TrickleDown);
                     m_ATagCursorCallbacksRegistered = true;
                 }
-                m_ATagCallbacksRegistered = true;
             }
-            else if (!hasATag && m_ATagCallbacksRegistered)
+            else if (m_ATagCallbacksRegistered)
             {
-                UnregisterATagCallbacks();
+                m_TextElement.UnregisterCallback(m_ATagOnPointerUp, TrickleDown.TrickleDown);
+                m_ATagCallbacksRegistered = false;
+                if (editor && m_ATagCursorCallbacksRegistered) UnregisterATagCursorCallbacks();
             }
         }
 

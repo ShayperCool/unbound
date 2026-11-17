@@ -83,6 +83,14 @@ namespace UnityEngine.Tests
             label.style.width = 200;
             label.style.height = 20;
             panel.visualTree.Add(label);
+            Generate(panel, label, spans);
+            return label;
+        }
+
+        /// <summary>Lays out the label in its panel and gives it <paramref name="spans"/> as its
+        /// generated text, with the handling generation sets up.</summary>
+        static void Generate(Panel panel, Label label, params Span[] spans)
+        {
             panel.ApplyStyles();
             panel.ValidateLayout();
             var info = new TextInfo
@@ -121,7 +129,6 @@ namespace UnityEngine.Tests
             handler.HandleATag();
             handler.HandleLinkTag();
             handler.HandleLinkAndATagCallbacks();
-            return label;
         }
 
         static void Send(Label label, EventType type, float x)
@@ -165,6 +172,29 @@ namespace UnityEngine.Tests
             Send(label, EventType.MouseUp, 130);    // over the <a>: no link event
             Send(label, EventType.MouseUp, 30);     // between the spans: no link
             Assert.Equal(new[] { "over k|A", "move k|B", "out", "over m|C", "out", "down k" }, seen);
+        }
+
+        // The probe's links.pointerOut leaves the label from link one; here from a second span of
+        // one id, and a pointer out off the links sends nothing.
+        [Fact]
+        public void LeavingTheElementOverALinkSendsOutOnce()
+        {
+            using var panel = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+            var label = LaidOut(panel, Link("k", 'A', 0), Link("k", 'B', 40));
+            var seen = Watch(label);
+            Send(label, EventType.MouseMove, 50);
+            SendOut(label);
+            SendOut(label);                         // already off the link: nothing
+            Send(label, EventType.MouseMove, 30);   // between the spans: nothing either
+            Send(label, EventType.MouseMove, 10);   // back onto the link: over again
+            Assert.Equal(new[] { "over k|B", "out", "over k|A" }, seen);
+        }
+
+        static void SendOut(Label label)
+        {
+            using var evt = PointerOutEvent.GetPooled(new Event { type = EventType.MouseMove, mousePosition = new Vector2(500f, 500f) });
+            evt.target = label;
+            label.SendEvent(evt);
         }
 
         [Fact]
@@ -243,6 +273,25 @@ namespace UnityEngine.Tests
             Send(label, EventType.MouseMove, 30);   // off the links
             var expected = context == ContextType.Editor ? new[] { "set 4", "set 0", "set 4", "set 0" } : Array.Empty<string>();
             Assert.Equal(expected, cursors.Calls);
+        }
+
+        // The cursor handling follows the panel its text is generated in: a label moved from a
+        // runtime panel into an Editor panel gets it with its next generation.
+        [Fact]
+        public void AnAnchorMovedIntoAnEditorPanelGetsTheLinkCursorWithItsNextGeneration()
+        {
+            using var runtime = new Panel(null, ContextType.Player, EventDispatcher.CreateDefault(), null);
+            using var editor = new Panel(null, ContextType.Editor, EventDispatcher.CreateDefault(), null);
+            var cursors = new CursorRecorder();
+            editor.cursorManager = cursors;
+            var anchor = Anchor("https://example.com/", 'A', 0);
+            var label = LaidOut(runtime, anchor);
+            editor.visualTree.Add(label);
+            Send(label, EventType.MouseMove, 10);
+            Assert.Empty(cursors.Calls);
+            Generate(editor, label, anchor);
+            Send(label, EventType.MouseMove, 10);
+            Assert.Equal(new[] { "set 4" }, cursors.Calls);
         }
     }
 }

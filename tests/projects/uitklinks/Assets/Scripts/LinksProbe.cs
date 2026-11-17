@@ -183,6 +183,14 @@ namespace LinksProbe
                 var outside = m_Root.Q("outside");
                 Send(PointerMoveEvent.GetPooled(At(EventType.MouseMove, outside.worldBound.center)), outside);
             });
+            // The pointer leaves the label while it is over a link, then comes back onto the link.
+            Step("links.overAgain", () => Move("links", 0.04f));
+            Step("links.pointerOut", () =>
+            {
+                var outside = m_Root.Q("outside");
+                Send(PointerOutEvent.GetPooled(At(EventType.MouseMove, outside.worldBound.center)), m_Labels["links"]);
+            });
+            Step("links.overAfterOut", () => Move("links", 0.04f));
             Step("anchor.over", () => Move("anchor", 0.5f));
             Step("anchor.down", () => Send(PointerDownEvent.GetPooled(At(EventType.MouseDown, Point("anchor", 0.5f))), m_Labels["anchor"]));
             Step("anchor.up", () => Send(PointerUpEvent.GetPooled(At(EventType.MouseUp, Point("anchor", 0.5f))), m_Labels["anchor"]));

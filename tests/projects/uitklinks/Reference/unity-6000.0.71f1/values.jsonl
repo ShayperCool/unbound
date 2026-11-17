@@ -8,7 +8,10 @@
 {"k":"links.downOffLinks","v":""}
 {"k":"links.upOffLinks","v":""}
 {"k":"links.leave","v":""}
-{"k":"anchor.over","v":""}
+{"k":"links.overAgain","v":"over(one|AAAA) at label target links BubbleUp ; over(one|AAAA) at parent target links BubbleUp"}
+{"k":"links.pointerOut","v":"out(-|-) at label target links BubbleUp ; out(-|-) at parent target links BubbleUp"}
+{"k":"links.overAfterOut","v":"over(one|AAAA) at label target links BubbleUp ; over(one|AAAA) at parent target links BubbleUp"}
+{"k":"anchor.over","v":"out(-|-) at label target links BubbleUp ; out(-|-) at parent target links BubbleUp"}
 {"k":"anchor.down","v":""}
 {"k":"anchor.up","v":""}
 {"k":"changing.over","v":"over(three|EEEEEEEE) at label target changing BubbleUp ; over(three|EEEEEEEE) at parent target changing BubbleUp"}
