@@ -347,6 +347,9 @@ public static class ApiGaps
                 }
                 : null;
             var stub = found?.IsStub == true;
+            // A stub body of an interface member counts only where an implementing type falls back on it.
+            if (stub && found!.Value.Type.IsInterface && !impl.InterfaceMemberReached(found.Value.Type, use.Name, use.Signature))
+                stub = false;
             // A type forwarded elsewhere by the implementation is not ours to check.
             var satisfied = found != null ? !stub : impl.Find(use.Type) == null && impl.IsForwarded(use.Type);
             report.Members.Count(satisfied, stub, use.Uses);

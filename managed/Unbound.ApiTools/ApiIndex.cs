@@ -210,6 +210,64 @@ sealed class ApiIndex
         return null;
     }
 
+    Dictionary<string, List<ApiType>>? _implementers;
+
+    /// <summary>The types of the set that name the interface among their interfaces.</summary>
+    IReadOnlyList<ApiType> Implementers(string interfaceName)
+    {
+        if (_implementers == null)
+        {
+            _implementers = new(StringComparer.Ordinal);
+            foreach (var list in _types.Values)
+                foreach (var type in list)
+                {
+                    if (type.IsInterface)
+                        continue;
+                    var md = type.Assembly.Reader;
+                    foreach (var handle in type.Definition.GetInterfaceImplementations())
+                    {
+                        var name = MetadataNames.Any(md, md.GetInterfaceImplementation(handle).Interface);
+                        if (!_implementers.TryGetValue(name, out var implementers))
+                            _implementers[name] = implementers = new();
+                        implementers.Add(type);
+                    }
+                }
+        }
+        return _implementers.TryGetValue(interfaceName, out var found) ? found : Array.Empty<ApiType>();
+    }
+
+    /// <summary>Whether a call through an interface can reach the interface's own (stub) member:
+    /// some type of the set implementing the interface has no member of its own for it, implicit or
+    /// explicit, in its class hierarchy. Types outside the set (a game's) implement every member of
+    /// the interfaces they take, so their calls never reach the interface's body.</summary>
+    public bool InterfaceMemberReached(ApiType iface, string name, string signature)
+    {
+        int dot = iface.FullName.LastIndexOfAny(new[] { '.', '/', '+' });
+        string explicitSuffix = "." + iface.FullName.Substring(dot + 1) + "." + name;
+        foreach (var implementer in Implementers(iface.FullName))
+        {
+            bool own = false;
+            foreach (var t in Hierarchy(implementer))
+            {
+                foreach (var (methodName, list) in t.Methods)
+                {
+                    if (methodName != name && !methodName.EndsWith(explicitSuffix, StringComparison.Ordinal))
+                        continue;
+                    if (list.Exists(m => m.Signature == signature && !m.IsStub))
+                    {
+                        own = true;
+                        break;
+                    }
+                }
+                if (own)
+                    break;
+            }
+            if (!own)
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>The type in the hierarchy that introduces the virtual method a method with this name
     /// and signature overrides (the least derived one declaring it).</summary>
     public (ApiType Type, bool IsStub)? FindVirtual(ApiType type, string name, string signature)

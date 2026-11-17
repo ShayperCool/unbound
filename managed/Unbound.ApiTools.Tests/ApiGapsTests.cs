@@ -152,4 +152,66 @@ public class ApiGapsTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    // A generated stub body of an interface member is a gap only where a type of the
+    // implementation that implements the interface falls back on it; a game's own implementer and
+    // an implementer with its own (implicit or explicit) member never reach it.
+    [Fact]
+    public void InterfaceStubsCountOnlyWhereAnImplementerFallsBackOnThem()
+    {
+        const string unity = """
+            namespace UnityEngine
+            {
+                public interface IConnection { void Send(); void Close(); }
+                public interface IGameSide { void Run(); }
+                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; }
+            }
+            """;
+        const string implementation = """
+            namespace Unbound { internal sealed class StubAttribute : System.Attribute {} }
+            namespace UnityEngine
+            {
+                public interface IConnection
+                {
+                    [Unbound.Stub] void Send() {}
+                    [Unbound.Stub] void Close() {}
+                }
+                public interface IGameSide { [Unbound.Stub] void Run() {} }
+                public static class Connections { public static IConnection Current => null; public static IGameSide Side => null; }
+                public class Player : IConnection { public void Send() {} }
+                public class Remote : IConnection { void IConnection.Send() {} void IConnection.Close() {} }
+            }
+            """;
+        const string game = """
+            using UnityEngine;
+            public class Caller
+            {
+                public void Go()
+                {
+                    Connections.Current.Send();
+                    Connections.Current.Close();
+                    Connections.Side.Run();
+                }
+            }
+            """;
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var managed = Path.Combine(root, "Managed", "UnityEngine");
+            var core = TestAssemblies.Compile(managed, "UnityEngine.CoreModule", unity);
+            var gameAssembly = TestAssemblies.Compile(Path.Combine(root, "game"), "Game", game, core);
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", implementation);
+
+            var report = ApiGaps.Analyze(new[] { gameAssembly }, impl, managed);
+
+            // Player has no Close of its own: a call through the interface reaches the stub.
+            var member = Assert.Single(report.MissingMembers.SelectMany(g => g.Members.Select(m => (g.Type, m.Signature, m.Stub))));
+            Assert.Equal(("UnityEngine.IConnection", "Close() : System.Void", true), member);
+            Assert.Equal(1, report.Members.Stubbed);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }
