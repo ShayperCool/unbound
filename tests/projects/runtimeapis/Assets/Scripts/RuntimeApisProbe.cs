@@ -88,6 +88,7 @@ public class RuntimeApisProbe : MonoBehaviour
             Attributes();
         }
         catch (Exception e) { Row("aborted", e.GetType().FullName + ": " + e.Message); }
+        yield return Scriptable();
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
         output.Dispose();
 #if UNITY_EDITOR
@@ -96,6 +97,7 @@ public class RuntimeApisProbe : MonoBehaviour
     }
 
     static readonly Matrix4x4 P = Matrix4x4.Perspective(50f, 1.5f, 0.2f, 300f);
+    static readonly Matrix4x4 P2 = Matrix4x4.Perspective(70f, 2f, 0.5f, 100f);
     static readonly Matrix4x4 V = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(10f, 20f, 30f), Vector3.one);
 
     static void Cameras()
@@ -118,6 +120,14 @@ public class RuntimeApisProbe : MonoBehaviour
         Do("camera.copy_device_to_nonjittered_left", () => cam.CopyStereoDeviceProjectionMatrixToNonJittered(left));
         Try("camera.after_copy.stereo_nonjittered_left", () => cam.GetStereoNonJitteredProjectionMatrix(left));
         Try("camera.after_copy.stereo_projection_left", () => cam.GetStereoProjectionMatrix(left));
+        Do("camera.set_stereo_projection_left_other", () => cam.SetStereoProjectionMatrix(left, P2));
+        Try("camera.after_other.stereo_projection_left", () => cam.GetStereoProjectionMatrix(left));
+        Try("camera.after_other.stereo_nonjittered_left", () => cam.GetStereoNonJitteredProjectionMatrix(left));
+        Do("camera.set_stereo_projection_right", () => cam.SetStereoProjectionMatrix(right, P2));
+        Try("camera.after_right.stereo_nonjittered_right", () => cam.GetStereoNonJitteredProjectionMatrix(right));
+        Do("camera.copy_device_to_nonjittered_right", () => cam.CopyStereoDeviceProjectionMatrixToNonJittered(right));
+        Do("camera.set_stereo_projection_right_again", () => cam.SetStereoProjectionMatrix(right, P));
+        Try("camera.after_right_again.stereo_nonjittered_right", () => cam.GetStereoNonJitteredProjectionMatrix(right));
         Do("camera.reset_stereo_projection", () => cam.ResetStereoProjectionMatrices());
         Try("camera.after_reset.stereo_projection_left", () => cam.GetStereoProjectionMatrix(left));
         Try("camera.after_reset.stereo_nonjittered_left", () => cam.GetStereoNonJitteredProjectionMatrix(left));
@@ -210,6 +220,50 @@ public class RuntimeApisProbe : MonoBehaviour
         });
         var layers = typeof(SortingLayer).GetField("onLayerChanged", All);
         Try("sorting_layer.on_layer_changed", () => layers.GetValue(null) == null ? "null" : "set");
+    }
+
+    sealed class ProbePipelineAsset : RenderPipelineAsset
+    {
+        protected override RenderPipeline CreatePipeline() => new ProbePipeline();
+    }
+
+    sealed class ProbePipeline : RenderPipeline
+    {
+        protected override void Render(ScriptableRenderContext context, Camera[] cameras) { }
+    }
+
+    static object ScreenSamples() => typeof(Screen).GetProperty("msaaSamples", All).GetValue(null);
+
+    /// <summary>Screen MSAA with a scriptable render pipeline (a pipeline that renders nothing).</summary>
+    static IEnumerator Scriptable()
+    {
+        int quality = QualitySettings.antiAliasing;
+        var asset = ScriptableObject.CreateInstance<ProbePipelineAsset>();
+        Do("srp.assign", () => GraphicsSettings.defaultRenderPipeline = asset);
+        Try("srp.msaa_samples", ScreenSamples);
+        yield return null;
+        Try("srp.frame.msaa_samples", ScreenSamples);
+        Do("srp.set_msaa_4", () => Call(typeof(Screen), null, "SetMSAASamples", 4));
+        Try("srp.after_set_4.msaa_samples", ScreenSamples);
+        Try("srp.after_set_4.quality_anti_aliasing", () => QualitySettings.antiAliasing);
+        yield return null;
+        Try("srp.after_set_4.frame.msaa_samples", ScreenSamples);
+        Do("srp.set_msaa_1", () => Call(typeof(Screen), null, "SetMSAASamples", 1));
+        Try("srp.after_set_1.msaa_samples", ScreenSamples);
+        Try("srp.after_set_1.quality_anti_aliasing", () => QualitySettings.antiAliasing);
+        yield return null;
+        Try("srp.after_set_1.frame.msaa_samples", ScreenSamples);
+        Do("srp.set_msaa_3", () => Call(typeof(Screen), null, "SetMSAASamples", 3));
+        Try("srp.after_set_3.msaa_samples", ScreenSamples);
+        QualitySettings.antiAliasing = 8;
+        Try("srp.quality_aa8.msaa_samples", ScreenSamples);
+        yield return null;
+        Try("srp.quality_aa8.frame.msaa_samples", ScreenSamples);
+        QualitySettings.antiAliasing = quality;
+        Do("srp.unassign", () => GraphicsSettings.defaultRenderPipeline = null);
+        Try("srp.unassigned.msaa_samples", ScreenSamples);
+        yield return null;
+        Try("srp.unassigned.frame.msaa_samples", ScreenSamples);
     }
 
     static void Attributes()
