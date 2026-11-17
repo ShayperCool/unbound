@@ -270,6 +270,36 @@
 {"key":"fontDefinitionNoneToFont.500","value":"definition font fontA asset null hints 0 []"}
 {"key":"fontDefinitionNoneToFont.750","value":"definition font fontA asset null hints 0 []"}
 {"key":"fontDefinitionNoneToFont.1000","value":"definition font fontA asset null hints 0 [end:-unity-font-definition]"}
+{"key":"fontAll.before","value":"font fontA hints 0"}
+{"key":"fontAll.0","value":"font fontA hints 0 [run:-unity-font]"}
+{"key":"fontAll.250","value":"font fontA hints 0 []"}
+{"key":"fontAll.500","value":"font fontB hints 0 []"}
+{"key":"fontAll.750","value":"font fontB hints 0 []"}
+{"key":"fontAll.1000","value":"font fontB hints 0 [end:-unity-font]"}
+{"key":"fontDefinitionAll.before","value":"definition font fontA asset null hints 0"}
+{"key":"fontDefinitionAll.0","value":"definition font fontA asset null hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinitionAll.250","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionAll.500","value":"definition font fontB asset null hints 0 []"}
+{"key":"fontDefinitionAll.750","value":"definition font fontB asset null hints 0 []"}
+{"key":"fontDefinitionAll.1000","value":"definition font fontB asset null hints 0 [end:-unity-font-definition]"}
+{"key":"imageRenderToVector.before","value":"image texture null sprite null renderTexture rt vector null hints 0"}
+{"key":"imageRenderToVector.0","value":"image texture null sprite null renderTexture rt vector null hints 0 [run:background-image]"}
+{"key":"imageRenderToVector.250","value":"image texture null sprite null renderTexture rt vector null hints 0 []"}
+{"key":"imageRenderToVector.500","value":"image texture null sprite null renderTexture null vector vector hints 0 []"}
+{"key":"imageRenderToVector.750","value":"image texture null sprite null renderTexture null vector vector hints 0 []"}
+{"key":"imageRenderToVector.1000","value":"image texture null sprite null renderTexture null vector vector hints 0 [end:background-image]"}
+{"key":"fontDefinitionAsset.before","value":"definition font null asset assetA hints 0"}
+{"key":"fontDefinitionAsset.0","value":"definition font null asset assetA hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinitionAsset.250","value":"definition font null asset assetA hints 0 []"}
+{"key":"fontDefinitionAsset.500","value":"definition font null asset assetB hints 0 []"}
+{"key":"fontDefinitionAsset.750","value":"definition font null asset assetB hints 0 []"}
+{"key":"fontDefinitionAsset.1000","value":"definition font null asset assetB hints 0 [end:-unity-font-definition]"}
+{"key":"fontDefinitionFontToAsset.before","value":"definition font fontA asset null hints 0"}
+{"key":"fontDefinitionFontToAsset.0","value":"definition font fontA asset null hints 0 [run:-unity-font-definition]"}
+{"key":"fontDefinitionFontToAsset.250","value":"definition font fontA asset null hints 0 []"}
+{"key":"fontDefinitionFontToAsset.500","value":"definition font null asset assetB hints 0 []"}
+{"key":"fontDefinitionFontToAsset.750","value":"definition font null asset assetB hints 0 []"}
+{"key":"fontDefinitionFontToAsset.1000","value":"definition font null asset assetB hints 0 [end:-unity-font-definition]"}
 {"key":"fontDefinitionEaseIn.before","value":"definition font fontA asset null hints 0"}
 {"key":"fontDefinitionEaseIn.0","value":"definition font fontA asset null hints 0 [run:-unity-font-definition]"}
 {"key":"fontDefinitionEaseIn.250","value":"definition font fontA asset null hints 0 []"}

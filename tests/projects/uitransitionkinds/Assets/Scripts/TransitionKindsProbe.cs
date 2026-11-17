@@ -278,6 +278,19 @@ public class TransitionKindsProbe : MonoBehaviour
         Case("fontEaseIn", "-unity-font", () => box.style.unityFont = fontA, () => box.style.unityFont = fontB, FontName, EasingMode.EaseIn);
         Case("fontDefinition", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromFont(fontB), FontDefinitionName);
         Case("fontDefinitionNoneToFont", "-unity-font-definition", null, () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), FontDefinitionName);
+        Case("fontAll", "all", () => box.style.unityFont = fontA, () => box.style.unityFont = fontB, FontName);
+        Case("fontDefinitionAll", "all", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromFont(fontB), FontDefinitionName);
+        var target = new RenderTexture(4, 4, 0) { name = "rt" };
+        var vector = ScriptableObject.CreateInstance<VectorImage>();
+        vector.name = "vector";
+        Case("imageRenderToVector", "background-image", () => box.style.backgroundImage = Background.FromRenderTexture(target), () => box.style.backgroundImage = Background.FromVectorImage(vector), Image);
+        var builtin = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var assetA = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(builtin);
+        assetA.name = "assetA";
+        var assetB = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(builtin);
+        assetB.name = "assetB";
+        Case("fontDefinitionAsset", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromSDFFont(assetA), () => box.style.unityFontDefinition = FontDefinition.FromSDFFont(assetB), FontDefinitionName);
+        Case("fontDefinitionFontToAsset", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromSDFFont(assetB), FontDefinitionName);
         Case("fontDefinitionEaseIn", "-unity-font-definition", () => box.style.unityFontDefinition = FontDefinition.FromFont(fontA), () => box.style.unityFontDefinition = FontDefinition.FromFont(fontB), FontDefinitionName, EasingMode.EaseIn);
     }
 
