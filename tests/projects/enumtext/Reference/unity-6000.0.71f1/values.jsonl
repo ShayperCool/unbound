@@ -1,0 +1,215 @@
+{"k":"call.ToString","v":"C"}
+{"k":"call.ToString.G","v":"C"}
+{"k":"call.ToString.g","v":"C"}
+{"k":"call.ToString.F","v":"C"}
+{"k":"call.ToString.D","v":"2"}
+{"k":"call.ToString.X","v":"00000002"}
+{"k":"call.boxed","v":"C"}
+{"k":"call.enum","v":"C"}
+{"k":"call.enum.G","v":"C"}
+{"k":"call.concat","v":"value C"}
+{"k":"call.concat.object","v":"C|Q"}
+{"k":"call.interpolated","v":"C Q"}
+{"k":"call.format","v":"C C 2 AB Q"}
+{"k":"call.format.invariant","v":"C"}
+{"k":"call.builder","v":"C Q"}
+{"k":"call.builder.format","v":"C"}
+{"k":"call.convert","v":"C"}
+{"k":"call.getname","v":"C"}
+{"k":"call.getname.boxed","v":"C"}
+{"k":"call.type.getenumname","v":"C"}
+{"k":"call.enum.format","v":"C"}
+{"k":"call.enum.format.F","v":"C"}
+{"k":"call.debug.log","v":"C"}
+{"k":"call.generic","v":"C"}
+{"k":"call.direct.others","v":"N M V9b V3b S5c Alias Alias, C Neg High Big Neg SolidColor LeftMeta 3"}
+{"k":"call.nullable","v":"C"}
+{"k":"call.generic.float","v":"1850"}
+{"k":"call.nullable.float","v":"1850"}
+{"k":"call.join.float","v":"1850,0.1"}
+{"k":"call.array","v":"C,C"}
+{"k":"call.list","v":"Q,X"}
+{"k":"call.parse","v":"C"}
+{"k":"call.isdefined","v":"True"}
+{"k":"enum.SortedAliases.names","v":"A,B,C,D,E"}
+{"k":"enum.SortedAliases.values","v":"1,2,2,3,4"}
+{"k":"enum.SortedAliases.valueNames","v":"A,C,C,D,E"}
+{"k":"enum.SortedAliases.unnamed.0","v":"0 | 0 | <null>"}
+{"k":"enum.SortedAliases.unnamed.5","v":"5 | A, E | <null>"}
+{"k":"enum.SortedAliases.unnamed.6","v":"6 | C, E | <null>"}
+{"k":"enum.SortedAliases.1","v":"A | A | A"}
+{"k":"enum.SortedAliases.2","v":"C | C | C"}
+{"k":"enum.SortedAliases.3","v":"D | D | D"}
+{"k":"enum.SortedAliases.4","v":"E | E | E"}
+{"k":"enum.ThreeAliases.names","v":"X,P,Q,R,Z"}
+{"k":"enum.ThreeAliases.values","v":"0,5,5,5,9"}
+{"k":"enum.ThreeAliases.valueNames","v":"X,Q,Q,Q,Z"}
+{"k":"enum.ThreeAliases.unnamed.1","v":"1 | 1 | <null>"}
+{"k":"enum.ThreeAliases.unnamed.6","v":"6 | 6 | <null>"}
+{"k":"enum.ThreeAliases.0","v":"X | X | X"}
+{"k":"enum.ThreeAliases.5","v":"Q | R | Q"}
+{"k":"enum.ThreeAliases.9","v":"Z | Z | Z"}
+{"k":"enum.UnsortedAliases.names","v":"D,A,B,C"}
+{"k":"enum.UnsortedAliases.values","v":"0,1,2,2"}
+{"k":"enum.UnsortedAliases.valueNames","v":"D,A,B,B"}
+{"k":"enum.UnsortedAliases.unnamed.3","v":"3 | A, C | <null>"}
+{"k":"enum.UnsortedAliases.0","v":"D | D | D"}
+{"k":"enum.UnsortedAliases.1","v":"A | A | A"}
+{"k":"enum.UnsortedAliases.2","v":"B | C | B"}
+{"k":"enum.ThreeUnsorted.names","v":"L,N,M"}
+{"k":"enum.ThreeUnsorted.values","v":"1,2,2"}
+{"k":"enum.ThreeUnsorted.valueNames","v":"L,N,N"}
+{"k":"enum.ThreeUnsorted.1","v":"L | L | L"}
+{"k":"enum.ThreeUnsorted.2","v":"N | M | N"}
+{"k":"enum.ThreeUnsortedLast.names","v":"L,M,N"}
+{"k":"enum.ThreeUnsortedLast.values","v":"1,2,2"}
+{"k":"enum.ThreeUnsortedLast.valueNames","v":"L,M,M"}
+{"k":"enum.ThreeUnsortedLast.1","v":"L | L | L"}
+{"k":"enum.ThreeUnsortedLast.2","v":"M | N | M"}
+{"k":"enum.ManyUnsorted.names","v":"V0,V1,V2,V3,V3d,V3b,V3c,V4,V5,V6,V7,V9b,V9c,V9d,V9,V11,V12c,V12,V12b,V14,V15,V17,V18,V20"}
+{"k":"enum.ManyUnsorted.values","v":"0,1,2,3,3,3,3,4,5,6,7,9,9,9,9,11,12,12,12,14,15,17,18,20"}
+{"k":"enum.ManyUnsorted.valueNames","v":"V0,V1,V2,V3b,V3b,V3b,V3b,V4,V5,V6,V7,V9b,V9b,V9b,V9b,V11,V12,V12,V12,V14,V15,V17,V18,V20"}
+{"k":"enum.ManyUnsorted.unnamed.8","v":"8 | 8 | <null>"}
+{"k":"enum.ManyUnsorted.unnamed.21","v":"21 | V1, V20 | <null>"}
+{"k":"enum.ManyUnsorted.0","v":"V0 | V0 | V0"}
+{"k":"enum.ManyUnsorted.1","v":"V1 | V1 | V1"}
+{"k":"enum.ManyUnsorted.2","v":"V2 | V2 | V2"}
+{"k":"enum.ManyUnsorted.3","v":"V3b | V3c | V3b"}
+{"k":"enum.ManyUnsorted.4","v":"V4 | V4 | V4"}
+{"k":"enum.ManyUnsorted.5","v":"V5 | V5 | V5"}
+{"k":"enum.ManyUnsorted.6","v":"V6 | V6 | V6"}
+{"k":"enum.ManyUnsorted.7","v":"V7 | V7 | V7"}
+{"k":"enum.ManyUnsorted.9","v":"V9b | V9 | V9b"}
+{"k":"enum.ManyUnsorted.11","v":"V11 | V11 | V11"}
+{"k":"enum.ManyUnsorted.12","v":"V12 | V12b | V12"}
+{"k":"enum.ManyUnsorted.14","v":"V14 | V14 | V14"}
+{"k":"enum.ManyUnsorted.15","v":"V15 | V15 | V15"}
+{"k":"enum.ManyUnsorted.17","v":"V17 | V17 | V17"}
+{"k":"enum.ManyUnsorted.18","v":"V18 | V18 | V18"}
+{"k":"enum.ManyUnsorted.20","v":"V20 | V20 | V20"}
+{"k":"enum.ManySorted.names","v":"S0,S1,S1b,S1c,S2,S3,S3b,S4,S5,S5b,S5c,S5d,S6,S7,S8,S8b,S9,S10,S11,S11b,S12,S13"}
+{"k":"enum.ManySorted.values","v":"0,1,1,1,2,3,3,4,5,5,5,5,6,7,8,8,9,10,11,11,12,13"}
+{"k":"enum.ManySorted.valueNames","v":"S0,S1,S1,S1,S2,S3,S3,S4,S5c,S5c,S5c,S5c,S6,S7,S8,S8,S9,S10,S11b,S11b,S12,S13"}
+{"k":"enum.ManySorted.unnamed.14","v":"14 | S2, S12 | <null>"}
+{"k":"enum.ManySorted.0","v":"S0 | S0 | S0"}
+{"k":"enum.ManySorted.1","v":"S1 | S1c | S1"}
+{"k":"enum.ManySorted.2","v":"S2 | S2 | S2"}
+{"k":"enum.ManySorted.3","v":"S3 | S3b | S3"}
+{"k":"enum.ManySorted.4","v":"S4 | S4 | S4"}
+{"k":"enum.ManySorted.5","v":"S5c | S5d | S5c"}
+{"k":"enum.ManySorted.6","v":"S6 | S6 | S6"}
+{"k":"enum.ManySorted.7","v":"S7 | S7 | S7"}
+{"k":"enum.ManySorted.8","v":"S8 | S8b | S8"}
+{"k":"enum.ManySorted.9","v":"S9 | S9 | S9"}
+{"k":"enum.ManySorted.10","v":"S10 | S10 | S10"}
+{"k":"enum.ManySorted.11","v":"S11b | S11b | S11b"}
+{"k":"enum.ManySorted.12","v":"S12 | S12 | S12"}
+{"k":"enum.ManySorted.13","v":"S13 | S13 | S13"}
+{"k":"enum.FlagAliases.names","v":"None,A,Alias,B,Both,AB,C"}
+{"k":"enum.FlagAliases.values","v":"0,1,1,2,2,3,4"}
+{"k":"enum.FlagAliases.valueNames","v":"None,Alias,Alias,Both,Both,AB,C"}
+{"k":"enum.FlagAliases.unnamed.5","v":"Alias, C | Alias, C | <null>"}
+{"k":"enum.FlagAliases.unnamed.6","v":"Both, C | Both, C | <null>"}
+{"k":"enum.FlagAliases.unnamed.7","v":"AB, C | AB, C | <null>"}
+{"k":"enum.FlagAliases.unnamed.8","v":"8 | 8 | <null>"}
+{"k":"enum.FlagAliases.unnamed.9","v":"9 | 9 | <null>"}
+{"k":"enum.FlagAliases.0","v":"None | None | None"}
+{"k":"enum.FlagAliases.1","v":"Alias | Alias | A"}
+{"k":"enum.FlagAliases.2","v":"Both | Both | B"}
+{"k":"enum.FlagAliases.3","v":"AB | AB | AB"}
+{"k":"enum.FlagAliases.4","v":"C | C | C"}
+{"k":"enum.FlagsNoZero.names","v":"One,Uno,Two"}
+{"k":"enum.FlagsNoZero.values","v":"1,1,2"}
+{"k":"enum.FlagsNoZero.valueNames","v":"Uno,Uno,Two"}
+{"k":"enum.FlagsNoZero.unnamed.0","v":"0 | 0 | <null>"}
+{"k":"enum.FlagsNoZero.unnamed.3","v":"Uno, Two | Uno, Two | <null>"}
+{"k":"enum.FlagsNoZero.unnamed.4","v":"4 | 4 | <null>"}
+{"k":"enum.FlagsNoZero.1","v":"Uno | Uno | Uno"}
+{"k":"enum.FlagsNoZero.2","v":"Two | Two | Two"}
+{"k":"enum.Signed.names","v":"Zero,One,Min,Neg,MinusOne"}
+{"k":"enum.Signed.values","v":"0,1,-2147483648,-1,-1"}
+{"k":"enum.Signed.valueNames","v":"Zero,One,Min,Neg,Neg"}
+{"k":"enum.Signed.unnamed.-2","v":"-2 | -2 | <null>"}
+{"k":"enum.Signed.unnamed.2","v":"2 | 2 | <null>"}
+{"k":"enum.Signed.0","v":"Zero | Zero | Zero"}
+{"k":"enum.Signed.1","v":"One | One | One"}
+{"k":"enum.Signed.-2147483648","v":"Min | Min | Min"}
+{"k":"enum.Signed.-1","v":"Neg | MinusOne | Neg"}
+{"k":"enum.Bytes.names","v":"Low,High,Top"}
+{"k":"enum.Bytes.values","v":"1,200,200"}
+{"k":"enum.Bytes.valueNames","v":"Low,High,High"}
+{"k":"enum.Bytes.unnamed.0","v":"0 | 0 | <null>"}
+{"k":"enum.Bytes.unnamed.201","v":"201 | Low, Top | <null>"}
+{"k":"enum.Bytes.1","v":"Low | Low | Low"}
+{"k":"enum.Bytes.200","v":"High | Top | High"}
+{"k":"enum.Longs.names","v":"Small,Mid,Big,Biggest"}
+{"k":"enum.Longs.values","v":"1,1099511627776,18446744073709551615,18446744073709551615"}
+{"k":"enum.Longs.valueNames","v":"Small,Mid,Big,Big"}
+{"k":"enum.Longs.unnamed.2","v":"2 | 2 | <null>"}
+{"k":"enum.Longs.unnamed.1099511627777","v":"1099511627777 | Small, Mid | <null>"}
+{"k":"enum.Longs.1","v":"Small | Small | Small"}
+{"k":"enum.Longs.1099511627776","v":"Mid | Mid | Mid"}
+{"k":"enum.Longs.18446744073709551615","v":"Big | Biggest | Big"}
+{"k":"enum.Shorts.names","v":"Pos,Neg,NegAlias"}
+{"k":"enum.Shorts.values","v":"5,-5,-5"}
+{"k":"enum.Shorts.valueNames","v":"Pos,Neg,Neg"}
+{"k":"enum.Shorts.unnamed.-6","v":"-6 | -6 | <null>"}
+{"k":"enum.Shorts.unnamed.0","v":"0 | 0 | <null>"}
+{"k":"enum.Shorts.5","v":"Pos | Pos | Pos"}
+{"k":"enum.Shorts.-5","v":"Neg | NegAlias | Neg"}
+{"k":"unity.UnityEngine.AnimatorCullingMode.1","v":"CullUpdateTransforms | CullUpdateTransforms | BasedOnRenderers,CullUpdateTransforms"}
+{"k":"unity.UnityEngine.AnimatorUpdateMode.1","v":"Fixed | Fixed | AnimatePhysics,Fixed"}
+{"k":"unity.UnityEngine.ADBannerView+Layout.0","v":"Top | Top | Top,TopLeft"}
+{"k":"unity.UnityEngine.ADBannerView+Layout.1","v":"Bottom | Bottom | Bottom,BottomLeft"}
+{"k":"unity.UnityEngine.CameraClearFlags.2","v":"SolidColor | SolidColor | Color,SolidColor"}
+{"k":"unity.UnityEngine.ComputeBufferType.256","v":"IndirectArguments | DrawIndirect | DrawIndirect,IndirectArguments"}
+{"k":"unity.UnityEngine.Experimental.Rendering.GraphicsFormat.96","v":"RGBA_DXT1_SRGB | RGBA_DXT1_SRGB | RGBA_DXT1_SRGB,RGB_DXT1_SRGB"}
+{"k":"unity.UnityEngine.Experimental.Rendering.GraphicsFormat.97","v":"RGBA_DXT1_UNorm | RGBA_DXT1_UNorm | RGBA_DXT1_UNorm,RGB_DXT1_UNorm"}
+{"k":"unity.UnityEngine.KeyCode.309","v":"RightMeta | RightMeta | RightApple,RightCommand,RightMeta"}
+{"k":"unity.UnityEngine.KeyCode.310","v":"LeftMeta | LeftMeta | LeftApple,LeftCommand,LeftMeta"}
+{"k":"unity.UnityEngine.LightType.3","v":"Rectangle | Rectangle | Area,Rectangle"}
+{"k":"unity.UnityEngine.LightmapsMode.0","v":"NonDirectional | NonDirectional | NonDirectional,Single"}
+{"k":"unity.UnityEngine.LightmapsMode.1","v":"Single, Dual | CombinedDirectional | CombinedDirectional,Dual"}
+{"k":"unity.UnityEngine.LightmapsMode.2","v":"Single, Directional | SeparateDirectional | Directional,SeparateDirectional"}
+{"k":"unity.UnityEngine.LineAlignment.1","v":"Local | Local | Local,TransformZ"}
+{"k":"unity.UnityEngine.RuntimePlatform.18","v":"MetroPlayerX86 | MetroPlayerX86 | MetroPlayerX86,WSAPlayerX86"}
+{"k":"unity.UnityEngine.RuntimePlatform.19","v":"MetroPlayerX64 | MetroPlayerX64 | MetroPlayerX64,WSAPlayerX64"}
+{"k":"unity.UnityEngine.RuntimePlatform.20","v":"MetroPlayerARM | MetroPlayerARM | MetroPlayerARM,WSAPlayerARM"}
+{"k":"unity.UnityEngine.RuntimePlatform.22","v":"BlackBerryPlayer | BlackBerryPlayer | BB10Player,BlackBerryPlayer"}
+{"k":"unity.UnityEngine.RuntimePlatform.18446744073709551615","v":"CloudRendering | CloudRendering | CloudRendering,GameCoreScarlett"}
+{"k":"unity.UnityEngine.ScreenOrientation.3","v":"LandscapeLeft | LandscapeLeft | Landscape,LandscapeLeft"}
+{"k":"unity.UnityEngine.SystemLanguage.18","v":"Hugarian | Hugarian | Hugarian,Hungarian"}
+{"k":"unity.UnityEngine.WrapMode.1","v":"Clamp | Clamp | Clamp,Once"}
+{"k":"unity.UnityEngine.iOS.ADBannerView+Layout.0","v":"Top | Top | Top,TopLeft"}
+{"k":"unity.UnityEngine.iOS.ADBannerView+Layout.1","v":"Bottom | Bottom | Bottom,BottomLeft"}
+{"k":"unity.UnityEngine.tvOS.DeviceGeneration.1001","v":"AppleTV1Gen | AppleTV1Gen | AppleTV1Gen,AppleTVHD"}
+{"k":"unity.UnityEngine.tvOS.DeviceGeneration.1002","v":"AppleTV2Gen | AppleTV2Gen | AppleTV2Gen,AppleTV4K"}
+{"k":"unity.UnityEngine.EventType.0","v":"mouseDown | mouseDown | MouseDown,mouseDown"}
+{"k":"unity.UnityEngine.EventType.1","v":"mouseUp | mouseUp | MouseUp,mouseUp"}
+{"k":"unity.UnityEngine.EventType.2","v":"mouseMove | mouseMove | MouseMove,mouseMove"}
+{"k":"unity.UnityEngine.EventType.3","v":"mouseDrag | mouseDrag | MouseDrag,mouseDrag"}
+{"k":"unity.UnityEngine.EventType.4","v":"KeyDown | KeyDown | KeyDown,keyDown"}
+{"k":"unity.UnityEngine.EventType.5","v":"keyUp | keyUp | KeyUp,keyUp"}
+{"k":"unity.UnityEngine.EventType.6","v":"scrollWheel | scrollWheel | ScrollWheel,scrollWheel"}
+{"k":"unity.UnityEngine.EventType.7","v":"repaint | repaint | Repaint,repaint"}
+{"k":"unity.UnityEngine.EventType.8","v":"Layout | Layout | Layout,layout"}
+{"k":"unity.UnityEngine.EventType.9","v":"DragUpdated | DragUpdated | DragUpdated,dragUpdated"}
+{"k":"unity.UnityEngine.EventType.10","v":"dragPerform | dragPerform | DragPerform,dragPerform"}
+{"k":"unity.UnityEngine.EventType.11","v":"Ignore | Ignore | Ignore,ignore"}
+{"k":"unity.UnityEngine.EventType.12","v":"Used | Used | Used,used"}
+{"k":"unity.UnityEngine.InputForUI.PointerEvent+Button.1","v":"MouseLeft | FingerInTouch | FingerInTouch,MouseLeft,PenTipInTouch,Primary"}
+{"k":"unity.UnityEngine.InputForUI.PointerEvent+Button.2","v":"MouseRight | PenEraserInTouch | MouseRight,PenEraserInTouch"}
+{"k":"unity.UnityEngine.InputForUI.PointerEvent+Button.4","v":"MouseMiddle | MouseMiddle | MouseMiddle,PenBarrelButton"}
+{"k":"unity.UnityEngine.ParticleSystemBakeTextureOptions.4","v":"Default | PerVertex | Default,PerVertex"}
+{"k":"unity.UnityEngine.CollisionDetectionMode2D.0","v":"Discrete | Discrete | Discrete,None"}
+{"k":"unity.UnityEngine.CollisionFlags.1","v":"Sides | Sides | CollidedSides,Sides"}
+{"k":"unity.UnityEngine.CollisionFlags.2","v":"Above | Above | Above,CollidedAbove"}
+{"k":"unity.UnityEngine.CollisionFlags.4","v":"Below | Below | Below,CollidedBelow"}
+{"k":"unity.UnityEngine.TerrainRenderFlags.1","v":"Heightmap | Heightmap | Heightmap,heightmap"}
+{"k":"unity.UnityEngine.TerrainRenderFlags.2","v":"Trees | Trees | Trees,trees"}
+{"k":"unity.UnityEngine.TerrainRenderFlags.4","v":"Details | Details | Details,details"}
+{"k":"unity.UnityEngine.TerrainRenderFlags.7","v":"All | all | All,all"}
+{"k":"unity.UnityEngine.UIElements.UIToolkitInputBackendOption.0","v":"InputSystemCompatibleBackend | InputSystemCompatibleBackend | Default,InputSystemCompatibleBackend"}
+{"k":"unity.UnityEngine.Analytics.AnalyticsEventPriority.1","v":"HighPriorityEvent | HighPriorityEvent | FlushQueueFlag,HighPriorityEvent"}
+{"k":"unity.UnityEngine.Analytics.AnalyticsEventPriority.2","v":"NormalPriorityEvent_WithCaching | NormalPriorityEvent_WithCaching | CacheImmediatelyFlag,NormalPriorityEvent_WithCaching"}
+{"k":"complete","v":true}

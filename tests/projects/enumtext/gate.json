@@ -1,0 +1,5 @@
+{
+  "commands": ["python3 tests/projects/enumtext/run.py gate"],
+  "summary": "enumtext: .*",
+  "engine_paths": ["managed/UnityEngine/Runtime/MonoEnumNames.cs", "managed/UnityEngine/Runtime/MonoNumberFormat.cs", "managed/Unbound.Host/NumberFormatShims.cs"]
+}
