@@ -24,9 +24,9 @@ namespace UnityEngine.Tests
 
         /// <summary>A long step emits and carries the emission phase as its advance within the loop:
         /// steps just past one and three loops of a 1.5-birth loop go on as one that took only that
-        /// advance (its births, time and phase: an odd count of loop ends would move it). Steps of
-        /// whole loops follow the Editor's float ties instead (tests/projects/particlerender
-        /// prewarm/maxdelta/0.2/*).</summary>
+        /// advance (its particles' ages and the time; the emission phase changes no birth here, so
+        /// it is not pinned by this test). Steps of whole loops follow the Editor's float ties
+        /// instead (tests/projects/particlerender prewarm/maxdelta/0.2/*).</summary>
         [Theory]
         [InlineData(0.1f, 15f, 0.10001f, 0.00001f)]
         [InlineData(0.1f, 15f, 0.30001f, 0.00001f)]
