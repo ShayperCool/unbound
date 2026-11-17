@@ -33,7 +33,9 @@ says only "The light used by the procedural skybox. If none is assigned, the bri
 light is used." The rest is observed behaviour of this release; other releases are unmeasured.
 
 `residuals.json` lists the known differences: the lighting settings of a scene made with
-`CreateScene` (Unbound keeps those in effect), and sky pixels within 3e-3 of the Editor's.
+`CreateScene` (Unbound keeps those in effect), and sky pixels within 3e-3 of the Editor's. The gate
+does not enforce that bound on the listed sky pixels; the light the sky is drawn with
+(`skyLightColor`, `skyLightPos`) is compared exactly in every state.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

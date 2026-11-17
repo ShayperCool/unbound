@@ -920,8 +920,8 @@ namespace Unbound.Runtime
         /// sky's disk).</summary>
         internal static Light SkySun() => UnityEngine.RenderSettings.sun;
 
-        /// <summary>The direction to the light a sky is drawn with when the scene has no sun
-        /// (built-in pipeline).</summary>
+        /// <summary>The direction to the light a sky is drawn with when the scene has no sun, under
+        /// any pipeline (tests/projects/rendersettingssun, tests/projects/urpsunscenes).</summary>
         internal static readonly Vector3 SkyWithoutSun = new Vector3(0f, 0f, -1f);
 
         /// <summary>Whether a light is a candidate for the scene's sun or a camera's main light:
