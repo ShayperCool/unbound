@@ -116,7 +116,9 @@ see [the Q449 correction](#q449-duplicate-diagnostics) below.
   filter units again after a later filter is added (Echo followed by Chorus). That accounts
   for every isolated and composed Mono startup above, but the retained histories after
   removals measured in [LIVE_LISTENERS.md](LIVE_LISTENERS.md) need the same insertion model
-  before an engine change; no engine behaviour or count changes.
+  before an engine change; no engine behaviour or count changes. Ruled out by the existing
+  controls: a fixed startup delay, a general Mono fold (single-unit Reverb passes), and a
+  transition from every published delay (Echo followed by Chorus shows none).
 - **Q416-R4b, composed source precision.** Stereo and Quad LowPass/Chorus and
   Reverb/Echo controls retain sparse Master and device differences. They are
   outside this new PCM qualification; their complete samples and original float

@@ -76,8 +76,11 @@ A Streaming asset's first 2D Stereo playback in one of two independent captures 
 of its data about 0.4 s after its start; the other capture and every later streamed control
 did not. The profile therefore records Streaming assets in 5.1 only. Clips wider than eight
 channels, streamed downloads (`DownloadHandlerAudioClip` with `streamAudio`) and spatial voices
-in Prologic output are unmeasured and fail to start with a clear diagnostic. Physical drivers,
-other backends and releases are unmeasured.
+in Prologic output are unmeasured and fail to start with a clear diagnostic. The spatial turns
+of widths other than six are measured at one pose, blend and spread (90 degrees); their
+proportion to the spread follows the six-channel controls of [SIX_SPATIAL.md](SIX_SPATIAL.md).
+Compressed In Memory assets are measured with PCM compression only. Physical drivers, other
+backends and releases are unmeasured.
 
 The engine implements these rules on this release through the same per-voice matrix as
 six-channel voices (`Compat` AudioOutputRules.multichannel_voices); other releases keep their

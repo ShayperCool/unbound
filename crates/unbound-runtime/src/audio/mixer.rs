@@ -109,10 +109,14 @@ fn input_layout(width: usize, mode: i32) -> &'static [InputRow] {
         }
         row
     }
-    let mode = if mode == speaker_mode::PROLOGIC {
-        speaker_mode::STEREO
-    } else {
-        mode
+    // Prologic, and any other mode the layouts do not list, take the Stereo gains.
+    let mode = match mode {
+        speaker_mode::MONO
+        | speaker_mode::QUAD
+        | speaker_mode::SURROUND
+        | speaker_mode::MODE_5POINT1
+        | speaker_mode::MODE_7POINT1 => mode,
+        _ => speaker_mode::STEREO,
     };
     match (width, mode) {
         (3, speaker_mode::MONO) => {
@@ -469,8 +473,6 @@ pub struct Clip {
     /// Interleaved; empty for a streamed clip, whose data comes from its PCM reader.
     pub samples: Vec<f32>,
     pub stream: bool,
-    /// The authored load type, even when its samples are available in the decoded cache.
-    pub streamed_asset: bool,
 }
 
 impl Clip {
@@ -482,7 +484,6 @@ impl Clip {
             rate,
             samples,
             stream: false,
-            streamed_asset: false,
         }
     }
 
@@ -4728,12 +4729,12 @@ mod tests {
 
     #[test]
     fn unmeasured_multichannel_voices_are_refused_with_a_diagnostic_code() {
-        for (mode, blend, channels, stream, streamed_asset) in [
-            (speaker_mode::PROLOGIC, 0.5, 6, false, false),
-            (speaker_mode::PROLOGIC, 1.0, 4, true, false),
-            (speaker_mode::STEREO, 0.0, 9, false, false),
-            (speaker_mode::QUAD, 1.0, 12, true, false),
-            (speaker_mode::MODE_7POINT1, 0.0, 16, false, true),
+        for (mode, blend, channels, stream) in [
+            (speaker_mode::PROLOGIC, 0.5, 6, false),
+            (speaker_mode::PROLOGIC, 1.0, 4, true),
+            (speaker_mode::STEREO, 0.0, 9, false),
+            (speaker_mode::QUAD, 1.0, 12, true),
+            (speaker_mode::MODE_7POINT1, 0.0, 16, false),
         ] {
             for kind in [command::PLAY, command::PLAY_ONE_SHOT] {
                 let mut mixer = Mixer::new(MixerConfig {
@@ -4745,7 +4746,6 @@ mod tests {
                 frame[2] = 0.25;
                 let mut clip = Clip::new(channels, 48000, frame.repeat(1024));
                 clip.stream = stream;
-                clip.streamed_asset = streamed_asset;
                 mixer.add_clip(1, clip);
                 source_with(&mut mixer, 7, 1, |params| params.spatial_blend = blend);
                 let command = AudioSourceCommand {
@@ -5368,6 +5368,15 @@ mod tests {
                 "{mode} {width}"
             );
         }
+        // A layout the tables do not list (such as the obsolete Raw mode) takes the Stereo gains.
+        let flat = spatial::Panning {
+            volume: 1.0,
+            ..Default::default()
+        };
+        assert_eq!(
+            input_matrix(6, 0, None, &flat, 0.0, 1.0),
+            input_matrix(6, speaker_mode::STEREO, None, &flat, 0.0, 1.0)
+        );
     }
 
     #[test]
