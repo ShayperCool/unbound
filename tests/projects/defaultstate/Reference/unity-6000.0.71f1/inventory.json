@@ -3183,6 +3183,24 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Device.Application"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Device.Screen"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Device.SystemInfo"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.DisallowMultipleComponent"
     },
