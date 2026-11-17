@@ -116,6 +116,10 @@ public class StpMotionProbe : MonoBehaviour
             ("stp_debug_reprojection", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(4), noDebugView),
             ("stp_debug_sensitivity", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, debugView(5), noDebugView),
             ("stp_debug_sensitivity_static", 0.5f, UpscalingFilterSelection.STP, Vector3.zero, 0f, debugView(5), noDebugView),
+            // Controls that separate the two: the second renderer into the render texture, and the
+            // first renderer to the screen.
+            ("stp_post_texture", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, () => data.SetRenderer(1), () => data.SetRenderer(0)),
+            ("stp_screen_plain", 0.5f, UpscalingFilterSelection.STP, drift, 0.11f, () => camera.targetTexture = null, toSmall),
         };
         foreach (var s in scenarios)
         {

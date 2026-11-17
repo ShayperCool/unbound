@@ -52,7 +52,9 @@ it was rendered in.
   `stp_debug_sensitivity_static` with a still camera. URP composes a full-screen debug view in
   its final post-processing pass, which a renderer without post-processing data does not have
   (the Editor then shows the plain image), and only on the screen, not in a camera's render
-  texture.
+  texture;
+- `stp_post_texture`, `stp_screen_plain`: controls that separate the renderer from the target:
+  the second renderer into the render texture, the first renderer to the screen.
 
 Values compare exactly; `image_limits.json` holds each image's measured limits.
 
@@ -64,9 +66,11 @@ content does not extend to every scene: docs/COMPATIBILITY_GAPS.md (Q546) record
 scene whose STP output under camera motion keeps more of its history in Unbound than in the OpenGL
 Core Editor. Through the renderer with post-processing data the OpenGL Core Editor's STP views
 report every pixel offscreen with no motion match, even with a still camera, and its image keeps no
-history; Unbound draws the other four views as the Editor does and matches the motion there, so
-`stp_screen`, `stp_debug_reprojection` and the Sensitivity views differ (their limits say how
-much; docs/COMPATIBILITY_GAPS.md, Q546). Other devices, GPUs and drivers are unmeasured.
+history, into the screen and into the render texture alike (`stp_post_texture`), while the first
+renderer on the screen (`stp_screen_plain`) matches; Unbound draws the other four views as the
+Editor does and matches the motion there, so `stp_screen`, `stp_post_texture`,
+`stp_debug_reprojection` and the Sensitivity views differ (their limits say how much;
+docs/COMPATIBILITY_GAPS.md, Q546). Other devices, GPUs and drivers are unmeasured.
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

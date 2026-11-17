@@ -89,11 +89,23 @@
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
+ "stp_post_texture.png": {
+  "mean": 8.3811,
+  "worst": 125,
+  "over8": 19947,
+  "reason": "Into the render texture through the renderer with post-processing data: the Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+ },
  "stp_screen.png": {
   "mean": 8.5685,
   "worst": 116,
   "over8": 19834,
   "reason": "The Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+ },
+ "stp_screen_plain.png": {
+  "mean": 0.0224,
+  "worst": 3,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_static.png": {
   "mean": 0.0008,
