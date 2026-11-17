@@ -16,7 +16,10 @@ manager has a texture cursor set (internal state, read by reflection) and the lo
   texture.") and, as `arrow` and no cursor, restores the default; a cursor is not inherited.
 - While an element holds the mouse capture, entering others changes nothing; releasing the capture
   takes the cursor of the element under the mouse.
-- A cursor changed under a resting pointer is taken at the next entering.
+- When the rules of the element under the resting pointer change (a class added, a `:hover` rule),
+  the style pass sets its cursor, also while another element holds the capture (`restyle.*`,
+  `pseudo.*`, `captureRestyle.*`); an inline cursor set on it applies at once, its removal waits for
+  the next entering (`inline.*`).
 - `custom-cursor` and an unknown keyword are refused by the importer (`import.logs`, a known residual:
   Unbound's importer does not validate property values).
 

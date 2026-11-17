@@ -52,9 +52,28 @@ namespace UnityEngine.UIElements
         /// The cursor update a mouse event makes before it is dispatched to this element (its
         /// target): entering the element under the mouse takes its cursor, leaving it restores the
         /// default, unless another element holds the mouse capture; the end of a capture takes the
-        /// cursor of the element under the mouse. A cursor style changed under a resting pointer is
-        /// taken at the next of these events.
+        /// cursor of the element under the mouse. A cursor changed under a resting pointer applies at
+        /// the style pass (UaMatchingRulesChanged) or, set inline, at once (ApplyCursorIfUnderMouse).
         /// </summary>
+        int m_UaMatchingRulesHash;
+
+        /// <summary>After a style pass: when the element's rules changed (a class, a pseudo-state such
+        /// as :hover, a sheet), the element under the mouse takes its cursor, whatever holds the
+        /// capture.</summary>
+        internal void UaMatchingRulesChanged(int matchingRulesHash)
+        {
+            if (matchingRulesHash == m_UaMatchingRulesHash) return;
+            m_UaMatchingRulesHash = matchingRulesHash;
+            ApplyCursorIfUnderMouse(computedValues.cursor);
+        }
+
+        /// <summary>An inline cursor value set (not removed) applies at once to the element under the mouse.</summary>
+        internal void ApplyCursorIfUnderMouse(Cursor cursor)
+        {
+            var panel = elementPanel;
+            if (panel != null && panel.GetTopElementUnderPointer(PointerId.mousePointerId) == this) panel.cursorManager.SetCursor(cursor);
+        }
+
         internal void UpdateCursorStyle(long eventType)
         {
             var panel = elementPanel;

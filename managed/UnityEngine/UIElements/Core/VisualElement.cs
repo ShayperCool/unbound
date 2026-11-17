@@ -906,6 +906,7 @@ namespace UnityEngine.UIElements
                 applied.CopyProperty(id, rules);
             }
             m_InlineStyle.ApplyTo(applied);
+            if (id == StylePropertyId.Cursor && !removed) ApplyCursorIfUnderMouse(applied.cursor);
             // Removing a transition declaration does not cancel its current event batch. The
             // next style pass reconciles the list after the panel finishes its animation phases.
             if (id == StylePropertyId.TransitionProperty) return;

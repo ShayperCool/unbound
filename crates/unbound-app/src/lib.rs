@@ -120,9 +120,8 @@ struct Driver {
     /// in the window takes it again).
     cursor: Option<unbound_runtime::cursor::CursorState>,
     cursor_released: bool,
-    /// One image per distinct cursor picture (size and pixels): a cursor set again reuses its
-    /// image, so the window's cache of system cursors keeps one entry per picture.
-    cursor_images: std::collections::HashMap<(u32, u32, Vec<u8>), Handle<Image>>,
+    /// The images of the cursors set so far ([`CursorImages`]).
+    cursor_images: CursorImages,
     /// Whether a warp outside the window was reported (once).
     warp_outside_warned: bool,
 }
@@ -252,7 +251,7 @@ pub fn run(
         cursor_seen: 0,
         cursor: None,
         cursor_released: false,
-        cursor_images: std::collections::HashMap::new(),
+        cursor_images: CursorImages::default(),
         warp_outside_warned: false,
     });
     app.insert_resource(RunSettings {
@@ -593,7 +592,7 @@ fn apply_cursor(
     window: Entity,
     options: &mut CursorOptions,
     images: &mut Assets<Image>,
-    cursor_images: &mut std::collections::HashMap<(u32, u32, Vec<u8>), Handle<Image>>,
+    cursor_images: &mut CursorImages,
     commands: &mut Commands,
 ) {
     options.grab_mode = grab_mode(cursor.lock);
@@ -601,22 +600,7 @@ fn apply_cursor(
     let icon = match &cursor.image {
         None => CursorIcon::System(SystemCursorIcon::Default),
         Some(image) => {
-            let handle = cursor_images
-                .entry((image.width, image.height, image.rgba.clone()))
-                .or_insert_with(|| {
-                    images.add(Image::new(
-                        bevy::render::render_resource::Extent3d {
-                            width: image.width,
-                            height: image.height,
-                            depth_or_array_layers: 1,
-                        },
-                        bevy::render::render_resource::TextureDimension::D2,
-                        image.rgba.clone(),
-                        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
-                        bevy::asset::RenderAssetUsages::MAIN_WORLD,
-                    ))
-                })
-                .clone();
+            let handle = cursor_images.handle(image, images);
             CursorIcon::Custom(CustomCursor::Image(CustomCursorImage {
                 handle,
                 hotspot: image.hotspot,
@@ -625,6 +609,49 @@ fn apply_cursor(
         }
     };
     commands.entity(window).insert(icon);
+}
+
+/// One image per distinct cursor (picture and hotspot): a cursor set again (a texture cursor
+/// hovered again) reuses its image, so the window's cache of system cursors, kept per image,
+/// gains no entry. Past [`CursorImages::LIMIT`] distinct cursors the oldest images are forgotten
+/// (a game drawing a new cursor every frame does not grow it without bound).
+#[derive(Default)]
+struct CursorImages {
+    images: std::collections::HashMap<unbound_runtime::cursor::CursorImage, Handle<Image>>,
+    order: std::collections::VecDeque<unbound_runtime::cursor::CursorImage>,
+}
+
+impl CursorImages {
+    const LIMIT: usize = 32;
+
+    fn handle(
+        &mut self,
+        image: &unbound_runtime::cursor::CursorImage,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        if let Some(handle) = self.images.get(image) {
+            return handle.clone();
+        }
+        if self.order.len() == Self::LIMIT
+            && let Some(oldest) = self.order.pop_front()
+        {
+            self.images.remove(&oldest);
+        }
+        let handle = images.add(Image::new(
+            bevy::render::render_resource::Extent3d {
+                width: image.width,
+                height: image.height,
+                depth_or_array_layers: 1,
+            },
+            bevy::render::render_resource::TextureDimension::D2,
+            image.rgba.clone(),
+            bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+            bevy::asset::RenderAssetUsages::MAIN_WORLD,
+        ));
+        self.images.insert(image.clone(), handle.clone());
+        self.order.push_back(image.clone());
+        handle
+    }
 }
 
 /// `Mouse.WarpCursorPosition`: Unity's screen coordinates (window pixels from the bottom left)
@@ -764,4 +791,49 @@ fn publish_display(
             })
             .collect(),
     }));
+}
+
+#[cfg(test)]
+mod cursor_image_tests {
+    use super::*;
+    use unbound_runtime::cursor::CursorImage;
+
+    fn picture(value: u8, hotspot: (u16, u16)) -> CursorImage {
+        CursorImage {
+            width: 2,
+            height: 1,
+            rgba: vec![value; 8],
+            hotspot,
+        }
+    }
+
+    #[test]
+    fn a_cursor_set_again_reuses_its_image() {
+        let mut assets = Assets::<Image>::default();
+        let mut cache = CursorImages::default();
+        let first = cache.handle(&picture(1, (0, 0)), &mut assets);
+        assert_eq!(first, cache.handle(&picture(1, (0, 0)), &mut assets));
+        assert_eq!(assets.len(), 1);
+    }
+
+    #[test]
+    fn another_hotspot_gets_its_own_image() {
+        let mut assets = Assets::<Image>::default();
+        let mut cache = CursorImages::default();
+        let a = cache.handle(&picture(1, (0, 0)), &mut assets);
+        let b = cache.handle(&picture(1, (1, 0)), &mut assets);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn the_oldest_images_are_forgotten_past_the_limit() {
+        let mut assets = Assets::<Image>::default();
+        let mut cache = CursorImages::default();
+        let first = cache.handle(&picture(0, (0, 0)), &mut assets);
+        for value in 1..=CursorImages::LIMIT as u8 {
+            cache.handle(&picture(value, (0, 0)), &mut assets);
+        }
+        assert_eq!(cache.images.len(), CursorImages::LIMIT);
+        assert_ne!(first, cache.handle(&picture(0, (0, 0)), &mut assets));
+    }
 }

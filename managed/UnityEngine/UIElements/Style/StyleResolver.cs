@@ -160,20 +160,20 @@ namespace Unbound.UIElements
             float dpi = pixelsPerPoint;
             var style = ApplyRules(element, variables, dpi);
             element.uaInlineStyle?.ApplyTo(style);
-            if (element is TextElement text)
+            // What the element's rules are: the matched rules, the scale and the inherited style.
+            var hash = new HashCode();
+            hash.Add(pixelsPerPoint);
+            UaTextHandle.AddInheritedStyleHash(ref hash, parentStyle);
+            foreach (var match in m_Matches)
             {
-                var hash = new HashCode();
-                hash.Add(pixelsPerPoint);
-                UaTextHandle.AddInheritedStyleHash(ref hash, parentStyle);
-                foreach (var match in m_Matches)
-                {
-                    hash.Add(match.Sheet);
-                    hash.Add(match.SheetIndex);
-                    hash.Add(match.Selector);
-                }
-                text.UaUpdateTextStyleMatching(hash.ToHashCode());
+                hash.Add(match.Sheet);
+                hash.Add(match.SheetIndex);
+                hash.Add(match.Selector);
             }
+            int matchingRules = hash.ToHashCode();
+            if (element is TextElement text) text.UaUpdateTextStyleMatching(matchingRules);
             element.SetComputedValues(style);
+            element.UaMatchingRulesChanged(matchingRules);
             m_Matches.Clear();
             return variables;
         }

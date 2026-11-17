@@ -4,7 +4,7 @@ use anyhow::{Result, bail};
 use std::sync::Mutex;
 
 /// A cursor image: RGBA8 rows from the top, the hotspot in pixels from the top left.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CursorImage {
     pub width: u32,
     pub height: u32,

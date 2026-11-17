@@ -4,6 +4,9 @@
   "engine_paths": [
     "managed/UnityEngine/UIElements/Core/CursorManager.cs",
     "managed/UnityEngine/UIElements/Events/Events.cs",
-    "managed/UnityEngine/UIElements/Style/StyleReader.cs"
+    "managed/UnityEngine/UIElements/Style/StyleReader.cs",
+    "managed/UnityEngine/UIElements/Style/StyleResolver.cs",
+    "managed/UnityEngine/Core/Input.cs",
+    "crates/unbound-app/src/lib.rs"
   ]
 }

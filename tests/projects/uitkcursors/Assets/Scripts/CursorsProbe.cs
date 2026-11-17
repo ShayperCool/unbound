@@ -72,6 +72,24 @@ namespace CursorsProbe
                 Put("error", e.GetType().Name + ": " + FirstLine(e.Message));
                 failed = true;
             }
+            // Steps that let the panel's style pass run (one frame) between them.
+            var styled = failed ? null : RecordStyled();
+            while (styled != null)
+            {
+                object current;
+                try
+                {
+                    if (!styled.MoveNext()) break;
+                    current = styled.Current;
+                }
+                catch (Exception e)
+                {
+                    Put("error.styled", e.GetType().Name + ": " + FirstLine(e.Message));
+                    failed = true;
+                    break;
+                }
+                yield return current;
+            }
             Application.logMessageReceived -= OnLog;
             if (!failed) Put("complete", true);
             File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
@@ -145,6 +163,9 @@ namespace CursorsProbe
             child.style.height = 20;
             parent.Add(child);
             m_Cells["child"] = child;
+            Cell("hoverable", "c-hover", 130, 200);
+            Cell("plain2", null, 160, 200);
+            Cell("plainB", null, 190, 200);
         }
 
         /// <summary>Whether the panel's cursor manager has a texture cursor set (internal state).</summary>
@@ -206,8 +227,37 @@ namespace CursorsProbe
             // A cursor style changed under a resting pointer.
             Step("restyle.over", () => MoveTo("plain"));
             Step("restyle.set", () => m_Cells["plain"].AddToClassList("c-texture"));
+        }
+
+        IEnumerator RecordStyled()
+        {
+            // The class added under the resting pointer above takes effect at the style pass.
+            yield return null;
+            Step("restyle.styled", () => { });
             Step("restyle.away", () => MoveTo(null));
             Step("restyle.back", () => MoveTo("plain"));
+            // A cursor from a :hover rule: entering finds none, the style pass sets it.
+            Step("pseudo.enter", () => MoveTo("hoverable"));
+            yield return null;
+            Step("pseudo.styled", () => { });
+            Step("pseudo.leave", () => MoveTo("plain2"));
+            yield return null;
+            Step("pseudo.leftStyled", () => { });
+            // An inline cursor set on the element under the pointer applies at once; removing it
+            // waits for the next entering.
+            Step("inline.set", () => m_Cells["plain2"].style.cursor = new StyleCursor(new UnityEngine.UIElements.Cursor { texture = Resources.Load<Texture2D>("cursor") }));
+            Step("inline.remove", () => m_Cells["plain2"].style.cursor = StyleKeyword.Null);
+            yield return null;
+            Step("inline.removedStyled", () => { });
+            Step("inline.away", () => MoveTo(null));
+            // A rule change under the pointer applies even while another element holds the capture.
+            Step("captureRestyle.over", () => MoveTo("plainB"));
+            Step("captureRestyle.capture", () => m_Cells["texture"].CaptureMouse());
+            Step("captureRestyle.restyle", () => m_Cells["plainB"].AddToClassList("c-texture"));
+            yield return null;
+            Step("captureRestyle.styled", () => { });
+            Step("captureRestyle.release", () => m_Cells["texture"].ReleaseMouse());
+            Step("captureRestyle.away", () => MoveTo(null));
         }
     }
 }

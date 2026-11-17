@@ -513,7 +513,7 @@ namespace UnityEngine
         sealed class SerializedImage
         {
             public uint updateCount;
-            public int hotspotX, hotspotY;
+            public int width, height, hotspotX, hotspotY;
             public string json;
         }
 
@@ -533,7 +533,8 @@ namespace UnityEngine
             if (width <= 0 || height <= 0) return;
             int hx = Mathf.Clamp(Mathf.RoundToInt(hotspot.x), 0, width - 1);
             int hy = Mathf.Clamp(Mathf.RoundToInt(hotspot.y), 0, height - 1);
-            if (s_Images.TryGetValue(texture, out var cached) && cached.updateCount == texture.updateCount && cached.hotspotX == hx && cached.hotspotY == hy)
+            if (s_Images.TryGetValue(texture, out var cached) && cached.updateCount == texture.updateCount && cached.width == width && cached.height == height
+                && cached.hotspotX == hx && cached.hotspotY == hy)
             {
                 Send(cached.json, true);
                 return;
@@ -561,7 +562,7 @@ namespace UnityEngine
                 }
             }
             var json = $"{{\"width\":{width},\"height\":{height},\"rgba\":[{rgba}],\"hotspot\":[{hx},{hy}]}}";
-            s_Images.AddOrUpdate(texture, new SerializedImage { updateCount = texture.updateCount, hotspotX = hx, hotspotY = hy, json = json });
+            s_Images.AddOrUpdate(texture, new SerializedImage { updateCount = texture.updateCount, width = width, height = height, hotspotX = hx, hotspotY = hy, json = json });
             Send(json, true);
         }
 
