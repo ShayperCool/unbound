@@ -15,9 +15,10 @@ namespace UnityEngine.Diagnostics
     /// <summary>
     /// Crashes the process as the Editor does when a script asks for it: the lines the Editor prints
     /// for the category, then the signal it dies of. AccessViolation dies of SIGSEGV; Abort,
-    /// PureVirtualFunction and MonoAbort of SIGABRT; FatalError logs its error and then aborts too
-    /// (the Editor starts shutting down and never exits cleanly). Matches the Unity 6000.0.71f1
-    /// Editor on Linux (tests/projects/forcecrash).
+    /// PureVirtualFunction and MonoAbort of SIGABRT. Matches the Unity 6000.0.71f1 Editor on Linux
+    /// (tests/projects/forcecrash); macOS prints the same lines (the macOS Editor's are unmeasured).
+    /// FatalError logs the Editor's error, but its end is not matched: the Editor starts shutting
+    /// down and never exits by itself, where Unbound aborts after the error without the shutdown.
     /// </summary>
     public static partial class Utils
     {

@@ -22,6 +22,9 @@ from probe_paths import run_root, reference_root  # noqa: E402
 import editor_runner  # noqa: E402
 
 CATEGORIES = ['AccessViolation', 'FatalError', 'Abort', 'PureVirtualFunction', 'MonoAbort']
+# Values the reference cannot have: after FatalError the Editor never exits by itself (its runner's
+# watchdog ends it), so Unbound's end is shown, not compared.
+NOT_COMPARED = {'FatalError.signal': "the Editor's run ends at the watchdog"}
 MARKER = 'ForceCrashProbe: forcing '
 # Where the crash handler's report or the shutdown starts: the lines before it are ForceCrash's.
 ENDS = ('Caught fatal signal', 'Application is shutting down', '=====', 'Native Crash Reporting')
@@ -135,6 +138,11 @@ def gate():
             continue
         if actual.get(key) != value:
             failures.append({'key': key, 'expected': value, 'actual': actual.get(key)})
+    for key in sorted(k for k in actual if k not in expected):
+        if key in NOT_COMPARED:
+            print(json.dumps({'key': key, 'actual': actual[key], 'not compared': NOT_COMPARED[key]}))
+        else:
+            failures.append({'key': key, 'extra': actual[key]})
     for failure in failures:
         print(json.dumps(failure))
     matched = len(expected) - 1 - len(failures)
