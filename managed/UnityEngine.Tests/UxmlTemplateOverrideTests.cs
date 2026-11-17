@@ -188,7 +188,8 @@ namespace UnityEngine.Tests
             var root = new VisualElement();
             outer.CloneTree(root);
             Assert.Equal(3, root.Q<TemplateOverrideGauge>("g").level);
-            // Within one instance the first override wins, whichever name it uses.
+            // Within one instance the first override wins, whichever name it uses (Unbound's choice,
+            // unmeasured: the probe measures one name only).
             var first = Host("GaugeFirst", "Leaf", leaf,
                 "<ui:Instance template=\"Leaf\"><AttributeOverrides element-name=\"g\" old-level=\"5\" /><AttributeOverrides element-name=\"g\" level=\"6\" /></ui:Instance>");
             root = new VisualElement();

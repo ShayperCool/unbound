@@ -687,9 +687,10 @@ namespace Unbound.UIElements
                 {
                     // The Unity 6000.0.71f1 Editor's message (tests/projects/uxmltemplates Odd), with
                     // Unbound's hint when it has one.
-                    Debug.LogError($"Element '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."
+                    var fullName = (string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".") + node.Type;
+                    Debug.LogError($"Element '{fullName}' is missing a UxmlElementAttribute and has no registered factory method. Please ensure that you have the correct namespace imported."
                         + (hint != null ? " " + hint : ""));
-                    var unknown = new Label($"Unknown type: '{(string.IsNullOrEmpty(node.Namespace) ? "" : node.Namespace + ".")}{node.Type}'");
+                    var unknown = new Label($"Unknown type: '{fullName}'");
                     unknown.style.color = Color.red;
                     return unknown;
                 }
@@ -888,7 +889,7 @@ namespace Unbound.UIElements
                 if (!IsStructural(a.Key) && (members.ByName.TryGetValue(a.Key, out member) || members.ByObsoleteName.TryGetValue(a.Key, out member)))
                 {
                     // One of a member's names is read: see PreferredName.
-                    if (PreferredName(node, member) != a.Key) continue;
+                    if (PreferredName(node, members, member) != a.Key) continue;
                 }
                 if (member == null)
                 {
@@ -946,15 +947,20 @@ namespace Unbound.UIElements
         /// <summary>The name a member is read under when several of its names are present: the
         /// override of best precedence under any of them (it wins over the element's own attribute),
         /// else the current name, else (Unbound's choice) the first obsolete name in declaration order.</summary>
-        static string PreferredName(UxmlNode node, UxmlMember member)
+        static string PreferredName(UxmlNode node, UxmlMembers members, UxmlMember member)
         {
+            // Only names that read this member count (another member's current name does not).
+            bool Reads(string name) =>
+                !string.IsNullOrEmpty(name) && (members.ByName.TryGetValue(name, out var m) ? m == member : members.ByObsoleteName.TryGetValue(name, out m) && m == member);
             if (node.OverrideSources != null)
             {
+                // Between overrides of one instance under different names of the member, the first
+                // wins as for one name (Unbound's choice, unmeasured).
                 string best = null;
                 int bestRank = int.MaxValue;
                 void Consider(string candidate)
                 {
-                    if (!string.IsNullOrEmpty(candidate) && node.OverrideSources.TryGetValue(candidate, out var o) && o.Rank < bestRank)
+                    if (Reads(candidate) && node.OverrideSources.TryGetValue(candidate, out var o) && o.Rank < bestRank)
                         (best, bestRank) = (candidate, o.Rank);
                 }
                 Consider(member.UxmlName);
@@ -963,7 +969,7 @@ namespace Unbound.UIElements
             }
             if (node.Attr(member.UxmlName) != null) return member.UxmlName;
             foreach (var obsolete in member.ObsoleteNames)
-                if (!string.IsNullOrEmpty(obsolete) && node.Attr(obsolete) != null) return obsolete;
+                if (Reads(obsolete) && node.Attr(obsolete) != null) return obsolete;
             return null;
         }
 
