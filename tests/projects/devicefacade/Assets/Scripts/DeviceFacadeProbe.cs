@@ -145,6 +145,7 @@ public class DeviceFacadeProbe : MonoBehaviour
 
         // Only NeverSleep (-1) and SystemSetting (-2) are valid; Unity documents other values as SystemSetting.
         int sleep = Screen.sleepTimeout;
+        Record("control.sleepTimeout.initial", sleep.ToString(CultureInfo.InvariantCulture));
         UnityEngine.Device.Screen.sleepTimeout = SleepTimeout.NeverSleep;
         Record("control.sleepTimeout.deviceSetNever.engineRead", Screen.sleepTimeout.ToString(CultureInfo.InvariantCulture));
         Screen.sleepTimeout = SleepTimeout.SystemSetting;

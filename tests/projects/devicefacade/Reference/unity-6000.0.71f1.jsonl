@@ -335,6 +335,7 @@
 {"key":"control.targetFrameRate.deviceSet.engineRead","value":"23"}
 {"key":"control.targetFrameRate.engineSet.deviceRead","value":"41"}
 {"key":"control.runInBackground.deviceSet.engineRead","value":"changed"}
+{"key":"control.sleepTimeout.initial","value":"-1"}
 {"key":"control.sleepTimeout.deviceSetNever.engineRead","value":"-1"}
 {"key":"control.sleepTimeout.engineSetSystem.deviceRead","value":"-1"}
 {"key":"control.sleepTimeout.engineSetSeconds.engineRead","value":"-1"}

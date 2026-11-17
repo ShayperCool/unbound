@@ -469,9 +469,9 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       `stubdefaults`; gen-stubs fails on stale entries or expression type mismatches). `UnityEngine.Device.Screen`/
       `Application`/`SystemInfo` forward to the non-Device classes (`Core/Device.cs`; Q545,
       `devicefacade`, Unity 6000.0.71f1 Linux GPU Editor, Play mode without the Device Simulator:
-      345/345, before 216/345), except four members whose counterparts are stubs too
+      346/346, before 216/346), except four members whose counterparts are stubs too
       (`Screen.SetMSAASamples`, `SystemInfo.SupportsVertexAttributeFormat`, `supportsGpuRecorder`,
-      `supportsIndirectDispatchRays`); the Device Simulator itself is not provided. Measured with it:
+      `supportsIndirectDispatchRays`); the Device Simulator itself is not provided. Also measured by that probe:
       `Screen.sleepTimeout` reads `NeverSleep` in the Linux Editor, also right after `SystemSetting`
       is set (macOS Editor unmeasured). Still returning the
       default because the answer needs a real implementation:
