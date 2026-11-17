@@ -323,14 +323,23 @@ a frame later.
 
 `OpsValues` has a spawn context with a block written as a script (`Assets/Callbacks/OpsInputs.cs`)
 whose inputs are fed by operators over exposed properties; `operations/<update>/*` is what it
-read when the context played and in its first three updates: matrices built from four vectors as
+read when the context played and in its first sixteen updates: matrices built from four vectors as
 rows and as columns (`m00`, `m01`), rows and columns of a matrix (`q00` to `q03`), a look-at frame
 (`m02`, built from axes) with its position, angles (some negative) and scale (`v00` to `v02`), the
-position, angles and scale of a matrix with an uneven scale and a last row that is not
-(0, 0, 0, 1) (`v04` to `v06`), a colour's hue, saturation and value (`v03`) and a colour from
-them (`q04`), a texture's width and height (`u00`, `u01`) and a graphics buffer's count (`u02`).
-At frame 3 the probe gives the effect a buffer of seven elements, another row, a hue in the first
-sixth of the circle and a black colour (no hue, no saturation).
+position, angles and scale of a matrix taken as a frame (`v04` to `v06`), a colour's hue,
+saturation and value (`v03`) and a colour from them (`q04`), a texture's width and height (`u00`,
+`u01`), a graphics buffer's count (`u02`) and a point of a camera's viewport in the world (`v07`:
+Viewport To World Point over a camera whose values are exposed properties, which takes the
+inverse of the camera's projection).
+At frame 3 the probe gives the effect a buffer of seven elements and another row. From frame 3,
+one step a frame for twelve frames, it gives it hues past either end of the circle, saturation and
+value past one and colours below zero and past one; frames mirrored, flattened, sheared, turned to
+the poles, of zeros, of a zero or tiny scale and holding a NaN; and perspective and orthographic
+cameras, scaled, sheared and turned, with planes and sizes at and past their limits, some of whose
+projections have no inverse (a near plane of zero, equal planes, a size or an aspect of zero). The
+texture is a new one of 16x4 at frame 5, a render texture at frame 9, the first again at frame 11,
+destroyed while it is set at frame 12; the buffer is released while it is set at frame 9, set to
+none at frame 11 and another of five elements at frame 13. The rows are written at frame 20.
 
 ## A built asset
 
@@ -356,8 +365,8 @@ runs (culled, awake), not its particles or an image of them.
 Outputs that are sorted or culled per camera (alpha blended ones are, by default: the effects
 of the simulation controls), drawn through an indirect buffer, lit outputs,
 motion vectors, Shader Graph outputs, shadows, strips, meshes and primitives other than quads
-(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: the inverse of a general matrix and a matrix's axis
-(no operator of the package gives either on the CPU), and the ones the runtime does not do yet:
+(Unbound draws none of these and says so); GPU events, bounds computed on the GPU. Expression operations without a control: a matrix's axis
+(made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), and the ones the runtime does not do yet:
 an event attribute read in a spawn context (it is evaluated per spawn event), meshes, noise, a
 texture's depth and format and a buffer's stride. Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve

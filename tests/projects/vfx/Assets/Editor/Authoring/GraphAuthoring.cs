@@ -264,8 +264,8 @@ public static class GraphAuthoring
 
     /// <summary>The operation controls' graph (README.md, "Operations"): a spawn context whose
     /// script block reads matrices built from and split into rows and columns, a look-at frame
-    /// with its position, angles and scale, colour spaces, and a texture's and a buffer's sizes, all
-    /// over exposed properties.</summary>
+    /// with its position, angles and scale, colour spaces, a texture's and a buffer's sizes and a
+    /// camera's viewport point in the world, all over exposed properties.</summary>
     static void Operations()
     {
         Directory.CreateDirectory(OperationFolder);
@@ -344,6 +344,23 @@ public static class GraphAuthoring
         graph.AddChild(count);
         Link(Exposed(typeof(GraphicsBuffer), "Buffer", null), count.inputSlots[0]);
         To(count.outputSlots[0], "u02");
+        // A point of a camera's viewport in the world: the inverse of the camera's projection,
+        // a camera whose values are each an exposed property.
+        var point = Make<ViewportToWorldPoint>();
+        graph.AddChild(point);
+        point.SetSettingValue("camera", CameraMode.Custom);
+        Link(Exposed(typeof(Vector3), "Viewport", new Vector3(0.25f, 0.75f, 6f)), point.inputSlots[0]);
+        var eye = Input(point, "Camera");
+        foreach (var (field, type, name, value) in new (string, Type, string, object)[]
+                 {
+                     ("transform", typeof(Matrix4x4), "EyeFrame", Matrix4x4.TRS(new Vector3(1f, 2f, -10f), Quaternion.Euler(10f, 20f, 5f), Vector3.one)),
+                     ("orthographic", typeof(bool), "EyeOrtho", false), ("fieldOfView", typeof(float), "EyeFov", 1.1f),
+                     ("nearPlane", typeof(float), "EyeNear", 0.3f), ("farPlane", typeof(float), "EyeFar", 1000f),
+                     ("orthographicSize", typeof(float), "EyeSize", 5f), ("aspectRatio", typeof(float), "EyeAspect", 16f / 9f),
+                     ("lensShift", typeof(Vector2), "EyeShift", new Vector2(0.1f, -0.2f)),
+                 })
+            Link(Exposed(type, name, value), eye.children.First(s => s.name == field));
+        To(point.outputSlots[0], "v07");
         graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
         Save(graph);
     }

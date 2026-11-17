@@ -8,7 +8,8 @@ using UnityEngine.VFX;
 /// <summary>
 /// A spawner block written as a script, for the probe's operation controls: its inputs are fed
 /// by operators over exposed properties (matrices built from and split into rows and columns,
-/// a look-at frame and its position, angles and scale, colour spaces, texture and buffer sizes),
+/// a look-at frame and its position, angles and scale, colour spaces, texture and buffer sizes,
+/// a camera's viewport point in the world),
 /// and it writes down what they hold when the
 /// spawn context plays and in its first updates (per effect, by the component's name).
 /// </summary>
@@ -21,14 +22,15 @@ public class OpsInputs : VFXSpawnerCallbacks
         /// <summary>Rows 1 and 2, columns 1 and 2 of a matrix; a colour from hue, saturation and value.</summary>
         public Vector4 q00, q01, q02, q03, q04;
         /// <summary>The look-at frame's position, angles and scale; a colour's hue, saturation and
-        /// value; another matrix's position, angles and scale.</summary>
-        public Vector3 v00, v01, v02, v03, v04, v05, v06;
+        /// value; another matrix's position, angles and scale; a camera's viewport point in the
+        /// world.</summary>
+        public Vector3 v00, v01, v02, v03, v04, v05, v06, v07;
         /// <summary>A texture's width and height, a buffer's count.</summary>
         public uint u00, u01, u02;
     }
 
     /// <summary>How many updates of an effect are written down.</summary>
-    public const int RecordedUpdates = 3;
+    public const int RecordedUpdates = 16;
 
     public static readonly Dictionary<string, List<string>> Logs = new Dictionary<string, List<string>>();
     static readonly Dictionary<string, int> s_Updates = new Dictionary<string, int>();

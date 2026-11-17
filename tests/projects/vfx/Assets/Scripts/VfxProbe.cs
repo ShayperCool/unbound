@@ -442,11 +442,30 @@ public sealed class VfxProbe : MonoBehaviour
     // ------------------------------------------------------------------------ operations
 
     VisualEffect m_Operations;
-    GraphicsBuffer m_OperationsBuffer;
+    GraphicsBuffer m_OperationsBuffer, m_OperationsBufferB;
+    Texture2D m_OperationsImage;
+    RenderTexture m_OperationsTarget;
 
     /// <summary>The operation controls (README.md, "Operations"): an effect of OpsValues whose
-    /// script block reads what the operators give; at frame 3 its buffer and one row change.</summary>
+    /// script block reads what the operators give. From frame 3 one step a frame changes its
+    /// colours, its frame and its camera; its texture and buffer change, are released or
+    /// destroyed while set, and are set to none.</summary>
     void BeginOperations() => m_Operations = Effect("operations", "Assets/OpGraphs/OpsValues.vfx", new Vector3(0f, 4f, 0f));
+
+    /// <summary>A camera for one step of the controls: its frame, whether it is orthographic,
+    /// its field of view (radians), near and far planes, orthographic size, aspect ratio and lens
+    /// shift, and the viewport point taken into the world.</summary>
+    readonly struct OperationEye
+    {
+        public readonly Matrix4x4 Frame;
+        public readonly bool Ortho;
+        public readonly float Fov, Near, Far, Size, Aspect;
+        public readonly Vector2 Shift;
+        public readonly Vector3 Viewport;
+
+        public OperationEye(Matrix4x4 frame, bool ortho, float fov, float near, float far, float size, float aspect, Vector2 shift, Vector3 viewport) =>
+            (Frame, Ortho, Fov, Near, Far, Size, Aspect, Shift, Viewport) = (frame, ortho, fov, near, far, size, aspect, shift, viewport);
+    }
 
     void OperationFrame()
     {
@@ -455,10 +474,84 @@ public sealed class VfxProbe : MonoBehaviour
             m_OperationsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 7, 12);
             m_Operations.SetGraphicsBuffer("Buffer", m_OperationsBuffer);
             m_Operations.SetVector4("A", new Vector4(-2f, 0.5f, 9f, -1f));
-            m_Operations.SetVector3("Hue", new Vector3(0.05f, 1f, 0.25f));
-            m_Operations.SetVector4("Tint", new Vector4(0f, 0f, 0f, 1f));
         }
-        if (m_Frame != 8) return;
+        int step = m_Frame - 3;
+        if (step >= 0 && step < 12)
+        {
+            var pos = new Vector3(10f, 20f, 30f);
+            var rot = Quaternion.Euler(30f, -120f, 200f);
+            var sheared = Matrix4x4.TRS(pos, rot, new Vector3(2f, 0.5f, 3f));
+            sheared.m01 += 0.75f;
+            sheared.m12 -= 0.4f;
+            var nan = Matrix4x4.TRS(pos, rot, Vector3.one);
+            nan.m11 = float.NaN;
+            // Hues past either end of the circle, saturation and value past one, a hue on a
+            // sixth's edge and one of no saturation; colours of every sixth, past one and below zero.
+            var hues = new[]
+            {
+                new Vector3(0.25f, 0.6f, 0.9f), new Vector3(0.45f, 0.6f, 0.9f), new Vector3(0.55f, 0.6f, 0.9f), new Vector3(0.9f, 0.6f, 0.9f),
+                new Vector3(1.25f, 0.6f, 0.9f), new Vector3(-0.25f, 0.6f, 0.9f), new Vector3(0.5f, 1.5f, 2f), new Vector3(1f / 6f, 1f, 1f),
+                new Vector3(3.71f, 0.6f, 0.9f), new Vector3(0.3f, 0f, 0.5f), new Vector3(1f, 0.6f, 0.9f), new Vector3(-1.3f, 0.6f, 0.9f),
+            };
+            var tints = new[]
+            {
+                new Vector3(0.3f, 0.8f, 0.6f), new Vector3(0.3f, 0.6f, 0.8f), new Vector3(0.5f, 0.5f, 0.5f), new Vector3(2f, 0.5f, 4f),
+                new Vector3(-0.5f, 0.2f, 0.1f), new Vector3(0.7f, 0.7f, 0.2f), new Vector3(0.2f, 0.7f, 0.7f), new Vector3(0.7f, 0.2f, 0.7f),
+                new Vector3(0.6f, 0.3f, 0.8f), new Vector3(0.8f, 0.6f, 0.3f), new Vector3(-0.2f, -0.5f, -0.1f), new Vector3(0.1f, 0.9f, 0.4f),
+            };
+            // Mirrored, flattened, sheared and turned to the poles; frames without a rotation
+            // (of zeros, of a zero or tiny scale) and one holding a NaN.
+            var frames = new[]
+            {
+                Matrix4x4.TRS(pos, rot, new Vector3(-2f, 0.5f, 3f)), Matrix4x4.TRS(pos, rot, new Vector3(2f, 0f, 3f)), Matrix4x4.zero, sheared,
+                Matrix4x4.TRS(pos, rot, new Vector3(-2f, -0.5f, 3f)), Matrix4x4.TRS(pos, rot, Vector3.zero), Matrix4x4.TRS(pos, Quaternion.Euler(90f, 45f, 0f), Vector3.one),
+                Matrix4x4.TRS(pos, Quaternion.Euler(-90f, 10f, 20f), new Vector3(2f, 2f, 2f)), Matrix4x4.TRS(pos, rot, new Vector3(1e-4f, 1e-4f, 1e-4f)),
+                Matrix4x4.TRS(pos, rot, new Vector3(2f, 0.5f, -3f)), Matrix4x4.TRS(pos, rot, new Vector3(0f, 0f, 3f)), nan,
+            };
+            // Perspective and orthographic cameras, scaled and turned, with planes and sizes at
+            // and past their limits: projections without an inverse among them (a near plane of
+            // zero, equal planes, a size or an aspect of zero).
+            var eyeFrame = Matrix4x4.TRS(new Vector3(1f, 2f, -10f), Quaternion.Euler(10f, 20f, 5f), Vector3.one);
+            var turned = Matrix4x4.TRS(new Vector3(-3f, 0.5f, 4f), Quaternion.Euler(90f, -30f, 0f), new Vector3(2f, 2f, 2f));
+            var eyes = new[]
+            {
+                new OperationEye(eyeFrame, false, 1.1f, 0.3f, 1000f, 5f, 16f / 9f, new Vector2(0.1f, -0.2f), new Vector3(0.25f, 0.75f, 6f)),
+                new OperationEye(eyeFrame, true, 1.1f, 0.3f, 1000f, 5f, 16f / 9f, Vector2.zero, new Vector3(0.9f, 0.1f, 3f)),
+                new OperationEye(turned, false, 0.3f, 0.01f, 50000f, 5f, 0.5f, Vector2.zero, new Vector3(0.5f, 0.5f, 100f)),
+                new OperationEye(turned, true, 1f, -10f, 10f, 0.5f, 1.25f, new Vector2(0.5f, 0.5f), new Vector3(0f, 1f, -2f)),
+                new OperationEye(eyeFrame, false, 2f, 1f, 1f, 5f, 1f, Vector2.zero, new Vector3(0.3f, 0.6f, 2f)),
+                new OperationEye(eyeFrame, true, 1f, 0.3f, 1000f, 0f, 1f, Vector2.zero, new Vector3(0.3f, 0.6f, 2f)),
+                new OperationEye(eyeFrame, false, Mathf.PI, 0.3f, 1000f, 5f, 1f, Vector2.zero, new Vector3(0.3f, 0.6f, 2f)),
+                new OperationEye(sheared, false, 0.8f, 0.5f, 200f, 5f, 2.5f, new Vector2(1f, 1f), new Vector3(1.5f, -0.5f, -4f)),
+                new OperationEye(eyeFrame, false, 1f, 0.3f, 1000f, 5f, 0f, Vector2.zero, new Vector3(0.3f, 0.6f, 2f)),
+                new OperationEye(eyeFrame, false, 1f, 0f, 1000f, 5f, 1f, Vector2.zero, new Vector3(0.3f, 0.6f, 2f)),
+                new OperationEye(turned, true, 1f, 50f, 2f, 3f, 0.75f, Vector2.zero, new Vector3(0.2f, 0.4f, 7f)),
+                new OperationEye(Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(1f, -1f, 1f)), false, 0.5f, 0.1f, 10f, 5f, 1f, new Vector2(-0.3f, 0f), new Vector3(0.75f, 0.25f, 1f)),
+            };
+            m_Operations.SetVector3("Hue", hues[step]);
+            m_Operations.SetVector4("Tint", new Vector4(tints[step].x, tints[step].y, tints[step].z, 1f));
+            m_Operations.SetMatrix4x4("N", frames[step]);
+            var eye = eyes[step];
+            m_Operations.SetMatrix4x4("EyeFrame", eye.Frame);
+            m_Operations.SetBool("EyeOrtho", eye.Ortho);
+            m_Operations.SetFloat("EyeFov", eye.Fov);
+            m_Operations.SetFloat("EyeNear", eye.Near);
+            m_Operations.SetFloat("EyeFar", eye.Far);
+            m_Operations.SetFloat("EyeSize", eye.Size);
+            m_Operations.SetFloat("EyeAspect", eye.Aspect);
+            m_Operations.SetVector2("EyeShift", eye.Shift);
+            m_Operations.SetVector3("Viewport", eye.Viewport);
+        }
+        // A texture's size: a new one, a render texture, the first again and then destroyed
+        // while set. A buffer's count: released while set, set to none, another.
+        if (m_Frame == 5) m_Operations.SetTexture("Image", m_OperationsImage = new Texture2D(16, 4));
+        if (m_Frame == 9) m_Operations.SetTexture("Image", m_OperationsTarget = new RenderTexture(32, 8, 0));
+        if (m_Frame == 9) m_OperationsBuffer.Release();
+        if (m_Frame == 11) m_Operations.SetTexture("Image", m_OperationsImage);
+        if (m_Frame == 11) m_Operations.SetGraphicsBuffer("Buffer", null);
+        if (m_Frame == 12) DestroyImmediate(m_OperationsImage);
+        if (m_Frame == 13) m_Operations.SetGraphicsBuffer("Buffer", m_OperationsBufferB = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 4));
+        if (m_Frame != 20) return;
         foreach (var line in OpsInputs.Logs.TryGetValue("operations", out var log) ? log : new List<string>())
         {
             var parts = line.Split(' ');
@@ -466,7 +559,8 @@ public sealed class VfxProbe : MonoBehaviour
                 if (part.Contains("=")) Rec("operations/" + parts[0] + "/" + part.Substring(0, part.IndexOf('=')), part.Substring(part.IndexOf('=') + 1));
         }
         Rec("operations/lines", OpsInputs.Logs.TryGetValue("operations", out var all) ? all.Count : -1);
-        m_OperationsBuffer?.Release();
+        m_OperationsBufferB?.Release();
+        if (m_OperationsTarget != null) m_OperationsTarget.Release();
     }
 
     // ---------------------------------------------------------------------------- bundle
