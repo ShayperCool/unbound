@@ -14,9 +14,10 @@
 --device selects the graphics device: opengl (the default: the Linux Editor's own device,
 Reference/unity-R.jsonl), vulkan (Reference/unity-R/vulkan-q58.jsonl) or metal (macOS arm64:
 the macOS Editor in batch mode, which draws with Metal, through tests/macos_editor.py;
-Reference/unity-R/metal.jsonl, the readback cases). Metal is the one device on macOS, so there
-`unbound` and `verify` check Metal whatever device is named (what the device decides follows
-the macOS Editor, AGENTS.md Platforms).
+Reference/unity-R/metal.jsonl, the readback cases). On macOS the engine draws with Metal: an
+opengl check compares it with the Linux OpenGL Core reference (what the device does not decide
+compares with the Linux references, AGENTS.md Platforms), and a vulkan check, a device macOS
+does not have, checks the Metal reference instead (said so on its first line).
 
 Every capture runs on a fresh project under $XDG_CACHE_HOME/unbound/validation/runs/
 textureformats/<label>: the probe's Assets with the hello project's Packages, ProjectSettings
@@ -190,7 +191,7 @@ def unbound(work, release, only=None):
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '30', '--size', '64x64',
-                                 *([] if DEVICE == 'metal' else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])],
+                                 *([] if MACOS else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     if result.returncode == 0:
@@ -225,10 +226,10 @@ def main():
         parser.error('label must be a single directory name')
     global DEVICE
     DEVICE = args.device
-    if MACOS and DEVICE != 'metal':
-        if args.mode not in ('unbound', 'verify'):
-            parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
-        print(f'textureformats: macOS draws with Metal; checking the Metal reference, not {DEVICE}')
+    if MACOS and DEVICE != 'metal' and args.mode not in ('unbound', 'verify'):
+        parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
+    if MACOS and DEVICE == 'vulkan':
+        print('textureformats: macOS has no Vulkan device; checking the Metal reference instead')
         DEVICE = 'metal'
     if DEVICE == 'metal' and not MACOS:
         parser.error('--device metal runs on macOS arm64 only')

@@ -137,6 +137,8 @@ namespace Unbound.Tests
         [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm, TextureFormat.RGBAFloat,
             "ReadPixels is unsupported for B8G8R8A8_UNorm; the texture is left unchanged.", false)]
         [InlineData("Vulkan", GraphicsFormat.R8G8B8A8_UNorm, TextureFormat.RGBAFloat, null, false)]
+        [InlineData("Metal", GraphicsFormat.A2B10G10R10_UNormPack32, TextureFormat.RGBAHalf,
+            "Unbound: ReadPixels of an A2B10G10R10_UNormPack32 target into R16G16B16A16_SFloat is unmeasured on Metal; refused as into RGBAFloat (the texture is left unchanged).", false)]
         public void TargetReadsFollowTheDevicesRule(string device, GraphicsFormat target, TextureFormat destination, string refusal, bool asserted)
         {
             var previousDevice = GraphicsDeviceProfile.Current;
@@ -187,7 +189,20 @@ namespace Unbound.Tests
             "'R32G32B32A32_SInt' doesn't support ReadPixels usage on this platform. Async GPU readback failed.")]
         [InlineData("Vulkan", GraphicsFormat.B8G8R8A8_UNorm,
             "'B8G8R8A8_UNorm' doesn't support ReadPixels usage on this platform. Async GPU readback failed.")]
-        public void TargetReadbacksFollowTheDevicesRule(string device, GraphicsFormat target, string refusal)
+        public void TargetReadbacksFollowTheDevicesRule(string device, GraphicsFormat target, string refusal) =>
+            TargetReadback(device, target, refusal, explicitFloat: false);
+
+        /// <summary>An explicit request logs the usage error before the unreadable format's own
+        /// (metal.jsonl readback.A1R5G5B5_UNormPack16.asyncfloat).</summary>
+        [Fact]
+        public void ExplicitRequestsOfUnreadableTargetsLogBothErrorsInOrder() =>
+            TargetReadback("Metal", GraphicsFormat.A1R5G5B5_UNormPack16, null, explicitFloat: true, new[]
+            {
+                "'A1R5G5B5_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.",
+                "AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back",
+            });
+
+        static void TargetReadback(string device, GraphicsFormat target, string refusal, bool explicitFloat, string[] errors = null)
         {
             var previousDevice = GraphicsDeviceProfile.Current;
             var logger = Debug.unityLogger;
@@ -199,9 +214,14 @@ namespace Unbound.Tests
                 GraphicsDeviceProfile.Select(device);
                 rt = new RenderTexture(2, 1, target, GraphicsFormat.None);
                 logger.logHandler = capture;
-                var request = AsyncGPUReadback.Request(rt, 0);
+                var request = explicitFloat ? AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBAFloat) : AsyncGPUReadback.Request(rt, 0);
                 var refused = capture.Logs.Exists(l => l.Type == LogType.Error && l.Text == refusal);
-                if (refusal == null)
+                if (errors != null)
+                {
+                    Assert.Equal(errors, capture.Logs.FindAll(l => l.Type == LogType.Error).ConvertAll(l => l.Text));
+                    Assert.True(request.hasError);
+                }
+                else if (refusal == null)
                     Assert.DoesNotContain(capture.Logs, l => l.Text.Contains("graphics format is not supported as source")
                         || l.Text.Contains("doesn't support ReadPixels usage"));
                 else

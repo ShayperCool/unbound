@@ -912,8 +912,9 @@ public static class TexFormatsProbe
                          RenderTextureFormat.ARGB64, RenderTextureFormat.ARGB2101010 })
                 if (Runs("rt." + format)) NormTarget("rt." + format, format);
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
+            // Only when named: the OpenGL Core and Vulkan references were recorded without them.
             foreach (var format in ReadbackFormats)
-                if (Runs("readback." + format)) ReadbackTarget("readback." + format, format);
+                if (!string.IsNullOrEmpty(s_Only) && Runs("readback." + format)) ReadbackTarget("readback." + format, format);
             if (Runs("rt.msaaMips")) MsaaMips();
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             if (Runs("rt.arrayLoad")) ArrayLoad();

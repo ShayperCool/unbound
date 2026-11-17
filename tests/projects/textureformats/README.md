@@ -179,8 +179,10 @@ missing record; both new Editor captures must also agree.
 
 `--device metal` records the macOS Editor in batch mode (it draws with Metal) through
 `tests/macos_editor.py`; `Reference/unity-6000.0.71f1/metal.jsonl` holds the `readback.*` cases,
-two byte-identical captures on an Apple M2 Pro (macOS arm64). On macOS `unbound` and `verify`
-check Metal whatever device is named, since it is the one device there. Each case clears a 2x1
+two byte-identical captures on an Apple M2 Pro (macOS arm64). On macOS the engine draws with
+Metal: the opengl check compares it with the Linux reference, and the vulkan check (macOS has no
+Vulkan device) checks the Metal reference. The readback cases run only when named
+(`TEXTURE_FORMATS_PROBE_ONLY`), so the other references stay as recorded. Each case clears a 2x1
 target of one format to (0.25, 0.5, 0.75, 0.625) and reads it with ReadPixels into RGBAFloat and
 RGBA32 and with AsyncGPUReadback (its own format and RGBAFloat), with the errors each logs.
 

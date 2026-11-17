@@ -564,7 +564,8 @@ namespace UnityEngine
         bool RefusesTarget(GraphicsFormat source)
         {
             var device = GraphicsDeviceProfile.Current;
-            if (!device.ReadsTargetsWithoutReadPixelsUsage)
+            // A target without color (a depth-only one) is refused on every device.
+            if (!device.ReadsTargetsWithoutReadPixelsUsage || source == GraphicsFormat.None)
             {
                 if (SystemInfo.IsFormatSupported(source, GraphicsFormatUsage.ReadPixels))
                     return false;
@@ -580,12 +581,14 @@ namespace UnityEngine
                 return true;
             }
             // Packed 10-bit texels convert to 8-bit ones, not to floats (measured into RGBAFloat
-            // and RGBA32: readback.A2B10G10R10_UNormPack32.read.*; half floats are unmeasured and
-            // refused as floats are).
+            // and RGBA32: readback.A2B10G10R10_UNormPack32.read.*).
             if (source == GraphicsFormat.A2B10G10R10_UNormPack32
                 && (GraphicsFormatUtility.IsIEEE754Format(graphicsFormat) || GraphicsFormatUtility.IsHDRFormat(graphicsFormat)))
             {
-                Debug.LogError($"Image blit conversion between formats {(int)source} -> {(int)graphicsFormat} is not supported");
+                if (graphicsFormat == GraphicsFormat.R32G32B32A32_SFloat)
+                    Debug.LogError($"Image blit conversion between formats {(int)source} -> {(int)graphicsFormat} is not supported");
+                else
+                    Debug.LogError($"Unbound: ReadPixels of an {source} target into {graphicsFormat} is unmeasured on {device.Type}; refused as into RGBAFloat (the texture is left unchanged).");
                 return true;
             }
             return false;
