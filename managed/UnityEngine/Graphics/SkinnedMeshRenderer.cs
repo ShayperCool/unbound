@@ -656,6 +656,7 @@ namespace UnityEngine
         /// <summary>The skinned pose in world space, when the mesh has bones.</summary>
         internal bool SkinnedPose(out Vector3[] positions, out Vector3[] normals)
         {
+            using var engineReads = Mesh.EngineReads();
             positions = null;
             normals = null;
             if (!IsSkinned) return false;
