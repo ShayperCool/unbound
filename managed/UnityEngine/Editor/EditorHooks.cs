@@ -38,29 +38,6 @@ namespace UnityEditor
         public static event Action<GameObject> prefabInstanceReverted;
     }
 
-    /// <summary>What a player build is asked for.</summary>
-    public partial struct BuildPlayerOptions
-    {
-        public string[] scenes { get; set; }
-        public string locationPathName { get; set; }
-        public string assetBundleManifestPath { get; set; }
-        public BuildTargetGroup targetGroup { get; set; }
-        public BuildTarget target { get; set; }
-        public int subtarget { get; set; }
-        public BuildOptions options { get; set; }
-        public string[] extraScriptingDefines { get; set; }
-    }
-
-    public partial class BuildPlayerWindow : EditorWindow
-    {
-        static Action<BuildPlayerOptions> s_BuildPlayerHandler;
-
-        /// <summary>What the Build Settings window's Build button calls; Unbound has no such
-        /// window, so it is kept and never called (measured: tests/projects/editorload register.*).</summary>
-        [Unbound.EditorFaithful("only the Build Settings window's Build button calls the handler; Unbound has no such window (measured: tests/projects/editorload register.*)")]
-        public static void RegisterBuildPlayerHandler(Action<BuildPlayerOptions> func) => s_BuildPlayerHandler = func;
-    }
-
     public sealed partial class PluginImporter
     {
         IncludeInBuildDelegate m_IncludeInBuildDelegate;

@@ -128,9 +128,12 @@ namespace UnityEditor.EditorTools
             }
         }
 
+        /// <summary>Chooses a built-in tool; Custom, with no custom tool to choose, selects none
+        /// (measured: tests/projects/editorload tools.current_Custom).</summary>
         internal static void Select(Tool tool)
         {
             Start();
+            if (tool == Tool.Custom) tool = Tool.None;
             if (tool == s_Current) return;
             Change(tool);
         }

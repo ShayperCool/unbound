@@ -4976,6 +4976,18 @@ namespace UnityEditor
         public string[] extraScriptingDefines { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerDataOptions.extraScriptingDefines"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerDataOptions.extraScriptingDefines"); } }
     }
     [global::Unbound.Stub]
+    public unsafe partial struct BuildPlayerOptions
+    {
+        public string[] scenes { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.scenes"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.scenes"); } }
+        public string locationPathName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.locationPathName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.locationPathName"); } }
+        public string assetBundleManifestPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.assetBundleManifestPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.assetBundleManifestPath"); } }
+        public global::UnityEditor.BuildTargetGroup targetGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.targetGroup"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.targetGroup"); } }
+        public global::UnityEditor.BuildTarget target { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.target"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.target"); } }
+        public int subtarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.subtarget"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.subtarget"); } }
+        public global::UnityEditor.BuildOptions options { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.options"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.options"); } }
+        public string[] extraScriptingDefines { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.extraScriptingDefines"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerOptions.extraScriptingDefines"); } }
+    }
+    [global::Unbound.Stub]
     internal unsafe partial class BuildPlayerSceneTreeView : global::UnityEditor.IMGUI.Controls.TreeView
     {
         [global::Unbound.Stub] public BuildPlayerSceneTreeView(global::UnityEditor.IMGUI.Controls.TreeViewState state) : base(default(global::UnityEditor.IMGUI.Controls.TreeViewState)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerSceneTreeView.ctor"); }
@@ -5007,17 +5019,20 @@ namespace UnityEditor
         [global::Unbound.Stub] public BuildPlayerSceneTreeViewItem(global::UnityEditor.EditorBuildSettingsScene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerSceneTreeViewItem.ctor"); }
         public string fullName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerSceneTreeViewItem.fullName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerSceneTreeViewItem.fullName"); } }
     }
-    unsafe partial class BuildPlayerWindow
+    [global::Unbound.Stub]
+    public unsafe partial class BuildPlayerWindow : global::UnityEditor.EditorWindow
     {
         [global::Unbound.Stub] internal static global::System.Action<global::UnityEditor.Build.Reporting.BuildReport> buildCompletionHandler;
         [global::Unbound.Stub] public static void ShowBuildPlayerWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.ShowBuildPlayerWindow"); }
         [global::Unbound.Stub] internal static bool WillDrawMultiplayerBuildOptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.WillDrawMultiplayerBuildOptions"); return default; }
         [global::Unbound.Stub] internal static void DrawMultiplayerBuildOption(global::UnityEditor.Build.Profile.BuildProfile buildProfile) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.DrawMultiplayerBuildOption"); }
+        [global::Unbound.Stub] public BuildPlayerWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.ctor"); }
         [global::Unbound.Stub] public static string GetPlaybackEngineDownloadURL(string moduleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.GetPlaybackEngineDownloadURL"); return default; }
         [global::Unbound.Stub] internal static string GetUnityHubModuleDownloadURL(string moduleName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.GetUnityHubModuleDownloadURL"); return default; }
         [global::Unbound.Stub] internal static bool IsModuleNotInstalled(global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.IsModuleNotInstalled"); return default; }
         [global::Unbound.Stub] internal static void ShowNoModuleLabel(global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget buildTarget, string moduleName, string noModuleLoaded, global::UnityEngine.GUIContent openDownloadPage, global::UnityEngine.GUIContent installModuleWithHub, string editorWillNeedToBeReloaded) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.ShowNoModuleLabel"); }
         [global::Unbound.Stub] public static void RegisterGetBuildPlayerOptionsHandler(global::System.Func<global::UnityEditor.BuildPlayerOptions, global::UnityEditor.BuildPlayerOptions> func) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.RegisterGetBuildPlayerOptionsHandler"); }
+        [global::Unbound.Stub] public static void RegisterBuildPlayerHandler(global::System.Action<global::UnityEditor.BuildPlayerOptions> func) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.RegisterBuildPlayerHandler"); }
         [global::Unbound.Stub] internal static void CallBuildMethods(bool askForBuildLocation, global::UnityEditor.BuildOptions defaultBuildOptions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.CallBuildMethods"); }
         internal static event global::System.Action<global::UnityEditor.Build.Profile.BuildProfile> drawingMultiplayerBuildOptions { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.BuildPlayerWindow.drawingMultiplayerBuildOptions"); } [global::Unbound.Stub] remove { } }
         [global::Unbound.Stub]
