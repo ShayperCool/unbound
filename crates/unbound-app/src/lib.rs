@@ -612,18 +612,15 @@ fn apply_cursor(
 }
 
 /// One image per distinct cursor (picture and hotspot): a cursor set again (a texture cursor
-/// hovered again) reuses its image, so the window's cache of system cursors, kept per image,
-/// gains no entry. Past [`CursorImages::LIMIT`] distinct cursors the oldest images are forgotten
-/// (a game drawing a new cursor every frame does not grow it without bound).
+/// hovered again, an animated cursor's frames cycled) reuses its image, so the window's cache of
+/// system cursors, kept per image and never emptied, holds one entry per distinct cursor and does
+/// not grow when cursors repeat.
 #[derive(Default)]
 struct CursorImages {
     images: std::collections::HashMap<unbound_runtime::cursor::CursorImage, Handle<Image>>,
-    order: std::collections::VecDeque<unbound_runtime::cursor::CursorImage>,
 }
 
 impl CursorImages {
-    const LIMIT: usize = 32;
-
     fn handle(
         &mut self,
         image: &unbound_runtime::cursor::CursorImage,
@@ -631,11 +628,6 @@ impl CursorImages {
     ) -> Handle<Image> {
         if let Some(handle) = self.images.get(image) {
             return handle.clone();
-        }
-        if self.order.len() == Self::LIMIT
-            && let Some(oldest) = self.order.pop_front()
-        {
-            self.images.remove(&oldest);
         }
         let handle = images.add(Image::new(
             bevy::render::render_resource::Extent3d {
@@ -649,7 +641,6 @@ impl CursorImages {
             bevy::asset::RenderAssetUsages::MAIN_WORLD,
         ));
         self.images.insert(image.clone(), handle.clone());
-        self.order.push_back(image.clone());
         handle
     }
 }
@@ -826,14 +817,14 @@ mod cursor_image_tests {
     }
 
     #[test]
-    fn the_oldest_images_are_forgotten_past_the_limit() {
+    fn a_cycle_of_cursors_adds_no_image_after_its_first_round() {
         let mut assets = Assets::<Image>::default();
         let mut cache = CursorImages::default();
-        let first = cache.handle(&picture(0, (0, 0)), &mut assets);
-        for value in 1..=CursorImages::LIMIT as u8 {
-            cache.handle(&picture(value, (0, 0)), &mut assets);
+        for _round in 0..3 {
+            for value in 0..40u8 {
+                cache.handle(&picture(value, (0, 0)), &mut assets);
+            }
         }
-        assert_eq!(cache.images.len(), CursorImages::LIMIT);
-        assert_ne!(first, cache.handle(&picture(0, (0, 0)), &mut assets));
+        assert_eq!(assets.len(), 40);
     }
 }

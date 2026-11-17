@@ -48,13 +48,6 @@ namespace UnityEngine.UIElements
 
     public partial class VisualElement
     {
-        /// <summary>
-        /// The cursor update a mouse event makes before it is dispatched to this element (its
-        /// target): entering the element under the mouse takes its cursor, leaving it restores the
-        /// default, unless another element holds the mouse capture; the end of a capture takes the
-        /// cursor of the element under the mouse. A cursor changed under a resting pointer applies at
-        /// the style pass (UaMatchingRulesChanged) or, set inline, at once (ApplyCursorIfUnderMouse).
-        /// </summary>
         int m_UaMatchingRulesHash;
 
         /// <summary>After a style pass: when the element's rules changed (a class, a pseudo-state such
@@ -74,6 +67,13 @@ namespace UnityEngine.UIElements
             if (panel != null && panel.GetTopElementUnderPointer(PointerId.mousePointerId) == this) panel.cursorManager.SetCursor(cursor);
         }
 
+        /// <summary>
+        /// The cursor update a mouse event makes before it is dispatched to this element (its
+        /// target): entering the element under the mouse takes its cursor, leaving it restores the
+        /// default, unless another element holds the mouse capture; the end of a capture takes the
+        /// cursor of the element under the mouse. A cursor changed under a resting pointer applies at
+        /// the style pass (UaMatchingRulesChanged) or, set inline, at once (ApplyCursorIfUnderMouse).
+        /// </summary>
         internal void UpdateCursorStyle(long eventType)
         {
             var panel = elementPanel;
