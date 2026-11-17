@@ -33,6 +33,17 @@ namespace UnityEngine.Tests
             RenderStats.Draw(9, 1);
             ProfilerCore.EndFrame();
             Assert.Equal(1, setPasses.LastValue);
+            // An instancing call of three instances through the stream is one draw call and batch.
+            for (uint i = 0; i < 3; i++)
+            {
+                RenderStats.MeshInstance(i);
+                RenderStats.Draw(9, 0);
+            }
+            RenderStats.Draw(9, 0);
+            ProfilerCore.EndFrame();
+            Assert.Equal(2, draws.LastValue);
+            Assert.Equal(2, batches.LastValue);
+            Assert.Equal(1, setPasses.LastValue);
         }
     }
 }

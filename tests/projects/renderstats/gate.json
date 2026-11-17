@@ -1,5 +1,5 @@
 {
   "commands": ["python3 tests/projects/renderstats/run.py gate"],
   "summary": "renderstats: .*",
-  "engine_paths": ["managed/UnityEngine/Profiling/RenderStats.cs", "managed/UnityEngine/Profiling/ProfilerCore.cs"]
+  "engine_paths": ["managed/UnityEngine/Profiling/RenderStats.cs", "managed/UnityEngine/Profiling/ProfilerCore.cs", "managed/UnityEngine/Graphics/CommandStream.cs"]
 }

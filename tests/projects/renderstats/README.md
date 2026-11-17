@@ -17,7 +17,8 @@ forward-add draw for the point light, and SetPass calls count material and pass 
 Unbound counts the draw commands its renderer writes: each is one draw call and one batch, and a
 SetPass call when its material or pass differs from the draw before it. `residuals.json` lists
 where the work differs (the Editor's batching of small meshes) and the counters Unbound does not
-provide (triangles and vertices). The Scripting API documents the counters' names
+provide (triangles and vertices). Not covered: a draw command for several passes of a shader
+counts once in Unbound (the Editor counts each pass it draws), and URP's SRP Batcher. The Scripting API documents the counters' names
 ([ProfilerRecorder](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.Profiling.ProfilerRecorder.html),
 Manual "Rendering Profiler module"), not how a given scene is counted.
 

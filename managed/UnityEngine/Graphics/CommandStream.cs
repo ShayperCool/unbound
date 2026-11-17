@@ -342,6 +342,7 @@ namespace Unbound.Runtime
         /// (NativeApi 65).</summary>
         internal static void MeshInstance(uint index, uint count)
         {
+            Unbound.Runtime.Profiling.RenderStats.MeshInstance(index);
             U8(MeshInstanceOp);
             U32(index);
             U32(count);
