@@ -6,9 +6,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
+using Image = UnityEngine.UI.Image;
 
 /// <summary>Draws screen-space overlay UI over the camera's solid background through URP:
-/// translucent uGUI Images on two canvases and a translucent IMGUI texture, reads the screen at
+/// translucent uGUI Images on two canvases, a UI Toolkit panel between them and IMGUI, reads the screen at
 /// the end of the frame and writes it as a PNG (and values.jsonl) into URP_OVERLAY_UI_OUT, then
 /// exits. See README.md.</summary>
 public class UrpOverlayUiProbe : MonoBehaviour
@@ -57,10 +59,25 @@ public class UrpOverlayUiProbe : MonoBehaviour
 
     /// <summary>Whether OnGUI draws (only in the imgui captures).</summary>
     bool m_Imgui;
+    /// <summary>OnGUI's Repaint events in this frame.</summary>
+    int m_Repaints;
+    Material m_VertexColor;
+
+    void Update() => m_Repaints = 0;
 
     void OnGUI()
     {
         if (!m_Imgui || Event.current.type != EventType.Repaint) return;
+        m_Repaints++;
+        // A translucent quad drawn with GL in the Repaint, in the screen's pixels from the top left.
+        m_VertexColor.SetPass(0);
+        GL.Begin(GL.QUADS);
+        GL.Color(new Color(0.2f, 0.4f, 1f, 0.5f));
+        GL.Vertex3(4, 5, 0);
+        GL.Vertex3(4, 60, 0);
+        GL.Vertex3(17, 60, 0);
+        GL.Vertex3(17, 5, 0);
+        GL.End();
         // IMGUI's origin is the top-left corner. A translucent white box over the background and
         // the red image, a white box in half grey, and opaque grey textures (sRGB and linear),
         // all over the background.
@@ -79,6 +96,7 @@ public class UrpOverlayUiProbe : MonoBehaviour
         m_Dir = Environment.GetEnvironmentVariable("URP_OVERLAY_UI_OUT");
         m_Grey = Grey(false);
         m_LinearGrey = Grey(true);
+        m_VertexColor = new Material(Shader.Find("Hidden/Probe/VertexColor"));
         var camera = Camera.main;
         var data = camera.GetUniversalAdditionalCameraData();
         data.renderPostProcessing = false;
@@ -90,10 +108,26 @@ public class UrpOverlayUiProbe : MonoBehaviour
         // A canvas of a higher sorting order over the first one's green image.
         var front = MakeCanvas("Front", 1);
         MakeImage(front, new Color(1f, 0f, 0f, 0.5f), 150, 40, 100, 60);
+        // A UI Toolkit panel sorted between the two canvases: a translucent blue square over the
+        // green image and under the red one.
+        var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+        panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+        panelSettings.sortingOrder = 0.5f;
+        var document = new GameObject("Panel").AddComponent<UIDocument>();
+        document.panelSettings = panelSettings;
+        var square = new VisualElement();
+        square.style.position = Position.Absolute;
+        square.style.left = 170;
+        square.style.top = 50;
+        square.style.width = 60;
+        square.style.height = 60;
+        square.style.backgroundColor = new Color(0f, 0f, 1f, 0.5f);
+        document.rootVisualElement.Add(square);
 
         yield return Capture("overlay");
         m_Imgui = true;
         yield return Capture("imgui");
+        Value("imgui.repaints", m_Repaints.ToString());
         m_Imgui = false;
 
         // Post-processing with FXAA: URP's final post pass draws to the screen before the UI.
@@ -107,6 +141,7 @@ public class UrpOverlayUiProbe : MonoBehaviour
         yield return Capture("overlay_builtin");
         m_Imgui = true;
         yield return Capture("imgui_builtin");
+        Value("imgui_builtin.repaints", m_Repaints.ToString());
 
         Value("complete", "true");
         int code = 0;

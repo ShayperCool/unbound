@@ -1,6 +1,8 @@
 {"k":"overlay.screen","v":[320,180]}
 {"k":"imgui.screen","v":[320,180]}
+{"k":"imgui.repaints","v":1}
 {"k":"overlay_post.screen","v":[320,180]}
 {"k":"overlay_builtin.screen","v":[320,180]}
 {"k":"imgui_builtin.screen","v":[320,180]}
+{"k":"imgui_builtin.repaints","v":1}
 {"k":"complete","v":true}

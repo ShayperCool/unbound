@@ -1,32 +1,32 @@
 {
  "imgui.png": {
-  "mean": 5.8247,
+  "mean": 6.462,
   "worst": 60,
-  "over8": 9200,
-  "reason": "IMGUI's translucent and tinted boxes: the Editor blends and tints IMGUI in gamma space, Unbound in linear space (the half-opaque white box 160 against 192, the half-grey tint 128 against 188; the canvas images and the opaque textures match). docs/COMPATIBILITY_GAPS.md, Q557. NVIDIA driver, OpenGL Core only."
+  "over8": 9915,
+  "reason": "IMGUI's translucent and tinted boxes and the GL quad drawn in OnGUI: the Editor blends and tints them in gamma space, Unbound in linear space (the half-opaque white box 160 against 192, the half-grey tint 128 against 188; the canvas images, the UI Toolkit panel (within 2/255) and the opaque textures match). docs/COMPATIBILITY_GAPS.md, Q557. NVIDIA driver, OpenGL Core only."
  },
  "imgui_builtin.png": {
-  "mean": 5.8247,
+  "mean": 6.462,
   "worst": 60,
-  "over8": 9200,
-  "reason": "IMGUI's translucent and tinted boxes: the Editor blends and tints IMGUI in gamma space, Unbound in linear space (the half-opaque white box 160 against 192, the half-grey tint 128 against 188; the canvas images and the opaque textures match). docs/COMPATIBILITY_GAPS.md, Q557. NVIDIA driver, OpenGL Core only."
+  "over8": 9915,
+  "reason": "IMGUI's translucent and tinted boxes and the GL quad drawn in OnGUI: the Editor blends and tints them in gamma space, Unbound in linear space (the half-opaque white box 160 against 192, the half-grey tint 128 against 188; the canvas images, the UI Toolkit panel (within 2/255) and the opaque textures match). docs/COMPATIBILITY_GAPS.md, Q557. NVIDIA driver, OpenGL Core only."
  },
  "overlay.png": {
-  "mean": 0.0,
-  "worst": 0,
+  "mean": 0.0015,
+  "worst": 2,
   "over8": 0,
-  "reason": "The Editor's image (no pixel differs), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "reason": "The canvas images as in the Editor; 72 pixels of the UI Toolkit panel where it covers only the background differ by 1 or 2/255 (rounding of the panel's color or blend, cause not resolved). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "overlay_builtin.png": {
-  "mean": 0.0,
-  "worst": 0,
+  "mean": 0.0015,
+  "worst": 2,
   "over8": 0,
-  "reason": "The Editor's image (no pixel differs), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "reason": "The canvas images as in the Editor; 72 pixels of the UI Toolkit panel where it covers only the background differ by 1 or 2/255 (rounding of the panel's color or blend, cause not resolved). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "overlay_post.png": {
-  "mean": 0.0,
-  "worst": 0,
+  "mean": 0.0015,
+  "worst": 2,
   "over8": 0,
-  "reason": "The Editor's image (no pixel differs), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "reason": "The canvas images as in the Editor; 72 pixels of the UI Toolkit panel where it covers only the background differ by 1 or 2/255 (rounding of the panel's color or blend, cause not resolved). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  }
 }
