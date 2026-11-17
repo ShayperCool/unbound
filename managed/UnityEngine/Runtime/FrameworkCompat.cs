@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -57,7 +58,7 @@ namespace Unbound
     /// <summary>
     /// <c>Marshal.GetFunctionPointerForDelegate</c> as the Editor's Mono answers it: a delegate of a
     /// generic type (<c>Action&lt;string, int, string&gt;</c>) gets a native-callable pointer too,
-    /// while .NET refuses generic delegate types (tests/projects/genericcallback). Such a delegate is
+    /// while .NET refuses generic delegate types (tests/projects/pluginbundle `callback.generic`). Such a delegate is
     /// called through a delegate of a non-generic type with its signature (one type per generic
     /// type). As under Mono, where a native callback made from a delegate stays valid after the
     /// delegate is collected (plugins pass temporary ones), the delegate called is kept alive, once
@@ -100,19 +101,27 @@ namespace Unbound
         static Type Define(Type generic)
         {
             var invoke = generic.GetMethod("Invoke");
+            // Marshalling given per parameter is not carried over: fail rather than marshal otherwise.
+            const ParameterAttributes marshalling = ParameterAttributes.HasFieldMarshal | ParameterAttributes.In | ParameterAttributes.Out;
+            foreach (var parameter in invoke.GetParameters().Append(invoke.ReturnParameter))
+                if ((parameter.Attributes & marshalling) != 0)
+                    throw new NotSupportedException($"Unbound: Marshal.GetFunctionPointerForDelegate of {generic} is not supported: its parameters' marshalling ([MarshalAs], [In], [Out]) is not carried to the callback.");
             lock (s_Types)
             {
                 s_Module ??= AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Unbound.MonoMarshal.Callbacks"), AssemblyBuilderAccess.Run)
                     .DefineDynamicModule("Callbacks");
                 var builder = s_Module.DefineType("Callback" + s_Defined++ + "_" + generic.Name.Replace('`', '_'),
                     TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.AutoClass, typeof(MulticastDelegate));
-                // The generic type's own calling convention, when it names one.
-                var convention = (System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute)Attribute.GetCustomAttribute(
-                    generic, typeof(System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute));
-                if (convention != null)
-                    builder.SetCustomAttribute(new CustomAttributeBuilder(
-                        typeof(System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(System.Runtime.InteropServices.CallingConvention) }),
-                        new object[] { convention.CallingConvention }));
+                // The generic type's [UnmanagedFunctionPointer] (calling convention, CharSet,
+                // SetLastError, ...), when it has one.
+                foreach (var data in generic.GetCustomAttributesData())
+                {
+                    if (data.AttributeType != typeof(System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute)) continue;
+                    var fields = data.NamedArguments.Where(a => a.IsField).ToArray();
+                    builder.SetCustomAttribute(new CustomAttributeBuilder(data.Constructor,
+                        data.ConstructorArguments.Select(a => a.Value).ToArray(),
+                        fields.Select(a => (FieldInfo)a.MemberInfo).ToArray(), fields.Select(a => a.TypedValue.Value).ToArray()));
+                }
                 builder.DefineConstructor(MethodAttributes.RTSpecialName | MethodAttributes.HideBySig | MethodAttributes.Public,
                         CallingConventions.Standard, new[] { typeof(object), typeof(IntPtr) })
                     .SetImplementationFlags(MethodImplAttributes.Runtime | MethodImplAttributes.Managed);

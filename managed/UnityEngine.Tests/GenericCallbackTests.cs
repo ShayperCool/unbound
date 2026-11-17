@@ -15,6 +15,8 @@ namespace UnityEngine.Tests
         const string Source = @"
 using System;
 using System.Runtime.InteropServices;
+public delegate void Plain(int x);
+public delegate void Marshalled<T>([MarshalAs(UnmanagedType.I1)] bool ok, T data);
 public static class Probe
 {
     public static string Received = ""not called"";
@@ -25,6 +27,12 @@ public static class Probe
     // A temporary delegate of a static method, as plugins pass one.
     public static IntPtr Temporary() => Marshal.GetFunctionPointerForDelegate(new Action<string, int, string>(Record));
     public static IntPtr AsDelegate() => Marshal.GetFunctionPointerForDelegate((Delegate)s_Twice);
+    public static int Seen;
+    static void Store(int x) => Seen = x;
+    // A temporary delegate of a non-generic type: .NET's own marshalling, kept alive as under Mono.
+    public static IntPtr TemporaryPlain() => Marshal.GetFunctionPointerForDelegate(new Plain(Store));
+    static void Ignore(bool ok, int data) { }
+    public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
 }";
 
         static Assembly Compiled(bool redirected)
@@ -66,6 +74,25 @@ public static class Probe
             // Through the overload taking a Delegate too.
             var twice = (IntPtr)Call(probe, "AsDelegate");
             Assert.Equal(42, ((delegate* unmanaged<int, int>)twice)(21));
+        }
+
+        [Fact]
+        public unsafe void ATemporaryNonGenericDelegateStaysCallable()
+        {
+            var probe = Compiled(redirected: true);
+            var pointer = (IntPtr)Call(probe, "TemporaryPlain");
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            ((delegate* unmanaged<int, void>)pointer)(5);
+            Assert.Equal(5, probe.GetType("Probe")!.GetField("Seen")!.GetValue(null));
+        }
+
+        [Fact]
+        public void PerParameterMarshallingFailsLoudly()
+        {
+            var error = Assert.Throws<NotSupportedException>(() => Call(Compiled(redirected: true), "WithMarshalling"));
+            Assert.Contains("[MarshalAs]", error.Message);
         }
 
         [Fact]

@@ -5,6 +5,8 @@
   "summary": "pluginbundle: .*",
   "engine_paths": [
     "managed/UnityEngine/Runtime/GameDomain.cs",
+    "managed/UnityEngine/Runtime/FrameworkCompat.cs",
+    "managed/Unbound.Host/FrameworkShims.cs",
     "crates/unbound-project/src/plugins.rs"
   ]
 }
