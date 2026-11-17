@@ -232,6 +232,7 @@ public class UitkProbe : MonoBehaviour
             DepthStateControls(rows);
             PoolDepthControls(rows);
             RawDepthSourceControls(rows);
+            FrontFaces(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -503,6 +504,100 @@ public class UitkProbe : MonoBehaviour
         target.Release(); UnityEngine.Object.DestroyImmediate(target);
         UnityEngine.Object.DestroyImmediate(readback); UnityEngine.Object.DestroyImmediate(quad); UnityEngine.Object.DestroyImmediate(full);
         UnityEngine.Object.DestroyImmediate(faces); UnityEngine.Object.DestroyImmediate(culled); UnityEngine.Object.DestroyImmediate(equal);
+    }
+
+    /// <summary>Recorded last: what a two-sided program reads as its face, through VFACE
+    /// (`FrontFaceVFace`) and SV_IsFrontFace (`FrontFaceSystem`): red for a front face, green for
+    /// a back face. A two-texel target gets a quad over its left texel and the same quad mirrored
+    /// (a matrix of negative determinant) over its right one, drawn by DrawMeshNow
+    /// (`immediate`), a command buffer's DrawMesh (`commandMesh`) and a camera's MeshRenderers
+    /// (`camera`, the mirrored one under a parent scaled -1 along x), each plain and with
+    /// GL.invertCulling (a command buffer's SetInvertCulling for `commandMesh`).</summary>
+    static void FrontFaces(StringBuilder rows)
+    {
+        var quad = new Mesh { vertices = new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(.5f, 1, 0), new Vector3(.5f, 0, 0) },
+            triangles = new[] { 0, 1, 2, 0, 2, 3 } };
+        var mirrored = Matrix4x4.TRS(new Vector3(1, 0, 0), Quaternion.identity, new Vector3(-1, 1, 1));
+        var target = new RenderTexture(2, 1, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear) { filterMode = FilterMode.Point };
+        target.Create();
+        var readback = new Texture2D(2, 1, TextureFormat.RGBAFloat, false, true);
+        var cameraObject = new GameObject("Front face camera");
+        var camera = cameraObject.AddComponent<Camera>();
+        camera.enabled = false;
+        camera.orthographic = true; camera.orthographicSize = .5f; camera.aspect = 1;
+        camera.transform.position = new Vector3(.5f, .5f, -2);
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(0, 0, 0, 1);
+        camera.cullingMask = 1 << 30; camera.targetTexture = target;
+        var plain = new GameObject("Front face quad") { layer = 30 };
+        plain.AddComponent<MeshFilter>().sharedMesh = quad;
+        var parent = new GameObject("Front face parent");
+        parent.transform.position = new Vector3(1, 0, 0);
+        parent.transform.localScale = new Vector3(-1, 1, 1);
+        var reflected = new GameObject("Front face reflected quad") { layer = 30 };
+        reflected.transform.SetParent(parent.transform, false);
+        reflected.AddComponent<MeshFilter>().sharedMesh = quad;
+        var renderers = new Renderer[] { plain.AddComponent<MeshRenderer>(), reflected.AddComponent<MeshRenderer>() };
+        foreach (var shader in new[] { "FrontFaceVFace", "FrontFaceSystem" })
+        {
+#if UNITY_EDITOR
+            var material = new Material(UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/" + shader + ".shader"));
+#else
+            var material = new Material(Shader.Find("Probe/SamplerStates/" + shader));
+#endif
+            foreach (var renderer in renderers) renderer.sharedMaterial = material;
+            foreach (string path in new[] { "immediate", "commandMesh", "camera" })
+            foreach (bool invert in new[] { false, true })
+            {
+                var previous = RenderTexture.active;
+                RenderTexture.active = target;
+                GL.Clear(true, true, new Color(0, 0, 0, 1));
+                RenderTexture.active = previous;
+                if (path == "immediate")
+                {
+                    RenderTexture.active = target;
+                    GL.PushMatrix(); GL.LoadOrtho();
+                    GL.invertCulling = invert;
+                    material.SetPass(0);
+                    Graphics.DrawMeshNow(quad, Matrix4x4.identity);
+                    Graphics.DrawMeshNow(quad, mirrored);
+                    GL.invertCulling = false;
+                    GL.PopMatrix();
+                    RenderTexture.active = previous;
+                }
+                else if (path == "commandMesh")
+                {
+                    using (var cmd = new UnityEngine.Rendering.CommandBuffer())
+                    {
+                        cmd.SetRenderTarget(target);
+                        cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.Ortho(0, 1, 0, 1, -1, 1));
+                        cmd.SetInvertCulling(invert);
+                        cmd.DrawMesh(quad, Matrix4x4.identity, material, 0, 0);
+                        cmd.DrawMesh(quad, mirrored, material, 0, 0);
+                        cmd.SetInvertCulling(false);
+                        Graphics.ExecuteCommandBuffer(cmd);
+                    }
+                }
+                else
+                {
+                    GL.invertCulling = invert;
+                    camera.Render();
+                    GL.invertCulling = false;
+                }
+                RenderTexture.active = target;
+                readback.ReadPixels(new Rect(0, 0, 2, 1), 0, 0);
+                readback.Apply();
+                RenderTexture.active = previous;
+                string key = "FrontFaces." + shader + "." + path + (invert ? ".inverted" : ".plain");
+                Row(rows, key + ".normal", readback.GetPixel(0, 0));
+                Row(rows, key + ".mirrored", readback.GetPixel(1, 0));
+            }
+            UnityEngine.Object.DestroyImmediate(material);
+        }
+        camera.targetTexture = null;
+        UnityEngine.Object.DestroyImmediate(cameraObject);
+        UnityEngine.Object.DestroyImmediate(plain); UnityEngine.Object.DestroyImmediate(parent);
+        target.Release(); UnityEngine.Object.DestroyImmediate(target);
+        UnityEngine.Object.DestroyImmediate(readback); UnityEngine.Object.DestroyImmediate(quad);
     }
 
     static void RawDepthSourceControls(StringBuilder rows)

@@ -106,6 +106,21 @@ retains its renderer winding separately from the submitted model matrix. The two
 captures per device keep all earlier rows unchanged. These observations are for Unity
 6000.0.71f1 on OpenGL Core and Vulkan, measured on the NVIDIA driver only.
 
+`FrontFaces.<shader>.<path>.<culling>` (recorded last): the face a two-sided program reads,
+through `VFACE` (`FrontFaceVFace`, what URP's shader library declares on OpenGL Core) and
+`SV_IsFrontFace` (`FrontFaceSystem`, its declaration on Vulkan), red for a front face and green
+for a back one, for the plain quad (`normal`) and the mirrored one (`mirrored`) drawn by
+DrawMeshNow (`immediate`), a command buffer's DrawMesh (`commandMesh`) and a camera's
+MeshRenderers (`camera`, the mirrored one under a parent scaled -1 along x), each plain and with
+GL.invertCulling (`SetInvertCulling` in the command buffer). On both devices the input follows
+the faces the culling and the stencil see: DrawMeshNow and DrawMesh draw the mirrored matrix as
+it is (a back face), the camera's renderer under the reflected parent keeps its front face, and
+inverted culling turns every answer round. Unbound turns the pipeline's front-face winding for
+such draws, so culling, the stencil's faces and this input follow one rule; before, it swapped
+the culled faces and the stencil's face states only, and a two-sided URP Shader Graph whose
+back faces mirror their normals (SpeedTree's backface normal mode) lit a mirrored renderer's
+visible faces as back faces.
+
 Unity 6000.0 contracts checked for these cases:
 
 | Contract | Control |
@@ -114,6 +129,7 @@ Unity 6000.0 contracts checked for these cases:
 | [CommandBuffer.DrawMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawMesh.html) records the supplied transform/pass; lighting data is undefined | Command mesh rows use an unlit shader. |
 | [GL.invertCulling](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GL-invertCulling.html) reverses the culling direction | Each path is rendered with inversion off/on; Cull Back changes the visible texels. Its effect on two-sided stencil is measured. |
 | [Cull](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-Cull.html) Back discards back faces, Off retains both | Two-sided and Cull Back passes observe the same reflected geometry. |
+| [VFACE](https://docs.unity3d.com/6000.0/Documentation/Manual/SL-ShaderSemantics.html) is positive on front faces and negative on back faces | `FrontFaces.*` read it (and SV_IsFrontFace) where the plain, mirrored and inverted draws disagree about the front face. Which face a flipped draw reports is measured, not documented. |
 
 `Compute.<kernel>.<target>` (after those): compute kernels (`DepthCompute.compute`) reading each
 depth target: `Compare` compares both texels against 0.5 through the texture's own comparison
