@@ -156,10 +156,14 @@ namespace Unbound.Tests
                 "Error: Graphics.CopyTexture called with negative region size (width -1, height 2).",
                 $"Error: Graphics.CopyTexture called with mismatching data size (src (8x8 with format {(int)larger.graphicsFormat} -> 256 bytes) dst (4x4 with format {(int)blue.graphicsFormat} -> 64 bytes))",
             }, m_Logs);
-            // A level of as many bytes copies, also when its sizes differ.
+            // A level of as many bytes copies its bytes in order, also when its sizes differ.
             var wide = Solid(8, 2, TextureFormat.RGBA32, Color.green);
+            for (int x = 0; x < 8; x++) wide.SetPixel(x, 1, Color.red);
+            wide.Apply();
             Graphics.CopyTexture(wide, 0, blue, 0);
-            Assert.Equal(Color.green, blue.GetPixel(0, 0));
+            Assert.Equal(Color.green, blue.GetPixel(3, 1));
+            Assert.Equal(Color.red, blue.GetPixel(0, 2));
+            Assert.Equal(Color.red, blue.GetPixel(3, 3));
             Assert.Equal(4, m_Logs.Count);
             foreach (var texture in new[] { red, larger, blue, wide }) Object.DestroyImmediate(texture);
         }

@@ -24,6 +24,24 @@ namespace UnityEngine
             // the GPU's source may contain changes which have no CPU representation.
         }
 
+        /// <summary>A whole first level into <paramref name="destination"/>'s: its bytes in order
+        /// where both levels hold as many (whatever their sizes and formats: the Unity 6000.0.71f1
+        /// Editor, tests/projects/apierrors `texture.copy_case.element_same_bytes_*`); otherwise the
+        /// pixels both levels hold (unmeasured).</summary>
+        internal void CopyRetainedLevel(Texture2D destination)
+        {
+            if (!EnsureRetainedPixels() || !destination.EnsureRetainedPixels()) return;
+            if (RawMipSize(0) != destination.RawMipSize(0))
+            {
+                CopyRetainedPixels(destination, 0, 0, Math.Min(m_Width, destination.m_Width), Math.Min(m_Height, destination.m_Height), 0, 0);
+                return;
+            }
+            destination.DecodeLevel(EncodeLevel(0), 0);
+            destination.m_UnreadableRaw = null;
+            destination.DropIfNotReadable();
+            DropIfNotReadable();
+        }
+
         bool EnsureRetainedPixels()
         {
             DecodeRaw();

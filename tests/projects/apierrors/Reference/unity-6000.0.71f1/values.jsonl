@@ -230,6 +230,8 @@
 {"k":"texture.copy_case.element_other_size_format","v":"returns done"}
 {"k":"texture.copy_case.element_other_size_format.logs","v":"Error: Graphics.CopyTexture called with mismatching data size (src (4x4 with format 48 -> 128 bytes) dst (4x4 with format 8 -> 64 bytes))"}
 {"k":"texture.copy_case.element_other_size_format.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.element_same_bytes_other_size","v":"returns done"}
+{"k":"texture.copy_case.element_same_bytes_other_size.pixels","v":"returns RGBA(0.000, 1.000, 0.000, 1.000) RGBA(1.000, 0.000, 0.000, 1.000) RGBA(1.000, 0.000, 0.000, 1.000)"}
 {"k":"texture.copy_case.element_same_bytes_other_format","v":"returns done"}
 {"k":"texture.copy_case.element_same_bytes_other_format.logs","v":"Error: Graphics.CopyTexture can only copy between same texture format groups (OpenGL internal formats: src=34842, blockSize=8 ; dst=32856, blockSize=4)"}
 {"k":"texture.copy_case.element_same_bytes_other_format.pixels","v":"returns RGBA(0.804, 0.804, 0.804, 0.804) RGBA(0.804, 0.804, 0.804, 0.804) RGBA(0.804, 0.804, 0.804, 0.804)"}

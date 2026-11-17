@@ -24,12 +24,14 @@
   "format.extract.started_game_argument",
   "format.extract.started_stack"
  ],
- "Graphics.CopyTexture between formats of other groups with as many bytes: the Editor's error names its OpenGL device's internal formats and the CPU bytes are copied as they are; Unbound copies the pixels both levels hold, without the error (device-specific text, follow-up)": [
-  "texture.copy_case.element_same_bytes_other_format.logs",
-  "texture.copy_case.element_same_bytes_other_format.pixels"
- ],
  "Texture3D.GetPixelBilinear is not implemented (a stub answering black, without the undefined-level error)": [
   "texture.volume.get_pixel_bilinear_bad_mip",
   "texture.volume.get_pixel_bilinear_bad_mip.logs"
+ ],
+ "Graphics.CopyTexture between formats of other groups with as many bytes: the Editor logs that only formats of one group copy, naming its OpenGL device's internal formats (device-specific text, follow-up); Unbound copies without the error": [
+  "texture.copy_case.element_same_bytes_other_format.logs"
+ ],
+ "A new RGBAHalf texture's texels before any write: the Editor's bytes are 0xCD, Unbound holds 205/255 per channel as half floats, so a byte copy of them into an RGBA32 level differs (follow-up)": [
+  "texture.copy_case.element_same_bytes_other_format.pixels"
  ]
 }

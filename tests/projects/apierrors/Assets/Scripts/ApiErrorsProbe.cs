@@ -721,6 +721,12 @@ public class ApiErrorsProbe : MonoBehaviour
         Try("texture.copy_case.format_half", () => (int)half.graphicsFormat);
         CopyCase("texture.copy_case.element_other_size_format", 4, 4, (s, d) => Graphics.CopyTexture(half, 0, d, 0));
         Destroy(half);
+        // A level of other sizes and as many bytes: a red top row over green ones, into a blue level.
+        var rows = Solid(8, 2, Color.green);
+        for (int x = 0; x < 8; x++) rows.SetPixel(x, 1, Color.red);
+        rows.Apply();
+        CopyCase("texture.copy_case.element_same_bytes_other_size", 4, 4, (s, d) => Graphics.CopyTexture(rows, 0, d, 0));
+        Destroy(rows);
         var halfSameBytes = new Texture2D(4, 2, TextureFormat.RGBAHalf, false);
         CopyCase("texture.copy_case.element_same_bytes_other_format", 4, 4, (s, d) => Graphics.CopyTexture(halfSameBytes, 0, d, 0));
         Destroy(halfSameBytes);

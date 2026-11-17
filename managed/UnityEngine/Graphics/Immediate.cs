@@ -659,7 +659,6 @@ namespace UnityEngine
         /// `texture.copy_region_*`).</summary>
         static bool CopyRegionFits(Texture src, int srcMip, int srcX, int srcY, int width, int height, Texture dst, int dstMip, int dstX, int dstY)
         {
-            if (width < 0) return true;
             static (int W, int H) Level(Texture t, int mip) => (Math.Max(1, t.width >> mip), Math.Max(1, t.height >> mip));
             static bool Fits((int W, int H) level, int x, int y, int w, int h) =>
                 x >= 0 && y >= 0 && w >= 0 && h >= 0 && (long)x + w <= level.W && (long)y + h <= level.H;
@@ -707,10 +706,8 @@ namespace UnityEngine
             }
             if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
-                // A whole level copies what both levels hold (the element copy between other
-                // sizes copies, tests/projects/apierrors `texture.copy_element_size_mismatch*`).
-                int w = srcWidth < 0 ? Math.Min(s2.width, d2.width) : srcWidth, h = srcHeight < 0 ? Math.Min(s2.height, d2.height) : srcHeight;
-                s2.CopyRetainedPixels(d2, srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h, dstX, dstY);
+                if (srcWidth < 0) s2.CopyRetainedLevel(d2);
+                else s2.CopyRetainedPixels(d2, srcX, srcY, srcWidth, srcHeight, dstX, dstY);
             }
             ulong source = TextureHandles.Of(src), destination = TextureHandles.Of(dst);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);

@@ -235,7 +235,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AWholeCopyNeedsMatchingSizesWhileALevelCopyTakesWhatBothHold()
+        public void AWholeCopyNeedsMatchingSizesWhileALevelCopyTakesTheBytesInOrder()
         {
             var wide = Own(new Texture2D(8, 4, TextureFormat.RGBA32, false));
             var tall = Own(new Texture2D(4, 8, TextureFormat.RGBA32, false));
@@ -249,11 +249,13 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Error: Graphics.CopyTexture called with mismatching texture sizes (src 8x4x1 (array length 0), dst 4x8x1 (array length 0))" },
                 Logs(() => Graphics.CopyTexture(wide, tall)));
             Assert.Equal(Color.blue, tall.GetPixel(0, 0));
-            // A level copy takes the 4x4 both hold, without wrapping rows.
+            // A level copy of as many bytes takes them in order: texel i of the source is texel i
+            // of the destination (tests/projects/apierrors texture.copy_case.element_same_bytes_*).
             Assert.Empty(Logs(() => Graphics.CopyTexture(wide, 0, 0, tall, 0, 0)));
             Assert.Equal(Color.red, tall.GetPixel(0, 0));
-            Assert.Equal(Color.green, tall.GetPixel(3, 3));
-            Assert.NotEqual(Color.white, tall.GetPixel(3, 4));
+            Assert.Equal(Color.green, tall.GetPixel(3, 6));
+            Assert.Equal(Color.white, tall.GetPixel(3, 7));
+            Assert.Equal(new Color(0, 0, 0, 0), tall.GetPixel(3, 3));
             // Control: a whole copy of the same size copies.
             var same = Own(new Texture2D(8, 4, TextureFormat.RGBA32, false));
             Assert.Empty(Logs(() => Graphics.CopyTexture(wide, same)));
