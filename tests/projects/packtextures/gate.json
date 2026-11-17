@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/packtextures/run.py gate"
+  ],
+  "summary": "packtextures: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/TexturePacker.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Blocks.cs"
+  ]
+}
