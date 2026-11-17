@@ -19,7 +19,8 @@ public delegate void Plain(int x);
 public delegate void Marshalled<T>([MarshalAs(UnmanagedType.I1)] bool ok, T data);
 [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 public delegate void Wide<T>(string text, T data);
-public delegate void Getter<T>(T key, out int value);
+public struct Flags { public bool On; public int Count; }
+public delegate void Touch<T>([In] ref Flags flags, T data);
 public static class Probe
 {
     public static string Received = ""not called"";
@@ -39,16 +40,20 @@ public static class Probe
     static void ReadWide(string text, int data) => WideText = text + ""/"" + data;
     static readonly Wide<int> s_Wide = ReadWide;
     public static IntPtr WideCallback() => Marshal.GetFunctionPointerForDelegate(s_Wide);
-    static void Get(int key, out int value) => value = key + 1;
-    static readonly Getter<int> s_Getter = Get;
-    public static IntPtr GetterCallback() => Marshal.GetFunctionPointerForDelegate(s_Getter);
+    // Flags is not blittable (bool): an [In] parameter is marshalled in only, so the change does not
+    // reach the caller's memory.
+    static void Change(ref Flags flags, int data) => flags.Count = data;
+    static readonly Touch<int> s_Touch = Change;
+    public static IntPtr TouchCallback() => Marshal.GetFunctionPointerForDelegate(s_Touch);
     public static IntPtr WithMarshalling() => Marshal.GetFunctionPointerForDelegate(new Marshalled<int>(Ignore));
 }";
 
         static Assembly Compiled(bool redirected)
         {
             var image = WideFloatsTests.Emit(WideFloatsTests.Compilation(Source, OptimizationLevel.Release, "GenericCallbackProbe")).Image;
-            return WideFloatsTests.Load(redirected ? FrameworkShims.Redirect(image) : image);
+            // Not collectible, as the game's load context: the emitted callback types reference its types.
+            return new System.Runtime.Loader.AssemblyLoadContext("generic callbacks " + Guid.NewGuid())
+                .LoadFromStream(new System.IO.MemoryStream(redirected ? FrameworkShims.Redirect(image) : image));
         }
 
         static object Call(Assembly assembly, string method)
@@ -108,11 +113,11 @@ public static class Probe
             try { ((delegate* unmanaged[Cdecl]<IntPtr, int, void>)wide)(text, 4); }
             finally { Marshal.FreeHGlobal(text); }
             Assert.Equal("h\u00e9llo/4", probe.GetType("Probe")!.GetField("WideText")!.GetValue(null));
-            // An `out` parameter writes back.
-            var getter = (IntPtr)Call(probe, "GetterCallback");
-            int value = 0;
-            ((delegate* unmanaged<int, int*, void>)getter)(41, &value);
-            Assert.Equal(42, value);
+            // An [In] parameter is not written back (its direction is the generic Invoke's).
+            var touch = (IntPtr)Call(probe, "TouchCallback");
+            var flags = stackalloc int[2] { 1, 1 }; // a 4-byte BOOL and the count, as marshalled
+            ((delegate* unmanaged<int*, int, void>)touch)(flags, 99);
+            Assert.Equal(1, flags[1]);
         }
 
         [Fact]
