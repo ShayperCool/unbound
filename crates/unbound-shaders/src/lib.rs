@@ -3998,13 +3998,15 @@ float4 vert(float4 v : POSITION) : SV_POSITION
     float start = f16tof32(asuint(_Curve.x) >> 16);
     return mul(unity_MatrixVP, v * scale + start);
 }
-float4 frag() : SV_Target { return f16tof32(f32tof16(_Curve.y)); }
+float4 frag() : SV_Target { return f32tof16(_Curve.y) / 65535.0; }
 "#;
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let compiled = compiler
             .compile(&program(source, false), &[], false)
             .unwrap();
         assert!(compiled.vertex.contains("unpack2x16float"));
+        // The fragment program packs and does not unpack.
+        assert!(!compiled.fragment.contains("unpack2x16float"));
         assert!(compiled.fragment.contains("pack2x16float("));
     }
 
