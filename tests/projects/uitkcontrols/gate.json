@@ -1,0 +1,10 @@
+{
+  "commands": ["python3 tests/projects/uitkcontrols/run.py gate"],
+  "summary": "uitkcontrols: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/Controls/HelpBox.cs",
+    "managed/UnityEngine/UIElements/Controls/ToggleButtonGroup.cs",
+    "managed/UnityEngine/UIElements/Controls/TwoPaneSplitView.cs",
+    "managed/UnityEngine/UIElements/Uxml/BuiltInTraits.cs"
+  ]
+}

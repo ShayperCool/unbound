@@ -1,0 +1,42 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:p="ControlsProbe">
+    <ui:HelpBox name="help" text="Disk almost full" message-type="Warning" />
+    <ui:HelpBox name="helpPlain" />
+    <ui:PopupWindow name="popup" text="Title">
+        <ui:Label name="inside" text="inside" />
+    </ui:PopupWindow>
+    <ui:ToggleButtonGroup name="group" label="Group" is-multiple-selection="true" allow-empty-selection="true">
+        <ui:Button name="a" text="A" />
+        <ui:Button name="b" text="B" />
+        <ui:Label name="notButton" text="not a button" />
+        <ui:Button name="c" text="C" />
+    </ui:ToggleButtonGroup>
+    <ui:ToggleButtonGroup name="groupDefault">
+        <ui:Button name="d" text="D" />
+        <ui:Button name="e" text="E" />
+    </ui:ToggleButtonGroup>
+    <ui:TwoPaneSplitView name="split" fixed-pane-index="1" fixed-pane-initial-dimension="80.5" orientation="Vertical" style="width: 300px; height: 200px; flex-shrink: 0;">
+        <ui:VisualElement name="splitFirst" />
+        <ui:VisualElement name="splitSecond" />
+    </ui:TwoPaneSplitView>
+    <ui:TwoPaneSplitView name="splitDefault" style="width: 300px; height: 200px; flex-shrink: 0;">
+        <ui:VisualElement name="splitDefaultFirst" />
+        <ui:VisualElement name="splitDefaultSecond" />
+    </ui:TwoPaneSplitView>
+    <p:OldHelp name="oldHelp" text="Old help" message-type="Error" />
+    <p:OldHelp name="oldHelpEmpty" />
+    <p:OldPopup name="oldPopup" text="Old title">
+        <ui:Label name="oldInside" text="inside" />
+    </p:OldPopup>
+    <p:OldGroup name="oldGroup" label="Old" is-multiple-selection="true">
+        <ui:Button name="f" text="F" />
+        <ui:Button name="g" text="G" />
+    </p:OldGroup>
+    <p:OldSplit name="oldSplit" fixed-pane-index="1" fixed-pane-initial-dimension="80.5" orientation="Vertical" style="width: 300px; height: 200px; flex-shrink: 0;">
+        <ui:VisualElement name="oldSplitFirst" />
+        <ui:VisualElement name="oldSplitSecond" />
+    </p:OldSplit>
+    <p:OldSplit name="oldSplitInt" fixed-pane-initial-dimension="90" style="width: 300px; height: 200px; flex-shrink: 0;">
+        <ui:VisualElement name="oldSplitIntFirst" />
+        <ui:VisualElement name="oldSplitIntSecond" />
+    </p:OldSplit>
+</ui:UXML>

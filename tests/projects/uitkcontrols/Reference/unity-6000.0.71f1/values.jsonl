@@ -1,0 +1,115 @@
+{"k":"help.default","v":"HelpBox#[unity-help-box]{Label#[unity-text-element unity-label unity-help-box__label]} type None text ''"}
+{"k":"help.warning","v":"HelpBox#[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--warning], Label#[unity-text-element unity-label unity-help-box__label]\"Saved\"}"}
+{"k":"help.toError","v":"HelpBox#[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--error], Label#[unity-text-element unity-label unity-help-box__label]\"Saved\"}"}
+{"k":"help.toNone","v":"HelpBox#[unity-help-box]{Label#[unity-text-element unity-label unity-help-box__label]\"Saved\"}"}
+{"k":"help.toInfo","v":"HelpBox#[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--info], Label#[unity-text-element unity-label unity-help-box__label]\"Saved\"}"}
+{"k":"help.toUndefined","v":"HelpBox#[unity-help-box]{Label#[unity-text-element unity-label unity-help-box__label]\"Saved\"} type 7"}
+{"k":"help.textNull","v":"''"}
+{"k":"help.withChild","v":"HelpBox#[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--warning], Label#[unity-text-element unity-label unity-help-box__label], VisualElement#extra[]}"}
+{"k":"popup.default","v":"PopupWindow#[unity-text-element unity-popup-window]{VisualElement#unity-content-container[unity-popup-window__content-container]} content unity-content-container children 0"}
+{"k":"popup.withChild","v":"PopupWindow#[unity-text-element unity-popup-window]\"Title\"{VisualElement#unity-content-container[unity-popup-window__content-container]{Label#inside[unity-text-element unity-label]\"inside\"}} children 1"}
+{"k":"state.ctorMasked","v":"011/3 TrueTrueFalse"}
+{"k":"state.full64","v":"1111111111111111111111111111111111111111111111111111111111111111/64"}
+{"k":"state.zeroLength","v":"0/0"}
+{"k":"state.default","v":"0/0"}
+{"k":"state.ctor65","v":"ArgumentOutOfRangeException param length: length of 65 should be greater than or equal to 0 and less than or equal to 64."}
+{"k":"state.ctorNegative","v":"ArgumentOutOfRangeException param length: length of -1 should be greater than or equal to 0 and less than or equal to 64."}
+{"k":"state.getPastEnd","v":"ArgumentOutOfRangeException param index: index of 3 should be in the range of 0 and 2 inclusively."}
+{"k":"state.setNegative","v":"ArgumentOutOfRangeException param index: index of -1 should be in the range of 0 and 2 inclusively."}
+{"k":"state.spanShort","v":"ArgumentException param -: indices' length (2) should be equal to or greater than the ToggleButtonGroupState's length (3)."}
+{"k":"state.active","v":"0,1"}
+{"k":"state.inactive","v":"2"}
+{"k":"state.setAll","v":"11111/5"}
+{"k":"state.toggleAll","v":"00010/5"}
+{"k":"state.resetAll","v":"00000/5"}
+{"k":"state.fromOptions","v":"1101/4"}
+{"k":"state.fromOptionsEmpty","v":"0/0"}
+{"k":"state.fromByteFlags","v":"10000001/8"}
+{"k":"state.fromIntFlags","v":"01010/5"}
+{"k":"state.fromLongFlags","v":"0000000000000000000000000000000000000000000000000000000000000001/64"}
+{"k":"state.fromNegativeInt","v":"11111111111111111111111111111110/32"}
+{"k":"state.fromNotFlags","v":"ArgumentException param -: Enum type T is not a flag enum type."}
+{"k":"state.fromTooLong","v":"ArgumentOutOfRangeException param length: length of 70 should be greater than or equal to 0 and less than or equal to 64."}
+{"k":"state.toIntFlags","v":"A, C"}
+{"k":"state.toIntFlagsStrict","v":"ArgumentException param -: Cannot sync to enum flag since the ToggleButtonGroupState has a different amount of options."}
+{"k":"state.toByteFlagsStrict","v":"A, B"}
+{"k":"state.toNotFlags","v":"ArgumentException param -: Enum type T is not a flag enum type."}
+{"k":"state.compare","v":"True False"}
+{"k":"state.equality","v":"True True True False hash True"}
+{"k":"state.compareTo","v":"1 -1"}
+{"k":"state.json","v":"{\"state\":{\"m_Data\":18446744073709551615,\"m_Length\":64},\"small\":{\"m_Data\":5,\"m_Length\":4}}"}
+{"k":"state.jsonRead","v":"11111111/3 True"}
+{"k":"state.attribute","v":"True True -1 / False False 3"}
+{"k":"group.default","v":"ToggleButtonGroup#[unity-base-field unity-base-field--no-label unity-toggle-button-group]{VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]} 0000000000000000000000000000000000000000000000000000000000000000/64 multiple False empty False content unity-toggle-button-group__container focusable True"}
+{"k":"group.labelled","v":"ToggleButtonGroup#[unity-base-field unity-toggle-button-group]{Label#[unity-text-element unity-label unity-base-field__label]\"Label\", VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]}"}
+{"k":"group.noOptions","v":"ToggleButtonGroup#[unity-base-field unity-base-field--no-label unity-toggle-button-group]{VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Label#unity-button-group__empty-label[unity-text-element unity-label unity-button-group__empty-label]\"Group has no buttons.\"}} 0/0"}
+{"k":"group.noOptionsThenTwo","v":"ToggleButtonGroup#[unity-base-field unity-base-field--no-label unity-toggle-button-group]{VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]} 01/2"}
+{"k":"group.add0","v":"0000000000000000000000000000000000000000000000000000000000000001/64 checked 1 changes 1 0000000000000000000000000000000000000000000000000000000000000000/64->0000000000000000000000000000000000000000000000000000000000000001/64 unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--standalone"}
+{"k":"group.add1","v":"0000000000000000000000000000000000000000000000000000000000000001/64 checked 10 changes 0 unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--left unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--right"}
+{"k":"group.add2","v":"0000000000000000000000000000000000000000000000000000000000000001/64 checked 100 changes 0 unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--left unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--mid unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--right"}
+{"k":"group.addLabel","v":"ToggleButtonGroup#[unity-base-field unity-toggle-button-group]{Label#[unity-text-element unity-label unity-base-field__label]\"Pick\", VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Button#b0[unity-text-element unity-button unity-button-group__button unity-button-group__button--left]\"B0\", Button#b1[unity-text-element unity-button unity-button-group__button unity-button-group__button--mid]\"B1\", Button#b2[unity-text-element unity-button unity-button-group__button unity-button-group__button--right]\"B2\"}, Label#note[unity-text-element unity-label]\"note\"}"}
+{"k":"group.single.click2","v":"0000000000000000000000000000000000000000000000000000000000000100/64 checked 001 changes 1 0000000000000000000000000000000000000000000000000000000000000001/64->0000000000000000000000000000000000000000000000000000000000000100/64"}
+{"k":"group.single.click2Again","v":"0000000000000000000000000000000000000000000000000000000000000100/64 checked 001 changes 0"}
+{"k":"group.singleEmpty.click2","v":"0000000000000000000000000000000000000000000000000000000000000000/64 checked 000 changes 1 0000000000000000000000000000000000000000000000000000000000000100/64->0000000000000000000000000000000000000000000000000000000000000000/64"}
+{"k":"group.singleEmpty.click1","v":"0000000000000000000000000000000000000000000000000000000000000010/64 checked 010 changes 1 0000000000000000000000000000000000000000000000000000000000000000/64->0000000000000000000000000000000000000000000000000000000000000010/64"}
+{"k":"group.singleEmpty.click0","v":"0000000000000000000000000000000000000000000000000000000000000001/64 checked 100 changes 1 0000000000000000000000000000000000000000000000000000000000000010/64->0000000000000000000000000000000000000000000000000000000000000001/64"}
+{"k":"group.multiple.click2","v":"0000000000000000000000000000000000000000000000000000000000000101/64 checked 101 changes 1 0000000000000000000000000000000000000000000000000000000000000001/64->0000000000000000000000000000000000000000000000000000000000000101/64"}
+{"k":"group.multiple.click1","v":"0000000000000000000000000000000000000000000000000000000000000111/64 checked 111 changes 1 0000000000000000000000000000000000000000000000000000000000000101/64->0000000000000000000000000000000000000000000000000000000000000111/64"}
+{"k":"group.multiple.click0","v":"0000000000000000000000000000000000000000000000000000000000000110/64 checked 011 changes 1 0000000000000000000000000000000000000000000000000000000000000111/64->0000000000000000000000000000000000000000000000000000000000000110/64"}
+{"k":"group.multipleNoEmpty.clear12","v":"0000000000000000000000000000000000000000000000000000000000000100/64 checked 001 changes 1 0000000000000000000000000000000000000000000000000000000000000110/64->0000000000000000000000000000000000000000000000000000000000000100/64"}
+{"k":"group.multipleNoEmpty.clickLast","v":"0000000000000000000000000000000000000000000000000000000000000101/64 checked 101 changes 1 0000000000000000000000000000000000000000000000000000000000000100/64->0000000000000000000000000000000000000000000000000000000000000101/64"}
+{"k":"group.toSingle","v":"0000000000000000000000000000000000000000000000000000000000000001/64 checked 100 changes 2 0000000000000000000000000000000000000000000000000000000000000111/64->0000000000000000000000000000000000000000000000000000000000000011/64 False"}
+{"k":"group.cleared","v":"000/3 checked 000 changes 0"}
+{"k":"group.disallowEmpty","v":"001/3 checked 100 changes 0"}
+{"k":"group.valueLonger","v":"1111/4 checked 111 changes 1 001/3->1111/4"}
+{"k":"group.mixed","v":"010/3 checked 000 changes 1 1111/4->010/3"}
+{"k":"group.mixed.click0","v":"001/3 checked 100 changes 1 000/3->001/3 mixed False"}
+{"k":"group.unmixed","v":"001/3 checked 100 changes 0"}
+{"k":"group.removeActiveMiddle","v":"100/2 checked 00 changes 1 110/3->100/2 unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--left unity-text-element.unity-button.unity-button-group__button.unity-button-group__button--right "}
+{"k":"group.removeInactive","v":"100/2 checked 0 changes 0 "}
+{"k":"group.removeLastActive","v":"none 0/0 "}
+{"k":"group.afterRemoveAll","v":"ToggleButtonGroup#[unity-base-field unity-toggle-button-group]{Label#[unity-text-element unity-label unity-base-field__label]\"Pick\", VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Label#unity-button-group__empty-label[unity-text-element unity-label unity-button-group__empty-label]\"Group has no buttons.\"}, Label#note[unity-text-element unity-label]\"note\"} 0/0"}
+{"k":"group.overflow","v":"0000000000000000000000000000000000000000000000000000000000000001/64 children 66 classed 64 logs 2 Warning: The number of buttons added to ToggleButtonGroup exceeds the maximum allowed (64). The newly added button will not be treated as part of this control."}
+{"k":"split.default","v":"TwoPaneSplitView#[unity-two-pane-split-view]{VisualElement#unity-content-container[unity-two-pane-split-view__content-container unity-two-pane-split-view--horizontal], VisualElement#unity-dragline-anchor[unity-two-pane-split-view__dragline-anchor unity-two-pane-split-view__dragline-anchor--horizontal]{VisualElement#unity-dragline[unity-two-pane-split-view__dragline unity-two-pane-split-view__dragline--horizontal]}} index 0 dimension 100 orientation Horizontal fixed True content unity-content-container"}
+{"k":"split.verticalCtor","v":"TwoPaneSplitView#[unity-two-pane-split-view]{VisualElement#unity-content-container[unity-two-pane-split-view__content-container unity-two-pane-split-view--vertical], VisualElement#unity-dragline-anchor[unity-two-pane-split-view__dragline-anchor unity-two-pane-split-view__dragline-anchor--vertical]{VisualElement#unity-dragline[unity-two-pane-split-view__dragline unity-two-pane-split-view__dragline--vertical]}}"}
+{"k":"split.toHorizontal","v":"TwoPaneSplitView#[unity-two-pane-split-view]{VisualElement#unity-content-container[unity-two-pane-split-view__content-container unity-two-pane-split-view--horizontal], VisualElement#unity-dragline-anchor[unity-two-pane-split-view__dragline-anchor unity-two-pane-split-view__dragline-anchor--horizontal]{VisualElement#unity-dragline[unity-two-pane-split-view__dragline unity-two-pane-split-view__dragline--horizontal]}}"}
+{"k":"split.laid.h0","v":"fixed h0A flexed h0B | h0A 0,0 120x300 display Flex | h0B 121,0 279x300 display Flex | anchor 120,0 1x300 | content padding 1,0"}
+{"k":"split.laid.h1","v":"fixed h1B flexed h1A | h1A 0,0 279x300 display Flex | h1B 280,0 120x300 display Flex | anchor 279,0 1x300 | content padding 1,0"}
+{"k":"split.laid.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x80 display Flex | v0B 0,81 400x219 display Flex | anchor 0,80 400x1 | content padding 0,1"}
+{"k":"split.laid.pending","v":"fixed pendingA flexed pendingB | pendingA 0,0 400x300 display Flex | pendingB 0,0 0x0 display None | anchor 0,0 0x0 | content padding 0,0"}
+{"k":"split.laid.tree","v":"TwoPaneSplitView#h0[unity-two-pane-split-view]{VisualElement#unity-content-container[unity-two-pane-split-view__content-container unity-two-pane-split-view--horizontal]{VisualElement#h0A[], VisualElement#h0B[]}, VisualElement#unity-dragline-anchor[unity-two-pane-split-view__dragline-anchor unity-two-pane-split-view__dragline-anchor--horizontal]{VisualElement#unity-dragline[unity-two-pane-split-view__dragline unity-two-pane-split-view__dragline--horizontal]}}"}
+{"k":"split.laid.logs","v":""}
+{"k":"split.shrunk.h1","v":"fixed h1B flexed h1A | h1A 0,0 149x300 display Flex | h1B 150,0 120x300 display Flex | anchor 150,0 1x300 | content padding 1,0"}
+{"k":"split.shrunk.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x69 display Flex | v0B 0,70 400x0 display Flex | anchor 0,69 400x1 | content padding 0,1"}
+{"k":"split.tiny.h1","v":"fixed h1B flexed h1A | h1A 0,0 109x300 display Flex | h1B 110,0 120x300 display Flex | anchor 110,0 1x300 | content padding 1,0"}
+{"k":"split.tiny.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x30 display Flex | v0B 0,31 400x0 display Flex | anchor 0,30 400x1 | content padding 0,1"}
+{"k":"split.regrown.h1","v":"fixed h1B flexed h1A | h1A 0,0 279x300 display Flex | h1B 280,0 120x300 display Flex | anchor 280,0 1x300 | content padding 1,0"}
+{"k":"split.regrown.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x30 display Flex | v0B 0,31 400x269 display Flex | anchor 0,30 400x1 | content padding 0,1"}
+{"k":"split.drag.h0","v":"fixed h0A flexed h0B | h0A 0,0 160x300 display Flex | h0B 161,0 239x300 display Flex | anchor 160,0 1x300 | content padding 1,0"}
+{"k":"split.dragPastMin.h0","v":"fixed h0A flexed h0B | h0A 0,0 0x300 display Flex | h0B 1,0 399x300 display Flex | anchor 0,0 1x300 | content padding 1,0"}
+{"k":"split.drag.h1","v":"fixed h1B flexed h1A | h1A 0,0 219x300 display Flex | h1B 220,0 180x300 display Flex | anchor 220,0 1x300 | content padding 1,0"}
+{"k":"split.dragPastMax.v0","v":"fixed v0A flexed v0B | v0A 0,0 400x295 display Flex | v0B 0,296 400x4 display Flex | anchor 0,295 400x1 | content padding 0,1"}
+{"k":"split.dragLogs","v":"Warning: Runtime cursors other than the default cursor need to be defined using a texture. | Warning: Runtime cursors other than the default cursor need to be defined using a texture."}
+{"k":"split.collapse0.h0","v":"fixed h0A flexed h0B | h0A 0,0 0x0 display None | h0B 0,0 400x300 display Flex | anchor 0,0 0x0 | content padding 0,0"}
+{"k":"split.uncollapse.h0","v":"fixed h0A flexed h0B | h0A 0,0 120x300 display Flex | h0B 120,0 280x300 display Flex | anchor 120,0 1x300 | content padding 0,0"}
+{"k":"split.collapseInvalid","v":"Error: Invalid index. Must be 0 or 1."}
+{"k":"split.uncollapseNotCollapsed.h0","v":"fixed h0A flexed h0B | h0A 0,0 120x300 display Flex | h0B 120,0 280x300 display Flex | anchor 120,0 1x300 | content padding 0,0"}
+{"k":"split.toIndex1.h0","v":"fixed h0B flexed h0A | h0A 0,0 280x300 display Flex | h0B 280,0 120x300 display Flex | anchor 279,0 1x300 | content padding 0,0"}
+{"k":"split.toVertical.h0","v":"fixed h0B flexed h0A | h0A 0,0 400x180 display Flex | h0B 0,180 400x120 display Flex | anchor 0,-120 400x1 | content padding 0,0"}
+{"k":"split.toDimension60.h0","v":"fixed h0B flexed h0A | h0A 0,0 400x240 display Flex | h0B 0,240 400x60 display Flex | anchor 0,239 400x1 | content padding 0,0"}
+{"k":"split.oneChild","v":"Error: TwoPaneSplitView needs exactly 2 children. fixed True"}
+{"k":"uxml.cloneLogs","v":""}
+{"k":"uxml.help","v":"HelpBox#help[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--warning], Label#[unity-text-element unity-label unity-help-box__label]\"Disk almost full\"} type Warning text 'Disk almost full'"}
+{"k":"uxml.helpPlain","v":"HelpBox#helpPlain[unity-help-box]{Label#[unity-text-element unity-label unity-help-box__label]} type None text ''"}
+{"k":"uxml.oldHelp","v":"OldHelp#oldHelp[unity-help-box]{VisualElement#[unity-help-box__icon unity-help-box__icon--error], Label#[unity-text-element unity-label unity-help-box__label]\"Old help\"} type Error text 'Old help'"}
+{"k":"uxml.oldHelpEmpty","v":"OldHelp#oldHelpEmpty[unity-help-box]{Label#[unity-text-element unity-label unity-help-box__label]} type None text ''"}
+{"k":"uxml.popup","v":"PopupWindow#popup[unity-text-element unity-popup-window]\"Title\"{VisualElement#unity-content-container[unity-popup-window__content-container]{Label#inside[unity-text-element unity-label]\"inside\"}}"}
+{"k":"uxml.oldPopup","v":"OldPopup#oldPopup[unity-text-element unity-popup-window]\"Old title\"{VisualElement#unity-content-container[unity-popup-window__content-container]{Label#oldInside[unity-text-element unity-label]\"inside\"}}"}
+{"k":"uxml.group","v":"ToggleButtonGroup#group[unity-base-field unity-toggle-button-group]{Label#[unity-text-element unity-label unity-base-field__label]\"Group\", VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Button#a[unity-text-element unity-button unity-button-group__button unity-button-group__button--left]\"A\", Button#b[unity-text-element unity-button unity-button-group__button unity-button-group__button--mid]\"B\", Button#c[unity-text-element unity-button unity-button-group__button unity-button-group__button--right]\"C\"}, Label#notButton[unity-text-element unity-label]\"not a button\"} 0000000000000000000000000000000000000000000000000000000000000000/64 multiple True empty True label 'Group'"}
+{"k":"uxml.groupDefault","v":"ToggleButtonGroup#groupDefault[unity-base-field unity-base-field--no-label unity-toggle-button-group]{VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Button#d[unity-text-element unity-button unity-button-group__button unity-button-group__button--left]\"D\", Button#e[unity-text-element unity-button unity-button-group__button unity-button-group__button--right]\"E\"}} 0000000000000000000000000000000000000000000000000000000000000001/64 multiple False empty False label ''"}
+{"k":"uxml.oldGroup","v":"OldGroup#oldGroup[unity-base-field unity-toggle-button-group]{Label#[unity-text-element unity-label unity-base-field__label]\"Old\", VisualElement#unity-toggle-button-group__container[unity-button-group unity-base-field__input]{Button#f[unity-text-element unity-button unity-button-group__button unity-button-group__button--left]\"F\", Button#g[unity-text-element unity-button unity-button-group__button unity-button-group__button--right]\"G\"}} 0000000000000000000000000000000000000000000000000000000000000001/64 multiple True empty False label 'Old'"}
+{"k":"uxml.split","v":"index 1 dimension 80.5 orientation Vertical | fixed splitSecond flexed splitFirst | splitFirst 0,0 300x119 display Flex | splitSecond 0,120 300x80 display Flex | anchor 0,119 300x1 | content padding 0,1"}
+{"k":"uxml.splitDefault","v":"index 0 dimension 100 orientation Horizontal | fixed splitDefaultFirst flexed splitDefaultSecond | splitDefaultFirst 0,0 100x200 display Flex | splitDefaultSecond 101,0 199x200 display Flex | anchor 100,0 1x200 | content padding 1,0"}
+{"k":"uxml.oldSplit","v":"index 1 dimension 100 orientation Vertical | fixed oldSplitSecond flexed oldSplitFirst | oldSplitFirst 0,0 300x99 display Flex | oldSplitSecond 0,100 300x100 display Flex | anchor 0,99 300x1 | content padding 0,1"}
+{"k":"uxml.oldSplitInt","v":"index 0 dimension 90 orientation Horizontal | fixed oldSplitIntFirst flexed oldSplitIntSecond | oldSplitIntFirst 0,0 90x200 display Flex | oldSplitIntSecond 91,0 209x200 display Flex | anchor 90,0 1x200 | content padding 1,0"}
+{"k":"complete","v":true}
