@@ -144,7 +144,7 @@ namespace UnityEngine.VFX
             {
                 if (system.type == VFXSystemType.Mesh) return $"the mesh output system '{system.name}'";
                 if (system.type != VFXSystemType.Particle) continue;
-                const VFXSystemFlag NotYet = VFXSystemFlag.SystemHasDirectLink | VFXSystemFlag.SystemIsRayTraced;
+                const VFXSystemFlag NotYet = VFXSystemFlag.SystemIsRayTraced;
                 if ((system.flags & NotYet) != 0) return $"{system.flags & NotYet} of the system '{system.name}'";
                 if (VFXParticleSystem.StripRefusal(system) is string strips) return strips;
                 if (VFXParticleSystem.BoundsRefusal(system) is string bounds) return bounds;
@@ -155,8 +155,6 @@ namespace UnityEngine.VFX
                 const VFXSystemFlag Spawned = VFXSystemFlag.SystemReceivedEventGPU, Dying = VFXSystemFlag.SystemHasKill;
                 if ((system.flags & (Spawned | Dying)) == Spawned) return $"the system '{system.name}' spawned by GPU events without a list of dead particles";
             }
-            foreach (var e in data.Events)
-                if (e.initSystems != null && e.initSystems.Length > 0) return $"the event '{e.name}' wired to an Initialize context";
             return null;
         }
 
@@ -308,6 +306,9 @@ namespace UnityEngine.VFX
             payload ??= m_Data.CpuInitialWords.Length > 0 ? m_Data.CpuInitialWords[0] : Array.Empty<uint>();
             foreach (uint system in e.startSystems ?? Array.Empty<uint>()) Spawner(system)?.OnPlay(payload, m_State);
             foreach (uint system in e.stopSystems ?? Array.Empty<uint>()) Spawner(system)?.OnStop(payload, m_State);
+            // Wired straight to an Initialize context: the event is that system's spawn event,
+            // with the count its attributes ask for.
+            foreach (uint system in e.initSystems ?? Array.Empty<uint>()) (SystemAt((int)system) as VFXParticleSystem)?.TakeEvent(payload);
         }
 
         VFXSpawnerSystem Spawner(uint index)

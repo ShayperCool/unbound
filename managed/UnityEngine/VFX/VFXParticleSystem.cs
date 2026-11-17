@@ -342,8 +342,11 @@ namespace Unbound.Runtime
         uint[] m_NewDeadList, m_NoAttributes;
 
         /// <summary>Takes a spawn event: the whole particles it asks for, as far as the system
-        /// has room (a system whose particles never die fills up for good).</summary>
-        void TakeEvent(uint[] attributes)
+        /// has room (a system whose particles never die fills up for good). The events of the
+        /// system's spawners are taken at each step; an event wired straight to the system's
+        /// Initialize context is taken when the effect processes it, and spawns in the next
+        /// step (tests/projects/vfxdirect).</summary>
+        internal void TakeEvent(uint[] attributes)
         {
             float asked = attributes.Length > 0 ? BitConverter.UInt32BitsToSingle(attributes[0]) : 0f;
             uint room = Capacity - m_Spawned;
