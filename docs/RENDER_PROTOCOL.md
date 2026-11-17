@@ -382,7 +382,7 @@ before and after it, as on Unity's render thread) and a read back.
 36 DotsDraw     u32 header[8], u32 window_offset, u32 window_size, u32 indirect, u32 count, u32 visible[count]
                                                 // next Draw is a BatchRendererGroup command's (NativeApi 60; indirect 73)
 37 DrawShape    u8 topology (0, 3, 5; 255 the submesh's), i32 base_vertex, u32 count (0: all)
-                                                // next Draw's indices read as topology, plus base_vertex for DrawIndices (NativeApi 85)
+                                                // next Draw's indices read as topology, at most count of them, plus base_vertex for DrawIndices (NativeApi 85)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip,

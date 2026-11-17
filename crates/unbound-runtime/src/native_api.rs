@@ -91,8 +91,8 @@ use std::ffi::c_void;
 /// 81: a dynamically scaled render texture's size before scaling at the end of `TexturePacket`.
 /// 82: texture packet flag 1 << 16 stores a texture in the screen's channel order.
 /// 84: the scripted frame step at the end of `FrameInput`.
-/// 85: the render command `DrawShape` gives the next draw a topology and the base vertex of its
-/// external indices.
+/// 85: the render command `DrawShape` gives the next draw a topology, the base vertex of its
+/// external indices and a cap on the indices it reads.
 pub const NATIVE_API_VERSION: u32 = 85;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.

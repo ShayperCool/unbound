@@ -1065,6 +1065,10 @@ namespace UnityEngine.Tests
                 Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 4, 0u)));
                 Assert.True(Holds(GfxStream.Recorded, Bytes(DrawIndicesOp, (ulong)indices.bufferHandle.value, (byte)2, 2u, 6u)));
                 GfxStream.Flush();
+                // 70000 vertex ids of the 131072-vertex stand-in.
+                BatchCulling.Draw(items[2], items[2].Dots.Value, 1, 0, null);
+                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)0xFF, 0, 70000u)));
+                GfxStream.Flush();
             }
             finally
             {
