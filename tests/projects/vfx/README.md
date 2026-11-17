@@ -357,25 +357,36 @@ and its colour on a triangle at barycentric coordinates (`v05`, `q03`); a volume
 and depth and the counts of an array of textures and of an array of cubemaps (`u04` to `u08`).
 `MeshMixed` has five vertices in two streams (positions and normals as floats, tangents as signed
 16-bit norms; colours as bytes, first texture coordinates as half floats, second ones as unsigned
-16-bit norms) and three triangles of 16-bit indices; `MeshWide` has four vertices in one stream of
-floats without normals or tangents, and 32-bit indices in two submeshes. From frame 3, one step a
+16-bit norms) and three triangles of 16-bit indices, `MeshLocked` the same saved without
+read/write access (as a model's meshes are imported by default); `MeshWide` has four vertices in
+one stream of floats without normals or tangents, and 32-bit indices in two submeshes. From frame 3, one step a
 frame: the mesh is `MeshMixed`, a volume of 4x2x3, an array of five 2x2 textures and an array of
 two cubemaps are set; the vertex, triangle and index read fall past the mesh's end; the mesh is
 `MeshWide` and the volume a volume render texture of 8x4x6; the mesh is a copy whose data was
 given up (`UploadMeshData(true)`); none can be set (`set none`, `set no texture`: both throw), so
 a mesh, a volume and the arrays are destroyed while they are set; a mesh made by script, whose
-vertices are then replaced and which then gains colours. The rows are written at frame 20, with
-each mesh's `vertexBufferTarget` and `indexBufferTarget` before and after (`<mesh>/before`,
-`after`): a readable mesh's vertex buffer gains `Structured` once it is an effect's value, its
-index buffer once an effect's programs read it.
+vertices are then replaced and which then gains colours; `MeshLocked`. The rows are written at
+frame 20, with each mesh's `vertexBufferTarget` and `indexBufferTarget` before and after
+(`<mesh>/before`, `after`), also of `ShapeA` (the scene's effects' default), of a copy only held
+by an effect whose graph reads nothing of it (`held`: Exposed's `Shape`) and of a copy only read
+by its vertices (`vertices only`, the `mesh stride` drawing): a readable mesh's vertex buffer
+gains `Structured` once it is an effect's value, its index buffer once an effect's programs read
+it; a mesh without read/write access gains neither. Such a mesh (`UploadMeshData(true)` or
+`MeshLocked`) keeps its counts, has no layout (its index reads 0xffffffff) and samples as zeros.
+The package's documentation (17.0.4: Operator-MeshVertexCount, Operator-MeshIndexCount,
+Operator-MeshTriangleCount, Operator-SampleMeshIndex, Operator-SampleMesh) says the counts and an
+index are 0 for a mesh that is not readable and that Sample Mesh supports Float32 channels only
+(and colours); the Editor answers as recorded here.
 
 Drawn, at frame 5: `mesh` (`DrawMesh` over `MeshMixed`) puts a particle on each vertex in turn
 (Set Position Mesh, the vertex given by the particle's id), coloured from a graphics buffer of
 vectors (Sample Graphics Buffer); `mesh stride` gives it a buffer of three floats an element,
 which the program does not read (black particles); `mesh wide` is `DrawMesh` over `MeshWide`;
 `mesh surface` and `mesh surface wide` (`DrawMeshSurface`) put one on each triangle, at
-barycentric coordinates, coloured by the mesh's colours sampled there. The programs read the
-meshes' vertex and index buffers as the effects' values hand them over.
+barycentric coordinates, coloured by the mesh's colours sampled there; `mesh locked` is
+`DrawMesh` over `MeshLocked`, whose buffers the programs cannot read: every vertex reads as zeros
+(the particles all at the origin). The programs read the meshes' vertex and index buffers as the
+effects' values hand them over.
 
 ## A built asset
 
@@ -406,9 +417,14 @@ shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU ev
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
 texture's format (no operator makes it), and the ones the runtime does not do yet: an event
 attribute read in a spawn context (it is evaluated per spawn event), noise, and a skinned mesh
-renderer's mesh, vertices and root bone. Not measured of meshes: one whose data was given up read
-by a program, one whose layout changes while an effect reads it on the GPU, and sampling with
-the edge placement or low-distortion surface coordinates (both made of operations measured here). Of baked curves and gradients, not measured: a curve whose values are larger than a
+renderer's mesh, vertices and root bone. Not measured of meshes: no mesh read by a program
+(Unbound gives it zeros, as for a mesh without read/write access), one whose layout changes while
+an effect reads it on the GPU, sampling with the edge placement or low-distortion surface
+coordinates (both made of operations measured here), signed 8-bit and integer channels, float
+colours outside zero to one, and an index read in the other index format or past the buffer's end
+(the package asks neither). Not measured of textures and buffers: a released buffer's stride, and
+the blocks and outputs that read a texture's depth (Position and Collision SDF, flipbooks from
+arrays of textures). Of baked curves and gradients, not measured: a curve whose values are larger than a
 half float holds (its scale is held by a unit test, as a gradient's is by `hdr`), a curve
 that ping-pongs, one that loops before its first key and clamps after its last, one that
 loops after its last key with a range whose product by 127 and quotient by 127 round below

@@ -574,7 +574,7 @@ public sealed class VfxProbe : MonoBehaviour
     // ------------------------------------------------------------------ mesh operations
 
     VisualEffect m_MeshOperations;
-    Mesh m_MeshMixed, m_MeshWide, m_Unreadable, m_Made;
+    Mesh m_MeshMixed, m_MeshWide, m_MeshLocked, m_Unreadable, m_Made, m_Held, m_VerticesOnly, m_ShapeA;
     Texture3D m_Volume;
     Texture2DArray m_Layers;
     CubemapArray m_Cubes;
@@ -588,8 +588,15 @@ public sealed class VfxProbe : MonoBehaviour
     {
         m_MeshMixed = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/MeshMixed.asset");
         m_MeshWide = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/MeshWide.asset");
-        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide) })
+        m_MeshLocked = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/MeshLocked.asset");
+        m_ShapeA = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/Objects/ShapeA.asset");
+        // Copies: one only held by an effect whose graph reads nothing of it (Exposed's Shape),
+        // one only read by its vertices (the `mesh stride` drawing).
+        m_Held = Instantiate(m_MeshMixed);
+        m_VerticesOnly = Instantiate(m_MeshMixed);
+        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide), ("locked", m_MeshLocked), ("shape a", m_ShapeA), ("held", m_Held), ("vertices only", m_VerticesOnly) })
             Rec("mesh operations/" + name + "/before", MeshState(mesh));
+        Effect("mesh holder", "Assets/Graphs/Exposed.vfx", new Vector3(0f, 8f, 0f)).SetMesh("Shape", m_Held);
         m_MeshOperations = Effect("mesh operations", "Assets/OpGraphs/OpsMesh.vfx", new Vector3(0f, 6f, 0f));
         // Colours by a buffer of vectors (the stride the graph reads), by one of another stride
         // (none read), from the vertices and from points on the triangles of each mesh.
@@ -601,8 +608,8 @@ public sealed class VfxProbe : MonoBehaviour
         m_MeshBuffers.Add(narrow);
         foreach (var (key, graph, mesh, buffer) in new[]
                  {
-                     ("mesh", "DrawMesh", m_MeshMixed, colours), ("mesh stride", "DrawMesh", m_MeshMixed, narrow),
-                     ("mesh wide", "DrawMesh", m_MeshWide, colours),
+                     ("mesh", "DrawMesh", m_MeshMixed, colours), ("mesh stride", "DrawMesh", m_VerticesOnly, narrow),
+                     ("mesh wide", "DrawMesh", m_MeshWide, colours), ("mesh locked", "DrawMesh", m_MeshLocked, colours),
                      ("mesh surface", "DrawMeshSurface", m_MeshMixed, null), ("mesh surface wide", "DrawMeshSurface", m_MeshWide, null),
                  })
         {
@@ -617,9 +624,9 @@ public sealed class VfxProbe : MonoBehaviour
 
     /// <summary>From frame 3 one step a frame: the vertex, triangle and index read change and
     /// fall outside the mesh, the mesh becomes another of other formats, a copy whose data was
-    /// given up, one destroyed while it is set, one made by script and then changed; the volume
-    /// and the arrays are set, the volume is replaced by a volume render texture, and all three
-    /// are destroyed while they are set.</summary>
+    /// given up, one destroyed while it is set, one made by script and then changed, one without
+    /// read/write access; the volume and the arrays are set, the volume is replaced by a volume
+    /// render texture, and all three are destroyed while they are set.</summary>
     void MeshOperationFrame()
     {
         if (m_MeshOperations == null) return;
@@ -680,9 +687,15 @@ public sealed class VfxProbe : MonoBehaviour
             case 10:
                 m_Made.colors32 = new[] { new Color32(10, 20, 30, 40), new Color32(50, 60, 70, 80), new Color32(90, 100, 110, 120) };
                 break;
+            case 11:
+                effect.SetMesh("Mesh", m_MeshLocked);
+                effect.SetUInt("Vertex", 3);
+                effect.SetUInt("Triangle", 2);
+                effect.SetUInt("Index", 5);
+                break;
         }
         if (m_Frame != 20) return;
-        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide), ("unreadable", m_Unreadable), ("made", m_Made) })
+        foreach (var (name, mesh) in new[] { ("mixed", m_MeshMixed), ("wide", m_MeshWide), ("locked", m_MeshLocked), ("shape a", m_ShapeA), ("held", m_Held), ("vertices only", m_VerticesOnly), ("unreadable", m_Unreadable), ("made", m_Made) })
             Rec("mesh operations/" + name + "/after", mesh == null ? "none" : MeshState(mesh));
         foreach (var line in OpsInputs.Logs.TryGetValue("mesh operations", out var log) ? log : new List<string>())
         {

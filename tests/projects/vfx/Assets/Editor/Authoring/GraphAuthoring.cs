@@ -372,8 +372,9 @@ public static class GraphAuthoring
     /// <summary>The meshes of the mesh controls (README.md, "Mesh operations"). `MeshMixed`:
     /// five vertices in two streams, positions and normals as floats, tangents as signed 16-bit
     /// norms, colours as bytes, first texture coordinates as halves and second ones as unsigned
-    /// 16-bit norms, three triangles of 16-bit indices. `MeshWide`: four vertices in one stream
-    /// of floats (position, colour, four texture coordinates), 32-bit indices in two submeshes.</summary>
+    /// 16-bit norms, three triangles of 16-bit indices; `MeshLocked`: the same without read/write
+    /// access. `MeshWide`: four vertices in one stream of floats (position, colour, four texture
+    /// coordinates), 32-bit indices in two submeshes.</summary>
     static void Meshes()
     {
         var mixed = new Mesh { name = "MeshMixed" };
@@ -416,6 +417,13 @@ public static class GraphAuthoring
         mixed.SetSubMesh(0, new SubMeshDescriptor(0, 9));
         mixed.RecalculateBounds();
         AssetDatabase.CreateAsset(mixed, ObjectFolder + "/MeshMixed.asset");
+        // The same mesh saved without read/write access, as a model's mesh is imported by default.
+        var locked = UnityEngine.Object.Instantiate(mixed);
+        locked.name = "MeshLocked";
+        AssetDatabase.CreateAsset(locked, ObjectFolder + "/MeshLocked.asset");
+        var lockedState = new SerializedObject(locked);
+        lockedState.FindProperty("m_IsReadable").boolValue = false;
+        lockedState.ApplyModifiedPropertiesWithoutUndo();
 
         var wide = new Mesh { name = "MeshWide" };
         wide.SetVertexBufferParams(4,
