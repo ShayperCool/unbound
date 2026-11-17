@@ -120,6 +120,9 @@ struct Driver {
     /// in the window takes it again).
     cursor: Option<unbound_runtime::cursor::CursorState>,
     cursor_released: bool,
+    /// One image per distinct cursor picture (size and pixels): a cursor set again reuses its
+    /// image, so the window's cache of system cursors keeps one entry per picture.
+    cursor_images: std::collections::HashMap<(u32, u32, Vec<u8>), Handle<Image>>,
     /// Whether a warp outside the window was reported (once).
     warp_outside_warned: bool,
 }
@@ -249,6 +252,7 @@ pub fn run(
         cursor_seen: 0,
         cursor: None,
         cursor_released: false,
+        cursor_images: std::collections::HashMap::new(),
         warp_outside_warned: false,
     });
     app.insert_resource(RunSettings {
@@ -517,7 +521,14 @@ fn drive(
             // A warp alone leaves the applied lock, visibility and image (and a pointer Escape
             // gave back) as they are.
             if warp.is_none() || driver.cursor.as_ref() != Some(&cursor) {
-                apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+                apply_cursor(
+                    &cursor,
+                    entity,
+                    &mut options,
+                    &mut images,
+                    &mut driver.cursor_images,
+                    &mut commands,
+                );
                 driver.cursor_released = false;
             }
             driver.cursor = Some(cursor);
@@ -582,6 +593,7 @@ fn apply_cursor(
     window: Entity,
     options: &mut CursorOptions,
     images: &mut Assets<Image>,
+    cursor_images: &mut std::collections::HashMap<(u32, u32, Vec<u8>), Handle<Image>>,
     commands: &mut Commands,
 ) {
     options.grab_mode = grab_mode(cursor.lock);
@@ -589,17 +601,22 @@ fn apply_cursor(
     let icon = match &cursor.image {
         None => CursorIcon::System(SystemCursorIcon::Default),
         Some(image) => {
-            let handle = images.add(Image::new(
-                bevy::render::render_resource::Extent3d {
-                    width: image.width,
-                    height: image.height,
-                    depth_or_array_layers: 1,
-                },
-                bevy::render::render_resource::TextureDimension::D2,
-                image.rgba.clone(),
-                bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
-                bevy::asset::RenderAssetUsages::MAIN_WORLD,
-            ));
+            let handle = cursor_images
+                .entry((image.width, image.height, image.rgba.clone()))
+                .or_insert_with(|| {
+                    images.add(Image::new(
+                        bevy::render::render_resource::Extent3d {
+                            width: image.width,
+                            height: image.height,
+                            depth_or_array_layers: 1,
+                        },
+                        bevy::render::render_resource::TextureDimension::D2,
+                        image.rgba.clone(),
+                        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+                        bevy::asset::RenderAssetUsages::MAIN_WORLD,
+                    ))
+                })
+                .clone();
             CursorIcon::Custom(CustomCursor::Image(CustomCursorImage {
                 handle,
                 hotspot: image.hotspot,

@@ -508,6 +508,18 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A texture's cursor picture as last handed to the window, while its pixels and the
+        /// hotspot are unchanged: a cursor set again (an element hovered again) is not read again.</summary>
+        sealed class SerializedImage
+        {
+            public uint updateCount;
+            public int hotspotX, hotspotY;
+            public string json;
+        }
+
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Texture2D, SerializedImage> s_Images =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Texture2D, SerializedImage>();
+
         /// <summary>The cursor's image (null: the system's arrow), its hotspot in pixels from the
         /// top left. The texture's pixels must be readable, as Unity asks.</summary>
         public static void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode cursorMode)
@@ -515,6 +527,15 @@ namespace UnityEngine
             if (texture == null)
             {
                 Send("null", true);
+                return;
+            }
+            int width = texture.width, height = texture.height;
+            if (width <= 0 || height <= 0) return;
+            int hx = Mathf.Clamp(Mathf.RoundToInt(hotspot.x), 0, width - 1);
+            int hy = Mathf.Clamp(Mathf.RoundToInt(hotspot.y), 0, height - 1);
+            if (s_Images.TryGetValue(texture, out var cached) && cached.updateCount == texture.updateCount && cached.hotspotX == hx && cached.hotspotY == hy)
+            {
+                Send(cached.json, true);
                 return;
             }
             Color32[] pixels;
@@ -527,8 +548,7 @@ namespace UnityEngine
                 Debug.LogError($"Cursor.SetCursor: the texture '{texture.name}' has no readable pixels ({e.Message})");
                 return;
             }
-            int width = texture.width, height = texture.height;
-            if (pixels == null || pixels.Length < width * height || width <= 0 || height <= 0) return;
+            if (pixels == null || pixels.Length < width * height) return;
             var rgba = new System.Text.StringBuilder(width * height * 16);
             // Texture rows go up from the bottom; a cursor's go down from the top.
             for (int y = height - 1; y >= 0; y--)
@@ -540,9 +560,9 @@ namespace UnityEngine
                     rgba.Append(p.r).Append(',').Append(p.g).Append(',').Append(p.b).Append(',').Append(p.a);
                 }
             }
-            int hx = Mathf.Clamp(Mathf.RoundToInt(hotspot.x), 0, width - 1);
-            int hy = Mathf.Clamp(Mathf.RoundToInt(hotspot.y), 0, height - 1);
-            Send($"{{\"width\":{width},\"height\":{height},\"rgba\":[{rgba}],\"hotspot\":[{hx},{hy}]}}", true);
+            var json = $"{{\"width\":{width},\"height\":{height},\"rgba\":[{rgba}],\"hotspot\":[{hx},{hy}]}}";
+            s_Images.AddOrUpdate(texture, new SerializedImage { updateCount = texture.updateCount, hotspotX = hx, hotspotY = hy, json = json });
+            Send(json, true);
         }
 
         /// <summary>Hands the cursor to the window (the native side applies it after the frame).</summary>
