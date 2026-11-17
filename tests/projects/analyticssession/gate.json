@@ -1,0 +1,10 @@
+{
+  "commands": ["python3 tests/projects/analyticssession/run.py gate"],
+  "summary": "analyticssession: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Platform/AnalyticsSession.cs",
+    "managed/UnityEngine/Platform/PlayerPrefs.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "managed/UnityEngine/Runtime/MainThreadCheck.cs"
+  ]
+}

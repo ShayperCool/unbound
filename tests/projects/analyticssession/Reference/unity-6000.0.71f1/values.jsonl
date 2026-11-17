@@ -1,0 +1,53 @@
+{"k":"session.state","v":"kSessionStarted"}
+{"k":"session.id","v":"positive"}
+{"k":"session.countAtLeastOne","v":true}
+{"k":"session.firstRunIsCountOne","v":true}
+{"k":"session.countInPrefs","v":true}
+{"k":"session.idInPrefs","v":true}
+{"k":"session.userIdInPrefs","v":true}
+{"k":"session.elapsed","v":"nonzero"}
+{"k":"session.userId","v":"32 hex"}
+{"k":"session.userIdStable","v":true}
+{"k":"session.identityToken","v":"empty"}
+{"k":"session.customUserId","v":""}
+{"k":"session.customDeviceId","v":""}
+{"k":"session.setCustomUserId","v":"probe-user"}
+{"k":"session.setCustomDeviceId","v":"probe-device"}
+{"k":"session.clearCustomUserId","v":""}
+{"k":"session.worker.id","v":"UnityException: get_sessionId can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"session.worker.userId","v":"UnityException: get_userId can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"remote.fromServer","v":false}
+{"k":"remote.int","v":"0"}
+{"k":"remote.intDefault","v":"5"}
+{"k":"remote.long","v":"6"}
+{"k":"remote.float","v":"1.5"}
+{"k":"remote.floatNoDefault","v":"0"}
+{"k":"remote.string","v":""}
+{"k":"remote.stringDefault","v":"d"}
+{"k":"remote.bool","v":true}
+{"k":"remote.hasKey","v":false}
+{"k":"remote.count","v":"0"}
+{"k":"remote.keys","v":"0"}
+{"k":"remote.objectT","v":"null"}
+{"k":"remote.objectType","v":"null"}
+{"k":"remote.objectDefault","v":"3 default"}
+{"k":"remote.objectNullType","v":"ArgumentNullException: Value cannot be null.\u000aParameter name: type"}
+{"k":"remote.objectUnityType","v":"ArgumentException: Cannot deserialize to new instances of type 'MonoBehaviour.'"}
+{"k":"remote.objectAbstractType","v":"ArgumentException: Cannot deserialize to new instances of type 'Stream.'"}
+{"k":"remote.objectNullDefault","v":"ArgumentNullException: Value cannot be null.\u000aParameter name: defaultValue"}
+{"k":"remote.objectUnityDefault","v":"ArgumentException: Cannot deserialize to new instances of type 'GameObject.'"}
+{"k":"remote.objectDefaultSame","v":"True"}
+{"k":"remote.dictionary","v":"null"}
+{"k":"remote.dictionaryRoot","v":"null"}
+{"k":"remote.nullKeyInt","v":"0"}
+{"k":"remote.nullKeyString","v":"d"}
+{"k":"remote.nullKeyHas","v":"False"}
+{"k":"remote.worker.int","v":"UnityException: GetInt can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"remote.worker.count","v":"UnityException: GetCount can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"events.beforeForceUpdate","v":""}
+{"k":"events.duringForceUpdate","v":""}
+{"k":"events.tenFramesLater","v":""}
+{"k":"remote.fromServerAfter","v":false}
+{"k":"remote.worker.forceUpdate","v":"UnityException: ForceUpdate can only be called from the main thread.\u000aConstructors and field initializers will be executed from the loading thread when loading a scene.\u000aDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"events.afterWorkerForceUpdate","v":""}
+{"k":"complete","v":true}
