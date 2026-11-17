@@ -175,6 +175,151 @@
 {"k":"texture.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_set_pixel","v":"throws UnityEngine.UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
 {"k":"texture.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2D.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '')"}
+{"k":"texture.copy_case.region_outside_source","v":"returns done"}
+{"k":"texture.copy_case.region_outside_source.logs","v":"Error: Graphics.CopyTexture called with region not fitting in source element: trying to copy from region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
+{"k":"texture.copy_case.region_outside_source.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.region_outside_destination","v":"returns done"}
+{"k":"texture.copy_case.region_outside_destination.logs","v":"Error: Graphics.CopyTexture called with region not fitting in destination element: trying to copy to region on GPU (x:2, y:2, width:4, height:4) of mip 0 (size: 4x4)"}
+{"k":"texture.copy_case.region_outside_destination.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.whole_larger","v":"returns done"}
+{"k":"texture.copy_case.whole_larger.logs","v":"Error: Graphics.CopyTexture called with mismatching texture sizes (src 8x8x1 (array length 0), dst 4x4x1 (array length 0))"}
+{"k":"texture.copy_case.whole_larger.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.whole_same","v":"returns done"}
+{"k":"texture.copy_case.whole_same.pixels","v":"returns RGBA(1.000, 0.000, 0.000, 1.000) RGBA(1.000, 0.000, 0.000, 1.000) RGBA(1.000, 0.000, 0.000, 1.000)"}
+{"k":"texture.copy_case.region_inside","v":"returns done"}
+{"k":"texture.copy_case.region_inside.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(1.000, 0.000, 0.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.region_whole_destination_offset","v":"returns done"}
+{"k":"texture.copy_case.region_whole_destination_offset.logs","v":"Error: Graphics.CopyTexture called with negative region size (width -1, height -1)."}
+{"k":"texture.copy_case.region_whole_destination_offset.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.region_whole_source_offset","v":"returns done"}
+{"k":"texture.copy_case.region_whole_source_offset.logs","v":"Error: Graphics.CopyTexture called with negative region size (width -1, height -1)."}
+{"k":"texture.copy_case.region_whole_source_offset.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.region_whole_smaller_destination","v":"returns done"}
+{"k":"texture.copy_case.region_whole_smaller_destination.logs","v":"Error: Graphics.CopyTexture called with negative region size (width -1, height -1)."}
+{"k":"texture.copy_case.region_whole_smaller_destination.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.region_width_only","v":"returns done"}
+{"k":"texture.copy_case.region_width_only.logs","v":"Error: Graphics.CopyTexture called with negative region size (width -1, height 2)."}
+{"k":"texture.copy_case.region_width_only.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.element_larger","v":"returns done"}
+{"k":"texture.copy_case.element_larger.logs","v":"Error: Graphics.CopyTexture called with mismatching data size (src (8x8 with format 8 -> 256 bytes) dst (4x4 with format 8 -> 64 bytes))"}
+{"k":"texture.copy_case.element_larger.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.element_smaller","v":"returns done"}
+{"k":"texture.copy_case.element_smaller.logs","v":"Error: Graphics.CopyTexture called with mismatching data size (src (4x4 with format 8 -> 64 bytes) dst (8x8 with format 8 -> 256 bytes))"}
+{"k":"texture.copy_case.element_smaller.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.bad_source_element","v":"returns done"}
+{"k":"texture.copy_case.bad_source_element.logs","v":"Error: Graphics.CopyTexture called with invalid source element index (got 3, have 1 elements/layers)"}
+{"k":"texture.copy_case.bad_source_element.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.bad_destination_mip","v":"returns done"}
+{"k":"texture.copy_case.bad_destination_mip.logs","v":"Error: Graphics.CopyTexture called with invalid destination mip level: got 5, have 1 mips (after mipmap limits if applicable)"}
+{"k":"texture.copy_case.bad_destination_mip.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.bad_source_mip","v":"returns done"}
+{"k":"texture.copy_case.bad_source_mip.logs","v":"Error: Graphics.CopyTexture called with invalid source mip level: got 3, have 1 mips (after mipmap limits if applicable)"}
+{"k":"texture.copy_case.bad_source_mip.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.bad_destination_element","v":"returns done"}
+{"k":"texture.copy_case.bad_destination_element.logs","v":"Error: Graphics.CopyTexture called with invalid destination element index (got 2, have 1 elements/layers)"}
+{"k":"texture.copy_case.bad_destination_element.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.negative_source_element","v":"returns done"}
+{"k":"texture.copy_case.negative_source_element.logs","v":"Error: Graphics.CopyTexture called with invalid source element index (got -1, have 1 elements/layers)"}
+{"k":"texture.copy_case.negative_source_element.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.format_srgb","v":"returns 8"}
+{"k":"texture.copy_case.format_linear","v":"returns 8"}
+{"k":"texture.copy_case.element_larger_linear","v":"returns done"}
+{"k":"texture.copy_case.element_larger_linear.logs","v":"Error: Graphics.CopyTexture called with mismatching data size (src (8x8 with format 8 -> 256 bytes) dst (4x4 with format 8 -> 64 bytes))"}
+{"k":"texture.copy_case.element_larger_linear.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.format_half","v":"returns 48"}
+{"k":"texture.copy_case.element_other_size_format","v":"returns done"}
+{"k":"texture.copy_case.element_other_size_format.logs","v":"Error: Graphics.CopyTexture called with mismatching data size (src (4x4 with format 48 -> 128 bytes) dst (4x4 with format 8 -> 64 bytes))"}
+{"k":"texture.copy_case.element_other_size_format.pixels","v":"returns RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"texture.copy_case.element_same_bytes_other_format","v":"returns done"}
+{"k":"texture.copy_case.element_same_bytes_other_format.logs","v":"Error: Graphics.CopyTexture can only copy between same texture format groups (OpenGL internal formats: src=34842, blockSize=8 ; dst=32856, blockSize=4)"}
+{"k":"texture.copy_case.element_same_bytes_other_format.pixels","v":"returns RGBA(0.804, 0.804, 0.804, 0.804) RGBA(0.804, 0.804, 0.804, 0.804) RGBA(0.804, 0.804, 0.804, 0.804)"}
+{"k":"texture.cubemap.mips","v":"returns 3"}
+{"k":"texture.cubemap.get_pixels_bad_mip","v":"throws System.ArgumentException: Cubemap.GetPixels: invalid mipmap level. (Texture 'Cube')"}
+{"k":"texture.cubemap.get_pixels_negative_mip","v":"throws System.ArgumentException: Cubemap.GetPixels: invalid mipmap level. (Texture 'Cube')"}
+{"k":"texture.cubemap.get_pixels_bad_face","v":"throws System.ArgumentException: Cubemap.GetPixels: invalid cubemap face. (Texture 'Cube')"}
+{"k":"texture.cubemap.get_pixels_unknown_face","v":"throws System.ArgumentException: Cubemap.GetPixels: invalid cubemap face. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixels_bad_mip","v":"throws System.ArgumentException: Cubemap.SetPixels: invalid mipmap level. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixels_bad_face","v":"throws System.ArgumentException: Cubemap.SetPixels: invalid cubemap face. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixels_short","v":"throws System.ArgumentException: Cubemap.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixels_null","v":"throws System.ArgumentException: Cubemap.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixels_long","v":"returns done"}
+{"k":"texture.cubemap.get_pixel_bad_mip","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.cubemap.get_pixel_bad_mip.logs","v":"Error: GetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.cubemap.set_pixel_bad_mip","v":"returns done"}
+{"k":"texture.cubemap.set_pixel_bad_mip.logs","v":"Error: SetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.cubemap.get_pixel_bad_face","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.cubemap.get_pixel_bad_face.logs","v":"Error: GetPixel called on an undefined image (valid values are 0 - 5"}
+{"k":"texture.cubemap.get_pixel_data_bad_mip","v":"throws System.ArgumentException: The passed in miplevel 9 is invalid. The valid range is 0 through 2"}
+{"k":"texture.cubemap.get_pixel_data_bad_face","v":"throws System.ArgumentException: The passed in face 7 is invalid. The valid range is 0 through 5."}
+{"k":"texture.cubemap.set_pixel_data_bad_mip","v":"throws System.ArgumentException: Cubemap.SetPixelData: invalid mipmap level. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixel_data_bad_face","v":"throws System.ArgumentException: Cubemap.SetPixelData: one of the arguments is not valid. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixel_data_short","v":"throws System.ArgumentException: Cubemap.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'Cube')"}
+{"k":"texture.cubemap.set_pixel_data_long","v":"returns done"}
+{"k":"texture.cubemap.set_pixel_data_long_kept","v":"returns RGBA(0.000, 0.000, 0.000, 0.000)"}
+{"k":"texture.array.mips","v":"returns 3"}
+{"k":"texture.array.get_pixels_bad_element","v":"throws System.ArgumentException: Texture2DArray.GetPixels: invalid array element. (Texture 'Layers')"}
+{"k":"texture.array.get_pixels_negative_element","v":"throws System.ArgumentException: Texture2DArray.GetPixels: invalid array element. (Texture 'Layers')"}
+{"k":"texture.array.get_pixels_bad_mip","v":"throws System.ArgumentException: Texture2DArray.GetPixels: invalid mipmap level. (Texture 'Layers')"}
+{"k":"texture.array.get_pixels32_bad_element","v":"throws System.ArgumentException: Texture2DArray.GetPixels32: invalid array element. (Texture 'Layers')"}
+{"k":"texture.array.get_pixels32_bad_mip","v":"throws System.ArgumentException: Texture2DArray.GetPixels32: invalid mipmap level. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels_bad_element","v":"throws System.ArgumentException: Texture2DArray.SetPixels: invalid array element. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels_bad_mip","v":"throws System.ArgumentException: Texture2DArray.SetPixels: invalid mipmap level. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels_short","v":"throws System.ArgumentException: Texture2DArray.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels_null","v":"throws System.ArgumentException: Texture2DArray.SetPixels: one of the arguments is not valid. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels_long","v":"returns done"}
+{"k":"texture.array.set_pixels32_long","v":"throws System.ArgumentException: Texture2DArray.SetPixels32: the size of data to be written is outside the target buffer bounds. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels32_short","v":"throws System.ArgumentException: Texture2DArray.SetPixels32: size of data to be filled was larger than the size of data available in the source array. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels32_null","v":"throws System.ArgumentException: Texture2DArray.SetPixels32: one of the arguments is not valid. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels32_bad_element","v":"throws System.ArgumentException: Texture2DArray.SetPixels32: invalid array element. (Texture 'Layers')"}
+{"k":"texture.array.set_pixels32_bad_mip","v":"throws System.ArgumentException: Texture2DArray.SetPixels32: invalid mipmap level. (Texture 'Layers')"}
+{"k":"texture.array.get_pixel_data_bad_mip","v":"throws System.ArgumentException: The passed in miplevel 9 is invalid. The valid range is 0 through 2"}
+{"k":"texture.array.get_pixel_data_bad_element","v":"throws System.ArgumentException: The passed in element 5 is invalid. The valid range is 0 through 1"}
+{"k":"texture.array.set_pixel_data_bad_mip","v":"throws System.ArgumentException: Texture2DArray.SetPixelData: invalid mipmap level. (Texture 'Layers')"}
+{"k":"texture.array.set_pixel_data_bad_element","v":"throws System.ArgumentException: Texture2DArray.SetPixelData: one of the arguments is not valid. (Texture 'Layers')"}
+{"k":"texture.array.set_pixel_data_short","v":"throws System.ArgumentException: Texture2DArray.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'Layers')"}
+{"k":"texture.volume.mips","v":"returns 3"}
+{"k":"texture.volume.get_pixels_bad_mip","v":"throws System.ArgumentException: Texture3D.GetPixels: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.get_pixels_negative_mip","v":"throws System.ArgumentException: Texture3D.GetPixels: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.get_pixels32_bad_mip","v":"throws System.ArgumentException: Texture3D.GetPixels32: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels_bad_mip","v":"throws System.ArgumentException: Texture3D.SetPixels: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels_short","v":"throws System.ArgumentException: Texture3D.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels_null","v":"throws System.ArgumentException: Texture3D.SetPixels: one of the arguments is not valid. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels_long","v":"returns done"}
+{"k":"texture.volume.set_pixels32_long","v":"throws System.ArgumentException: Texture3D.SetPixels32: the size of data to be written is outside the target buffer bounds. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels32_short","v":"throws System.ArgumentException: Texture3D.SetPixels32: size of data to be filled was larger than the size of data available in the source array. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels32_null","v":"throws System.ArgumentException: Texture3D.SetPixels32: one of the arguments is not valid. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixels32_bad_mip","v":"throws System.ArgumentException: Texture3D.SetPixels32: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.get_pixel_bad_mip","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.volume.get_pixel_bad_mip.logs","v":"Error: GetPixel called on an undefined image (valid values are 0 - 2"}
+{"k":"texture.volume.set_pixel_bad_mip","v":"returns done"}
+{"k":"texture.volume.set_pixel_bad_mip.logs","v":"Error: SetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.volume.get_pixel_bilinear_bad_mip","v":"returns RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"texture.volume.get_pixel_bilinear_bad_mip.logs","v":"Error: GetPixel called on an undefined mip (valid values are 0 - 2"}
+{"k":"texture.volume.get_pixel_data_bad_mip","v":"throws System.ArgumentException: The passed in miplevel 9 is invalid. The valid range is 0 through  2"}
+{"k":"texture.volume.set_pixel_data_bad_mip","v":"throws System.ArgumentException: Texture3D.SetPixelData: invalid mipmap level. (Texture 'Volume')"}
+{"k":"texture.volume.set_pixel_data_short","v":"throws System.ArgumentException: Texture3D.SetPixelData: size of data to be filled was larger than the size of data available in the source array. (Texture 'Volume')"}
+{"k":"texture.cube_array.mips","v":"returns 3"}
+{"k":"texture.cube_array.get_pixels_bad_element","v":"throws System.ArgumentException: CubemapArray.GetPixels: invalid array element. (Texture 'Cubes')"}
+{"k":"texture.cube_array.get_pixels_bad_mip","v":"throws System.ArgumentException: CubemapArray.GetPixels: invalid mipmap level. (Texture 'Cubes')"}
+{"k":"texture.cube_array.get_pixels_bad_face","v":"throws System.ArgumentException: CubemapArray.GetPixels: invalid cubemap face. (Texture 'Cubes')"}
+{"k":"texture.cube_array.get_pixels32_bad_element","v":"throws System.ArgumentException: CubemapArray.GetPixels32: invalid array element. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_bad_element","v":"throws System.ArgumentException: CubemapArray.SetPixels: invalid array element. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_bad_mip","v":"throws System.ArgumentException: CubemapArray.SetPixels: invalid mipmap level. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_bad_face","v":"throws System.ArgumentException: CubemapArray.SetPixels: invalid cubemap face. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_short","v":"throws System.ArgumentException: CubemapArray.SetPixels: size of data to be filled was larger than the size of data available in the source array. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_null","v":"throws System.ArgumentException: CubemapArray.SetPixels: one of the arguments is not valid. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels_long","v":"returns done"}
+{"k":"texture.cube_array.set_pixels32_null","v":"throws System.ArgumentException: CubemapArray.SetPixels32: one of the arguments is not valid. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels32_short","v":"throws System.ArgumentException: CubemapArray.SetPixels32: size of data to be filled was larger than the size of data available in the source array. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels32_long","v":"throws System.ArgumentException: CubemapArray.SetPixels32: the size of data to be written is outside the target buffer bounds. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixels32_bad_element","v":"throws System.ArgumentException: CubemapArray.SetPixels32: invalid array element. (Texture 'Cubes')"}
+{"k":"texture.cube_array.get_pixel_data_bad_mip","v":"throws System.ArgumentException: The passed in miplevel 9 is invalid. The valid range is 0 through 2"}
+{"k":"texture.cube_array.get_pixel_data_bad_element","v":"throws System.ArgumentException: The passed in element 5 is invalid. The valid range is 0 through 1"}
+{"k":"texture.cube_array.set_pixel_data_bad_mip","v":"throws System.ArgumentException: CubemapArray.SetPixelData: invalid mipmap level. (Texture 'Cubes')"}
+{"k":"texture.cube_array.set_pixel_data_bad_element","v":"throws System.ArgumentException: CubemapArray.SetPixelData: one of the arguments is not valid. (Texture 'Cubes')"}
+{"k":"texture.cubemap.non_readable_get_pixels","v":"throws System.ArgumentException: Cubemap.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture 'LockedCube')"}
+{"k":"texture.cubemap.non_readable_get_pixel","v":"throws UnityEngine.UnityException: Texture 'LockedCube' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"texture.array.non_readable_get_pixels","v":"throws System.ArgumentException: Texture2DArray.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture 'LockedLayers')"}
 {"k":"animator.set_float_missing","v":"returns done"}
 {"k":"animator.set_float_missing.logs","v":"Warning: Parameter 'NoSuch' does not exist."}
 {"k":"animator.get_float_missing","v":"returns 0"}

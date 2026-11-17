@@ -295,7 +295,7 @@ public class ApiErrorsProbe : MonoBehaviour
         Do("texture.non_readable_set_pixel", () => locked.SetPixel(0, 0, Color.red));
         Try("texture.non_readable_get_pixels", () => locked.GetPixels());
         Destroy(t);
-        Destroy(locked);
+        Destroy(locked); CopyControls(); LayeredTextures();
     }
 
     static IEnumerator Animators()
@@ -665,5 +665,169 @@ public class ApiErrorsProbe : MonoBehaviour
         Extract("format.extract.update_game_argument", Caught(() => throw new ArgumentException("Bad thing.", "p")));
         Row("format.extract.update_stack", Paths(StackTraceUtility.ExtractStackTrace()));
         StartCoroutine(Started());
+    }
+
+    static Texture2D Solid(int width, int height, Color color)
+    {
+        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        var pixels = new Color[width * height];
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
+    }
+
+    /// <summary>The corner and centre pixels of a texture (whether a copy happened).</summary>
+    static string Pixels(Texture2D texture) =>
+        string.Join(" ", new[] { texture.GetPixel(0, 0), texture.GetPixel(texture.width / 2, texture.height / 2), texture.GetPixel(texture.width - 1, texture.height - 1) });
+
+    static void CopyCase(string key, int srcSize, int dstSize, Action<Texture2D, Texture2D> copy)
+    {
+        var source = Solid(srcSize, srcSize, Color.red);
+        var destination = Solid(dstSize, dstSize, Color.blue);
+        Do(key, () => copy(source, destination));
+        Try(key + ".pixels", () => Pixels(destination));
+        Destroy(source);
+        Destroy(destination);
+    }
+
+    static void CopyControls()
+    {
+        // Whether a refused copy leaves the destination as it was.
+        CopyCase("texture.copy_case.region_outside_source", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 2, 2, 4, 4, d, 0, 0, 0, 0));
+        CopyCase("texture.copy_case.region_outside_destination", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 0, 0, 4, 4, d, 0, 0, 2, 2));
+        CopyCase("texture.copy_case.whole_larger", 8, 4, (s, d) => Graphics.CopyTexture(s, d));
+        CopyCase("texture.copy_case.whole_same", 4, 4, (s, d) => Graphics.CopyTexture(s, d));
+        CopyCase("texture.copy_case.region_inside", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 0, 0, 2, 2, d, 0, 0, 1, 1));
+        // A region of width or height -1 with offsets.
+        CopyCase("texture.copy_case.region_whole_destination_offset", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 0, 0, -1, -1, d, 0, 0, 2, 2));
+        CopyCase("texture.copy_case.region_whole_source_offset", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 2, 2, -1, -1, d, 0, 0, 0, 0));
+        CopyCase("texture.copy_case.region_whole_smaller_destination", 8, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 0, 0, -1, -1, d, 0, 0, 2, 2));
+        CopyCase("texture.copy_case.region_width_only", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, 0, 0, -1, 2, d, 0, 0, 2, 2));
+        CopyCase("texture.copy_case.element_larger", 8, 4, (s, d) => Graphics.CopyTexture(s, 0, d, 0));
+        CopyCase("texture.copy_case.element_smaller", 4, 8, (s, d) => Graphics.CopyTexture(s, 0, d, 0));
+        CopyCase("texture.copy_case.bad_source_element", 4, 4, (s, d) => Graphics.CopyTexture(s, 3, d, 0));
+        CopyCase("texture.copy_case.bad_destination_mip", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 0, d, 0, 5));
+        CopyCase("texture.copy_case.bad_source_mip", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, 3, d, 0, 0));
+        CopyCase("texture.copy_case.bad_destination_element", 4, 4, (s, d) => Graphics.CopyTexture(s, 0, d, 2));
+        CopyCase("texture.copy_case.negative_source_element", 4, 4, (s, d) => Graphics.CopyTexture(s, -1, d, 0));
+        // Formats in the size message, and copies between formats.
+        Try("texture.copy_case.format_srgb", () => (int)Solid(4, 4, Color.red).graphicsFormat);
+        var linear = new Texture2D(8, 8, TextureFormat.RGBA32, false, true);
+        Try("texture.copy_case.format_linear", () => (int)linear.graphicsFormat);
+        CopyCase("texture.copy_case.element_larger_linear", 4, 4, (s, d) => Graphics.CopyTexture(linear, 0, d, 0));
+        Destroy(linear);
+        var half = new Texture2D(4, 4, TextureFormat.RGBAHalf, false);
+        Try("texture.copy_case.format_half", () => (int)half.graphicsFormat);
+        CopyCase("texture.copy_case.element_other_size_format", 4, 4, (s, d) => Graphics.CopyTexture(half, 0, d, 0));
+        Destroy(half);
+        var halfSameBytes = new Texture2D(4, 2, TextureFormat.RGBAHalf, false);
+        CopyCase("texture.copy_case.element_same_bytes_other_format", 4, 4, (s, d) => Graphics.CopyTexture(halfSameBytes, 0, d, 0));
+        Destroy(halfSameBytes);
+    }
+
+    static Color[] Colors(int count) => new Color[count];
+
+    static void LayeredTextures()
+    {
+        var cube = new Cubemap(4, TextureFormat.RGBA32, true) { name = "Cube" };
+        Try("texture.cubemap.mips", () => cube.mipmapCount);
+        Try("texture.cubemap.get_pixels_bad_mip", () => cube.GetPixels(CubemapFace.PositiveX, 9));
+        Try("texture.cubemap.get_pixels_negative_mip", () => cube.GetPixels(CubemapFace.PositiveX, -1));
+        Try("texture.cubemap.get_pixels_bad_face", () => cube.GetPixels((CubemapFace)7));
+        Try("texture.cubemap.get_pixels_unknown_face", () => cube.GetPixels(CubemapFace.Unknown));
+        Do("texture.cubemap.set_pixels_bad_mip", () => cube.SetPixels(Colors(16), CubemapFace.PositiveX, 9));
+        Do("texture.cubemap.set_pixels_bad_face", () => cube.SetPixels(Colors(16), (CubemapFace)7));
+        Do("texture.cubemap.set_pixels_short", () => cube.SetPixels(Colors(3), CubemapFace.PositiveX));
+        Do("texture.cubemap.set_pixels_null", () => cube.SetPixels(null, CubemapFace.PositiveX));
+        Do("texture.cubemap.set_pixels_long", () => cube.SetPixels(Colors(40), CubemapFace.PositiveX));
+        Try("texture.cubemap.get_pixel_bad_mip", () => cube.GetPixel(CubemapFace.PositiveX, 0, 0, 9));
+        Do("texture.cubemap.set_pixel_bad_mip", () => cube.SetPixel(CubemapFace.PositiveX, 0, 0, Color.red, 9));
+        Try("texture.cubemap.get_pixel_bad_face", () => cube.GetPixel((CubemapFace)7, 0, 0));
+        Try("texture.cubemap.get_pixel_data_bad_mip", () => cube.GetPixelData<byte>(9, CubemapFace.PositiveX).Length);
+        Try("texture.cubemap.get_pixel_data_bad_face", () => cube.GetPixelData<byte>(0, (CubemapFace)7).Length);
+        Do("texture.cubemap.set_pixel_data_bad_mip", () => cube.SetPixelData(new byte[64], 9, CubemapFace.PositiveX));
+        Do("texture.cubemap.set_pixel_data_bad_face", () => cube.SetPixelData(new byte[64], 0, (CubemapFace)7));
+        Do("texture.cubemap.set_pixel_data_short", () => cube.SetPixelData(new byte[3], 0, CubemapFace.PositiveX));
+        Do("texture.cubemap.set_pixel_data_long", () => cube.SetPixelData(new byte[100], 0, CubemapFace.PositiveX));
+        Try("texture.cubemap.set_pixel_data_long_kept", () => cube.GetPixel(CubemapFace.PositiveX, 0, 0));
+        Destroy(cube);
+
+        var array = new Texture2DArray(4, 4, 2, TextureFormat.RGBA32, true) { name = "Layers" };
+        Try("texture.array.mips", () => array.mipmapCount);
+        Try("texture.array.get_pixels_bad_element", () => array.GetPixels(5));
+        Try("texture.array.get_pixels_negative_element", () => array.GetPixels(-1));
+        Try("texture.array.get_pixels_bad_mip", () => array.GetPixels(0, 9));
+        Try("texture.array.get_pixels32_bad_element", () => array.GetPixels32(5));
+        Try("texture.array.get_pixels32_bad_mip", () => array.GetPixels32(0, 9));
+        Do("texture.array.set_pixels_bad_element", () => array.SetPixels(Colors(16), 5));
+        Do("texture.array.set_pixels_bad_mip", () => array.SetPixels(Colors(16), 0, 9));
+        Do("texture.array.set_pixels_short", () => array.SetPixels(Colors(3), 0));
+        Do("texture.array.set_pixels_null", () => array.SetPixels(null, 0));
+        Do("texture.array.set_pixels_long", () => array.SetPixels(Colors(40), 0));
+        Do("texture.array.set_pixels32_long", () => array.SetPixels32(new Color32[40], 0));
+        Do("texture.array.set_pixels32_short", () => array.SetPixels32(new Color32[3], 0));
+        Do("texture.array.set_pixels32_null", () => array.SetPixels32(null, 0));
+        Do("texture.array.set_pixels32_bad_element", () => array.SetPixels32(new Color32[16], 5));
+        Do("texture.array.set_pixels32_bad_mip", () => array.SetPixels32(new Color32[16], 0, 9));
+        Try("texture.array.get_pixel_data_bad_mip", () => array.GetPixelData<byte>(9, 0).Length);
+        Try("texture.array.get_pixel_data_bad_element", () => array.GetPixelData<byte>(0, 5).Length);
+        Do("texture.array.set_pixel_data_bad_mip", () => array.SetPixelData(new byte[64], 9, 0));
+        Do("texture.array.set_pixel_data_bad_element", () => array.SetPixelData(new byte[64], 0, 5));
+        Do("texture.array.set_pixel_data_short", () => array.SetPixelData(new byte[3], 0, 0));
+        Destroy(array);
+
+        var volume = new Texture3D(4, 4, 4, TextureFormat.RGBA32, true) { name = "Volume" };
+        Try("texture.volume.mips", () => volume.mipmapCount);
+        Try("texture.volume.get_pixels_bad_mip", () => volume.GetPixels(9));
+        Try("texture.volume.get_pixels_negative_mip", () => volume.GetPixels(-1));
+        Try("texture.volume.get_pixels32_bad_mip", () => volume.GetPixels32(9));
+        Do("texture.volume.set_pixels_bad_mip", () => volume.SetPixels(Colors(64), 9));
+        Do("texture.volume.set_pixels_short", () => volume.SetPixels(Colors(3)));
+        Do("texture.volume.set_pixels_null", () => volume.SetPixels(null));
+        Do("texture.volume.set_pixels_long", () => volume.SetPixels(Colors(100)));
+        Do("texture.volume.set_pixels32_long", () => volume.SetPixels32(new Color32[100]));
+        Do("texture.volume.set_pixels32_short", () => volume.SetPixels32(new Color32[3]));
+        Do("texture.volume.set_pixels32_null", () => volume.SetPixels32(null));
+        Do("texture.volume.set_pixels32_bad_mip", () => volume.SetPixels32(new Color32[64], 9));
+        Try("texture.volume.get_pixel_bad_mip", () => volume.GetPixel(0, 0, 0, 9));
+        Do("texture.volume.set_pixel_bad_mip", () => volume.SetPixel(0, 0, 0, Color.red, 9));
+        Try("texture.volume.get_pixel_bilinear_bad_mip", () => volume.GetPixelBilinear(0f, 0f, 0f, 9));
+        Try("texture.volume.get_pixel_data_bad_mip", () => volume.GetPixelData<byte>(9).Length);
+        Do("texture.volume.set_pixel_data_bad_mip", () => volume.SetPixelData(new byte[256], 9));
+        Do("texture.volume.set_pixel_data_short", () => volume.SetPixelData(new byte[3], 0));
+        Destroy(volume);
+
+        var cubes = new CubemapArray(4, 2, TextureFormat.RGBA32, true) { name = "Cubes" };
+        Try("texture.cube_array.mips", () => cubes.mipmapCount);
+        Try("texture.cube_array.get_pixels_bad_element", () => cubes.GetPixels(CubemapFace.PositiveX, 5));
+        Try("texture.cube_array.get_pixels_bad_mip", () => cubes.GetPixels(CubemapFace.PositiveX, 0, 9));
+        Try("texture.cube_array.get_pixels_bad_face", () => cubes.GetPixels((CubemapFace)7, 0));
+        Try("texture.cube_array.get_pixels32_bad_element", () => cubes.GetPixels32(CubemapFace.PositiveX, 5));
+        Do("texture.cube_array.set_pixels_bad_element", () => cubes.SetPixels(Colors(16), CubemapFace.PositiveX, 5));
+        Do("texture.cube_array.set_pixels_bad_mip", () => cubes.SetPixels(Colors(16), CubemapFace.PositiveX, 0, 9));
+        Do("texture.cube_array.set_pixels_bad_face", () => cubes.SetPixels(Colors(16), (CubemapFace)7, 0));
+        Do("texture.cube_array.set_pixels_short", () => cubes.SetPixels(Colors(3), CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels_null", () => cubes.SetPixels(null, CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels_long", () => cubes.SetPixels(Colors(40), CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels32_null", () => cubes.SetPixels32(null, CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels32_short", () => cubes.SetPixels32(new Color32[3], CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels32_long", () => cubes.SetPixels32(new Color32[40], CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixels32_bad_element", () => cubes.SetPixels32(new Color32[16], CubemapFace.PositiveX, 5));
+        Try("texture.cube_array.get_pixel_data_bad_mip", () => cubes.GetPixelData<byte>(9, CubemapFace.PositiveX, 0).Length);
+        Try("texture.cube_array.get_pixel_data_bad_element", () => cubes.GetPixelData<byte>(0, CubemapFace.PositiveX, 5).Length);
+        Do("texture.cube_array.set_pixel_data_bad_mip", () => cubes.SetPixelData(new byte[64], 9, CubemapFace.PositiveX, 0));
+        Do("texture.cube_array.set_pixel_data_bad_element", () => cubes.SetPixelData(new byte[64], 0, CubemapFace.PositiveX, 5));
+        Destroy(cubes);
+
+        var lockedCube = new Cubemap(4, TextureFormat.RGBA32, false) { name = "LockedCube" };
+        lockedCube.Apply(false, true);
+        Try("texture.cubemap.non_readable_get_pixels", () => lockedCube.GetPixels(CubemapFace.PositiveX));
+        Try("texture.cubemap.non_readable_get_pixel", () => lockedCube.GetPixel(CubemapFace.PositiveX, 0, 0));
+        Destroy(lockedCube);
+        var lockedArray = new Texture2DArray(4, 4, 2, TextureFormat.RGBA32, false) { name = "LockedLayers" };
+        lockedArray.Apply(false, true);
+        Try("texture.array.non_readable_get_pixels", () => lockedArray.GetPixels(0));
+        Destroy(lockedArray);
     }
 }

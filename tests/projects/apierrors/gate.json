@@ -26,6 +26,8 @@
     "managed/UnityEngine/Core/StackTraceUtility.cs",
     "managed/UnityEngine/Core/StackTraces.cs",
     "managed/UnityEngine/Core/PortablePdb.cs",
-    "managed/UnityEngine/Runtime/Coroutines.cs"
+    "managed/UnityEngine/Runtime/Coroutines.cs",
+    "managed/UnityEngine/Graphics/Cubemap.cs",
+    "managed/UnityEngine/Graphics/TextureArrays.cs"
   ]
 }

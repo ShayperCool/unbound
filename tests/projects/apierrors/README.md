@@ -13,7 +13,13 @@ log messages it writes with their log type (`.logs`; logs written on other threa
   archive, and null arguments.
 * `mesh.*`: Mesh submesh, index, channel and size errors.
 * `texture.*`: Texture2D creation and reinitialization sizes, mip levels, pixel blocks and
-  array sizes, Graphics.CopyTexture regions outside a texture, and an unreadable texture.
+  array sizes, Graphics.CopyTexture regions outside a texture, and an unreadable texture;
+  `texture.copy_case.*`: copies from a red into a blue texture that are refused or done (the
+  destination's corner, centre and far corner after each): regions outside a level, negative
+  region sizes, whole and element copies of other sizes and formats, elements and levels that do
+  not exist; `texture.{cubemap,array,volume,cube_array}.*`: the pixel APIs of Cubemap,
+  Texture2DArray, Texture3D and CubemapArray with faces, elements and levels that do not exist,
+  missing, short and long arrays, and unreadable textures.
 * `animator.*`: Animator parameters, layers and states that do not exist or have another type,
   with `Resources/Ctrl.controller` (state Idle; parameters go: trigger, speed: float,
   flag: bool, count: int), with `logWarnings` off (`quiet_*`) and without a controller (`bare_*`).
@@ -51,4 +57,6 @@ message, without a full stop on Mono and with one on CoreCLR. The `format.extrac
 methods the Editor's JIT inlines (Unbound lists them), throws in a branch that the Editor reports at
 the method's last statement, a rethrow (the Editor names the `throw;`), the frame that called
 ExceptionDispatchInfo.Throw (CoreCLR places it at the method's first statement), and
-MonoBehaviour.StartCoroutine's own frames below a coroutine's first step.
+MonoBehaviour.StartCoroutine's own frames below a coroutine's first step. A copy between formats of other groups
+with as many bytes logs the Editor's OpenGL internal formats and copies the CPU bytes as they are
+(Unbound copies the pixels, without the error); Texture3D.GetPixelBilinear is not implemented.
