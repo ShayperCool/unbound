@@ -979,9 +979,13 @@ namespace UnityEngine.UIElements
                     return;
                 }
                 container.templateSource = template;
-                // Unbound's documents carry no slots or attribute overrides into a creation context
-                // (COMPATIBILITY_GAPS), so there are none to pass on to the template.
-                template.CloneTree(container);
+                // Under the attribute overrides of an enclosing template instance (any, even one that
+                // names no element of this template) these traits cannot clone their template: the
+                // Unity 6000.0.71f1 Editor throws out of the clone (tests/projects/uxmltemplates
+                // OldTemplateHost, OldTemplateOther; OldTemplateBare clones).
+                var scope = cc.uaScope ?? Unbound.UIElements.UxmlCloneScope.Root();
+                if (scope.Ranges.Count > 0) throw new NullReferenceException("Object reference not set to an instance of an object");
+                template.CloneTree(container, scope, out _, out _);
             }
         }
     }

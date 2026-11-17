@@ -70,7 +70,12 @@ namespace UnityEngine.UIElements
 
         public void CloneTree(VisualElement target) => CloneTree(target, out _, out _);
 
-        public void CloneTree(VisualElement target, out int firstElementIndex, out int elementAddedCount)
+        public void CloneTree(VisualElement target, out int firstElementIndex, out int elementAddedCount) =>
+            CloneTree(target, UxmlCloneScope.Root(), out firstElementIndex, out elementAddedCount);
+
+        /// <summary>Clones the document into <paramref name="target"/> with the overrides and slots of
+        /// the template instances it is cloned for.</summary>
+        internal void CloneTree(VisualElement target, UxmlCloneScope scope, out int firstElementIndex, out int elementAddedCount)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));
             firstElementIndex = target.childCount;
@@ -80,7 +85,7 @@ namespace UnityEngine.UIElements
             foreach (var child in m_UaRoot.Children)
             {
                 if (UxmlBuilder.IsBindings(child)) continue;
-                var element = UxmlBuilder.Create(this, child, target as TemplateContainer, target);
+                var element = UxmlBuilder.Create(this, child, target as TemplateContainer, target, scope);
                 if (element == null) continue;
                 element.visualTreeAssetSource = this;
                 target.hierarchy.Add(element);
@@ -152,7 +157,8 @@ namespace Unbound.UIElements
     {
         public string Namespace;
         public string Type;
-        public readonly List<KeyValuePair<string, string>> Attributes = new List<KeyValuePair<string, string>>();
+        List<KeyValuePair<string, string>> m_Attributes = new List<KeyValuePair<string, string>>();
+        public List<KeyValuePair<string, string>> Attributes => m_Attributes;
         public readonly List<UxmlNode> Children = new List<UxmlNode>();
         public readonly List<StyleSheet> StyleSheets = new List<StyleSheet>();
         public StyleSheet InlineSheet;
@@ -162,11 +168,140 @@ namespace Unbound.UIElements
         public int Line, Column;
         /// <summary>Attributes whose import-time warnings were logged (once per document element).</summary>
         public HashSet<string> ReportedUrls;
+        /// <summary>A template instance's attribute overrides, in document order (null without any).</summary>
+        public List<UxmlAttributeOverride> Overrides;
+        /// <summary>The slot this element defines in its document (`slot-name`), or null.</summary>
+        public string SlotName;
+        /// <summary>The slot of the enclosing template instance's document this element goes into
+        /// (`slot`), or null.</summary>
+        public string SlotUsage;
+
+        /// <summary>A copy of the element description with other attributes (the same children,
+        /// sheets and position).</summary>
+        public UxmlNode WithAttributes(List<KeyValuePair<string, string>> attributes)
+        {
+            var copy = (UxmlNode)MemberwiseClone();
+            copy.m_Attributes = attributes;
+            return copy;
+        }
 
         public string Attr(string name)
         {
             foreach (var a in Attributes) if (a.Key == name) return a.Value;
             return null;
+        }
+    }
+
+    /// <summary>One attribute value a template instance gives the named elements of its template.</summary>
+    internal readonly struct UxmlAttributeOverride
+    {
+        public readonly string ElementName;
+        public readonly string AttributeName;
+        public readonly string Value;
+
+        public UxmlAttributeOverride(string elementName, string attributeName, string value)
+        {
+            ElementName = elementName;
+            AttributeName = attributeName;
+            Value = value;
+        }
+    }
+
+    /// <summary>
+    /// What cloning a document carries into the templates it instances: the attribute overrides of
+    /// the enclosing template instances (outermost first) and the slots their documents defined.
+    /// Matches the Unity 6000.0.71f1 Editor (tests/projects/uxmltemplates): an override applies to
+    /// every element of the instanced document, nested instances' documents included, whose name
+    /// it names (not to template instances themselves); an outer instance's override wins over an
+    /// inner one's, and within one instance the first override of an attribute wins. A child of an
+    /// instance that names a slot (`slot`) goes into the element of that name (`slot-name`) defined so
+    /// far by the instance's document or the documents it instances; the table is emptied once the
+    /// instance's children are placed, so an outer instance reaches only its own document's slots.
+    /// </summary>
+    internal sealed class UxmlCloneScope
+    {
+        static readonly List<List<UxmlAttributeOverride>> s_NoRanges = new List<List<UxmlAttributeOverride>>();
+
+        /// <summary>The overrides of the enclosing instances, outermost first.</summary>
+        public readonly List<List<UxmlAttributeOverride>> Ranges;
+        /// <summary>The slots defined so far by the instances' documents (one table for the whole
+        /// clone, emptied once an instance's children are placed).</summary>
+        public readonly Dictionary<string, VisualElement> Slots;
+
+        UxmlCloneScope(List<List<UxmlAttributeOverride>> ranges, Dictionary<string, VisualElement> slots)
+        {
+            Ranges = ranges;
+            Slots = slots;
+        }
+
+        /// <summary>The scope of a document cloned from code: no overrides, its own slot table.</summary>
+        public static UxmlCloneScope Root() => new UxmlCloneScope(s_NoRanges, new Dictionary<string, VisualElement>());
+
+        /// <summary>The scope of a template cloned for an instance with <paramref name="overrides"/>.</summary>
+        public UxmlCloneScope Enter(List<UxmlAttributeOverride> overrides)
+        {
+            if (overrides == null || overrides.Count == 0) return this;
+            var ranges = new List<List<UxmlAttributeOverride>>(Ranges.Count + 1);
+            ranges.AddRange(Ranges);
+            ranges.Add(overrides);
+            return new UxmlCloneScope(ranges, Slots);
+        }
+
+        /// <summary>The value an override gives attribute <paramref name="attribute"/> (or one of
+        /// <paramref name="obsoleteNames"/>) of the element named <paramref name="elementName"/>.</summary>
+        public bool TryGetOverride(string elementName, string attribute, IEnumerable<string> obsoleteNames, out string value)
+        {
+            value = null;
+            if (string.IsNullOrEmpty(elementName)) return false;
+            foreach (var range in Ranges)
+            {
+                foreach (var o in range)
+                {
+                    if (o.ElementName != elementName) continue;
+                    if (o.AttributeName == attribute || IsObsoleteName(o.AttributeName, obsoleteNames))
+                    {
+                        value = o.Value;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        static bool IsObsoleteName(string name, IEnumerable<string> obsoleteNames)
+        {
+            if (obsoleteNames == null) return false;
+            foreach (var obsolete in obsoleteNames)
+                if (!string.IsNullOrEmpty(obsolete) && obsolete == name) return true;
+            return false;
+        }
+
+        /// <summary>The element description with the overrides of its name applied (attributes it has
+        /// get the override's value, others are added in the order they are first overridden), or
+        /// <paramref name="node"/> itself when none apply. Template instances take none.</summary>
+        public UxmlNode Apply(UxmlNode node)
+        {
+            if (Ranges.Count == 0 || node.TemplateName != null) return node;
+            var name = node.Attr("name");
+            if (string.IsNullOrEmpty(name)) return node;
+            List<KeyValuePair<string, string>> attributes = null;
+            HashSet<string> overridden = null;
+            foreach (var range in Ranges)
+            {
+                foreach (var o in range)
+                {
+                    if (o.ElementName != name) continue;
+                    // An outer instance's value (seen first) and the first of an instance's values win.
+                    overridden ??= new HashSet<string>();
+                    if (!overridden.Add(o.AttributeName)) continue;
+                    attributes ??= new List<KeyValuePair<string, string>>(node.Attributes);
+                    var entry = new KeyValuePair<string, string>(o.AttributeName, o.Value);
+                    int index = attributes.FindIndex(a => a.Key == o.AttributeName);
+                    if (index >= 0) attributes[index] = entry;
+                    else attributes.Add(entry);
+                }
+            }
+            return attributes == null ? node : node.WithAttributes(attributes);
         }
     }
 
@@ -187,7 +322,7 @@ namespace Unbound.UIElements
             Locate(rootNode, positions, ref next);
             asset.m_UaAssetPath = assetPath;
             var errors = new List<string>();
-            ReadChildren(asset, assetPath, root, rootNode, errors, positions, ref next);
+            ReadChildren(asset, assetPath, root, rootNode, errors, positions, new HashSet<string>(), ref next);
             asset.m_UaRoot = rootNode;
             foreach (var e in errors) Debug.LogWarning(assetPath + ": " + e);
             asset.importedWithWarnings = errors.Count > 0;
@@ -223,12 +358,35 @@ namespace Unbound.UIElements
                 if (child is XmlElement element) Skip(element, ref next);
         }
 
+        const string k_SlotWarning = "Syntax - Slot are an experimental feature. Syntax and semantic may change in the future.";
+
+        static bool IsDeclaration(XmlAttribute a) =>
+            a.Prefix == "xmlns" || a.Name == "xmlns" || a.Name.StartsWith("xsi:", StringComparison.Ordinal);
+
+        /// <summary>Reads an element's attributes, children and their descriptions. Slots and
+        /// attribute overrides are reported as the Unity 6000.0.71f1 Editor's importer reports them
+        /// (tests/projects/uxmltemplates): each `slot-name` and `slot` as experimental, a slot name
+        /// defined twice in the document as an error (the first element keeps it), and an override of
+        /// `name`, `class` or `style` as one it cannot make (the override is dropped).</summary>
         static void ReadChildren(VisualTreeAsset asset, string assetPath, XmlElement xml, UxmlNode node, List<string> errors,
-            List<(int Line, int Column)> positions, ref int next)
+            List<(int Line, int Column)> positions, HashSet<string> slots, ref int next)
         {
             foreach (XmlAttribute a in xml.Attributes)
             {
-                if (a.Prefix == "xmlns" || a.Name == "xmlns" || a.Name.StartsWith("xsi:", StringComparison.Ordinal) || a.Name == "editor-extension-mode") continue;
+                if (IsDeclaration(a) || a.Name == "editor-extension-mode") continue;
+                if (a.Name == "slot-name" || a.Name == "slot")
+                {
+                    Debug.LogWarning($" ({node.Line},{node.Column}): {k_SlotWarning}");
+                    asset.importedWithWarnings = true;
+                    if (a.Name == "slot") node.SlotUsage = a.Value;
+                    else if (slots.Add(a.Value)) node.SlotName = a.Value;
+                    else
+                    {
+                        Debug.LogError($" ({node.Line},{node.Column}): Semantic - Slot definition '{a.Value}' is defined more than once");
+                        asset.importedWithErrors = true;
+                    }
+                    continue;
+                }
                 node.Attributes.Add(new KeyValuePair<string, string>(a.Name, a.Value));
             }
             var style = node.Attr("style");
@@ -237,6 +395,7 @@ namespace Unbound.UIElements
             {
                 if (!(child is XmlElement element)) continue;
                 string local = element.LocalName;
+                if (local == "AttributeOverrides" && next < positions.Count) ReadOverrides(asset, element, node, positions[next]);
                 if (local == "Style" || local == "Template" || local == "AttributeOverrides") Skip(element, ref next);
                 if (local == "Style")
                 {
@@ -269,8 +428,26 @@ namespace Unbound.UIElements
                     asset.importedWithErrors = true;
                 }
                 if (local == "Instance") childNode.TemplateName = element.GetAttribute("template");
-                ReadChildren(asset, assetPath, element, childNode, errors, positions, ref next);
+                ReadChildren(asset, assetPath, element, childNode, errors, positions, slots, ref next);
                 node.Children.Add(childNode);
+            }
+        }
+
+        /// <summary>An `AttributeOverrides` element: each attribute but `element-name` overrides that
+        /// attribute of the template's elements of that name.</summary>
+        static void ReadOverrides(VisualTreeAsset asset, XmlElement xml, UxmlNode instance, (int Line, int Column) position)
+        {
+            var elementName = xml.GetAttribute("element-name");
+            foreach (XmlAttribute a in xml.Attributes)
+            {
+                if (IsDeclaration(a) || a.Name == "element-name") continue;
+                if (a.Name == "name" || a.Name == "class" || a.Name == "style")
+                {
+                    Debug.LogWarning($" ({position.Line},{position.Column}): Semantic - AttributeOverrides node cannot override attribute '{a.Name}'.");
+                    asset.importedWithWarnings = true;
+                    continue;
+                }
+                (instance.Overrides ??= new List<UxmlAttributeOverride>()).Add(new UxmlAttributeOverride(elementName, a.Name, a.Value));
             }
         }
     }
@@ -420,7 +597,7 @@ namespace Unbound.UIElements
             return ElementSource.Unknown;
         }
 
-        internal static VisualElement Create(VisualTreeAsset asset, UxmlNode node, TemplateContainer target, VisualElement cloneTarget)
+        internal static VisualElement Create(VisualTreeAsset asset, UxmlNode node, TemplateContainer target, VisualElement cloneTarget, UxmlCloneScope scope)
         {
             VisualElement element;
             var source = ElementSource.BuiltIn;
@@ -433,7 +610,7 @@ namespace Unbound.UIElements
                     return null;
                 }
                 var container = new TemplateContainer(node.TemplateName, template);
-                template.CloneTree(container);
+                template.CloneTree(container, scope.Enter(node.Overrides), out _, out _);
                 element = container;
             }
             else
@@ -456,7 +633,8 @@ namespace Unbound.UIElements
                 }
                 if (source == ElementSource.Factory)
                 {
-                    element = CreateWithFactory(asset, node, factories, cloneTarget);
+                    // A factory's traits read the overrides through their attribute descriptions.
+                    element = CreateWithFactory(asset, node, factories, cloneTarget, scope);
                     if (element == null) return null;
                 }
                 else
@@ -472,8 +650,9 @@ namespace Unbound.UIElements
                     }
                 }
             }
-            if (source == ElementSource.UxmlElement) ApplyUxmlAttributes(asset, element, node, type);
-            else if (source == ElementSource.BuiltIn) ApplyAttributes(asset, element, node);
+            if (source == ElementSource.UxmlElement) ApplyUxmlAttributes(asset, element, scope.Apply(node), type);
+            else if (source == ElementSource.BuiltIn) ApplyAttributes(asset, element, scope.Apply(node));
+            if (node.SlotName != null) scope.Slots.TryAdd(node.SlotName, element);
             ApplyClassesAndSheets(node, element);
             if (node.InlineSheet != null)
             {
@@ -488,13 +667,29 @@ namespace Unbound.UIElements
                     UxmlBindings.Apply(asset, element, child);
                     continue;
                 }
-                var childElement = Create(asset, child, target, cloneTarget);
+                var childElement = Create(asset, child, target, cloneTarget, scope);
                 if (childElement == null) continue;
                 childElement.visualTreeAssetSource = asset;
-                element.Add(childElement);
+                if (node.TemplateName != null && child.SlotUsage != null) AddToSlot(element, childElement, child.SlotUsage, scope);
+                else element.Add(childElement);
             }
+            // An instance's slots are filled: the slots defined so far are not reachable further out.
+            if (node.TemplateName != null) scope.Slots.Clear();
             if (node.Attr("content-container") != null && target != null) target.SetContentContainer(element);
             return element;
+        }
+
+        /// <summary>A child of a template instance into the slot it names, or (reported) into the
+        /// instance when no such slot is defined.</summary>
+        static void AddToSlot(VisualElement instance, VisualElement child, string slot, UxmlCloneScope scope)
+        {
+            if (scope.Slots.TryGetValue(slot, out var slotElement))
+            {
+                slotElement.Add(child);
+                return;
+            }
+            Debug.LogErrorFormat("Slot '{0}' was not found. Existing slots: {1}", slot, string.Join(", ", scope.Slots.Keys));
+            instance.Add(child);
         }
 
         static readonly string[] s_FirstAttributes = { "choices", "low-value", "high-value", "max-length" };
@@ -695,34 +890,27 @@ namespace Unbound.UIElements
 
         /// <summary>An element of a game UxmlFactory: the first factory of the tag that accepts the
         /// attributes creates it, its traits reading them.</summary>
-        static VisualElement CreateWithFactory(VisualTreeAsset asset, UxmlNode node, List<IUxmlFactory> factories, VisualElement cloneTarget)
+        static VisualElement CreateWithFactory(VisualTreeAsset asset, UxmlNode node, List<IUxmlFactory> factories, VisualElement cloneTarget, UxmlCloneScope scope)
         {
             var bag = new UxmlNodeAttributes(node);
-            var cc = new CreationContext(new Dictionary<string, VisualElement>(), asset, cloneTarget);
+            var cc = new CreationContext(scope, asset, cloneTarget);
             IUxmlFactory chosen = null;
-            VisualElement element;
-            try
+            foreach (var factory in factories)
             {
-                foreach (var factory in factories)
+                if (factory.AcceptsAttributeBag(bag, cc))
                 {
-                    if (factory.AcceptsAttributeBag(bag, cc))
-                    {
-                        chosen = factory;
-                        break;
-                    }
+                    chosen = factory;
+                    break;
                 }
-                if (chosen == null)
-                {
-                    Debug.LogError($"{Describe(asset, node)}: no UxmlFactory of this element accepts its attributes.");
-                    return null;
-                }
-                element = chosen.Create(bag, cc);
             }
-            catch (Exception e)
+            if (chosen == null)
             {
-                Debug.LogException(e);
+                Debug.LogError($"{Describe(asset, node)}: no UxmlFactory of this element accepts its attributes.");
                 return null;
             }
+            // A factory's exception leaves the clone, as in the Unity 6000.0.71f1 Editor
+            // (tests/projects/uxmltemplates OldTemplateHost).
+            var element = chosen.Create(bag, cc);
             if (element == null)
             {
                 Debug.LogError($"{Describe(asset, node)}: {chosen.GetType().FullName}.Create returned no element.");
@@ -747,7 +935,11 @@ namespace Unbound.UIElements
                 case "class":
                 case "style":
                 case "content-container":
+                    return;
                 case "template":
+                    // A template container written as an element names its template without cloning it
+                    // (Unity 6000.0.71f1, tests/projects/uxmltemplates).
+                    if (element is TemplateContainer container) container.SetTemplateId(value);
                     return;
                 case "picking-mode":
                     if (TryEnum(typeof(PickingMode), value, out var picking)) element.pickingMode = (PickingMode)picking;

@@ -57,14 +57,27 @@ namespace UnityEngine.UIElements
     {
         public static readonly CreationContext Default;
 
-        internal CreationContext(VisualTreeAsset vta) : this(null, vta, null) { }
+        internal CreationContext(VisualTreeAsset vta) : this((Dictionary<string, VisualElement>)null, vta, null) { }
 
         internal CreationContext(Dictionary<string, VisualElement> slotInsertionPoints, VisualTreeAsset vta, VisualElement target)
         {
             this.slotInsertionPoints = slotInsertionPoints;
             visualTreeAsset = vta;
             this.target = target;
+            uaScope = null;
         }
+
+        /// <summary>The context of an element cloned with the overrides and slots of
+        /// <paramref name="scope"/>.</summary>
+        internal CreationContext(Unbound.UIElements.UxmlCloneScope scope, VisualTreeAsset vta, VisualElement target)
+            : this(scope.Slots, vta, target)
+        {
+            uaScope = scope;
+        }
+
+        /// <summary>The overrides and slots of the template instances the element is cloned for
+        /// (null outside a clone).</summary>
+        internal Unbound.UIElements.UxmlCloneScope uaScope { get; private set; }
 
         public VisualElement target { get; private set; }
 
@@ -174,6 +187,11 @@ namespace UnityEngine.UIElements
         {
             value = null;
             if (bag == null) return false;
+            // A template instance's override of the element's attribute (by the element's name, under
+            // the attribute's name or a former one) comes first, as in the Unity 6000.0.71f1 Editor
+            // (tests/projects/uxmltemplates).
+            if (cc.uaScope != null && bag.TryGetAttributeValue("name", out var elementName)
+                && cc.uaScope.TryGetOverride(elementName, name, obsoleteNames, out value)) return true;
             if (!string.IsNullOrEmpty(name) && bag.TryGetAttributeValue(name, out value)) return true;
             if (obsoleteNames != null)
             {
