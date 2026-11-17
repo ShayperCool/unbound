@@ -229,12 +229,12 @@ controls of every guard, the pair gate, launch admission, the preflight judgemen
 comparator. Fake answers are not Unity's: the controls prove emission, schema and control flow
 only.
 
-## Sheriff status (main e541da0ea, 2026-11-16)
+## Status (2026-11-17)
 
-Since game code reads argument exception messages as Mono writes them (main after
-2026-11-17, `docs/COMPATIBILITY_GAPS.md` "Argument exception texts"), the ten `subshaderTag`
-exception messages of the eleven retained above match: 1 of 1510 keys fails,
-`context.isBatchMode`, which is a property of the capture: the reference was recorded in batch mode and Unbound runs as the interactive Editor.
+1 of 1510 keys fails, `context.isBatchMode`, which is a property of the capture: the reference
+was recorded in batch mode and Unbound runs as the interactive Editor. The ten `subshaderTag`
+exception messages of the eleven retained above match since game code reads argument exception
+messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception texts").
 Closing that key needs a windowed Linux Editor re-record, as activationorder's did. A run on
 macOS also differs in the OS-decided `context.platform` and `context.graphicsDeviceType`.
 Anything else is a regression.

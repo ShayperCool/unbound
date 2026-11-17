@@ -42,8 +42,8 @@ Run Unbound (which sets the Burst variable itself) and compare:
 
 `compare.py` reports apart the values that differ because of the .NET runtime rather than the
 engine (`RUNTIME_DIFFERENCES`: Enum.ToString of shared values, GetFunctionPointerForDelegate,
-AssemblyQualifiedName of BCL types) and normalizes how CoreCLR formats ArgumentException and
-NullReferenceException messages.
+AssemblyQualifiedName of BCL types) and normalizes how CoreCLR formats the NullReferenceException
+message (argument exception messages compare exactly: game code reads them as Mono writes them).
 
 The IL post-processors' output can be checked against the Editor's: after a Unity run,
 `Library/ScriptAssemblies/JobsProbe.dll` is the post-processed assembly (with

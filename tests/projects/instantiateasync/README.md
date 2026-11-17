@@ -99,13 +99,12 @@ unmeasured. Evidence: `validation/runs/start-texture-matching-validation-2026110
 `validation/runs/start-texture-root-admission-20261103/`; runtime manifest `d4078b07`, Core
 `fb2a7180`. No new Native capture or change to async integration is claimed by this replay.
 
-## Sheriff status (main e541da0ea, 2026-11-16)
+## Status (2026-11-17)
 
-The strict comparison has 774/777 lines with 3 missing and 3 extra, all recorded residuals
+The strict comparison has 776/777 lines with 1 missing and 1 extra, a recorded residual
 (`docs/COMPATIBILITY_GAPS.md`, instantiateasync row): the scene Template's Start runs before
 the probe's own Start in the Editor and after it in Unbound (frame -1 versus 0; an order
-between objects Unity does not document), and two `integrationTimeMS` exception messages
-carry the parameter name in the runtime's own form. Since game code reads argument exception
-messages as Mono writes them (2026-11-17, `docs/COMPATIBILITY_GAPS.md` "Argument exception
-texts"), the two messages match: 776/777 lines, the Start order alone. The deferred-Destroy
-differences above are closed. Any other difference is a regression.
+between objects Unity does not document). The two `integrationTimeMS` exception messages that
+differed before match since game code reads argument exception messages as Mono writes them
+(`docs/COMPATIBILITY_GAPS.md` "Argument exception texts"). The deferred-Destroy differences
+above are closed. Any other difference is a regression.

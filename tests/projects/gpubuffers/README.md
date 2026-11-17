@@ -78,7 +78,7 @@ python3 tests/projects/gpubuffers/compare.py tests/projects/gpubuffers/Reference
   A texture request without a region reads every layer of the level (array slices, volume depth
   slices); conversions take bytes as b / 255 and floats to bytes rounded.
 
-`compare.py` compares every value exactly. Mono's argument exception messages are compared in
-CoreCLR's wording, as tests/projects/jobs does. A readback's timing passes when its events are
+`compare.py` compares every value exactly, argument exception messages included (game code
+reads them as Mono writes them). A readback's timing passes when its events are
 those of an Editor sequence and its later events fall within the frames the Editor showed for
 that phase over all requests (1 to 2).
