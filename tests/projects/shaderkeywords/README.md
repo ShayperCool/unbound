@@ -95,8 +95,8 @@ Other releases, backends, quality settings and color spaces remain unmeasured.
 The matching-runtime comparison at source `fd64c55d` passes 1499/1510 canonical keys.
 The public passCount correction resolves exactly eight more keys from the previous1491,
 with no lost match, missing key, extra key or changed retained value. The eleven retained
-keys were ten exception-message strings and `context.isBatchMode` (closed by the windowed
-re-record below); exact comparison stays red on the ten messages.
+keys were ten exception-message strings (matching since game code reads Mono's message layout)
+and `context.isBatchMode` (closed by the windowed re-record; see Status below).
 Built-ins with no Properties block expose zero properties, and serialized UsePass entries
 resolve their target LightMode tags, including terrain Picking and SceneSelectionPass.
 The separate declarations cache is version3; the old v2 entry is unchanged and unused by
