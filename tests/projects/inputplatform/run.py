@@ -59,14 +59,11 @@ def engine(work, cli, work_area=False, work_area_delay_frames=0):
     project = project_copy(work/'project')
     out = work/'unbound'
     out.mkdir(parents=True)
-    command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', 'xvfb-run', '-a',
-        '-s', '-screen 0 1280x720x24', 'vglrun', '-d', 'egl', str(Path(cli).resolve()),
+    # A private 1280x720 X display (its own clipboard and work area), the GPU through VirtualGL.
+    command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', sys.executable,
+        str(REPO/'tests/private_display.py'), '--screen', '1280x720x24', '--gpu', '--', str(Path(cli).resolve()),
         'run', '-p', str(project), '--no-watch', '--size', '640x360', '--frames', '1800']
     env = environment(out)
-    env.pop('WAYLAND_DISPLAY', None)
-    env.pop('WAYLAND_SOCKET', None)
-    env['XDG_SESSION_TYPE'] = 'x11'
-    env['WINIT_UNIX_BACKEND'] = 'x11'
     env['INPUTPLATFORM_ENGINE'] = '1'
     if work_area:
         env['INPUTPLATFORM_WORK_AREA'] = '1'

@@ -34,9 +34,12 @@ laid out text, which a batch-mode Editor sometimes lays out a frame later.
   selection and shows at the cursor) needs a composing input method, which batch mode lacks; the
   managed tests cover it with a stand-in input method.
 
-The probe puts the clipboard text it found back when it ends (after its last row), so the desktop
-clipboard that other programs and probes read is left as it was; a non-text clipboard comes back
-empty. Its gate is exclusive (it runs alone, like inputplatform's) because the values it copies
-while it runs would reach a probe that reads the clipboard at the same time (editorui).
+`run.py check` runs the engine on its own X display (`tests/private_display.py`, the GPU through
+VirtualGL), and the Linux Editor runner records on a private display too: the clipboard the probe
+copies to and pastes from belongs to that run alone, so other programs and probes on the desktop
+(editorui reads the clipboard) never see its values, even when a run is killed, and the gate runs
+beside other probes. Where the probe does run on a shared desktop (the macOS Editor), it puts the
+clipboard text it found back when it ends (after its last row); a non-text clipboard comes back
+empty.
 
 Other releases are unmeasured.

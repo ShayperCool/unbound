@@ -1,5 +1,4 @@
 {
-  "exclusive": true,
   "commands": [
     "python3 tests/projects/textcommands/run.py check"
   ],

@@ -22,15 +22,18 @@ Make the probe scene (once; it is committed):
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -nographics -projectPath tests/projects/editorui \
         -executeMethod ProbeRunner.Create -logFile ~/.cache/editorui-create.log
 
-Record Unity's reference (the Editor needs a display):
+Record Unity's reference (the Editor needs a display; a private one, whose clipboard is empty as
+`EditorGUIUtility.systemCopyBuffer` records it, with the GPU through VirtualGL):
 
-    EDITORUI_PROBE_OUT=$PWD/tests/projects/editorui/Reference \
+    EDITORUI_PROBE_OUT=$PWD/tests/projects/editorui/Reference python3 tests/private_display.py --gpu -- \
         ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/editorui \
         -executeMethod ProbeRunner.Record -logFile ~/.cache/editorui.log
 
-Run Unbound and compare:
+Run Unbound and compare (on a private display too, so that nothing on the desktop's clipboard
+reaches `systemCopyBuffer`; the suite's recipe does the same):
 
-    EDITORUI_PROBE_OUT=/tmp/editorui unbound run -p tests/projects/editorui --headless 300000 --fixed-fps 60
+    EDITORUI_PROBE_OUT=/tmp/editorui python3 tests/private_display.py -- \
+        unbound run -p tests/projects/editorui --headless 300000 --fixed-fps 60
     python3 tests/projects/editorui/compare.py tests/projects/editorui/Reference /tmp/editorui
 
 `ClipLength.*` (the last calls, recorded with the macOS Editor, two identical captures; the other

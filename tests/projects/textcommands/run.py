@@ -21,6 +21,7 @@ from probe_paths import reference_file, run_root
 
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
+PRIVATE_DISPLAY = REPO/'tests/private_display.py'
 OUT = 'values.jsonl'
 
 
@@ -59,8 +60,10 @@ def engine(label):
     project = project_at(out)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, TEXT_COMMAND_OUT=str(out/OUT))
-    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-               '--no-watch', '--frames', '200', '--size', '640x480']
+    # Its own X display: the probe copies to and pastes from the clipboard, which then is the
+    # run's alone (tests/private_display.py), and the window draws on the GPU through VirtualGL.
+    command = [str(HEAVY), '--kind', 'engine-gpu', 'timeout', '600', sys.executable, str(PRIVATE_DISPLAY), '--gpu',
+               '--', cli, 'run', '-p', str(project), '--no-watch', '--frames', '200', '--size', '640x480']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print('engine exit', code, 'log', out/'engine.log')

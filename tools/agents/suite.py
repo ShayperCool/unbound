@@ -146,9 +146,12 @@ class NoRecipe:
         self.reason = reason
 
 
-def run(*args, env=None, timeout=None):
-    """`unbound run -p <probe> ARGS` with OUT variables in env."""
-    return Step('engine', ['{cli}', 'run', '-p', '{probe}', *args], env, timeout=timeout)
+def run(*args, env=None, timeout=None, private_display=False):
+    """`unbound run -p <probe> ARGS` with OUT variables in env. private_display: on its own X
+    display (tests/private_display.py), for probes that read what the desktop shares, such as
+    the clipboard."""
+    wrapper = ['{python}', '{repo}/tests/private_display.py', '--'] if private_display else []
+    return Step('engine', [*wrapper, '{cli}', 'run', '-p', '{probe}', *args], env, timeout=timeout)
 
 
 def py(script, *args, env=None, verdict='exit', ok=(0,)):
@@ -173,11 +176,12 @@ def gated_image(reference, candidate, residuals=None):
 
 
 def classic(variable, out, run_args, compare=None, images=None, verdict='summary', extra_env=None,
-            image_gate=False, residuals=None):
+            image_gate=False, residuals=None, private_display=False):
     """The original probe layout: an *_OUT variable, `unbound run`, compare.py REFERENCE OUT.
-    residuals: the probe's residual list for its compare.py, whose exit status then decides."""
+    residuals: the probe's residual list for its compare.py, whose exit status then decides.
+    private_display: see run()."""
     target = '{work}/'+out
-    steps = [run(*run_args, env={variable: target, **(extra_env or {})})]
+    steps = [run(*run_args, env={variable: target, **(extra_env or {})}, private_display=private_display)]
     arguments = [*(compare or [ref(), target]), *(('--residuals', residuals) if residuals else ())]
     steps.append(py('compare.py', *arguments, verdict='exit' if residuals else verdict))
     if images:
@@ -466,9 +470,11 @@ def recipes(release):
                            ('bundleanim', 'ANIM_PROBE_OUT')]:
         R[name] = classic(variable, 'out', headless)
     for name, variable, verdict in [('bundleaudio', 'AUDIO_PROBE_OUT', 'exit'),
-                                    ('settings', 'SETTINGS_PROBE_OUT', 'exit'),
-                                    ('editorui', 'EDITORUI_PROBE_OUT', 'exit')]:
+                                    ('settings', 'SETTINGS_PROBE_OUT', 'exit')]:
         R[name] = classic(variable, 'out', [*headless, '--fixed-fps', '60'], verdict=verdict)
+    # EditorGUIUtility.systemCopyBuffer reads the clipboard; its reference is an empty one.
+    R['editorui'] = classic('EDITORUI_PROBE_OUT', 'out', [*headless, '--fixed-fps', '60'], verdict='exit',
+                            private_display=True)
     gamepad = ('"$UNBOUND" run -p "$UNBOUND_PROBE_PROJECT" --headless 300000 --fixed-fps 60')
     R['gamepad'] = [Step('engine', ['sg', 'input', '-c', gamepad], launcher_kind='engine-cpu',
                          env={'UNBOUND': '{cli}', 'UNBOUND_PROBE_PROJECT': '{project}',

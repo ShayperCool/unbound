@@ -961,6 +961,16 @@ class PartialRecipeTests(unittest.TestCase):
         self.assertNotIn('{probe}', engine.argv)
         self.assertEqual(compare.kind, 'compare')
 
+    def test_a_probe_reading_the_clipboard_runs_on_its_own_display(self):
+        table = suite.recipes('6000.0.71f1')
+        engine, compare = table['editorui']
+        self.assertEqual(engine.kind, 'engine')
+        self.assertEqual(engine.argv[:4], ['{python}', '{repo}/tests/private_display.py', '--', '{cli}'])
+        self.assertIn('--headless', engine.argv)
+        self.assertEqual(compare.kind, 'compare')
+        # The other probes of its recipe group stay on the shared display.
+        self.assertEqual(table['settings'][0].argv[0], '{cli}')
+
     def test_color_variants_have_independent_settings_outputs_and_comparisons(self):
         table = suite.recipes('6000.0.71f1')
         for name, variants in [('uicolors', ('Linear', 'Gamma')),
