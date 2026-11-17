@@ -168,9 +168,67 @@ namespace UnityEngine.Tests
                 // Another layout is another buffer.
                 mesh.SetVertexBufferParams(5, new VertexAttributeDescriptor(VertexAttribute.Position), new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4, 1));
                 Assert.NotSame(view, VFXMeshFunctions.VertexBuffer(mesh, infos, view));
-                Assert.Null(VFXMeshFunctions.VertexBuffer(null, infos, null));
+                Assert.Same(VFXMeshFunctions.NoBuffer, VFXMeshFunctions.VertexBuffer(null, infos, null));
             }
             finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void AnEffectKeepsItsViewsOfAMeshUntilTheMeshChanges()
+        {
+            var mesh = Mixed();
+            var other = Mixed();
+            var locked = Mixed();
+            locked.UploadMeshData(true);
+            try
+            {
+                var data = Data(new[]
+                {
+                    Value(VFXValueType.Mesh), Value(VFXValueType.Uint32),
+                    Op(VFXExpressionOperation.VertexBufferFromMesh, 0, 1), Op(VFXExpressionOperation.IndexBufferFromMesh, 0),
+                }, Array.Empty<VFXExpressionValueContainerDesc>());
+                var values = new VisualEffectValues(data);
+                void Evaluate() => VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+                values.SetObject(0, mesh);
+                values.SetWord(1, VFXMeshFunctions.ChannelInfos(mesh, (uint)VertexAttribute.Color));
+                Evaluate();
+                var vertices = values.GetObject(2) as GraphicsBuffer;
+                var indices = values.GetObject(3) as GraphicsBuffer;
+                Assert.Equal(12, vertices.stride);
+                Assert.Equal(2, indices.stride);
+                // Kept from one evaluation to the next, and when the vertices change in place.
+                mesh.SetVertexBufferData(new byte[12], 0, 0, 12, 1);
+                Evaluate();
+                Assert.Same(vertices, values.GetObject(2));
+                Assert.Same(indices, values.GetObject(3));
+                // Another mesh: new views, the old ones released.
+                values.SetObject(0, other);
+                Evaluate();
+                Assert.NotSame(vertices, values.GetObject(2));
+                Assert.False(vertices.IsValid());
+                Assert.False(indices.IsValid());
+                // A mesh whose data was given up gains no target for effects: the programs read
+                // zeros of it (unless a script gave its buffers that target); of a destroyed
+                // one too. The buffer of zeros is shared and stays valid.
+                values.SetObject(0, locked);
+                Evaluate();
+                Assert.Same(VFXMeshFunctions.NoBuffer, values.GetObject(2));
+                Assert.Same(VFXMeshFunctions.NoBuffer, values.GetObject(3));
+                Object.DestroyImmediate(other);
+                values.SetObject(0, other);
+                Evaluate();
+                Assert.Same(VFXMeshFunctions.NoBuffer, values.GetObject(2));
+                Assert.True(VFXMeshFunctions.NoBuffer.IsValid());
+                values.SetObject(0, mesh);
+                Evaluate();
+                Assert.NotSame(VFXMeshFunctions.NoBuffer, values.GetObject(2));
+                Assert.True(VFXMeshFunctions.NoBuffer.IsValid());
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(locked);
+            }
         }
 
         [Fact]

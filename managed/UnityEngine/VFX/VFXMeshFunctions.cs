@@ -17,6 +17,8 @@ namespace Unbound.Runtime
         internal const uint None = uint.MaxValue;
 
         const int Streams = 4;
+        /// <summary>The most bytes a channel takes in a vertex (four 32-bit components).</summary>
+        const int MaxChannelBytes = 16;
 
         static bool Readable(Mesh mesh) => mesh != null && mesh.isReadable;
 
@@ -26,6 +28,21 @@ namespace Unbound.Runtime
 
         internal static uint IndexFormat(Mesh mesh) => Readable(mesh) ? (uint)mesh.indexFormat : None;
 
+        /// <summary>The byte offset of the layout's attribute <paramref name="at"/> in its
+        /// stream's vertices, and that stream's stride in bytes.</summary>
+        static (int Offset, int Stride) Place(ReadOnlySpan<VertexAttributeDescriptor> layout, int at)
+        {
+            int offset = 0, stride = 0, stream = layout[at].stream;
+            for (int i = 0; i < layout.Length; i++)
+            {
+                if (layout[i].stream != stream) continue;
+                int size = Mesh.FormatSize(layout[i].format) * layout[i].dimension;
+                if (i < at) offset += size;
+                stride += size;
+            }
+            return (offset, stride);
+        }
+
         /// <summary>Finds the channel's descriptor, its byte offset in its stream's vertices and
         /// that stream's stride in bytes.</summary>
         static bool Channel(Mesh mesh, uint channel, out VertexAttributeDescriptor found, out int offset, out int stride)
@@ -34,20 +51,15 @@ namespace Unbound.Runtime
             offset = stride = 0;
             if (!Readable(mesh) || channel >= Mesh.MaxVertexAttributes) return false;
             Span<VertexAttributeDescriptor> layout = stackalloc VertexAttributeDescriptor[Mesh.MaxVertexAttributes];
-            int count = mesh.FillLayout(layout);
-            int at = -1;
-            for (int i = 0; i < count; i++)
-                if ((uint)layout[i].attribute == channel) at = i;
-            if (at < 0) return false;
-            found = layout[at];
-            for (int i = 0; i < count; i++)
+            layout = layout.Slice(0, mesh.FillLayout(layout));
+            for (int i = 0; i < layout.Length; i++)
             {
-                if (layout[i].stream != found.stream) continue;
-                int size = Mesh.FormatSize(layout[i].format) * layout[i].dimension;
-                if (i < at) offset += size;
-                stride += size;
+                if ((uint)layout[i].attribute != channel) continue;
+                found = layout[i];
+                (offset, stride) = Place(layout, i);
+                return true;
             }
-            return true;
+            return false;
         }
 
         internal static uint VertexStride(Mesh mesh, uint channel) =>
@@ -98,31 +110,23 @@ namespace Unbound.Runtime
             var format = (VertexAttributeFormat)(infos & 0xff);
             if (stream >= Streams || dimension == 0) return;
             Span<VertexAttributeDescriptor> layout = stackalloc VertexAttributeDescriptor[Mesh.MaxVertexAttributes];
-            int count = mesh.FillLayout(layout);
-            int stride = 0;
-            for (int i = 0; i < count; i++)
-                if (layout[i].stream == stream) stride += Mesh.FormatSize(layout[i].format) * layout[i].dimension;
-            if (stride == 0) return;
-            ulong bytes = (ulong)offset * 4;
-            ulong vertex = bytes / (ulong)stride;
-            int within = (int)(bytes % (ulong)stride);
-            if (vertex >= (ulong)mesh.vertexCount) return;
-            int start = 0;
-            for (int i = 0; i < count; i++)
+            layout = layout.Slice(0, mesh.FillLayout(layout));
+            Span<byte> packed = stackalloc byte[MaxChannelBytes];
+            for (int i = 0; i < layout.Length; i++)
             {
                 var d = layout[i];
                 if (d.stream != stream) continue;
+                // The channel of the stream the offset falls on, within a vertex the mesh has.
+                var (start, stride) = Place(layout, i);
+                ulong bytes = (ulong)offset * 4;
+                if (bytes / (ulong)stride >= (ulong)mesh.vertexCount) return;
+                if ((int)(bytes % (ulong)stride) != start || d.format != format || d.dimension != dimension) continue;
                 int size = Mesh.FormatSize(d.format) * d.dimension;
-                if (start == within && d.format == format && d.dimension == dimension)
-                {
-                    Span<byte> packed = stackalloc byte[16];
-                    mesh.PackAttribute(d, (int)vertex, packed.Slice(0, size));
-                    int component = Mesh.FormatSize(format);
-                    int read = Math.Min(dimension, result.Length);
-                    for (int c = 0; c < read; c++) result[c] = Mesh.Read(packed.Slice(c * component, component), format).Item1;
-                    return;
-                }
-                start += size;
+                mesh.PackAttribute(d, (int)(bytes / (ulong)stride), packed.Slice(0, size));
+                int component = Mesh.FormatSize(format);
+                int read = Math.Min(dimension, result.Length);
+                for (int c = 0; c < read; c++) result[c] = Mesh.Read(packed.Slice(c * component, component), format).Item1;
+                return;
             }
         }
 
@@ -141,21 +145,34 @@ namespace Unbound.Runtime
             if (mesh != null && mesh.isReadable) mesh.vertexBufferTarget |= GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
         }
 
-        /// <summary>The view of the stream's vertex buffer the programs read.</summary>
+        /// <summary>What the programs read where a mesh's buffer cannot be bound: zeros (a
+        /// shared buffer of four zero words, never released).</summary>
+        internal static GraphicsBuffer NoBuffer => s_NoBuffer ??= new GraphicsBuffer(GraphicsBuffer.Target.Raw | GraphicsBuffer.Target.Structured, NoBufferWords, sizeof(uint));
+
+        const int NoBufferWords = 4;
+        static GraphicsBuffer s_NoBuffer;
+
+        /// <summary>The view of the stream's vertex buffer the programs read. A buffer without the
+        /// device's target for effects cannot be bound: the programs read zeros of a mesh without
+        /// read/write access (which does not gain it; tests/projects/vfx <c>draw-mesh locked</c>)
+        /// and, not measured, of no mesh.</summary>
         internal static GraphicsBuffer VertexBuffer(Mesh mesh, uint infos, GraphicsBuffer kept)
         {
-            if (mesh == null) return null;
+            if (mesh == null) return NoBuffer;
             Held(mesh);
-            return mesh.VertexBufferView((int)(infos >> 16 & 0xff), kept);
+            if ((mesh.vertexBufferTarget & GraphicsDeviceProfile.Current.VfxMeshBufferTarget) == 0) return NoBuffer;
+            return mesh.VertexBufferView((int)(infos >> 16 & 0xff), ReferenceEquals(kept, s_NoBuffer) ? null : kept) ?? NoBuffer;
         }
 
         /// <summary>The view of the index buffer the programs read: a readable mesh's index
-        /// buffer gains the device's target for effects' programs.</summary>
+        /// buffer gains the device's target for effects' programs (one without it is read as
+        /// zeros, as <see cref="VertexBuffer"/>).</summary>
         internal static GraphicsBuffer IndexBuffer(Mesh mesh, GraphicsBuffer kept)
         {
-            if (mesh == null) return null;
+            if (mesh == null) return NoBuffer;
             if (mesh.isReadable) mesh.indexBufferTarget |= GraphicsDeviceProfile.Current.VfxMeshBufferTarget;
-            return mesh.IndexBufferView(kept);
+            if ((mesh.indexBufferTarget & GraphicsDeviceProfile.Current.VfxMeshBufferTarget) == 0) return NoBuffer;
+            return mesh.IndexBufferView(ReferenceEquals(kept, s_NoBuffer) ? null : kept) ?? NoBuffer;
         }
     }
 }

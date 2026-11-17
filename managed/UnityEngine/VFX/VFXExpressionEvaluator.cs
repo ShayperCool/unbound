@@ -37,9 +37,10 @@ namespace Unbound.Runtime
 
         /// <summary>What a graph reads of the main camera while there is none: a new camera's
         /// lens (Unity 6000.0.71f1, tests/projects/vfx <c>camera/values</c> from frame 8).</summary>
-        const uint CubeFaces = 6;
-
         const float NoCameraFieldOfView = 60f, NoCameraNearPlane = 0.3f, NoCameraFarPlane = 1000f, NoCameraOrthographicSize = 5f;
+
+        /// <summary>The faces of a cubemap: an array of cubemaps' depth counts them.</summary>
+        const uint CubeFaces = 6;
 
         /// <summary>Whether <see cref="Evaluate"/> computes the operation.</summary>
         internal static bool Supported(VFXExpressionOperation op)
@@ -77,9 +78,10 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A texture's depth as a graph reads it: a volume's depth, an array's count of
-        /// slices, an array of cubemaps' count of faces, a render texture's volume depth, one for
-        /// another texture and zero for none or one destroyed (tests/projects/vfx
-        /// <c>mesh operations/*/u06..u08</c>).</summary>
+        /// slices, an array of cubemaps' count of faces, a render texture's volume depth and zero
+        /// for none or one destroyed (tests/projects/vfx <c>mesh operations/*/u06..u08</c>); one
+        /// for another texture (not measured: the package reads the depth of volumes and arrays
+        /// only).</summary>
         static uint TextureDepth(Texture texture) => texture == null ? 0u : texture switch
         {
             Texture3D volume => (uint)volume.depth,
@@ -365,7 +367,7 @@ namespace Unbound.Runtime
                             ? VFXMeshFunctions.VertexBuffer(viewed, w[p1], kept)
                             : VFXMeshFunctions.IndexBuffer(viewed, kept);
                         if (ReferenceEquals(view, kept)) break;
-                        kept?.Release();
+                        if (!ReferenceEquals(kept, VFXMeshFunctions.NoBuffer)) kept?.Release();
                         values.SetObject(e, view);
                         break;
                     }
