@@ -7152,6 +7152,16 @@
 {"key":"UnityEngine.StateMachineBehaviour/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEngine.StaticBatchingUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.SubsystemManager/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.SubsystemsImplementation.Extensions.SubsystemDescriptorExtensions/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.SubsystemsImplementation.Extensions.SubsystemExtensions/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemDescriptorStore/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemDescriptorWithProvider/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemDescriptorWithProvider`2/@factory","status":"excluded","value":"open-generic"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemProvider/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemProvider`1/@factory","status":"excluded","value":"open-generic"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemProxy`2/@factory","status":"excluded","value":"open-generic"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemWithProvider/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEngine.SubsystemsImplementation.SubsystemWithProvider`3/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEngine.SurfaceEffector2D/@factory","status":"value","value":"component"}
 {"key":"UnityEngine.SurfaceEffector2D/Property/UnityEngine.Behaviour/enabled","status":"value","value":"true"}
 {"key":"UnityEngine.SurfaceEffector2D/Property/UnityEngine.Behaviour/isActiveAndEnabled","status":"value","value":"true"}
