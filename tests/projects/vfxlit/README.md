@@ -38,6 +38,12 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   shadows.
 - `MeshDying`: ten particles a second that rise and live two fifths of a second, drawn as the
   wedge: a system that draws every particle it has room for, with dead ones between live ones.
+- `LitSorted`: nine lit quads blended over what is behind them, half transparent, each of a
+  colour, a turn and a depth of its own (a depth of three units in all): such an output sorts
+  its particles by default and draws them through a sorted indirect buffer.
+- `CurveOutput`: unlit quads, twenty a second living four fifths of a second, whose output
+  context sets each one's size from a curve and its colour from a gradient over its life
+  (`Set Size over Life`, `Set Color over Life`): the output's own program samples both.
 
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The pipeline asset
 (`Assets/Settings/ProbeURP.asset`) has two renderers: a forward one and a deferred one
@@ -78,6 +84,10 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   `ArgumentNullException` for `m` and the effect keeps its mesh), the wedge again (23).
 - `mesh none`: nothing is drawn of an output whose mesh is none.
 - `mesh dying`: frames 12 and 24.
+- `lit sorted`: `LitSorted` with a point light: where two quads overlap, the one drawn later
+  shows through less of the other.
+- `curve output`: frames 6, 12 and 24: quads of every age, each of the size and colour of its
+  age.
 - `renderer/<control>`: what the effect's renderer is set to (shadow casting, receiving, motion
   vectors, probes) and the names of its materials: one per output, by the outputs' sort priority
   and, among outputs of one priority, in the graph's order (`outputs`: the unlit quads' first,
@@ -106,10 +116,13 @@ adds to that is not separated.
 ## Not covered
 
 - Outputs with motion vectors (they keep buffers of the frame before), outputs of
-  a Shader Graph, strips, several meshes per output or a mesh chosen by distance, and lit or
-  mesh outputs drawn through an indirect buffer (alpha blended ones by default; unlit quads
-  through an unsorted one are `tests/projects/vfxoutputs`): not drawn; each says so once for
-  its asset.
+  a Shader Graph, lit strips, several meshes per output or a mesh chosen by distance, lit
+  outputs drawn through an indirect buffer that is not sorted and mesh outputs through any
+  indirect buffer (unlit quads through an unsorted one are `tests/projects/vfxoutputs`): not
+  drawn; each says so once for its asset.
+- A sorted lit output with another sort criterion than the default, of quads that cut
+  through each other, of other primitives than quads, or that casts shadows; a curve or a
+  gradient sampled by a lit, mesh or strip output, or by other blocks than the two here.
 - Shadows cast by an output drawn through an indirect buffer (the casters here draw
   themselves): such an output's shadow pass is drawn from the list its colour is drawn from, a
   frustum-culled one included, where the Editor may leave out of the shadows the particles its

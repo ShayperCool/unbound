@@ -123,6 +123,10 @@ public sealed class LitProbe : MonoBehaviour
             m_Exposed = Draw("mesh exposed", "MeshExposed", 5, 8, 11, 14, 17, 20, 23);
             Draw("mesh none", "MeshNone", 5);
             Draw("mesh dying", "MeshDying", 12, 24);
+            // Lit quads blended over what is behind them (sorted, through an indirect buffer),
+            // and quads sized and coloured over their life by their output.
+            Lamp(Draw("lit sorted", "LitSorted", 5, 12), LightType.Point);
+            Draw("curve output", "CurveOutput", 6, 12, 24);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

@@ -30,6 +30,7 @@ public static class LitAuthoring
         Objects();
         LitQuads();
         Meshes();
+        SortedAndCurves();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -447,6 +448,50 @@ public static class LitAuthoring
         block.inputSlots[0].value = Spaced(block.inputSlots[0], from);
         block.inputSlots[1].value = Spaced(block.inputSlots[1], to);
         return block;
+    }
+
+    /// <summary>Lit quads that are blended over what is behind them, which such an output
+    /// sorts by default and draws through an indirect buffer; and quads whose output context
+    /// takes each particle's size and colour from a curve and a gradient over its life, which
+    /// the output's own program then samples.</summary>
+    static void SortedAndCurves()
+    {
+        // Half transparent, each quad a colour, a turn and a depth of its own: where two
+        // overlap, the order they are drawn in shows.
+        var sorted = NewGraph("LitSorted");
+        var (sortedSpawn, sortedInit, _, sortedOutput) = System<VFXURPLitPlanarPrimitiveOutput>(sorted, 16);
+        sortedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        sortedOutput.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+        Burst(sortedSpawn, 9f);
+        SetRandom(sortedInit, "position", new Vector3(-0.9f, -0.9f, -1.5f), new Vector3(0.9f, 0.9f, 1.5f));
+        SetRandom(sortedInit, "angle", new Vector3(-30f, -30f, 0f), new Vector3(30f, 30f, 90f));
+        SetRandom(sortedInit, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+        Set(sortedInit, "alpha", 0.6f);
+        Set(sortedInit, "size", 1f);
+        Input(sortedOutput, "smoothness").value = 0.3f;
+        Input(sortedOutput, "metallic").value = 0f;
+        Save(sorted);
+
+        // Unlit quads that grow and shrink and change colour over their life, in the output.
+        var curved = NewGraph("CurveOutput");
+        var (curvedSpawn, curvedInit, _, curvedOutput) = System<VFXPlanarPrimitiveOutput>(curved, 32);
+        curvedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        ConstantRate(curvedSpawn, 20f);
+        SetRandom(curvedInit, "position", new Vector3(-1.2f, -1.2f, 0f), new Vector3(1.2f, 1.2f, 0f));
+        Set(curvedInit, "lifetime", 0.8f);
+        var size = Make<AttributeFromCurve>();
+        size.SetSettingValue("attribute", "size");
+        curvedOutput.AddChild(size);
+        size.inputSlots[0].value = new AnimationCurve(new Keyframe(0f, 0.05f), new Keyframe(0.4f, 0.5f), new Keyframe(1f, 0.1f));
+        var color = Make<AttributeFromCurve>();
+        color.SetSettingValue("attribute", "color");
+        curvedOutput.AddChild(color);
+        var ramp = new Gradient();
+        ramp.SetKeys(
+            new[] { new GradientColorKey(new Color(1f, 0.9f, 0.2f), 0f), new GradientColorKey(new Color(1f, 0.2f, 0.1f), 0.5f), new GradientColorKey(new Color(0.2f, 0.3f, 1f), 1f) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+        color.inputSlots[0].value = ramp;
+        Save(curved);
     }
 
     // ------------------------------------------------------------------------------ scene
