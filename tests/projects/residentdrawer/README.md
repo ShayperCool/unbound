@@ -69,8 +69,8 @@ from x -3 at 0.25 a frame (25 to 36) and zooms from a field of view of 60 to 20 
 (43 to 48). Every frame is captured, with every renderer's isVisible and the renderers the drawer
 holds. Each frame's draws are tested against the previous frame's depth pyramid and the ones it
 culls again against the frame's own, so the Editor draws every cube the camera sees in the frame it
-shows (the scene's own Lit sphere stays where the URP probe's scene has it). The images and
-isVisible catch culling of what the camera sees; what the wall hides looks the same whether it is
+shows (the scene's own Lit sphere stays where the URP probe's scene has it). The images catch
+culling of what the camera sees (isVisible, set by the CPU culling, stays true); what the wall hides looks the same whether it is
 culled or only fails the depth test.
 
 The profile also records four depth controls once, before the camera moves (`depthRead.*`): a
