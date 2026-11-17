@@ -238,7 +238,7 @@ namespace UnityEngine.Tests
         {
             var effect = Effect(Asset(new VFXExpressionSheet
             {
-                expressions = new[] { Value(VFXValueType.Buffer) },
+                expressions = new[] { Value(VFXValueType.Buffer), VisualEffectSimulationTests.Op(VFXExpressionOperation.BufferCount, 0) },
                 values = Array.Empty<VFXExpressionValueContainerDesc>(),
                 exposed = new[] { Exposed("Buffer", 0) },
             }));
@@ -250,7 +250,12 @@ namespace UnityEngine.Tests
                 released.Release();
                 effect.SetGraphicsBuffer("Buffer", released);
                 Assert.Null(effect.GetGraphicsBuffer("Buffer"));
+                // The count the graph reads is zero, not the replaced buffer's
+                // (tests/projects/vfx operations/update15/u02).
+                VFXExpressionEvaluator.Evaluate(effect.Data, effect.Values, 0, effect.Data.Expressions.Length, new VisualEffectState(), null);
+                Assert.Equal(0u, effect.Values.GetWord(1));
                 // One released once it is set stays set.
+                kept.Release();
                 kept = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 4);
                 effect.SetGraphicsBuffer("Buffer", kept);
                 kept.Release();
