@@ -13,9 +13,10 @@ using Unbound.Runtime;
 namespace Unbound.Host;
 
 /// <summary>
-/// Game code formats floats and doubles as under Unity's Mono (see <see cref="Unbound.MonoNumberFormat"/>):
-/// calls to <c>float.ToString</c>, <c>double.ToString</c>, <c>string.Format</c>, <c>string.Concat(object…)</c>,
-/// <c>StringBuilder.Append/AppendFormat</c>, <c>Convert.ToString</c> and virtual <c>ToString</c>s are
+/// Game code formats floats and doubles, and reads exception messages, as under Unity's Mono (see
+/// <see cref="Unbound.MonoNumberFormat"/>): calls to <c>float.ToString</c>, <c>double.ToString</c>,
+/// <c>string.Format</c>, <c>string.Concat(object…)</c>, <c>StringBuilder.Append/AppendFormat</c>,
+/// <c>Convert.ToString</c>, virtual <c>ToString</c>s and virtual <c>Exception.Message</c> reads are
 /// redirected to it when an assembly loads, and again in the IL of every hot-reload delta. Every
 /// rewritten instruction keeps its size, so the assembly's symbols still match.
 /// </summary>
@@ -27,6 +28,13 @@ static class NumberFormatShims
     };
 
     static readonly string s_ShimType = typeof(Unbound.MonoNumberFormat).FullName!;
+
+    /// <summary>The classes whose Message a call can name: Exception, which declares it, and the
+    /// class library's argument exceptions, which override it.</summary>
+    static readonly HashSet<string> s_MessageTypes = new(StringComparer.Ordinal)
+    {
+        "System.Exception", "System.ArgumentException", "System.ArgumentOutOfRangeException",
+    };
 
     /// <summary>Shims by name and parameter types (an instance call's receiver first).</summary>
     static readonly Dictionary<string, System.Reflection.MethodInfo> s_Shims = typeof(Unbound.MonoNumberFormat)
@@ -152,6 +160,10 @@ static class NumberFormatShims
         string? constrained, bool virtualCall)
     {
         if (!s_Names.Contains(name)) return null;
+        // A virtual read of an exception's message. (A non-virtual one is base.Message in an
+        // override: it stays.)
+        if (name == "get_Message" && s_MessageTypes.Contains(declaring))
+            return constrained == null && virtualCall && hasThis ? s_Shims.GetValueOrDefault(Key(name, ["System.Exception"])) : null;
         // A virtual ToString on an object that may be a boxed float. (A non-virtual call is
         // base.ToString() in an override: it stays.)
         if (constrained == null && virtualCall && name == "ToString" && declaring is "System.Object" or "System.IFormattable")
@@ -180,7 +192,7 @@ static class NumberFormatShims
             var member = reader.GetMemberReference(handle);
             if (!s_Names.Contains(reader.GetString(member.Name)) || member.Parent.Kind != HandleKind.TypeReference) continue;
             var parent = FullName(reader, (TypeReferenceHandle)member.Parent);
-            if (s_Types.Contains(parent) || parent is "System.Object" or "System.IFormattable" or "System.ValueType") return true;
+            if (s_Types.Contains(parent) || s_MessageTypes.Contains(parent) || parent is "System.Object" or "System.IFormattable" or "System.ValueType") return true;
         }
         return false;
     }

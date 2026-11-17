@@ -27,10 +27,8 @@ namespace Unbound.Runtime
 
         /// <summary>What a binding throws for an object argument it requires that is null or dead:
         /// the same messages with the parameter's name after them, else an ArgumentNullException
-        /// of the parameter. The Editor's exception has both the parameter name (tests/projects/vfx
-        /// reads it) and the Mono runtime's message ("Value cannot be null.\nParameter name: x");
-        /// .NET writes the name into the message itself whenever it is set, so this one keeps the
-        /// name and its message ends " (Parameter 'x')".</summary>
+        /// of the parameter (tests/projects/vfx reads its name; game code reads its message as Mono
+        /// writes it, "Value cannot be null.\nParameter name: x", MonoExceptions).</summary>
         internal static Exception Argument(Object o, string parameterName) =>
             (ReferenceEquals(o, null) ? null : Editor(o, parameterName)) ?? new ArgumentNullException(parameterName);
 

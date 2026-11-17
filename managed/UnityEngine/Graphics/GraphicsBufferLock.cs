@@ -28,7 +28,7 @@ namespace UnityEngine
             // In 64 bits: a count whose bytes overflow 32 bits is refused rather than handed out
             // over the buffer's end.
             if (bufferStartIndex < 0 || count < 0 || ((long)bufferStartIndex + count) * size > (long)this.count * stride)
-                throw MonoExceptions.OutOfRange($"Bad indices/count arguments (bufferStartIndex:{bufferStartIndex} count:{count} elementSize:{size}, this.count:{this.count}, this.stride{stride})");
+                throw new ArgumentOutOfRangeException($"Bad indices/count arguments (bufferStartIndex:{bufferStartIndex} count:{count} elementSize:{size}, this.count:{this.count}, this.stride{stride})");
             void* pointer = BeginBufferWrite((long)bufferStartIndex * size, (long)count * size);
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(pointer, count, Allocator.Invalid);
             m_Safety = AtomicSafetyHandle.Create();
@@ -50,7 +50,7 @@ namespace UnityEngine
             }
             // The array is released either way; a bad count leaves the lock open
             // (lock.negativeCountWritten, lock.afterNegativeCountWritten).
-            if (countWritten < 0) throw MonoExceptions.OutOfRange($"Bad indices/count arguments (countWritten:{countWritten})");
+            if (countWritten < 0) throw new ArgumentOutOfRangeException($"Bad indices/count arguments (countWritten:{countWritten})");
             EndBufferWrite();
         }
 

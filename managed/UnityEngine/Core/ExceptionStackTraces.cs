@@ -111,8 +111,11 @@ namespace Unbound.Runtime
             text.Append(')');
         }
 
-        static string ExceptionMessage(Exception exception, bool measured = true) => measured && string.IsNullOrWhiteSpace(exception.Message)
-            ? exception.GetType().Name : exception.GetType().Name + ": " + exception.Message;
+        static string ExceptionMessage(Exception exception, bool measured = true)
+        {
+            string message = MonoExceptions.MessageOf(exception);
+            return measured && string.IsNullOrWhiteSpace(message) ? exception.GetType().Name : exception.GetType().Name + ": " + message;
+        }
 
         static void AppendSource(StringBuilder text, StackFrame frame, string projectFolder)
         {

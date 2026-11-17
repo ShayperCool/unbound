@@ -62,7 +62,7 @@ namespace Unbound.Tests
         public void GraphicsBuffersCheckTheirShapeAndOnlyVertexOrIndexBuffersAreLockableByDefault()
         {
             void Shape(GraphicsBuffer.Target target, int count, int stride, string message) =>
-                Assert.Equal(message, Assert.Throws<ArgumentException>(() => new GraphicsBuffer(target, count, stride)).Message);
+                Assert.Equal(message, Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentException>(() => new GraphicsBuffer(target, count, stride))));
             Shape(GraphicsBuffer.Target.Structured, 0, 4, "Attempting to create a zero length graphics buffer\nParameter name: count");
             Shape(GraphicsBuffer.Target.Structured, 4, 0, "Attempting to create a graphics buffer with a negative or null stride\nParameter name: stride");
             Shape(GraphicsBuffer.Target.Index, 4, 3, "Attempting to create an index buffer with an invalid stride: 3\nParameter name: stride");
@@ -95,7 +95,7 @@ namespace Unbound.Tests
 
             var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GraphicsBuffer.UsageFlags.LockBufferForWrite, 8, 4);
             Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Bad indices/count arguments (bufferStartIndex:0 count:5 elementSize:8, this.count:8, this.stride4)",
-                Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<long>(0, 5)).Message);
+                Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<long>(0, 5))));
             // A count whose bytes wrap 32 bits (0x20000000 * 8 = 2^32) is refused too.
             Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<long>(0, 0x20000000));
             Assert.Throws<ArgumentOutOfRangeException>(() => buffer.LockBufferForWrite<int>(int.MaxValue, 1));
@@ -200,7 +200,7 @@ namespace Unbound.Tests
             block.SetTexture("_Src", (Texture)depthOnly);
             Assert.Same(depthOnly, block.GetTexture(id));
             Assert.Equal("Value cannot be null.\nParameter name: value",
-                Assert.Throws<ArgumentNullException>(() => block.SetTexture(id, (RenderTexture)null, RenderTextureSubElement.Depth)).Message);
+                Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentNullException>(() => block.SetTexture(id, (RenderTexture)null, RenderTextureSubElement.Depth))));
         }
 
         [Fact]
@@ -274,10 +274,10 @@ namespace Unbound.Tests
             try
             {
                 Assert.Equal("Count must be in the range of 0 to 3.\nParameter name: count",
-                    Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 5)).Message);
+                    Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 5))));
                 Assert.Equal("Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.\nParameter name: lightProbeProxyVolume",
-                    Assert.Throws<ArgumentException>(() => Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 3, null, ShadowCastingMode.On, true, 0, null,
-                        LightProbeUsage.UseProxyVolume, null)).Message);
+                    Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentException>(() => Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 3, null,
+                        ShadowCastingMode.On, true, 0, null, LightProbeUsage.UseProxyVolume, null))));
                 Assert.Throws<NullReferenceException>(() => Graphics.DrawMeshInstanced(mesh, 0, material, (Matrix4x4[])null));
                 Graphics.DrawMeshInstanced(mesh, 0, material, matrices, 0);
                 Assert.Empty(Immediate.Queued);

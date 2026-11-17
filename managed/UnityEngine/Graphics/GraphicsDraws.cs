@@ -98,15 +98,15 @@ namespace UnityEngine
             LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume)
         {
             if (!SystemInfo.supportsInstancing) throw new InvalidOperationException("Instancing is not supported.");
-            if (mesh == null) throw MonoExceptions.Null(nameof(mesh));
-            if (submeshIndex < 0 || submeshIndex >= mesh.subMeshCount) throw MonoExceptions.OutOfRange(nameof(submeshIndex), "submeshIndex out of range.");
-            if (material == null) throw MonoExceptions.Null(nameof(material));
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            if (submeshIndex < 0 || submeshIndex >= mesh.subMeshCount) throw new ArgumentOutOfRangeException(nameof(submeshIndex), "submeshIndex out of range.");
+            if (material == null) throw new ArgumentNullException(nameof(material));
             if (!material.enableInstancing) throw new InvalidOperationException("Material needs to enable instancing for use with DrawMeshInstanced.");
-            if (matrices == null) throw MonoExceptions.Null(nameof(matrices));
+            if (matrices == null) throw new ArgumentNullException(nameof(matrices));
             int most = Math.Min(kMaxDrawMeshInstanceCount, matrices.Length);
-            if (count < 0 || count > most) throw MonoExceptions.OutOfRange(nameof(count), $"Count must be in the range of 0 to {most}.");
+            if (count < 0 || count > most) throw new ArgumentOutOfRangeException(nameof(count), $"Count must be in the range of 0 to {most}.");
             if (lightProbeUsage == LightProbeUsage.UseProxyVolume && lightProbeProxyVolume == null)
-                throw MonoExceptions.Argument("Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.", nameof(lightProbeProxyVolume));
+                throw new ArgumentException("Argument lightProbeProxyVolume must not be null if lightProbeUsage is set to UseProxyVolume.", nameof(lightProbeProxyVolume));
         }
 
         /// <summary>The instances culled and sorted as a group ("Unity culls and sorts instanced
@@ -177,7 +177,7 @@ namespace UnityEngine
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, List<Matrix4x4> matrices, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage, LightProbeProxyVolume lightProbeProxyVolume)
         {
-            if (matrices == null) throw MonoExceptions.Null(nameof(matrices));
+            if (matrices == null) throw new ArgumentNullException(nameof(matrices));
             DrawMeshInstanced(mesh, submeshIndex, material, matrices.ToArray(), matrices.Count, properties, castShadows, receiveShadows, layer, camera, lightProbeUsage, lightProbeProxyVolume);
         }
 

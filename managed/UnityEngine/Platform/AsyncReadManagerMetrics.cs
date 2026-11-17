@@ -230,13 +230,13 @@ namespace Unity.IO.LowLevel.Unsafe
         /// records only the null check.)</summary>
         public static void GetMetrics(List<AsyncReadManagerRequestMetric> outMetrics, Flags flags)
         {
-            if (outMetrics == null) throw Unbound.Runtime.MonoExceptions.Null("metrics");
+            if (outMetrics == null) throw new ArgumentNullException("metrics");
             AsyncReadMetrics.Take(null, Clear(flags), outMetrics);
         }
 
         public static void GetMetrics(List<AsyncReadManagerRequestMetric> outMetrics, AsyncReadManagerMetricsFilters filters, Flags flags)
         {
-            if (outMetrics == null) throw Unbound.Runtime.MonoExceptions.Null("metrics");
+            if (outMetrics == null) throw new ArgumentNullException("metrics");
             RequireFilters(filters);
             AsyncReadMetrics.Take(filters, Clear(flags), outMetrics);
         }

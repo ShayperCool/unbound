@@ -285,7 +285,7 @@ namespace UnityEngine.Tests
             Assert.Equal(16UL, AsyncReadManagerMetrics.GetSummaryOfMetrics(list).TotalBytesRead);
             Assert.Equal(0UL, AsyncReadManagerMetrics.GetSummaryOfMetrics((List<AsyncReadManagerRequestMetric>)null).TotalBytesRead);
             var e = Assert.Throws<ArgumentNullException>(() => AsyncReadManagerMetrics.GetMetrics((List<AsyncReadManagerRequestMetric>)null, AsyncReadManagerMetrics.Flags.None));
-            Assert.Equal("Value cannot be null.\nParameter name: metrics", e.Message);
+            Assert.Equal("Value cannot be null.\nParameter name: metrics", Unbound.Runtime.MonoExceptions.MessageOf(e));
         }
     }
 }

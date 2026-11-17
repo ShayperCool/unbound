@@ -1361,7 +1361,7 @@ namespace UnityEngine
         /// back as no texture (tests/projects/srpmembers element.*).</summary>
         public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element)
         {
-            if ((object)value == null) throw MonoExceptions.Null("value");
+            if ((object)value == null) throw new ArgumentNullException("value");
             m_Values[nameID] = new TextureElement(value, element);
             m_Values[HdrDecode.IdOf(nameID)] = HdrDecode.Of(value);
         }

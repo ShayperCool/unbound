@@ -90,7 +90,8 @@ namespace UnityEngine.Tests
         {
             var missing = Path.Combine(directory, "missing");
             Assert.Equal($"Cache path '{missing}' doesn't exist.", Assert.Throws<ArgumentException>(() => Caching.AddCache(missing)).Message);
-            Assert.Equal("Value cannot be null.\nParameter name: Cache path cannot be null or empty.", Assert.Throws<ArgumentNullException>(() => Caching.AddCache("")).Message);
+            Assert.Equal("Value cannot be null.\nParameter name: Cache path cannot be null or empty.", Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentNullException>(() => Caching.AddCache(""))));
+            Assert.Equal("Cache path cannot be null or empty.", Assert.Throws<ArgumentNullException>(() => Caching.AddCache("")).ParamName);
             var a = Caching.AddCache(Dir("a"));
             Assert.Equal($"Cache with path '{Dir("a")}' has already been added.", Assert.Throws<InvalidOperationException>(() => Caching.AddCache(Dir("a"))).Message);
             var aSlash = Caching.AddCache(Dir("a") + "/");
@@ -175,7 +176,7 @@ namespace UnityEngine.Tests
             Assert.False(Caching.MarkAsUsed("http://host/alpha", new Hash128(9, 9, 9, 9)));
             Assert.Equal("Input AssetBundle url cannot be null or empty.", Assert.Throws<ArgumentException>(() => Caching.IsVersionCached("", default(Hash128))).Message);
             Assert.Equal("Input AssetBundle name cannot be null or empty.", Assert.Throws<ArgumentException>(() => Caching.ClearAllCachedVersions(null)).Message);
-            Assert.Equal("Value cannot be null.\nParameter name: Input outCachedVersions cannot be null.", Assert.Throws<ArgumentNullException>(() => Caching.GetCachedVersions("alpha", null)).Message);
+            Assert.Equal("Value cannot be null.\nParameter name: Input outCachedVersions cannot be null.", Unbound.Runtime.MonoExceptions.MessageOf(Assert.Throws<ArgumentNullException>(() => Caching.GetCachedVersions("alpha", null))));
 
             // A cache added again reads what its directory holds.
             Assert.True(Caching.RemoveCache(b));

@@ -552,7 +552,7 @@ namespace UnityEngine.UIElements
             if (id == newParentId || IsChildOf(newParentId, id) || !m_UaHierarchy.TryGet(id, out var node)) return;
             UaTreeNode parent;
             if (newParentId == BaseTreeView.invalidId) parent = m_UaHierarchy.root;
-            else if (!m_UaHierarchy.TryGet(newParentId, out parent)) throw new ArgumentNullException(null, "Value cannot be null.\nParameter name: node");
+            else if (!m_UaHierarchy.TryGet(newParentId, out parent)) throw new ArgumentNullException("node");
             if (node.parent == parent && GetChildIndexForId(id) < childIndex) childIndex--;
             if (childIndex < -1)
             {

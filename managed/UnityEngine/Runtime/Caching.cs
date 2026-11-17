@@ -571,9 +571,6 @@ namespace UnityEngine
 
         public static bool ClearCache(int expiration) => BundleCaches.ClearEach(store => store.ClearOlderThan(expiration));
 
-        /// <summary>Unity's ArgumentNullException(paramName), with the message its runtime gives it.</summary>
-        static ArgumentNullException NullArgument(string paramName) => Unbound.Runtime.MonoExceptions.Null(paramName);
-
         static void CheckName(string name)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentException("Input AssetBundle name cannot be null or empty.");
@@ -606,7 +603,7 @@ namespace UnityEngine
         public static void GetCachedVersions(string assetBundleName, List<Hash128> outCachedVersions)
         {
             CheckName(assetBundleName);
-            if (outCachedVersions == null) throw NullArgument("Input outCachedVersions cannot be null.");
+            if (outCachedVersions == null) throw new ArgumentNullException("Input outCachedVersions cannot be null.");
             outCachedVersions.AddRange(BundleCaches.VersionsOf(assetBundleName));
         }
 
@@ -676,7 +673,7 @@ namespace UnityEngine
         public static Cache AddCache(string cachePath)
         {
             if (string.IsNullOrEmpty(cachePath))
-                throw NullArgument("Cache path cannot be null or empty.");
+                throw new ArgumentNullException("Cache path cannot be null or empty.");
             bool readOnly = false;
             if (cachePath.Replace('\\', '/').StartsWith(Application.streamingAssetsPath, StringComparison.Ordinal))
                 readOnly = true;

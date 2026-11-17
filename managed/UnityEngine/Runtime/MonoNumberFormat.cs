@@ -12,7 +12,9 @@ namespace Unbound
     /// other formats round those digits again ("F2" of <c>1.005</c> is "1.01", "G8" of a float takes 9
     /// digits and rounds them to 8), "R" tries 7/15 digits before 9/17, a value exactly halfway
     /// between two texts rounds away from zero (.NET rounds it to the even digit), and a value that
-    /// rounds to zero prints no minus sign.
+    /// rounds to zero prints no minus sign. Exceptions print their messages as Mono writes them
+    /// (Unbound.Runtime.MonoExceptions): Exception.Message, a virtual ToString() and the calls that
+    /// format their arguments.
     /// Game assemblies' calls are redirected here when they load (Unbound.Host.NumberFormatShims);
     /// the methods take an instance's value by reference first, like the call they replace.
     /// </summary>
@@ -334,14 +336,19 @@ namespace Unbound
         public static string ToString(ref double value, IFormatProvider provider) => Format(value, null, provider);
         public static string ToString(ref double value, string format, IFormatProvider provider) => Format(value, format, provider);
 
-        // Virtual calls whose receiver may be a boxed float or double.
+        // Virtual calls whose receiver may be a boxed float or double, or an exception.
 
         public static string VirtualToString(object value) => value switch
         {
             float f => Format(f, null, null),
             double d => Format(d, null, null),
+            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             _ => value.ToString(),
         };
+
+        /// <summary>A virtual call of Exception.Message (a non-virtual one is base.Message in an
+        /// override: it stays).</summary>
+        public static string get_Message(Exception exception) => Unbound.Runtime.MonoExceptions.MessageOf(exception);
 
         public static string VirtualToString(IFormattable value, string format, IFormatProvider provider) => value switch
         {
@@ -360,12 +367,14 @@ namespace Unbound
         {
             float f => Format(f, null, null),
             double d => Format(d, null, null),
+            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             _ => Convert.ToString(value),
         };
         public static string ToString(object value, IFormatProvider provider) => value switch
         {
             float f => Format(f, null, provider),
             double d => Format(d, null, provider),
+            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             _ => Convert.ToString(value, provider),
         };
 
@@ -400,6 +409,7 @@ namespace Unbound
         {
             float f => Format(f, null, null),
             double d => Format(d, null, null),
+            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             _ => value?.ToString(),
         };
 
@@ -407,6 +417,7 @@ namespace Unbound
         {
             float f => new Boxed(f, true),
             double d => new Boxed(d, false),
+            Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             _ => value,
         };
 
@@ -416,7 +427,7 @@ namespace Unbound
             object[] wrapped = null;
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] is not (float or double)) continue;
+                if (args[i] is not (float or double or Exception)) continue;
                 wrapped ??= (object[])args.Clone();
                 wrapped[i] = Wrap(args[i]);
             }

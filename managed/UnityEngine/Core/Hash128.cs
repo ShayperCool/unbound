@@ -126,7 +126,7 @@ namespace UnityEngine
         {
             if (start < 0 || count < 0 || start + count > length)
                 // Unity passes the text as the parameter name.
-                throw Unbound.Runtime.MonoExceptions.OutOfRange($"Bad start/count arguments (start:{start} count:{count})");
+                throw new ArgumentOutOfRangeException($"Bad start/count arguments (start:{start} count:{count})");
         }
 
         internal void AppendBytes(ReadOnlySpan<byte> data) => SpookyHash.Hash(data, ref u64_0, ref u64_1);

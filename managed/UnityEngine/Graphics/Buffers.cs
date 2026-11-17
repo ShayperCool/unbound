@@ -269,12 +269,12 @@ namespace UnityEngine
             const Target VertexIndexOrCopy = Target.Vertex | Target.Index | Target.CopySource | Target.CopyDestination;
             if ((target & ComputeTargets) != 0 && !SystemInfo.supportsComputeShaders)
                 throw new ArgumentException("Attempting to create a graphics buffer that requires compute shader support, but compute shaders are not supported on this platform. Target: " + target);
-            if (count <= 0) throw MonoExceptions.Argument("Attempting to create a zero length graphics buffer", nameof(count));
-            if (stride <= 0) throw MonoExceptions.Argument("Attempting to create a graphics buffer with a negative or null stride", nameof(stride));
+            if (count <= 0) throw new ArgumentException("Attempting to create a zero length graphics buffer", nameof(count));
+            if (stride <= 0) throw new ArgumentException("Attempting to create a graphics buffer with a negative or null stride", nameof(stride));
             if ((target & Target.Index) != 0 && stride != 2 && stride != 4)
-                throw MonoExceptions.Argument("Attempting to create an index buffer with an invalid stride: " + stride, nameof(stride));
+                throw new ArgumentException("Attempting to create an index buffer with an invalid stride: " + stride, nameof(stride));
             if ((target & VertexIndexOrCopy) != target && stride % 4 != 0)
-                throw MonoExceptions.Argument("Stride must be a multiple of 4 unless the buffer is only used as a vertex buffer and/or index buffer ", nameof(stride));
+                throw new ArgumentException("Stride must be a multiple of 4 unless the buffer is only used as a vertex buffer and/or index buffer ", nameof(stride));
             long size = (long)count * stride, most = SystemInfo.MeasuredMaxGraphicsBufferSize;
             if (most > 0 && size > most)
                 throw new ArgumentException($"The total size of the graphics buffer ({size} bytes) exceeds the maximum buffer size. Maximum supported buffer size: {most} bytes.");
