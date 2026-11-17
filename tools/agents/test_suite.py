@@ -8,6 +8,7 @@ import io
 import json
 import os
 import shlex
+import shutil
 import signal
 from pathlib import Path
 import subprocess
@@ -960,6 +961,34 @@ class PartialRecipeTests(unittest.TestCase):
         self.assertIn('{project}', engine.argv)
         self.assertNotIn('{probe}', engine.argv)
         self.assertEqual(compare.kind, 'compare')
+
+    def test_promotion_records_the_recent_baselines_durations(self):
+        with tempfile.TemporaryDirectory() as temporary, unittest.mock.patch.object(suite, 'AGENTS', Path(temporary)), \
+                contextlib.redirect_stdout(io.StringIO()):
+            def promote(label, seconds):
+                summary = Path(temporary)/label/'summary.json'
+                summary.parent.mkdir()
+                summary.write_text(json.dumps({'label': label, 'probes': {
+                    'a': {'seconds': seconds, 'release': '6000.0.71f1', 'status': 'pass', 'summary': 'long'},
+                    'broken': 'not a probe entry'}}))
+                suite.promote(summary)
+            path = Path(temporary)/'baseline'/suite.DURATIONS
+            for number in range(1, 8):
+                promote(f'run{number}', number*10)
+            recorded = json.loads(path.read_text())['baselines']
+            self.assertEqual([item['label'] for item in recorded], [f'run{n}' for n in range(3, 8)])
+            self.assertEqual(recorded[-1]['probes'],
+                             {'a': {'seconds': 70, 'release': '6000.0.71f1', 'status': 'pass'}})
+            self.assertEqual(json.loads((Path(temporary)/'baseline/summary.json').read_text())['label'], 'run7')
+            # A label promoted again is one entry, the newest.
+            shutil.rmtree(Path(temporary)/'run5')
+            promote('run5', 55)
+            recorded = json.loads(path.read_text())['baselines']
+            self.assertEqual([item['label'] for item in recorded], ['run3', 'run4', 'run6', 'run7', 'run5'])
+            # An unreadable record starts again.
+            path.write_text('{')
+            promote('run8', 80)
+            self.assertEqual([item['label'] for item in json.loads(path.read_text())['baselines']], ['run8'])
 
     def test_a_probe_reading_the_clipboard_runs_on_its_own_display(self):
         table = suite.recipes('6000.0.71f1')

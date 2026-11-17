@@ -158,6 +158,43 @@ class PostlandTests(unittest.TestCase):
         self.assertEqual(postland.recorded_limits(checks, summary), {})
         self.assertEqual(postland.too_long(checks, summary), [])
 
+    def test_a_baseline_slowed_by_other_work_does_not_stretch_the_limits(self):
+        summary = self.root/'summary.json'
+        release = '6000.0.71f1'
+        summary.write_text(json.dumps({'probes': {
+            'slowed': {'seconds': 2000, 'release': release, 'status': 'pass'},
+            'steady': {'seconds': 600, 'release': release, 'status': 'fail'},
+            'new': {'seconds': 500, 'release': release, 'status': 'pass'}}}))
+        def baseline(label, **probes):
+            return {'label': label, 'probes': {name: dict(zip(('seconds', 'status', 'release'), (*value, release)))
+                                               for name, value in probes.items()}}
+        def write(*baselines):
+            (self.root/'durations.json').write_text(json.dumps({'baselines': list(baselines)}))
+        suite = 'python3 tools/agents/suite.py --only {} --jobs 1'
+        checks = [[name, suite.format(name), 'engine paths', release] for name in ('slowed', 'steady', 'new')]
+        key = land.automatic_limit_key
+        # Without earlier durations the current baseline decides, as before: 2x2000 is over the cap.
+        self.assertEqual(postland.recorded_seconds(checks, summary),
+                         {key(checks[0]): 2000, key(checks[1]): 600, key(checks[2]): 500})
+        self.assertEqual(postland.too_long(checks, summary), [(checks[0], 2000)])
+        write(baseline('oldest', slowed=(10, 'pass'), steady=(10, 'pass')),
+              baseline('older', slowed=(900, 'pass'), steady=(30, 'fail')),
+              # A run cut short by a failure, or of another release, says nothing about the length.
+              {'label': 'other release', 'probes': {'slowed': {'seconds': 20, 'status': 'pass',
+                                                               'release': '2022.3.10f1'}}},
+              baseline('current', slowed=(2000, 'pass'), steady=(600, 'fail'), new=(500, 'pass')))
+        # The three most recent baselines count (the oldest no longer does): the shortest complete run.
+        self.assertEqual(postland.recorded_seconds(checks, summary),
+                         {key(checks[0]): 900, key(checks[1]): 600, key(checks[2]): 500})
+        self.assertEqual(postland.recorded_limits(checks, summary),
+                         {key(checks[0]): 1800, key(checks[1]): 1200, key(checks[2]): 1000})
+        self.assertEqual(postland.too_long(checks, summary), [])
+        # An unreadable record leaves the current baseline's durations.
+        for text in ('{', '{"baselines": 3}', '{"baselines": [7, {"probes": []}]}', '[]'):
+            (self.root/'durations.json').write_text(text)
+            with self.subTest(text=text):
+                self.assertEqual(postland.recorded_seconds(checks, summary)[key(checks[0])], 2000)
+
     def test_a_check_recorded_beyond_the_cap_is_reported_for_an_explicit_probe_not_run(self):
         (self.state/'baseline').mkdir(parents=True)
         (self.state/'baseline/summary.json').write_text(json.dumps({'probes': {'a': {'seconds': 4000}}}))

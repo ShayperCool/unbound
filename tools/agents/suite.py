@@ -114,7 +114,7 @@ from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tr
                            stop_tree, require_process_watch, default_release, probe_release,
                            python_with_pil, probe_path)
 from runtime_snapshot import (snapshot_runtime, managed_for as snapshot_managed_for,
-                              retain, release_reference, cleanup, task_owner)
+                              retain, release_reference, cleanup, task_owner, atomic_json)
 
 
 class Step:
@@ -1261,7 +1261,30 @@ def promote(summary):
         retain(reference, baseline/'runtime', replace=True)
     baseline.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(summary, baseline/'summary.json')
+    record_durations(value, baseline/DURATIONS)
     print(f'suite: baseline is now {summary}')
+
+
+# The probe durations of the last promoted baselines, oldest first, in the baseline's directory.
+# tools/agents/postland.py times a check by the shortest complete run among the recent ones, so
+# that one baseline that ran beside other heavy work does not stretch its limit.
+DURATIONS = 'durations.json'
+DURATIONS_KEPT = 5
+
+
+def record_durations(summary, path):
+    """Adds a promoted summary's probe durations to `path` (a new entry for a label promoted
+    again), keeping the last DURATIONS_KEPT. An unreadable file is started again: it is derived
+    from the summaries, and a duration missing from it only leaves a limit as it was."""
+    entry = {'label': summary.get('label'),
+             'probes': {name: {key: probe.get(key) for key in ('seconds', 'release', 'status')}
+                        for name, probe in summary.get('probes', {}).items() if isinstance(probe, dict)}}
+    try:
+        kept = json.loads(path.read_text())['baselines']
+        kept = [item for item in kept if isinstance(item, dict) and item.get('label') != entry['label']]
+    except (OSError, ValueError, KeyError, TypeError):
+        kept = []
+    atomic_json(path, {'baselines': [*kept, entry][-DURATIONS_KEPT:]})
 
 
 def default_jobs():

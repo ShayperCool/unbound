@@ -14,8 +14,8 @@ so landings that arrive while it runs are checked in its next round. It checks o
 own locked worktree beside the land trains, builds it, freezes the runtime and runs the union
 of the landings' checks with the gate's rules: the same selection, the sheriff baseline frozen
 for suite checks (--against), one rerun of time-limited checks, and the same strict comparisons.
-A suite check's time limit follows its duration in the sheriff baseline (recorded_limits); other
-checks keep the gate's 300 s. A suite check recorded too long for the checker's cap is not run; it
+A suite check's time limit follows its duration in the recent sheriff baselines (recorded_limits);
+other checks keep the gate's 300 s. A suite check recorded too long for the checker's cap is not run; it
 is reported for an explicit --probe. Holding no lock, it has no shared budget and runs as
 many checks at once as the machine's free capacity allows (background_workers).
 
@@ -48,6 +48,7 @@ import time
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import land  # noqa: E402
+from suite import DURATIONS  # noqa: E402
 
 # Background work: below ordinary jobs, which the job runner keeps at niceness 10.
 BACKGROUND_NICE = 15
@@ -66,23 +67,49 @@ def background_workers():
     return max(1, min(land.retry_workers(), int(free // THREADS_PER_CHECK)))
 
 
-# A suite check's limit is this multiple of its duration in the sheriff baseline, which ran beside
+# A suite check's limit is this multiple of its duration in the sheriff baselines, which ran beside
 # the whole suite: realtimegi took 1139 s there and 17-35 min after landings on the loaded machine
 # (the margin is thin under the heaviest load). At least the gate's per-check limit. A check that
 # would need more than RECORDED_LIMIT_MAX_SECONDS is not run here (each round may run a check four
 # times); it is reported for an explicit --probe instead.
 RECORDED_LIMIT_FACTOR = 2
 RECORDED_LIMIT_MAX_SECONDS = 3600
+# The duration is the shortest among the current baseline's and the complete runs (passed or
+# reported) of the probe at the same release in the last RECENT_BASELINES promoted baselines
+# (suite.py's DURATIONS beside the summary). A baseline that ran beside other heavy work then does
+# not double a limit or put a check beyond the cap (audiopitch took 9186 s in one, most of it
+# waiting for engine slots, and 4736 s in the one before); a run cut short by a failure does not
+# shorten it.
+RECENT_BASELINES = 3
+COMPLETE = ('pass', 'report')
+
+
+def recent_durations(path):
+    """The probe entries of the last RECENT_BASELINES promoted baselines; none when unreadable."""
+    try:
+        baselines = json.loads(Path(path).read_text())['baselines']
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+    if not isinstance(baselines, list):
+        return []
+    return [item['probes'] for item in baselines[-RECENT_BASELINES:]
+            if isinstance(item, dict) and isinstance(item.get('probes'), dict)]
+
+
+def duration(seconds):
+    return isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds > 0
 
 
 def recorded_seconds(checks, summary=None):
     """{land.automatic_limit_key(check): seconds} for the suite checks whose probe the sheriff
-    baseline timed at the check's release."""
-    summary = summary or land.STATE/'baseline/summary.json'
+    baseline timed at the check's release: the shortest of that time and the complete runs of the
+    recent baselines (RECENT_BASELINES)."""
+    summary = Path(summary or land.STATE/'baseline/summary.json')
     try:
-        probes = json.loads(Path(summary).read_text()).get('probes', {})
+        probes = json.loads(summary.read_text()).get('probes', {})
     except (OSError, ValueError):
         return {}
+    earlier = recent_durations(summary.parent/DURATIONS)
     found = {}
     for check in checks:
         entry = probes.get(check[0])
@@ -91,6 +118,11 @@ def recorded_seconds(checks, summary=None):
         seconds, release = entry.get('seconds'), entry.get('release')
         if not isinstance(seconds, (int, float)) or len(check) > 3 and release and check[3] != release:
             continue
+        for baseline in earlier:
+            then = baseline.get(check[0])
+            if (isinstance(then, dict) and then.get('status') in COMPLETE and then.get('release') == release
+                    and duration(then.get('seconds'))):
+                seconds = min(seconds, then['seconds'])
         found[land.automatic_limit_key(check)] = seconds
     return found
 
