@@ -180,10 +180,11 @@ namespace UnityEngine
         /// order: a texture prototype's texture; a mesh's material's main texture (white when the
         /// material has none or no _MainTex); white for a prototype the terrain refuses. They are
         /// packed as Texture2D.PackTextures packs them (no padding, at most 2048 texels a side),
-        /// into an sRGB atlas when any of them is sRGB, with transparent black between them. The
-        /// atlas samples with clamped edges (measured along v) and without blending mip levels, and
-        /// its mip levels are rebuilt from the first, so a texture beside empty texels keeps its own
-        /// texels in the lower mips (matches the Unity 6000.0.71f1 Editor, tests/projects/grass:
+        /// into an sRGB atlas when any of them is sRGB, with transparent black between them; textures
+        /// of one compressed format keep it, with their own mip levels (TexturePacker.AtlasFormat).
+        /// The atlas samples with clamped edges (measured along v) and without blending mip levels;
+        /// an uncompressed atlas's mip levels are rebuilt from the first, so a texture beside empty
+        /// texels keeps its own texels in the lower mips (matches the Unity 6000.0.71f1 Editor, tests/projects/grass:
         /// for a 16 × 32 grass texture and white the atlas is 32 × 32, the white 4 × 4 at (16, 0)).</summary>
         DetailTexture[] BuildDetailAtlas(DetailPrototype[] prototypes)
         {

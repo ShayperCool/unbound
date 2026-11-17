@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.Experimental.Rendering;
 
 namespace Unbound.Runtime
 {
@@ -22,6 +23,11 @@ namespace Unbound.Runtime
     /// textures, and the pixels of shrunk textures (scaled bilinearly here).</summary>
     internal static class TexturePacker
     {
+        /// <summary>A compressed block's side in texels (the formats the atlas keeps compressed).</summary>
+        const int BlockSide = 4;
+
+        static float Aligned(float side, bool blockAligned) => blockAligned ? (float)(((int)side + BlockSide - 1) & ~(BlockSide - 1)) : side;
+
         /// <summary>How close a free rectangle must be to a texture's size to take it as it is.</summary>
         const float Epsilon = 1e-5f;
         /// <summary>Rounds of shrinking at the maximum size before packing gives up (PackTextures
@@ -43,7 +49,8 @@ namespace Unbound.Runtime
         /// <paramref name="heights"/> may shrink (to fit the maximum size); <paramref name="x"/> and
         /// <paramref name="y"/> receive each texture's corner in texels. False when the textures
         /// do not fit even after shrinking (textures of 4 texels or less in a side never shrink).</summary>
-        internal static bool Layout(int[] widths, int[] heights, int padding, int maximumSize, int[] x, int[] y, out int atlasWidth, out int atlasHeight)
+        internal static bool Layout(int[] widths, int[] heights, int padding, int maximumSize, int[] x, int[] y, out int atlasWidth, out int atlasHeight,
+            bool blockAligned = false)
         {
             int count = widths.Length;
             // A maximum over the largest texture side (int.MaxValue meaning "no limit") is that side
@@ -77,7 +84,7 @@ namespace Unbound.Runtime
                     bool fits = true;
                     foreach (int i in order)
                     {
-                        placed[i] = Insert(root, padding, padding, widths[i], heights[i]);
+                        placed[i] = Insert(root, padding, padding, widths[i], heights[i], blockAligned);
                         if (placed[i] == null) { fits = false; break; }
                     }
                     if (!fits) continue;
@@ -143,13 +150,16 @@ namespace Unbound.Runtime
             }
         }
 
-        static Node Insert(Node node, float padX, float padY, float width, float height)
+        /// <summary>A free rectangle for a texture. <paramref name="blockAligned"/> (a block-compressed
+        /// atlas): rectangles split at whole blocks (4 texels), and one with at most a block left over
+        /// in both sides takes the texture as it is.</summary>
+        static Node Insert(Node node, float padX, float padY, float width, float height, bool blockAligned)
         {
             while (true)
             {
                 if (node.First != null)
                 {
-                    var found = Insert(node.First, padX, padY, width, height);
+                    var found = Insert(node.First, padX, padY, width, height, blockAligned);
                     if (found != null) return found;
                     node = node.Second;
                     continue;
@@ -179,11 +189,16 @@ namespace Unbound.Runtime
                     node.Used = true;
                     return node;
                 }
+                if (blockAligned && leftX <= BlockSide && leftY <= BlockSide)
+                {
+                    node.Used = true;
+                    return node;
+                }
                 float x = node.X, y = node.Y;
                 Node first, second;
                 if (leftX <= leftY)
                 {
-                    float split = height + padY;
+                    float split = Aligned(height + padY, blockAligned);
                     first = new Node { X = x, Y = y, Width = (freeWidth + x) - x, Height = (split + y) - y };
                     if (Math.Abs(first.Width - freeWidth) < Epsilon && Math.Abs(first.Height - freeHeight) < Epsilon)
                     {
@@ -196,7 +211,7 @@ namespace Unbound.Runtime
                 }
                 else
                 {
-                    float split = width + padX;
+                    float split = Aligned(width + padX, blockAligned);
                     first = new Node { X = x, Y = y, Width = (split + x) - x, Height = (freeHeight + y) - y };
                     if (Math.Abs(first.Width - freeWidth) < Epsilon && Math.Abs(first.Height - freeHeight) < Epsilon)
                     {
@@ -215,46 +230,204 @@ namespace Unbound.Runtime
 
         /// <summary>Texture2D.PackTextures: the same texture given twice takes one place; a missing
         /// one gets an empty rect; without any texture the atlas stays as it was; null (the atlas
-        /// unchanged) when the textures do not fit. The atlas is RGBA32 (Unbound does not keep compressed atlases:
-        /// see docs/COMPATIBILITY_GAPS.md), with mipmaps when any texture has them (rebuilt from the
-        /// first level), its colour space its own. Returns the rects in [0, 1].</summary>
+        /// unchanged) when the textures do not fit. Its format is <see cref="AtlasFormat"/>'s, its
+        /// colour space its own. A block-compressed atlas takes each texture's levels block for
+        /// block (<see cref="CopyBlocks"/>); any other is drawn from the textures' first levels,
+        /// with mipmaps when any texture has them (rebuilt from the first level). Returns the
+        /// rects in [0, 1].</summary>
         internal static UnityEngine.Rect[] Pack(UnityEngine.Texture2D atlas, UnityEngine.Texture2D[] textures, int padding, int maximumSize, bool makeNoLongerReadable)
         {
             var rects = new UnityEngine.Rect[textures.Length];
             var unique = new List<UnityEngine.Texture2D>();
             var slot = new int[textures.Length];
-            bool mipmaps = false;
             for (int i = 0; i < textures.Length; i++)
             {
                 var texture = textures[i];
                 if (texture == null) { slot[i] = -1; continue; }
                 slot[i] = unique.IndexOf(texture);
                 if (slot[i] < 0) { slot[i] = unique.Count; unique.Add(texture); }
-                mipmaps |= texture.mipmapCount > 1;
             }
             if (unique.Count == 0) return rects;
             int n = unique.Count;
+            var format = AtlasFormat(unique, padding, maximumSize, out bool mipmaps);
+            bool blocks = BlockFormats.BlockBytes(format) > 0;
             var widths = new int[n];
             var heights = new int[n];
             var xs = new int[n];
             var ys = new int[n];
             for (int i = 0; i < n; i++) { widths[i] = unique[i].width; heights[i] = unique[i].height; }
-            if (!Layout(widths, heights, padding, maximumSize, xs, ys, out int width, out int height)) return null;
-            if (!atlas.Reinitialize(width, height, UnityEngine.TextureFormat.RGBA32, mipmaps)) return null;
-            var pixels = new UnityEngine.Color32[width * height];
+            if (!Layout(widths, heights, padding, maximumSize, xs, ys, out int width, out int height, blocks)) return null;
+            if (blocks)
+                for (int i = 0; i < n && blocks; i++)
+                    if (widths[i] != unique[i].width || heights[i] != unique[i].height)
+                    {
+                        // Textures shrunk to fit the maximum size: unmeasured for a compressed atlas.
+                        Stubs.Ignored("Texture2D.PackTextures shrinking block-compressed textures to fit", "packs them uncompressed (RGBA32)");
+                        format = UnityEngine.TextureFormat.RGBA32;
+                        blocks = false;
+                    }
             var placed = new UnityEngine.Rect[n];
             for (int i = 0; i < n; i++)
             {
-                Blit(unique[i], widths[i], heights[i], pixels, width, xs[i], ys[i]);
                 float left = xs[i] / (float)width, bottom = ys[i] / (float)height;
                 placed[i] = new UnityEngine.Rect(left, bottom, (widths[i] + xs[i]) / (float)width - left, (heights[i] + ys[i]) / (float)height - bottom);
             }
+            if (blocks)
+                CopyBlocks(atlas, unique, xs, ys, width, height, format, mipmaps ? BlockMipCount(unique) : 1);
+            else
+            {
+                if (!atlas.Reinitialize(width, height, format, mipmaps)) return null;
+                var pixels = new UnityEngine.Color32[width * height];
+                for (int i = 0; i < n; i++) Blit(unique[i], widths[i], heights[i], pixels, width, xs[i], ys[i]);
+                atlas.SetPixels32(pixels);
+            }
             for (int i = 0; i < textures.Length; i++)
                 if (slot[i] >= 0) rects[i] = placed[slot[i]];
-            atlas.SetPixels32(pixels);
-            atlas.Apply(true, makeNoLongerReadable);
+            atlas.Apply(!blocks, makeNoLongerReadable);
             return rects;
         }
+
+        /// <summary>The atlas's format, as the Unity 6000.0.71f1 Editor chooses it (tests/projects/
+        /// packtextures). The first texture's format when it is DXT1, DXT5, BC7, ETC (RGB), ETC2 RGB,
+        /// ETC2 RGBA8, ASTC 4×4 or a 4444 format, else RGBA32; each texture keeps it when of the
+        /// same format, where DXT1 with DXT5 makes DXT5, ETC with ETC2 RGB makes ETC2 RGB and either
+        /// with ETC2 RGBA8 makes ETC2 RGBA8, the two 4444 formats go together, and anything else, or
+        /// a texture that must shrink to the maximum size, makes RGBA32. A block-compressed format
+        /// stays only when no texture has mipmaps, or all have them and there is no padding. The
+        /// 4444 formats make the one the graphics device samples, ARGB4444 before RGBA4444 (else
+        /// RGBA32). <paramref name="mipmaps"/>: any texture has them.</summary>
+        internal static UnityEngine.TextureFormat AtlasFormat(List<UnityEngine.Texture2D> textures, int padding, int maximumSize, out bool mipmaps)
+        {
+            int max = NextPowerOfTwo(Math.Clamp(maximumSize, 8, UnityEngine.SystemInfo.maxTextureSize));
+            var format = Candidate(textures[0].format);
+            bool withMips = false, withoutMips = false;
+            foreach (var texture in textures)
+            {
+                if (FitSide(texture.width, max) != texture.width || FitSide(texture.height, max) != texture.height)
+                    format = UnityEngine.TextureFormat.RGBA32;
+                format = Merge(format, texture.format);
+                if (texture.mipmapCount > 1) withMips = true;
+                else withoutMips = true;
+            }
+            mipmaps = withMips;
+            if (BlockFormats.BlockBytes(format) > 0 && withMips && (withoutMips || padding >= 1))
+                return UnityEngine.TextureFormat.RGBA32;
+            if (format is UnityEngine.TextureFormat.ARGB4444 or UnityEngine.TextureFormat.RGBA4444)
+                return UnityEngine.SystemInfo.IsFormatSupported(GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormatUsage.Sample) ? UnityEngine.TextureFormat.ARGB4444
+                    : UnityEngine.SystemInfo.IsFormatSupported(GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormatUsage.Sample) ? UnityEngine.TextureFormat.RGBA4444
+                    : UnityEngine.TextureFormat.RGBA32;
+            return format;
+        }
+
+        static UnityEngine.TextureFormat Candidate(UnityEngine.TextureFormat format) => format switch
+        {
+            UnityEngine.TextureFormat.ARGB4444 or UnityEngine.TextureFormat.RGBA4444 or UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.DXT5
+                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
+                or UnityEngine.TextureFormat.ETC2_RGBA8 or UnityEngine.TextureFormat.ASTC_4x4 => format,
+            _ => UnityEngine.TextureFormat.RGBA32,
+        };
+
+        static UnityEngine.TextureFormat Merge(UnityEngine.TextureFormat atlas, UnityEngine.TextureFormat texture)
+        {
+            const UnityEngine.TextureFormat Rgba32 = UnityEngine.TextureFormat.RGBA32;
+            switch (atlas)
+            {
+                case UnityEngine.TextureFormat.ARGB4444 or UnityEngine.TextureFormat.RGBA4444:
+                    return texture is UnityEngine.TextureFormat.ARGB4444 or UnityEngine.TextureFormat.RGBA4444 ? atlas : Rgba32;
+                case UnityEngine.TextureFormat.DXT1:
+                    return texture is UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.DXT5 ? texture : Rgba32;
+                case UnityEngine.TextureFormat.DXT5:
+                    return texture is UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.DXT5 ? atlas : Rgba32;
+                case UnityEngine.TextureFormat.BC7:
+                case UnityEngine.TextureFormat.ASTC_4x4:
+                    return texture == atlas ? atlas : Rgba32;
+                case UnityEngine.TextureFormat.ETC_RGB4:
+                    return texture is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB or UnityEngine.TextureFormat.ETC2_RGBA8 ? texture : Rgba32;
+                case UnityEngine.TextureFormat.ETC2_RGB:
+                    return texture is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB ? atlas
+                        : texture == UnityEngine.TextureFormat.ETC2_RGBA8 ? texture : Rgba32;
+                case UnityEngine.TextureFormat.ETC2_RGBA8:
+                    return texture is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB or UnityEngine.TextureFormat.ETC2_RGBA8 ? atlas : Rgba32;
+                default:
+                    return Rgba32;
+            }
+        }
+
+        /// <summary>The levels of a block-compressed atlas with mipmaps: down to where the smallest
+        /// side of any texture is one block (tests/projects/packtextures).</summary>
+        static int BlockMipCount(List<UnityEngine.Texture2D> textures)
+        {
+            int smallest = int.MaxValue;
+            foreach (var texture in textures) smallest = Math.Min(smallest, Math.Min(texture.width, texture.height));
+            int blocks = smallest / BlockSide, levels = 0;
+            while (blocks > 0) { levels++; blocks >>= 1; }
+            // (A side under one block, possible for ASTC alone, is unmeasured: one level.)
+            return Math.Max(1, levels);
+        }
+
+        /// <summary>The atlas's blocks: zero (an empty block) but where a texture lies, where each
+        /// level of the texture is copied block for block, as far as the atlas has levels, the
+        /// texture's place is on whole blocks there and the texture is at least two blocks wide and
+        /// high in the level before. DXT1 blocks go into a DXT5 atlas and ETC2 RGB ones into an ETC2
+        /// RGBA8 atlas behind an opaque alpha block (eight bytes of 0xFF); ETC blocks into an ETC2
+        /// RGB atlas are not copied (unmeasured). Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/packtextures.</summary>
+        static void CopyBlocks(UnityEngine.Texture2D atlas, List<UnityEngine.Texture2D> textures, int[] xs, int[] ys, int width, int height,
+            UnityEngine.TextureFormat format, int levels)
+        {
+            int blockBytes = BlockFormats.BlockBytes(format);
+            var offsets = new int[levels + 1];
+            for (int mip = 0; mip < levels; mip++)
+                offsets[mip + 1] = offsets[mip] + BlockFormats.LevelSize(format, Math.Max(1, width >> mip), Math.Max(1, height >> mip));
+            var data = new byte[offsets[levels]];
+            for (int i = 0; i < textures.Count; i++)
+            {
+                var texture = textures[i];
+                var from = texture.format;
+                bool same = from == format;
+                bool opaqueAlpha = (format == UnityEngine.TextureFormat.DXT5 && from == UnityEngine.TextureFormat.DXT1)
+                    || (format == UnityEngine.TextureFormat.ETC2_RGBA8 && from is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB);
+                if (!same && !opaqueAlpha)
+                {
+                    Stubs.Ignored("Texture2D.PackTextures of ETC textures into an ETC2 RGB atlas", "copies nothing of them");
+                    continue;
+                }
+                int x = xs[i], y = ys[i], w = texture.width, h = texture.height;
+                int copied = Math.Min(texture.mipmapCount, levels);
+                for (int mip = 0; mip < copied; mip++)
+                {
+                    var level = texture.BlockLevel(mip);
+                    if (level.IsEmpty) break;
+                    int sourceBlocksX = (Math.Max(1, texture.width >> mip) + BlockSide - 1) / BlockSide;
+                    int sourceBlocksY = (Math.Max(1, texture.height >> mip) + BlockSide - 1) / BlockSide;
+                    int atlasBlocksX = (Math.Max(1, width >> mip) + BlockSide - 1) / BlockSide;
+                    int sourceBytes = opaqueAlpha ? OpaqueAlphaBytes : blockBytes;
+                    for (int by = 0; by < sourceBlocksY; by++)
+                        for (int bx = 0; bx < sourceBlocksX; bx++)
+                        {
+                            var source = level.Slice((by * sourceBlocksX + bx) * sourceBytes, sourceBytes);
+                            var target = data.AsSpan(offsets[mip] + ((y / BlockSide + by) * atlasBlocksX + x / BlockSide + bx) * blockBytes, blockBytes);
+                            if (opaqueAlpha)
+                            {
+                                target.Slice(0, OpaqueAlphaBytes).Fill(0xFF);
+                                source.CopyTo(target.Slice(OpaqueAlphaBytes));
+                            }
+                            else source.CopyTo(target);
+                        }
+                    x /= 2;
+                    y /= 2;
+                    if (((x | y) & (BlockSide - 1)) != 0 || w < 2 * BlockSide || h < 2 * BlockSide) break;
+                    w /= 2;
+                    h /= 2;
+                }
+            }
+            atlas.InitLevels(width, height, format, levels);
+            atlas.LoadRawTextureData(data);
+        }
+
+        /// <summary>The 8-byte half of a 16-byte block a DXT1 or ETC2 RGB block fills; the other
+        /// half is an opaque alpha block.</summary>
+        const int OpaqueAlphaBytes = 8;
 
         /// <summary>A texture's first level into the atlas at (x, y), scaled bilinearly when it
         /// had to shrink.</summary>

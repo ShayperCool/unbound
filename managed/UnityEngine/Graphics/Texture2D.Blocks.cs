@@ -447,6 +447,24 @@ namespace UnityEngine
         static bool BlockSized(TextureFormat format, int width, int height) =>
             BlockFormats.BlockBytes(format) == 0 || BlockFormats.IsAstc(format) || (width % 4 == 0 && height % 4 == 0);
 
+        /// <summary>Level <paramref name="mip"/>'s blocks of a block-compressed texture, readable or
+        /// not (Texture2D.PackTextures copies them, as Graphics.CopyTexture does); empty when the
+        /// texture keeps none.</summary>
+        internal ReadOnlySpan<byte> BlockLevel(int mip)
+        {
+            if (!SourceBlocks || SourceCrunch || !ValidMip(mip)) return default;
+            CheckStoreRead();
+            var blocks = CurrentBlocks();
+            if (blocks == null) return default;
+            int at = 0;
+            for (int m = 0; m < mip; m++) at += SourceLevelSize(m);
+            return new ReadOnlySpan<byte>(blocks, at, SourceLevelSize(mip));
+        }
+
+        /// <summary>Makes the texture one of these sides, format and number of levels, keeping its
+        /// colour space (Texture2D.PackTextures' atlas).</summary>
+        internal void InitLevels(int width, int height, TextureFormat format, int mipCount) => Init(width, height, format, mipCount, m_Linear);
+
         /// <summary>Bytes of a source level of a block-compressed texture.</summary>
         int SourceLevelSize(int mip) =>
             BlockFormats.LevelSize(m_SourceFormat.Value, Math.Max(1, m_Width >> mip), Math.Max(1, m_Height >> mip));

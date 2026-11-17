@@ -40,9 +40,9 @@
   "reason": "isolated pixels at the edges of distant blades and slabs (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); the textured slabs in the Grass render mode match since they are drawn with the grass shader (Q553; they differed in 570 pixels up to 194/255); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Tilted": {
-  "pixels": 9525,
-  "worst": 139,
-  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+  "pixels": 4058,
+  "worst": 26,
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); the detail atlas is compressed as in the Editor since Q561 (were 9525 pixels up to 139); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Waving1": {
   "pixels": 4598,
