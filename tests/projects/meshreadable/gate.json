@@ -8,6 +8,8 @@
     "managed/UnityEngine/Graphics/MeshFromModel.cs",
     "managed/UnityEngine/Graphics/MeshBuffers.cs",
     "managed/UnityEngine/Graphics/MeshData.cs",
-    "crates/unbound-assets/src/model.rs"
+    "crates/unbound-assets/src/model.rs",
+    "managed/UnityEngine/Physics/Collider.cs",
+    "managed/UnityEngine/Graphics/MeshSerialized.cs"
   ]
 }

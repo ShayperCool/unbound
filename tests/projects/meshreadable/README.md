@@ -31,8 +31,10 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
   throws InvalidOperationException; a MeshCollider of it collides. `UploadMeshData(true)` does the
   same to a scripted mesh.
 
-Unbound matches every value. Other model formats than FBX, skinned and blend-shape data of meshes
-that are not readable and serialized mesh assets are unmeasured (Unbound treats them alike).
+Unbound matches every value. Unmeasured: other model formats than FBX; bone weights, bind poses
+and blend shapes of meshes that are not readable (Unbound does not refuse them); serialized mesh
+assets (Unbound refuses them alike); `CombineMeshes` and `BakeMesh` of such meshes (Unbound reads
+them, as the engine's own systems do).
 
     blender -b --factory-startup --python tests/projects/meshreadable/make_models.py   # once
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy> \
