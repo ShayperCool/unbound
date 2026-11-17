@@ -48,7 +48,7 @@ namespace Unbound.Runtime
                 case VFXExpressionValueContainerDesc<Gradient> v: m_Objects[at] = v.value; break;
                 case VFXExpressionValueContainerDesc<GraphicsBuffer> v: m_Objects[at] = v.value; break;
                 case VFXExpressionObjectValueContainerDesc<Texture> v: m_Objects[at] = ObjectRegistry.FindById(v.instanceID); break;
-                case VFXExpressionObjectValueContainerDesc<Mesh> v: m_Objects[at] = ObjectRegistry.FindById(v.instanceID); break;
+                case VFXExpressionObjectValueContainerDesc<Mesh> v: SetObject(expression, ObjectRegistry.FindById(v.instanceID)); break;
                 case VFXExpressionObjectValueContainerDesc<SkinnedMeshRenderer> v: m_Objects[at] = ObjectRegistry.FindById(v.instanceID); break;
             }
         }
@@ -97,6 +97,12 @@ namespace Unbound.Runtime
 
         internal object GetObject(int expression) => m_Objects[m_Data.ValueOffsets[expression]];
 
-        internal void SetObject(int expression, object value) => m_Objects[m_Data.ValueOffsets[expression]] = value;
+        /// <summary>Sets an object as the expression's value; a mesh is held by the effect from
+        /// then on (<see cref="VFXMeshFunctions.Held"/>).</summary>
+        internal void SetObject(int expression, object value)
+        {
+            m_Objects[m_Data.ValueOffsets[expression]] = value;
+            if (value is Mesh mesh) VFXMeshFunctions.Held(mesh);
+        }
     }
 }

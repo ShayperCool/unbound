@@ -59,6 +59,12 @@ namespace Unbound.Runtime
         internal bool DepthFetchInRenderPass { get; init; } = true;
         internal int MaxTexture3DSize { get; init; } = 16384;
         internal int MaxComputeWorkGroupSizeZ { get; init; } = 64;
+        /// <summary>The target a readable mesh's buffers gain once a visual effect reads the mesh
+        /// (its vertex buffer once it is an effect's value, its index buffer once an effect's
+        /// programs read it): Structured on OpenGL Core (Unity 6000.0.71f1, tests/projects/vfx
+        /// <c>mesh operations/*/after</c>); not measured on Vulkan and Metal, which answer the
+        /// same.</summary>
+        internal GraphicsBuffer.Target VfxMeshBufferTarget { get; init; } = GraphicsBuffer.Target.Structured;
         /// <summary>What the Editor's device answers for geometry shaders and conservative
         /// rasterization; Unbound's renderer has neither and answers false (warned where the
         /// Editor answers true).</summary>

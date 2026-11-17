@@ -75,6 +75,27 @@ namespace UnityEngine
             return new GraphicsBuffer(m_GraphicsIndexBuffer);
         }
 
+        /// <summary>The view of a vertex stream's buffer a visual effect's programs read:
+        /// <paramref name="kept"/> while it is a live view of that buffer, else a new view; null
+        /// for a stream the mesh has no buffer of.</summary>
+        internal GraphicsBuffer VertexBufferView(int stream, GraphicsBuffer kept)
+        {
+            if ((uint)stream >= 4) return null;
+            SyncGraphicsBuffers(true);
+            return View(m_GraphicsVertexBuffers[stream], kept);
+        }
+
+        /// <summary>The view of the index buffer a visual effect's programs read (as
+        /// <see cref="VertexBufferView"/>).</summary>
+        internal GraphicsBuffer IndexBufferView(GraphicsBuffer kept)
+        {
+            SyncGraphicsBuffers(true);
+            return View(m_GraphicsIndexBuffer, kept);
+        }
+
+        static GraphicsBuffer View(GpuBufferStorage storage, GraphicsBuffer kept) =>
+            storage == null ? null : kept != null && kept.IsValid() && kept.Views(storage) ? kept : new GraphicsBuffer(storage);
+
         /// <summary>Mesh-owned buffers share the mesh-data packer. Existing storage survives a
         /// same-layout, same-size upload; a changed layout, size or target invalidates its views.
         /// Only meshes whose buffers were requested pay for this upload.</summary>

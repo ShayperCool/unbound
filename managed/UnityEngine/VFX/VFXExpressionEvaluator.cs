@@ -37,6 +37,8 @@ namespace Unbound.Runtime
 
         /// <summary>What a graph reads of the main camera while there is none: a new camera's
         /// lens (Unity 6000.0.71f1, tests/projects/vfx <c>camera/values</c> from frame 8).</summary>
+        const uint CubeFaces = 6;
+
         const float NoCameraFieldOfView = 60f, NoCameraNearPlane = 0.3f, NoCameraFarPlane = 1000f, NoCameraOrthographicSize = 5f;
 
         /// <summary>Whether <see cref="Evaluate"/> computes the operation.</summary>
@@ -48,19 +50,44 @@ namespace Unbound.Runtime
                 // initialize and update contexts only (collision shapes, a position on a mesh),
                 // whose values no control reads; an event attribute read in a spawn context is
                 // among the expressions evaluated per spawn event, which Unbound does not
-                // evaluate yet.
+                // evaluate yet; no operator of the package makes a texture's format.
                 case VFXExpressionOperation.MatrixToAxis:
                 case VFXExpressionOperation.ReadEventAttribute:
+                case VFXExpressionOperation.TextureFormat:
+                // A skinned mesh renderer's mesh, vertices and root bone are not done yet.
+                case VFXExpressionOperation.VertexBufferFromSkinnedMeshRenderer:
+                case VFXExpressionOperation.MeshFromSkinnedMeshRenderer:
+                case VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer:
                     return false;
+                case VFXExpressionOperation.MeshVertexCount:
+                case VFXExpressionOperation.MeshChannelOffset:
+                case VFXExpressionOperation.MeshChannelInfos:
+                case VFXExpressionOperation.MeshVertexStride:
+                case VFXExpressionOperation.MeshIndexCount:
+                case VFXExpressionOperation.MeshIndexFormat:
+                case VFXExpressionOperation.BufferStride:
+                case VFXExpressionOperation.BufferCount:
                 case VFXExpressionOperation.TextureWidth:
                 case VFXExpressionOperation.TextureHeight:
-                case VFXExpressionOperation.BufferCount:
+                case VFXExpressionOperation.TextureDepth:
                     return true;
             }
-            if (op >= VFXExpressionOperation.SampleMeshVertexFloat && op <= VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer) return false;
-            if (op >= VFXExpressionOperation.ValueNoise1D && op <= VFXExpressionOperation.TextureFormat) return false;
+            if (op >= VFXExpressionOperation.ValueNoise1D && op <= VFXExpressionOperation.VoroNoise2D) return false;
             return op >= VFXExpressionOperation.None && op <= VFXExpressionOperation.SpawnerStateLoopCount;
         }
+
+        /// <summary>A texture's depth as a graph reads it: a volume's depth, an array's count of
+        /// slices, an array of cubemaps' count of faces, a render texture's volume depth, one for
+        /// another texture and zero for none or one destroyed (tests/projects/vfx
+        /// <c>mesh operations/*/u06..u08</c>).</summary>
+        static uint TextureDepth(Texture texture) => texture == null ? 0u : texture switch
+        {
+            Texture3D volume => (uint)volume.depth,
+            Texture2DArray slices => (uint)slices.depth,
+            CubemapArray cubes => (uint)cubes.cubemapCount * CubeFaces,
+            RenderTexture target => (uint)target.volumeDepth,
+            _ => 1u,
+        };
 
         /// <summary>Evaluates the expressions <paramref name="begin"/>..<paramref name="end"/>.
         /// <paramref name="spawner"/> is the spawner whose blocks are being evaluated, null
@@ -72,6 +99,8 @@ namespace Unbound.Runtime
             var operands = data.Operands;
             var offsets = data.ValueOffsets;
             end = Math.Min(end, ops.Length);
+            // A mesh vertex's channel as it is sampled.
+            Span<float> vertex = stackalloc float[4];
             for (int e = begin; e < end; e++)
             {
                 var op = ops[e];
@@ -299,6 +328,47 @@ namespace Unbound.Runtime
                     case VFXExpressionOperation.TextureWidth: w[at] = values.GetObject(a0) is Texture wide && wide ? (uint)wide.width : 0u; break;
                     case VFXExpressionOperation.TextureHeight: w[at] = values.GetObject(a0) is Texture high && high ? (uint)high.height : 0u; break;
                     case VFXExpressionOperation.BufferCount: w[at] = values.GetObject(a0) is GraphicsBuffer counted ? (uint)counted.ElementCount : 0u; break;
+                    case VFXExpressionOperation.BufferStride: w[at] = values.GetObject(a0) is GraphicsBuffer strided ? (uint)strided.ElementStride : 0u; break;
+                    case VFXExpressionOperation.TextureDepth: w[at] = TextureDepth(values.GetObject(a0) as Texture); break;
+
+                    case VFXExpressionOperation.MeshVertexCount: w[at] = VFXMeshFunctions.VertexCount(values.GetObject(a0) as Mesh); break;
+                    case VFXExpressionOperation.MeshIndexCount: w[at] = VFXMeshFunctions.IndexCount(values.GetObject(a0) as Mesh); break;
+                    case VFXExpressionOperation.MeshIndexFormat: w[at] = VFXMeshFunctions.IndexFormat(values.GetObject(a0) as Mesh); break;
+                    case VFXExpressionOperation.MeshVertexStride: w[at] = VFXMeshFunctions.VertexStride(values.GetObject(a0) as Mesh, w[p1]); break;
+                    case VFXExpressionOperation.MeshChannelOffset: w[at] = VFXMeshFunctions.ChannelOffset(values.GetObject(a0) as Mesh, w[p1]); break;
+                    case VFXExpressionOperation.MeshChannelInfos: w[at] = VFXMeshFunctions.ChannelInfos(values.GetObject(a0) as Mesh, w[p1]); break;
+                    case VFXExpressionOperation.SampleMeshIndex:
+                        w[at] = VFXMeshFunctions.Index(values.GetObject(a0) as Mesh, w[p1], w[offsets[operands[d + 2]]]);
+                        break;
+                    case VFXExpressionOperation.SampleMeshVertexFloat:
+                    case VFXExpressionOperation.SampleMeshVertexFloat2:
+                    case VFXExpressionOperation.SampleMeshVertexFloat3:
+                    case VFXExpressionOperation.SampleMeshVertexFloat4:
+                    case VFXExpressionOperation.SampleMeshVertexColor:
+                    {
+                        int read = op == VFXExpressionOperation.SampleMeshVertexColor ? 4 : op - VFXExpressionOperation.SampleMeshVertexFloat + 1;
+                        var sampledMesh = values.GetObject(a0) as Mesh;
+                        uint infos = w[offsets[operands[d + 2]]];
+                        if (op == VFXExpressionOperation.SampleMeshVertexColor) VFXMeshFunctions.SampleColor(sampledMesh, w[p1], infos, vertex);
+                        else VFXMeshFunctions.Sample(sampledMesh, w[p1], infos, vertex.Slice(0, read));
+                        for (int c = 0; c < read; c++) w[at + c] = Bits(vertex[c]);
+                        break;
+                    }
+                    // The views of a mesh's buffers the programs read, kept while they still
+                    // view them.
+                    case VFXExpressionOperation.VertexBufferFromMesh:
+                    case VFXExpressionOperation.IndexBufferFromMesh:
+                    {
+                        var kept = values.GetObject(e) as GraphicsBuffer;
+                        var viewed = values.GetObject(a0) as Mesh;
+                        var view = op == VFXExpressionOperation.VertexBufferFromMesh
+                            ? VFXMeshFunctions.VertexBuffer(viewed, w[p1], kept)
+                            : VFXMeshFunctions.IndexBuffer(viewed, kept);
+                        if (ReferenceEquals(view, kept)) break;
+                        kept?.Release();
+                        values.SetObject(e, view);
+                        break;
+                    }
                     case VFXExpressionOperation.TransposeMatrix: Store(w, at, Load(w, p0).transpose); break;
                     case VFXExpressionOperation.TransformMatrix: Store(w, at, Load(w, p0) * Load(w, p1)); break;
                     case VFXExpressionOperation.TransformPos:

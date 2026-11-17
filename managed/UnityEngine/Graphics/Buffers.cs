@@ -316,6 +316,10 @@ namespace UnityEngine
         /// <summary>The element count, released or not (what a visual effect the buffer is set
         /// on reads of it).</summary>
         internal int ElementCount => m_Storage.Count;
+        /// <summary>The element stride, released or not (as <see cref="ElementCount"/>).</summary>
+        internal int ElementStride => m_Storage.Stride;
+        /// <summary>Whether this is a view of the storage (a mesh's buffer).</summary>
+        internal bool Views(GpuBufferStorage storage) => ReferenceEquals(m_Storage, storage);
         public int stride => CheckedStorage.Stride;
         public Target target { get { _ = CheckedStorage; return m_Target; } }
         public UsageFlags usageFlags { get { _ = CheckedStorage; return m_UsageFlags; } }

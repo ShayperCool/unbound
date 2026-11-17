@@ -488,6 +488,12 @@ namespace UnityEngine
             Changed(false);
         }
 
+        /// <summary>The number of indices in the index buffer (all submeshes').</summary>
+        internal int IndexBufferLength => IndexBuffer().Length;
+
+        /// <summary>The index buffer's index at <paramref name="i"/>.</summary>
+        internal int IndexBufferAt(int i) => IndexBuffer()[i];
+
         /// <summary>The index buffer: the one set, else the submeshes' indices one after another.</summary>
         int[] IndexBuffer()
         {
