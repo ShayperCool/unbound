@@ -1,23 +1,23 @@
 {
  "Counts": {
-  "pixels": 6170,
+  "pixels": 886,
   "worst": 93,
-  "reason": "grass quads: shading one level apart over most of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Coverage": {
-  "pixels": 4215,
+  "pixels": 3308,
   "worst": 105,
-  "reason": "grass quads: shading one level apart over most of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "DensityCounts": {
-  "pixels": 6943,
+  "pixels": 2007,
   "worst": 123,
-  "reason": "grass quads: shading one level apart over most of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "DensityCoverage": {
-  "pixels": 6871,
+  "pixels": 3348,
   "worst": 115,
-  "reason": "grass quads: shading one level apart over most of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Instanced": {
   "pixels": 63,
@@ -30,8 +30,8 @@
   "reason": "one pixel one level apart (not traced); the slab meshes drawn in the Grass render mode match since they take the terrain's normal (Q533); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Tilted": {
-  "pixels": 10523,
+  "pixels": 9549,
   "worst": 139,
-  "reason": "grass quads: shading one level apart over most of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  }
 }
