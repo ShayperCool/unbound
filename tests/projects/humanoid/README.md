@@ -99,8 +99,7 @@ imported without keyframe reduction.
   the root with the motion state in full up to and including the update it completes in; at long
   play times a clip reads its time in seconds (single precision for states) divided by its length,
   rounded up to a single. Unbound matches these. Residuals (docs/COMPATIBILITY_GAPS.md): small-step
-  velocities, and the legs and the root's x of `longClipA`/`longClipB`, 2.8e6 units from the
-  origin.
+  velocities, and the root's x of `longClipA`, 2.8e6 units from the origin (its leg muscles match).
 
 - the controls of `HumanoidLeftovers.cs` (assets from `ProbeRunner.Leftovers`): target matching on
   HumanA's clip with root motion applied (`match.*`: each `AvatarTarget` from 0.2 to 0.6, masks of
@@ -287,7 +286,8 @@ printed as `NOW MATCHES`. `feet-pivot-velocity`: Animator.velocity at steps 5 an
 clip, the residual every HumanA play of the probe already has; `foot-ik-legs`: leg muscles up to
 2.4e-3 on single steps after the Animator's own Foot IK on a pose a job changed (consistent with
 amplified rounding of a nearly straight leg); `stance-drift`: the final pose after a job's
-ResetToStancePose on an Animator root motion has moved from the origin, where the Editor's
+ResetToStancePose on an Animator root motion has moved from the origin (a static placement there
+does the same, measured outside the reference), where the Editor's
 stance values step with the distance (body up to 3.3e-3, a straight leg's twist muscle up to
 1.5e-2 by update 28). `stream.stanceInPlace` (recorded last, built in `HumanoidBones.cs`) is
 the same job without root motion applied, so that the Animator stays at the origin: there every
