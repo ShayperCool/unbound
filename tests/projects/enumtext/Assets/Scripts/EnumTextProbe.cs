@@ -110,7 +110,7 @@ public class EnumTextProbe : MonoBehaviour
         Row("call.generic.float", Generic(1849.9999f));
         Row("call.nullable.float", ((float?)1849.9999f).ToString());
         Row("call.join.float", string.Join(",", new[] { 1849.9999f, 0.1f }));
-        // A format provider whose custom formatter takes one enum value and leaves the rest.
+        // A format provider whose custom formatter leaves every argument here to the class library.
         Row("call.customformatter", string.Format(new Localizer(), "{0} {1} {2:F} {3} {4} {5}", SortedAliases.C, SortedAliases.B, FlagAliases.AB, 1849.9999f, 1849.9999, new Money()));
         // IFormattable's and Enum's ToString through type parameters.
         Row("call.generic.formattable", Formattable(c, "G") + " " + Formattable(1849.9999f, null) + " " + Formattable<IFormattable>(c, null));
