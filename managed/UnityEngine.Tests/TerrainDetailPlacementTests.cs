@@ -538,7 +538,11 @@ namespace UnityEngine.Tests
             foreach (var n in normals)
             {
                 if (ground) Assert.Equal(Vector3.up, n);
-                else Assert.True(Mathf.Abs(n.y) < 1e-4f, n.ToString());
+                else
+                {
+                    var turned = Quaternion.Euler(0f, 40f, 0f) * Vector3.forward;
+                    Assert.True((n - turned).magnitude < 1e-4f, n.ToString());
+                }
             }
         }
 

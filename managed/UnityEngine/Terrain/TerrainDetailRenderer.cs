@@ -377,7 +377,8 @@ namespace UnityEngine
         }
 
         /// <summary>Meshes drawn without instancing: each instance's mesh through its transform
-        /// (turned, tilted to the ground, scaled), its normals turned and tilted, coloured the
+        /// (turned, tilted to the ground, scaled), its normals turned and tilted (in the Grass render
+        /// mode the terrain's normal at every vertex), coloured the
         /// instance's colour, drawn with a material that samples white (the prototype material's
         /// texture is not used: not yet).</summary>
         static void BakeMeshDetails(TerrainData data, MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements)
