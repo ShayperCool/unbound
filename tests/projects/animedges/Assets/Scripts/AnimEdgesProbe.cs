@@ -168,10 +168,19 @@ public class AnimEdgesProbe : MonoBehaviour
         var times = new (string Name, float Time)[]
         {
             ("NaN", float.NaN), ("+Infinity", float.PositiveInfinity), ("-Infinity", float.NegativeInfinity),
-            ("+Max", float.MaxValue), ("-Max", -float.MaxValue),
+            ("+Max", float.MaxValue), ("-Max", -float.MaxValue), ("-3", -3f), ("+9", 9f),
         };
         foreach (var (name, create) in curves)
             Record("curvetime." + name, "{" + string.Join(",", times.Select(t => S(t.Name) + ":" + V(create().Evaluate(t.Time)))) + "}");
+        // One stepped curve evaluated in turn at ordinary times between the extreme ones, as a game
+        // evaluates its table every frame.
+        var sequence = new (string Name, float Time)[]
+        {
+            ("0.5", .5f), ("+Infinity", float.PositiveInfinity), ("1.5", 1.5f), ("NaN", float.NaN), ("0.25", .25f),
+            ("-Infinity", float.NegativeInfinity), ("1.75", 1.75f), ("+Max", float.MaxValue), ("0.75", .75f),
+        };
+        var table = curves[0].Create();
+        Record("curvetime.sequence", "[" + string.Join(",", sequence.Select(t => "[" + S(t.Name) + "," + V(table.Evaluate(t.Time)) + "]")) + "]");
     }
 
     // ------------------------------------------------------------------ Play before the first evaluation

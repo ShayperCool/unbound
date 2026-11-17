@@ -12,7 +12,9 @@ records, in Play mode:
 * `curvetime.*`: `AnimationCurve.Evaluate` at NaN, ±Infinity and ±`float.MaxValue` for stepped,
   smooth, linear, one-key and empty curves, for looping and ping-pong wrap modes on both sides or on
   one (a stepped curve among them), and for two keys at one time clamped, looping and ping-ponging,
-  each time on a new curve. Evaluating one curve at these times in turn can give other
+  each time on a new curve, at those times and at −3 and 9; and one stepped curve evaluated in turn
+  at ordinary times between the extreme ones (`curvetime.sequence`: the ordinary times read as on a
+  new curve). Evaluating one curve at the extreme times only, in turn, can give other
   answers in the Editor (seen once: −MaxValue NaN after other extreme times, the first key on a new
   curve); that history is not covered.
 * `entry.*`: script-playable graphs created and played before the first scene loads, in game time

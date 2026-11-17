@@ -436,7 +436,8 @@ namespace UnityEngine
             }
         }
 
-        // Returns false when the mode clamps (the caller uses the end key's value).
+        // Wraps a time outside the keys into them for a looping or ping-pong side with keys over a
+        // positive duration; false otherwise (the caller decides the answer).
         private static bool WrapTime(ref float time, WrapMode mode, float first, float duration)
         {
             if (duration <= 0.0f)
