@@ -275,6 +275,7 @@
 {"key":"UnityEditor.ActiveEditorTracker/Property/UnityEditor.ActiveEditorTracker/inspectorMode","status":"value","value":"enum:0"}
 {"key":"UnityEditor.ActiveEditorTracker/Property/UnityEditor.ActiveEditorTracker/isDirty","status":"value","value":"false"}
 {"key":"UnityEditor.ActiveEditorTracker/Property/UnityEditor.ActiveEditorTracker/isLocked","status":"value","value":"false"}
+{"key":"UnityEditor.Analytics.AnalyticsSettings/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.Android.AndroidExternalToolsSettings/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.AnimatedValues.AnimBool/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.AnimatedValues.AnimBool/Property/UnityEditor.AnimatedValues.AnimBool/faded","status":"value","value":"0"}
@@ -398,6 +399,7 @@
 {"key":"UnityEditor.CustomPropertyDrawer/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.DecoratorDrawer/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEditor.DragAndDrop/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.DragAndDropWindowTarget/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.DrawGizmo/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Editor/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.Editor/Property/UnityEditor.Editor/hasUnsavedChanges","status":"value","value":"false"}
@@ -735,6 +737,7 @@
 {"key":"UnityEditor.PropertyEditor/Property/UnityEditor.PropertyEditor/tracker","status":"value","value":"UnityEditor.ActiveEditorTracker{activeEditors=[];hasComponentsWhichCannotBeMultiEdited=false;hasUnsavedChanges=false;inspectorMode=enum:0;isDirty=false;isLocked=false}"}
 {"key":"UnityEditor.PropertyEditor/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:52"}
 {"key":"UnityEditor.PropertyEditor/Property/UnityEngine.Object/name","status":"value","value":"string:"}
+{"key":"UnityEditor.Purchasing.PurchasingSettings/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.Rendering.EditorGraphicsSettings/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.SceneAsset/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SceneManagement.EditorSceneManager/@factory","status":"value","value":"class"}

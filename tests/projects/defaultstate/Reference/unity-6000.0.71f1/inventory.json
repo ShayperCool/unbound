@@ -908,6 +908,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Analytics.AnalyticsSettings"
+    },
+    {
+      "category": "class",
       "module": "UnityEditor.Android.Extensions",
       "status": "static",
       "type": "UnityEditor.Android.AndroidExternalToolsSettings"
@@ -1145,6 +1151,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.DragAndDrop"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.DragAndDropWindowTarget"
     },
     {
       "category": "class",
@@ -1673,6 +1685,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.PropertyEditor"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Purchasing.PurchasingSettings"
     },
     {
       "category": "class",
