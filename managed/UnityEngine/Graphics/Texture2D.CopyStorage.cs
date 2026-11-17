@@ -25,9 +25,11 @@ namespace UnityEngine
         }
 
         /// <summary>A whole first level into <paramref name="destination"/>'s: its bytes in order
-        /// where both levels hold as many (whatever their sizes and formats: the Unity 6000.0.71f1
-        /// Editor, tests/projects/apierrors `texture.copy_case.element_same_bytes_*`); otherwise the
-        /// pixels both levels hold (unmeasured).</summary>
+        /// where both levels hold as many (levels of other sizes: the Unity 6000.0.71f1 Editor,
+        /// tests/projects/apierrors `texture.copy_case.element_same_bytes_other_size`; of other
+        /// formats inferred from `element_same_bytes_other_format`, unmeasured on its own);
+        /// otherwise the pixels both levels hold (unmeasured). The GPU copy that follows takes the
+        /// region both levels share (the Editor's GPU side of this case is unmeasured).</summary>
         internal void CopyRetainedLevel(Texture2D destination)
         {
             if (!EnsureRetainedPixels() || !destination.EnsureRetainedPixels()) return;

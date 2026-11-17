@@ -59,4 +59,5 @@ the method's last statement, a rethrow (the Editor names the `throw;`), the fram
 ExceptionDispatchInfo.Throw (CoreCLR places it at the method's first statement), and
 MonoBehaviour.StartCoroutine's own frames below a coroutine's first step. A copy between formats of other groups
 with as many bytes logs the Editor's OpenGL internal formats and copies the CPU bytes as they are
-(Unbound copies the pixels, without the error); Texture3D.GetPixelBilinear is not implemented.
+(Unbound copies the bytes without the error), a new RGBAHalf texture's
+unwritten texels are 0xCD bytes in the Editor (205/255 per channel in Unbound); Texture3D.GetPixelBilinear is not implemented.
