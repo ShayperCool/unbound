@@ -22,11 +22,10 @@ namespace Unbound.Runtime
         // Owns the memory m_Pdb reads.
         readonly MetadataReaderProvider m_Provider;
         readonly MetadataReader m_Pdb;
-        // Applied hot-reload edits, oldest first: the readers (kept with their providers), the
-        // edited methods' newest debug information by MethodDef row, and the documents they add.
+        // Applied hot-reload edits, oldest first (their providers own the readers' memory), and
+        // the edited methods' newest debug information by MethodDef row.
         readonly List<MetadataReaderProvider> m_Deltas = new();
         readonly Dictionary<int, (MetadataReader Reader, MethodDebugInformationHandle Handle)> m_Edited = new();
-        readonly Dictionary<int, string> m_AddedDocuments = new();
 
         PortablePdb(PEReader image, MetadataReaderProvider provider)
         {
@@ -43,6 +42,7 @@ namespace Unbound.Runtime
         internal static PortablePdb Of(Assembly assembly)
         {
             if (assembly.IsDynamic || string.IsNullOrEmpty(assembly.Location)) return null;
+            if (s_Loaded.TryGetValue(assembly, out var known)) return known;
             lock (s_Loaded)
             {
                 if (!s_Loaded.TryGetValue(assembly, out var pdb))
@@ -61,23 +61,25 @@ namespace Unbound.Runtime
             var pdb = Of(assembly);
             if (pdb == null || delta == null || delta.Length == 0) return;
             lock (pdb) pdb.Add(delta);
+            Edited = true;
         }
+
+        /// <summary>Whether a hot-reload edit was applied: until then the runtime's own lines of
+        /// frames are the .pdb's.</summary>
+        internal static volatile bool Edited;
 
         internal void Add(byte[] delta)
         {
             var provider = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(delta));
             var reader = provider.GetMetadataReader();
             m_Deltas.Add(provider);
-            // A delta's rows of a table are listed, in order, by the rows they stand for (EncMap).
-            int methods = 0, documents = 0;
+            // The delta's method rows stand, in order, for the methods its map lists (EncMap). Its
+            // statements name documents of its own Document table: the compiler's numbering, which
+            // the loaded .pdb need not keep (an adapted assembly's is rewritten).
+            int methods = 0;
             foreach (var entry in reader.GetEditAndContinueMapEntries())
-            {
-                int row = MetadataTokens.GetRowNumber(entry);
                 if (entry.Kind == HandleKind.MethodDebugInformation)
-                    m_Edited[row] = (reader, MetadataTokens.MethodDebugInformationHandle(++methods));
-                else if (entry.Kind == HandleKind.Document)
-                    m_AddedDocuments[row] = reader.GetString(reader.GetDocument(MetadataTokens.DocumentHandle(++documents)).Name);
-            }
+                    m_Edited[MetadataTokens.GetRowNumber(entry)] = (reader, MetadataTokens.MethodDebugInformationHandle(++methods));
         }
 
         /// <summary>The .pdb of an assembly file that is not loaded (null without one).</summary>
@@ -123,10 +125,11 @@ namespace Unbound.Runtime
             if ((methodToken >> 24) != 0x06) return false;
             int row = methodToken & 0xFFFFFF;
             MethodDebugInformation information;
+            MetadataReader reader = m_Pdb;
             lock (this)
             {
                 if (m_Edited.TryGetValue(row, out var edited))
-                    information = edited.Reader.GetMethodDebugInformation(edited.Handle);
+                    information = (reader = edited.Reader).GetMethodDebugInformation(edited.Handle);
                 else if (row <= m_Pdb.GetTableRowCount(TableIndex.MethodDebugInformation))
                     information = m_Pdb.GetMethodDebugInformation(MetadataTokens.MethodDebugInformationHandle(row));
                 else return false;
@@ -136,7 +139,7 @@ namespace Unbound.Runtime
                     if (point.Offset > ilOffset) break;
                     if (point.IsHidden) continue;
                     start = point.Offset;
-                    document = DocumentName(point.Document);
+                    document = DocumentName(reader, point.Document);
                     line = point.StartLine;
                     found = true;
                 }
@@ -144,12 +147,10 @@ namespace Unbound.Runtime
             }
         }
 
-        string DocumentName(DocumentHandle handle)
-        {
-            int row = MetadataTokens.GetRowNumber(handle);
-            if (m_AddedDocuments.TryGetValue(row, out var added)) return added;
-            return row <= m_Pdb.GetTableRowCount(TableIndex.Document) ? m_Pdb.GetString(m_Pdb.GetDocument(handle).Name) : null;
-        }
+        static string DocumentName(MetadataReader reader, DocumentHandle handle) =>
+            MetadataTokens.GetRowNumber(handle) <= reader.GetTableRowCount(TableIndex.Document)
+                ? reader.GetString(reader.GetDocument(handle).Name)
+                : null;
 
         /// <summary>Where the method <paramref name="typeName"/>.<paramref name="methodName"/> with
         /// <paramref name="parameterCount"/> parameters calls a method named

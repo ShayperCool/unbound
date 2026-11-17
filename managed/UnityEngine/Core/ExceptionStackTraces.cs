@@ -112,7 +112,7 @@ namespace Unbound.Runtime
             int offset = frame.GetILOffset();
             if (offset >= 0 && method != null && PortablePdb.Of(method.Module.Assembly) is PortablePdb pdb
                 && pdb.Statement(method.MetadataToken, offset, out int start, out string document, out int line))
-                return (start, document, line);
+                return (start, document ?? frame.GetFileName(), line);
             return (offset, frame.GetFileName(), frame.GetFileLineNumber());
         }
 
@@ -224,7 +224,10 @@ namespace Unbound.Runtime
 
         internal static void AppendSource(StringBuilder text, StackFrame frame, string projectFolder)
         {
-            var (_, file, line) = Place(frame, frame.GetMethod());
+            // Only an edit makes the runtime's line differ from the .pdb's.
+            var (_, file, line) = PortablePdb.Edited
+                ? Place(frame, frame.GetMethod())
+                : (0, frame.GetFileName(), frame.GetFileLineNumber());
             if (string.IsNullOrEmpty(file)) return;
             text.Append(" (at ").Append(StackSourcePath(file, projectFolder, ProjectInfo.ProjectPath)).Append(':')
                 .Append(line).Append(')');

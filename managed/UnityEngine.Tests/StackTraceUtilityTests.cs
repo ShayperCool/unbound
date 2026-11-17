@@ -217,60 +217,95 @@ namespace Unbound.Tests
             Assert.Equal("/p/Assets/A.cs", UnityStackTrace.StackSourcePath("/p/Assets/A.cs", "Assets/", "/p"));
         }
 
-        const string EditedSource = @"
-public static class Game
-{
-    public static int Unchanged(int x)
-    {
-        int y = x + 1;
-        return y * 2;
-    }
-
-    public static int Edited(int x)
-    {
-        return x + 1;
-    }
-}";
-
-        /// <summary>A hot-reload edit's .pdb places the methods it edits; the others keep the
-        /// loaded .pdb's places.</summary>
-        [Fact]
-        public void AnEditsPdbPlacesTheMethodsItEdits()
+        static readonly (string Path, string Text)[] EditedSources =
         {
-            var original = UnityEngine.Tests.WideFloatsTests.Compilation(EditedSource, Microsoft.CodeAnalysis.OptimizationLevel.Debug, "EditedGame", engine: false);
+            ("A.cs", "public enum Kind { One, Two }\npublic class Data { public int x; }\n"),
+            ("C.cs", "public static class C\n{\n    public static int Run(int x)\n    {\n        return x + 1;\n    }\n}\n"),
+            ("B.cs", "public static class B\n{\n    public static int Kept(int x)\n    {\n        int y = x + 1;\n        return y * 2;\n    }\n\n    public static int Run(int x)\n    {\n        return x + 1;\n    }\n}\n"),
+        };
+
+        // One set across the edits: the edit session compares declarations of successive compilations.
+        static readonly Microsoft.CodeAnalysis.MetadataReference[] s_GameReferences =
+            { Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location) };
+
+        static Microsoft.CodeAnalysis.CSharp.CSharpCompilation EditedGame(Func<string, string, string> edit) =>
+            Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create("EditedGame",
+                EditedSources.Select(s => Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(edit(s.Path, s.Text), path: "/game/" + s.Path, encoding: System.Text.Encoding.UTF8)),
+                s_GameReferences,
+                new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary,
+                    optimizationLevel: Microsoft.CodeAnalysis.OptimizationLevel.Debug));
+
+        static string Edit(string path, string text, string file) =>
+            path == file ? text.Replace("        return x + 1;", "        x *= 3;\n        return x + 1;") : text;
+
+        /// <summary>Hot-reload edits' .pdb deltas place the methods they edit, in the files the
+        /// compiler numbered, also when the loaded .pdb was rewritten with the assembly (which
+        /// drops a file without methods and renumbers the others); other methods keep the loaded
+        /// .pdb's places.</summary>
+        [Fact]
+        public void EditsPdbsPlaceTheMethodsTheyEditInTheirFiles()
+        {
+            var original = EditedGame((path, text) => text);
             var (image, pdbImage) = UnityEngine.Tests.WideFloatsTests.Emit(original);
             var session = new Unbound.Compiler.EditAndContinue();
             session.Begin("EditedGame", original, image, pdbImage);
-            var current = UnityEngine.Tests.WideFloatsTests.Compilation(EditedSource.Replace("return x + 1;", "x *= 3;\n        return x + 1;"),
-                Microsoft.CodeAnalysis.OptimizationLevel.Debug, "EditedGame", engine: false);
-            var delta = session.Emit("EditedGame", current);
-            Assert.NotNull(delta);
+            var first = session.Emit("EditedGame", EditedGame((path, text) => Edit(path, text, "B.cs")));
+            var second = session.Emit("EditedGame", EditedGame((path, text) => Edit(path, Edit(path, text, "B.cs"), "C.cs")));
+            Assert.NotNull(first);
+            Assert.NotNull(second);
+
+            // The assembly as the game domain loads it: rewritten, with its .pdb, as the filters
+            // write adapted assemblies (Mono.Cecil).
+            byte[] loaded, loadedPdb;
+            using (var module = Mono.Cecil.AssemblyDefinition.ReadAssembly(new MemoryStream(image), new Mono.Cecil.ReaderParameters
+            {
+                ReadSymbols = true,
+                SymbolStream = new MemoryStream(pdbImage),
+                SymbolReaderProvider = new Mono.Cecil.Cil.PortablePdbReaderProvider(),
+            }))
+            using (var output = new MemoryStream())
+            using (var pdbOutput = new MemoryStream())
+            {
+                module.Write(output, new Mono.Cecil.WriterParameters
+                {
+                    WriteSymbols = true,
+                    SymbolStream = pdbOutput,
+                    SymbolWriterProvider = new Mono.Cecil.Cil.PortablePdbWriterProvider(),
+                });
+                (loaded, loadedPdb) = (output.ToArray(), pdbOutput.ToArray());
+            }
 
             string directory = Path.Combine(Path.GetTempPath(), "unbound-pdb-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             try
             {
                 string dll = Path.Combine(directory, "EditedGame.dll");
-                File.WriteAllBytes(dll, image);
-                File.WriteAllBytes(Path.Combine(directory, "EditedGame.pdb"), pdbImage);
+                File.WriteAllBytes(dll, loaded);
+                File.WriteAllBytes(Path.Combine(directory, PeImage.PdbName(loaded) ?? "EditedGame.pdb"), loadedPdb);
                 var pdb = PortablePdb.OfFile(dll);
                 Assert.NotNull(pdb);
                 using var reader = new PEReader(new MemoryStream(image));
                 var metadata = reader.GetMetadataReader();
-                int Token(string name) => MetadataTokens.GetToken(metadata.MethodDefinitions.Single(h => metadata.GetString(metadata.GetMethodDefinition(h).Name) == name));
-                int LastLine(int token)
+                int Token(string type, string name) => MetadataTokens.GetToken(metadata.MethodDefinitions.Single(h =>
                 {
-                    Assert.True(pdb.Statement(token, 1000, out _, out _, out int line));
-                    return line;
+                    var method = metadata.GetMethodDefinition(h);
+                    return metadata.GetString(method.Name) == name && metadata.GetString(metadata.GetTypeDefinition(method.GetDeclaringType()).Name) == type;
+                }));
+                (string, int) Last(string type, string name)
+                {
+                    Assert.True(pdb.Statement(Token(type, name), 1000, out _, out string document, out int line));
+                    return (document, line);
                 }
-                int unchanged = LastLine(Token("Unchanged"));
-                Assert.Equal(13, LastLine(Token("Edited")));
-                pdb.Add(delta!.Pdb);
-                Assert.Equal(unchanged, LastLine(Token("Unchanged")));
-                // The edit adds a line before the method's last statement and closing brace.
-                Assert.Equal(14, LastLine(Token("Edited")));
-                Assert.True(pdb.Statement(Token("Edited"), 1000, out _, out string document, out _));
-                Assert.NotNull(document);
+                Assert.Equal(("/game/B.cs", 7), Last("B", "Kept"));
+                Assert.Equal(("/game/B.cs", 12), Last("B", "Run"));
+                Assert.Equal(("/game/C.cs", 6), Last("C", "Run"));
+                pdb.Add(first!.Pdb);
+                Assert.Equal(("/game/B.cs", 7), Last("B", "Kept"));
+                Assert.Equal(("/game/B.cs", 13), Last("B", "Run"));
+                Assert.Equal(("/game/C.cs", 6), Last("C", "Run"));
+                pdb.Add(second!.Pdb);
+                Assert.Equal(("/game/B.cs", 13), Last("B", "Run"));
+                Assert.Equal(("/game/C.cs", 7), Last("C", "Run"));
             }
             finally { Directory.Delete(directory, true); }
         }
