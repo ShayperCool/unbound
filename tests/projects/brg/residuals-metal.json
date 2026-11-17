@@ -1,0 +1,3 @@
+{
+  "procedural*": "the procedural scenario has no Metal reference yet (recorded on the Linux Editor's OpenGL Core and Vulkan devices only); record it with the macOS Editor (run.py native --device metal), including how Metal draws procedural quads, which Unbound warns about and does not draw there"
+}
