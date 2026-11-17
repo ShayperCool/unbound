@@ -122,3 +122,12 @@ within 3.4e-9, and its bytes are the predicted encodings.
 Not covered: a Custom default reflection, `DynamicGI.UpdateEnvironment`, Skybox/Flat ambient
 modes, other skyboxes, authored (rather than script-set) intensities, and bakes other than this
 one.
+
+## Recorded residuals (suite gate)
+
+The suite passes the comparator this probe's residual list (`residuals*.json`, format in
+tests/residuals.py): each remaining difference is listed by key with its measured bounds and
+reason (docs/COMPATIBILITY_GAPS.md, cause table `indirectspec`), measured on the Linux NVIDIA OpenGL Core
+GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
+is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
+(NOW MATCHES) so that its entry can be withdrawn.

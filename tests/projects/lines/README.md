@@ -371,3 +371,12 @@ selects the built-in cascade count, and
 sets the normalized split positions. Perspective controls change atlas coverage when
 these settings change. The orthographic single-map result is a measured release behavior,
 rather than an additional documented guarantee.
+
+## Recorded residuals (suite gate)
+
+The suite passes the comparator this probe's residual list (`residuals*.json`, format in
+tests/residuals.py): each remaining difference is listed by key with its measured bounds and
+reason (docs/COMPATIBILITY_GAPS.md, cause table `lines`), measured on the Linux NVIDIA OpenGL Core
+GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
+is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
+(NOW MATCHES) so that its entry can be withdrawn.

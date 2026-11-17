@@ -1,0 +1,8 @@
+{
+ "basemap": {"pixels": 627, "worst": 16, "reason": "shading one level apart over the terrain (594 pixels) and single pixels at tree trunk edges; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"},
+ "close": {"pixels": 106, "worst": 25, "reason": "single pixels along a tree trunk's silhouette and shading one level apart; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"},
+ "overview": {"pixels": 1186, "worst": 23, "reason": "shading one level apart over the terrain (1133 pixels) and single pixels at tree trunk edges; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"},
+ "overview_detail": {"pixels": 633, "worst": 16, "reason": "shading one level apart over the terrain (601 pixels) and single pixels at tree trunk edges; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"},
+ "top": {"pixels": 2625, "worst": 3, "reason": "shading up to three levels apart over the terrain seen from above; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"},
+ "trees": {"pixels": 289, "worst": 28, "reason": "single pixels along tree trunk silhouettes and shading one to three levels apart; visually insignificant; Linux NVIDIA OpenGL Core, 2026-11-16"}
+}

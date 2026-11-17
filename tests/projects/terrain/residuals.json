@@ -1,0 +1,10 @@
+{
+ "interpolated[76].steepness": {
+  "max_abs": 0.000201,
+  "reason": "GetSteepness: one float step of the interpolated normal's y below 1, about 2e-4 degrees through the arc cosine (cause table `terrain`, Q421); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "interpolated[7].steepness": {
+  "max_abs": 0.000226,
+  "reason": "GetSteepness: one float step of the interpolated normal's y below 1, about 2e-4 degrees through the arc cosine (cause table `terrain`, Q421); Linux NVIDIA OpenGL Core, 2026-11-16"
+ }
+}

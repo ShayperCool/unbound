@@ -33,3 +33,12 @@ What still differs: two steepness values on nearly flat ground (the arc cosine o
 last digit differs: 0.8673 vs 0.8675), the dropped spheres (Box3D integrates in four sub-steps,
 PhysX in one: a free fall lags by 3/8 g dt² a step), and the images by about 2/255 on average
 (the Editor compresses the imported layer textures to BC1; Unbound keeps their pixels).
+
+## Recorded residuals (suite gate)
+
+The suite passes the comparator this probe's residual list (`residuals*.json`, format in
+tests/residuals.py): each remaining difference is listed by key with its measured bounds and
+reason (docs/COMPATIBILITY_GAPS.md, cause table `terrain`), measured on the Linux NVIDIA OpenGL Core
+GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
+is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
+(NOW MATCHES) so that its entry can be withdrawn.

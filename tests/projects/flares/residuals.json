@@ -1,0 +1,97 @@
+{
+ "h.color.f2": {
+  "max_delta": 0.000672,
+  "pixels": 8,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.directional.f2": {
+  "max_delta": 0.000207,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.point.f2": {
+  "max_delta": 0.000207,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.point.int2.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.point.white.f2": {
+  "max_delta": 0.000207,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.background.f2": {
+  "max_delta": 0.000392,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.depth.f2": {
+  "max_delta": 0.000412,
+  "pixels": 3,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.depthNear.f2": {
+  "max_delta": 0.000412,
+  "pixels": 3,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.fog.f2": {
+  "max_delta": 0.000248,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.moved.f2": {
+  "max_delta": 0.00145,
+  "pixels": 26,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.noLayer.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.rolled.f2": {
+  "max_delta": 0.00342,
+  "pixels": 30,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.scaled.f2": {
+  "max_delta": 0.00145,
+  "pixels": 26,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "h.white.strength1.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ho.scene.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ho.sceneAfterBuffers.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ho.sceneAfterFlare.f2": {
+  "max_delta": 0.000412,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ho.withFlare.f2": {
+  "max_delta": 0.000413,
+  "pixels": 6,
+  "reason": "halo pixels at the edge of the halo fan (gap row `LensFlare/Flare/Halo`, cause table `flares`; interpolation and sampling remain hypotheses after Q387, Q463 and Q469); Linux NVIDIA OpenGL Core, 2026-11-16"
+ }
+}

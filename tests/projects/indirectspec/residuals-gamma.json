@@ -1,0 +1,290 @@
+{
+ "ambient 0.5 reflection 0.25 immediate ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 immediate dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 0.25 settled dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 immediate dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 0.5 reflection 1 settled dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 immediate dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 0.25 settled dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 immediate dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ambient 1 reflection 1 settled dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled ambientProbe": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHAb": {
+  "max_abs": 5.61e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHAg": {
+  "max_abs": 3.91e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHAr": {
+  "max_abs": 5.6e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHBb": {
+  "max_abs": 3.73e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHBg": {
+  "max_abs": 3.39e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHBr": {
+  "max_abs": 3.32e-09,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "lights enabled dump unity_SHC": {
+  "max_abs": 7.31e-10,
+  "reason": "ambient probe and unity_SH* values within 1e-8 of the lighting data's (cause table `indirectspec`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ }
+}

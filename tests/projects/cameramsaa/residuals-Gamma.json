@@ -1,0 +1,430 @@
+{
+ "ARGB32.resolve.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "ResolveAntiAliasedSurface with no render target active copies the Editor window's framebuffer into the target in the Editor (gap row `ResolveAntiAliasedSurface with an inactive source`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "ARGBFloat.resolve.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "ResolveAntiAliasedSurface with no render target active copies the Editor window's framebuffer into the target in the Editor (gap row `ResolveAntiAliasedSurface with an inactive source`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.ARGB32.resolveSentinelInactive.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "ResolveAntiAliasedSurface with no render target active copies the Editor window's framebuffer into the target in the Editor (gap row `ResolveAntiAliasedSurface with an inactive source`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.ARGBFloat.resolveSentinelInactive.image": {
+  "channels": 65536,
+  "max_delta": 1.46,
+  "reason": "ResolveAntiAliasedSurface with no render target active copies the Editor window's framebuffer into the target in the Editor (gap row `ResolveAntiAliasedSurface with an inactive source`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q0.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q0.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q0.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q2.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q2.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q2.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q4.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q4.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hFalse.q4.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q0.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q0.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q0.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q2.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q2.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q2.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q4.target": {
+  "actual": null,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q4.target.filter": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screen.hTrue.q4.target.size": {
+  "missing": true,
+  "reason": "the probe's Editor-only branch reads the Game view through the Editor's own render-view texture and describes it as the read's target; Unbound has no such texture and the probe describes none (cause table `cameramsaa`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBA32.linearFalse.image": {
+  "channels": 16384,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBA32.linearTrue.image": {
+  "channels": 16384,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBAFloat.linearFalse.image": {
+  "channels": 16384,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q0.RGBAFloat.linearTrue.image": {
+  "channels": 16384,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBA32.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBA32.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBAFloat.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q2.RGBAFloat.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBA32.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBA32.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBAFloat.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hFalse.q4.RGBAFloat.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBA32.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBA32.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBAFloat.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q0.RGBAFloat.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBA32.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBA32.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBAFloat.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q2.RGBAFloat.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBA32.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBA32.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBA32.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBA32.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBAFloat.linearFalse.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBAFloat.linearFalse.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBAFloat.linearTrue.center": {
+  "actual": [
+   0.7490196,
+   0.498039216,
+   0.2509804,
+   0.623529434
+  ],
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ },
+ "boundary.screenPublic.hTrue.q4.RGBAFloat.linearTrue.image": {
+  "channels": 65536,
+  "max_delta": 1.0,
+  "reason": "a read outside the frame's drawing returns the Editor window's framebuffer (Editor interface pixels) in the Editor (cause table `cameramsaa`, gap row `Editor GameView and system-framebuffer readback`); Linux NVIDIA OpenGL Core, 2026-11-16"
+ }
+}

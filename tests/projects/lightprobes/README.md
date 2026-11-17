@@ -425,3 +425,12 @@ Unity 6000.0 contracts checked for this work:
   change; it is not established by the single-position renderer controls.
 
 * [Lightmapping.Tetrahedralize](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Lightmapping.Tetrahedralize.html)
+
+## Recorded residuals (suite gate)
+
+The suite passes the comparator this probe's residual list (`residuals*.json`, format in
+tests/residuals.py): each remaining difference is listed by key with its measured bounds and
+reason (docs/COMPATIBILITY_GAPS.md, cause table `lightprobes`), measured on the Linux NVIDIA OpenGL Core
+GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
+is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
+(NOW MATCHES) so that its entry can be withdrawn.
