@@ -14,17 +14,18 @@ absent.
 What is still missing or only partly done, found by auditing the engine, is mapped in
 `COMPATIBILITY_GAPS.md`.
 
-## Where it stands (2026-11-11)
+## Where it stands (2026-11-17)
 
-Measured on commit `61e8aa8fae87bb45a3213195792dc2cc9dc7cbf1` with
+Measured on commit `7540e827f6beaae3c84ae263717965c5bae56440` with
 `unbound api-gaps -p tests/projects/packages --json`.
 
 * Compiling: the 188 script assemblies of the packages project match the Editor's graph exactly
   (references, defines, .NET Standard 2.1 and .NET Framework levels) and all compile.
-* API members: 4943 of 5974 referenced satisfied, 1031 stubbed;
-  uses 74051 of 76289 satisfied.
-* API types: 1186 of 1406 referenced satisfied, 220 stubbed;
-  uses 84200 of 86159 satisfied.
+* API members: 5322 of 5974 referenced satisfied, 652 stubbed (1031 on 2026-11-11);
+  uses 74948 of 76289 satisfied (74051). Of the stubbed members 501 (1016 uses) are UnityEditor
+  API, 139 (265 uses) runtime API, the rest UI Toolkit, text, input and VFX Graph API.
+* API types: 1267 of 1406 referenced satisfied, 139 stubbed (220);
+  uses 85122 of 86159 satisfied (84200).
 * Works in a real game: core objects and lifecycle, scenes and prefabs, Unity
   serialization, uGUI, TextMeshPro, IMGUI, 2D physics (Box2D), 3D physics (PhysX 4.1), legacy and
   Animator animation, particles, audio and mixers, UnityWebRequest, Addressables in Play mode
@@ -43,17 +44,17 @@ entries and their uses can appear in several rows, so the rows are not additive.
 
 | Package | Stubbed members / reported uses | Types with most referenced stubbed members |
 |---|---|---|
-| Render Pipelines Core, URP/2D, Shader Graph, GPU Driven, Light Transport | 398 / 1010 | `UnityEngine.VFX.VisualEffect`, `UnityEngine.Rendering.GPUDrivenRendererGroupData`, `UnityEngine.Rendering.BatchCullingContext` |
-| Input System (+ ForUI) | 166 / 345 | `UnityEditor.EditorGUILayout`, `UnityEditor.AssetDatabase`, `UnityEditor.IMGUI.Controls.TreeView/RowGUIArgs` |
-| Timeline, Sequences, Cinemachine, Animation Rigging | 19 / 56 | `UnityEditor.PrefabUtility`, `UnityEditor.AssetDatabase`, `UnityEditor.AnimationUtility` |
-| VFX Graph | 74 / 223 | `UnityEngine.VFX.VisualEffect`, `UnityEngine.VFX.VFXEventAttribute`, `UnityEngine.VFX.VFXSpawnerState` |
-| Post Processing v2 | 7 / 23 | `UnityEngine.Camera`, `UnityEngine.Rendering.GraphicsSettings` |
-| Collections, Burst, Logging, Transport, Serialization | 40 / 84 | `Unity.TLS.LowLevel.Binding`, `Unity.TLS.LowLevel.Binding/unitytls_client_config`, `Unity.TLS.LowLevel.Binding/unitytls_dataRef` |
+| Render Pipelines Core, URP/2D, Shader Graph, GPU Driven, Light Transport | 149 / 368 | `UnityEngine.XR.XRDisplaySubsystem`, `UnityEngine.XR.XRDisplaySubsystem/XRRenderPass`, `UnityEditor.SceneView` |
+| Input System (+ ForUI) | 154 / 327 | `UnityEditor.EditorGUILayout`, `UnityEditor.SettingsProvider`, `UnityEditor.Search.SearchProvider` |
+| Timeline, Sequences, Cinemachine, Animation Rigging | 16 / 53 | `UnityEditor.AnimationClipStats`, `UnityEditor.AnimationMode`, `UnityEditor.AnimationUtility` |
+| VFX Graph | 4 / 12 | `UnityEngine.VFX.VFXManager`, `UnityEditor.AssetDatabase`, `UnityEditor.EditorUtility` |
+| Post Processing v2 | 5 / 15 | `UnityEngine.Camera`, `UnityEngine.Rendering.GraphicsSettings` |
+| Collections, Burst, Logging, Transport, Serialization | 40 / 84 | `Unity.TLS.LowLevel.Binding/unitytls_client_config`, `Unity.TLS.LowLevel.Binding`, `UnityEditor.Compilation.CompilationPipeline` |
 | 2D Animation, IK, Pixel Perfect, SpriteShape, Tilemap Extras | 1 / 5 | `UnityEditor.AssetDatabase` |
-| AI Navigation | 2 / 5 | `UnityEditor.SceneManagement.PrefabStage`, `UnityEditor.SceneManagement.EditorSceneManager` |
-| Notifications, Ads, IAP, LevelPlay | 3 / 10 | `UnityEditor.AssetDatabase`, `UnityEngine.Analytics.Analytics` |
-| Test Framework, UnityEditor.UI | 256 / 523 | `UnityEditor.EditorGUILayout`, `UnityEditor.BuildPlayerOptions`, `UnityEditor.PlayerSettings` |
-| Other scanned packages | 120 / 312 | `UnityEditor.PrefabUtility`, `UnityEngine.UIElements.UxmlObjectAttribute`, `UnityEditor.AssetDatabase` |
+| AI Navigation | 2 / 5 | `UnityEditor.SceneManagement.EditorSceneManager`, `UnityEditor.SceneManagement.PrefabStage` |
+| Notifications, Ads, IAP, LevelPlay | 0 / 0 |  |
+| Test Framework, UnityEditor.UI | 250 / 507 | `UnityEditor.EditorUserBuildSettings`, `UnityEditor.PlayerSettings`, `UnityEditor.IMGUI.Controls.TreeViewController` |
+| Other scanned packages | 71 / 202 | `UnityEditor.AssetDatabase`, `UnityEditor.ConvertToPrefabInstanceSettings`, `UnityEditor.Animations.AnimatorTransitionBase` |
 
 ## Work list
 
