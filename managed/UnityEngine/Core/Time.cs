@@ -81,8 +81,34 @@ namespace UnityEngine
         static double s_FrameRealtime;
         static readonly Stopwatch s_FrameClock = Stopwatch.StartNew();
 
-        /// <summary>Real time: the frame's start plus the wall time spent in the frame so far.</summary>
-        static double Realtime() => s_FrameRealtime + s_FrameClock.Elapsed.TotalSeconds;
+        /// <summary>Under a scripted fixed frame rate (<c>--fixed-fps</c>, Unbound's deterministic
+        /// mode), the frame's step; 0 when frames follow the wall clock.</summary>
+        static double s_FixedRealStep;
+        /// <summary>The latest real time read in fixed-step mode, and how many reads this frame
+        /// found the frame's real time used up.</summary>
+        static double s_LastRealtime;
+        static int s_OverrunReads;
+
+        /// <summary>How far a read that finds the frame's fixed step of real time used up moves the
+        /// clock: Unbound's choice, small against any frame step, so that a script waiting in
+        /// one frame for more real time than the step still sees it pass.</summary>
+        /// (Read-only rather than const: tests save and restore every settable static of Time.)
+        static readonly double OverrunReadStep = 1e-6;
+
+        /// <summary>Real time: the frame's start plus the wall time spent in the frame so far. In
+        /// fixed-step mode a frame lasts its step of real time, as it does for unscaledTime: the
+        /// clock starts each frame where unscaledTime does and, within the frame, follows the wall
+        /// clock up to a read step short of the next frame's start, then moves by a read step
+        /// per read, so slow frames do not make it run ahead of the frames.</summary>
+        static double Realtime()
+        {
+            double inFrame = s_FrameClock.Elapsed.TotalSeconds;
+            if (!(s_FixedRealStep > 0)) return s_FrameRealtime + inFrame;
+            double limit = Math.Max(s_FixedRealStep - OverrunReadStep, 0);
+            double value = inFrame < limit ? s_FrameRealtime + inFrame : s_FrameRealtime + limit + ++s_OverrunReads * OverrunReadStep;
+            if (value > s_LastRealtime) s_LastRealtime = value;
+            return value;
+        }
 
         public static float fixedDeltaTime
         {
@@ -201,14 +227,23 @@ namespace UnityEngine
             s_CaptureClockTime = s_Time;
         }
 
-        /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.</summary>
-        internal static void BeginFrame(double realDelta)
+        /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.
+        /// <paramref name="fixedStep"/> is the frame step of a scripted fixed frame rate, 0 when
+        /// frames follow the wall clock.</summary>
+        internal static void BeginFrame(double realDelta, double fixedStep = 0)
         {
             // The host's delta covers at least the wall time spent since the last frame began.
             // Real time counts from the first frame, like unscaledTime (measured in Play mode:
             // realtimeSinceStartup equal to unscaledTime to the millisecond); loading before it
-            // does not count.
-            s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(s_FrameRealtime + realDelta, Realtime());
+            // does not count. In fixed-step mode the frames' steps are the real time, as they are
+            // unscaledTime: the clock moves past them only as far as a script has read it.
+            if (fixedStep > 0)
+                s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(s_FrameRealtime + realDelta, s_LastRealtime);
+            else
+                s_FrameRealtime = s_FrameCount == 0 ? 0.0 : Math.Max(s_FrameRealtime + realDelta, Realtime());
+            s_FixedRealStep = fixedStep;
+            s_LastRealtime = s_FrameRealtime;
+            s_OverrunReads = 0;
             s_FrameClock.Restart();
             s_RealDeltaTime = realDelta;
             // Under a capture rate the game clock steps by the capture delta while the unscaled

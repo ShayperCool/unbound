@@ -499,6 +499,7 @@ fn drive(
         raw_motion: 1,
         display_version: unbound_runtime::display::version(),
         ime_version: unbound_runtime::ime::version(),
+        fixed_step: 0.0,
     };
     let keep_going = driver.inner.frame(&input);
     // The presentation follows the game's vertical sync setting.

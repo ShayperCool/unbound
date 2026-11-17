@@ -158,7 +158,14 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   `--screenshot` (the last frame) and `--snapshot FRAME:PATH` (any frame, the run goes on);
   playthroughs can be checked without a person. `--fixed-fps N` advances game time by exactly 1/N
   per frame, so a frame number means the same game moment on every run (otherwise the wall clock
-  drives time and scripted taps drift). `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
+  drives time and scripted taps drift). Every engine clock follows those frames: `time` and
+  `unscaledTime`, the audio clock, and real time (`realtimeSinceStartup`,
+  `EditorApplication.timeSinceStartup`, `WaitForSecondsRealtime`), which starts each frame where
+  `unscaledTime` does and within the frame follows the wall clock up to just short of the next
+  frame's start (a script waiting longer in one frame sees it move by a microsecond per reading),
+  so a slow frame cannot make a tap read as a long press. The .NET clocks (`Stopwatch`,
+  `DateTime`, `Environment.TickCount`) keep wall time: games time their work and date things with
+  them. `UNBOUND_RANDOM_SEED=N` seeds `UnityEngine.Random` with N
   instead of the clock, so random choices repeat too.
 * **Compute shaders**: a `.compute` asset is a `ComputeShader` whose kernels (`#pragma kernel`, with
   their defines and `multi_compile` sets) compile through the same pipeline as draw programs to WGSL

@@ -26,6 +26,8 @@ namespace UnityEngine.Tests
     /// the 8 Rigidbody2D cases fail and the other 21 pass; with the simulated pose of both kinds
     /// of body, all 29 pass.
     /// </summary>
+    // Sets the clocks: not beside other tests of them.
+    [Collection("Time")]
     public class AudioVelocityUpdateModeTests : IDisposable
     {
         const BindingFlags StaticPrivate = BindingFlags.Static | BindingFlags.NonPublic;

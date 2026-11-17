@@ -40,6 +40,9 @@ namespace Unbound.Runtime
         internal int RawMotion;
         internal ulong DisplayVersion;
         internal ulong ImeVersion;
+        /// <summary>Under a scripted fixed frame rate (<c>--fixed-fps</c>), the frame's step in
+        /// seconds; 0 when frames follow the wall clock.</summary>
+        internal double FixedStep;
     }
 
     /// <summary>A key press or release; <see cref="TextStart"/> and <see cref="TextLength"/> are
@@ -656,7 +659,7 @@ namespace Unbound.Runtime
         static unsafe void UpdateTime()
         {
             if (s_Input == null) return;
-            Time.BeginFrame(s_Input->RealDeltaTime);
+            Time.BeginFrame(s_Input->RealDeltaTime, s_Input->FixedStep);
             ReflectionProbe.BeginFrame();
             SceneManagerInternal.PreparePending();
         }

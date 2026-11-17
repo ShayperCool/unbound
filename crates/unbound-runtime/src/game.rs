@@ -69,6 +69,10 @@ pub struct FrameInput {
     /// Changes only when the host display description changes.
     pub display_version: u64,
     pub ime_version: u64,
+    /// Under `--fixed-fps`, the frame's step in seconds (also in the first frame, whose
+    /// `real_delta_time` is 0); 0 when frames follow the wall clock. The engine's real-time clock
+    /// then follows the fixed frames too.
+    pub fixed_step: f64,
 }
 
 /// A key press or release; the layout matches `KeyEvent` in the managed engine.
@@ -387,8 +391,9 @@ impl Game {
         {
             scripted.real_delta_time = delta;
         }
-        if self.fixed_delta.is_some() {
+        if let Some(delta) = self.fixed_delta {
             scripted.paced = 0;
+            scripted.fixed_step = delta;
         }
         // The window's key events and text, then the script's.
         let mut events: Vec<KeyEvent> = if input.key_events.is_null() {
@@ -574,6 +579,7 @@ impl Game {
                 raw_motion: 0,
                 display_version: crate::display::version(),
                 ime_version: crate::ime::version(),
+                fixed_step: 0.0,
             };
             self.apply_changes();
             if restart_requested() || !self.frame(&input) {
@@ -604,8 +610,9 @@ mod tests {
     use super::FrameInput;
     #[test]
     fn frame_layout_matches_managed_cached_input_versions() {
-        assert_eq!(std::mem::size_of::<FrameInput>(), 112);
+        assert_eq!(std::mem::size_of::<FrameInput>(), 120);
         assert_eq!(std::mem::offset_of!(FrameInput, display_version), 96);
         assert_eq!(std::mem::offset_of!(FrameInput, ime_version), 104);
+        assert_eq!(std::mem::offset_of!(FrameInput, fixed_step), 112);
     }
 }

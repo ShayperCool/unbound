@@ -90,7 +90,8 @@ use std::ffi::c_void;
 /// 80: texture packets distinguish 24-bit depth without stencil from depth with stencil.
 /// 81: a dynamically scaled render texture's size before scaling at the end of `TexturePacket`.
 /// 82: texture packet flag 1 << 16 stores a texture in the screen's channel order.
-pub const NATIVE_API_VERSION: u32 = 83;
+/// 84: the scripted frame step at the end of `FrameInput`.
+pub const NATIVE_API_VERSION: u32 = 84;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
