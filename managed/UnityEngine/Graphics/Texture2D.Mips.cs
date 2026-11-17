@@ -23,12 +23,7 @@ namespace UnityEngine
 
         /// <summary>The single-texel accessors' mip check: logged, the access does nothing
         /// (tests/projects/apierrors `texture.*_pixel*_bad_mip`).</summary>
-        bool TexelMip(int mip, string api)
-        {
-            if (ValidMip(mip)) return true;
-            Debug.LogError($"{api} called on an undefined mip (valid values are 0 - {m_MipCount - 1}");
-            return false;
-        }
+        bool TexelMip(int mip, string api) => PixelDataTransfer.TexelAccess(ValidMip(mip), api, "mip", m_MipCount - 1);
 
         Color32[] ByteLevel(int mip)
         {

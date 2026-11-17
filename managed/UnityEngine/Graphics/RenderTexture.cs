@@ -409,7 +409,7 @@ namespace UnityEngine
             if (!target.IsCreated()) return false;
             if (!Compat.RenderingMeasured)
             {
-                Graphics.CopyTexture(this, 0, 0, target, 0, 0);
+                Graphics.CopyElement(this, 0, 0, target, 0, 0);
                 return false;
             }
             if (s_Active == null && antiAliasing > 1 && IsCreated() && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)

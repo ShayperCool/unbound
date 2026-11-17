@@ -46,7 +46,7 @@ namespace Unbound.Runtime
                     if ((faceMask & (1 << i)) == 0) continue;
                     camera.worldToCameraMatrix = CubeFaceView(i, position);
                     RenderCamera(camera);
-                    Graphics.CopyTexture(face, 0, 0, cube, i, 0);
+                    Graphics.CopyElement(face, 0, 0, cube, i, 0);
                 }
             }
             finally
@@ -100,7 +100,7 @@ namespace UnityEngine
                 for (int i = 0; i < 6; i++)
                 {
                     if ((faceMask & (1 << i)) == 0) continue;
-                    Graphics.CopyTexture(cube, i, 0, face, 0, 0);
+                    Graphics.CopyElement(cube, i, 0, face, 0, 0);
                     RenderTexture.active = face;
                     read.ReadPixels(new Rect(0, 0, cubemap.width, cubemap.width), 0, 0);
                     cubemap.SetPixels(read.ColorsOfLevelZero(), (CubemapFace)i);

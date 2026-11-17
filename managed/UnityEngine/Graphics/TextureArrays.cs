@@ -300,10 +300,12 @@ namespace UnityEngine
             Buffer.BlockCopy(bytes, 0, Data, Offset(image, mip) + index * size, Math.Min(bytes.Length, size));
         }
 
+        /// <summary>A level's texels from the start of <paramref name="colors"/> (at least the
+        /// level's size; the public methods check, <see cref="PixelDataTransfer.CheckLayerLength"/>).</summary>
         internal void SetPixels(int image, int mip, Color[] colors)
         {
             RequireTexels();
-            if (colors == null || colors.Length != Size(mip)) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
+            if (colors == null || colors.Length < Size(mip)) throw new ArgumentException("Array size must hold the mip level's size.", nameof(colors));
             if (Hdr)
             {
                 Store(image, mip, PixelFormats.EncodeFloat(Format, colors));
@@ -317,7 +319,7 @@ namespace UnityEngine
         internal void SetPixels32(int image, int mip, Color32[] colors)
         {
             RequireTexels();
-            if (colors == null || colors.Length != Size(mip)) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
+            if (colors == null || colors.Length < Size(mip)) throw new ArgumentException("Array size must hold the mip level's size.", nameof(colors));
             if (Hdr)
             {
                 SetPixels(image, mip, Array.ConvertAll(colors, c => (Color)c));
@@ -695,10 +697,10 @@ namespace UnityEngine
         LayeredPixels Level(string api, int element, int mip, bool write = false)
         {
             var pixels = Pixels(api);
-            if (element < 0 || element >= m_Depth) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
-            if (mip < 0 || mip >= pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            if (element < 0 || element >= m_Depth) throw PixelDataTransfer.InvalidElement(api, name);
+            if (mip < 0 || mip >= pixels.Mips) throw PixelDataTransfer.InvalidMip(api, name);
             if (write) LayeredTextures.CheckTexelWrite(pixels, api, name);
-            else if (api != null) LayeredTextures.CheckTexelRead(pixels, api, name);
+            else LayeredTextures.CheckTexelRead(pixels, api, name);
             return pixels;
         }
 
@@ -708,13 +710,29 @@ namespace UnityEngine
         public Color32[] GetPixels32(int arrayElement, int miplevel) => Level("Texture2DArray.GetPixels32", arrayElement, miplevel).GetPixels32(arrayElement, miplevel);
         public Color32[] GetPixels32(int arrayElement) => GetPixels32(arrayElement, 0);
 
-        public void SetPixels(Color[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels", arrayElement, miplevel, write: true).SetPixels(arrayElement, miplevel, colors);
+        public void SetPixels(Color[] colors, int arrayElement, int miplevel)
+        {
+            var pixels = Level("Texture2DArray.SetPixels", arrayElement, miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), false, "Texture2DArray.SetPixels", name);
+            pixels.SetPixels(arrayElement, miplevel, colors);
+        }
         public void SetPixels(Color[] colors, int arrayElement) => SetPixels(colors, arrayElement, 0);
 
-        public void SetPixels32(Color32[] colors, int arrayElement, int miplevel) => Level("Texture2DArray.SetPixels32", arrayElement, miplevel, write: true).SetPixels32(arrayElement, miplevel, colors);
+        public void SetPixels32(Color32[] colors, int arrayElement, int miplevel)
+        {
+            var pixels = Level("Texture2DArray.SetPixels32", arrayElement, miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), true, "Texture2DArray.SetPixels32", name);
+            pixels.SetPixels32(arrayElement, miplevel, colors);
+        }
         public void SetPixels32(Color32[] colors, int arrayElement) => SetPixels32(colors, arrayElement, 0);
 
-        public NativeArray<T> GetPixelData<T>(int mipLevel, int element) where T : struct => Level(null, element, mipLevel).View<T>(element, mipLevel);
+        public NativeArray<T> GetPixelData<T>(int mipLevel, int element) where T : struct
+        {
+            var pixels = Pixels(null);
+            if (mipLevel < 0 || mipLevel >= m_MipCount) throw PixelDataTransfer.MipRange(mipLevel, m_MipCount);
+            if (element < 0 || element >= m_Depth) throw PixelDataTransfer.ElementRange(element, m_Depth);
+            return pixels.View<T>(element, mipLevel);
+        }
 
         const string PixelDataApi = "Texture2DArray.SetPixelData";
 
@@ -874,11 +892,11 @@ namespace UnityEngine
         LayeredPixels Level(string api, CubemapFace face, int element, int mip, bool write = false)
         {
             Pixels(api);
-            if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException($"Invalid cubemap face {face}.", nameof(face));
-            if (element < 0 || element >= m_Count) throw new ArgumentException($"Invalid array element {element}.", nameof(element));
-            if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            if (!PixelDataTransfer.ValidFace(face)) throw PixelDataTransfer.InvalidFace(api, name);
+            if (element < 0 || element >= m_Count) throw PixelDataTransfer.InvalidElement(api, name);
+            if (mip < 0 || mip >= m_Pixels.Mips) throw PixelDataTransfer.InvalidMip(api, name);
             if (write) LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
-            else if (api != null) LayeredTextures.CheckTexelRead(m_Pixels, api, name);
+            else LayeredTextures.CheckTexelRead(m_Pixels, api, name);
             return m_Pixels;
         }
 
@@ -889,20 +907,33 @@ namespace UnityEngine
         public Color32[] GetPixels32(CubemapFace face, int arrayElement, int miplevel) => Level("CubemapArray.GetPixels32", face, arrayElement, miplevel).GetPixels32(Image(face, arrayElement), miplevel);
         public Color32[] GetPixels32(CubemapFace face, int arrayElement) => GetPixels32(face, arrayElement, 0);
 
-        public void SetPixels(Color[] colors, CubemapFace face, int arrayElement, int miplevel) =>
-            Level("CubemapArray.SetPixels", face, arrayElement, miplevel, write: true).SetPixels(Image(face, arrayElement), miplevel, colors);
+        public void SetPixels(Color[] colors, CubemapFace face, int arrayElement, int miplevel)
+        {
+            var pixels = Level("CubemapArray.SetPixels", face, arrayElement, miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), false, "CubemapArray.SetPixels", name);
+            pixels.SetPixels(Image(face, arrayElement), miplevel, colors);
+        }
         public void SetPixels(Color[] colors, CubemapFace face, int arrayElement) => SetPixels(colors, face, arrayElement, 0);
-        public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement, int miplevel) =>
-            Level("CubemapArray.SetPixels32", face, arrayElement, miplevel, write: true).SetPixels32(Image(face, arrayElement), miplevel, colors);
+        public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement, int miplevel)
+        {
+            var pixels = Level("CubemapArray.SetPixels32", face, arrayElement, miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), true, "CubemapArray.SetPixels32", name);
+            pixels.SetPixels32(Image(face, arrayElement), miplevel, colors);
+        }
         public void SetPixels32(Color32[] colors, CubemapFace face, int arrayElement) => SetPixels32(colors, face, arrayElement, 0);
 
-        public NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face, int element) where T : struct =>
-            Level(null, face, element, mipLevel).View<T>(Image(face, element), mipLevel);
+        public NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face, int element) where T : struct
+        {
+            var pixels = Pixels(null);
+            if (mipLevel < 0 || mipLevel >= m_MipCount) throw PixelDataTransfer.MipRange(mipLevel, m_MipCount);
+            if (!PixelDataTransfer.ValidFace(face)) throw PixelDataTransfer.FaceRange(face, array: true);
+            if (element < 0 || element >= m_Count) throw PixelDataTransfer.ElementRange(element, m_Count);
+            return pixels.View<T>(Image(face, element), mipLevel);
+        }
 
         const string PixelDataApi = "CubemapArray.SetPixelData";
 
-        bool ValidImage(CubemapFace face, int element) =>
-            face >= CubemapFace.PositiveX && face <= CubemapFace.NegativeZ && element >= 0 && element < m_Count;
+        bool ValidImage(CubemapFace face, int element) => PixelDataTransfer.ValidFace(face) && element >= 0 && element < m_Count;
 
         public void SetPixelData<T>(T[] data, int mipLevel, CubemapFace face, int element, int sourceDataStartIndex = 0)
         {
@@ -1052,9 +1083,9 @@ namespace UnityEngine
         LayeredPixels Level(string api, int mip, bool write = false)
         {
             Pixels(api);
-            if (mip < 0 || mip >= m_Pixels.Mips) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
+            if (mip < 0 || mip >= m_Pixels.Mips) throw PixelDataTransfer.InvalidMip(api, name);
             if (write) LayeredTextures.CheckTexelWrite(m_Pixels, api, name);
-            else if (api != null) LayeredTextures.CheckTexelRead(m_Pixels, api, name);
+            else LayeredTextures.CheckTexelRead(m_Pixels, api, name);
             return m_Pixels;
         }
 
@@ -1063,12 +1094,27 @@ namespace UnityEngine
         public Color32[] GetPixels32(int miplevel) => Level("Texture3D.GetPixels32", miplevel).GetPixels32(0, miplevel);
         public Color32[] GetPixels32() => GetPixels32(0);
 
-        public void SetPixels(Color[] colors, int miplevel) => Level("Texture3D.SetPixels", miplevel, write: true).SetPixels(0, miplevel, colors);
+        public void SetPixels(Color[] colors, int miplevel)
+        {
+            var pixels = Level("Texture3D.SetPixels", miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), false, "Texture3D.SetPixels", name);
+            pixels.SetPixels(0, miplevel, colors);
+        }
         public void SetPixels(Color[] colors) => SetPixels(colors, 0);
-        public void SetPixels32(Color32[] colors, int miplevel) => Level("Texture3D.SetPixels32", miplevel, write: true).SetPixels32(0, miplevel, colors);
+        public void SetPixels32(Color32[] colors, int miplevel)
+        {
+            var pixels = Level("Texture3D.SetPixels32", miplevel, write: true);
+            PixelDataTransfer.CheckLayerLength(colors, pixels.Size(miplevel), true, "Texture3D.SetPixels32", name);
+            pixels.SetPixels32(0, miplevel, colors);
+        }
         public void SetPixels32(Color32[] colors) => SetPixels32(colors, 0);
 
-        public NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct => Level(null, mipLevel).View<T>(0, mipLevel);
+        public NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct
+        {
+            var pixels = Pixels(null);
+            if (mipLevel < 0 || mipLevel >= m_MipCount) throw PixelDataTransfer.MipRange(mipLevel, m_MipCount, "  ");
+            return pixels.View<T>(0, mipLevel);
+        }
 
         const string PixelDataApi = "Texture3D.SetPixelData";
 
@@ -1094,7 +1140,9 @@ namespace UnityEngine
 
         public void SetPixel(int x, int y, int z, Color color, int mipLevel)
         {
-            var pixels = Level("Texture3D.SetPixel", mipLevel, write: true);
+            var pixels = Pixels("Texture3D.SetPixel");
+            if (!PixelDataTransfer.TexelAccess(mipLevel >= 0 && mipLevel < pixels.Mips, "SetPixel", "mip", pixels.Mips - 1)) return;
+            LayeredTextures.CheckTexelWrite(pixels, "Texture3D.SetPixel", name);
             int w = pixels.W(mipLevel), h = pixels.H(mipLevel), d = pixels.D(mipLevel);
             if (x < 0 || y < 0 || z < 0 || x >= w || y >= h || z >= d) return;
             pixels.SetPixel(0, mipLevel, (z * h + y) * w + x, color);
@@ -1104,7 +1152,10 @@ namespace UnityEngine
 
         public Color GetPixel(int x, int y, int z, int mipLevel)
         {
-            var pixels = Level("Texture3D.GetPixel", mipLevel);
+            // An undefined level reads as an undefined image (measured text).
+            var pixels = Pixels("Texture3D.GetPixel");
+            if (!PixelDataTransfer.TexelAccess(mipLevel >= 0 && mipLevel < pixels.Mips, "GetPixel", "image", pixels.Mips - 1)) return Color.white;
+            LayeredTextures.CheckTexelRead(pixels, "Texture3D.GetPixel", name);
             int w = pixels.W(mipLevel), h = pixels.H(mipLevel), d = pixels.D(mipLevel);
             x = Mathf.Clamp(x, 0, w - 1);
             y = Mathf.Clamp(y, 0, h - 1);

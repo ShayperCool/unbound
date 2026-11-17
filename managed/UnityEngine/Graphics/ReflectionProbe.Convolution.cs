@@ -137,7 +137,7 @@ namespace UnityEngine
             }
             for (int mip = 0; mip < mips; mip += 2)
                 for (int face = 0; face < 6; face++)
-                    Graphics.CopyTexture(cube, face, mip, chain, face, mip);
+                    Graphics.CopyElement(cube, face, mip, chain, face, mip);
             // Every mip from 1: the chain at its roughness's level.
             var levels = ChainLevels(size);
             properties[s_MainTexId] = chain;

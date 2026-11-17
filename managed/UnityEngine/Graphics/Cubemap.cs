@@ -167,22 +167,40 @@ namespace UnityEngine
         }
 
         /// <summary>A face's level, current with the pixel data store while one exists.</summary>
-        Color[] Level(CubemapFace face, int mip, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
+        Color[] Level(CubemapFace face, int mip, string api, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
         {
-            var level = CheckedLevel(face, mip, caller);
+            var level = CheckedLevel(face, mip, api, caller);
             if (m_Store != null) DecodeStored((int)face, mip, level);
             return level;
         }
 
-        Color[] CheckedLevel(CubemapFace face, int mip, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
+        /// <summary>A face's level after the pixel APIs' checks (an undefined face or level fails
+        /// with <paramref name="api"/>'s text).</summary>
+        Color[] CheckedLevel(CubemapFace face, int mip, string api, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
+        {
+            RequireCpuPixels(caller);
+            if (!PixelDataTransfer.ValidFace(face)) throw PixelDataTransfer.InvalidFace(api, name);
+            if (!ValidMip(mip)) throw PixelDataTransfer.InvalidMip(api, name);
+            return m_Pixels[(int)face][mip];
+        }
+
+        bool ValidMip(int mip) => mip >= 0 && mip < m_MipCount;
+
+        void RequireCpuPixels(string caller)
         {
             CheckExternalCpu(caller, "Cubemap");
             CheckStoreRead();
             if (m_Readable && m_Pixels == null && m_AssetGuid != null) FetchImported();
-            if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
-            if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException("Invalid cubemap face.", nameof(face));
-            if (mip < 0 || mip >= m_MipCount) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
-            return m_Pixels[(int)face][mip];
+            if (!m_Readable || m_Pixels == null) throw LayeredTextures.NoMemoryAccess(name);
+        }
+
+        /// <summary>GetPixel's and SetPixel's checks: an undefined face or level is logged and the
+        /// access does nothing (tests/projects/apierrors `texture.cubemap.*_pixel_bad_*`).</summary>
+        bool TexelAccess(CubemapFace face, int mip, string api, [System.Runtime.CompilerServices.CallerMemberName] string caller = null)
+        {
+            RequireCpuPixels(caller);
+            return PixelDataTransfer.TexelAccess(PixelDataTransfer.ValidFace(face), api, "image", 5)
+                && PixelDataTransfer.TexelAccess(ValidMip(mip), api, "mip", m_MipCount - 1);
         }
 
         public void SetPixel(CubemapFace face, int x, int y, Color color) => SetPixel(face, x, y, color, 0);
@@ -190,7 +208,8 @@ namespace UnityEngine
         public void SetPixel(CubemapFace face, int x, int y, Color color, int mip)
         {
             CheckStoreWrite();
-            var level = CheckedLevel(face, mip);
+            if (!TexelAccess(face, mip, "SetPixel")) return;
+            var level = m_Pixels[(int)face][mip];
             // A compressed cube keeps its texels and logs its format's linear graphics format,
             // whatever the colour space (the Unity 6000.0.71f1 Editor, tests/projects/
             // cubeblocks write.*.setpixel: DXT1 97, ETC2_RGB 120 for sRGB data too).
@@ -209,7 +228,8 @@ namespace UnityEngine
 
         public Color GetPixel(CubemapFace face, int x, int y, int mip)
         {
-            var level = CheckedLevel(face, mip);
+            if (!TexelAccess(face, mip, "GetPixel")) return Color.white;
+            var level = m_Pixels[(int)face][mip];
             int s = Math.Max(1, m_Width >> mip);
             x = Mathf.Clamp(x, 0, s - 1);
             y = Mathf.Clamp(y, 0, s - 1);
@@ -222,7 +242,7 @@ namespace UnityEngine
         {
             if (!m_Readable && Compat.AssetCloneResourcesMeasured)
                 throw new ArgumentException($"Cubemap.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '{name}')");
-            var level = (Color[])Level(face, miplevel).Clone();
+            var level = (Color[])Level(face, miplevel, "Cubemap.GetPixels").Clone();
             if (ReadsBlocks(out var blocks))
             {
                 int s = Math.Max(1, m_Width >> miplevel);
@@ -236,9 +256,11 @@ namespace UnityEngine
         public void SetPixels(Color[] colors, CubemapFace face, int miplevel)
         {
             CheckStoreWrite();
-            var level = CheckedLevel(face, miplevel);
+            var level = CheckedLevel(face, miplevel, "Cubemap.SetPixels");
             if (m_SourceFormat != null) throw new ArgumentException($"Cubemap.SetPixels: texture uses an unsupported format. (Texture '{name}')");
-            if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
+            // No array has no data; a longer one is written from its start (tests/projects/apierrors
+            // `texture.cubemap.set_pixels_*`).
+            if (colors == null || colors.Length < level.Length) throw PixelDataTransfer.NotEnoughData("Cubemap.SetPixels", name);
             for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
             if (m_Store != null)
                 for (int i = 0; i < level.Length; i++) EncodeStored(level[i], StoreTexel((int)face, miplevel, i));
@@ -265,11 +287,70 @@ namespace UnityEngine
         /// write.*.view*).</summary>
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel, CubemapFace face) where T : struct
         {
-            CheckedLevel(face, mipLevel);
+            RequireCpuPixels(nameof(GetPixelData));
+            if (!ValidMip(mipLevel)) throw PixelDataTransfer.MipRange(mipLevel, m_MipCount);
+            if (!PixelDataTransfer.ValidFace(face)) throw PixelDataTransfer.FaceRange(face, array: false);
             if (m_SourceFormat is TextureFormat blocks) return BlockData<T>(blocks, mipLevel, face);
+            EnsureStore();
+            int size = UnsafeUtility.SizeOf<T>();
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
+                (byte*)m_StorePin.AddrOfPinnedObject() + m_StoreOffsets[(int)face * m_MipCount + mipLevel], LevelBytes(mipLevel) / size, Allocator.None);
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_StoreSafety);
+            return array;
+        }
+
+        const string PixelDataApi = "Cubemap.SetPixelData";
+
+        public void SetPixelData<T>(T[] data, int mipLevel, CubemapFace face, int sourceDataStartIndex = 0)
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            RequireCpuPixels(nameof(SetPixelData));
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = PixelDataLevelBytes(face, mipLevel);
+            WritePixelData(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), face, mipLevel);
+        }
+
+        public void SetPixelData<T>(NativeArray<T> data, int mipLevel, CubemapFace face, int sourceDataStartIndex = 0) where T : struct
+        {
+            PixelDataTransfer.CheckStart(sourceDataStartIndex);
+            RequireCpuPixels(nameof(SetPixelData));
+            int elementSize = PixelDataTransfer.ElementSize(data);
+            int bytes = PixelDataLevelBytes(face, mipLevel);
+            WritePixelData(PixelDataTransfer.Level(data, sourceDataStartIndex, elementSize, bytes, PixelDataApi, name), face, mipLevel);
+        }
+
+        /// <summary>SetPixelData's face and level checks (the face first, as the layered textures'),
+        /// and the level's size in bytes: a compressed cube's blocks, otherwise its texels.</summary>
+        int PixelDataLevelBytes(CubemapFace face, int mip)
+        {
+            if (!PixelDataTransfer.ValidFace(face)) throw PixelDataTransfer.InvalidArgument(PixelDataApi, name);
+            if (!ValidMip(mip)) throw PixelDataTransfer.InvalidMip(PixelDataApi, name);
+            if (m_SourceFormat is TextureFormat blocks) return BlockLevelSize(blocks, mip);
+            if (TexelBytes == 0) throw new UnityException($"Unbound: Cubemap.SetPixelData of a {m_Format} cubemap is not supported.");
+            return LevelBytes(mip);
+        }
+
+        /// <summary>A face level's bytes into the cubemap's pixel data (its held blocks when compressed),
+        /// which its readers then read.</summary>
+        void WritePixelData(ReadOnlySpan<byte> bytes, CubemapFace face, int mip)
+        {
+            CheckStoreWrite();
+            if (m_SourceFormat is TextureFormat blocks)
+            {
+                m_SourceRaw ??= FetchBlocks();
+                bytes.CopyTo(new Span<byte>(m_SourceRaw, BlockLevelOffset(blocks, (int)face, mip), bytes.Length));
+                return;
+            }
+            EnsureStore();
+            bytes.CopyTo(new Span<byte>(m_Store, m_StoreOffsets[(int)face * m_MipCount + mip], bytes.Length));
+        }
+
+        /// <summary>The pixel data store, made from the faces' texels at first use.</summary>
+        void EnsureStore()
+        {
             if (m_Store == null)
             {
-                if (TexelBytes == 0) throw new UnityException($"Unbound: Cubemap.GetPixelData of a {m_Format} cubemap is not supported.");
+                if (TexelBytes == 0) throw new UnityException($"Unbound: the pixel data of a {m_Format} cubemap is not supported.");
                 var offsets = new int[6 * m_MipCount + 1];
                 for (int i = 0; i < 6 * m_MipCount; i++) offsets[i + 1] = checked(offsets[i] + LevelBytes(i % m_MipCount));
                 m_Store = new byte[offsets[^1]];
@@ -283,11 +364,6 @@ namespace UnityEngine
                 m_StorePin = GCHandle.Alloc(m_Store, GCHandleType.Pinned);
                 m_StoreSafety = AtomicSafetyHandle.Create();
             }
-            int size = UnsafeUtility.SizeOf<T>();
-            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
-                (byte*)m_StorePin.AddrOfPinnedObject() + m_StoreOffsets[(int)face * m_MipCount + mipLevel], LevelBytes(mipLevel) / size, Allocator.None);
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_StoreSafety);
-            return array;
         }
 
         unsafe NativeArray<T> BlockData<T>(TextureFormat blocks, int mipLevel, CubemapFace face) where T : struct

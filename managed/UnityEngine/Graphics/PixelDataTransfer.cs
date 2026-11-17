@@ -77,12 +77,58 @@ namespace UnityEngine
         internal static ArgumentException NotEnoughData(string api, string name) =>
             new ArgumentException($"{api}: size of data to be filled was larger than the size of data available in the source array. (Texture '{name}')");
 
-        /// <summary>GetPixelData's mip check (the release's reference assemblies).</summary>
+        /// <summary>Texture2D.GetPixelData's mip check (the release's reference assemblies).</summary>
         internal static ArgumentException InvalidMipLevel(int mip, int mipCount) =>
             new ArgumentException($"The passed in miplevel {mip} is invalid. It needs to be in the range 0 and {mipCount - 1}");
 
         internal static ArgumentException InvalidArgument(string api, string name) =>
             new ArgumentException($"{api}: one of the arguments is not valid. (Texture '{name}')");
+
+        /// <summary>The pixel APIs' element and face checks of array and cube textures (the Unity
+        /// 6000.0.71f1 Editor, tests/projects/apierrors `texture.{array,cube_array,cubemap}.*`).</summary>
+        internal static ArgumentException InvalidElement(string api, string name) =>
+            new ArgumentException($"{api}: invalid array element. (Texture '{name}')");
+
+        internal static ArgumentException InvalidFace(string api, string name) =>
+            new ArgumentException($"{api}: invalid cubemap face. (Texture '{name}')");
+
+        /// <summary>GetPixelData's level, element and face checks of Cubemap, Texture2DArray,
+        /// CubemapArray and Texture3D (the release's reference assemblies; Texture3D's mip text has
+        /// two spaces before the last level, CubemapArray's face text two after "invalid." and no
+        /// full stop).</summary>
+        internal static ArgumentException MipRange(int mip, int mipCount, string before = " ") =>
+            new ArgumentException($"The passed in miplevel {mip} is invalid. The valid range is 0 through{before}{mipCount - 1}");
+
+        internal static ArgumentException ElementRange(int element, int count) =>
+            new ArgumentException($"The passed in element {element} is invalid. The valid range is 0 through {count - 1}");
+
+        internal static ArgumentException FaceRange(CubemapFace face, bool array) => array
+            ? new ArgumentException($"The passed in face {face} is invalid.  The valid range is 0 through 5")
+            : new ArgumentException($"The passed in face {face} is invalid. The valid range is 0 through 5.");
+
+        internal static bool ValidFace(CubemapFace face) => face >= CubemapFace.PositiveX && face <= CubemapFace.NegativeZ;
+
+        /// <summary>The single-texel accessors' checks (GetPixel, SetPixel, GetPixelBilinear): an
+        /// undefined level or image is logged and the access does nothing (the Unity 6000.0.71f1
+        /// Editor, tests/projects/apierrors `texture.*_pixel*_bad_*`; the text has no closing
+        /// parenthesis).</summary>
+        internal static bool TexelAccess(bool valid, string api, string what, int last)
+        {
+            if (valid) return true;
+            UnityEngine.Debug.LogError($"{api} called on an undefined {what} (valid values are 0 - {last}");
+            return false;
+        }
+
+        /// <summary>SetPixels' and SetPixels32's array of a layered texture's level (the Unity
+        /// 6000.0.71f1 Editor, tests/projects/apierrors `texture.{array,volume,cube_array}.set_pixels*`):
+        /// none is not a valid argument, a short one has too little data, a longer one is written in
+        /// part by SetPixels and refused by SetPixels32.</summary>
+        internal static void CheckLayerLength(Array colors, int size, bool refuseLonger, string api, string name)
+        {
+            if (colors == null) throw InvalidArgument(api, name);
+            if (colors.Length < size) throw NotEnoughData(api, name);
+            if (refuseLonger && colors.Length > size) throw OutsideLevel(api, name);
+        }
 
         /// <summary>A level's bytes in a managed array: the array itself, or a copy in the declared
         /// layout for structs that hold references (<see cref="DeclaredLayout"/>).</summary>

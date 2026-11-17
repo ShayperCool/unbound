@@ -589,7 +589,7 @@ namespace UnityEngine
             }
             if (src.dimension != TextureDimension.Tex3D && dst.dimension != TextureDimension.Tex3D)
             {
-                CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
+                CopyLevel(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
                 return;
             }
             int depth = Immediate.GpuLayers(src);
@@ -601,11 +601,58 @@ namespace UnityEngine
             }
             for (int mip = 0; mip < src.mipmapCount; mip++)
                 for (int slice = 0; slice < Math.Max(1, depth >> mip); slice++)
-                    CopyTexture(src, slice, mip, -1, -1, -1, -1, dst, slice, mip, 0, 0);
+                    CopyLevel(src, slice, mip, -1, -1, -1, -1, dst, slice, mip, 0, 0);
         }
-        public static void CopyTexture(Texture src, int srcElement, Texture dst, int dstElement) => CopyTexture(src, srcElement, 0, -1, -1, -1, -1, dst, dstElement, 0, 0, 0);
-        public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
-            CopyTexture(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
+        public static void CopyTexture(Texture src, int srcElement, Texture dst, int dstElement) => CopyTexture(src, srcElement, 0, dst, dstElement, 0);
+
+        /// <summary>A whole level copy checks its elements and levels, then, between uncompressed
+        /// formats, that both levels hold as many bytes (their sizes may differ; tests/projects/
+        /// apierrors `texture.copy_case.*`, `texture.copy_element_size_mismatch*`). Compressed levels
+        /// of other sizes copy without that error (tests/projects/texturecompression `copy.mip`);
+        /// an uncompressed and a compressed level are not checked either (unmeasured).</summary>
+        public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip)
+        {
+            if (src == null) throw new ArgumentNullException(nameof(src));
+            if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (!CopyLevelsExist(src, srcElement, srcMip, dst, dstElement, dstMip)) return;
+            int sw = Math.Max(1, src.width >> srcMip), sh = Math.Max(1, src.height >> srcMip);
+            int dw = Math.Max(1, dst.width >> dstMip), dh = Math.Max(1, dst.height >> dstMip);
+            GraphicsFormat sf = src.graphicsFormat, df = dst.graphicsFormat;
+            uint sb = GraphicsFormatUtility.ComputeMipmapSize(sw, sh, sf), db = GraphicsFormatUtility.ComputeMipmapSize(dw, dh, df);
+            if (sb != db && !GraphicsFormatUtility.IsCompressedFormat(sf) && !GraphicsFormatUtility.IsCompressedFormat(df))
+            {
+                Debug.LogError($"Graphics.CopyTexture called with mismatching data size (src ({sw}x{sh} with format {(int)sf} -> {sb} bytes) dst ({dw}x{dh} with format {(int)df} -> {db} bytes))");
+                return;
+            }
+            CopyLevel(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
+        }
+
+        /// <summary>The engine's own element copies (render textures and cubes it made alike).</summary>
+        internal static void CopyElement(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
+            CopyLevel(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
+
+        /// <summary>The elements and levels a copy names exist (the Unity 6000.0.71f1 Editor's
+        /// errors, tests/projects/apierrors `texture.copy_case.bad_*`); a copy naming another copies
+        /// nothing.</summary>
+        static bool CopyLevelsExist(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip)
+        {
+            int srcLayers = Immediate.GpuLayers(src), dstLayers = Immediate.GpuLayers(dst);
+            int srcMips = src.mipmapCount, dstMips = dst.mipmapCount;
+            string error = srcElement < 0 || srcElement >= srcLayers
+                    ? $"Graphics.CopyTexture called with invalid source element index (got {srcElement}, have {srcLayers} elements/layers)"
+                : srcMip < 0 || srcMip >= srcMips
+                    ? $"Graphics.CopyTexture called with invalid source mip level: got {srcMip}, have {srcMips} mips (after mipmap limits if applicable)"
+                : dstElement < 0 || dstElement >= dstLayers ? InvalidDestinationElement(dstElement, dstLayers)
+                : dstMip < 0 || dstMip >= dstMips
+                    ? $"Graphics.CopyTexture called with invalid destination mip level: got {dstMip}, have {dstMips} mips (after mipmap limits if applicable)"
+                : null;
+            if (error == null) return true;
+            Debug.LogError(error);
+            return false;
+        }
+
+        static string InvalidDestinationElement(int element, int layers) =>
+            $"Graphics.CopyTexture called with invalid destination element index (got {element}, have {layers} elements/layers)";
 
         /// <summary>A region copy whose region leaves the source or the destination level copies
         /// nothing and logs the engine's error (the Unity 6000.0.71f1 Editor, tests/projects/apierrors
@@ -631,12 +678,26 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>Copies on the GPU; between Texture2Ds the retained CPU pixels too, independent of readability.</summary>
+        /// <summary>A region copy checks its elements and levels, that its size is not negative
+        /// and that the region fits both levels (tests/projects/apierrors `texture.copy_*region*`).</summary>
         public static void CopyTexture(Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, Texture dst, int dstElement, int dstMip, int dstX, int dstY)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            if (!CopyLevelsExist(src, srcElement, srcMip, dst, dstElement, dstMip)) return;
+            if (srcWidth < 0 || srcHeight < 0)
+            {
+                Debug.LogError($"Graphics.CopyTexture called with negative region size (width {srcWidth}, height {srcHeight}).");
+                return;
+            }
             if (!CopyRegionFits(src, srcMip, srcX, srcY, srcWidth, srcHeight, dst, dstMip, dstX, dstY)) return;
+            CopyLevel(src, srcElement, srcMip, srcX, srcY, srcWidth, srcHeight, dst, dstElement, dstMip, dstX, dstY);
+        }
+
+        /// <summary>Copies on the GPU; between Texture2Ds the retained CPU pixels too, independent
+        /// of readability. A width of -1 is the whole level.</summary>
+        static void CopyLevel(Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, Texture dst, int dstElement, int dstMip, int dstX, int dstY)
+        {
             if (src is Texture2D b1 && dst is Texture2D b2
                 && (BlockFormats.BlockBytes(b1.format) > 0 || BlockFormats.BlockBytes(b2.format) > 0))
             {
@@ -689,7 +750,7 @@ namespace UnityEngine
             int layers = Immediate.GpuLayers(dst);
             if (dstElement < 0 || dstElement >= layers)
             {
-                Debug.LogError($"Graphics.CopyTexture called with invalid destination element index (got {dstElement}, have {layers} elements/layers)");
+                Debug.LogError(InvalidDestinationElement(dstElement, layers));
                 return true;
             }
             var active = RenderTexture.ActiveTarget;

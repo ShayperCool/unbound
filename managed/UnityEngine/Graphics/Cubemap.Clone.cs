@@ -76,7 +76,7 @@ namespace UnityEngine
                 {
                     faces[f] = new Color[m_MipCount][];
                     // Level is current with a GetPixelData store; the store itself is not copied.
-                    for (int m = 0; m < m_MipCount; m++) faces[f][m] = (Color[])Level((CubemapFace)f, m).Clone();
+                    for (int m = 0; m < m_MipCount; m++) faces[f][m] = (Color[])Level((CubemapFace)f, m, "Cubemap.GetPixels").Clone();
                 }
                 return faces;
             }
