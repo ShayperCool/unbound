@@ -54,15 +54,25 @@
 {"k":"gamut.P3D65G22.primaries","v":"returns P3"}
 {"k":"gamut.P3D65G22.white_point","v":"returns D65"}
 {"k":"gamut.P3D65G22.transfer","v":"returns Gamma22"}
+{"k":"gamut.value-1.primaries","v":"returns Unknown"}
+{"k":"gamut.value-1.white_point","v":"returns Unknown"}
+{"k":"gamut.value-1.transfer","v":"returns Unknown"}
+{"k":"gamut.value7.primaries","v":"returns Unknown"}
+{"k":"gamut.value7.white_point","v":"returns Unknown"}
+{"k":"gamut.value7.transfer","v":"returns Unknown"}
 {"k":"shader_mode.DeferredShading","v":"returns UseBuiltin"}
-{"k":"shader_mode.DeferredReflections","v":"returns UseBuiltin"}
+{"k":"shader_mode.DeferredReflections","v":"returns Disabled"}
 {"k":"shader_mode.LegacyDeferredLighting","v":"returns UseBuiltin"}
 {"k":"shader_mode.LegacyDeferredLighting.logs","v":"Assert: Unknown builtin shader type 2"}
 {"k":"shader_mode.ScreenSpaceShadows","v":"returns UseBuiltin"}
 {"k":"shader_mode.DepthNormals","v":"returns UseBuiltin"}
 {"k":"shader_mode.MotionVectors","v":"returns UseBuiltin"}
 {"k":"shader_mode.LightHalo","v":"returns UseBuiltin"}
-{"k":"shader_mode.LensFlare","v":"returns UseBuiltin"}
+{"k":"shader_mode.LensFlare","v":"returns UseCustom"}
+{"k":"shader_mode.value-1","v":"returns UseBuiltin"}
+{"k":"shader_mode.value-1.logs","v":"Assert: Unknown builtin shader type -1"}
+{"k":"shader_mode.value8","v":"returns UseBuiltin"}
+{"k":"shader_mode.value8.logs","v":"Assert: Unknown builtin shader type 8"}
 {"k":"transform.rotation_order","v":"returns OrderZXY"}
 {"k":"transform.euler_orderOrderXYZ","v":"returns (56.14300, -2.29300, 54.53300)"}
 {"k":"transform.euler_orderOrderXZY","v":"returns (59.35800, -3.94800, 54.46900)"}
@@ -91,6 +101,24 @@
 {"k":"transform.wide.euler_orderXYZ","v":"returns (-27.35800, 173.83900, 54.93700)"}
 {"k":"transform.set_euler_400.euler_orderZXY","v":"returns (40.00000, 0.00000, 0.00000)"}
 {"k":"transform.set_euler_400.euler","v":"returns (40.00000, 0.00000, 0.00000)"}
+{"k":"transform.clear_hint","v":"returns done"}
+{"k":"transform.lock90.euler_orderZXY","v":"returns (90.00000, 0.00000, -30.00000)"}
+{"k":"transform.lock90.euler_orderXYZ","v":"returns (90.00000, 30.00000, 0.00000)"}
+{"k":"transform.lock90.euler","v":"returns (90.00000, 30.00000, 0.00000)"}
+{"k":"transform.lock90z.euler_orderZXY","v":"returns (90.00000, 0.00000, -10.00000)"}
+{"k":"transform.lock90z.euler","v":"returns (90.00000, 10.00000, 0.00000)"}
+{"k":"transform.lock_neg90.euler_orderZXY","v":"returns (-90.00000, 0.00000, 30.00000)"}
+{"k":"transform.lock_neg90.euler","v":"returns (270.00000, 30.00000, 0.00000)"}
+{"k":"transform.near89.euler_orderZXY","v":"returns (89.90500, 0.00000, -29.95000)"}
+{"k":"transform.near89.euler","v":"returns (89.90513, 30.00000, 0.00000)"}
+{"k":"transform.near_lock.euler_orderZXY","v":"returns (90.00000, 0.00000, -30.00000)"}
+{"k":"transform.near_lock.euler","v":"returns (90.00000, 30.00000, 0.00000)"}
+{"k":"transform.lock_y90.euler_orderXYZ","v":"returns (30.00000, 90.00000, 0.00000)"}
+{"k":"transform.lock_hint","v":"returns done"}
+{"k":"transform.lock90_hint.euler_orderZXY","v":"returns (90.00000, 0.00000, -30.00000)"}
+{"k":"transform.lock90_hint.euler_orderXYZ","v":"returns (90.00000, 30.00000, 0.00000)"}
+{"k":"transform.lock_hint_y","v":"returns done"}
+{"k":"transform.lock_y90_hint.euler_orderXYZ","v":"returns (30.00000, 90.00000, 0.00000)"}
 {"k":"quality.anti_aliasing","v":"returns 2"}
 {"k":"screen.msaa_samples","v":"returns 2"}
 {"k":"screen.set_msaa_4","v":"returns done"}

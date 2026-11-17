@@ -15,6 +15,9 @@
     "managed/UnityEngine/Core/Transform.cs",
     "managed/UnityEngine/Core/Input.cs",
     "managed/UnityEngine/Core/Attributes.cs",
+    "managed/UnityEngine/Core/Enums.Rendering.cs",
+    "managed/UnityEngine/Core/Device.cs",
+    "managed/UnityEngine/U2D/Light2DBase.cs",
     "managed/UnityEngine/Runtime/ScriptingRuntime.cs",
     "managed/Unbound.Host/Game.cs",
     "crates/unbound-runtime/src/config.rs"

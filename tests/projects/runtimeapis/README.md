@@ -9,12 +9,14 @@ writes with their log type (`.logs`).
   CopyStereoDeviceProjectionMatrixToNonJittered and the resets, next to the camera's own
   matrices; the scene view filter mode.
 * `gamut.*`: ColorGamutUtility's primaries, white point and transfer function of every
-  ColorGamut.
-* `shader_mode.*`: GraphicsSettings.GetShaderMode of every BuiltinShaderType with the default
-  graphics settings.
+  ColorGamut and of values outside the enum (`gamut.value*`).
+* `shader_mode.*`: GraphicsSettings.GetShaderMode of every BuiltinShaderType and of values
+  outside the enum; the project's graphics settings disable the deferred reflections shader and
+  give the lens flare a custom one, every other type the built-in shader.
 * `transform.*`: Transform.rotationOrder and GetLocalEulerAngles in every rotation order, after
   Euler hints (SetLocalEulerHint), with fractions and wide angles and after localEulerAngles is
-  set; that neither the hint nor the order changes the rotation.
+  set; in gimbal lock (a middle angle of a quarter turn, also 89.9 and 89.9999 degrees, with and
+  without a hint); that neither the hint nor the order changes the rotation.
 * `quality.*`, `screen.*`: Screen.msaaSamples under QualitySettings.antiAliasing levels and
   Screen.SetMSAASamples with the built-in renderer; `srp.*` the same after a scriptable render
   pipeline (one that renders nothing) is assigned as GraphicsSettings.defaultRenderPipeline, a
@@ -27,7 +29,7 @@ writes with their log type (`.logs`).
   attributes and an exception the render pipelines construct.
 
 Measured in the Unity 6000.0.71f1 Editor on Linux with an NVIDIA GPU, windowed (two
-byte-identical captures). The project has only its predefined script assemblies: whether package
+byte-identical captures; a third attempt that crashed while the Editor started was discarded). The project has only its predefined script assemblies: whether package
 assemblies count as user assemblies is not measured. `run.py record` / `publish` / `gate`
 (tests/value_probe.py).
 
