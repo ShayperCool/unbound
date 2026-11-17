@@ -36,6 +36,7 @@ laid out text, which a batch-mode Editor sometimes lays out a frame later.
 
 The probe puts the clipboard text it found back when it ends (after its last row), so the desktop
 clipboard that other programs and probes read is left as it was; a non-text clipboard comes back
-empty.
+empty. Its gate is exclusive (it runs alone, like inputplatform's) because the values it copies
+while it runs would reach a probe that reads the clipboard at the same time (editorui).
 
 Other releases are unmeasured.
