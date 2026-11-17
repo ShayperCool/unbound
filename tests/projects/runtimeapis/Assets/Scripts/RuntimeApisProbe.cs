@@ -85,6 +85,8 @@ public class RuntimeApisProbe : MonoBehaviour
             ShaderModes();
             Rotations();
             Rendering();
+            ShaderModeSetters();
+            CommandSizes();
             Attributes();
         }
         catch (Exception e) { Row("aborted", e.GetType().FullName + ": " + e.Message); }
@@ -319,6 +321,102 @@ public class RuntimeApisProbe : MonoBehaviour
         Try("srp.unassigned.msaa_samples", ScreenSamples);
         yield return null;
         Try("srp.unassigned.frame.msaa_samples", ScreenSamples);
+    }
+
+    static object ShaderName(BuiltinShaderType type)
+    {
+        var shader = GraphicsSettings.GetCustomShader(type);
+        return shader == null ? "null" : shader.name;
+    }
+
+    /// <summary>GraphicsSettings' shader mode and custom shader setters.</summary>
+    static void ShaderModeSetters()
+    {
+        foreach (int value in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 })
+            Try("custom_shader.type" + value, () => ShaderName((BuiltinShaderType)value));
+        Do("set_mode.reflections_builtin", () => GraphicsSettings.SetShaderMode(BuiltinShaderType.DeferredReflections, BuiltinShaderMode.UseBuiltin));
+        Try("set_mode.reflections_builtin.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DeferredReflections));
+        Do("set_mode.depth_disabled", () => GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, BuiltinShaderMode.Disabled));
+        Try("set_mode.depth_disabled.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+        Try("set_mode.depth_disabled.shader", () => ShaderName(BuiltinShaderType.DepthNormals));
+        Do("set_mode.depth_custom", () => GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, BuiltinShaderMode.UseCustom));
+        Try("set_mode.depth_custom.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+        Do("set_mode.depth_invalid", () => GraphicsSettings.SetShaderMode(BuiltinShaderType.DepthNormals, (BuiltinShaderMode)5));
+        Try("set_mode.depth_invalid.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+        Do("set_mode.type2", () => GraphicsSettings.SetShaderMode((BuiltinShaderType)2, BuiltinShaderMode.Disabled));
+        Try("set_mode.type2.mode", () => GraphicsSettings.GetShaderMode((BuiltinShaderType)2));
+        Do("set_mode.type8", () => GraphicsSettings.SetShaderMode((BuiltinShaderType)8, BuiltinShaderMode.Disabled));
+        var unlit = Shader.Find("Unlit/Color");
+        Do("set_custom.depth_unlit", () => GraphicsSettings.SetCustomShader(BuiltinShaderType.DepthNormals, unlit));
+        Try("set_custom.depth_unlit.shader", () => ShaderName(BuiltinShaderType.DepthNormals));
+        Try("set_custom.depth_unlit.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.DepthNormals));
+        Do("set_custom.motion_unlit", () => GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, unlit));
+        Try("set_custom.motion_unlit.mode", () => GraphicsSettings.GetShaderMode(BuiltinShaderType.MotionVectors));
+        Do("set_custom.depth_null", () => GraphicsSettings.SetCustomShader(BuiltinShaderType.DepthNormals, null));
+        Try("set_custom.depth_null.shader", () => ShaderName(BuiltinShaderType.DepthNormals));
+        Do("set_custom.type2", () => GraphicsSettings.SetCustomShader((BuiltinShaderType)2, unlit));
+        Try("set_custom.type2.shader", () => ShaderName((BuiltinShaderType)2));
+    }
+
+    static void Size(string key, Action<CommandBuffer> record)
+    {
+        var cb = new CommandBuffer();
+        Try("size." + key, () => { record(cb); return cb.sizeInBytes; });
+        Try("size." + key + ".twice", () => { record(cb); return cb.sizeInBytes; });
+        cb.Release();
+    }
+
+    /// <summary>CommandBuffer.sizeInBytes after one and two of each command.</summary>
+    static void CommandSizes()
+    {
+        int id = Shader.PropertyToID("_ProbeValue");
+        int temp = Shader.PropertyToID("_ProbeTemp");
+        var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+        var material = new Material(Shader.Find("Unlit/Color"));
+        var target = new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget);
+        Size("named", cb => cb.name = "named");
+        Size("global_float_name", cb => cb.SetGlobalFloat("_ProbeValue", 1f));
+        Size("global_float_long_name", cb => cb.SetGlobalFloat("_ProbeValueWithALongerName", 1f));
+        Size("global_float_id", cb => cb.SetGlobalFloat(id, 1f));
+        Size("global_int", cb => cb.SetGlobalInt(id, 1));
+        Size("global_vector", cb => cb.SetGlobalVector(id, Vector4.one));
+        Size("global_color", cb => cb.SetGlobalColor(id, Color.red));
+        Size("global_matrix", cb => cb.SetGlobalMatrix(id, Matrix4x4.identity));
+        Size("global_texture", cb => cb.SetGlobalTexture(id, target));
+        Size("global_float_array4", cb => cb.SetGlobalFloatArray(id, new float[4]));
+        Size("global_float_array16", cb => cb.SetGlobalFloatArray(id, new float[16]));
+        Size("global_vector_array4", cb => cb.SetGlobalVectorArray(id, new Vector4[4]));
+        Size("global_matrix_array2", cb => cb.SetGlobalMatrixArray(id, new Matrix4x4[2]));
+        Size("enable_keyword", cb => cb.EnableShaderKeyword("A"));
+        Size("enable_keyword_long", cb => cb.EnableShaderKeyword("PROBE_LONGER_KEYWORD"));
+        Size("disable_keyword", cb => cb.DisableShaderKeyword("A"));
+        Size("set_render_target", cb => cb.SetRenderTarget(target));
+        Size("set_render_target_mip", cb => cb.SetRenderTarget(target, 1));
+        Size("clear_render_target", cb => cb.ClearRenderTarget(true, true, Color.black));
+        Size("set_viewport", cb => cb.SetViewport(new Rect(0, 0, 8, 8)));
+        Size("scissor", cb => cb.EnableScissorRect(new Rect(0, 0, 8, 8)));
+        Size("disable_scissor", cb => cb.DisableScissorRect());
+        Size("get_temporary", cb => cb.GetTemporaryRT(temp, 16, 16));
+        Size("release_temporary", cb => cb.ReleaseTemporaryRT(temp));
+        Size("blit", cb => cb.Blit(target, new RenderTargetIdentifier(temp)));
+        Size("blit_material", cb => cb.Blit(target, new RenderTargetIdentifier(temp), material));
+        Size("copy_texture", cb => cb.CopyTexture(target, new RenderTargetIdentifier(temp)));
+        Size("draw_mesh", cb => cb.DrawMesh(mesh, Matrix4x4.identity, material));
+        Size("draw_procedural", cb => cb.DrawProcedural(Matrix4x4.identity, material, 0, MeshTopology.Triangles, 3));
+        Size("view_projection", cb => cb.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity));
+        Size("invert_culling", cb => cb.SetInvertCulling(true));
+        Size("depth_bias", cb => cb.SetGlobalDepthBias(1f, 1f));
+        Size("begin_sample", cb => cb.BeginSample("a"));
+        Size("begin_sample_long", cb => cb.BeginSample("probe sample with a longer name"));
+        Size("end_sample", cb => cb.EndSample("a"));
+        Size("mixed", cb => { cb.SetGlobalFloat(id, 1f); cb.SetRenderTarget(target); cb.ClearRenderTarget(true, true, Color.black); });
+        var cleared = new CommandBuffer();
+        cleared.SetGlobalFloat(id, 1f);
+        cleared.Clear();
+        Try("size.cleared", () => cleared.sizeInBytes);
+        cleared.Release();
+        Destroy(mesh);
+        Destroy(material);
     }
 
     static void Attributes()
