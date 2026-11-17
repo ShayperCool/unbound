@@ -365,6 +365,22 @@ namespace Unbound
         // parameter's value, which may also be a float or double), on an Enum reference or a boxed
         // value; the static lookups.
 
+        public static string ConstrainedToString<T>(ref T value, string format, IFormatProvider provider) where T : IFormattable
+        {
+            if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), format, provider);
+            if (typeof(T) == typeof(double)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, double>(ref value), format, provider);
+            if (typeof(T).IsEnum) return MonoEnumNames.ToString((Enum)(object)value, format);
+            // A reference type parameter may hold a boxed enum, float or double (null throws, as the
+            // call it replaces does).
+            if (!typeof(T).IsValueType) return value is null ? throw new NullReferenceException() : VirtualToString(value, format, provider);
+            return value.ToString(format, provider);
+        }
+
+        /// <summary>An Enum overload called through a type parameter constrained to Enum.</summary>
+        public static string ConstrainedToString<T>(ref T value, string format) => MonoEnumNames.ToString((Enum)(object)value, format);
+
+        public static string ConstrainedToString<T>(ref T value, IFormatProvider provider) => MonoEnumNames.ToString((Enum)(object)value, null);
+
         public static string ConstrainedToString<T>(ref T value)
         {
             if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), null, null);
@@ -406,10 +422,14 @@ namespace Unbound
         public static string Format(string format, object arg0, object arg1) => string.Format(format, Wrap(arg0), Wrap(arg1));
         public static string Format(string format, object arg0, object arg1, object arg2) => string.Format(format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
         public static string Format(string format, object[] args) => string.Format(format, Wrap(args));
-        public static string Format(IFormatProvider provider, string format, object arg0) => string.Format(provider, format, Wrap(arg0, provider));
-        public static string Format(IFormatProvider provider, string format, object arg0, object arg1) => string.Format(provider, format, Wrap(arg0, provider), Wrap(arg1, provider));
-        public static string Format(IFormatProvider provider, string format, object arg0, object arg1, object arg2) => string.Format(provider, format, Wrap(arg0, provider), Wrap(arg1, provider), Wrap(arg2, provider));
-        public static string Format(IFormatProvider provider, string format, object[] args) => string.Format(provider, format, Wrap(args, provider));
+        public static string Format(IFormatProvider provider, string format, object arg0) =>
+            Fallback(provider) is { } fallback ? string.Format(fallback, format, arg0) : string.Format(provider, format, Wrap(arg0));
+        public static string Format(IFormatProvider provider, string format, object arg0, object arg1) =>
+            Fallback(provider) is { } fallback ? string.Format(fallback, format, arg0, arg1) : string.Format(provider, format, Wrap(arg0), Wrap(arg1));
+        public static string Format(IFormatProvider provider, string format, object arg0, object arg1, object arg2) =>
+            Fallback(provider) is { } fallback ? string.Format(fallback, format, arg0, arg1, arg2) : string.Format(provider, format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
+        public static string Format(IFormatProvider provider, string format, object[] args) =>
+            Fallback(provider) is { } fallback ? string.Format(fallback, format, args) : string.Format(provider, format, Wrap(args));
 
         public static string Concat(object arg0) => string.Concat(Wrap(arg0));
         public static string Concat(object arg0, object arg1) => string.Concat(Wrap(arg0), Wrap(arg1));
@@ -432,9 +452,11 @@ namespace Unbound
         /// enums, exceptions, or values of a type that can hold any of them.</summary>
         static class Texts<T>
         {
-            internal static readonly bool Mono = !typeof(T).IsValueType || typeof(T).IsEnum || typeof(T) == typeof(float) || typeof(T) == typeof(double)
-                || Nullable.GetUnderlyingType(typeof(T)) is { } inner && (inner.IsEnum || inner == typeof(float) || inner == typeof(double));
+            internal static readonly bool Mono = !typeof(T).IsValueType || PrintsOtherwise(Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T));
         }
+
+        /// <summary>Whether values of a value type print otherwise under Mono: enums, floats and doubles.</summary>
+        internal static bool PrintsOtherwise(Type type) => type.IsEnum || type == typeof(float) || type == typeof(double);
 
         static IEnumerable<string> MonoTexts<T>(IEnumerable<T> values)
         {
@@ -448,10 +470,14 @@ namespace Unbound
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object arg0, object arg1) => builder.AppendFormat(format, Wrap(arg0), Wrap(arg1));
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object arg0, object arg1, object arg2) => builder.AppendFormat(format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
         public static StringBuilder AppendFormat(StringBuilder builder, string format, object[] args) => builder.AppendFormat(format, Wrap(args));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0) => builder.AppendFormat(provider, format, Wrap(arg0, provider));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1) => builder.AppendFormat(provider, format, Wrap(arg0, provider), Wrap(arg1, provider));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1, object arg2) => builder.AppendFormat(provider, format, Wrap(arg0, provider), Wrap(arg1, provider), Wrap(arg2, provider));
-        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object[] args) => builder.AppendFormat(provider, format, Wrap(args, provider));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0) =>
+            Fallback(provider) is { } fallback ? builder.AppendFormat(fallback, format, arg0) : builder.AppendFormat(provider, format, Wrap(arg0));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1) =>
+            Fallback(provider) is { } fallback ? builder.AppendFormat(fallback, format, arg0, arg1) : builder.AppendFormat(provider, format, Wrap(arg0), Wrap(arg1));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object arg0, object arg1, object arg2) =>
+            Fallback(provider) is { } fallback ? builder.AppendFormat(fallback, format, arg0, arg1, arg2) : builder.AppendFormat(provider, format, Wrap(arg0), Wrap(arg1), Wrap(arg2));
+        public static StringBuilder AppendFormat(StringBuilder builder, IFormatProvider provider, string format, object[] args) =>
+            Fallback(provider) is { } fallback ? builder.AppendFormat(fallback, format, args) : builder.AppendFormat(provider, format, Wrap(args));
 
         /// <summary>An object's string as Mono makes it (floats and doubles by the rules above).</summary>
         public static string ObjectToString(object value) => value switch
@@ -472,13 +498,35 @@ namespace Unbound
             _ => value,
         };
 
-        /// <summary>A provider with a custom formatter is given the arguments themselves (it may
-        /// test their types); its fallback prints them as .NET does.</summary>
-        static bool CustomFormatter(IFormatProvider provider) => provider?.GetFormat(typeof(ICustomFormatter)) != null;
+        /// <summary>For a provider with a custom formatter, a provider whose formatter gives the
+        /// game's the arguments themselves (it may test their types) and prints the ones it leaves
+        /// (returns null for) as Mono does; null for any other provider.</summary>
+        static IFormatProvider Fallback(IFormatProvider provider) =>
+            provider?.GetFormat(typeof(ICustomFormatter)) is ICustomFormatter custom ? new MonoFallback(provider, custom) : null;
 
-        static object Wrap(object value, IFormatProvider provider) => CustomFormatter(provider) ? value : Wrap(value);
+        sealed class MonoFallback : IFormatProvider, ICustomFormatter
+        {
+            readonly IFormatProvider m_Provider;
+            readonly ICustomFormatter m_Custom;
 
-        static object[] Wrap(object[] args, IFormatProvider provider) => CustomFormatter(provider) ? args : Wrap(args);
+            internal MonoFallback(IFormatProvider provider, ICustomFormatter custom)
+            {
+                m_Provider = provider;
+                m_Custom = custom;
+            }
+
+            public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : m_Provider.GetFormat(type);
+
+            // A null result leaves the argument to the class library's own fallback.
+            public string Format(string format, object arg, IFormatProvider provider) => m_Custom.Format(format, arg, m_Provider) ?? arg switch
+            {
+                float f => MonoNumberFormat.Format(f, format, m_Provider),
+                double d => MonoNumberFormat.Format(d, format, m_Provider),
+                Enum e => MonoEnumNames.ToString(e, format),
+                Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
+                _ => null,
+            };
+        }
 
         static object[] Wrap(object[] args)
         {

@@ -77,8 +77,7 @@ namespace Unbound
         {
             internal static readonly Info Enum = typeof(T).IsEnum ? Of(typeof(T)) : null;
             /// <summary>A nullable enum, float or double: printed through its boxed value.</summary>
-            internal static readonly bool NullableMono = Nullable.GetUnderlyingType(typeof(T)) is { } inner
-                && (inner.IsEnum || inner == typeof(float) || inner == typeof(double));
+            internal static readonly bool NullableMono = Nullable.GetUnderlyingType(typeof(T)) is { } inner && MonoNumberFormat.PrintsOtherwise(inner);
         }
 
         /// <summary>A constant's value as Mono orders it: sign-extended to 64 bits, then unsigned.</summary>

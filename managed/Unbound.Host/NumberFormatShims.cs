@@ -59,7 +59,21 @@ static class NumberFormatShims
         .Where(m => m.DeclaringType == typeof(Unbound.MonoNumberFormat) && m.IsGenericMethodDefinition)
         .ToArray();
 
-    static readonly System.Reflection.MethodInfo s_ConstrainedToString = s_GenericShims.Single(m => m.Name == nameof(Unbound.MonoNumberFormat.ConstrainedToString));
+    /// <summary>The shims of ToString calls that a <c>constrained.</c> prefix makes, by the called
+    /// method's declaring type and parameter types: object's, IFormattable's and (through a type
+    /// parameter constrained to Enum) Enum's overloads.</summary>
+    static readonly Dictionary<string, System.Reflection.MethodInfo> s_ConstrainedShims = new(StringComparer.Ordinal)
+    {
+        ["System.Object()"] = ConstrainedShimTaking(),
+        ["System.IFormattable(System.String,System.IFormatProvider)"] = ConstrainedShimTaking(typeof(string), typeof(IFormatProvider)),
+        ["System.Enum()"] = ConstrainedShimTaking(),
+        ["System.Enum(System.String)"] = ConstrainedShimTaking(typeof(string)),
+        ["System.Enum(System.IFormatProvider)"] = ConstrainedShimTaking(typeof(IFormatProvider)),
+        ["System.Enum(System.String,System.IFormatProvider)"] = ConstrainedShimTaking(typeof(string), typeof(IFormatProvider)),
+    };
+
+    static System.Reflection.MethodInfo ConstrainedShimTaking(params Type[] parameters) => s_GenericShims.Single(m =>
+        m.Name == nameof(Unbound.MonoNumberFormat.ConstrainedToString) && m.GetParameters().Skip(1).Select(p => p.ParameterType).SequenceEqual(parameters));
 
     static string Key(string name, IEnumerable<string> parameters) => name + "(" + string.Join(",", parameters) + ")";
 
@@ -111,12 +125,13 @@ static class NumberFormatShims
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
                     var constrained = instruction.Previous is { OpCode.Code: Code.Constrained } prefix ? prefix : null;
-                    if (constrained?.Operand is Mono.Cecil.TypeReference receiver && IsObjectToString(target) && MayBeEnum(receiver))
+                    if (constrained?.Operand is Mono.Cecil.TypeReference receiver && ConstrainedShim(target) is { } constrainedShim && MayBeEnum(receiver))
                     {
-                        // constrained. T callvirt object::ToString() -> call ConstrainedToString<T>(ref T):
-                        // the receiver is already the value's address.
+                        // constrained. T callvirt object::ToString() -> call ConstrainedToString<T>(ref T),
+                        // IFormattable::ToString(string, IFormatProvider) likewise: the receiver is
+                        // already the value's address.
                         instruction.OpCode = OpCodes.Call;
-                        instruction.Operand = Instance(s_ConstrainedToString, receiver);
+                        instruction.Operand = Instance(constrainedShim, receiver);
                         Nop(il, constrained);
                         continue;
                     }
@@ -165,11 +180,17 @@ static class NumberFormatShims
         for (int i = 0; i < 5; i++) il.InsertAfter(constrained, il.Create(OpCodes.Nop));
     }
 
-    static bool IsObjectToString(MethodReference target) =>
-        target.Name == "ToString" && target.HasThis && target.Parameters.Count == 0 && target.DeclaringType.FullName == "System.Object";
+    /// <summary>The generic shim of a ToString that a <c>constrained.</c> call makes.</summary>
+    static System.Reflection.MethodInfo? ConstrainedShim(MethodReference target) =>
+        target.Name == "ToString" && target.HasThis
+            ? s_ConstrainedShims.GetValueOrDefault(target.DeclaringType.FullName + "(" + string.Join(",", target.Parameters.Select(p => p.ParameterType.FullName)) + ")")
+            : null;
 
     /// <summary>Whether a constrained call's type may hold an enum value: a generic parameter, a
     /// nullable or an enum (false when it cannot be resolved).</summary>
+    /// <summary>Assemblies already reported unresolvable (images may be filtered on several threads).</summary>
+    static readonly HashSet<string> s_Unresolved = new(StringComparer.Ordinal);
+
     static bool MayBeEnum(Mono.Cecil.TypeReference type)
     {
         if (type is Mono.Cecil.GenericParameter) return true;
@@ -178,8 +199,13 @@ static class NumberFormatShims
         {
             return type.Resolve()?.IsEnum == true;
         }
-        catch (AssemblyResolutionException)
+        catch (AssemblyResolutionException e)
         {
+            bool first;
+            lock (s_Unresolved) first = s_Unresolved.Add(e.AssemblyReference.Name);
+            if (first)
+                Native.Log((int)UnityEngine.LogType.Warning,
+                    $"[Unbound] cannot resolve {e.AssemblyReference.Name}: a ToString called directly on its enum values prints .NET's name where several share a value");
             return false;
         }
     }

@@ -36,6 +36,11 @@ public sealed class Localizer : IFormatProvider, ICustomFormatter
     public object GetFormat(Type type) => type == typeof(ICustomFormatter) ? this : null;
     public string Format(string format, object arg, IFormatProvider provider) => arg is SortedAliases value ? ""enum "" + (int)value : null;
 }
+public struct Formattable : IFormattable
+{
+    public int Calls;
+    public string ToString(string format, IFormatProvider provider) => format + "" "" + (++Calls);
+}
 public struct Counter { public int Calls; public override string ToString() => ""calls "" + (++Calls); }
 public static class Probe
 {
@@ -54,7 +59,14 @@ public static class Probe
     public static string Generic<T>(T value) => value.ToString();
     public static string GenericEnum() => Generic(SortedAliases.C);
     public static string GenericObject() => Generic<object>(SortedAliases.C) + "" "" + Generic<Enum>(SortedAliases.C) + "" "" + Generic<object>(1849.9999f) + "" "" + Generic<IFormattable>(1849.9999);
-    public static string CustomFormatter() => string.Format(new Localizer(), ""{0} {1}"", SortedAliases.C, 1.5f) + ""|"" + new StringBuilder().AppendFormat(new Localizer(), ""{0}"", SortedAliases.C);
+    public static string CustomFormatter() => string.Format(new Localizer(), ""{0} {1} {2:F}"", SortedAliases.C, 1849.9999f, FlagAliases.AB)
+        + ""|"" + new StringBuilder().AppendFormat(new Localizer(), ""{0} {1}"", SortedAliases.C, ThreeUnsorted.N) + ""|"" + string.Format(new Localizer(), ""{0}"", new object[] { 1849.9999 });
+    static string Formatted<T>(T value, string format) where T : IFormattable => value.ToString(format, null);
+    static string FormattedEnum<T>(T value) where T : struct, Enum => value.ToString(""G"", null);
+    static string FormattedRef<T>(ref T value) where T : IFormattable => value.ToString(""x"", null);
+    public static string GenericFormattable() { var counter = new Formattable(); string first = FormattedRef(ref counter);
+        return Formatted(SortedAliases.C, ""G"") + "" "" + FormattedEnum(SortedAliases.C) + "" "" + Formatted(1849.9999f, null) + "" "" + Formatted(12345, ""N0"")
+            + "" "" + Formatted<IFormattable>(SortedAliases.C, null) + "" "" + first + "" "" + counter.Calls; }
     public static string Sequences() => string.Concat(new System.Collections.Generic.List<SortedAliases> { SortedAliases.C, SortedAliases.B })
         + ""|"" + new StringBuilder().AppendJoin("","", new[] { SortedAliases.C, SortedAliases.B }).AppendJoin('/', new object[] { SortedAliases.C, 1849.9999f })
         + ""|"" + new StringBuilder().AppendJoin(';', new System.Collections.Generic.List<float> { 1849.9999f, 2f });
@@ -122,8 +134,12 @@ public static class Probe
         public void GenericToStringKeepsOtherTypes(OptimizationLevel optimization)
         {
             var probe = Redirected(optimization);
-            // A custom formatter is given the enum itself (it may test its type), not a wrapper.
-            Assert.Equal("enum 2 1.5|enum 2", Run(probe, "CustomFormatter"));
+            // A custom formatter is given the enum itself (it may test its type), not a wrapper; what
+            // it leaves to the class library prints as Mono does.
+            Assert.Equal("enum 2 1850 AB|enum 2 N|1849.9999", Run(probe, "CustomFormatter"));
+            // IFormattable.ToString through a type parameter: enums and floats as Mono prints them,
+            // other types their own (a struct's on the caller's storage).
+            Assert.Equal("C C 1850 12,345 C x 1 1", Run(probe, "GenericFormattable"));
             Assert.Equal("text", Run(probe, "GenericClass"));
             Assert.Throws<NullReferenceException>(() => Run(probe, "GenericNull"));
             Assert.Equal("1850", Run(probe, "GenericFloat"));
