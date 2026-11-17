@@ -259,9 +259,10 @@ namespace Unbound.Runtime
                     case VFXExpressionOperation.ExtractAnglesFromMatrix:
                     {
                         // Of the matrix with its last row (0, 0, 0, 1): its rotation's Euler angles
-                        // in degrees, not made positive.
+                        // in degrees, of the rotation as it comes (not normalized, as a script's
+                        // Quaternion.eulerAngles has it) and not made positive.
                         var m = AffinePart(Load(w, p0));
-                        var angles = Quaternion.ToEulerRad(m.rotation) * Mathf.Rad2Deg;
+                        var angles = Quaternion.EulerRadOf(m.rotation) * Mathf.Rad2Deg;
                         (w[at], w[at + 1], w[at + 2]) = (Bits(angles.x), Bits(angles.y), Bits(angles.z));
                         break;
                     }

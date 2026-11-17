@@ -156,16 +156,22 @@ namespace UnityEngine
         }
 
         // Inverse of FromEulerRad, in radians, from the normalized rotation (identity when its length is
-        // below 1e-5). Outside gimbal lock X comes from the Y axis's Z component and Y and Z from two
-        // arctangents; in gimbal lock (|yz - xw| >= 0.499999) Z is 0 and Y carries the whole
-        // remaining rotation. Single precision in the order of the Unity 6000.0.71f1 Editor
+        // below 1e-5). Single precision in the order of the Unity 6000.0.71f1 Editor
         // (tests/projects/floatrounding, native/quaternionEulerAngles).
         internal static Vector3 ToEulerRad(Quaternion rotation)
         {
-            const float gimbalLock = 0.499999f;
             float length = MathF.Sqrt(rotation.x * rotation.x + rotation.y * rotation.y + rotation.z * rotation.z + rotation.w * rotation.w);
-            Quaternion q = length < RotationMatrix.MinimumLength ? identity
-                : new Quaternion(rotation.x / length, rotation.y / length, rotation.z / length, rotation.w / length);
+            return EulerRadOf(length < RotationMatrix.MinimumLength ? identity
+                : new Quaternion(rotation.x / length, rotation.y / length, rotation.z / length, rotation.w / length));
+        }
+
+        // The Euler angles of a rotation taken as it is, not normalized first (a visual effect's
+        // angles of a matrix: tests/projects/vfx operations/*/v05). Outside gimbal lock X comes
+        // from the Y axis's Z component and Y and Z from two arctangents; in gimbal lock
+        // (|yz - xw| >= 0.499999) Z is 0 and Y carries the whole remaining rotation.
+        internal static Vector3 EulerRadOf(Quaternion q)
+        {
+            const float gimbalLock = 0.499999f;
             float xx = q.x * q.x, yy = q.y * q.y, zz = q.z * q.z, ww = q.w * q.w;
             if (!(MathF.Abs(xx + yy + zz + ww - 1f) < RotationMatrix.MinimumLength))
                 Debug.LogAssertion(NotNormalizedMessage);

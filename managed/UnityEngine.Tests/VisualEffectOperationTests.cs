@@ -18,6 +18,8 @@ namespace UnityEngine.Tests
             return values;
         }
 
+        static uint[] Words(Vector4 v) => new[] { BitConverter.SingleToUInt32Bits(v.x), BitConverter.SingleToUInt32Bits(v.y), BitConverter.SingleToUInt32Bits(v.z) };
+
         [Fact]
         public void MatricesAreMadeOfRowsColumnsAndAxesAndSplitIntoThem()
         {
@@ -76,6 +78,26 @@ namespace UnityEngine.Tests
             Assert.True(angles.y < 0f || angles.x < 0f || angles.z < 0f);
             var scale = frame.lossyScale;
             Assert.Equal(new Vector4(scale.x, scale.y, scale.z, 0f), values.GetVector(3, 3));
+        }
+
+        [Fact]
+        public void TheAnglesOfAFrameWithoutARotationComeFromItsRotationAsItIs()
+        {
+            // The rotation of a frame of zeros or with a zero axis is not of unit length: its
+            // angles are taken from it as it is, where Quaternion.eulerAngles normalizes it first
+            // (values of the Unity 6000.0.71f1 Editor, tests/projects/vfx operations/*/v05).
+            var at = new Vector3(10f, 20f, 30f);
+            var turn = Quaternion.Euler(30f, -120f, 200f);
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.ExtractAnglesFromMatrix, 0),
+                Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.ExtractAnglesFromMatrix, 2),
+            }, new[] { Constant(0, Matrix4x4.zero), Constant(2, Matrix4x4.TRS(at, turn, new Vector3(2f, 0f, 3f))) });
+            var values = Evaluated(data);
+            Assert.Equal(new[] { 0xc207a65du, 0xc218130cu, 0xc218130cu }, Words(values.GetVector(1, 3)));
+            Assert.Equal(new[] { 0x41f00001u, 0xc2f00001u, 0xc3200000u }, Words(values.GetVector(3, 3)));
+            var normalized = Quaternion.ToEulerRad(Matrix4x4.zero.rotation) * Mathf.Rad2Deg;
+            Assert.NotEqual(0xc207a65du, BitConverter.SingleToUInt32Bits(normalized.x));
         }
 
         [Fact]

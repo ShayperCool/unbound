@@ -614,7 +614,9 @@ namespace UnityEngine.VFX
             SetObject(nameID, VFXValueType.Mesh, m);
         }
         public void SetSkinnedMeshRenderer(int nameID, SkinnedMeshRenderer m) => SetObject(nameID, VFXValueType.SkinnedMeshRenderer, m);
-        public void SetGraphicsBuffer(int nameID, GraphicsBuffer g) => SetObject(nameID, VFXValueType.Buffer, g);
+        /// <summary>A buffer already released sets none; one released after it is set stays set,
+        /// with its element count (Unity 6000.0.71f1, tests/projects/vfx <c>operations/*/u02</c>).</summary>
+        public void SetGraphicsBuffer(int nameID, GraphicsBuffer g) => SetObject(nameID, VFXValueType.Buffer, g != null && g.IsValid() ? g : null);
 
         public void SetBool(string name, bool b) => SetBool(Shader.PropertyToID(name), b);
         public void SetInt(string name, int i) => SetInt(Shader.PropertyToID(name), i);

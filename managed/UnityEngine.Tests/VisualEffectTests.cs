@@ -234,6 +234,36 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ABufferReleasedBeforeItIsSetSetsNone()
+        {
+            var effect = Effect(Asset(new VFXExpressionSheet
+            {
+                expressions = new[] { Value(VFXValueType.Buffer) },
+                values = Array.Empty<VFXExpressionValueContainerDesc>(),
+                exposed = new[] { Exposed("Buffer", 0) },
+            }));
+            var kept = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 4);
+            var released = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 9, 4);
+            try
+            {
+                effect.SetGraphicsBuffer("Buffer", kept);
+                released.Release();
+                effect.SetGraphicsBuffer("Buffer", released);
+                Assert.Null(effect.GetGraphicsBuffer("Buffer"));
+                // One released once it is set stays set.
+                kept = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 5, 4);
+                effect.SetGraphicsBuffer("Buffer", kept);
+                kept.Release();
+                Assert.Same(kept, effect.GetGraphicsBuffer("Buffer"));
+            }
+            finally
+            {
+                kept.Release();
+                Object.DestroyImmediate(effect.gameObject);
+            }
+        }
+
+        [Fact]
         public void TextureOfAnotherDimensionIsRefused()
         {
             var effect = Effect(First());
