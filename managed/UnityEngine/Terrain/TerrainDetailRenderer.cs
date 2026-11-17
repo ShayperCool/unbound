@@ -186,7 +186,7 @@ namespace UnityEngine
             var rects = TexturePacker.Pack(m_DetailAtlas, textures.ToArray(), 0, DetailAtlasMaximumSize, false);
             if (rects == null)
             {
-                Warn("Unbound: the terrain's detail textures do not fit a 2048 × 2048 atlas; its details sample the atlas's first texel instead of their textures.");
+                Warn("Unbound: the terrain's detail textures do not fit a 2048 × 2048 atlas; its details sample the atlas left from before instead of their textures.");
                 return result;
             }
             m_DetailAtlas.wrapMode = TextureWrapMode.Clamp;

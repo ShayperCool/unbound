@@ -54,7 +54,7 @@ namespace Unbound.Runtime
                 widths[i] = FitSide(widths[i], max);
                 heights[i] = FitSide(heights[i], max);
             }
-            // A 32-bit sum, as the Editor's.
+            // A 32-bit unsigned sum: it wraps past 2^32 texels (unmeasured).
             uint area = 0;
             int widest = 0, highest = 0;
             for (int i = 0; i < count; i++)
