@@ -273,6 +273,30 @@ impl SamplerKey {
 /// Internal sampler mode: a shader declares a comparison while native texture state reads depth.
 pub const STORED_DEPTH: i32 = -1;
 
+/// PCI vendor ID of NVIDIA.
+const NVIDIA_VENDOR_ID: u32 = 0x10de;
+
+/// Whether the device reads stored depth through a declared comparison binding: the native
+/// sampler opt-in vendor/wgpu-sampler accepts on NVIDIA OpenGL and Vulkan alone (its
+/// `native-depth-state.patch`), where it was measured. Elsewhere (Metal, other drivers) a
+/// comparison binding compares, as before the opt-in, instead of making a sampler the device
+/// refuses.
+pub fn stored_depth_reads(info: &wgpu::AdapterInfo) -> bool {
+    info.vendor == NVIDIA_VENDOR_ID
+        && matches!(info.backend, wgpu::Backend::Gl | wgpu::Backend::Vulkan)
+}
+
+/// The warning key of a comparison binding that compares where its texture turns comparison off.
+pub const STORED_DEPTH_WARNING: &str = "stored-depth-compare";
+
+/// What a device without stored-depth reads ([`stored_depth_reads`]) does instead, warned once.
+pub fn stored_depth_warning() -> String {
+    "a shader samples a depth texture through a comparison sampler while the texture turns \
+     comparison off (RenderTexture.depthCompareMode / shadowSamplingMode): this device compares \
+     instead of reading stored depth (measured only on NVIDIA OpenGL Core and Vulkan)"
+        .to_string()
+}
+
 /// Texture-owned state controls graphics comparisons; measured OpenGL compute state remains separate.
 pub fn depth_comparison_mode(state: Option<bool>, inline: bool, texture_state: bool) -> i32 {
     if state == Some(false) && !inline && texture_state {
@@ -1015,11 +1039,21 @@ pub fn texture_storage(t: &owned::Texture, samples: u32, caps: &NormFormatCaps) 
             }
         }
         texture_format::RGB10A2_UINT => {
-            assert!(
-                !t.random_write || caps.packed_integer_storage,
-                "this device cannot read and write packed unsigned targets"
-            );
-            stored(wgpu::TextureFormat::Rgb10a2Uint, 4)
+            if !t.random_write || caps.packed_integer_storage {
+                stored(wgpu::TextureFormat::Rgb10a2Uint, 4)
+            } else {
+                // As the integer formats kernels cannot read and write on the device: four
+                // unsigned 32-bit channels (Metal does not let kernels write this format).
+                let wide = wgpu::TextureFormat::Rgba32Uint;
+                TextureStorage {
+                    format: wide,
+                    bytes_per_pixel: 16,
+                    fallback: Some(FormatFallback::Unsupported(format!(
+                        "this device cannot let kernels read and write {:?}: kept as {wide:?}",
+                        wgpu::TextureFormat::Rgb10a2Uint
+                    ))),
+                }
+            }
         }
         texture_format::INTEGER_FIRST..=texture_format::INTEGER_LAST => {
             let i = (t.format - texture_format::INTEGER_FIRST) as usize;
@@ -2753,6 +2787,70 @@ mod tests {
             );
         }
         assert!(norm_format(12, &full_caps(), true, false, 1).is_err());
+    }
+
+    #[test]
+    fn stored_depth_reads_only_where_the_sampler_opt_in_is_accepted() {
+        let info = |vendor, backend| wgpu::AdapterInfo {
+            name: String::new(),
+            vendor,
+            device: 0,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            device_pci_bus_id: String::new(),
+            driver: String::new(),
+            driver_info: String::new(),
+            backend,
+            subgroup_min_size: 0,
+            subgroup_max_size: 0,
+            transient_saves_memory: None,
+            limit_bucket: None,
+        };
+        // NVIDIA OpenGL and Vulkan (measured); not Metal, nor other vendors' drivers.
+        assert!(stored_depth_reads(&info(
+            NVIDIA_VENDOR_ID,
+            wgpu::Backend::Gl
+        )));
+        assert!(stored_depth_reads(&info(
+            NVIDIA_VENDOR_ID,
+            wgpu::Backend::Vulkan
+        )));
+        assert!(!stored_depth_reads(&info(0x106b, wgpu::Backend::Metal)));
+        assert!(!stored_depth_reads(&info(0x1002, wgpu::Backend::Vulkan)));
+        // Where the device cannot read stored depth, a texture that turns comparison off still
+        // compares (mode 4) instead of asking for the native state.
+        assert_eq!(depth_comparison_mode(Some(false), false, false), 4);
+        assert_eq!(
+            depth_comparison_mode(Some(false), false, true),
+            STORED_DEPTH
+        );
+    }
+
+    #[test]
+    fn packed_unsigned_targets_kernels_cannot_write_are_kept_wide() {
+        let code = texture_format::RGB10A2_UINT;
+        let caps = NormFormatCaps {
+            packed_integer_storage: false,
+            ..full_caps()
+        };
+        // A target kernels write, on a device that cannot let them (Metal): four unsigned
+        // 32-bit channels, warned, where it panicked before.
+        let wide = stored(code, true, true, 1, &caps);
+        assert_eq!(wide.format, wgpu::TextureFormat::Rgba32Uint);
+        assert_eq!(wide.bytes_per_pixel, 16);
+        assert!(
+            matches!(&wide.fallback, Some(FormatFallback::Unsupported(why)) if why.contains("Rgb10a2Uint")),
+            "{:?}",
+            wide.fallback
+        );
+        // Without random writes, or where kernels may write it, the format itself.
+        for (rw, caps) in [(false, caps), (true, full_caps())] {
+            let own = stored(code, true, rw, 1, &caps);
+            assert_eq!(
+                (own.format, own.bytes_per_pixel),
+                (wgpu::TextureFormat::Rgb10a2Uint, 4)
+            );
+            assert!(own.fallback.is_none());
+        }
     }
 
     #[test]

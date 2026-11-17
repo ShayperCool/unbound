@@ -646,6 +646,9 @@ pub struct UnityRenderer {
     plugins: plugins::PluginState,
     /// The graphics device's projection, depth and target orientation (resolved at startup).
     conventions: DeviceConventions,
+    /// Whether a comparison binding may read a depth texture's stored depth where the texture's
+    /// own state does not compare ([`resources::stored_depth_reads`]).
+    stored_depth_reads: bool,
     /// The Vulkan device's plugin interface (None: plugins see OpenGL Core's, `plugins`).
     #[cfg(target_os = "linux")]
     vulkan_plugins: Option<plugins_vulkan::VulkanPlugins>,
@@ -825,6 +828,7 @@ impl UnityRenderer {
             frames_completed: Default::default(),
             plugin_pass_open: false,
             conventions,
+            stored_depth_reads: resources::stored_depth_reads(&adapter.get_info()),
             adapter,
             device,
             queue,
@@ -1999,7 +2003,17 @@ impl UnityRenderer {
                     .get(h)
                     .filter(|t| t.depth_texture.is_some())
                     .and_then(|t| t.depth_compare);
-                key.compare = resources::depth_comparison_mode(state, slot.inline.is_some(), true);
+                key.compare = resources::depth_comparison_mode(
+                    state,
+                    slot.inline.is_some(),
+                    self.stored_depth_reads,
+                );
+                if state == Some(false) && slot.inline.is_none() && !self.stored_depth_reads {
+                    self.warn_once(
+                        resources::STORED_DEPTH_WARNING.into(),
+                        resources::stored_depth_warning,
+                    );
+                }
             }
             if slot.inline.is_none() {
                 key.lod_bias_bits = self.sampler_lod_bias(*h);

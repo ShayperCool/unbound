@@ -1372,8 +1372,19 @@ fn main() {
                             let compare = super::resources::depth_comparison_mode(
                                 state,
                                 texture.is_none(),
-                                self.conventions.compute_depth_sampler_state,
+                                self.conventions.compute_depth_sampler_state
+                                    && self.stored_depth_reads,
                             );
+                            if self.conventions.compute_depth_sampler_state
+                                && !self.stored_depth_reads
+                                && state == Some(false)
+                                && texture.is_some()
+                            {
+                                self.warn_once(
+                                    super::resources::STORED_DEPTH_WARNING.into(),
+                                    super::resources::stored_depth_warning,
+                                );
+                            }
                             super::SamplerKey { compare, ..key }
                         } else {
                             key
