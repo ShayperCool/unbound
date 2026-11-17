@@ -21,8 +21,8 @@ namespace UnityEngine
     // instancing are their prototype's meshes and materials at each instance. As the Editor builds
     // them (measured: a project overriding the detail shaders dumped the vertices it draws): a
     // grass quad spans its width along its transform's x axis (uv's left at -x) and rises along its y
-    // axis, its colour the dry colour lerped to the healthy one by the size noise (top; the
-    // bottom 0.625 of it, alpha 0 for no waving), its normal the terrain's; a billboard's four
+    // axis, its colour the dry colour lerped to the healthy one by the size noise in bytes (top;
+    // the bottom scaled by 160/255 in bytes, alpha 0 for no waving), its normal the terrain's; a billboard's four
     // corners sit at the instance with their offsets in the tangent; meshes are baked through their
     // instance's transform (turned, tilted to the ground, scaled), coloured its colour. The
     // shaders' globals: _WaveAndDistance (frame time × speed × 0.04, strength × 0.5, amount × 6,
@@ -219,17 +219,38 @@ namespace UnityEngine
             }
         }
 
-        static Color32 ToColor32(Color c) => new Color32(
-            (byte)Mathf.Clamp(Mathf.RoundToInt(c.r * 255f), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(c.g * 255f), 0, 255),
-            (byte)Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(c.a * 255f), 0, 255));
+        /// <summary>An instance's colour: the healthy colour × the noise plus the dry colour × (1 −
+        /// the noise), each channel clamped to [0, 1] and quantized to a byte (×255 + 0.5, truncated).</summary>
+        static Color32 DetailColor(DetailPrototype prototype, float noise)
+        {
+            Color healthy = prototype.healthyColor, dry = prototype.dryColor;
+            float rest = 1f - noise;
+            static byte Quantize(float v) => (byte)(int)(Mathf.Clamp01(v) * 255f + 0.5f);
+            return new Color32(Quantize(healthy.r * noise + dry.r * rest), Quantize(healthy.g * noise + dry.g * rest),
+                Quantize(healthy.b * noise + dry.b * rest), Quantize(healthy.a * noise + dry.a * rest));
+        }
+
+        /// <summary>A grass quad's vertex colours: 160/255 grey and transparent at its foot (no
+        /// waving there), white at its top.</summary>
+        static readonly Color32 s_QuadBottom = new Color32(160, 160, 160, 0), s_QuadTop = new Color32(255, 255, 255, 255);
 
         internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
         internal Texture2D DetailAtlasForTest => m_DetailAtlas;
-        internal static List<Vector3> BakedMeshNormalsForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement)
+        internal static List<Vector3> BakedMeshNormalsForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement) =>
+            BakedMeshForTest(data, prototype, placement).Normals;
+        internal static List<Color32> BakedMeshColorsForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement) =>
+            BakedMeshForTest(data, prototype, placement).Colors;
+        static MeshBuilder BakedMeshForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement)
         {
             var builder = new MeshBuilder();
             BakeMeshDetails(data, builder, prototype, new List<Matrix4x4> { placement });
-            return builder.Normals;
+            return builder;
+        }
+        internal static List<Color32> QuadColorsForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement)
+        {
+            var builders = new MeshBuilder[3];
+            AddQuads(data, prototype, new List<Matrix4x4> { placement }, false, new Rect(0f, 0f, 1f, 1f), builders);
+            return builders[(int)DetailKind.Grass].Colors;
         }
 
         void BuildDetails(Terrain terrain, TerrainData data, Vector3 origin)
@@ -336,10 +357,8 @@ namespace UnityEngine
                 // The quad spans the transform's x axis (its width) and rises along its y axis
                 // (its height): turned, and tilted to the ground.
                 Vector3 axis = model.GetColumn(0) * 0.5f, height = model.GetColumn(1);
-                float noise = Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread);
-                var top = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
-                var topColor = ToColor32(new Color(top.r, top.g, top.b, 1f));
-                var bottomColor = ToColor32(new Color(top.r * 0.625f, top.g * 0.625f, top.b * 0.625f, 0f));
+                var color = DetailColor(prototype, Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread));
+                Color32 topColor = Tinted(s_QuadTop, color), bottomColor = Tinted(s_QuadBottom, color);
                 var normal = data.GetInterpolatedNormal(position.x / size.x, position.z / size.z);
                 int first = builder.Vertices.Count;
                 if (!billboard)
@@ -378,8 +397,8 @@ namespace UnityEngine
 
         /// <summary>Meshes drawn without instancing: each instance's mesh through its transform
         /// (turned, tilted to the ground, scaled), its normals turned and tilted (in the Grass render
-        /// mode the terrain's normal at every vertex), coloured the
-        /// instance's colour, drawn with a material that samples white (the prototype material's
+        /// mode the terrain's normal at every vertex), its vertex colours (white without them)
+        /// tinted by the instance's colour, drawn with a material that samples white (the prototype material's
         /// texture is not used: not yet).</summary>
         static void BakeMeshDetails(TerrainData data, MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements)
         {
@@ -387,14 +406,13 @@ namespace UnityEngine
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;
             var normals = mesh.normals;
+            var colors = mesh.colors32;
             var triangles = mesh.triangles;
             bool grass = prototype.renderMode == DetailRenderMode.Grass;
             foreach (var model in placements)
             {
                 var position = model.GetColumn(3);
-                float noise = Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread);
-                var c = Color.Lerp(prototype.dryColor, prototype.healthyColor, noise);
-                var color = ToColor32(new Color(c.r, c.g, c.b, 1f));
+                var color = DetailColor(prototype, Mathf.PerlinNoise(position.x * prototype.noiseSpread, position.z * prototype.noiseSpread));
                 Vector3 ax = model.GetColumn(0), ay = model.GetColumn(1), az = model.GetColumn(2);
                 ax = ax.normalized; ay = ay.normalized; az = az.normalized;
                 // In the Grass render mode every vertex takes the terrain's normal there, as a grass
@@ -405,7 +423,8 @@ namespace UnityEngine
                 for (int v = 0; v < vertices.Length; v++)
                 {
                     var n = v < normals.Length ? normals[v] : Vector3.up;
-                    builder.Add(model.MultiplyPoint3x4(vertices[v]), grass ? ground : ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, Vector2.zero);
+                    var tint = v < colors.Length ? Tinted(colors[v], color) : color;
+                    builder.Add(model.MultiplyPoint3x4(vertices[v]), grass ? ground : ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), tint, Vector2.zero);
                 }
                 foreach (var t in triangles) builder.Indices.Add(first + t);
             }

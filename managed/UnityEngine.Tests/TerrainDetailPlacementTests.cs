@@ -546,6 +546,49 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A grass quad's colours in bytes: the healthy and dry colours mixed by the noise,
+        /// clamped and quantized (× 255 + 0.5, truncated) at its top, scaled by 160/255 as
+        /// (160 × (c + 1)) >> 8 and transparent at its foot (tests/projects/grass): a red of 100/255
+        /// has the foot 63 (100 × 0.625 would round to 62).</summary>
+        [Fact]
+        public void GrassQuadColoursAreQuantizedInBytes()
+        {
+            var color = new Color(100f / 255f, 1.2f, -0.1f, 1f);
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype
+            {
+                prototypeTexture = Own(new Texture2D(4, 4)), healthyColor = color, dryColor = color,
+            });
+            var colors = TerrainRenderer.QuadColorsForTest(data, data.detailPrototypes[0], Matrix4x4.Translate(new Vector3(4f, 0f, 4f)));
+            var top = new Color32(100, 255, 0, 255);
+            var foot = new Color32(63, 160, 0, 0);
+            Assert.Equal(new[] { foot, top, top, foot }, colors.ToArray());
+        }
+
+        /// <summary>A mesh detail's vertex colours (white without them) scaled by the instance's colour
+        /// in bytes, (v × (c + 1)) >> 8: a transparent vertex stays transparent.</summary>
+        [Fact]
+        public void MeshDetailVertexColoursAreTintedByTheInstanceColour()
+        {
+            var mesh = Own(new Mesh());
+            mesh.vertices = new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 1, 0) };
+            mesh.colors32 = new[] { new Color32(255, 255, 255, 255), new Color32(128, 64, 0, 0), new Color32(10, 200, 255, 77) };
+            mesh.triangles = new[] { 0, 1, 2 };
+            var prefab = Own(new GameObject("coloured mesh detail"));
+            prefab.AddComponent<MeshFilter>().sharedMesh = mesh;
+            prefab.AddComponent<MeshRenderer>();
+            var color = new Color(0.4f, 0.8f, 0.2f, 1f);
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype
+            {
+                prototype = prefab, usePrototypeMesh = true, useInstancing = false, renderMode = DetailRenderMode.VertexLit,
+                healthyColor = color, dryColor = color,
+            });
+            var colors = TerrainRenderer.BakedMeshColorsForTest(data, data.detailPrototypes[0], Matrix4x4.identity);
+            var c = new Color32(102, 204, 51, 255);
+            Assert.Equal(c, colors[0]);
+            Assert.Equal(new Color32((byte)(128 * 103 >> 8), (byte)(64 * 205 >> 8), 0, 0), colors[1]);
+            Assert.Equal(new Color32((byte)(10 * 103 >> 8), (byte)(200 * 205 >> 8), (byte)(255 * 52 >> 8), 77), colors[2]);
+        }
+
         /// <summary>Drawn details are rebuilt when the detail density changes, the terrain's or the
         /// quality level's.</summary>
         [Fact]

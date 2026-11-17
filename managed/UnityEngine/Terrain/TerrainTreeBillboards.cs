@@ -192,7 +192,9 @@ namespace UnityEngine
 
         static Vector3 Abs(Vector3 v) => new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
 
-        /// <summary>A tree's color times its lightmap color, per 8-bit channel (c × (l + 1) / 256).</summary>
+        /// <summary>One colour scaled by another per 8-bit channel (c × (l + 1) / 256): a tree's colour
+        /// by its lightmap colour, a detail's vertex colour by its instance's colour (white keeps
+        /// the instance's colour).</summary>
         internal static Color32 Tinted(Color32 color, Color32 lightmap) => new Color32(
             (byte)(color.r * (lightmap.r + 1) >> 8), (byte)(color.g * (lightmap.g + 1) >> 8),
             (byte)(color.b * (lightmap.b + 1) >> 8), (byte)(color.a * (lightmap.a + 1) >> 8));
