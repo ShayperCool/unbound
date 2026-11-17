@@ -1540,6 +1540,78 @@ namespace UnityEngine.UIElements
         }
     }
 
+    public partial class HelpBox
+    {
+        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlTraits : VisualElement.UxmlTraits
+        {
+            readonly UxmlStringAttributeDescription m_Text = new UxmlStringAttributeDescription { name = "text" };
+            readonly UxmlEnumAttributeDescription<HelpBoxMessageType> m_MessageType = new UxmlEnumAttributeDescription<HelpBoxMessageType> { name = "message-type", defaultValue = HelpBoxMessageType.None };
+
+            public UxmlTraits() { }
+
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
+            {
+                base.Init(ve, bag, cc);
+                var helpBox = ve as HelpBox;
+                helpBox.text = m_Text.GetValueFromBag(bag, cc);
+                helpBox.messageType = m_MessageType.GetValueFromBag(bag, cc);
+            }
+        }
+
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<HelpBox, UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class PopupWindow
+    {
+        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlTraits : TextElement.UxmlTraits
+        {
+            public UxmlTraits() { }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield return new UxmlChildElementDescription(typeof(VisualElement)); }
+            }
+        }
+
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<PopupWindow, UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
+    public partial class ToggleButtonGroup
+    {
+        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlTraits : BaseField<ToggleButtonGroupState>.UxmlTraits
+        {
+            readonly UxmlBoolAttributeDescription m_IsMultipleSelection = new UxmlBoolAttributeDescription { name = "is-multiple-selection" };
+            readonly UxmlBoolAttributeDescription m_AllowEmptySelection = new UxmlBoolAttributeDescription { name = "allow-empty-selection" };
+
+            public UxmlTraits() { }
+
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
+            {
+                base.Init(ve, bag, cc);
+                var group = (ToggleButtonGroup)ve;
+                group.isMultipleSelection = m_IsMultipleSelection.GetValueFromBag(bag, cc);
+                group.allowEmptySelection = m_AllowEmptySelection.GetValueFromBag(bag, cc);
+            }
+        }
+
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<ToggleButtonGroup, UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
     /// <summary>Readers the built-in traits share.</summary>
     static class UxmlBuiltInTraits
     {

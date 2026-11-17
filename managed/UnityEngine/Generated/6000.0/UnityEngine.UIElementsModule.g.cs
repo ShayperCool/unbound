@@ -1427,21 +1427,8 @@ namespace UnityEngine.UIElements
         public const int kSize = 4;
         [global::Unbound.Stub] public fixed int hashes[4];
     }
-    [global::Unbound.Stub]
-    public unsafe partial class HelpBox : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class HelpBox
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId textProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId messageTypeProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string labelUssClassName;
-        [global::Unbound.Stub] public static readonly string iconUssClassName;
-        [global::Unbound.Stub] public static readonly string iconInfoUssClassName;
-        [global::Unbound.Stub] public static readonly string iconwarningUssClassName;
-        [global::Unbound.Stub] public static readonly string iconErrorUssClassName;
-        [global::Unbound.Stub] public HelpBox() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.ctor"); }
-        [global::Unbound.Stub] public HelpBox(string text, global::UnityEngine.UIElements.HelpBoxMessageType messageType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.ctor"); }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.text"); } }
-        public global::UnityEngine.UIElements.HelpBoxMessageType messageType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.messageType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.messageType"); } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -1450,19 +1437,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.HelpBox, global::UnityEngine.UIElements.HelpBox.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.HelpBox.UxmlTraits.ctor"); }
         }
     }
     internal enum HierarchyChangeType
@@ -2519,32 +2493,14 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId indexProperty;
     }
-    [global::Unbound.Stub]
-    public unsafe partial class PopupWindow : global::UnityEngine.UIElements.TextElement
+    unsafe partial class PopupWindow
     {
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string contentUssClassName;
-        [global::Unbound.Stub] public PopupWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.ctor"); }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.contentContainer"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
         {
             [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlSerializedData.ctor"); }
-        }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.PopupWindow, global::UnityEngine.UIElements.PopupWindow.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.TextElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.PopupWindow.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
         }
     }
     internal enum PositionProperty
@@ -3653,30 +3609,9 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Toggle.UxmlSerializedData.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ToggleButtonGroup : global::UnityEngine.UIElements.BaseField<global::UnityEngine.UIElements.ToggleButtonGroupState>
+    unsafe partial class ToggleButtonGroup
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId isMultipleSelectionProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId allowEmptySelectionProperty;
-        [global::Unbound.Stub] public static readonly string ussClassName;
-        [global::Unbound.Stub] public static readonly string containerUssClassName;
-        [global::Unbound.Stub] public static readonly string buttonGroupClassName;
-        [global::Unbound.Stub] public static readonly string buttonClassName;
-        [global::Unbound.Stub] public static readonly string buttonLeftClassName;
-        [global::Unbound.Stub] public static readonly string buttonMidClassName;
-        [global::Unbound.Stub] public static readonly string buttonRightClassName;
-        [global::Unbound.Stub] public static readonly string buttonStandaloneClassName;
-        [global::Unbound.Stub] public static readonly string emptyStateLabelClassName;
-        [global::Unbound.Stub] public ToggleButtonGroup() : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.ctor"); }
-        [global::Unbound.Stub] public ToggleButtonGroup(string label) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.ctor"); }
-        [global::Unbound.Stub] public ToggleButtonGroup(global::UnityEngine.UIElements.ToggleButtonGroupState toggleButtonGroupState) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.ctor"); }
-        [global::Unbound.Stub] public ToggleButtonGroup(string label, global::UnityEngine.UIElements.ToggleButtonGroupState toggleButtonGroupState) : base(default(string)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.ctor"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.OnViewDataReady"); }
-        [global::Unbound.Stub] protected override void UpdateMixedValueContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UpdateMixedValueContent"); }
-        [global::Unbound.Stub] public override void SetValueWithoutNotify(global::UnityEngine.UIElements.ToggleButtonGroupState newValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.SetValueWithoutNotify"); }
-        public bool isMultipleSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.isMultipleSelection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.isMultipleSelection"); } }
-        public bool allowEmptySelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.allowEmptySelection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.allowEmptySelection"); } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.contentContainer"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BaseField<global::UnityEngine.UIElements.ToggleButtonGroupState>.UxmlSerializedData
@@ -3686,54 +3621,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.ToggleButtonGroup, global::UnityEngine.UIElements.ToggleButtonGroup.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.BaseField<global::UnityEngine.UIElements.ToggleButtonGroupState>.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroup.UxmlTraits.ctor"); }
-        }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct ToggleButtonGroupState : global::System.IEquatable<global::UnityEngine.UIElements.ToggleButtonGroupState>, global::System.IComparable<global::UnityEngine.UIElements.ToggleButtonGroupState>
-    {
-        internal const int maxLength = 64;
-        [global::Unbound.Stub] public ToggleButtonGroupState(ulong optionsBitMask, int length) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.ctor"); }
-        [global::Unbound.Stub] public global::System.Span<int> GetActiveOptions(global::System.Span<int> activeOptionsIndices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.GetActiveOptions"); return default; }
-        [global::Unbound.Stub] public global::System.Span<int> GetInactiveOptions(global::System.Span<int> inactiveOptionsIndices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.GetInactiveOptions"); return default; }
-        [global::Unbound.Stub] public void SetAllOptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.SetAllOptions"); }
-        [global::Unbound.Stub] public void ResetAllOptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.ResetAllOptions"); }
-        [global::Unbound.Stub] public void ToggleAllOptions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.ToggleAllOptions"); }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ToggleButtonGroupState CreateFromOptions(global::System.Collections.Generic.IList<bool> options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.CreateFromOptions"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.UIElements.ToggleButtonGroupState FromEnumFlags<T>(T options, int length = -1) where T : global::System.Enum { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.FromEnumFlags"); return default; }
-        [global::Unbound.Stub] public static T ToEnumFlags<T>(global::UnityEngine.UIElements.ToggleButtonGroupState options, bool acceptsLengthMismatch = true) where T : global::System.Enum { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.ToEnumFlags"); return default; }
-        [global::Unbound.Stub] public int CompareTo(global::UnityEngine.UIElements.ToggleButtonGroupState other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.CompareTo"); return default; }
-        [global::Unbound.Stub] public static bool Compare<T>(global::UnityEngine.UIElements.ToggleButtonGroupState options, T value) where T : global::System.Enum { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.Compare"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.UIElements.ToggleButtonGroupState lhs, global::UnityEngine.UIElements.ToggleButtonGroupState rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.UIElements.ToggleButtonGroupState lhs, global::UnityEngine.UIElements.ToggleButtonGroupState rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.op_Inequality"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.UIElements.ToggleButtonGroupState other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.GetHashCode"); return default; }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.ToString"); return default; }
-        public int length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.length"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.length"); } }
-        internal ulong data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.data"); return default; } }
-        public bool this[int p0] { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.this[]"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupState.this[]"); } }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)384)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ToggleButtonGroupStatePropertiesAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public ToggleButtonGroupStatePropertiesAttribute(bool allowMultipleSelection = true, bool allowEmptySelection = true, int length = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.ctor"); }
-        public bool allowMultipleSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.allowMultipleSelection"); return default; } }
-        public bool allowEmptySelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.allowEmptySelection"); return default; } }
-        public int length { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute.length"); return default; } }
     }
     unsafe partial class TooltipEvent
     {
