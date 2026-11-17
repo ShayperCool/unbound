@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/editorload/run.py gate"
+  ],
+  "summary": "editorload: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SceneTools.cs",
+    "managed/UnityEngine/Editor/EditorHooks.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Editor/EditorTypeLookup.cs",
+    "managed/UnityEngine/Editor/EditorApplication.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/Unbound.Host/Game.cs",
+    "crates/unbound-project/src/settings.rs",
+    "crates/unbound-runtime/src/config.rs"
+  ]
+}

@@ -1,0 +1,87 @@
+{"k":"subscribe.header","v":"returns done"}
+{"k":"subscribe.import_completed","v":"returns done"}
+{"k":"subscribe.import_cancelled","v":"returns done"}
+{"k":"subscribe.import_failed","v":"returns done"}
+{"k":"subscribe.compilation_started","v":"returns done"}
+{"k":"subscribe.assembly_compiled","v":"returns done"}
+{"k":"subscribe.prefab_reverted","v":"returns done"}
+{"k":"subscribe.require_in_build","v":"returns done"}
+{"k":"subscribe.active_context","v":"returns done"}
+{"k":"subscribe.tool_events","v":"returns done"}
+{"k":"register.build_player_handler","v":"returns done"}
+{"k":"register.build_player_handler_null","v":"returns done"}
+{"k":"drop.targets","v":"returns -417863675,1081994447,1486780135,1621880143"}
+{"k":"drop.handlers_at_start","v":"returns 3:-417863675=1,1486780135=1,1621880143=1"}
+{"k":"drop.has_before","v":"returns False"}
+{"k":"drop.add_hierarchy","v":"returns done"}
+{"k":"drop.has_after","v":"returns True"}
+{"k":"drop.has_other_target","v":"returns False"}
+{"k":"drop.handlers_after_hierarchy","v":"returns 3:-417863675=1,1486780135=2,1621880143=1"}
+{"k":"drop.add_hierarchy_again","v":"throws System.Exception: Delegate already registered for dropDestinationId:1486780135"}
+{"k":"drop.handlers_after_again","v":"returns 3:-417863675=1,1486780135=2,1621880143=1"}
+{"k":"drop.add_project","v":"returns done"}
+{"k":"drop.add_scene","v":"returns done"}
+{"k":"drop.add_inspector","v":"returns done"}
+{"k":"drop.handlers_after_all","v":"returns 4:-417863675=2,1081994447=1,1486780135=2,1621880143=2"}
+{"k":"drop.has_project","v":"returns True"}
+{"k":"drop.has_scene","v":"returns True"}
+{"k":"drop.has_inspector","v":"returns True"}
+{"k":"drop.remove_hierarchy","v":"returns done"}
+{"k":"drop.has_removed","v":"returns False"}
+{"k":"drop.handlers_after_remove","v":"returns 4:-417863675=2,1081994447=1,1486780135=1,1621880143=2"}
+{"k":"drop.remove_hierarchy_again","v":"returns done"}
+{"k":"drop.add_null","v":"returns done"}
+{"k":"drop.handlers_after_null","v":"returns 4:-417863675=2,1081994447=1,1486780135=2,1621880143=2"}
+{"k":"drop.has_null","v":"returns True"}
+{"k":"drop.has_unknown_target","v":"returns False"}
+{"k":"drop.cleanup","v":"returns done"}
+{"k":"drop.handlers_end","v":"returns 4:-417863675=1,1081994447=0,1486780135=2,1621880143=1"}
+{"k":"tools.start","v":"returns Move|Center|Local|UnityEditor.MoveTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.start.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.pivot_mode_other","v":"returns done"}
+{"k":"tools.pivot_mode_other.events","v":"pivotModeChanged"}
+{"k":"tools.pivot_mode_other.state","v":"returns Move|Pivot|Local|UnityEditor.MoveTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.pivot_mode_same","v":"returns done"}
+{"k":"tools.pivot_mode_back","v":"returns done"}
+{"k":"tools.pivot_mode_back.events","v":"pivotModeChanged"}
+{"k":"tools.pivot_rotation_other","v":"returns done"}
+{"k":"tools.pivot_rotation_other.events","v":"pivotRotationChanged"}
+{"k":"tools.pivot_rotation_other.state","v":"returns Move|Center|Global|UnityEditor.MoveTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.pivot_rotation_same","v":"returns done"}
+{"k":"tools.pivot_rotation_back","v":"returns done"}
+{"k":"tools.pivot_rotation_back.events","v":"pivotRotationChanged"}
+{"k":"tools.current_rotate","v":"returns done"}
+{"k":"tools.current_rotate.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_rotate.state","v":"returns Rotate|Center|Local|UnityEditor.RotateTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_same","v":"returns done"}
+{"k":"tools.current_view","v":"returns done"}
+{"k":"tools.current_view.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_view.state","v":"returns View|Center|Local|UnityEditor.ViewModeTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_none","v":"returns done"}
+{"k":"tools.current_none.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_none.state","v":"returns None|Center|Local|UnityEditor.NoneTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_Scale","v":"returns done"}
+{"k":"tools.current_Scale.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_Scale.state","v":"returns Scale|Center|Local|UnityEditor.ScaleTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_Rect","v":"returns done"}
+{"k":"tools.current_Rect.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_Rect.state","v":"returns Rect|Center|Local|UnityEditor.RectTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_Transform","v":"returns done"}
+{"k":"tools.current_Transform.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_Transform.state","v":"returns Transform|Center|Local|UnityEditor.TransformTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_Custom","v":"returns done"}
+{"k":"tools.current_Custom.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.current_Custom.state","v":"returns None|Center|Local|UnityEditor.NoneTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.current_back","v":"returns done"}
+{"k":"tools.current_back.events","v":"activeToolChanging,activeToolChanged"}
+{"k":"tools.end","v":"returns Move|Center|Local|UnityEditor.MoveTool|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"player.product_guid","v":"returns 83698854-3747-92d3-811f-88562ca9becd"}
+{"k":"unity_type.ci_GameObject","v":"returns GameObject/1"}
+{"k":"unity_type.ci_gameobject","v":"returns GameObject/1"}
+{"k":"unity_type.ci_TRANSFORM","v":"returns Transform/4"}
+{"k":"unity_type.ci_monobehaviour","v":"returns MonoBehaviour/114"}
+{"k":"unity_type.ci_NoSuchType","v":"returns null"}
+{"k":"unity_type.ci_empty","v":"returns null"}
+{"k":"unity_type.ci_null","v":"returns null"}
+{"k":"later.events","v":"activeContextChanged"}
+{"k":"complete","v":true}

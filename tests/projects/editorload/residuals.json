@@ -1,0 +1,14 @@
+{
+  "The Editor registers its own drop handlers for the project browser, the hierarchy and the inspector; Unbound has none of those views and registers none": [
+    "drop.handlers_at_start",
+    "drop.handlers_after_hierarchy",
+    "drop.handlers_after_again",
+    "drop.handlers_after_all",
+    "drop.handlers_after_remove",
+    "drop.handlers_after_null",
+    "drop.handlers_end"
+  ],
+  "The Editor raises ToolManager.activeContextChanged once in the first frames of Play mode, for a reason not measured; Unbound's tool context does not change": [
+    "later.events"
+  ]
+}
