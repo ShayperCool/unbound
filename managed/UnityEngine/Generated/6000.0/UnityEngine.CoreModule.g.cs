@@ -1043,12 +1043,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal readonly string m_DispatchingFieldName;
         [global::Unbound.Stub] internal HelpURLAttribute(string defaultURL, string dispatchingFieldName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HelpURLAttribute.ctor"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class HideInCallstackAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public HideInCallstackAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HideInCallstackAttribute.ctor"); }
-    }
     [global::Unbound.Stub]
     public unsafe partial class HmiPlatform
     {
@@ -1701,13 +1695,10 @@ namespace UnityEngine
         [global::System.Obsolete("Security.PrefetchSocketPolicy is no longer supported, since the Unity Web Player is no longer supported by Unity.")] [global::Unbound.Stub] public static bool PrefetchSocketPolicy(string ip, int atPort, int timeout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Security.PrefetchSocketPolicy"); return default; }
         [global::Unbound.Stub] public Security() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Security.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class SetupCoroutine
+    unsafe partial class SetupCoroutine
     {
-        [global::Unbound.Stub] public static void InvokeMoveNext(global::System.Collections.IEnumerator enumerator, global::System.IntPtr returnValueAddress) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SetupCoroutine.InvokeMoveNext"); }
         [global::Unbound.Stub] public static object InvokeMember(object behaviour, string name, object variable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SetupCoroutine.InvokeMember"); return default; }
         [global::Unbound.Stub] public static object InvokeStatic(global::System.Type klass, string name, object variable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SetupCoroutine.InvokeStatic"); return default; }
-        [global::Unbound.Stub] public SetupCoroutine() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SetupCoroutine.ctor"); }
     }
     unsafe partial class Shader
     {
@@ -1857,15 +1848,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Bounds GetSpriteBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.GetSpriteBounds"); return default; }
         internal bool shouldSupportTiling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.shouldSupportTiling"); return default; } }
         internal bool hasSpriteChangeEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.hasSpriteChangeEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SpriteRenderer.hasSpriteChangeEvents"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class StackTraceUtility
-    {
-        [global::Unbound.Stub] internal static void SetProjectFolder(string folder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StackTraceUtility.SetProjectFolder"); }
-        [global::Unbound.Stub] public static string ExtractStackTrace() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StackTraceUtility.ExtractStackTrace"); return default; }
-        [global::Unbound.Stub] public static string ExtractStringFromException(object exception) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StackTraceUtility.ExtractStringFromException"); return default; }
-        [global::Unbound.Stub] internal static void ExtractStringFromExceptionInternal(object exceptiono, out string message, out string stackTrace) { message = default; stackTrace = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StackTraceUtility.ExtractStringFromExceptionInternal"); }
-        [global::Unbound.Stub] internal static string ExtractFormattedStackTrace(global::System.Diagnostics.StackTrace stackFrames) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.StackTraceUtility.ExtractFormattedStackTrace"); return default; }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
     [global::Unbound.Stub]

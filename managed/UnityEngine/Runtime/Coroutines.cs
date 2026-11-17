@@ -82,10 +82,10 @@ namespace Unbound.Runtime
                     return;
                 }
                 var top = c.Stack.Peek();
-                bool moved;
+                bool moved = false;
                 try
                 {
-                    moved = top.MoveNext();
+                    unsafe { SetupCoroutine.InvokeMoveNext(top, (IntPtr)(&moved)); }
                 }
                 catch (Exception e)
                 {

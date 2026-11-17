@@ -9,8 +9,9 @@ namespace Unbound.Runtime
     /// <c>Namespace.Type:Method (int,string) (at path:line)</c>, nested types after <c>/</c>,
     /// built-in types by their short runtime names (<c>single</c>, <c>intptr</c>, <c>byte*</c>),
     /// parameters separated by commas without spaces, a source location where the frame has one.
-    /// Only the game's frames are listed: the engine's own frames (Unbound's runtime, the class
-    /// libraries) stand for the Editor's native code, which writes none.</summary>
+    /// Only the game's frames are listed, and those of engine methods that stand for Unity's managed
+    /// ones (<see cref="Unbound.UnityFrameAttribute"/>): the engine's other frames (Unbound's
+    /// runtime, the class libraries) stand for the Editor's native code, which writes none.</summary>
     internal static partial class UnityStackTrace
     {
         /// <summary>The game frames above the <paramref name="skipFrames"/> innermost ones (engine frames
@@ -26,10 +27,16 @@ namespace Unbound.Runtime
             {
                 var frame = trace.GetFrame(i);
                 var method = frame?.GetMethod();
-                if (method == null || !IsGameMethod(method)) continue;
+                if (method == null) continue;
+                string unitySource = UnitySource(method, out bool unity);
+                if (!unity && !IsGameMethod(method)) continue;
                 AppendMethod(text, method);
                 string file = frame.GetFileName();
-                if (!string.IsNullOrEmpty(file))
+                if (unity)
+                {
+                    if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');
+                }
+                else if (!string.IsNullOrEmpty(file))
                 {
                     text.Append(" (at ").Append(SourcePath(file, projectFolder)).Append(':').Append(frame.GetFileLineNumber()).Append(')');
                 }
@@ -41,7 +48,7 @@ namespace Unbound.Runtime
         static readonly Assembly s_Engine = typeof(UnityStackTrace).Assembly;
         static readonly Assembly s_CoreLib = typeof(object).Assembly;
 
-        static bool IsGameMethod(MethodBase method)
+        internal static bool IsGameMethod(MethodBase method)
         {
             if (method.DeclaringType == null || method.DeclaringType.Name == Unbound.Runtime.Lifetime.CallsType) return false;
             var assembly = method.DeclaringType?.Assembly ?? method.Module.Assembly;

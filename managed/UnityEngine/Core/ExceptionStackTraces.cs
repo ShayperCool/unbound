@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -74,6 +75,83 @@ namespace Unbound.Runtime
                 }
             }
             return (ExceptionMessage(chain[chain.Count - 1]), text.ToString());
+        }
+
+        /// <summary>An exception's own stack as Mono's <c>Exception.StackTrace</c> writes it, null
+        /// when it was never thrown: one line per game frame,
+        /// <c>"  at Type.Method (ParameterType name) [0xOFFSET] in path:line "</c>, the offset
+        /// being where the frame's statement starts, the path absolute; a stack captured elsewhere
+        /// and thrown again (ExceptionDispatchInfo) ends with Mono's line for that.</summary>
+        internal static string MonoTrace(Exception exception)
+        {
+            if (exception.StackTrace == null) return null;
+            var captured = new StackTrace(exception, true);
+            var text = new StringBuilder();
+            bool separate = false;
+            for (int i = 0; i < captured.FrameCount; i++)
+            {
+                var frame = captured.GetFrame(i);
+                var method = frame?.GetMethod();
+                if (method != null && IsGameMethod(method))
+                {
+                    if (text.Length != 0) text.Append('\n');
+                    if (separate) text.Append(ForeignStackEnd).Append('\n');
+                    separate = false;
+                    text.Append("  at ");
+                    AppendCapturedMethod(text, method);
+                    int offset = frame.GetILOffset();
+                    string file = frame.GetFileName();
+                    int line = frame.GetFileLineNumber();
+                    if (offset >= 0 && PortablePdb.Of(method.Module.Assembly) is PortablePdb pdb
+                        && pdb.Statement(method.MetadataToken, offset, out int start, out string document, out int statementLine))
+                        (offset, file, line) = (start, document, statementLine);
+                    text.Append(" [0x").Append(Math.Max(offset, 0).ToString("x5")).Append("] in ");
+                    if (file == null) text.Append('<').Append(method.Module.ModuleVersionId.ToString("N")).Append('>');
+                    else text.Append(AbsoluteSourcePath(file));
+                    text.Append(':').Append(line).Append(' ');
+                }
+                if (frame != null && IsLastForeignFrame(frame) && text.Length != 0) separate = true;
+            }
+            return text.ToString();
+        }
+
+        /// <summary>Mono's line after the frames of a stack captured elsewhere (a blank line follows).</summary>
+        const string ForeignStackEnd = "--- End of stack trace from previous location where exception was thrown ---\n";
+
+        static readonly PropertyInfo s_LastForeignFrame = typeof(StackFrame).GetProperty(
+            "IsLastFrameFromForeignExceptionStackTrace", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        static bool IsLastForeignFrame(StackFrame frame) => s_LastForeignFrame?.GetValue(frame) is true;
+
+        /// <summary>A source path as the Editor compiled it: in the project's folder for the
+        /// project's own sources (a runtime project view resolved).</summary>
+        static string AbsoluteSourcePath(string file)
+        {
+            string relative = SourcePath(file, ProjectInfo.ProjectPath);
+            return relative == file.Replace('\\', '/') || Path.IsPathRooted(relative)
+                ? relative
+                : ProjectInfo.ProjectPath.Replace('\\', '/').TrimEnd('/') + "/" + relative;
+        }
+
+        static readonly ConcurrentDictionary<MethodBase, string> s_UnitySources = new();
+
+        /// <summary>Whether <paramref name="method"/> stands for a managed Unity method
+        /// (<see cref="Unbound.UnityFrameAttribute"/>), and that method's source place as
+        /// <c>path:line</c> (null without the release's .pdb).</summary>
+        internal static string UnitySource(MethodBase method, out bool unity)
+        {
+            var frame = method.GetCustomAttribute<Unbound.UnityFrameAttribute>();
+            unity = frame != null;
+            if (!unity) return null;
+            string data = UnityEditor.UnityInstallInfo.DataPath;
+            if (string.IsNullOrEmpty(data)) return null;
+            return s_UnitySources.GetOrAdd(method, m =>
+            {
+                var pdb = PortablePdb.OfFile(Path.Combine(data, "Managed", "UnityEngine", "UnityEngine.CoreModule.dll"));
+                return pdb != null && pdb.CallSite(m.DeclaringType.FullName, m.Name, m.GetParameters().Length, frame.Callee, out var document, out int line)
+                    ? document + ":" + line
+                    : null;
+            });
         }
 
         static void AppendCapturedMethod(StringBuilder text, MethodBase method)
