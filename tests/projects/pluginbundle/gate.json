@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/pluginbundle/run.py check"
+  ],
+  "summary": "pluginbundle: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/GameDomain.cs",
+    "crates/unbound-project/src/plugins.rs"
+  ]
+}
