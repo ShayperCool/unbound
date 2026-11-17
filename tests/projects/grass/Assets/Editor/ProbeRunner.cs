@@ -58,6 +58,7 @@ public static class ProbeRunner
         CreateRefusals();
         CreateAligned();
         CreateInstanced();
+        CreateColoured();
     }
 
     /// <summary>
@@ -264,6 +265,75 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateColoured` adds, without touching the other assets, a slab
+    /// with vertex colours (alpha down to 0) and the scene `Coloured` with a terrain `Coloured`
+    /// (instance counts): grass textures and billboards whose healthy and dry colours lie outside
+    /// [0, 1] with alpha below 1, and the painted slab drawn without instancing in the VertexLit
+    /// and Grass render modes.
+    /// </summary>
+    public static void CreateColoured()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
+        var painted = MakeSlab("SlabPainted", true, true);
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Coloured.asset");
+        SmallMaps(data);
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 3f, 32f);
+        var heights = new float[33, 33];
+        for (int y = 0; y < 33; y++)
+            for (int x = 0; x < 33; x++)
+                heights[y, x] = 0.3f + 0.2f * Mathf.Sin(x * 0.2f + 1f) * Mathf.Cos(y * 0.15f);
+        data.SetHeights(0, 0, heights);
+        data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        data.SetDetailResolution(32, 16);
+        DetailPrototype Texture(DetailRenderMode mode, int seed) => new DetailPrototype
+        {
+            prototypeTexture = blade, renderMode = mode, minWidth = 0.6f, maxWidth = 1f, minHeight = 0.7f, maxHeight = 1.3f,
+            noiseSeed = seed, noiseSpread = 0.35f,
+            healthyColor = new Color(1.5f, 0.2f, -0.3f, 0.6f), dryColor = new Color(-0.5f, 0.9f, 1.2f, 1f),
+        };
+        DetailPrototype Mesh(DetailRenderMode mode, int seed) => new DetailPrototype
+        {
+            prototype = painted, usePrototypeMesh = true, useInstancing = false, renderMode = mode,
+            minWidth = 0.6f, maxWidth = 0.9f, minHeight = 0.6f, maxHeight = 0.9f, noiseSeed = seed, noiseSpread = 0.5f,
+            healthyColor = new Color(0.9f, 0.5f, 0.3f, 0.7f), dryColor = new Color(0.3f, 0.6f, 0.9f, 1f),
+        };
+        data.detailPrototypes = new[]
+        {
+            Texture(DetailRenderMode.Grass, 51), Texture(DetailRenderMode.GrassBillboard, 52),
+            Mesh(DetailRenderMode.VertexLit, 53), Mesh(DetailRenderMode.Grass, 54),
+        };
+        for (int layer = 0; layer < 4; layer++)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = (x * 2 + y * 3 + layer) % (layer < 2 ? 3 : 7) == 0 ? 1 + (x + layer) % 2 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        data.wavingGrassAmount = 0f;
+        data.wavingGrassStrength = 0f;
+        data.wavingGrassSpeed = 0f;
+        EditorUtility.SetDirty(data);
+        var terrain = Terrain.CreateTerrainGameObject(data);
+        terrain.name = "Coloured";
+        terrain.transform.position = new Vector3(-800f, 0f, 0f);
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Coloured.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Coloured.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
     /// <summary>One layer covers the whole terrain at any splat resolution: the smallest maps keep
     /// the assets small.</summary>
     static void SmallMaps(TerrainData data)
@@ -287,8 +357,9 @@ public static class ProbeRunner
         return layer;
     }
 
-    /// <summary>A lopsided box (off the y axis, longer in x), with or without uvs.</summary>
-    static GameObject MakeSlab(string name, bool uvs)
+    /// <summary>A lopsided box (off the y axis, longer in x), with or without uvs, optionally with
+    /// a vertex colour of its own at each corner (alpha 0 to 252).</summary>
+    static GameObject MakeSlab(string name, bool uvs, bool colours = false)
     {
         var mesh = new Mesh { name = name };
         var center = new Vector3(0.3f, 0.2f, -0.1f);
@@ -302,6 +373,12 @@ public static class ProbeRunner
         }
         mesh.vertices = vertices;
         if (uvs) mesh.uv = uv;
+        if (colours)
+        {
+            var painted = new Color32[8];
+            for (int i = 0; i < 8; i++) painted[i] = new Color32((byte)(40 + 30 * i), (byte)(230 - 25 * i), (byte)(90 + 20 * (i % 4)), (byte)(36 * i));
+            mesh.colors32 = painted;
+        }
         mesh.triangles = new[]
         {
             0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 5, 4,

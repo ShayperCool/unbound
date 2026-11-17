@@ -15,8 +15,9 @@ using UnityEngine.SceneManagement;
 /// from a camera. Then the same for the terrains of the scene `Density`, loaded additively, with
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
 /// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
-/// scatter mode switch); then the scene `Instanced`; then the terrain settings under the quality
-/// level's overrides. Writes <c>grass.jsonl</c> and PNGs into <c>GRASS_PROBE_OUT</c>, then quits.
+/// scatter mode switch); then the scene `Instanced`; then an image of the scene `Coloured`; then
+/// the terrain settings under the quality level's overrides. Writes <c>grass.jsonl</c> and PNGs
+/// into <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
 {
@@ -142,6 +143,15 @@ public class GrassProbe : MonoBehaviour
             RecordTerrain(terrain, true);
         yield return null;
         foreach (var terrain in instanced)
+            Render(camera, target, terrain, dir);
+
+        // The scene `Coloured`: colours outside [0, 1] with alpha below 1, and a painted slab
+        // (an image only).
+        before = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        yield return SceneManager.LoadSceneAsync("Coloured", LoadSceneMode.Additive);
+        var coloured = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !before.Contains(t)).OrderBy(t => t.name).ToArray();
+        yield return null;
+        foreach (var terrain in coloured)
             Render(camera, target, terrain, dir);
 
         // The quality level's terrain overrides: what the terrain settings read without them,

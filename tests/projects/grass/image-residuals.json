@@ -1,4 +1,9 @@
 {
+ "Coloured": {
+  "pixels": 573,
+  "worst": 73,
+  "reason": "grass quads: isolated pixels at the edges of distant blades and one level over a few (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); the painted slabs' tinted vertex colours and the colours outside [0, 1] match; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+ },
  "Counts": {
   "pixels": 886,
   "worst": 93,
