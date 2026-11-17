@@ -607,7 +607,9 @@ namespace UnityEngine.Rendering
         /// <summary>Takes the project's built-in shader modes and shaders; a type the settings do
         /// not list uses the built-in shader, and its shader is none, as is a disabled type's
         /// (measured: tests/projects/runtimeapis custom_shader.type1, the project's deferred
-        /// reflections disabled; disabling one later keeps its shader, set_mode.depth_disabled.shader).</summary>
+        /// reflections disabled; disabling one later keeps its shader, set_mode.depth_disabled.shader).
+        /// Not measured: a built-in-mode type whose stored shader is a custom one, and a setting
+        /// missing from the project's graphics settings.</summary>
         internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null)
         {
             for (int i = 0; i < s_ShaderModes.Length; i++)
@@ -634,7 +636,15 @@ namespace UnityEngine.Rendering
         /// <summary>The project's mode of a built-in shader, as last set (any value is kept).</summary>
         public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type) => s_ShaderModes[ShaderSlot(type)];
 
-        public static void SetShaderMode(BuiltinShaderType type, BuiltinShaderMode mode) => s_ShaderModes[ShaderSlot(type)] = mode;
+        /// <summary>Keeps the mode; the built-in renderer still draws with its own shaders (a
+        /// custom or disabled one is reported once, unbound doctor lists it too).</summary>
+        public static void SetShaderMode(BuiltinShaderType type, BuiltinShaderMode mode)
+        {
+            s_ShaderModes[ShaderSlot(type)] = mode;
+            if (mode != BuiltinShaderMode.UseBuiltin) Unbound.Runtime.Stubs.Ignored("GraphicsSettings built-in shader modes", NotApplied);
+        }
+
+        const string NotApplied = "are kept but not applied: the built-in renderer draws with its own deferred, shadow, depth-normals, motion-vector, halo and flare shaders";
 
         /// <summary>The shader a built-in shader type uses: the project's (null when it does not
         /// resolve), else the one set; setting one leaves the mode as it is (measured:
@@ -655,6 +665,7 @@ namespace UnityEngine.Rendering
             int slot = ShaderSlot(type);
             s_CustomShaderLoaded[slot] = true;
             s_CustomShaders[slot] = shader;
+            if (shader != null) Unbound.Runtime.Stubs.Ignored("GraphicsSettings built-in shader modes", NotApplied);
         }
 
         public static bool lightsUseLinearIntensity { get; set; }
