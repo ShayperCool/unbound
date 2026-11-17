@@ -158,8 +158,8 @@ The queued `LoadSceneAsync` loop (`scene_loop.py check --queue-only`) matches 0 
 receiver/driver streams: an open functional gap (`docs/COMPATIBILITY_GAPS.md`, row "Queued
 `LoadSceneAsync` staging"); fresh Editor repeats complete those loads on different frames. A later
 pair of windowed Linux GPU captures (2026-11-17) agreed with each other byte for byte but not with
-the reference (72 against 82 lines: the second scene's preloading callbacks fall in another
-frame), so the completion frames follow the Editor's loading schedule and the reference stays as
+the reference (72 against 82 lines: they complete the second load at step 3 against the
+reference's step 4, as Unbound does), so the completion frames follow the Editor's loading schedule and the reference stays as
 recorded; LoadSceneAsync promises no frame count. The additive, single, forced, starts and three-load
 loops pass (their inter-object order differences are reported as deferred, not failures) and the
 four quit controls match. Anything else is a regression.
