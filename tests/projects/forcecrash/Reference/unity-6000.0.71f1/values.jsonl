@@ -1,0 +1,20 @@
+{"k": "AccessViolation.before", "v": "forcing AccessViolation"}
+{"k": "AccessViolation.returned", "v": false}
+{"k": "AccessViolation.lines", "v": "Forcing a crash -- Intentionally Dereferencing NULL pointer"}
+{"k": "AccessViolation.signal", "v": "SIGSEGV"}
+{"k": "FatalError.before", "v": "forcing FatalError"}
+{"k": "FatalError.returned", "v": false}
+{"k": "FatalError.lines", "v": "Intentionally caused fatal error"}
+{"k": "Abort.before", "v": "forcing Abort"}
+{"k": "Abort.returned", "v": false}
+{"k": "Abort.lines", "v": ""}
+{"k": "Abort.signal", "v": "SIGABRT"}
+{"k": "PureVirtualFunction.before", "v": "forcing PureVirtualFunction"}
+{"k": "PureVirtualFunction.returned", "v": false}
+{"k": "PureVirtualFunction.lines", "v": "pure virtual method called | terminate called without an active exception"}
+{"k": "PureVirtualFunction.signal", "v": "SIGABRT"}
+{"k": "MonoAbort.before", "v": "forcing MonoAbort"}
+{"k": "MonoAbort.returned", "v": false}
+{"k": "MonoAbort.lines", "v": "* Assertion at unity-utils.c:183, condition `klass' not met"}
+{"k": "MonoAbort.signal", "v": "SIGABRT"}
+{"k": "complete", "v": true}

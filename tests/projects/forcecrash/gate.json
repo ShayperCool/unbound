@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/forcecrash/run.py gate"],
+  "summary": "forcecrash: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/ForceCrash.cs",
+    "managed/UnityEngine/Core/ConsoleLog.cs"
+  ]
+}
