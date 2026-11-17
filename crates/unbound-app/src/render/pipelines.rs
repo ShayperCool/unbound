@@ -416,7 +416,10 @@ pub fn create_pipeline(
         },
         primitive: wgpu::PrimitiveState {
             topology: key.topology.wgpu(),
-            strip_index_format: None,
+            // An indexed strip draw needs its index format here: a mesh's indices are 32-bit
+            // (draws of a buffer's indices as a strip are refused before they reach a pipeline).
+            strip_index_format: (key.topology == Topology::LineStrip)
+                .then_some(wgpu::IndexFormat::Uint32),
             // Targets are stored bottom-up (clip y negated), which turns Unity's clockwise
             // front faces counter-clockwise; a draw whose faces are turned round winds them the
             // other way.
