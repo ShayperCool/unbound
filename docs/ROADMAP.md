@@ -189,14 +189,15 @@ In dependency order; each item ends with an Editor-reference probe.
       Editor does, and effects simulate: the frame's steps per update mode, spawn contexts and
       their blocks, events, `Reinit`/`Simulate`/pause/play rate, culling flags, alive counts and
       system info, with the graph's initialize and update kernels dispatched on the GPU
-      (`tests/projects/vfx`). Quad and mesh outputs that draw themselves (opaque or additive,
-      unsorted), unlit or lit by URP in its forward and deferred renderers, are drawn, and
-      effects cast shadows (`tests/projects/vfxlit`); unlit quads are also drawn through an
-      unsorted indirect buffer (`tests/projects/vfxoutputs`). Not yet: outputs that are
-      sorted (alpha blended ones by default), lit or mesh outputs through an indirect buffer,
-      strips, other primitives, motion vectors and Shader Graph outputs (such an output says
-      once that it is not drawn; its system runs), strips spawned by GPU events (systems
-      spawned by GPU events run: `tests/projects/vfxevents`),
+      (`tests/projects/vfx`). Quad and mesh outputs that draw themselves, unlit or lit by
+      URP in its forward and deferred renderers, are drawn, and effects cast shadows
+      (`tests/projects/vfxlit`); unlit quads, triangles and octagons are also drawn through
+      an indirect buffer, sorted or not (`tests/projects/vfxoutputs`). Not yet: lit or mesh
+      outputs through an indirect buffer, points, lines and cubes, motion vectors and Shader
+      Graph outputs (such an output says once that it is not drawn; its system runs).
+      Systems spawned by GPU events run (`tests/projects/vfxevents`), and particle strips,
+      drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`). Not
+      yet either:
       output events, bounds computed on the GPU and part of the expression operations (an
       effect using them does not simulate and says what); `unbound doctor` lists the effects.
 - [x] Baked lighting: a scene's LightingData (read through its type tree): lightmaps and each
