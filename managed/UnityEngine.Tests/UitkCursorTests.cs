@@ -72,9 +72,9 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Logs);
         }
 
-        // An element entered that is not the top one under the pointer (an ancestor receiving the
-        // event) does not change the cursor; the end of a capture with nothing under the pointer
-        // restores the default.
+        // An element entered while it is not the top one under the pointer (here nothing is under
+        // the pointer) does not change the cursor; the end of a capture with nothing under the
+        // pointer restores the default.
         [Fact]
         public void OnlyTheElementUnderThePointerSetsItsCursor()
         {
