@@ -278,7 +278,8 @@ const NVIDIA_VENDOR_ID: u32 = 0x10de;
 
 /// Whether the device reads stored depth through a declared comparison binding: the native
 /// sampler opt-in vendor/wgpu-sampler accepts on NVIDIA OpenGL and Vulkan alone (its
-/// `native-depth-state.patch`), where it was measured. Elsewhere (Metal, other drivers) a
+/// `native-depth-state.patch`, whose Core validation this mirrors: change both together), where
+/// it was measured. Elsewhere (Metal, other drivers) a
 /// comparison binding compares, as before the opt-in, instead of making a sampler the device
 /// refuses.
 pub fn stored_depth_reads(info: &wgpu::AdapterInfo) -> bool {
@@ -1049,7 +1050,8 @@ pub fn texture_storage(t: &owned::Texture, samples: u32, caps: &NormFormatCaps) 
                     format: wide,
                     bytes_per_pixel: 16,
                     fallback: Some(FormatFallback::Unsupported(format!(
-                        "this device cannot let kernels read and write {:?}: kept as {wide:?}",
+                        "this device cannot let kernels read and write {:?}: kept as {wide:?} \
+                         (values are not narrowed to 10/10/10/2 bits)",
                         wgpu::TextureFormat::Rgb10a2Uint
                     ))),
                 }
