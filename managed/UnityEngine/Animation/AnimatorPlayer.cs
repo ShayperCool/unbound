@@ -2104,9 +2104,10 @@ namespace Unbound.Runtime
         void QueueEnter(LayerRun layer, StateRun run)
         {
             run.EnteredThisUpdate = true;
-            // A detached player (no Animator) has no behaviours: their instances and callbacks
-            // belong to the player an output makes.
-            if (m_Animator == null) return;
+            // A detached player (made without an Animator) has no behaviours: their instances and
+            // callbacks belong to the player an output makes. A destroyed Animator's player is not
+            // detached.
+            if (ReferenceEquals(m_Animator, null)) return;
             foreach (var target in LayersPlaying(layer))
             {
                 foreach (var b in BehavioursOf(target.Layer, run.Def))
@@ -2132,7 +2133,7 @@ namespace Unbound.Runtime
 
         void QueueMachine(LayerRun layer, MachineDef machine, bool enter)
         {
-            if (m_Animator == null) return;
+            if (ReferenceEquals(m_Animator, null)) return;
             foreach (var asset in machine.Behaviours)
             {
                 var b = Instance(asset);

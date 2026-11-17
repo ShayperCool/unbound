@@ -1258,7 +1258,8 @@ namespace UnityEngine.Tests
         {
             var file = Load(AnimationFixtures.Machines);
             var recorder = ScriptableObject.CreateInstance<StateRecorder>();
-            ((ControllerStateAsset)file.Objects[1102000002]).Behaviours.Add(recorder);
+            // On the start state, which every player enters at once.
+            ((ControllerStateAsset)file.Objects[1102000001]).Behaviours.Add(recorder);
             var graph = UnityEngine.Playables.PlayableGraph.Create("Unplayed");
             var root = Hierarchy("Character", "Body");
             int before = Resources.FindObjectsOfTypeAll<StateRecorder>().Length;
