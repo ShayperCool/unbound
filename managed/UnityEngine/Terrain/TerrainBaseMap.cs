@@ -77,6 +77,22 @@ namespace UnityEngine
             BindBaseMaps();
         }
 
+        /// <summary>The template's values changed: the base map materials take them again in place,
+        /// and the base maps are made again.</summary>
+        void RefreshBaseMaterials(Material template, TerrainData data)
+        {
+            if (m_BaseMaterial == null) return;
+            for (int p = 0; p < m_BaseGen.Length; p++)
+            {
+                m_BaseGen[p].CopyPropertiesKeepingShader(m_Passes[p]);
+                m_BaseGen[p].SetFloat(s_DstBlend, p == 0 ? (float)BlendMode.Zero : (float)BlendMode.One);
+            }
+            m_BaseMaterial.CopyPropertiesKeepingShader(template);
+            SetHoles(m_BaseMaterial, data);
+            m_BaseMapsDirty = true;
+            BindBaseMaps();
+        }
+
         /// <summary>Reads the generation passes' tags: which make a base map, bound to what, of
         /// which size; the maps of another shader go.</summary>
         void ReadBaseMapPasses(Shader shader)

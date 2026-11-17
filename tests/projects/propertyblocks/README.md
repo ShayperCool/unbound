@@ -33,7 +33,8 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver)
   renderer's block.
 
 Not measured: other renderer types (skinned, sprite, particle, line), SRP draws, blocks on
-`Graphics.RenderMesh` and command buffers, textures and arrays in the blocks.
+`Graphics.RenderMesh` and command buffers, textures and arrays in the blocks, a terrain's base
+map after its template is edited (the probe draws no base map; Unbound makes it again).
 
     python3 tests/projects/propertyblocks/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/propertyblocks/run.py record --label B

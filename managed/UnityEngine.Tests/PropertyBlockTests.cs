@@ -243,6 +243,56 @@ namespace UnityEngine.Tests
         }
     }
 
+    public class TerrainTemplateTests
+    {
+        /// <summary>A terrain's material template edited in place is drawn (tests/projects/propertyblocks
+        /// `materialChanged`), by the same pass materials taking its values again, without
+        /// allocating.</summary>
+        [Fact]
+        public void AnEditedTemplateRefreshesThePassesInPlace()
+        {
+            var go = new GameObject("terrain");
+            var data = new TerrainData { heightmapResolution = 33 };
+            data.terrainLayers = new[] { new TerrainLayer { diffuseTexture = new Texture2D(4, 4) } };
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            var template = new Material { color = Color.red };
+            terrain.materialTemplate = template;
+            var renderer = TerrainRenderer.For(terrain);
+            renderer.UpdateMaterials(terrain, data);
+            var pass = renderer.PassesForTest[0];
+            Assert.Equal(Color.red, pass.color);
+
+            template.color = Color.green;
+            renderer.UpdateMaterials(terrain, data);
+            Assert.Same(pass, renderer.PassesForTest[0]);
+            Assert.Equal(Color.green, pass.color);
+            // The splat values the terrain sets are set again over the template's.
+            Assert.Same(data.terrainLayers[0].diffuseTexture, pass.GetTexture("_Splat0"));
+
+            int version = pass.m_Version;
+            renderer.UpdateMaterials(terrain, data);
+            Assert.Equal(version, pass.m_Version);
+
+            EmptyAllocationContext();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 20; i++)
+            {
+                template.SetColor("_Color", new Color(i / 20f, 0f, 0f));
+                renderer.UpdateMaterials(terrain, data);
+            }
+            Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+            Assert.Same(pass, renderer.PassesForTest[0]);
+
+            // Another template makes the passes again.
+            terrain.materialTemplate = new Material { color = Color.blue };
+            renderer.UpdateMaterials(terrain, data);
+            Assert.NotSame(pass, renderer.PassesForTest[0]);
+            Assert.Equal(Color.blue, renderer.PassesForTest[0].color);
+            Object.DestroyImmediate(go);
+        }
+    }
+
     static class BlockTestExtensions
     {
         internal static MaterialPropertyBlock With(this MaterialPropertyBlock block, Action<MaterialPropertyBlock> fill)

@@ -417,6 +417,9 @@ namespace UnityEngine
 
         internal float GetAlphamapResolutionInternal() => m_AlphamapResolution;
 
+        /// <summary>The layers themselves (<see cref="terrainLayers"/> returns a copy).</summary>
+        internal TerrainLayer[] Layers => m_Layers;
+
         public TerrainLayer[] terrainLayers
         {
             get => (TerrainLayer[])m_Layers.Clone();

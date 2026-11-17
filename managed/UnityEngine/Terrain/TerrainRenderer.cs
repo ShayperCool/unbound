@@ -27,9 +27,10 @@ namespace UnityEngine
     {
         internal Terrain m_Terrain;
         Material m_Template;
-        /// <summary>The template's values the passes were made from: a change of the template
-        /// draws (measured: tests/projects/propertyblocks `materialChanged`).</summary>
+        /// <summary>The template's values and shader the passes were made from: a change of the
+        /// template's values draws (measured: tests/projects/propertyblocks `materialChanged`).</summary>
         int m_TemplateVersion = -1;
+        Shader m_TemplateShader;
         Material[] m_Passes = Array.Empty<Material>();
         int m_SplatVersion = -1;
         TerrainData m_SplatData;
@@ -277,14 +278,23 @@ namespace UnityEngine
             return result;
         }
 
-        void UpdateMaterials(Terrain terrain, TerrainData data)
+        internal Material[] PassesForTest => m_Passes;
+
+        internal void UpdateMaterials(Terrain terrain, TerrainData data)
         {
             var template = terrain.materialTemplate;
             if (template == null) template = BuiltinObjects.DefaultTerrainMaterial;
             if (template == null) return;
-            if (template == m_Template && template.m_Version == m_TemplateVersion && m_SplatData == data
-                && m_SplatVersion == data.m_SplatVersion + data.m_HeightsVersion * 7919) return;
+            bool sameLayout = template == m_Template && template.shader == m_TemplateShader && m_SplatData == data
+                && m_SplatVersion == data.m_SplatVersion + data.m_HeightsVersion * 7919;
+            if (sameLayout && template.m_Version == m_TemplateVersion) return;
+            if (sameLayout)
+            {
+                RefreshMaterials(template, data);
+                return;
+            }
             m_Template = template;
+            m_TemplateShader = template.shader;
             m_SplatData = data;
             m_SplatVersion = data.m_SplatVersion + data.m_HeightsVersion * 7919;
             var layers = data.terrainLayers;
@@ -313,6 +323,24 @@ namespace UnityEngine
             m_TemplateVersion = template.m_Version;
         }
 
+        /// <summary>The template's values changed (not its shader, the layers or the data): the
+        /// materials made from it take them again in place, without new materials, and the base
+        /// maps are made again.</summary>
+        void RefreshMaterials(Material template, TerrainData data)
+        {
+            var layers = data.Layers;
+            var controls = data.AlphaTextures;
+            for (int p = 0; p < m_Passes.Length; p++)
+            {
+                var material = m_Passes[p];
+                material.CopyPropertiesKeepingShader(template);
+                SetLayers(material, data, layers, p * 4, p < controls.Length ? controls[p] : null);
+                SetHoles(material, data);
+            }
+            RefreshBaseMaterials(template, data);
+            m_TemplateVersion = template.m_Version;
+        }
+
         /// <summary>A terrain with holes cuts them out of every material it draws with.</summary>
         void SetHoles(Material material, TerrainData data)
         {
@@ -329,25 +357,25 @@ namespace UnityEngine
         internal static void SetLayers(Material material, TerrainData data, TerrainLayer[] layers, int first, Texture2D control)
         {
             var size = data.size;
-            material.SetTexture("_Control", control);
+            material.SetTexture(LayerIds.Control, control);
             bool normals = false, masks = false;
             if (layers.Length == 0 && first == 0)
             {
                 // No layers: the built-in grey checker (two by two squares) in 2 m tiles, as the
                 // Editor shows such a terrain whatever its size (measured).
-                material.SetTexture("_Control", DefaultTextures.Red);
-                material.SetTexture("_Splat0", BuiltinObjects.DefaultCheckerGray);
-                material.SetTextureScale("_Splat0", new Vector2(size.x / 2f, size.z / 2f));
-                material.SetTextureOffset("_Splat0", Vector2.zero);
-                material.SetFloat("_Metallic0", 0f);
-                material.SetFloat("_Smoothness0", 0f);
-                material.SetFloat("_NormalScale0", 1f);
-                material.SetTexture("_Mask0", null);
-                material.SetFloat("_LayerHasMask0", 0f);
-                material.SetVector("_DiffuseRemapScale0", Vector4.one);
-                material.SetVector("_MaskMapRemapOffset0", Vector4.zero);
-                material.SetVector("_MaskMapRemapScale0", Vector4.one);
-                for (int k = 1; k < 4; k++) material.SetTexture("_Splat" + k, null);
+                material.SetTexture(LayerIds.Control, DefaultTextures.Red);
+                material.SetTexture(LayerIds.Splat[0], BuiltinObjects.DefaultCheckerGray);
+                material.SetTextureScale(LayerIds.Splat[0], new Vector2(size.x / 2f, size.z / 2f));
+                material.SetTextureOffset(LayerIds.Splat[0], Vector2.zero);
+                material.SetFloat(LayerIds.Metallic[0], 0f);
+                material.SetFloat(LayerIds.Smoothness[0], 0f);
+                material.SetFloat(LayerIds.NormalScale[0], 1f);
+                material.SetTexture(LayerIds.Mask[0], null);
+                material.SetFloat(LayerIds.LayerHasMask[0], 0f);
+                material.SetVector(LayerIds.DiffuseRemapScale[0], Vector4.one);
+                material.SetVector(LayerIds.MaskMapRemapOffset[0], Vector4.zero);
+                material.SetVector(LayerIds.MaskMapRemapScale[0], Vector4.one);
+                for (int k = 1; k < 4; k++) material.SetTexture(LayerIds.Splat[k], null);
                 material.DisableKeyword("_NORMALMAP");
                 material.DisableKeyword("_MASKMAP");
                 return;
@@ -355,46 +383,57 @@ namespace UnityEngine
             for (int k = 0; k < 4; k++)
             {
                 var layer = first + k < layers.Length ? layers[first + k] : null;
-                string n = k.ToString();
                 if (layer == null)
                 {
-                    material.SetTexture("_Splat" + n, null);
-                    material.SetFloat("_LayerHasMask" + n, 0f);
+                    material.SetTexture(LayerIds.Splat[k], null);
+                    material.SetFloat(LayerIds.LayerHasMask[k], 0f);
                     continue;
                 }
                 var tile = new Vector2(Mathf.Max(layer.tileSize.x, 1e-4f), Mathf.Max(layer.tileSize.y, 1e-4f));
-                material.SetTexture("_Splat" + n, layer.diffuseTexture);
-                material.SetTextureScale("_Splat" + n, new Vector2(size.x / tile.x, size.z / tile.y));
-                material.SetTextureOffset("_Splat" + n, new Vector2(layer.tileOffset.x / tile.x, layer.tileOffset.y / tile.y));
+                material.SetTexture(LayerIds.Splat[k], layer.diffuseTexture);
+                material.SetTextureScale(LayerIds.Splat[k], new Vector2(size.x / tile.x, size.z / tile.y));
+                material.SetTextureOffset(LayerIds.Splat[k], new Vector2(layer.tileOffset.x / tile.x, layer.tileOffset.y / tile.y));
                 // A layer without a normal map gets the flat normal texture, linear data
                 // (tests/projects/urpterrain masks; unmeasured for shaders whose _NormalN default
                 // is not "bump"); one without a mask the black texture (unmeasured: URP's shaders
                 // ignore a layer's mask unless _LayerHasMask flags it).
                 normals |= layer.normalMapTexture != null;
-                material.SetTexture("_Normal" + n, layer.normalMapTexture != null ? layer.normalMapTexture : Texture2D.normalTexture);
-                material.SetFloat("_NormalScale" + n, layer.normalScale);
+                material.SetTexture(LayerIds.Normal[k], layer.normalMapTexture != null ? layer.normalMapTexture : Texture2D.normalTexture);
+                material.SetFloat(LayerIds.NormalScale[k], layer.normalScale);
                 bool hasMask = layer.maskMapTexture != null;
-                material.SetTexture("_Mask" + n, hasMask ? layer.maskMapTexture : Texture2D.blackTexture);
+                material.SetTexture(LayerIds.Mask[k], hasMask ? layer.maskMapTexture : Texture2D.blackTexture);
                 masks |= hasMask;
-                material.SetFloat("_LayerHasMask" + n, hasMask ? 1f : 0f);
-                material.SetFloat("_DiffuseHasAlpha" + n, DiffuseHasAlpha(layer) ? 1f : 0f);
+                material.SetFloat(LayerIds.LayerHasMask[k], hasMask ? 1f : 0f);
+                material.SetFloat(LayerIds.DiffuseHasAlpha[k], DiffuseHasAlpha(layer) ? 1f : 0f);
                 // Made linear here, and once more by the material where the shader flags it
                 // [Gamma] (URP's terrain shaders flag _Metallic0-3), as in the Unity 6000.0.71f1
                 // Editor (tests/projects/urpterrain).
-                material.SetFloat("_Metallic" + n, LayerMetallic(layer));
-                material.SetFloat("_Smoothness" + n, LayerSmoothness(layer));
-                material.SetVector("_DiffuseRemapOffset" + n, layer.diffuseRemapMin);
-                material.SetVector("_DiffuseRemapScale" + n, layer.diffuseRemapMax - layer.diffuseRemapMin);
-                material.SetVector("_MaskMapRemapOffset" + n, layer.maskMapRemapMin);
-                material.SetVector("_MaskMapRemapScale" + n, layer.maskMapRemapMax - layer.maskMapRemapMin);
+                material.SetFloat(LayerIds.Metallic[k], LayerMetallic(layer));
+                material.SetFloat(LayerIds.Smoothness[k], LayerSmoothness(layer));
+                material.SetVector(LayerIds.DiffuseRemapOffset[k], layer.diffuseRemapMin);
+                material.SetVector(LayerIds.DiffuseRemapScale[k], layer.diffuseRemapMax - layer.diffuseRemapMin);
+                material.SetVector(LayerIds.MaskMapRemapOffset[k], layer.maskMapRemapMin);
+                material.SetVector(LayerIds.MaskMapRemapScale[k], layer.maskMapRemapMax - layer.maskMapRemapMin);
             }
             // All layers count: URP's shaders turn opacity-as-density and height blending off past
             // four, whichever pass draws.
-            material.SetFloat("_NumLayersCount", layers.Length);
+            material.SetFloat(LayerIds.NumLayersCount, layers.Length);
             if (normals) material.EnableKeyword("_NORMALMAP");
             else material.DisableKeyword("_NORMALMAP");
             if (masks) material.EnableKeyword("_MASKMAP");
             else material.DisableKeyword("_MASKMAP");
+        }
+
+        /// <summary>The splat materials' property IDs, per layer of a pass.</summary>
+        static class LayerIds
+        {
+            internal static readonly int Control = Shader.PropertyToID("_Control"), NumLayersCount = Shader.PropertyToID("_NumLayersCount");
+            internal static readonly int[] Splat = Of("_Splat"), Normal = Of("_Normal"), NormalScale = Of("_NormalScale"), Mask = Of("_Mask"),
+                LayerHasMask = Of("_LayerHasMask"), DiffuseHasAlpha = Of("_DiffuseHasAlpha"), Metallic = Of("_Metallic"), Smoothness = Of("_Smoothness"),
+                DiffuseRemapOffset = Of("_DiffuseRemapOffset"), DiffuseRemapScale = Of("_DiffuseRemapScale"),
+                MaskMapRemapOffset = Of("_MaskMapRemapOffset"), MaskMapRemapScale = Of("_MaskMapRemapScale");
+
+            static int[] Of(string name) => new[] { Shader.PropertyToID(name + "0"), Shader.PropertyToID(name + "1"), Shader.PropertyToID(name + "2"), Shader.PropertyToID(name + "3") };
         }
 
         /// <summary>A layer's metallic value as its splat material gets it: the slider read as a

@@ -38,6 +38,8 @@ namespace UnityEngine
             internal readonly HashSet<int> m_VectorsAfterTexture = new HashSet<int>();
             internal readonly Dictionary<int, Matrix4x4> m_Matrices = new Dictionary<int, Matrix4x4>();
             internal readonly Dictionary<int, TextureSlot> m_Textures = new Dictionary<int, TextureSlot>();
+            /// <summary>Slots a copy dropped (ClearForCopyOf), for the next slot this material needs.</summary>
+            internal List<TextureSlot> m_SpareSlots;
             internal readonly Dictionary<int, object> m_Buffers = new Dictionary<int, object>();
             internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
             internal readonly HashSet<string> m_Keywords = new HashSet<string>();
@@ -195,12 +197,12 @@ namespace UnityEngine
             foreach (var p in source.m_Floats) m_Floats[p.Key] = p.Value;
             foreach (var p in source.m_Ints) m_Ints[p.Key] = p.Value;
             foreach (var p in source.m_Vectors) m_Vectors[p.Key] = p.Value;
-            m_VectorsAfterTexture.UnionWith(source.m_VectorsAfterTexture);
+            AddAll(m_VectorsAfterTexture, source.m_VectorsAfterTexture);
             foreach (var p in source.m_Matrices) m_Matrices[p.Key] = p.Value;
             foreach (var p in source.m_Textures)
             {
                 // A slot this material already has is reused (ResetToCopyOf).
-                if (!m_Textures.TryGetValue(p.Key, out var slot)) m_Textures[p.Key] = slot = new TextureSlot();
+                if (!m_Textures.TryGetValue(p.Key, out var slot)) m_Textures[p.Key] = slot = NewSlot();
                 slot.Texture = p.Value.Texture;
                 slot.Element = p.Value.Element;
                 slot.ElementBinding = p.Value.ElementBinding;
@@ -211,14 +213,27 @@ namespace UnityEngine
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
             m_KeywordExtras.AddRange(source.m_KeywordExtras);
-            m_DisabledPasses = source.m_DisabledPasses != null ? new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase) : null;
-            m_ScriptSet.UnionWith(source.m_ScriptSet);
-            m_RawBindings.UnionWith(source.m_RawBindings);
-            m_TextureNames.UnionWith(source.m_TextureNames);
+            if (source.m_DisabledPasses == null) m_DisabledPasses = null;
+            else if (m_DisabledPasses == null) m_DisabledPasses = new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase);
+            else
+            {
+                m_DisabledPasses.Clear();
+                AddAll(m_DisabledPasses, source.m_DisabledPasses);
+            }
+            AddAll(m_ScriptSet, source.m_ScriptSet);
+            AddAll(m_RawBindings, source.m_RawBindings);
+            AddAll(m_TextureNames, source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
             m_GIFlags = source.m_GIFlags;
             MarkDirty();
+        }
+
+        /// <summary>HashSet.UnionWith without its boxed enumerator (copies made per change of a
+        /// drawn material stay free of allocations).</summary>
+        static void AddAll<T>(HashSet<T> into, HashSet<T> from)
+        {
+            foreach (var item in from) into.Add(item);
         }
 
         internal Object CloneObject() => new Material(this);
@@ -1020,7 +1035,22 @@ namespace UnityEngine
 
         TextureSlot Slot(int nameID)
         {
-            if (!m_Textures.TryGetValue(nameID, out var slot)) m_Textures[nameID] = slot = new TextureSlot();
+            if (!m_Textures.TryGetValue(nameID, out var slot)) m_Textures[nameID] = slot = NewSlot();
+            return slot;
+        }
+
+        /// <summary>An empty slot: one a copy dropped, else a new one.</summary>
+        TextureSlot NewSlot()
+        {
+            var spare = m_State.m_SpareSlots;
+            if (spare == null || spare.Count == 0) return new TextureSlot();
+            var slot = spare[spare.Count - 1];
+            spare.RemoveAt(spare.Count - 1);
+            slot.Texture = null;
+            slot.Element = default;
+            slot.ElementBinding = false;
+            slot.Scale = Vector2.one;
+            slot.Offset = Vector2.zero;
             return slot;
         }
 
@@ -1190,11 +1220,28 @@ namespace UnityEngine
             Inherit();
             if (mat == this) return;
             var shaderBefore = m_Shader;
-            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
-            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
-            m_Buffers.Clear(); m_Arrays.Clear();
+            ClearForCopyOf(mat);
             CopyFrom(mat);
             m_Shader = shaderBefore;
+        }
+
+        /// <summary><see cref="CopyPropertiesFromMaterial"/> for Unbound's own materials made from
+        /// another (a terrain's passes from its template), without the variant warning.</summary>
+        internal void CopyPropertiesKeepingShader(Material mat) => CopyProperties(mat);
+
+        /// <summary>Empties the values before <see cref="CopyFrom"/> copies <paramref name="source"/>'s;
+        /// texture slots the source also has are kept for it to fill.</summary>
+        void ClearForCopyOf(Material source)
+        {
+            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
+            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
+            m_Buffers.Clear(); m_Arrays.Clear();
+            foreach (var p in m_Textures)
+                if (!source.m_Textures.ContainsKey(p.Key))
+                {
+                    (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(p.Value);
+                    m_Textures.Remove(p.Key);
+                }
         }
 
         /// <summary>Makes this material what <c>new Material(source) { parent = null }</c> makes,
@@ -1203,15 +1250,18 @@ namespace UnityEngine
         internal void ResetToCopyOf(Material source)
         {
             source.Inherit();
-            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
-            m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
-            m_Buffers.Clear(); m_Arrays.Clear(); m_Tags.Clear();
-            foreach (var id in m_Textures.Keys)
-                if (!source.m_Textures.ContainsKey(id)) m_Textures.Remove(id);
+            ClearForCopyOf(source);
+            m_Tags.Clear();
             CopyFrom(source);
             m_DoubleSidedGI = source.m_DoubleSidedGI;
             m_Name = source.m_Name;
-            m_Locked = source.m_Locked != null ? new HashSet<int>(source.m_Locked) : null;
+            if (source.m_Locked == null) m_Locked = null;
+            else if (m_Locked == null) m_Locked = new HashSet<int>(source.m_Locked);
+            else
+            {
+                m_Locked.Clear();
+                AddAll(m_Locked, source.m_Locked);
+            }
             parent = null;
         }
 
