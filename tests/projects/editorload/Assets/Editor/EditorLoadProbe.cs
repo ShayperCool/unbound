@@ -169,8 +169,8 @@ public static class EditorLoadProbe
         Try("drop.handlers_end", Handlers);
     }
 
-    static string ToolsNow() => Tools.current + "|" + Tools.pivotMode + "|" + Tools.pivotRotation + "|" +
-                                (ToolManager.activeToolType?.FullName ?? "null") + "|" + (ToolManager.activeContextType?.FullName ?? "null");
+    // The pivot settings start from the Editor preferences of the machine: only their changes are recorded.
+    static string ToolsNow() => Tools.current + "|" + (ToolManager.activeToolType?.FullName ?? "null") + "|" + (ToolManager.activeContextType?.FullName ?? "null");
 
     static void ToolState()
     {
@@ -181,11 +181,11 @@ public static class EditorLoadProbe
         var rotation = Tools.pivotRotation;
         var tool = Tools.current;
         Do("tools.pivot_mode_other", () => Tools.pivotMode = mode == PivotMode.Center ? PivotMode.Pivot : PivotMode.Center);
-        Try("tools.pivot_mode_other.state", ToolsNow);
+        Try("tools.pivot_mode_other.state", () => (Tools.pivotMode != mode) + "|" + (Tools.pivotRotation == rotation));
         Do("tools.pivot_mode_same", () => Tools.pivotMode = Tools.pivotMode);
         Do("tools.pivot_mode_back", () => Tools.pivotMode = mode);
         Do("tools.pivot_rotation_other", () => Tools.pivotRotation = rotation == PivotRotation.Local ? PivotRotation.Global : PivotRotation.Local);
-        Try("tools.pivot_rotation_other.state", ToolsNow);
+        Try("tools.pivot_rotation_other.state", () => (Tools.pivotMode == mode) + "|" + (Tools.pivotRotation != rotation));
         Do("tools.pivot_rotation_same", () => Tools.pivotRotation = Tools.pivotRotation);
         Do("tools.pivot_rotation_back", () => Tools.pivotRotation = rotation);
         Do("tools.current_rotate", () => Tools.current = Tool.Rotate);

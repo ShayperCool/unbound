@@ -36,6 +36,8 @@
 {"k":"drop.has_unknown_target","v":"returns False"}
 {"k":"drop.cleanup","v":"returns done"}
 {"k":"drop.handlers_end","v":"returns 4:-417863675=1,1081994447=0,1486780135=2,1621880143=1"}
+{"k":"tools.types_first","v":"returns null|UnityEditor.EditorTools.GameObjectToolContext"}
+{"k":"tools.types_first.events","v":"activeContextChanged"}
 {"k":"tools.start","v":"returns Move|Center|Local|UnityEditor.MoveTool|UnityEditor.EditorTools.GameObjectToolContext"}
 {"k":"tools.start.events","v":"activeToolChanging,activeToolChanged"}
 {"k":"tools.pivot_mode_other","v":"returns done"}

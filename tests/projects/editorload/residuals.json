@@ -7,8 +7,5 @@
     "drop.handlers_after_remove",
     "drop.handlers_after_null",
     "drop.handlers_end"
-  ],
-  "The Editor raises ToolManager.activeContextChanged once in the first frames of Play mode, for a reason not measured; Unbound's tool context does not change": [
-    "later.events"
   ]
 }

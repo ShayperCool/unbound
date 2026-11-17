@@ -12,13 +12,13 @@ returns or throws, the events it raises (`.events`) and the log messages it writ
   `later.events` lists which of them fired in the next 30 editor updates without any call here.
 * `drop.*`: DragAndDrop drop handlers: the views' ids, the handlers registered at the start
   (`dropHandlers` by view), adding, adding again, removing, null, and HasHandler for each view.
-* `tools.*`: Tools.current, pivotMode and pivotRotation with ToolManager's tool and context
-  types, and the events each change raises, for every Tool value.
+* `tools.*`: ToolManager's tool and context types read first, then Tools.current, pivotMode and
+  pivotRotation with the tool and context types, and the events each change raises, for every
+  Tool value.
 * `player.*`, `unity_type.*`: PlayerSettings.productGUID, and the case-insensitive class lookup.
 
 Measured in the Unity 6000.0.71f1 Editor on Linux with an NVIDIA GPU, windowed (two
 byte-identical captures). `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
 Recorded residuals (`residuals.json`): the Editor registers drop handlers of its own for the
-project browser, the hierarchy and the inspector, which Unbound has no views for; and it raises
-ToolManager.activeContextChanged once in the first frames of Play mode (cause not measured).
+project browser, the hierarchy and the inspector, which Unbound has no views for.
