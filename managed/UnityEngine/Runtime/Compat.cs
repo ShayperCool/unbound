@@ -353,6 +353,13 @@ namespace Unbound.Runtime
         /// Screen's resolution choices describe the Editor, while DisplayInfo comes from the OS.</summary>
         internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>macOS Editor display answers measured by macdisplay on 6000.0.71f1: the
+        /// usable area (the work area) as the current resolution and the display info's size, at
+        /// the host's exact refresh ratio; the resolutions the display modes' sizes at that rate,
+        /// the current mode's as the usable area, plus the desktop's size in points without a rate.
+        /// Other releases keep the host's answers until measured.</summary>
+        internal static bool MacEditorDisplayMeasured => OperatingSystem.IsMacOS() && Release == (6000, 0, 71, 'f', 1);
+
         // Standard sizes measured on a desktop larger than every size in the list. The smaller
         // captures establish that each dimension is filtered independently against the desktop.
         internal static readonly (int Width, int Height)[] EditorDisplaySizes =

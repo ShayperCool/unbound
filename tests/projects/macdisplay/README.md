@@ -17,10 +17,18 @@ width then height; the density is the current mode's pixel width over the screen
 inches; the display info and layout carry the screen's localized name, the current resolution and
 its work area (bottom-left origin); `Display.main` keeps the Game view's size.
 
+Screen's size and current resolution are also recorded as scripts see them at
+SubsystemRegistration (`*.atStart`): the Game view's size and the display's resolution from the
+first callback on. `check` also runs the engine with a window larger than the screen (8000x6000):
+the host fits the window before it opens, so what scripts see first is what they see on the fifth
+frame, smaller than the request (engine consistency: the Editor's fixed-resolution Game view is not
+bound by the screen, so there is no Editor reference for it).
+
 The reference describes the recording machine's display: `check` compares the `unity.*` rows only
 when this machine's `os.*` rows equal the reference's, and otherwise reports that the reference
-does not apply (a display with the Dock shown, or another display, is unmeasured). On another OS
-the probe does not apply.
+does not apply (a display with the Dock shown, or another display, is unmeasured); a capture that
+failed fails. The Editor's rules apply to the measured release (Compat.MacEditorDisplayMeasured);
+other releases keep the host's answers. On another OS the probe does not apply.
 
     python3 tests/projects/macdisplay/run.py native --label L     # two macOS Editor captures
     python3 tests/projects/macdisplay/run.py publish L-1 L-2

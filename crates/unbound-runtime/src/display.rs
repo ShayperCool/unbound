@@ -37,6 +37,8 @@ pub struct DisplaySnapshot {
     /// The current refresh rate as an exact ratio, when the host gives one; it replaces
     /// `refresh_rate_millihertz`.
     pub refresh_ratio: Option<(u32, u32)>,
+    /// The desktop's size in points, where the host has points apart from pixels (macOS).
+    pub points: Option<(u32, u32)>,
     /// The window system's scale factor for the monitor (1 on an unscaled desktop).
     pub scale_factor: f64,
     /// In the window system's order.
@@ -114,6 +116,7 @@ pub fn encode(version: u64, display: Option<&Display>, since: Option<u64>) -> Js
             "height": d.height,
             "refreshRate": d.refresh_ratio.map(ratio).or_else(|| d.refresh_rate_millihertz.and_then(refresh_rate)),
             "scaleFactor": d.scale_factor,
+            "pointSize": d.points.map(|(width, height)| [width, height]),
             "modes": d.modes.iter().map(|m| json!({
                 "width": m.width,
                 "height": m.height,
@@ -161,6 +164,7 @@ mod tests {
             height: 1440,
             refresh_rate_millihertz: Some(59_951),
             refresh_ratio: None,
+            points: None,
             scale_factor: 1.5,
             modes: vec![
                 DisplayMode {
@@ -196,6 +200,7 @@ mod tests {
                 "height": 1440,
                 "refreshRate": { "numerator": 59_951, "denominator": 1000 },
                 "scaleFactor": 1.5,
+                "pointSize": null,
                 "modes": [
                     { "width": 2560, "height": 1440,
                       "refreshRate": { "numerator": 59_951, "denominator": 1000 } },
@@ -216,6 +221,14 @@ mod tests {
         assert_eq!(json["name"], Json::Null);
         assert_eq!(json["refreshRate"], Json::Null);
         assert_eq!(json["modes"][0]["refreshRate"], Json::Null);
+    }
+
+    #[test]
+    fn a_point_size_is_encoded_where_the_host_has_one() {
+        let mut d = monitor();
+        d.points = Some((1512, 982));
+        let json = encode(1, Some(&Display::Known(d)), None);
+        assert_eq!(json["pointSize"], json!([1512, 982]));
     }
 
     #[test]

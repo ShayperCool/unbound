@@ -381,6 +381,26 @@ namespace UnityEngine
             RectInt workArea = new RectInt(0, 0, width, height);
             if (root.TryGetProperty("workArea", out var wa))
                 workArea = new RectInt(wa[0].GetInt32(), wa[1].GetInt32(), wa[2].GetInt32(), wa[3].GetInt32());
+            if (Compat.MacEditorDisplayMeasured && root.TryGetProperty("pointSize", out var points)
+                && points.ValueKind == System.Text.Json.JsonValueKind.Array && workArea.width > 0 && workArea.height > 0)
+            {
+                // The measured macOS Editor: the usable area stands for the current mode; every
+                // size is at the current rate; the desktop's points come without one.
+                var sizes = new List<Resolution>
+                {
+                    new Resolution { width = points[0].GetInt32(), height = points[1].GetInt32(), refreshRateRatio = new RefreshRate { numerator = 0, denominator = 1 } },
+                };
+                foreach (var mode in modes)
+                {
+                    int modeWidth = mode.width, modeHeight = mode.height;
+                    if (modeWidth == width && modeHeight == height) (modeWidth, modeHeight) = (workArea.width, workArea.height);
+                    if (!sizes.Exists(m => m.width == modeWidth && m.height == modeHeight))
+                        sizes.Add(new Resolution { width = modeWidth, height = modeHeight, refreshRateRatio = rate });
+                }
+                sizes.Sort((a, b) => a.width != b.width ? a.width.CompareTo(b.width) : a.height.CompareTo(b.height));
+                modes = sizes;
+                (width, height) = (workArea.width, workArea.height);
+            }
             var name = root.GetProperty("name");
             s_Display = new DisplayAnswer
             {

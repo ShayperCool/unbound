@@ -108,6 +108,30 @@ namespace UnityEngine.Tests
             Assert.Equal(600, Screen.resolutions[7].height);
         }
 
+        /// <summary>The measured macOS Editor (tests/projects/macdisplay): the usable area for the
+        /// current mode, every size at the current exact rate, the desktop's points without one;
+        /// another release keeps the host's answers.</summary>
+        [Fact]
+        public void MacEditorAnswersFromTheUsableAreaAndTheDisplayLinkRate()
+        {
+            if (!OperatingSystem.IsMacOS()) return;
+            string mac = Known(1, width: 3024, height: 1964, rate: Rate(24000000, 199999), scale: 2, name: "\"Built-in Retina Display\"",
+                    Mode(1920, 1200, Rate(120, 1)), Mode(1920, 1200, Rate(60, 1)), Mode(3024, 1964, Rate(120, 1)))
+                .Replace("\"modes\"", "\"workArea\":[0,0,3024,1898],\"pointSize\":[1512,982],\"modes\"");
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            m_Answer = _ => mac;
+            var current = Screen.currentResolution;
+            Assert.Equal("3024x1898@24000000/199999", current.width + "x" + current.height + "@" + current.refreshRateRatio.numerator + "/" + current.refreshRateRatio.denominator);
+            var got = Screen.resolutions.Select(r => r.width + "x" + r.height + "@" + r.refreshRateRatio.numerator + "/" + r.refreshRateRatio.denominator);
+            Assert.Equal(new[] { "1512x982@0/1", "1920x1200@24000000/199999", "3024x1898@24000000/199999" }, got);
+            Assert.Equal(1898, Screen.mainWindowDisplayInfo.height);
+            // Unmeasured release: the host's own size and modes.
+            Screen.ResetDisplayForTests();
+            ProjectInfo.UnityVersion = "6000.0.0f1";
+            Assert.Equal(1964, Screen.currentResolution.height);
+            Assert.Equal(3, Screen.resolutions.Length);
+        }
+
         [Fact]
         public void EditorResolutionAnswerDoesNotLimitHighRefreshPacing()
         {

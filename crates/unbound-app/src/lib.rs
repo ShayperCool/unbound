@@ -696,7 +696,8 @@ fn finish_run(
 /// The window size the host gives a window asked for at `width` x `height` pixels: on macOS a
 /// titled window's content is kept within the main screen's usable area, so a larger request
 /// gets that; elsewhere the request itself. Called before the window opens, so scripts see the
-/// window's size from the first callback (tests/projects/screenboot).
+/// window's size from the first callback (engine consistency: tests/projects/macdisplay's
+/// oversized window).
 pub fn fitted_window_size(width: i32, height: i32) -> (i32, i32) {
     match host_display::largest_window_content() {
         Some((largest_width, largest_height)) => {
@@ -805,6 +806,7 @@ fn publish_display(
         height: monitor.physical_height,
         refresh_rate_millihertz: monitor.refresh_rate_millihertz,
         refresh_ratio: None,
+        points: None,
         scale_factor: monitor.scale_factor,
         modes: monitor
             .video_modes
@@ -817,6 +819,26 @@ fn publish_display(
             })
             .collect(),
     }));
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod window_size_tests {
+    use super::*;
+
+    /// A request the main screen holds is kept; a larger one gets the largest content AppKit
+    /// gives a window there.
+    #[test]
+    fn a_window_larger_than_the_screen_is_fitted_to_it() {
+        let (width, height) =
+            host_display::largest_window_content().expect("macOS reports its main screen");
+        assert!(width > 0 && height > 0);
+        assert_eq!(
+            fitted_window_size(320, 180),
+            (320.min(width), 180.min(height))
+        );
+        assert_eq!(fitted_window_size(100_000, 100_000), (width, height));
+        assert_eq!(fitted_window_size(100_000, 180), (width, 180.min(height)));
+    }
 }
 
 #[cfg(test)]

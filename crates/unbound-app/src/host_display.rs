@@ -195,6 +195,7 @@ pub(crate) fn snapshot(
                 details.refresh_denominator,
             ),
             refresh_ratio: None,
+            points: None,
             scale_factor: 1.0,
             modes: info
                 .modes
@@ -216,13 +217,13 @@ pub(crate) fn snapshot(
     anyhow::bail!("the X server reports no active monitor")
 }
 
-/// The display the window is on, as the macOS Editor reports it (matches the Unity 6000.0.71f1
-/// macOS Editor, tests/projects/macdisplay): the desktop's usable area (the screen without the
-/// menu bar and Dock, `NSScreen.visibleFrame`) in pixels as the current resolution, at the
-/// display link's nominal refresh period as an exact ratio; one resolution per display mode's
-/// pixel size at that rate, the current mode's as the usable area, plus the desktop's size in
-/// points without a rate; the density of the current mode's pixels over the screen's width.
-/// Reads AppKit: called on the main thread.
+/// The display the window is on, as macOS describes it: the current mode's size in pixels, the
+/// display link's nominal refresh period as an exact ratio, the usable area (the screen without
+/// the menu bar and Dock, `NSScreen.visibleFrame`) in pixels as the work area (bottom-left
+/// origin), the desktop's size in points, every display mode with its own rate, the density of
+/// the current mode's pixels over the screen's physical width, and the screen's localized name.
+/// The managed side answers Screen's queries from these as the release's Editor does
+/// (Compat.MacEditorDisplayMeasured). Reads AppKit: called on the main thread.
 #[cfg(target_os = "macos")]
 pub(crate) fn snapshot(
     name: Option<&str>,
@@ -331,14 +332,14 @@ pub(crate) fn snapshot(
             anyhow::bail!("the screen has no display number");
         };
         let pixels = |points: f64| (points * scale).round() as i64;
-        let width = pixels(visible.size.width) as u32;
-        let height = pixels(visible.size.height) as u32;
+        let usable_width = pixels(visible.size.width) as u32;
+        let usable_height = pixels(visible.size.height) as u32;
         // Cocoa's origin: the desktop's bottom-left corner.
         let work_area = [
             pixels(visible.origin.x - frame.origin.x) as i32,
             pixels(visible.origin.y - frame.origin.y) as i32,
-            width as i32,
-            height as i32,
+            usable_width as i32,
+            usable_height as i32,
         ];
         let mut link = std::ptr::null_mut();
         let period = (unsafe { CVDisplayLinkCreateWithCGDisplay(display, &mut link) } == 0
@@ -364,12 +365,7 @@ pub(crate) fn snapshot(
         let millihertz = (current_rate * 1000.0).round() as u32;
         let ratio = period.map(|time| (time.scale as u32, time.value as u32));
         let (info_numerator, info_denominator) = ratio.unwrap_or((millihertz, 1000));
-        let mut modes = vec![DisplayMode {
-            width: unsafe { CGDisplayPixelsWide(display) } as u32,
-            height: unsafe { CGDisplayPixelsHigh(display) } as u32,
-            refresh_rate_millihertz: 0,
-            refresh_ratio: Some((0, 1)),
-        }];
+        let mut modes = Vec::new();
         let all = unsafe { CGDisplayCopyAllDisplayModes(display, std::ptr::null()) };
         if !all.is_null() {
             for index in 0..unsafe { CFArrayGetCount(all) } {
@@ -380,16 +376,12 @@ pub(crate) fn snapshot(
                         CGDisplayModeGetPixelHeight(mode),
                     )
                 };
-                let (mode_width, mode_height) = if size == current_size {
-                    (width, height)
-                } else {
-                    (size.0 as u32, size.1 as u32)
-                };
+                let rate = unsafe { CGDisplayModeGetRefreshRate(mode) };
                 modes.push(DisplayMode {
-                    width: mode_width,
-                    height: mode_height,
-                    refresh_rate_millihertz: millihertz,
-                    refresh_ratio: ratio,
+                    width: size.0 as u32,
+                    height: size.1 as u32,
+                    refresh_rate_millihertz: (rate * 1000.0).round() as u32,
+                    refresh_ratio: None,
                 });
             }
             unsafe { CFRelease(all) };
@@ -408,10 +400,16 @@ pub(crate) fn snapshot(
             info_refresh_denominator: info_denominator,
             work_area,
             name: screen_name,
-            width,
-            height,
+            width: current_size.0 as u32,
+            height: current_size.1 as u32,
             refresh_rate_millihertz: Some(millihertz),
             refresh_ratio: ratio,
+            points: Some(unsafe {
+                (
+                    CGDisplayPixelsWide(display) as u32,
+                    CGDisplayPixelsHigh(display) as u32,
+                )
+            }),
             scale_factor: scale,
             modes,
         })
@@ -470,9 +468,64 @@ fn rate_millihertz(numerator: u32, denominator: u32) -> Option<u32> {
 
 static DIRTY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
-/// Checks only memory in the frame loop. The blocking event connection wakes on changes.
+/// Checks only memory in the frame loop. The blocking event connection wakes on changes; on macOS
+/// the main screen's geometry is compared every [`SCREEN_CHECK_FRAMES`] calls (the Dock or menu
+/// bar showing or hiding changes the usable area without changing the monitor).
 pub(crate) fn changed() -> bool {
-    DIRTY.swap(false, std::sync::atomic::Ordering::AcqRel)
+    let dirty = DIRTY.swap(false, std::sync::atomic::Ordering::AcqRel);
+    #[cfg(target_os = "macos")]
+    let dirty = screen_geometry_changed() || dirty;
+    dirty
+}
+
+/// How often (in calls of [`changed`], once a frame) macOS's screen geometry is compared.
+#[cfg(target_os = "macos")]
+const SCREEN_CHECK_FRAMES: u32 = 30;
+
+/// Whether the main screen's frame, usable area or scale changed since the last comparison.
+/// Called on the main thread (AppKit).
+#[cfg(target_os = "macos")]
+fn screen_geometry_changed() -> bool {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyClass, AnyObject};
+    use objc2_foundation::NSRect;
+    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static CALLS: AtomicU32 = AtomicU32::new(0);
+    static LAST: Mutex<Option<[f64; 9]>> = Mutex::new(None);
+    if !CALLS
+        .fetch_add(1, Ordering::Relaxed)
+        .is_multiple_of(SCREEN_CHECK_FRAMES)
+    {
+        return false;
+    }
+    let Some(class) = AnyClass::get(c"NSScreen") else {
+        return false;
+    };
+    let geometry = objc2::rc::autoreleasepool(|_| {
+        let screen: *mut AnyObject = unsafe { msg_send![class, mainScreen] };
+        if screen.is_null() {
+            return None;
+        }
+        let frame: NSRect = unsafe { msg_send![screen, frame] };
+        let visible: NSRect = unsafe { msg_send![screen, visibleFrame] };
+        let scale: f64 = unsafe { msg_send![screen, backingScaleFactor] };
+        Some([
+            frame.origin.x,
+            frame.origin.y,
+            frame.size.width,
+            frame.size.height,
+            visible.origin.x,
+            visible.origin.y,
+            visible.size.width,
+            visible.size.height,
+            scale,
+        ])
+    });
+    let mut last = LAST.lock().unwrap();
+    let changed = last.is_some() && *last != geometry;
+    *last = geometry;
+    changed
 }
 
 pub(crate) fn watch() {

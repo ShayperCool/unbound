@@ -6,6 +6,9 @@
   "engine_paths": [
     "crates/unbound-app/src/host_display.rs",
     "crates/unbound-runtime/src/display.rs",
-    "managed/UnityEngine/Core/Input.cs"
+    "managed/UnityEngine/Core/Input.cs",
+    "crates/unbound-app/src/lib.rs",
+    "crates/unbound/src/commands.rs",
+    "managed/UnityEngine/Runtime/Compat.cs"
   ]
 }

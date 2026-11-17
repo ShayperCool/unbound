@@ -9,8 +9,9 @@ using UnityEngine;
 /// The display queries on macOS: Screen.currentResolution, Screen.resolutions, Screen.dpi,
 /// Display.main's sizes, Screen.mainWindowDisplayInfo and Screen.GetDisplayLayout (`unity.*`),
 /// and the facts of the host's main display they are taken from, read from CoreGraphics,
-/// CoreVideo and AppKit in the same process (`os.*`). Writes values.jsonl in MAC_DISPLAY_OUT on
-/// the fifth frame and exits.
+/// CoreVideo and AppKit in the same process (`os.*`); Screen's size and currentResolution also as
+/// scripts see them at SubsystemRegistration (`*.atStart`). Writes values.jsonl in MAC_DISPLAY_OUT
+/// on the fifth frame and exits.
 /// </summary>
 public sealed class MacDisplayProbe : MonoBehaviour
 {
@@ -41,6 +42,16 @@ public sealed class MacDisplayProbe : MonoBehaviour
 
     readonly StringBuilder m_Out = new StringBuilder();
     int m_Frame;
+    /// <summary>What scripts see before the first frame (SubsystemRegistration).</summary>
+    static string s_BootScreen, s_BootCurrent;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void AtStart()
+    {
+        s_BootScreen = Screen.width + "x" + Screen.height;
+        var current = Screen.currentResolution;
+        s_BootCurrent = $"{current.width}x{current.height} @{Rate(current.refreshRateRatio)}";
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot() => new GameObject("MacDisplayProbe").AddComponent<MacDisplayProbe>();
@@ -58,6 +69,9 @@ public sealed class MacDisplayProbe : MonoBehaviour
             Host();
             var current = Screen.currentResolution;
             Rec("unity.currentResolution", $"{current.width}x{current.height} @{Rate(current.refreshRateRatio)}");
+            Rec("unity.currentResolution.atStart", s_BootCurrent);
+            Rec("unity.screen", Screen.width + "x" + Screen.height);
+            Rec("unity.screen.atStart", s_BootScreen);
             var resolutions = new List<string>();
             foreach (var r in Screen.resolutions) resolutions.Add($"{r.width}x{r.height} @{Rate(r.refreshRateRatio)}");
             Rec("unity.resolutions", string.Join(", ", resolutions));
