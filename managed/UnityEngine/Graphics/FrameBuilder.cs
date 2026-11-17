@@ -738,12 +738,10 @@ namespace Unbound.Runtime
 
         internal static Dictionary<int, object> SkyboxLightProperties(Camera camera, Material material)
         {
-            // The environment's capture is drawn as the built-in pipeline draws a sky, whatever
-            // the pipeline.
-            bool builtin = GraphicsSettings.currentRenderPipeline == null || camera.m_EnvironmentCapture;
-            if (!builtin) return null;
-            // The sky's sun is RenderSettings.sun (SkySun), which need not be the main light the
-            // globals hold: without one, the direction (0, 0, -1) and no colour.
+            // The sky's sun is RenderSettings.sun (SkySun), under the built-in pipeline and a
+            // render pipeline alike, which need not be the main light the globals hold: without
+            // one, the direction (0, 0, -1) and no colour (tests/projects/rendersettingssun,
+            // tests/projects/urpsunscenes).
             var sun = LightingGlobals.SkySun();
             var toSun = sun != null ? -sun.transform.forward : LightingGlobals.SkyWithoutSun;
             // The ambient projection leaves out the light's colour, whatever the sky's shader
