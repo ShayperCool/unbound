@@ -1,0 +1,11 @@
+{"k":"subsystemRegistration","v":"960x540 safe 0,0,960,540"}
+{"k":"afterAssembliesLoaded","v":"960x540 safe 0,0,960,540"}
+{"k":"beforeSplashScreen","v":"960x540 safe 0,0,960,540"}
+{"k":"beforeSceneLoad","v":"960x540 safe 0,0,960,540"}
+{"k":"awake","v":"960x540 safe 0,0,960,540"}
+{"k":"afterSceneLoad","v":"960x540 safe 0,0,960,540"}
+{"k":"start","v":"960x540 safe 0,0,960,540"}
+{"k":"update1","v":"960x540 safe 0,0,960,540"}
+{"k":"update2","v":"960x540 safe 0,0,960,540"}
+{"k":"update3","v":"960x540 safe 0,0,960,540"}
+{"k":"complete","v":true}
