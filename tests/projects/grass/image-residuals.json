@@ -1,26 +1,26 @@
 {
  "Coloured": {
-  "pixels": 452,
+  "pixels": 382,
   "worst": 48,
   "reason": "grass quads: isolated pixels at the edges of distant blades and one level over a few (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); the painted slabs' tinted vertex colours and the colours outside [0, 1] match; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Counts": {
-  "pixels": 751,
+  "pixels": 599,
   "worst": 47,
   "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Coverage": {
-  "pixels": 3217,
+  "pixels": 3202,
   "worst": 18,
   "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "DensityCounts": {
-  "pixels": 1771,
+  "pixels": 1693,
   "worst": 62,
   "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "DensityCoverage": {
-  "pixels": 3064,
+  "pixels": 2994,
   "worst": 115,
   "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
@@ -32,16 +32,26 @@
  "Refusals": {
   "pixels": 1,
   "worst": 1,
-  "reason": "one pixel one level apart (not traced); the slab meshes drawn in the Grass render mode match since they take the terrain's normal (Q533); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+  "reason": "one pixel one level apart (not traced); the slab meshes drawn in the Grass render mode match: they take the terrain's normal (Q533) and are drawn with the grass shader (Q553); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Textured": {
-  "pixels": 570,
-  "worst": 194,
-  "reason": "the textured slabs in the Grass render mode (448 of the 453 pixels over 8 lie on them; the textured VertexLit slabs match); untraced, the candidate being that such meshes are still drawn with the vertex-lit detail shader, not the grass shader (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail meshes in the Grass render mode`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+  "pixels": 97,
+  "worst": 56,
+  "reason": "isolated pixels at the edges of distant blades and slabs (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); the textured slabs in the Grass render mode match since they are drawn with the grass shader (Q553; they differed in 570 pixels up to 194/255); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  },
  "Tilted": {
-  "pixels": 9549,
+  "pixels": 9525,
   "worst": 139,
   "reason": "grass quads: shading one level apart over part of them and isolated pixels at the edges of distant blades (open in docs/COMPATIBILITY_GAPS.md, row `Grass quads: one level of shading and isolated pixels at the edges of distant blades`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+ },
+ "Waving1": {
+  "pixels": 4598,
+  "worst": 6,
+  "reason": "waving grass and meshes one or two levels apart in colour over most of them (the waving's tint and lighting; not traced) and isolated pixels at the faded far edge (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail waving and distance fade`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
+ },
+ "Waving30": {
+  "pixels": 4611,
+  "worst": 68,
+  "reason": "waving grass and meshes one or two levels apart in colour over most of them (the waving's tint and lighting; not traced) and isolated pixels at the faded far edge (open in docs/COMPATIBILITY_GAPS.md, row `Terrain detail waving and distance fade`); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-17"
  }
 }

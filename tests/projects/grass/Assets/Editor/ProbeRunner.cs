@@ -60,6 +60,7 @@ public static class ProbeRunner
         CreateInstanced();
         CreateColoured();
         CreateTextured();
+        CreateWaving();
     }
 
     /// <summary>
@@ -411,6 +412,87 @@ public static class ProbeRunner
             new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Coloured.unity", true),
             new EditorBuildSettingsScene("Assets/Scenes/Textured.unity", true),
+        };
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// `-executeMethod ProbeRunner.CreateWaving` adds, without touching the other assets, the scene
+    /// `Waving` with a terrain `Waving` (instance counts) sloping up across x, its grass waving
+    /// (strength, amount and speed apart, a tint) and a short detail distance (so that the far
+    /// details fade): grass textures with healthy alpha below 1, billboards, and slabs drawn
+    /// without instancing: white, painted (vertex alpha 0 to 252) and textured in the Grass render
+    /// mode, white in the VertexLit mode aligned to the slope.
+    /// </summary>
+    public static void CreateWaving()
+    {
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var blade = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Grass/Blade.png");
+        GameObject Load(string name) => AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Grass/{name}.prefab");
+        var data = new TerrainData();
+        AssetDatabase.CreateAsset(data, "Assets/Grass/Waving.asset");
+        SmallMaps(data);
+        data.terrainLayers = new[] { AssetDatabase.LoadAssetAtPath<TerrainLayer>("Assets/Grass/Ground.terrainlayer") };
+        data.heightmapResolution = 33;
+        data.size = new Vector3(32f, 10f, 32f);
+        var heights = new float[33, 33];
+        for (int y = 0; y < 33; y++)
+            for (int x = 0; x < 33; x++)
+                heights[y, x] = 0.05f + 0.6f * x / 32f + 0.05f * Mathf.Sin(y * 0.4f);
+        data.SetHeights(0, 0, heights);
+        data.SetDetailScatterMode(DetailScatterMode.InstanceCountMode);
+        data.SetDetailResolution(32, 16);
+        DetailPrototype Mesh(string prefab, DetailRenderMode mode, int seed, float align) => new DetailPrototype
+        {
+            prototype = Load(prefab), usePrototypeMesh = true, useInstancing = false, renderMode = mode,
+            minWidth = 0.6f, maxWidth = 0.9f, minHeight = 0.6f, maxHeight = 0.9f, noiseSeed = seed, alignToGround = align,
+            healthyColor = new Color(0.9f, 0.8f, 0.6f, 1f), dryColor = new Color(0.7f, 0.9f, 0.8f, 1f),
+        };
+        data.detailPrototypes = new[]
+        {
+            new DetailPrototype
+            {
+                prototypeTexture = blade, renderMode = DetailRenderMode.Grass, minWidth = 0.5f, maxWidth = 0.9f,
+                minHeight = 0.8f, maxHeight = 1.4f, noiseSeed = 81, noiseSpread = 0.3f,
+                healthyColor = new Color(0.3f, 0.9f, 0.2f, 0.6f), dryColor = new Color(0.8f, 0.7f, 0.1f, 1f),
+            },
+            new DetailPrototype
+            {
+                prototypeTexture = blade, renderMode = DetailRenderMode.GrassBillboard, minWidth = 0.6f, maxWidth = 0.8f,
+                minHeight = 0.8f, maxHeight = 1.2f, noiseSeed = 82,
+            },
+            Mesh("Slab", DetailRenderMode.Grass, 83, 0f),
+            Mesh("SlabPainted", DetailRenderMode.Grass, 84, 0f),
+            Mesh("SlabTextured", DetailRenderMode.Grass, 85, 0f),
+            Mesh("Slab", DetailRenderMode.VertexLit, 86, 1f),
+        };
+        for (int layer = 0; layer < data.detailPrototypes.Length; layer++)
+        {
+            var values = new int[32, 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    values[y, x] = (x * 3 + y * 5 + layer) % (layer < 2 ? 4 : 11) == 0 ? 1 + (x + y) % 2 : 0;
+            data.SetDetailLayer(0, 0, layer, values);
+        }
+        data.wavingGrassStrength = 0.8f;
+        data.wavingGrassAmount = 0.6f;
+        data.wavingGrassSpeed = 0.7f;
+        data.wavingGrassTint = new Color(0.9f, 0.5f, 0.3f, 1f);
+        EditorUtility.SetDirty(data);
+        var terrainObject = Terrain.CreateTerrainGameObject(data);
+        terrainObject.name = "Waving";
+        terrainObject.transform.position = new Vector3(-1000f, 0f, 0f);
+        terrainObject.GetComponent<Terrain>().detailObjectDistance = 30f;
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/Waving.unity");
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Density.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Aligned.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Instanced.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Coloured.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Textured.unity", true),
+            new EditorBuildSettingsScene("Assets/Scenes/Waving.unity", true),
         };
         AssetDatabase.SaveAssets();
     }

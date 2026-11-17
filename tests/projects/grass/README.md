@@ -14,14 +14,19 @@ per patch, a count over 16, and a scatter mode switch after coverage values. The
 (an image only): grass textures and billboards whose healthy and dry colours lie outside [0, 1]
 with alpha below 1, and a slab with vertex colours of its own drawn without instancing in the
 VertexLit and Grass render modes; and the scene `Textured` (an image only): a slab whose material
-shows an uncompressed checker, drawn without instancing in both modes, beside grass. Then it
+shows an uncompressed checker, drawn without instancing in both modes, beside grass; and the
+scene `Waving` (images only): a terrain sloping up across x whose grass waves (strength, amount
+and speed apart, a tint) and whose detail distance is short, with grass, billboards and slabs
+(white, painted, textured) in the Grass render mode and one in the VertexLit mode aligned to the
+slope, drawn at a fixed frame time (Time.captureDeltaTime 1/30) in 30 frames, `Waving1` after
+the first and `Waving30` after the last (the waving's phase grows in each frame drawn). Then it
 records the terrain settings the quality level's overrides replace, and Texture2D.PackTextures'
 layouts (the detail atlas is packed the same way) for sets of textures made in the script. What `Validate` says of each prototype is
 recorded, the density terrains' instances again with QualitySettings.useLegacyDetailDistribution,
 and the messages the terrain API logs. `GrassProbe` records Mathf.PerlinNoise samples, each
 terrain's detail data (resolution, patches, prototypes, layers read back, coverage), every patch's
 and layer's instances from `ComputeDetailInstanceTransforms` at two densities, and an image of each
-terrain (waving off in the data).
+terrain (waving off in the data but `Waving`'s).
 
 `Assets/Editor/GrassExperiments.cs` holds the edit-mode experiments that measured the placement
 (`-executeMethod GrassExperiments.Run` with `GRASS_EXPERIMENT_OUT`, and `GrassExperiments.Perlin`).
@@ -30,8 +35,8 @@ shaders (`Hidden/TerrainEngine/Details/*`) by shaders that write every vertex th
 random-write buffer.
 
 Make the assets once (they are committed; `ProbeRunner.CreateDensity`, then `CreateRefusals`, make
-the scene `Density`, and `CreateAligned`, `CreateInstanced`, `CreateColoured` and `CreateTextured`
-the scenes `Aligned`, `Instanced`, `Coloured` and `Textured`, without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
+the scene `Density`, and `CreateAligned`, `CreateInstanced`, `CreateColoured`, `CreateTextured` and `CreateWaving`
+the scenes `Aligned`, `Instanced`, `Coloured`, `Textured` and `Waving`, without touching the others) and record Unity's reference: `record.py` runs the Editor on the GPU in
 copies of the project under the validation cache, twice, and publishes only identical captures whose
 committed rows and images are unchanged:
 
@@ -41,6 +46,7 @@ committed rows and images are unchanged:
     python3 tests/projects/grass/record.py create --method CreateInstanced --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateColoured --release 6000.0.71f1
     python3 tests/projects/grass/record.py create --method CreateTextured --release 6000.0.71f1
+    python3 tests/projects/grass/record.py create --method CreateWaving --release 6000.0.71f1
     python3 tests/projects/grass/record.py record --release 6000.0.71f1
     python3 tests/projects/grass/record.py publish --release 6000.0.71f1
 
@@ -59,14 +65,16 @@ the textures. Before Q533 Unbound's atlas repeated at its edges and held a white
 first texture, so distant blades lost their edges (the differences once taken for the layerless
 terrains' checker, which matches).
 
-Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the nine images to
+Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-17): `compare_images.py --gate image-residuals.json` holds each of the eleven images to
 its recorded pixel count and largest difference: six texture-grass images differ by one level
-over part of their blades and in isolated pixels at the edges of distant blades (452 to 9549
-pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes and the
-atlas laid out as the Editor's, Q553; the quads' and painted slabs' vertex colours were checked
-by rendering them in the Editor; `Tilted`'s atlas is compressed in the Editor, not in Unbound),
-`Textured` in 570 pixels up to 194/255 on its textured slabs in the Grass render mode (not traced;
-they are drawn with the vertex-lit shader; its VertexLit slabs match), `Refusals` in one pixel by one level (its slab meshes drawn
-in the Grass render mode take the terrain's normal at every vertex, as the Editor draws them, since
-Q533; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
+over part of their blades and in isolated pixels at the edges of distant blades (382 to 9525
+pixels, up to 139/255; 4215 to 10523 before the details' colours were quantized in bytes, the
+atlas laid out as the Editor's and the waving tint made linear once, Q553; the quads' and painted
+slabs' vertex colours were checked by rendering them in the Editor; `Tilted`'s atlas is
+compressed in the Editor, not in Unbound), `Textured` in 97 pixels up to 56/255 (its Grass-mode
+slabs drawn with the grass shader since Q553: 570 up to 194 before), `Waving1` and `Waving30` in
+4598 and 4611 pixels, one or two levels apart in colour over the waving details and up to 68/255
+at the faded far edge (not traced), `Refusals` in one pixel by one level (its slab meshes drawn
+in the Grass render mode take the terrain's normal at every vertex and the grass shader, as the
+Editor draws them, since Q533 and Q553; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
 fails.

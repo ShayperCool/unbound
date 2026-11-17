@@ -16,8 +16,9 @@ using UnityEngine.SceneManagement;
 /// their prototypes' validation, a third density, the legacy distribution and the logged messages;
 /// then for the scene `Aligned`; then a terrain made here (zero noise seeds, a count over 16, a
 /// scatter mode switch); then the scene `Instanced`; then images of the scenes `Coloured` and
-/// `Textured`; then the terrain settings under the quality level's overrides; then
-/// Texture2D.PackTextures' layouts. Writes <c>grass.jsonl</c> and PNGs into
+/// `Textured`, and of `Waving` after one and 30 frames at a fixed frame time; then the terrain
+/// settings under the quality level's overrides; then Texture2D.PackTextures' layouts and the
+/// waving frames' times. Writes <c>grass.jsonl</c> and PNGs into
 /// <c>GRASS_PROBE_OUT</c>, then quits.
 /// </summary>
 public class GrassProbe : MonoBehaviour
@@ -163,6 +164,27 @@ public class GrassProbe : MonoBehaviour
         foreach (var terrain in textured)
             Render(camera, target, terrain, dir);
 
+        // The scene `Waving`: waving grass and meshes in the Grass render mode, at a fixed frame
+        // time; the waving's phase grows in each frame the details are drawn in: images after one
+        // frame drawn and after 30.
+        before = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        yield return SceneManager.LoadSceneAsync("Waving", LoadSceneMode.Additive);
+        var waving = FindObjectsByType<Terrain>(FindObjectsSortMode.None).Where(t => !before.Contains(t)).OrderBy(t => t.name).ToArray();
+        Time.captureDeltaTime = 1f / 30f;
+        yield return null;
+        var frameTimes = new List<string>();
+        for (int frame = 1; frame <= 30; frame++)
+        {
+            frameTimes.Add(F(Time.deltaTime));
+            foreach (var terrain in waving)
+            {
+                if (frame == 1 || frame == 30) Render(camera, target, terrain, dir, terrain.name + frame);
+                else Render(camera, target, terrain, null, null);
+            }
+            yield return null;
+        }
+        Time.captureDeltaTime = 0f;
+
         // The quality level's terrain overrides: what the terrain settings read without them,
         // with all of them, and with the terrain ignoring quality settings.
         var probe = terrains[0];
@@ -183,6 +205,7 @@ public class GrassProbe : MonoBehaviour
         QualitySettings.terrainQualityOverrides = TerrainQualityOverrides.None;
 
         RecordPacking();
+        Record("waving_frames", $"\"deltaTimes\":[{string.Join(",", frameTimes)}]");
 
         File.WriteAllText(Path.Combine(dir, "grass.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -266,13 +289,15 @@ public class GrassProbe : MonoBehaviour
     void RecordTerrainSettings(Terrain t, string overrides) =>
         Record("terrain_settings", $"\"overrides\":\"{overrides}\",\"values\":[{F(t.heightmapPixelError)},{F(t.detailObjectDensity)},{F(t.basemapDistance)},{F(t.detailObjectDistance)},{F(t.treeDistance)},{F(t.treeBillboardDistance)},{F(t.treeCrossFadeLength)},{t.treeMaximumFullLODCount}]");
 
-    static void Render(Camera camera, RenderTexture target, Terrain terrain, string dir)
+    /// <summary>An image of a terrain from above at an angle, saved as its name (or the given
+    /// name); without a directory only drawn.</summary>
+    static void Render(Camera camera, RenderTexture target, Terrain terrain, string dir, string name = null)
     {
         var origin = terrain.transform.position;
         camera.transform.position = origin + new Vector3(16f, 8f, -6f);
         camera.transform.LookAt(origin + new Vector3(16f, 1f, 14f));
         camera.Render();
-        Save(target, Path.Combine(dir, $"{terrain.name}.png"));
+        if (dir != null) Save(target, Path.Combine(dir, $"{name ?? terrain.name}.png"));
     }
 
     void RecordInstances(string kind, Terrain terrain, float density)
