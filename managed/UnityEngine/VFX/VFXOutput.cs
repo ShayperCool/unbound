@@ -102,7 +102,7 @@ namespace Unbound.Runtime
                 m_CountBuffer = Parameter(task, "indirectIndex");
                 m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == VFXIndirectArgs.KeyIndexPairBytes;
                 m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
-                m_Sorted = Buffer(task, "indirectBuffer") != m_CountBuffer;
+                m_Sorted = ReadsSortedList(task);
             }
         }
 
@@ -150,7 +150,7 @@ namespace Unbound.Runtime
                 if (Parameter(task, IndirectDrawName) != 0)
                 {
                     if (Parameter(task, StripsName) == 0) return "it draws a strip system's particles one by one through an indirect buffer, which is not measured yet";
-                    if (Buffer(task, "indirectBuffer") == Parameter(task, "indirectIndex")) return "it draws strips through an indirect buffer that is not sorted, which is not measured yet";
+                    if (!ReadsSortedList(task)) return "it draws strips through an indirect buffer that is not sorted, which is not measured yet";
                 }
             }
             if (Parameter(task, IndirectDrawName) != 0)
@@ -185,10 +185,11 @@ namespace Unbound.Runtime
         /// pipeline lights.</summary>
         const string LitDefine = "#define URP_LIT 1";
 
-        /// <summary>A lit output is measured where it draws itself and an output drawn through
-        /// an indirect buffer where it is unlit (tests/projects/vfxlit, tests/projects/vfxoutputs):
-        /// the two together are not, and are not drawn until they are.</summary>
-        internal const string LitIndirectRefusal = "it is lit and draws through an indirect buffer, which is not measured yet";
+        /// <summary>A lit output is measured where it draws itself and where it draws a sorted
+        /// list (an alpha blended one sorts by default: tests/projects/vfxlit, `lit sorted`);
+        /// through a list that is not sorted only unlit outputs are (tests/projects/vfxoutputs),
+        /// and a lit one is not drawn until it is.</summary>
+        internal const string LitIndirectRefusal = "it is lit and draws through an indirect buffer that is not sorted, which is not measured yet";
 
         /// <summary>Strips are measured unlit (tests/projects/vfxstrips): a lit strip output is
         /// not drawn until it is.</summary>
@@ -211,8 +212,8 @@ namespace Unbound.Runtime
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
                     if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !source.Contains(LitDefine, StringComparison.Ordinal)) continue;
-                    if (Parameter(tasks[t], IndirectDrawName) != 0) refusals[s][t] = LitIndirectRefusal;
-                    else if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
+                    if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
+                    else if (Parameter(tasks[t], IndirectDrawName) != 0 && !ReadsSortedList(tasks[t])) refusals[s][t] = LitIndirectRefusal;
                 }
             }
             // The renderer finds a generated shader by its name: outputs whose shaders share one
@@ -273,8 +274,8 @@ namespace Unbound.Runtime
         /// system writes (its indices are another buffer than the one that counts them).</summary>
         static bool ListMade(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
         {
+            if (!ReadsSortedList(task)) return true;
             int read = Buffer(task, "indirectBuffer");
-            if (read == Parameter(task, "indirectIndex")) return true;
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
                 if (other.type == VFXTaskType.PerOutputSort && Buffer(other, "dstBuffer") == read)
                     return Buffer(other, "srcBuffer") == Parameter(task, "indirectIndex") && VFXSort.Plan(system.capacity, Buffer(other, "scratchBuffer") >= 0) != null;
@@ -283,6 +284,10 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the output draws a sorted copy of its list.</summary>
         internal bool Sorted => m_Sorted;
+
+        /// <summary>Whether an indirect output's task draws a sorted copy of its list: the
+        /// indices it reads are another buffer than the one that counts them.</summary>
+        static bool ReadsSortedList(in VFXEditorTaskDesc task) => Buffer(task, "indirectBuffer") != Parameter(task, "indirectIndex");
 
         internal static int Buffer(in VFXEditorTaskDesc task, string name)
         {

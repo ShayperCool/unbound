@@ -1132,7 +1132,7 @@ namespace UnityEngine.Tests
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal(Moving, VFXOutput.Refusal(system, quads, material, Moving));
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
-            // A lit output through an indirect buffer: each is measured, the two together are not.
+            // A lit output through an indirect buffer that is not sorted: each is measured, the two together are not.
             VFXEditorTaskDesc From(VFXEditorTaskDesc task, int sourceIndex)
             {
                 task.shaderSourceIndex = sourceIndex;
@@ -1142,6 +1142,11 @@ namespace UnityEngine.Tests
                 new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 2), 0), From(quads, 0), From(Indirect(2, 2), 1) } } },
                 new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
             Assert.Equal(new[] { VFXOutput.LitIndirectRefusal, null, null }, litIndirect[0]);
+            // From a sorted list a lit output is drawn (what an alpha blended one does by default).
+            var litSorted = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 3), 0) } } },
+                new[] { new VFXShaderSourceDesc { source = lit } });
+            Assert.Equal(new string[] { null }, litSorted[0]);
             // Strips are measured unlit: a lit output of a strip system is not drawn.
             var litStrips = VFXOutput.SourceRefusals(
                 new[] { new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(quads, 0), From(quads, 1) } } },
