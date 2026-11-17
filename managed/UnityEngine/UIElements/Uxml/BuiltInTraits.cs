@@ -1612,6 +1612,40 @@ namespace UnityEngine.UIElements
         }
     }
 
+    public partial class TwoPaneSplitView
+    {
+        [Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlTraits : VisualElement.UxmlTraits
+        {
+            readonly UxmlIntAttributeDescription m_FixedPaneIndex = new UxmlIntAttributeDescription { name = "fixed-pane-index", defaultValue = 0 };
+            readonly UxmlIntAttributeDescription m_FixedPaneInitialDimension = new UxmlIntAttributeDescription { name = "fixed-pane-initial-dimension", defaultValue = 100 };
+            readonly UxmlEnumAttributeDescription<TwoPaneSplitViewOrientation> m_Orientation = new UxmlEnumAttributeDescription<TwoPaneSplitViewOrientation> { name = "orientation", defaultValue = TwoPaneSplitViewOrientation.Horizontal };
+
+            public UxmlTraits() { }
+
+            public override IEnumerable<UxmlChildElementDescription> uxmlChildElementsDescription
+            {
+                get { yield break; }
+            }
+
+            // The initial dimension is read as an integer here, unlike the float property.
+            public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)
+            {
+                base.Init(ve, bag, cc);
+                int fixedPaneIndex = m_FixedPaneIndex.GetValueFromBag(bag, cc);
+                int fixedPaneInitialDimension = m_FixedPaneInitialDimension.GetValueFromBag(bag, cc);
+                var orientation = m_Orientation.GetValueFromBag(bag, cc);
+                ((TwoPaneSplitView)ve).Init(fixedPaneIndex, fixedPaneInitialDimension, orientation);
+            }
+        }
+
+        [Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.", false)]
+        public new partial class UxmlFactory : UxmlFactory<TwoPaneSplitView, UxmlTraits>
+        {
+            public UxmlFactory() { }
+        }
+    }
+
     /// <summary>Readers the built-in traits share.</summary>
     static class UxmlBuiltInTraits
     {

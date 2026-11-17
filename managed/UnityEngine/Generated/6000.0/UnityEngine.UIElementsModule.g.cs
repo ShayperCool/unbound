@@ -3717,27 +3717,9 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal int GetChildIndex(int itemId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.GetChildIndex"); return default; }
         [global::Unbound.Stub] internal void ReplaceChild(global::UnityEngine.UIElements.TreeViewItemData<T> newChild) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewItemData<T>.ReplaceChild"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class TwoPaneSplitView : global::UnityEngine.UIElements.VisualElement
+    unsafe partial class TwoPaneSplitView
     {
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedPaneIndexProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId fixedPaneInitialDimensionProperty;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId orientationProperty;
-        [global::Unbound.Stub] internal global::UnityEngine.UIElements.TwoPaneSplitViewResizer m_Resizer;
-        [global::Unbound.Stub] public TwoPaneSplitView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.ctor"); }
-        [global::Unbound.Stub] public TwoPaneSplitView(int fixedPaneIndex, float fixedPaneStartDimension, global::UnityEngine.UIElements.TwoPaneSplitViewOrientation orientation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.ctor"); }
-        [global::Unbound.Stub] public void CollapseChild(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.CollapseChild"); }
-        [global::Unbound.Stub] public void UnCollapse() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UnCollapse"); }
-        [global::Unbound.Stub] internal virtual void Init(int fixedPaneIndex, float fixedPaneInitialDimension, global::UnityEngine.UIElements.TwoPaneSplitViewOrientation orientation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.Init"); }
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.OnViewDataReady"); }
-        public global::UnityEngine.UIElements.VisualElement fixedPane { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPane"); return default; } }
-        public global::UnityEngine.UIElements.VisualElement flexedPane { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.flexedPane"); return default; } }
-        internal global::UnityEngine.UIElements.VisualElement dragLine { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.dragLine"); return default; } }
-        public int fixedPaneIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneIndex"); } }
-        public float fixedPaneInitialDimension { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneInitialDimension"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneInitialDimension"); } }
-        public global::UnityEngine.UIElements.TwoPaneSplitViewOrientation orientation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.orientation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.orientation"); } }
-        internal float fixedPaneDimension { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneDimension"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.fixedPaneDimension"); } }
-        public override global::UnityEngine.UIElements.VisualElement contentContainer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.contentContainer"); return default; } }
         [global::System.Serializable]
         [global::Unbound.Stub]
         public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
@@ -3747,39 +3729,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.Deserialize"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.ctor"); }
         }
-        [global::System.Obsolete("UxmlFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlFactory : global::UnityEngine.UIElements.UxmlFactory<global::UnityEngine.UIElements.TwoPaneSplitView, global::UnityEngine.UIElements.TwoPaneSplitView.UxmlTraits>
-        {
-            [global::Unbound.Stub] public UxmlFactory() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlFactory.ctor"); }
-        }
-        [global::System.Obsolete("UxmlTraits is deprecated and will be removed. Use UxmlElementAttribute instead.")]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlTraits : global::UnityEngine.UIElements.VisualElement.UxmlTraits
-        {
-            [global::Unbound.Stub] public override void Init(global::UnityEngine.UIElements.VisualElement ve, global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlTraits.Init"); }
-            [global::Unbound.Stub] public UxmlTraits() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlTraits.ctor"); }
-            public override global::System.Collections.Generic.IEnumerable<global::UnityEngine.UIElements.UxmlChildElementDescription> uxmlChildElementsDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlTraits.uxmlChildElementsDescription"); return global::System.Array.Empty<global::UnityEngine.UIElements.UxmlChildElementDescription>(); } }
-        }
-    }
-    public enum TwoPaneSplitViewOrientation
-    {
-        Horizontal = 0,
-        Vertical = 1,
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TwoPaneSplitViewResizer : global::UnityEngine.UIElements.PointerManipulator
-    {
-        [global::Unbound.Stub] protected bool m_Active;
-        [global::Unbound.Stub] public TwoPaneSplitViewResizer(global::UnityEngine.UIElements.TwoPaneSplitView splitView, int dir) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.ctor"); }
-        [global::Unbound.Stub] protected override void RegisterCallbacksOnTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.RegisterCallbacksOnTarget"); }
-        [global::Unbound.Stub] protected override void UnregisterCallbacksFromTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.UnregisterCallbacksFromTarget"); }
-        [global::Unbound.Stub] public void ApplyDelta(float delta) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.ApplyDelta"); }
-        [global::Unbound.Stub] protected void OnPointerDown(global::UnityEngine.UIElements.PointerDownEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.OnPointerDown"); }
-        [global::Unbound.Stub] protected void OnPointerMove(global::UnityEngine.UIElements.PointerMoveEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.OnPointerMove"); }
-        [global::Unbound.Stub] protected void OnPointerUp(global::UnityEngine.UIElements.PointerUpEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.OnPointerUp"); }
-        [global::Unbound.Stub] protected void InterruptPointerMove(global::UnityEngine.UIElements.PointerMoveEvent e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.InterruptPointerMove"); }
-        public float delta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitViewResizer.delta"); return default; } }
     }
     unsafe partial class UIDocument
     {
