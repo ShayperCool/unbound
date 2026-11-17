@@ -581,6 +581,18 @@ namespace UnityEngine
             return Math.Max(0, (int)Math.Ceiling(dt / (double)duration - 1e-4) - 1);
         }
 
+        /// <summary>What a step longer than its loop emits for (see <see cref="SkippedLoops"/>): the
+        /// loop time it advances, its end's place in the loop less its start's, a loop added when
+        /// the end lies before the start, and a whole loop when it ends where it started (in float
+        /// arithmetic, so ties fall as the Editor's do).</summary>
+        float RateSpan(float t0, float dt, float duration)
+        {
+            if (SkippedLoops(dt, duration) == 0) return dt;
+            float advance = (t0 + dt) % duration - t0;
+            if (advance < 0f) advance += duration;
+            return advance > 1e-6f ? advance : duration;
+        }
+
         // Count with the established float arithmetic, sharing the step's emission draw
         // across loops. Start curves use the final playback time of the whole batch.
         bool PlanRate(float t0, float dt, float duration, float rateRandom)
@@ -589,7 +601,7 @@ namespace UnityEngine
             m_RateBatchEmitted = false;
             m_StepRateBirths = 0;
             float counted = m_RateAccumulator, whole = counted, gain = 0f, phase = m_EmitPhase;
-            float t1 = t0 + (dt - SkippedLoops(dt, duration) * duration);
+            float t1 = t0 + RateSpan(t0, dt, duration);
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
