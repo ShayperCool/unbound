@@ -225,6 +225,12 @@ namespace UnityEngine
 
         internal void BuildDetailsForTest(Terrain terrain, TerrainData data, Vector3 origin) => BuildDetails(terrain, data, origin);
         internal Texture2D DetailAtlasForTest => m_DetailAtlas;
+        internal static List<Vector3> BakedMeshNormalsForTest(TerrainData data, DetailPrototype prototype, Matrix4x4 placement)
+        {
+            var builder = new MeshBuilder();
+            BakeMeshDetails(data, builder, prototype, new List<Matrix4x4> { placement });
+            return builder.Normals;
+        }
 
         void BuildDetails(Terrain terrain, TerrainData data, Vector3 origin)
         {
@@ -277,7 +283,7 @@ namespace UnityEngine
                                 if (data.PlacePatchMeshDetails(setup, px, py, density, placed, perInstance, ref used, placements))
                                     placed++;
                                 if (placements.Count == 0) continue;
-                                if (mesh != null) BakeMeshDetails(builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements);
+                                if (mesh != null) BakeMeshDetails(data, builders[(int)DetailKind.Mesh] ??= new MeshBuilder(), prototype, placements);
                                 else AddQuads(data, prototype, placements, mode == DetailRenderMode.GrassBillboard, rects[index], builders);
                             }
                         }
@@ -374,13 +380,14 @@ namespace UnityEngine
         /// (turned, tilted to the ground, scaled), its normals turned and tilted, coloured the
         /// instance's colour, drawn with a material that samples white (the prototype material's
         /// texture is not used: not yet).</summary>
-        static void BakeMeshDetails(MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements)
+        static void BakeMeshDetails(TerrainData data, MeshBuilder builder, DetailPrototype prototype, List<Matrix4x4> placements)
         {
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
             var vertices = mesh.m_Vertices;
             var normals = mesh.normals;
             var triangles = mesh.triangles;
+            bool grass = prototype.renderMode == DetailRenderMode.Grass;
             foreach (var model in placements)
             {
                 var position = model.GetColumn(3);
@@ -389,11 +396,15 @@ namespace UnityEngine
                 var color = ToColor32(new Color(c.r, c.g, c.b, 1f));
                 Vector3 ax = model.GetColumn(0), ay = model.GetColumn(1), az = model.GetColumn(2);
                 ax = ax.normalized; ay = ay.normalized; az = az.normalized;
+                // In the Grass render mode every vertex takes the terrain's normal there, as a grass
+                // quad does: the mesh's faces are lit alike (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/grass Refusals; measured on flat terrain, where that normal is up).
+                var ground = grass ? data.GetInterpolatedNormal(position.x / data.size.x, position.z / data.size.z) : Vector3.zero;
                 int first = builder.Vertices.Count;
                 for (int v = 0; v < vertices.Length; v++)
                 {
                     var n = v < normals.Length ? normals[v] : Vector3.up;
-                    builder.Add(model.MultiplyPoint3x4(vertices[v]), ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, Vector2.zero);
+                    builder.Add(model.MultiplyPoint3x4(vertices[v]), grass ? ground : ax * n.x + ay * n.y + az * n.z, new Vector4(1f, 0f, 0f, 1f), color, Vector2.zero);
                 }
                 foreach (var t in triangles) builder.Indices.Add(first + t);
             }

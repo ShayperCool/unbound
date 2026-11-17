@@ -512,6 +512,36 @@ namespace UnityEngine.Tests
             for (int x = 24; x < 32; x++) Assert.Equal(0, level0[x].a);
         }
 
+        /// <summary>A mesh in the Grass render mode takes the terrain's normal at every vertex, its
+        /// faces lit alike (tests/projects/grass Refusals); in the VertexLit mode it keeps its own
+        /// normals, turned with the instance.</summary>
+        [Theory]
+        [InlineData(DetailRenderMode.Grass, true)]
+        [InlineData(DetailRenderMode.VertexLit, false)]
+        public void GrassModeMeshesTakeTheTerrainNormal(DetailRenderMode mode, bool ground)
+        {
+            var mesh = Own(new Mesh());
+            mesh.vertices = new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 1, 0) };
+            mesh.normals = new[] { Vector3.forward, Vector3.forward, Vector3.forward };
+            mesh.triangles = new[] { 0, 1, 2 };
+            var prefab = Own(new GameObject("mesh detail"));
+            prefab.AddComponent<MeshFilter>().sharedMesh = mesh;
+            prefab.AddComponent<MeshRenderer>();
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype
+            {
+                prototype = prefab, usePrototypeMesh = true, useInstancing = false, renderMode = mode,
+                minWidth = 1f, maxWidth = 1f, minHeight = 1f, maxHeight = 1f,
+            });
+            var turn = Matrix4x4.TRS(new Vector3(8f, 0f, 8f), Quaternion.Euler(0f, 40f, 0f), Vector3.one);
+            var normals = TerrainRenderer.BakedMeshNormalsForTest(data, data.detailPrototypes[0], turn);
+            Assert.Equal(3, normals.Count);
+            foreach (var n in normals)
+            {
+                if (ground) Assert.Equal(Vector3.up, n);
+                else Assert.True(Mathf.Abs(n.y) < 1e-4f, n.ToString());
+            }
+        }
+
         /// <summary>Drawn details are rebuilt when the detail density changes, the terrain's or the
         /// quality level's.</summary>
         [Fact]
