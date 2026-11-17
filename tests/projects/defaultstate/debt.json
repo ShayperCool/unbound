@@ -3801,6 +3801,19 @@
         "status": "value",
         "value": "4"
       }
+    },
+    {
+      "key": "UnityEngine.UIElements.PopupWindow/Property/UnityEngine.UIElements.TextElement/selection",
+      "module": "UnityEngine.UIElementsModule",
+      "reason": "Q411 UIElements remaining context: Text interfaces and hierarchy now match, but cursor/selection values require initialized font and text-layout geometry. Unattached TextElement variants and TextField differ, so a fixed cursor-height value is not a general rule; retain this raw leaf or aggregate.",
+      "expected": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=16.943182};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      },
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.UIElements.ITextSelection{cursorColor=UnityEngine.Color{r=0.70599997;g=0.70599997;b=0.70599997;a=1};cursorIndex=-1;cursorPosition=UnityEngine.Vector2{x=0;y=0};doubleClickSelectsWord=true;isSelectable=false;selectAllOnFocus=false;selectAllOnMouseUp=false;selectIndex=-1;selectionColor=UnityEngine.Color{r=0.238999993;g=0.501999974;b=0.875;a=0.649999976};tripleClickSelectsLine=true}"
+      }
     }
   ],
   "constructorStores": []

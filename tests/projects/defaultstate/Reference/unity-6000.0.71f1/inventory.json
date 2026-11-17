@@ -8008,6 +8008,24 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.HelpBox"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.HelpBox+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.HelpBox+UxmlTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.IMGUIContainer"
     },
     {
@@ -8507,6 +8525,24 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.PopupField`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.PopupWindow"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.PopupWindow+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.PopupWindow+UxmlTraits"
     },
     {
       "category": "class",
@@ -9016,6 +9052,36 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.ToggleButtonGroup"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ToggleButtonGroup+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ToggleButtonGroup+UxmlTraits"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.ToggleButtonGroupState"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.UIElements.ToggleButtonGroupStatePropertiesAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.TooltipEvent"
     },
     {
@@ -9095,6 +9161,24 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEngine.UIElements.TreeViewItemData`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TwoPaneSplitView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TwoPaneSplitView+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TwoPaneSplitView+UxmlTraits"
     },
     {
       "category": "class",
