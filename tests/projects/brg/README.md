@@ -101,3 +101,13 @@ Editor draws the batch on both devices (the Manual's platform list names only Vu
 the images are identical on both, and so are the values but the buffer target and the AddBatch windows each device refuses. Unbound: every value on both devices (2329 records on OpenGL Core, 2326 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
+
+## Metal (macOS)
+
+`--device metal` records the macOS Editor in batch mode, which draws with Metal
+(`tests/macos_editor.py`); `Reference/unity-6000.0.71f1/metal` holds two byte-identical
+captures on an Apple M2 Pro. Against the Linux references every Metal image differs by one
+step in most pixels (means 0.46 to 0.98, worst 1) in the macOS Editor and in Unbound alike: that
+is Metal's own rounding, which the device decides, so on macOS the check compares Metal with the
+Metal reference (`check --device vulkan` there, since macOS has no Vulkan device) at the same
+bounds, while `check` still compares with the Linux OpenGL Core reference.
