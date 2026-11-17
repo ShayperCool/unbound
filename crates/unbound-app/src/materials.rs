@@ -136,6 +136,13 @@ impl ResolvedMaterial {
         };
         (handle, default)
     }
+
+    /// Whether the shader's Properties block declares `name`: a declared texture reads the
+    /// material's texture or its default, and only an undeclared one a global texture
+    /// (Shader.SetGlobalTexture; tests/projects/postprocessv2 `global.*`).
+    pub fn declares(&self, name: &str) -> bool {
+        self.lab.property(name).is_some()
+    }
 }
 
 /// Resolves materials; logs once per shader that cannot draw as written.

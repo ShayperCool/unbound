@@ -1768,6 +1768,7 @@ impl UnityRenderer {
                         texture = h;
                     }
                     if texture == 0
+                        && !resolved.declares(name)
                         && let Some((_, owned::PropertyValue::Texture { handle, .. })) =
                             globals.iter().find(|(n, _)| n == name)
                     {
@@ -4238,12 +4239,18 @@ impl UnityRenderer {
             Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
             _ => 0,
         };
-        // `_MainTex`: the renderer's (a sprite's texture), else the material's.
+        // `_MainTex`: the renderer's (a sprite's texture), else the material's, else a global
+        // one when the shader does not declare it.
         let (_, main_default) = resolved.texture("_MainTex");
-        let main_handle = if draw.main_texture != 0 {
-            draw.main_texture
-        } else {
-            texture_of("_MainTex")
+        let main_handle = match (draw.main_texture, texture_of("_MainTex")) {
+            (0, 0) if !resolved.declares("_MainTex") => {
+                match self.globals_index.find(&self.globals, "_MainTex") {
+                    Some(owned::PropertyValue::Texture { handle, .. }) => *handle,
+                    _ => 0,
+                }
+            }
+            (0, material) => material,
+            (renderer, _) => renderer,
         };
         let (texture_bg, alpha_only) = self.main_bind_group(main_handle, &main_default, space);
         let screen = [
