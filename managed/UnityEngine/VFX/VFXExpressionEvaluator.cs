@@ -44,10 +44,11 @@ namespace Unbound.Runtime
         {
             switch (op)
             {
-                // No control records these yet: no operator of the package gives the first
-                // two on the CPU; the third reads an event's attributes among the expressions
-                // evaluated per spawn event, which Unbound does not evaluate yet.
-                case VFXExpressionOperation.InverseMatrix:
+                // No control records these yet: a matrix's axis is made by blocks of
+                // initialize and update contexts only (collision shapes, a position on a mesh),
+                // whose values no control reads; an event attribute read in a spawn context is
+                // among the expressions evaluated per spawn event, which Unbound does not
+                // evaluate yet.
                 case VFXExpressionOperation.MatrixToAxis:
                 case VFXExpressionOperation.ReadEventAttribute:
                     return false;
@@ -207,6 +208,9 @@ namespace Unbound.Runtime
                         Store(w, at, inverse);
                         break;
                     }
+                    // The inverse of any matrix (a camera's projection's, for a point from its
+                    // viewport): a singular one gives a matrix of zeros.
+                    case VFXExpressionOperation.InverseMatrix: Store(w, at, Matrix4x4.Inverse(Load(w, p0))); break;
                     case VFXExpressionOperation.RowToMatrix:
                     case VFXExpressionOperation.ColumnToMatrix:
                     {
@@ -289,10 +293,11 @@ namespace Unbound.Runtime
                         (w[at], w[at + 1], w[at + 2]) = (Bits(r + rest), Bits(g + rest), Bits(rest + b));
                         break;
                     }
-                    // A texture's size (none: zero) and a buffer's element count.
+                    // A texture's size (none, or destroyed: zero) and a buffer's element count
+                    // (none: zero; one released while it is set keeps its count).
                     case VFXExpressionOperation.TextureWidth: w[at] = values.GetObject(a0) is Texture wide && wide ? (uint)wide.width : 0u; break;
                     case VFXExpressionOperation.TextureHeight: w[at] = values.GetObject(a0) is Texture high && high ? (uint)high.height : 0u; break;
-                    case VFXExpressionOperation.BufferCount: w[at] = values.GetObject(a0) is GraphicsBuffer counted && counted.IsValid() ? (uint)counted.count : 0u; break;
+                    case VFXExpressionOperation.BufferCount: w[at] = values.GetObject(a0) is GraphicsBuffer counted ? (uint)counted.ElementCount : 0u; break;
                     case VFXExpressionOperation.TransposeMatrix: Store(w, at, Load(w, p0).transpose); break;
                     case VFXExpressionOperation.TransformMatrix: Store(w, at, Load(w, p0) * Load(w, p1)); break;
                     case VFXExpressionOperation.TransformPos:

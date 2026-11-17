@@ -93,8 +93,20 @@ namespace UnityEngine.Tests
             // place in it, green the least, blue the most.
             float hue = 0.71f * 360f, chroma = 0.6f * 0.9f, second = (1f - MathF.Abs(hue / 60f % 2f - 1f)) * chroma, rest = 0.9f - chroma;
             Assert.Equal(new Vector4(second + rest, 0f + rest, rest + chroma, 0f), values.GetVector(3, 3));
-            // Every sixth: a hue of one gives what a hue of zero does (red).
-            foreach (var (h0, expected) in new[] { (0f, new Vector3(1f, 0f, 0f)), (1f / 3f, new Vector3(0f, 1f, 0f)), (2f / 3f, new Vector3(0f, 0f, 1f)), (1f, new Vector3(1f, 0f, 0f)) })
+            // The middle of every sixth, where the second component is half the chroma: the
+            // largest component turns red, yellow, green, cyan, blue, magenta; a hue of one gives
+            // what a hue of zero does.
+            var sixths = new[]
+            {
+                (1f / 12f, new Vector3(1f, 0.5f, 0f)), (3f / 12f, new Vector3(0.5f, 1f, 0f)), (5f / 12f, new Vector3(0f, 1f, 0.5f)),
+                (7f / 12f, new Vector3(0f, 0.5f, 1f)), (9f / 12f, new Vector3(0.5f, 0f, 1f)), (11f / 12f, new Vector3(1f, 0f, 0.5f)),
+                (1f, new Vector3(1f, 0f, 0f)),
+                // A hue outside the circle is not wrapped into it: the second component goes
+                // negative below it and the last sixth's rule holds above it (tests/projects/vfx
+                // operations/*/q04).
+                (-0.25f, new Vector3(1f, -1.5f, 0f)), (1.25f, new Vector3(1f, 0f, 0.5f)),
+            };
+            foreach (var (h0, expected) in sixths)
             {
                 var one = Data(new[] { Value(VFXValueType.Float3), Op(VFXExpressionOperation.HSVtoRGB, 0) }, new[] { Constant(0, new Vector3(h0, 1f, 1f)) });
                 var rgb = Evaluated(one).GetVector(1, 3);
@@ -102,6 +114,26 @@ namespace UnityEngine.Tests
                 Assert.Equal(expected.y, rgb.y, 5);
                 Assert.Equal(expected.z, rgb.z, 5);
             }
+        }
+
+        [Fact]
+        public void AnyMatrixIsInvertedAndOneWithoutAnInverseGivesZeros()
+        {
+            // A perspective projection with a lens shift: not affine, so its affine inverse would
+            // be wrong.
+            var projection = Matrix4x4.Perspective(63f, 1.5f, 0.3f, 1000f);
+            projection.m02 = -0.2f;
+            var data = Data(new[]
+            {
+                Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.InverseMatrix, 0),
+                Value(VFXValueType.Matrix4x4), Op(VFXExpressionOperation.InverseMatrix, 2),
+            }, new[] { Constant(0, projection), Constant(2, new Matrix4x4(new Vector4(1f, 2f, 3f, 4f), new Vector4(2f, 4f, 6f, 8f), Vector4.one, new Vector4(0f, 0f, 0f, 1f))) });
+            Assert.True(VFXExpressionEvaluator.Supported(VFXExpressionOperation.InverseMatrix));
+            var values = Evaluated(data);
+            Assert.Equal(projection.inverse, values.GetMatrix(1));
+            var product = projection * values.GetMatrix(1);
+            for (int i = 0; i < 16; i++) Assert.Equal(Matrix4x4.identity[i], product[i], 4);
+            Assert.Equal(Matrix4x4.zero, values.GetMatrix(3));
         }
 
         [Fact]
@@ -125,6 +157,14 @@ namespace UnityEngine.Tests
                 VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
                 Assert.Equal(8u, values.GetWord(1));
                 Assert.Equal(4u, values.GetWord(2));
+                Assert.Equal(7u, values.GetWord(4));
+                // A buffer released while it is set keeps its count; a texture destroyed while
+                // it is set has no size (tests/projects/vfx operations/*/u00..u02).
+                buffer.Release();
+                Object.DestroyImmediate(texture);
+                VFXExpressionEvaluator.Evaluate(data, values, 0, data.Operations.Length, new VisualEffectState(), null);
+                Assert.Equal(0u, values.GetWord(1));
+                Assert.Equal(0u, values.GetWord(2));
                 Assert.Equal(7u, values.GetWord(4));
             }
             finally

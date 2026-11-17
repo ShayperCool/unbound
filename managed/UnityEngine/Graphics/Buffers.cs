@@ -313,6 +313,9 @@ namespace UnityEngine
         public bool IsValid() => m_Ptr != IntPtr.Zero && !m_Storage.Released;
 
         public int count => CheckedStorage.Count;
+        /// <summary>The element count, released or not (what a visual effect the buffer is set
+        /// on reads of it).</summary>
+        internal int ElementCount => m_Storage.Count;
         public int stride => CheckedStorage.Stride;
         public Target target { get { _ = CheckedStorage; return m_Target; } }
         public UsageFlags usageFlags { get { _ = CheckedStorage; return m_UsageFlags; } }
