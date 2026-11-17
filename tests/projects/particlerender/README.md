@@ -59,8 +59,9 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   `plain_gravity8`, `plain_gravity12`, World-space rates under gravity without sub-emitters, and
   `birth_child12_dur05`, `birth_child8_dur01`, Birth children of parents whose duration, 0.5 and
   0.1 s, is below the long steps a prewarm takes; `maxdelta/<maximum>/*`: the same World-space rates
-  and a Birth child under Time.maximumParticleDeltaTime 0.15, 0.25 and 0.4 s for loops of 0.1 to 1 s,
-  lifetimes of 3, 8 and 12 s and rates of 1 to 100 (each maximum its own pass);
+  and a Birth child under Time.maximumParticleDeltaTime 0.15, 0.2, 0.25 and 0.4 s for loops of 0.05
+  to 1 s, lifetimes of 3, 8 and 12 s and rates of 1 to 100, 15 a fractional count a loop (each
+  maximum its own pass);
   systems in procedural mode with bursts at and after a loop's start, a rate under gravity, and random
   start lifetimes, sizes and rotations (`proc_random/values`: their start values).
 - `birthend/*`: Birth children, played and simulated at 0.02 s, of a non-looping child whose duration

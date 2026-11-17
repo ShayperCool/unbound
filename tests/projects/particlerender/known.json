@@ -193,11 +193,17 @@
   ]
  },
  "prewarm-maxdelta-sweep": {
-  "reason": "Prewarms under a Time.maximumParticleDeltaTime above the default (prewarm/maxdelta/*, 42 records, 23 exact): the step lengths and the rate a step emits match (a looping step longer than its loop emits for its advance within the loop), but in these records births Unbound places inside long steps are up to 1e-3 s older than the Editor's (0.25/d0.1_l12_r10, 0.25/d0.1_l8_r100), and a birth due at the prewarm's end or at the first update's falls on the other side of it, one particle more or fewer (0.15/d0.1_l8_r10, 0.25/d0.2_l8_r10, 0.25/d0.3_l8_r10, 0.25/d1_l8_r1, 0.4/d0.1_l8_r10; also with steps shorter than the loop), with the seeds' order following (0.25/birth_child8). Open: the in-step birth times and the end tie under these steps.",
+  "reason": "Prewarms under a Time.maximumParticleDeltaTime above the default (prewarm/maxdelta/*, 54 records, 32 within the comparator's bound): the step lengths and the rate a step emits match (a looping step longer than its loop emits for its advance within the loop, a step of whole loops for one loop), but births Unbound places inside long steps are up to 1e-3 s older than the Editor's (0.25/d0.1_l12_r10, 0.25/d0.1_l8_r100); a birth due at the prewarm's end falls on the other side of it, one particle more or fewer (0.15/d0.1_l8_r10, 0.25/d0.2_l8_r10, 0.25/d0.3_l8_r10, 0.25/d1_l8_r1); in steps of exactly two loops the Editor's births fall in the middle of the step and its last 0.3 s holds none, two particles fewer than Unbound's (0.2/d0.1_l8_r10, 0.2/d0.1_l8_r15); and a Birth child's seed order follows (0.25/birth_child8). Open: the in-step birth times, the end tie and whole-loop steps under these maxima.",
   "keys": [
    "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/0",
    "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/1",
    "prewarm/maxdelta/0.15/d0.1_l8_r10/parent/start",
+   "prewarm/maxdelta/0.2/d0.1_l8_r10/parent/0",
+   "prewarm/maxdelta/0.2/d0.1_l8_r10/parent/1",
+   "prewarm/maxdelta/0.2/d0.1_l8_r10/parent/start",
+   "prewarm/maxdelta/0.2/d0.1_l8_r15/parent/0",
+   "prewarm/maxdelta/0.2/d0.1_l8_r15/parent/1",
+   "prewarm/maxdelta/0.2/d0.1_l8_r15/parent/start",
    "prewarm/maxdelta/0.25/birth_child8/parent/0",
    "prewarm/maxdelta/0.25/d0.1_l12_r10/parent/0",
    "prewarm/maxdelta/0.25/d0.1_l12_r10/parent/1",
@@ -210,10 +216,7 @@
    "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/0",
    "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/1",
    "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/start",
-   "prewarm/maxdelta/0.25/d1_l8_r1/parent/start",
-   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/0",
-   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/1",
-   "prewarm/maxdelta/0.4/d0.1_l8_r10/parent/start"
+   "prewarm/maxdelta/0.25/d1_l8_r1/parent/start"
   ]
  }
 }
