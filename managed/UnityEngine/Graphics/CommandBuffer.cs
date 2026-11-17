@@ -516,7 +516,10 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ drawing
 
-        public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass, MaterialPropertyBlock properties)
+        public void DrawMesh(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass, MaterialPropertyBlock properties) =>
+            DrawMeshCommand(mesh, matrix, material, submeshIndex, shaderPass, properties, 84);
+
+        void DrawMeshCommand(Mesh mesh, Matrix4x4 matrix, Material material, int submeshIndex, int shaderPass, MaterialPropertyBlock properties, int size)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (material == null) throw new ArgumentNullException(nameof(material));
@@ -526,7 +529,7 @@ namespace UnityEngine.Rendering
                 ulong meshHandle = mesh.Sync();
                 ulong materialHandle = material.Sync();
                 GfxStream.Draw(meshHandle, submeshIndex, materialHandle, shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, Color.white, properties: values, rawWinding: Unbound.Runtime.Compat.ImmediateMeshKeepsWinding);
-            }, 84);
+            }, size);
         }
 
         /// <summary>The first <paramref name="count"/> meshes, each with its matrix and submesh, in one
@@ -539,8 +542,10 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (count < 0 || count > matrices.Length || count > meshes.Length || count > subsetIndices.Length)
                 throw new ArgumentOutOfRangeException(nameof(count), "count exceeds the arrays' lengths.");
+            // One command: 16 bytes and 72 for each mesh (measured: tests/projects/runtimeapis size.draw_multiple*).
             for (int i = 0; i < count; i++)
-                if (meshes[i] != null) DrawMesh(meshes[i], matrices[i], material, subsetIndices[i], shaderPass, properties);
+                if (meshes[i] != null) DrawMeshCommand(meshes[i], matrices[i], material, subsetIndices[i], shaderPass, properties, 0);
+            Grow(16 + 72 * count);
         }
 
         public void GenerateMips(RenderTargetIdentifier rt) => Add(c =>

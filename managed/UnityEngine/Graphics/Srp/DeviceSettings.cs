@@ -71,9 +71,9 @@ namespace UnityEngine.Rendering
 
     public partial class CommandBuffer
     {
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
-        public void BeginSample(Profiling.CustomSampler sampler) { }
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
-        public void EndSample(Profiling.CustomSampler sampler) { }
+        // Profiler samples: nothing a game observes (no profiler is attached) but their size
+        // (measured: tests/projects/runtimeapis size.*_sample_sampler).
+        public void BeginSample(Profiling.CustomSampler sampler) => Grow(16);
+        public void EndSample(Profiling.CustomSampler sampler) => Grow(16);
     }
 }

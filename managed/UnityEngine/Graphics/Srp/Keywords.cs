@@ -210,12 +210,12 @@ namespace UnityEngine.Rendering
             Add(c => { if (value) computeShader.EnableKeyword(name); else computeShader.DisableKeyword(name); });
         }
 
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
+        // Profiler samples: nothing a game observes (no profiler is attached) but their size
+        // (measured: tests/projects/runtimeapis size.*_sample_marker).
         [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
-        public void BeginSample(Unity.Profiling.ProfilerMarker marker) { }
-        [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
+        public void BeginSample(Unity.Profiling.ProfilerMarker marker) => Grow(16);
         [global::System.Diagnostics.Conditional("ENABLE_PROFILER")]
-        public void EndSample(Unity.Profiling.ProfilerMarker marker) { }
+        public void EndSample(Unity.Profiling.ProfilerMarker marker) => Grow(16);
 
         /// <summary>When executed, the texture's <c>updateCount</c> goes up (only a texture object
         /// has one to read; temporaries and built-in targets have none).</summary>
