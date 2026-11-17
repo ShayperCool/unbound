@@ -169,6 +169,16 @@ public class BlendProbe : MonoBehaviour
             ("clear", m => m.ClearBlendShapes()),
             ("vertices change", m => m.vertices = new Vector3[4]),
             ("vertices same count", m => m.vertices = m.vertices),
+            // Fewer vertices than the indices reach, through the other setters, and indices of
+            // other topologies and from a base vertex; a shorter array covering them as a control.
+            ("SetVertices list", m => m.SetVertices(new List<Vector3>(new Vector3[4]))),
+            ("SetVertices array", m => m.SetVertices(new Vector3[4])),
+            ("SetVertices range", m => m.SetVertices(new List<Vector3>(new Vector3[9]), 0, 4)),
+            ("vertices null", m => m.vertices = null),
+            ("SetVertices null list", m => m.SetVertices((List<Vector3>)null)),
+            ("point indices", m => { m.SetIndices(new[] { 0, 1, 7 }, MeshTopology.Points, 0); m.vertices = new Vector3[5]; }),
+            ("base vertex", m => { m.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0, true, 6); m.vertices = new Vector3[8]; }),
+            ("shorter covering", m => { m.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0); m.vertices = new Vector3[5]; }),
         };
         foreach (var (name, act) in misuse)
         {
@@ -176,7 +186,7 @@ public class BlendProbe : MonoBehaviour
             string error = "";
             try { act(mesh); }
             catch (Exception e) { error = e.GetType().Name; }
-            Record("misuse", $"\"name\":{Q(name)},\"exception\":{Q(error)},\"count\":{mesh.blendShapeCount},\"shapes\":{Shapes(mesh)},\"logs\":{Logs()}");
+            Record("misuse", $"\"name\":{Q(name)},\"exception\":{Q(error)},\"count\":{mesh.blendShapeCount},\"shapes\":{Shapes(mesh)},\"vertexCount\":{mesh.vertexCount},\"logs\":{Logs()}");
             Destroy(mesh);
         }
 
