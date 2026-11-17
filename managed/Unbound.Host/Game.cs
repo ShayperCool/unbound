@@ -46,6 +46,9 @@ public sealed class GameConfig
     public float MaximumParticleDeltaTime { get; set; } = 0.03f;
     public float TimeScale { get; set; } = 1f;
     public bool SimulateTouch { get; set; }
+    /// <summary>The Game view's size (the window's) before the first frame; 0 without a window.</summary>
+    public int ScreenWidth { get; set; }
+    public int ScreenHeight { get; set; }
     /// <summary>Player Settings' active input handling: 0 Input Manager, 1 Input System package, 2 both.</summary>
     public int ActiveInputHandler { get; set; }
     /// <summary>Script execution orders from the scripts' .meta files: guid → order.</summary>
@@ -389,6 +392,7 @@ public static unsafe class Game
         Time.s_MaximumParticleDeltaTime = c.MaximumParticleDeltaTime;
         Time.s_TimeScale = c.TimeScale;
         Input.SimulateTouchWithMouse = c.SimulateTouch;
+        Screen.SetInitialSize(c.ScreenWidth, c.ScreenHeight);
         Input.s_InputManagerDisabled = c.ActiveInputHandler == 1;
         NativeInput.Enabled = c.ActiveInputHandler != 0;
         UnityEditor.PlayerSettings.s_ActiveInputHandler = c.ActiveInputHandler;

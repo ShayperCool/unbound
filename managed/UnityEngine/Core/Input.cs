@@ -17,6 +17,16 @@ namespace UnityEngine
         static int s_RenderingWidth, s_RenderingHeight;
         static bool s_RenderingPending;
 
+        /// <summary>The Game view's size before Play mode's first callback: the Editor's Game view
+        /// exists before Play mode, so scripts see its size from SubsystemRegistration on (matches
+        /// the Unity 6000.0.71f1 macOS Editor, tests/projects/screenboot).</summary>
+        internal static void SetInitialSize(int width, int height)
+        {
+            if (width <= 0 || height <= 0) return;
+            s_Width = width;
+            s_Height = height;
+        }
+
         internal static void Update(int width, int height)
         {
             s_DisplayFrame++;

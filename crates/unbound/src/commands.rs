@@ -1297,6 +1297,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         command_line,
         player_prefs: None,
         persistent_data_path: None,
+        screen: None,
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
     // The Editor's own `-force-vulkan` / `-force-glcore` among the test arguments.
@@ -1370,6 +1371,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         code_optimization: unbound_project::CodeOptimization::at_startup(&[]),
         player_prefs: run.player_prefs.clone(),
         persistent_data_path: run.persistent_data_path.clone(),
+        screen: Some((width, height)),
     };
     choose_graphics_device(&project, run.forced_device, run.headless.is_none())?;
     install_shader_declarations(&project, &args.target);

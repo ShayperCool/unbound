@@ -37,6 +37,9 @@ pub struct GameOptions {
     pub player_prefs: Option<PathBuf>,
     /// Application.persistentDataPath of the run's own instead of the Editor's.
     pub persistent_data_path: Option<PathBuf>,
+    /// The Game view's size in rendering pixels (the window's), which scripts see from the first
+    /// callback of Play mode on; None without a window.
+    pub screen: Option<(i32, i32)>,
 }
 
 /// Where a Unity release's module facades are kept: they depend on the release alone, so they
@@ -268,6 +271,10 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     }
     // Outside the literal above, which is at json!'s recursion limit.
     config["codeOptimization"] = json!(options.code_optimization.name());
+    if let Some((width, height)) = options.screen {
+        config["screenWidth"] = json!(width);
+        config["screenHeight"] = json!(height);
+    }
     // Retain the metadata in Edit mode too: a session may enter Play mode later.
     config["disabledModules"] = json!(
         graph
