@@ -27,6 +27,5 @@ recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
 Recorded residuals (`residuals.json`): an ArgumentNullException or ArgumentOutOfRangeException
 with a parameter name has Mono's message format in the Editor and .NET's in Unbound, which keeps
-the parameter name; a controller playable that no output plays has no state in Unbound, so its
-lookups answer without warnings; a null reference in the probe's own code has the runtime's
+the parameter name; a null reference in the probe's own code has the runtime's
 message, without a full stop on Mono and with one on CoreCLR.
