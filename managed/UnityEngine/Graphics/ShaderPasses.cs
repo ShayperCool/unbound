@@ -289,8 +289,8 @@ namespace UnityEngine
 
         /// <summary>A SubShader's tag as Unity stores it. An index out of range throws (canonical
         /// *.subshaderTag[count] and [-1]; Unity's C# checks the index before the native call and
-        /// passes its text as the parameter name). Preserve ParamName; the runtime's standard
-        /// exception-message formatting may differ between .NET and Mono.</summary>
+        /// passes its text as the parameter name; game code reads the message as Mono writes it,
+        /// Unbound.Runtime.MonoExceptions).</summary>
         public ShaderTagId FindSubshaderTagValue(int subshaderIndex, ShaderTagId tagName)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);

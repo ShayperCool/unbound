@@ -105,5 +105,7 @@ The strict comparison has 774/777 lines with 3 missing and 3 extra, all recorded
 (`docs/COMPATIBILITY_GAPS.md`, instantiateasync row): the scene Template's Start runs before
 the probe's own Start in the Editor and after it in Unbound (frame -1 versus 0; an order
 between objects Unity does not document), and two `integrationTimeMS` exception messages
-carry the parameter name in the runtime's own form. The deferred-Destroy differences above
-are closed. Any other difference is a regression.
+carry the parameter name in the runtime's own form. Since game code reads argument exception
+messages as Mono writes them (2026-11-17, `docs/COMPATIBILITY_GAPS.md` "Argument exception
+texts"), the two messages match: 776/777 lines, the Start order alone. The deferred-Destroy
+differences above are closed. Any other difference is a regression.

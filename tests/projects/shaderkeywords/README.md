@@ -231,10 +231,10 @@ only.
 
 ## Sheriff status (main e541da0ea, 2026-11-16)
 
-11 of 1510 keys fail, the eleven retained above: ten `subshaderTag` exception messages
-(parameter name in the runtime's own form, `docs/COMPATIBILITY_GAPS.md` "Order and text
-Unity's documentation leaves open") and `context.isBatchMode`, which is a property of the
-capture: the reference was recorded in batch mode and Unbound runs as the interactive Editor.
+Since game code reads argument exception messages as Mono writes them (main after
+2026-11-17, `docs/COMPATIBILITY_GAPS.md` "Argument exception texts"), the ten `subshaderTag`
+exception messages of the eleven retained above match: 1 of 1510 keys fails,
+`context.isBatchMode`, which is a property of the capture: the reference was recorded in batch mode and Unbound runs as the interactive Editor.
 Closing that key needs a windowed Linux Editor re-record, as activationorder's did. A run on
 macOS also differs in the OS-decided `context.platform` and `context.graphicsDeviceType`.
 Anything else is a regression.
