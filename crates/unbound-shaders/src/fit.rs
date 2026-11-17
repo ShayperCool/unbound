@@ -1318,6 +1318,10 @@ pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
     let mut module = naga::front::spv::parse_u8_slice(&bytes, &options)
         .map_err(|e| anyhow!("reading SPIR-V: {e:?}"))?;
     finite_float_literals(&mut module);
+    vector_logical_operators(&mut module);
+    for function in module_functions(&mut module) {
+        cases_that_leave(&mut function.body);
+    }
     if made_nans {
         // The constants whose uses were made at run time are left without one: unused, they
         // go (declared, each would still be a literal of the module). Functions, variables
@@ -1357,6 +1361,120 @@ fn finite_float_literals(module: &mut Module) {
         for (_, e) in entry.function.expressions.iter_mut() {
             finite(e);
         }
+    }
+}
+
+/// The module's functions, its entry points' included.
+fn module_functions(module: &mut Module) -> impl Iterator<Item = &mut naga::Function> {
+    module
+        .functions
+        .iter_mut()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter_mut().map(|e| &mut e.function))
+}
+
+/// `||` and `&&` of bool vectors (HLSL's `any(offset == 0 || offset == size - 1)`, URP's
+/// debug display), which glslang writes as SPIR-V's component-wise logical operators and naga
+/// allows only on single bools, become `|` and `&`: the same values, since HLSL evaluates both
+/// operands of a vector operator anyway.
+fn vector_logical_operators(module: &mut Module) {
+    let types = &module.types;
+    let mut found: Vec<(bool, usize, Handle<Expression>)> = Vec::new();
+    let functions: Vec<&naga::Function> = module
+        .functions
+        .iter()
+        .map(|(_, f)| f)
+        .chain(module.entry_points.iter().map(|e| &e.function))
+        .collect();
+    for (index, function) in functions.iter().enumerate() {
+        let context = naga::proc::ResolveContext::with_locals(
+            module,
+            &function.local_variables,
+            &function.arguments,
+        );
+        // Resolved in order, as naga's typifier does, except that a vector logical operator
+        // (which the typifier refuses) has its operands' type.
+        let mut resolved: Vec<naga::proc::TypeResolution> = Vec::new();
+        for (handle, expression) in function.expressions.iter() {
+            let resolution = match *expression {
+                Expression::Binary {
+                    op: op @ (BinaryOperator::LogicalOr | BinaryOperator::LogicalAnd),
+                    left,
+                    ..
+                } if resolved.get(left.index()).is_some_and(|r| {
+                    matches!(
+                        r.inner_with(types),
+                        TypeInner::Vector { scalar, .. } if scalar.kind == naga::ScalarKind::Bool
+                    )
+                }) =>
+                {
+                    found.push((op == BinaryOperator::LogicalOr, index, handle));
+                    resolved[left.index()].clone()
+                }
+                _ => match context.resolve(expression, |h| Ok(&resolved[h.index()])) {
+                    Ok(resolution) => resolution,
+                    // A program naga cannot type is left as it is (validation says why).
+                    Err(_) => break,
+                },
+            };
+            resolved.push(resolution);
+        }
+    }
+    drop(functions);
+    let mut functions: Vec<&mut naga::Function> = module_functions(module).collect();
+    for (or, index, handle) in found {
+        if let Expression::Binary { op, .. } = &mut functions[index].expressions[handle] {
+            *op = match or {
+                true => BinaryOperator::InclusiveOr,
+                false => BinaryOperator::And,
+            };
+        }
+    }
+}
+
+/// Switch cases marked to fall through whose code leaves the switch on every path (naga's
+/// SPIR-V reader marks so a case that ends in an `if` whose branches both leave, as glslang
+/// writes HLSL's `case A: case B: { if (..) return x; else return y; }` in an inlined
+/// function, URP's full-screen debug views): they never reach the next case, and WGSL has no
+/// way to write a case with code that falls through.
+fn cases_that_leave(block: &mut naga::Block) {
+    for statement in block.iter_mut() {
+        match statement {
+            Statement::Block(inner) => cases_that_leave(inner),
+            Statement::If { accept, reject, .. } => {
+                cases_that_leave(accept);
+                cases_that_leave(reject);
+            }
+            Statement::Loop {
+                body, continuing, ..
+            } => {
+                cases_that_leave(body);
+                cases_that_leave(continuing);
+            }
+            Statement::Switch { cases, .. } => {
+                for case in cases.iter_mut() {
+                    cases_that_leave(&mut case.body);
+                    if case.fall_through && leaves(&case.body) {
+                        case.fall_through = false;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Whether a block's code, run to its end, leaves the switch or loop around it (or the
+/// function) on every path. A nested loop or switch counts as not leaving: a `break` there
+/// leaves only it.
+fn leaves(block: &naga::Block) -> bool {
+    match block.last() {
+        Some(
+            Statement::Return { .. } | Statement::Kill | Statement::Break | Statement::Continue,
+        ) => true,
+        Some(Statement::Block(inner)) => leaves(inner),
+        Some(Statement::If { accept, reject, .. }) => leaves(accept) && leaves(reject),
+        _ => false,
     }
 }
 

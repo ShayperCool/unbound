@@ -2759,6 +2759,58 @@ float4 frag(v2f i) : SV_Target
         }
     }
 
+    /// URP's debug display (`DEBUG_DISPLAY`): `||` of bool vectors (Debugging3D.hlsl's tile
+    /// borders) and a switch whose grouped cases end in an `if` that returns on both branches
+    /// (DebuggingFullscreen.hlsl's full-screen views, inlined) compile, and keep their values.
+    #[test]
+    fn debug_display_constructs_compile() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+uint _Mode;
+float4 _Tile;
+struct v2f { float4 pos : SV_POSITION; };
+v2f vert(float4 v : POSITION) { v2f o; o.pos = v; return o; }
+bool View(float2 uv, inout float4 c)
+{
+    switch (_Mode)
+    {
+        case 1:
+        case 2:
+        {
+            if (uv.x > 0.5) { c = 1; return true; }
+            else { return false; }
+        }
+        case 3:
+            c = 0.25;
+            return true;
+        default:
+        {
+            return false;
+        }
+    }
+}
+float4 frag(v2f i) : SV_Target
+{
+    uint2 o = uint2(i.pos.xy) % 8u;
+    bool border = any(o == 0 || o == (uint)_Tile.x - 1);
+    bool inside = all(o > 1 && o < 6);
+    float4 c = 0;
+    if (View(i.pos.xy, c)) return c;
+    return float4(border, inside, 0, 1);
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let wgsl = &compiled.fragment;
+        // Component-wise, as HLSL evaluates vector operators.
+        assert!(wgsl.contains(") | (") && wgsl.contains(") & ("), "{wgsl}");
+        // The grouped labels still share their case.
+        assert!(wgsl.contains("case 2, 1: {"), "{wgsl}");
+    }
+
     #[test]
     fn texture_slots_record_their_texel_type() {
         // Shader cache 15: float, integer and depth declarations give the slot its texel type;

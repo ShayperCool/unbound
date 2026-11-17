@@ -304,7 +304,13 @@ impl<'a> Preprocessor<'a> {
             {
                 out.push(' ');
             }
-            out.push_str(&t.text);
+            // A character literal is an integer to Unity's compiler; glslang, whose lexer has
+            // none, would read `'N'` as the name `N` (URP's mipmap debug legend is an array of
+            // them).
+            match char_literal(&t) {
+                Some(value) => out.push_str(&value.to_string()),
+                None => out.push_str(&t.text),
+            }
             previous = Some(t.kind);
         }
         Ok(())
@@ -1077,10 +1083,40 @@ impl Eval<'_> {
             Kind::Number => number(&t.text)?,
             // A name no macro defines is 0 (`true` too, as in C).
             Kind::Ident => 0,
-            Kind::Str => t.text.chars().nth(1).map_or(0, |c| c as i64),
+            Kind::Str => char_literal(&t).unwrap_or(0),
             _ => bail!("unexpected `{}` in #if expression", t.text),
         })
     }
+}
+
+/// The value of a character literal token (`'N'`, `'\n'`, `'\x41'`, `'\101'`): its one
+/// character's code, as in C; None for any other token, an empty or a multi-character literal.
+fn char_literal(t: &Tok) -> Option<i64> {
+    let body = t.text.strip_prefix('\'')?.strip_suffix('\'')?;
+    let mut chars = body.chars();
+    let value = match chars.next()? {
+        '\\' => match chars.next()? {
+            'n' => '\n' as i64,
+            't' => '\t' as i64,
+            'r' => '\r' as i64,
+            'a' => 7,
+            'b' => 8,
+            'f' => 12,
+            'v' => 11,
+            'x' => {
+                let digits = chars.as_str();
+                chars = "".chars();
+                i64::from_str_radix(digits, 16).ok()?
+            }
+            d @ '0'..='7' => {
+                let digits: String = std::iter::once(d).chain(chars.by_ref()).collect();
+                i64::from_str_radix(&digits, 8).ok()?
+            }
+            other => other as i64,
+        },
+        c => c as i64,
+    };
+    chars.next().is_none().then_some(value)
 }
 
 fn precedence(op: &str) -> Option<u8> {
@@ -1152,7 +1188,7 @@ mod tests {
             &[],
         )
         .unwrap();
-        assert_eq!(words(&out.text), "int a; int b = 2; int c = 'x';");
+        assert_eq!(words(&out.text), "int a; int b = 2; int c = 120;");
         let out = run("#warning don't\n#define C 3\nint c = C;\n", &[]).unwrap();
         assert_eq!(words(&out.text), "int c = 3;");
     }
@@ -1200,6 +1236,26 @@ mod tests {
 
     fn words(text: &str) -> String {
         text.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
+    #[test]
+    fn character_literals_are_their_codes() {
+        // URP's mipmap debug legend (DebugMipmapStreaming.hlsl, under DEBUG_DISPLAY): an array
+        // of character literals, a space among them.
+        let out = run(
+            concat!(
+                "static const uint s[][4] = { {2, 'N',' ','.'} };\n",
+                "uint e[] = { '\\n', '\\'', '\\\\', '\\x41', '\\101', '\\0' };\n",
+                "#if 'A' == 65 && '\\n' == 10\nint yes;\n#endif\n",
+                "string t = \"it's\";\n",
+            ),
+            &[],
+        )
+        .unwrap();
+        assert_eq!(
+            words(&out.text),
+            "static const uint s[ ] [4] = { {2, 78,32,46} } ; uint e[ ] = { 10, 39, 92, 65, 65, 0 } ; int yes; string t = \"it's\";"
+        );
     }
 
     #[test]
