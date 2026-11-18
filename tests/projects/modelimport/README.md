@@ -7,7 +7,15 @@ every model of Assets/Models and records each GameObject's components, every ren
 slots (shader, render queue, tags, keywords, GI flags, every shader property, textures by name and
 size with offset and scale, the material's asset path, which slots share a Material) and the
 LODGroup the importer adds. `DescriptionDump` (Assets/Editor) records the material descriptions
-the importer hands `OnPreprocessMaterialDescription`.
+the importer hands `OnPreprocessMaterialDescription`. `MaterialStages` (Assets/Editor) records the
+Exotic models' materials between the render pipeline's preprocessors (`stages.*`: after its FBX
+preprocessor, after its Autodesk Interactive one, after its Arnold and 3ds Max Physical ones: the
+shader, GI flags, whether the shader has `_EmissionColor`, its `_QueueControl`). With URP the
+Editor validates a material with its new shader's editor as a preprocessor sets the shader: Lit's
+validation sees the emission and GI flags the Editor's own FBX preprocessor (order -990) set, and a
+Shader Graph shader's queue control is validated before the next preprocessor. A project
+postprocessor with `OnPostprocessMaterial` changes how the legacy importer's transparent URP
+materials end (they become opaque; measured once, not recorded), so the recorder has none.
 
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy

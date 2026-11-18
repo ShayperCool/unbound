@@ -100,12 +100,26 @@ namespace Unbound.Runtime
                 new[] { typeof(MaterialDescription), typeof(Material), typeof(AnimationClip[]) },
                 typeof(FBXMaterialDescriptionPreprocessor));
 
+        /// <summary>Runs the preprocessors. Each time one sets the material's shader, that shader's
+        /// editor validates the material at once (render pipelines' and projects' editors,
+        /// <see cref="MaterialValidation"/>), as the Editor does when a material's shader changes
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/modelimport <c>stages.*</c> with
+        /// URP: Lit's validation, made as URP's FBX preprocessor sets Lit, sees the emission and
+        /// GI flags the Editor's own FBX preprocessor gave the material before, and not the base
+        /// colour the URP preprocessor sets after it; a Shader Graph shader set next has its queue
+        /// control validated before the next preprocessor runs).</summary>
         static void Preprocess(string assetPath, MaterialDescription description, Material material)
         {
-            AssetPostprocessorHooks.Run(Preprocessors(), assetPath, new AssetImportContext(assetPath),
-                new object[] { description, material, Array.Empty<AnimationClip>() });
-            // As the model imports: render pipelines' and projects' editors (MaterialValidation).
-            MaterialValidation.Validate(material, editorsOfTheEditor: false);
+            material.m_ValidateOnShaderChange = true;
+            try
+            {
+                AssetPostprocessorHooks.Run(Preprocessors(), assetPath, new AssetImportContext(assetPath),
+                    new object[] { description, material, Array.Empty<AnimationClip>() });
+            }
+            finally
+            {
+                material.m_ValidateOnShaderChange = false;
+            }
         }
 
         /// <summary>
@@ -254,6 +268,10 @@ namespace Unbound.Runtime
             if (shader == m.shader) return;
             m.StartWith(shader);
             m.MarkDirty();
+            // Made with its shader: validated by that shader's editor before the importer sets its
+            // values (measured: tests/projects/modelimport stages.ExoticLegacy.*, the queue control
+            // of URP's Autodesk Interactive graphs).
+            MaterialValidation.Validate(m, editorsOfTheEditor: false);
         }
 
         /// <summary>The legacy importer's blend set-up; Standard's blend mode properties only on a

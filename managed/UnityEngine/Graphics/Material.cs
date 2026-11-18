@@ -381,12 +381,18 @@ namespace UnityEngine
                         m_Sheet.Fill(m_Shader);
                     }
                 }
+                bool changed = value != m_Shader;
                 m_Shader = value;
                 TouchSheet();
                 AddTextureNames();
                 MarkDirty();
+                if (changed && m_ValidateOnShaderChange) Unbound.Runtime.MaterialValidation.Validate(this, editorsOfTheEditor: false);
             }
         }
+
+        /// <summary>Set while a model's import makes the material: the Editor validates it with the
+        /// new shader's editor as its shader is set (<see cref="Unbound.Runtime.ModelMaterialImport"/>).</summary>
+        internal bool m_ValidateOnShaderChange;
 
         /// <summary>
         /// Documented (Material.renderQueue, 6000.0): "if a shader on the material is changed, the
