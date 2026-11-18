@@ -70,6 +70,16 @@ namespace Unbound.Tests
             return errors;
         }
 
+        /// <summary>Resources.UnloadUnusedAssets and the preloading pass that completes it in
+        /// Play mode (a queued operation, measured: tests/projects/editorcallbacks --queue-budget).</summary>
+        static AsyncOperation UnloadUnused()
+        {
+            var operation = Resources.UnloadUnusedAssets();
+            UnityEngine.SceneManagement.SceneManagerInternal.ProcessPending();
+            Assert.True(operation.isDone);
+            return operation;
+        }
+
         static LoadedFile Loaded(string guid, string path, long fileId, Object asset)
         {
             var file = new LoadedFile { Guid = guid, Path = path, MainObject = asset };
@@ -326,7 +336,10 @@ Mesh:
                 AsyncOperation operation = null;
                 Assert.Empty(Errors(() => operation = Resources.UnloadUnusedAssets()));
 
-                // Completion as before: done when the call returns.
+                // Queued in Play mode: nothing is unloaded before the preloading pass completes it.
+                Assert.False(operation.isDone);
+                Assert.Equal("unused 0", unused.text);
+                UnityEngine.SceneManagement.SceneManagerInternal.ProcessPending();
                 Assert.True(operation.isDone);
                 // Referenced from a scene object's component: still loaded.
                 Assert.Equal("held 0", held.text);
@@ -358,7 +371,7 @@ Mesh:
             Loaded(guid, "Assets/Resources/Data.asset", 11400000, data);
             try
             {
-                Resources.UnloadUnusedAssets();
+                UnloadUnused();
                 Assert.True(data != null);
                 Assert.Same(data, AssetDatabaseRuntime.Load(guid, 11400000, typeof(ScriptableObject)));
             }
@@ -407,7 +420,7 @@ Mesh:
                 Assert.Contains<object>(sky, reached, reached.Comparer);
                 Assert.DoesNotContain<object>(held, reached, reached.Comparer);
 
-                Assert.Empty(Errors(() => Resources.UnloadUnusedAssets()));
+                Assert.Empty(Errors(() => UnloadUnused()));
 
                 // Script edits kept, nothing read again.
                 Assert.Equal(Color.red, highlight.color);
@@ -439,7 +452,7 @@ Mesh:
             // Guard: a class with an explicit static constructor is initialized exactly at its first
             // use; examining statics must not run it (its statics are not read).
             AssetDatabaseRuntime.Reachability.Walk();
-            Resources.UnloadUnusedAssets();
+            UnloadUnused();
             Assert.False(UnloadCctorProbe.Ran);
         }
 

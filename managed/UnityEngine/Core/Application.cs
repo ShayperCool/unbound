@@ -172,7 +172,19 @@ namespace UnityEngine
         public static string absoluteURL => s_AbsoluteURL;
         public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
-        public static ThreadPriority backgroundLoadingPriority { get; set; } = ThreadPriority.Normal;
+        static ThreadPriority s_BackgroundLoadingPriority = ThreadPriority.BelowNormal;
+        /// <summary>The loader's priority, which sets the per-frame integration limit of the
+        /// scene-operation queue. BelowNormal by default (Scripting API 6000.0). The Linux Editor
+        /// lowers its loading thread for that default and cannot raise it again: Normal and High,
+        /// and any value from Normal up, read back as Low and take Low's limit (measured:
+        /// tests/projects/editorcallbacks --queue-budget). Other platforms keep the value set
+        /// (not measured).</summary>
+        public static ThreadPriority backgroundLoadingPriority
+        {
+            get => s_BackgroundLoadingPriority;
+            set => s_BackgroundLoadingPriority = Compat.SceneAsyncPreparationMeasured && OperatingSystem.IsLinux()
+                && (int)value >= (int)ThreadPriority.Normal ? ThreadPriority.Low : value;
+        }
         static int s_TargetFrameRate = -1;
         public static int targetFrameRate
         {

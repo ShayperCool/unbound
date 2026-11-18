@@ -137,16 +137,28 @@ namespace UnityEngine
         /// at their next use,
         /// as the Scripting API 6000.0 says: imported text assets free their bytes. Materials,
         /// meshes, textures, audio clips and ScriptableObjects are kept, with what scripts changed,
-        /// and nothing already unloaded is processed again. The operation is complete when it
-        /// returns, as before.
-        /// Scene loads and EditorUtility.UnloadUnusedAssetsImmediate still only compact the object
-        /// registry (<see cref="UnloadUnusedAssetsInternal"/>).
+        /// and nothing already unloaded is processed again. In Play mode of the measured release
+        /// the operation joins the scene-operation queue and completes at a later preloading pass
+        /// (measured: tests/projects/editorcallbacks --queue-budget, the frame after the request
+        /// with nothing queued before it); otherwise it is complete when it returns, as before.
+        /// EditorUtility.UnloadUnusedAssetsImmediate still only compacts the object registry
+        /// (<see cref="UnloadUnusedAssetsInternal"/>).
         /// </summary>
         public static AsyncOperation UnloadUnusedAssets()
         {
+            if (Compat.SceneAsyncPreparationMeasured && Unbound.Runtime.EditorSession.IsPlaying)
+                return UnityEngine.SceneManagement.SceneManagerInternal.QueueUnloadUnused();
+            UnloadUnusedAssetsNow(collectGarbage: false);
+            return AsyncOperation.Completed();
+        }
+
+        /// <summary>The unused-asset unload itself; a Single load's forced unload also collects
+        /// the managed heap (Scripting API 6000.0, EditorSettings.forceAssetUnloadAndGCOnSceneLoad).</summary>
+        internal static void UnloadUnusedAssetsNow(bool collectGarbage)
+        {
             UnloadUnusedAssetsInternal();
             AssetDatabaseRuntime.UnloadUnused();
-            return AsyncOperation.Completed();
+            if (collectGarbage) GC.Collect();
         }
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();

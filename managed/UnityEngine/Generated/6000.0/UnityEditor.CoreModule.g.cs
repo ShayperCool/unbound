@@ -9382,7 +9382,6 @@ namespace UnityEditor
         public static bool assetNamingUsesSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.assetNamingUsesSpace"); } }
         internal static bool inspectorUseIMGUIDefaultInspector { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.inspectorUseIMGUIDefaultInspector"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.inspectorUseIMGUIDefaultInspector"); } }
         public static bool referencedClipsExactNaming { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.referencedClipsExactNaming"); } }
-        public static bool forceAssetUnloadAndGCOnSceneLoad { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.forceAssetUnloadAndGCOnSceneLoad"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorSettings.forceAssetUnloadAndGCOnSceneLoad"); } }
         internal enum Bc7TextureCompressor
         {
             Default = 0,

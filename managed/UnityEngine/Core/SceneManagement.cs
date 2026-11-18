@@ -555,8 +555,26 @@ namespace UnityEngine.SceneManagement
                 try { Perform(data, parameters, sceneManagerLoad: sceneManagerLoad, documents: documents, prepared: true); }
                 finally { s_Requested.Remove(data); }
                 Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
-            }, load: true, async: async, frame: Time.frameCount, prepare: () => documents = SceneLoader.ReadDocuments(data));
+            }, SceneOperationQueue.Kind.Load, async: async, frame: Time.frameCount, prepare: () => documents = SceneLoader.ReadDocuments(data));
+            // The Editor unloads unused assets and collects the managed heap after a Single load
+            // when EditorSettings.forceAssetUnloadAndGCOnSceneLoad is on (Scripting API 6000.0), as
+            // a queued operation behind the load (measured: tests/projects/editorcallbacks
+            // --queue-budget, the loads queued after it start once it completes).
+            if (parameters.loadSceneMode == LoadSceneMode.Single && Compat.SceneAsyncPreparationMeasured
+                && UnityEditor.EditorSettings.forceAssetUnloadAndGCOnSceneLoad)
+                s_Operations.EnqueueAfterLast(new AsyncOperation(), () => Resources.UnloadUnusedAssetsNow(collectGarbage: true),
+                    SceneOperationQueue.Kind.UnloadUnused, Time.frameCount);
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
+        }
+
+        /// <summary>Resources.UnloadUnusedAssets in Play mode: a queued operation (see
+        /// <see cref="SceneOperationQueue"/>).</summary>
+        internal static AsyncOperation QueueUnloadUnused()
+        {
+            var operation = new AsyncOperation();
+            s_Operations.EnqueueAfterLast(operation, () => Resources.UnloadUnusedAssetsNow(collectGarbage: false),
+                SceneOperationQueue.Kind.UnloadUnused, Time.frameCount);
+            return operation;
         }
 
         /// <summary>
@@ -840,7 +858,7 @@ namespace UnityEngine.SceneManagement
                     if (!data.IsLoaded) return;
                     if (SceneRegistry.Loaded.Count > 1) FinishUnload(data);
                     else Debug.LogWarning("Unloading the last loaded scene is not supported.");
-                }, load: false, async: true, frame: Time.frameCount);
+                }, SceneOperationQueue.Kind.Unload, async: true, frame: Time.frameCount);
                 return operation;
             }
             FinishUnload(data);

@@ -11,18 +11,60 @@ namespace Unbound.Tests
     public sealed class SceneOperationQueueTests : IDisposable
     {
         readonly string m_Release = ProjectInfo.UnityVersion;
-        readonly SceneOperationQueue m_Queue = new SceneOperationQueue();
+        readonly ThreadPriority m_Priority = Application.backgroundLoadingPriority;
+        readonly SceneOperationQueue m_Queue;
         readonly List<string> m_Events = new List<string>();
+        // The queue's clock: integration work advances it by the time it is given.
+        double m_Now;
 
-        public SceneOperationQueueTests() => ProjectInfo.UnityVersion = "6000.0.71f1";
-        public void Dispose() => ProjectInfo.UnityVersion = m_Release;
+        public SceneOperationQueueTests()
+        {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            Application.backgroundLoadingPriority = ThreadPriority.BelowNormal;
+            m_Queue = new SceneOperationQueue(() => m_Now);
+        }
 
-        AsyncOperation Load(string name, int frame, bool async = true)
+        public void Dispose()
+        {
+            Application.backgroundLoadingPriority = m_Priority;
+            ProjectInfo.UnityVersion = m_Release;
+        }
+
+        AsyncOperation Load(string name, int frame, bool async = true, double milliseconds = 0)
         {
             var operation = new AsyncOperation();
-            m_Queue.Enqueue(operation, null, () => m_Events.Add(name + ".objects"), true, async, frame);
+            m_Queue.Enqueue(operation, null, () => { m_Events.Add(name + ".objects"); m_Now += milliseconds; },
+                SceneOperationQueue.Kind.Load, async, frame);
             operation.completed += _ => m_Events.Add(name + ".completed");
             return operation;
+        }
+
+        AsyncOperation Unload(string name, int frame, SceneOperationQueue.Kind kind = SceneOperationQueue.Kind.Unload)
+        {
+            var operation = new AsyncOperation();
+            var scene = new SceneData { IsLoaded = true };
+            m_Queue.Enqueue(operation, scene, () => { scene.IsLoaded = false; m_Events.Add(name); }, kind, true, frame);
+            return operation;
+        }
+
+        /// <summary>Frames from <paramref name="first"/> on, preparation then the preloading pass,
+        /// until every operation is done; the frame each completed in.</summary>
+        int[] Run(int first, params AsyncOperation[] operations)
+        {
+            var frames = new int[operations.Length];
+            for (int frame = first; frame < first + 40; frame++)
+            {
+                m_Queue.Prepare(frame);
+                m_Queue.Process(frame);
+                bool pending = false;
+                for (int i = 0; i < operations.Length; i++)
+                {
+                    if (operations[i].isDone && frames[i] == 0) frames[i] = frame;
+                    pending |= !operations[i].isDone;
+                }
+                if (!pending) return frames;
+            }
+            throw new InvalidOperationException("the queue did not finish");
         }
 
         [Theory]
@@ -50,7 +92,7 @@ namespace Unbound.Tests
             var second = Load("second", 0);
             var unload = new AsyncOperation();
             var scene = new SceneData { IsLoaded = true };
-            m_Queue.Enqueue(unload, scene, () => { scene.IsLoaded = false; m_Events.Add("unload"); }, false, true, 0);
+            m_Queue.Enqueue(unload, scene, () => { scene.IsLoaded = false; m_Events.Add("unload"); }, SceneOperationQueue.Kind.Unload, true, 0);
             for (int frame = 1; frame <= 4; frame++)
             {
                 m_Queue.Prepare(frame);
@@ -67,9 +109,10 @@ namespace Unbound.Tests
             m_Queue.Process(5);
             Assert.True(first.isDone);
             Assert.False(second.isDone || unload.isDone);
+            // The second load reached the head prepared in the first pass: it integrates in the
+            // next frame, and the unload behind it in the same pass.
             m_Queue.Process(6);
             Assert.True(second.isDone);
-            m_Queue.Process(7);
             Assert.True(unload.isDone);
             Assert.False(m_Queue.IsUnloading);
             Assert.Equal(new[] { "first.objects", "first.completed", "second.objects", "second.completed", "unload" }, m_Events);
@@ -100,7 +143,7 @@ namespace Unbound.Tests
                 m_Events.Add("first.objects");
                 // Scene loading invokes sceneLoaded inside its work, before completion.
                 callbackLoad = Load("callback", 1, async: false);
-            }, true, false, 0);
+            }, SceneOperationQueue.Kind.Load, false, 0);
             var second = Load("second", 0, async: false);
             m_Queue.Process(0);
             Assert.False(first.isDone || second.isDone);
@@ -124,6 +167,7 @@ namespace Unbound.Tests
                 m_Queue.Process(2);
             };
             m_Queue.Prepare(1);
+            m_Queue.Process(1);
             m_Queue.Process(2);
             Assert.True(first.isDone);
             Assert.NotNull(second);
@@ -140,9 +184,10 @@ namespace Unbound.Tests
         {
             var first = new AsyncOperation();
             AsyncOperation second = null;
-            m_Queue.Enqueue(first, null, () => m_Events.Add("first.objects"), true, true, 0,
+            m_Queue.Enqueue(first, null, () => m_Events.Add("first.objects"), SceneOperationQueue.Kind.Load, true, 0,
                 prepare: () => { second = Load("second", 1); m_Queue.Prepare(1); });
             m_Queue.Prepare(1);
+            m_Queue.Process(1);
             Assert.Equal(.9f, first.progress);
             Assert.NotNull(second);
             Assert.Equal(0f, second.progress);
@@ -164,12 +209,157 @@ namespace Unbound.Tests
                 during = m_Queue.IsUnloading;
                 scene.IsLoaded = false;
                 after = m_Queue.IsUnloading;
-            }, false, true, 0);
+            }, SceneOperationQueue.Kind.Unload, true, 0);
+            m_Queue.Prepare(1);
             m_Queue.Process(1);
             Assert.Equal(true, during);
             Assert.Equal(false, after);
             Assert.True(operation.isDone);
             Assert.False(m_Queue.IsUnloading);
+        }
+
+        [Theory]
+        // Integration below the limit: the next load is armed in the same pass.
+        [InlineData(1.0, 2, 3, 4)]
+        [InlineData(3.4, 2, 3, 4)]
+        // Rounded to 4 ms, the BelowNormal limit: the pass stops and arming takes a pass of its own.
+        [InlineData(3.5, 2, 4, 6)]
+        [InlineData(70.0, 2, 4, 6)]
+        public void ALoadIsArmedInThePassOfThePreviousOneOnlyBelowTheTimeLimit(double milliseconds, int first, int second, int third)
+        {
+            var a = Load("a", 0, milliseconds: milliseconds);
+            var b = Load("b", 0, milliseconds: milliseconds);
+            var c = Load("c", 0, milliseconds: milliseconds);
+            Assert.Equal(new[] { first, second, third }, Run(1, a, b, c));
+        }
+
+        [Fact]
+        public void TheLimitFollowsTheReadBackPriority()
+        {
+            // 3 ms: below BelowNormal's 4 ms, beyond Low's 2 ms.
+            Application.backgroundLoadingPriority = ThreadPriority.Low;
+            Assert.Equal(new[] { 2, 4 }, Run(1, Load("a", 0, milliseconds: 3), Load("b", 0, milliseconds: 3)));
+            Application.backgroundLoadingPriority = ThreadPriority.BelowNormal;
+            Assert.Equal(new[] { 8, 9 }, Run(7, Load("c", 6, milliseconds: 3), Load("d", 6, milliseconds: 3)));
+        }
+
+        [Fact]
+        public void AnUnloadBehindALoadSharesItsPassBelowTheLimitAndArmsNothing()
+        {
+            var fast = Load("fast", 0, milliseconds: 1);
+            var fastUnload = Unload("fast.unload", 0);
+            var fastNext = Load("fast.next", 0);
+            Assert.Equal(new[] { 2, 2, 3 }, Run(1, fast, fastUnload, fastNext));
+            var slow = Load("slow", 10, milliseconds: 70);
+            var slowUnload = Unload("slow.unload", 10);
+            var slowNext = Load("slow.next", 10);
+            Assert.Equal(new[] { 12, 13, 14 }, Run(11, slow, slowUnload, slowNext));
+        }
+
+        [Fact]
+        public void ALoadHeldBehindAnotherIntegratesInThePassAfterItsRelease()
+        {
+            var first = Load("first", 0);
+            var held = Load("held", 0);
+            held.allowSceneActivation = false;
+            for (int frame = 1; frame <= 5; frame++) { m_Queue.Prepare(frame); m_Queue.Process(frame); }
+            Assert.True(first.isDone);
+            Assert.False(held.isDone);
+            held.allowSceneActivation = true;
+            Assert.Equal(new[] { 6 }, Run(6, held));
+        }
+
+        [Fact]
+        public void PriorityOrdersRequestsTheLoaderHasNotTaken()
+        {
+            // The first request finds the loader idle and is taken at once; the others wait for
+            // its next pass, where the highest priority goes first and equal ones keep their order.
+            var first = Load("first", 0);
+            var low = Load("low", 0);
+            var high = Load("high", 0);
+            var same = Load("same", 0);
+            first.priority = 5;
+            low.priority = 1;
+            high.priority = 2;
+            same.priority = 1;
+            Run(1, first, low, high, same);
+            Assert.Equal(new[] { "first.objects", "first.completed", "high.objects", "high.completed",
+                "low.objects", "low.completed", "same.objects", "same.completed" }, m_Events);
+        }
+
+        [Fact]
+        public void APriorityChangedAfterTheLoaderTookTheRequestHasNoEffect()
+        {
+            var first = Load("first", 0);
+            var second = Load("second", 0);
+            var third = Load("third", 0);
+            m_Queue.Prepare(1);
+            third.priority = 2;
+            second.priority = 1;
+            Run(1, first, second, third);
+            Assert.Equal(new[] { "first.objects", "first.completed", "second.objects", "second.completed",
+                "third.objects", "third.completed" }, m_Events);
+        }
+
+        [Fact]
+        public void AnUnusedAssetUnloadStopsTheLoaderUntilItIsIntegrated()
+        {
+            var unused = Unload("unused", 0, SceneOperationQueue.Kind.UnloadUnused);
+            var load = Load("load", 0);
+            m_Queue.Prepare(1);
+            Assert.Equal(0f, load.progress);
+            m_Queue.Process(1);
+            Assert.True(unused.isDone);
+            // Taken at the loader's next pass, armed there, integrated in the frame after.
+            Assert.Equal(new[] { 3 }, Run(2, load));
+            Assert.Equal(new[] { "unused", "load.objects", "load.completed" }, m_Events);
+        }
+
+        [Fact]
+        public void AnUnusedAssetUnloadQueuedBehindALoadSceneIsForcedWithIt()
+        {
+            var sync = Load("sync", 0, async: false);
+            var unused = new AsyncOperation();
+            m_Queue.EnqueueAfterLast(unused, () => m_Events.Add("unused"), SceneOperationQueue.Kind.UnloadUnused, 0);
+            m_Queue.Process(1);
+            Assert.True(sync.isDone && unused.isDone);
+            Assert.Equal(new[] { "sync.objects", "sync.completed", "unused" }, m_Events);
+        }
+
+        [Theory]
+        [InlineData(ThreadPriority.Low, 2)]
+        [InlineData(ThreadPriority.BelowNormal, 4)]
+        [InlineData(ThreadPriority.Normal, 10)]
+        [InlineData(ThreadPriority.High, 50)]
+        [InlineData((ThreadPriority)3, 4)]
+        [InlineData((ThreadPriority)(-1), 4)]
+        public void TheLimitOfEachPriorityIsTheDocumentedOne(ThreadPriority priority, int milliseconds) =>
+            Assert.Equal(milliseconds, SceneOperationQueue.LoadingLimitMilliseconds(priority));
+
+        [Fact]
+        public void TheLinuxEditorReadsRaisedPrioritiesBackAsLow()
+        {
+            foreach (var (set, read) in new[] {
+                (ThreadPriority.Low, ThreadPriority.Low), (ThreadPriority.BelowNormal, ThreadPriority.BelowNormal),
+                (ThreadPriority.Normal, ThreadPriority.Low), (ThreadPriority.High, ThreadPriority.Low),
+                ((ThreadPriority)3, ThreadPriority.Low) })
+            {
+                Application.backgroundLoadingPriority = set;
+                Assert.Equal(OperatingSystem.IsLinux() ? read : set, Application.backgroundLoadingPriority);
+            }
+        }
+
+        [Fact]
+        public void OtherReleasesKeepTheValueSetAndTheOnePassTiming()
+        {
+            ProjectInfo.UnityVersion = "6000.0.0f1";
+            Application.backgroundLoadingPriority = ThreadPriority.High;
+            Assert.Equal(ThreadPriority.High, Application.backgroundLoadingPriority);
+            var a = Load("a", 0, milliseconds: 70);
+            var b = Load("b", 0, milliseconds: 70);
+            m_Queue.Prepare(1);
+            m_Queue.Process(1);
+            Assert.True(a.isDone && b.isDone);
         }
 
         [Fact]

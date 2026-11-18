@@ -445,10 +445,14 @@ namespace UnityEditor
         static readonly object s_LoadLock = new object();
         static bool s_EnterPlayModeOptionsEnabled;
         static EnterPlayModeOptions s_EnterPlayModeOptions;
+        // The Editor's default when the asset does not set it.
+        const bool ForceAssetUnloadAndGCOnSceneLoadDefault = true;
+        static bool s_ForceAssetUnloadAndGCOnSceneLoad = ForceAssetUnloadAndGCOnSceneLoadDefault;
 
         /// <summary>The project's ProjectSettings/EditorSettings.asset (class 159), read once (from any
         /// thread, the flag published after the values); a project without one, or with one that
-        /// cannot be read, keeps the defaults (off, None), as the host's reader of the file does.</summary>
+        /// cannot be read, keeps the defaults (Enter Play Mode Options off and None, the forced unload
+        /// on), as the host's reader of the file does.</summary>
         static void Load()
         {
             if (s_Loaded) return;
@@ -465,19 +469,21 @@ namespace UnityEditor
                             if (doc.ClassId != EditorSettingsClassId) continue;
                             s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
                             s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
+                            s_ForceAssetUnloadAndGCOnSceneLoad = doc.Body.Bool("m_ForceAssetUnloadAndGCOnSceneLoad", ForceAssetUnloadAndGCOnSceneLoadDefault);
                         }
                 }
                 catch (Exception e)
                 {
                     s_EnterPlayModeOptionsEnabled = false;
                     s_EnterPlayModeOptions = EnterPlayModeOptions.None;
+                    s_ForceAssetUnloadAndGCOnSceneLoad = ForceAssetUnloadAndGCOnSceneLoadDefault;
                     failure = e.Message;
                 }
                 finally { s_Loaded = true; }
             }
             // Logged once loaded: a log listener reading these settings does not come back here.
             if (failure != null)
-                Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + failure + "): Enter Play Mode Options keep their defaults");
+                Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + failure + "): its settings keep their defaults");
         }
 
         /// <summary>The options Play mode is entered with: the project's when enabled, else None.</summary>
@@ -496,6 +502,15 @@ namespace UnityEditor
         {
             get { Load(); return s_EnterPlayModeOptions; }
             set { Load(); s_EnterPlayModeOptions = value; }
+        }
+
+        /// <summary>Whether a Single scene load in the Editor is followed by an unused-asset unload
+        /// and a managed heap collection (Scripting API 6000.0); the project's
+        /// m_ForceAssetUnloadAndGCOnSceneLoad, on when unset.</summary>
+        public static bool forceAssetUnloadAndGCOnSceneLoad
+        {
+            get { Load(); return s_ForceAssetUnloadAndGCOnSceneLoad; }
+            set { Load(); s_ForceAssetUnloadAndGCOnSceneLoad = value; }
         }
     }
 
