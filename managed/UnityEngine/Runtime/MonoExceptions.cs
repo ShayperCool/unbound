@@ -76,7 +76,8 @@ namespace Unbound.Runtime
         static string Mono(Exception exception, string message)
         {
             if (exception is not ArgumentException argument || message == null) return message;
-            if (argument is ArgumentOutOfRangeException { ActualValue: float or double or System.Runtime.CompilerServices.ITuple } range)
+            if (argument is ArgumentOutOfRangeException { ActualValue: { } actual } range
+                && (actual is float or double || Unbound.MonoNumberFormat.IsLibraryTuple(actual.GetType())))
             {
                 // The class library writes the value with the current culture's default format.
                 string net = ActualValue + string.Format(CultureInfo.CurrentCulture, "{0}", range.ActualValue) + ".";

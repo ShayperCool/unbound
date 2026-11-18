@@ -379,8 +379,7 @@ namespace Unbound
             if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), null, null);
             if (typeof(T) == typeof(double)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, double>(ref value), null, null);
             // A value tuple called directly ((a, b).ToString()).
-            if (typeof(System.Runtime.CompilerServices.ITuple).IsAssignableFrom(typeof(T)) && typeof(T).IsValueType)
-                return TupleToString((System.Runtime.CompilerServices.ITuple)value);
+            if (typeof(T).IsValueType && IsLibraryTuple(typeof(T))) return TupleToString((System.Runtime.CompilerServices.ITuple)value);
             return MonoEnumNames.ToString(ref value);
         }
         public static string ToString(Enum value) => MonoEnumNames.ToString(value, null);
@@ -442,8 +441,9 @@ namespace Unbound
             internal static readonly bool Mono = !typeof(T).IsValueType || PrintsOtherwise(Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T));
         }
 
-        /// <summary>Whether values of a value type print otherwise under Mono: enums, floats and doubles.</summary>
-        internal static bool PrintsOtherwise(Type type) => type.IsEnum || type == typeof(float) || type == typeof(double);
+        /// <summary>Whether values of a value type print otherwise under Mono: enums, floats, doubles
+        /// and value tuples (whose items may be floats).</summary>
+        internal static bool PrintsOtherwise(Type type) => type.IsEnum || type == typeof(float) || type == typeof(double) || IsLibraryTuple(type);
 
         static IEnumerable<string> MonoTexts<T>(IEnumerable<T> values)
         {
@@ -478,9 +478,15 @@ namespace Unbound
             double d => Format(d, null, null),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             Enum e => MonoEnumNames.ToString(e, null),
-            System.Runtime.CompilerServices.ITuple tuple => TupleToString(tuple),
+            System.Runtime.CompilerServices.ITuple tuple when IsLibraryTuple(tuple.GetType()) => TupleToString(tuple),
             _ => null,
         };
+
+        /// <summary>The class library's tuples (System.Tuple and System.ValueTuple), whose text is
+        /// their items'; a game type that is an ITuple keeps its own.</summary>
+        internal static bool IsLibraryTuple(Type type) =>
+            type.Namespace == "System" && (type.Name.StartsWith("ValueTuple", StringComparison.Ordinal) || type.Name.StartsWith("Tuple`", StringComparison.Ordinal))
+            && typeof(System.Runtime.CompilerServices.ITuple).IsAssignableFrom(type);
 
         /// <summary>A tuple as ValueTuple and Tuple write it, each item as Mono writes it.</summary>
         static string TupleToString(System.Runtime.CompilerServices.ITuple tuple)
@@ -500,7 +506,7 @@ namespace Unbound
             double d => new Boxed(d, false),
             Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
             Enum e => new BoxedEnum(e),
-            System.Runtime.CompilerServices.ITuple tuple => TupleToString(tuple),
+            System.Runtime.CompilerServices.ITuple tuple when IsLibraryTuple(tuple.GetType()) => TupleToString(tuple),
             _ => value,
         };
 
@@ -532,6 +538,7 @@ namespace Unbound
                 Enum e => MonoEnumNames.ToString(e, format),
                 Exception e => Unbound.Runtime.MonoExceptions.ToStringOf(e),
                 IFormattable formattable => formattable.ToString(format, m_Provider),
+                System.Runtime.CompilerServices.ITuple tuple when IsLibraryTuple(tuple.GetType()) => TupleToString(tuple),
                 _ => null,
             };
         }
@@ -542,9 +549,10 @@ namespace Unbound
             object[] wrapped = null;
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] is not (float or double or Exception or Enum)) continue;
+                object arg = Wrap(args[i]);
+                if (ReferenceEquals(arg, args[i])) continue;
                 wrapped ??= (object[])args.Clone();
-                wrapped[i] = Wrap(args[i]);
+                wrapped[i] = arg;
             }
             return wrapped ?? args;
         }

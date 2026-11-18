@@ -27,7 +27,15 @@ public static class Game
     public static string Concat(float a, double b) => ""t="" + (a, b);
     public static string Format(float a, double b) => string.Format(""{0}"", (a, b));
     public static string Actual(object value) => new ArgumentOutOfRangeException(""p"", value, ""Too big."").ActualValue.ToString();
+    public static string Nullable(float a) { (float, float)? t = (a, 2f); return t.ToString(); }
 }";
+
+        sealed class OwnTuple : System.Runtime.CompilerServices.ITuple
+        {
+            public int Length => 1;
+            public object this[int index] => 1f / 3f;
+            public override string ToString() => "own";
+        }
 
         static Assembly Redirected(string source) => WideFloatsTests.Load(NumberFormatShims.Redirect(
             WideFloatsTests.Emit(WideFloatsTests.Compilation(source, OptimizationLevel.Release, "MonoTextGame")).Image));
@@ -59,8 +67,13 @@ public static class Game
             Assert.Equal("(0.3333333, x)", Unbound.MonoNumberFormat.ObjectToString(System.Tuple.Create(1f / 3f, "x")));
             Assert.Equal("Too big.\nParameter name: p\nActual value was (0.3333333, 2.5).",
                 MonoExceptions.MessageOf(new ArgumentOutOfRangeException("p", (1f / 3f, 2.5f), "Too big.")));
-            // Control: a tuple without floats reads as .NET writes it.
+            // Control: a tuple without floats reads as .NET writes it, and a game's own ITuple keeps its text.
             Assert.Equal((1, "x").ToString(), Unbound.MonoNumberFormat.ObjectToString((1, "x")));
+            Assert.Equal("own", Unbound.MonoNumberFormat.ObjectToString(new OwnTuple()));
+            // The argument array overloads, a generic join and a nullable tuple.
+            Assert.Equal("1 2 3 (0.3333333, 2)", Unbound.MonoNumberFormat.Format("{0} {1} {2} {3}", new object[] { 1, 2, 3, (1f / 3f, 2f) }));
+            Assert.Equal("(0.3333333, 2), (1, 2)", Unbound.MonoNumberFormat.Join(", ", new System.Collections.Generic.List<(float, float)> { (1f / 3f, 2f), (1f, 2f) }));
+            Assert.Equal("(0.3333333, 2)", Call(game, "Nullable", 1f / 3f));
         }
 
         [Fact]
