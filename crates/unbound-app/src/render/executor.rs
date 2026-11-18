@@ -6058,8 +6058,6 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-/// A packed target's texels (`CopyKind::Packed565`): each 8-bit channel keeps its top `BITS` bits,
-/// repeated below them to fill the byte (0 bits: no channel, read as 1).
 /// The mip level of a target's single-sample texture (texture, layer, level); 0 without one.
 fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
     texture.as_ref().map_or(0, |(_, _, level)| *level)
@@ -6086,6 +6084,8 @@ fn packed_clear(
     }
 }
 
+/// A packed target's texels (`CopyKind::Packed565`): each 8-bit channel keeps its top `BITS` bits,
+/// repeated below them to fill the byte (0 bits: no channel, read as 1).
 const PACKED_TEXELS_WGSL: &str = r#"
 @group(0) @binding(0) var source: texture_2d<f32>;
 
@@ -6276,6 +6276,25 @@ fn apply_override(
         state.ztest = o.ztest;
         state.gui_ztest = false;
     }
+    if o.mask & state_mask::ENGINE_STENCIL != 0 {
+        // Compare Always (8), pass Replace (2), keep (0) on failures: the engine's bits over
+        // the pass's own reference and write mask.
+        let bits = o.stencil_ref as u32 & 0xff;
+        let (own_ref, own_write) = state
+            .stencil
+            .as_ref()
+            .map_or((0, 0), |s| (stencil_ref, s.write_mask as u32));
+        state.stencil = Some(crate::materials::StencilState {
+            comp: 8,
+            pass: 2,
+            fail: 0,
+            zfail: 0,
+            read_mask: 0xff,
+            write_mask: (own_write | bits) as u8,
+            back: [8, 2, 0, 0],
+        });
+        return (own_ref & !bits) | bits;
+    }
     if o.mask & state_mask::STENCIL == 0 {
         return stencil_ref;
     }
@@ -6400,6 +6419,53 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The engine's stencil bits (a deferred G-buffer pass's) are set with no test beside the
+    /// bits the pass's own reference writes (tests/projects/builtinfx `deferredStencil.*`: 0xC0
+    /// over a Standard object, 0xC2 over one whose Deferred pass writes 2).
+    #[test]
+    fn engine_stencil_bits_join_the_passes_own() {
+        let engine = commands::StateOverride {
+            mask: commands::state_mask::ENGINE_STENCIL,
+            blend: [0; 7],
+            cull: 0,
+            offset_units: 0,
+            offset_factor: 0.0,
+            zwrite: false,
+            ztest: 0,
+            stencil_enabled: false,
+            stencil_ref: 0xC0,
+            stencil_read_mask: 0,
+            stencil_write_mask: 0,
+            stencil: [0; 8],
+        };
+        let mut plain = crate::materials::RenderState::default();
+        assert_eq!(apply_override(&mut plain, 0, &engine), 0xC0);
+        let s = plain.stencil.expect("the engine's stencil");
+        assert_eq!(
+            (s.comp, s.pass, s.fail, s.zfail, s.write_mask),
+            (8, 2, 0, 0, 0xC0)
+        );
+        // A pass testing Equal and writing 2: no test, its 2 written beside the engine's bits.
+        let declared = crate::materials::RenderState {
+            stencil: Some(crate::materials::StencilState {
+                comp: 3,
+                pass: 2,
+                fail: 0,
+                zfail: 0,
+                read_mask: 0xff,
+                write_mask: 0xff,
+                back: [3, 2, 0, 0],
+            }),
+            ..Default::default()
+        };
+        let mut own = declared;
+        assert_eq!(apply_override(&mut own, 2, &engine), 0xC2);
+        let s = own.stencil.expect("the pass's stencil");
+        assert_eq!((s.comp, s.write_mask, s.back[0]), (8, 0xff, 8));
+        // The engine's bits are set whatever the pass's own reference has there.
+        assert_eq!(apply_override(&mut { declared }, 0x41, &engine), 0xC1);
+    }
 
     /// A packed clear rounds to the channels' bits on a device whose clears round, at a
     /// texture's first level only (each color by its own packing); elsewhere it stays for the

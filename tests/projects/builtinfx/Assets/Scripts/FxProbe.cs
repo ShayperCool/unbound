@@ -251,6 +251,7 @@ public partial class FxProbe : MonoBehaviour
             Section("components", Components);
             Section("cameras", Cameras);
             Section("settings", ShaderSettings);
+            Section("deferredStencil", DeferredStencil);
             File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Values.ToString());
         }
 #if UNITY_EDITOR

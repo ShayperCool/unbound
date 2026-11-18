@@ -1745,8 +1745,16 @@ namespace Unbound.Runtime
                 if (deferred)
                 {
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
-                    // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above).
-                    if (deferredSeed) GfxStream.CopyDepth(depthSource, TextureHandles.Of(gbufferDepth));
+                    // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above),
+                    // over a cleared stencil (a pooled buffer may hold another camera's G-buffer
+                    // marks, which the lights test).
+                    if (deferredSeed)
+                    {
+                        GfxStream.SetTarget(TextureHandles.Of(gbufferDepth));
+                        GfxStream.Viewport(viewport);
+                        GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
+                        GfxStream.CopyDepth(depthSource, TextureHandles.Of(gbufferDepth));
+                    }
                     else if (onScreen && camera.clearFlags == CameraClearFlags.Nothing)
                     {
                         GfxStream.SetTarget(TextureHandles.Of(gbufferDepth));

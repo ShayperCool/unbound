@@ -135,14 +135,18 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   shader unset before any render keep it); depth-normals and motion vector textures whose setting
   never had a shader are not made. No Support switches off screen-space shadows (with the warning
   "Screenspace cascaded shadow map support is disabled in graphics settings") and deferred
-  reflections; deferred shading, halos and flares still draw. A sphere moved between two
+  reflections; deferred shading, halos and flares still draw. The stencil a deferred camera leaves
+  for its later passes (`deferredStencil.*`, recorded last): bits 6 and 7 over every object its
+  G-buffer pass draws, with the bits a Deferred pass's own stencil writes beside them (an object
+  whose Deferred pass writes 2 Replace reads 0xC2), none over the background (the Manual: the
+  base pass's stencil test is ignored, its writes kept; unmeasured: pass operations other than
+  Replace). A sphere moved between two
   `Camera.Render` calls of the frame it is first drawn in has no object motion in the second
   (`settings_motionVectors_custom`). Unbound draws them alike
   (`GraphicsSettings.RendererShader`), with these differences: `settings_deferred_builtin` and
   `settings_deferredReflections_*` are within the `path_deferred*` means (3.6);
   `settings_deferred_{custom,customNull,disabled}`: both draw a custom shader's light pass over the
-  scene's pixels only (the base and lighting passes ignore shaders' stencil, Unity 6000.0 Manual,
-  ShaderLab command Stencil; Unbound marks the G-buffer's pixels with a stencil bit of its own), but
+  scene's pixels only (the G-buffer's stencil marks, `deferredStencil.*`), but
   the Editor draws the point and spot lights over their volumes and Unbound each light over the
   whole view (mean 15.7; Unity's own shader adds nothing outside a light's range);
   `settings_deferredLdr_*`: the Editor decodes an LDR camera's light buffer with the shader's second
