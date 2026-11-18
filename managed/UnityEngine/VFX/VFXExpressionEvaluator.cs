@@ -97,6 +97,11 @@ namespace Unbound.Runtime
         internal static bool ReadableEventAttribute(VFXValueType type) =>
             type is >= VFXValueType.Float and <= VFXValueType.Uint32 or VFXValueType.Boolean;
 
+        /// <summary>Whether a read of an event attribute of the type at the element lies within
+        /// attributes of that many words.</summary>
+        internal static bool EventAttributeWithin(VFXValueType type, int element, int words) =>
+            element >= 0 && element + VFXExpressionHelper.GetSizeOfType(type) <= words;
+
         /// <summary>Evaluates the expressions <paramref name="begin"/>..<paramref name="end"/>.
         /// <paramref name="spawner"/> is the spawner whose blocks are being evaluated, null
         /// outside one (the spawner's own operations then leave their value as it is).</summary>
@@ -522,11 +527,10 @@ namespace Unbound.Runtime
                         var source = spawner.EventAttribute.Words;
                         int element = operands[d + 2];
                         var type = (VFXValueType)operands[d + 3];
-                        if (!ReadableEventAttribute(type)) break;
-                        int size = VFXExpressionHelper.GetSizeOfType(type);
-                        if (element < 0 || element + size > source.Length) break;
+                        // An effect reading otherwise is refused (VisualEffect.Unsupported).
+                        if (!ReadableEventAttribute(type) || !EventAttributeWithin(type, element, source.Length)) break;
                         if (type == VFXValueType.Boolean) w[at] = source[element] & 0xffu;
-                        else Array.Copy(source, element, w, at, size);
+                        else Array.Copy(source, element, w, at, VFXExpressionHelper.GetSizeOfType(type));
                         break;
                     }
                     case VFXExpressionOperation.SpawnerStateNewLoop: if (spawner != null) w[at] = spawner.NewLoop ? 1u : 0u; break;

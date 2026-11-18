@@ -56,8 +56,9 @@ namespace UnityEngine.Tests
                 var values = effect.Values;
                 VFXExpressionEvaluator.Evaluate(effect.Data, values, 1, 5, new VisualEffectState(), spawner);
                 Assert.Equal(0x41a00102u, values.GetWord(1));
-                // A bool is the word's low byte (inferred: the Editor's attributes held only
-                // false and true); an unsigned integer the word itself; a vector its words.
+                // A bool is the word's low byte: Unbound's own choice for words other than
+                // false and true, the only ones the Editor's attributes held; an unsigned
+                // integer is the word itself; a vector its words.
                 Assert.Equal(0x02u, values.GetWord(2));
                 Assert.Equal(0x41a00102u, values.GetWord(3));
                 int vector = effect.Data.ValueOffsets[4];

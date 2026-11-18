@@ -142,8 +142,8 @@ namespace UnityEngine.VFX
                 {
                     var type = (VFXValueType)data.Operands[i * 4 + 3];
                     if (!VFXExpressionEvaluator.ReadableEventAttribute(type)) return $"an event attribute of the type {type} read in a spawn context";
-                    uint words = data.CpuBuffers.Length > 0 ? data.CpuBuffers[0].stride : 0u;
-                    if ((uint)data.Operands[i * 4 + 2] + (uint)VFXExpressionHelper.GetSizeOfType(type) > words)
+                    int words = data.CpuBuffers.Length > 0 ? (int)data.CpuBuffers[0].stride : 0;
+                    if (!VFXExpressionEvaluator.EventAttributeWithin(type, data.Operands[i * 4 + 2], words))
                         return "an event attribute read in a spawn context past the spawn event's attributes";
                 }
             }
