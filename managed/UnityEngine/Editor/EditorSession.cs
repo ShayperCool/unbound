@@ -37,6 +37,8 @@ namespace Unbound.Runtime
         {
             IsPlaying = false;
             s_EnteringPlayMode = true;
+            // Entering Play mode answers a request to enter it (one an Edit-mode load made).
+            if (s_Request > 0) s_Request = 0;
         }
 
         internal static void EndEnteringPlayMode()

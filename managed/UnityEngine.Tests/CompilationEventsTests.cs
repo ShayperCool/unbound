@@ -139,7 +139,38 @@ namespace UnityEngine.Tests
             return seen;
         }
 
-        /// <summary>isPlaying and isPlayingOrWillChangePlaymode, as "playing/willChange".</summary>
+        [Fact]
+        public void AnEnterRequestFromTheKeptDomainsLoadIsAnsweredByEnteringPlayMode()
+        {
+            // An editor script that enters Play mode from its load (as probe runners do) while the
+            // options keep the domain: entering Play mode answers it, nothing stays pending.
+            bool enabled = EditorSettings.enterPlayModeOptionsEnabled;
+            var options = EditorSettings.enterPlayModeOptions;
+            bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
+            AssemblyReloadEvents.AssemblyReloadCallback enter = () =>
+            {
+                if (!EditorApplication.isPlayingOrWillChangePlaymode) EditorApplication.EnterPlaymode();
+            };
+            AssemblyReloadEvents.afterAssemblyReload += enter;
+            try
+            {
+                EditorSettings.enterPlayModeOptionsEnabled = true;
+                EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
+                Unbound.Runtime.EditorSession.IsPlaying = true;
+                EditorInitialization.BeforePlayMode();
+                Assert.Equal("True/True", PlayState());
+            }
+            finally
+            {
+                AssemblyReloadEvents.afterAssemblyReload -= enter;
+                Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
+                EditorSettings.enterPlayModeOptionsEnabled = enabled;
+                EditorSettings.enterPlayModeOptions = options;
+            }
+        }
+
+        /// <summary>isPlaying and isPlayingOrWillChangePlaymode, as "playing/willChange" (Unbound's
+        /// session states, not values an Editor capture records).</summary>
         static string PlayState() => EditorApplication.isPlaying + "/" + EditorApplication.isPlayingOrWillChangePlaymode;
 
         [Fact]
