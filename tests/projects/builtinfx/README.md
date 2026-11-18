@@ -35,6 +35,15 @@ render 200x150 textures with `Camera.Render`, a few cases wait for the player lo
   (`BillboardAsset`/`BillboardRenderer`, both windings), **occlusion components**, **static
   batching** (which renderers a combine takes, moving the root and a child), **cameras** (HDR without
   image effects, a culling matrix set from script, `CopyFrom`, the scene camera's settings).
+* **Built-in shader settings** (`settings_*`, `settings.*`, recorded last): for deferred shading
+  (HDR and LDR), deferred reflections, screen-space shadows, depth-normals, motion vectors, the
+  light halo and the lens flare, an image in each mode set by `GraphicsSettings.SetShaderMode` and
+  `SetCustomShader` (built-in, custom with a shader of `Assets/Shaders/Settings*.shader` that draws
+  a constant color, custom without a shader, No Support), the mode and shader read back, the
+  rendering path and what the render logs; the depth-normals and motion vector textures are drawn
+  over the image by `Probe/Settings/ShowGlobal`. Depth-normals and motion vectors, which no earlier
+  part renders, take the modes without a shader first. `settings_halo_unrendered`: a custom shader
+  set and unset again before any render.
 
 `ProbeRunner.Create` made the scene (a camera with a Skybox and a FlareLayer, a projector, lights
 with a halo and a flare, a lens flare, a halo, occlusion components, a proxy volume) and the assets
@@ -45,6 +54,11 @@ Record Unity's reference (the Editor needs a display; it renders on the GPU):
     BUILTINFX_PROBE_OUT=$PWD/tests/projects/builtinfx/Reference \
         ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -projectPath tests/projects/builtinfx \
         -executeMethod ProbeRunner.Record -logFile ~/.cache/builtinfx.log
+
+The built-in shader settings part changes the graphics settings while it runs: record it from two
+copies of the project (`Assets`, `Packages`, `ProjectSettings`) outside the repository, through
+`tests/editor_runner.py` on the GPU, and publish what is new only where both captures agree byte for
+byte (the settings images and rows were recorded so; every earlier file stayed as it was).
 
 Run Unbound and compare:
 
@@ -116,5 +130,21 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   the Editor's GL driver broadcasts it.
 * `path_deferred*`: within a mean of 3.6 (shadow edges and the point and spot lights' highlights).
 * `probe_blend_distance_now`: probes created the same frame (mean 4.3).
+* Built-in shader settings, as the Editor draws them: each effect with the setting's shader when
+  it has one, whatever the mode, else with the shader it last drew with (SetCustomShader(null) and a
+  shader unset before any render keep it); depth-normals and motion vector textures whose setting
+  never had a shader are not made. No Support switches off screen-space shadows (with the warning
+  "Screenspace cascaded shadow map support is disabled in graphics settings") and deferred
+  reflections; deferred shading, halos and flares still draw. Unbound draws them alike
+  (`GraphicsSettings.RendererShader`), with these differences: `settings_deferred_builtin` and
+  `settings_deferredReflections_*` are within the `path_deferred*` means (3.6);
+  `settings_deferred_{custom,customNull,disabled}`: the Editor draws a custom shader's light pass
+  over the scene's pixels only, Unbound over the whole view (it warns);
+  `settings_deferredLdr_*`: the Editor decodes an LDR camera's light buffer with the shader's second
+  pass, here still the custom one; Unbound's light buffer is linear and has no such pass (it warns);
+  `settings_motionVectors_custom`: the Editor draws the moved sphere's object pass in a second
+  `Camera.Render`, Unbound takes it to be still (Camera.Render keeps no previous matrices, so the
+  built-in pass would write no motion there); `settings_lensFlare_builtin`: as `flare_LensFlareObject`,
+  a flare's first render fades in by the frame's delta time.
 * `static_batching.mesh`: Unbound keeps each renderer's own mesh; `material.crc.values`: checksums
   are Unbound's own.

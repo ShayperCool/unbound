@@ -250,6 +250,7 @@ public partial class FxProbe : MonoBehaviour
             Section("streams", Streams);
             Section("components", Components);
             Section("cameras", Cameras);
+            Section("settings", ShaderSettings);
             File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Values.ToString());
         }
 #if UNITY_EDITOR

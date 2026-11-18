@@ -27,6 +27,13 @@ EXPECTED_IMAGES = [
     r"^target_buffers_mrt1$",
     r"^path_deferred(_ldr)?$",
     r"^probe_blend_distance_now$",
+    # Built-in shader settings (README "What differs").
+    r"^settings_deferred_builtin$",
+    r"^settings_deferredReflections_(builtin|custom|customNull|disabled)$",
+    r"^settings_deferred_(custom|customNull|disabled)$",
+    r"^settings_deferredLdr_(builtin|custom|customNull|disabled)$",
+    r"^settings_motionVectors_custom$",
+    r"^settings_lensFlare_builtin$",
 ]
 
 
