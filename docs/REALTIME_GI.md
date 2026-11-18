@@ -138,6 +138,17 @@ the two). The update is converged (`DynamicGI.isConverged`) once an update of ev
 leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
 do.
 
+A scene's realtime GI is not solved in the first PostLateUpdate.EnlightenRuntimeUpdate after it
+loads: its first update solves what the next frame's scripts have set. The probe's light
+delegate cases change the point light's range in the frame after the Room loads
+(`room-delegate-inversesquared`, `-norange` at range 4, `-linear-range6`): solved once before at
+the light's own range, the update threshold kept part of that brighter light (1.2% in sum at
+range 6, 6 isolated values; `crates/unbound-gi` replays both, matching the engine's earlier
+lightmaps to the value), solved first from the changed state the Editor's are met as in its
+other cases (0 to 3 isolated values, 0.3 to 0.5% below in sum). Not measured: whether a scene
+loaded additively, or a scene's own bake (`Lightmapping.bakeOnSceneLoad`), waits alike (Unbound
+treats every load alike), and synchronous mode in the frame after a load.
+
 ## Lights of a render pipeline
 
 A scriptable render pipeline decides what its lights give global illumination: it registers a
@@ -175,10 +186,10 @@ ambient color, and a skybox at ambient intensities 1 and 2; lightmaps, light pro
   2 isolated values outside the comparator's tolerance; two higher-band light probe
   coefficients of this brightest case reported, as in `room-bounce`). At range 6, where the
   far corners read the table's outer samples, it scales with the range
-  (`room-delegate-linear-range6`: 6 isolated values, (1,9), (1,12) and (2,12) next to the
-  emissive panel and (36,12), (30,14) and (18,26); one higher-band probe coefficient reported),
-  though the engine's lightmap is 1.2% brighter than the Editor's in sum where the other
-  delegate cases are 0.5% darker, more so in the far texels (the short-range residual below).
+  (`room-delegate-linear-range6`: no value outside the comparator's tolerance),
+  0.5% darker than the Editor's in sum as the other delegate cases (it was 1.2% brighter while
+  the engine solved a loaded scene once before the frame that changed the range, see
+  [Runtime update](#runtime-update)).
   With the light 0.4 below the ceiling (`room-delegate-linear-near`, range 10), the ceiling
   above it reads the table between its innermost sample and the light, where the sample at the
   light of 1 fits: 3 isolated values (and 3 band-1 coefficients of one light probe reported,
@@ -217,16 +228,14 @@ plus half its `areaSize.x`, any other light's range itself (tests/projects/realt
 `lights-dilatedrange`: rectangles of 2 x 1, 3 x 3 and no size, discs of two radii whatever
 `areaSize.y`, and every other light type).
 
-A short range brings out a residual of a few texels: with the Room's point light at range 4
-and the legacy falloff, 10 values of the floor's texels next to the left wall are 10-12% above
-the Editor's (more than the gate allows; a capture outside the reference), where the same
-texels are 2-4% above it at the light's own range 10 and 8-10% with an inverse-squared falloff
-at range 4 (within the gate); with the linear falloff at range 4 texels (8,10) to (8,12) are
-11-20% above it, and at range 6 the whole lightmap 1.7% brighter relative to the other cases.
-Its cause is not found ([Open](#open)): it is not the outermost interval of the table alone
-(with nothing read below the second lit sample the range-6 lightmap is 9% too dark). The
-probe's legacy cases use the light's own range, its linear ones the light's own range or 6
-(the capture at range 4 stays outside the reference).
+A short range brought out a residual where the light's range is changed by a script in the frame
+after the scene loads (the probe's delegate cases): the engine solved the scene once at the
+light's own range first, which the update threshold kept in part (texels 10 to 20% above the
+Editor's next to the left wall at range 4, the range-6 lightmap 1.7% brighter relative to the
+other cases); solved first from the changed state as the Editor's
+([Runtime update](#runtime-update)) the range-4 and range-6 cases are met as the others. An
+earlier capture with the legacy falloff at range 4, set the same way, stays outside the
+reference and was not taken again.
 
 ## Directionality
 
@@ -1106,7 +1115,7 @@ measure):
   block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
 - Lights: render pipelines other than the Universal Render Pipeline,
   light types other than point, spot and directional (area lights are baked only), linear light
-  intensity in the built-in pipeline, and the edge texels' residual a short range brings out
+  intensity in the built-in pipeline
   ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
 - Scenes: light probes of additive loads, probe sets that cannot be read or placed, probes
   merged from several scenes, and systems that reference another scene's systems.
