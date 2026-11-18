@@ -489,4 +489,44 @@ mod tests {
         assert!(!root.join(".git").exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn folders_are_literal_and_links_are_refused() {
+        let dir = scratch("literal");
+        let work = dir.join("work");
+        std::fs::create_dir_all(work.join(":pkg")).unwrap();
+        std::fs::write(
+            work.join(":pkg/package.json"),
+            r#"{"name": "com.test.colon", "version": "1.0.0"}"#,
+        )
+        .unwrap();
+        let outside = dir.join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(
+            outside.join("package.json"),
+            r#"{"name": "com.test.link", "version": "1.0.0"}"#,
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&outside, work.join("link")).unwrap();
+        run(&work, &["init", "-q", "-b", "main"]);
+        run(&work, &["add", "-A"]);
+        run(&work, &["commit", "-q", "-m", "one"]);
+        let commit = run(&work, &["rev-parse", "HEAD"]);
+        let url = format!("file://{}", work.display());
+        let store = dir.join("store");
+        let colon = parse_spec(&format!("{url}?path=/:pkg"));
+        assert_eq!(
+            version(&fetch(&store, "com.test.colon", &colon, Some(&commit), false).unwrap()),
+            "1.0.0"
+        );
+        let link = parse_spec(&format!("{url}?path=/link"));
+        assert!(fetch(&store, "com.test.link", &link, Some(&commit), false).is_err());
+        let names: Vec<_> = std::fs::read_dir(store.join("git"))
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(names.len(), 1, "{names:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
