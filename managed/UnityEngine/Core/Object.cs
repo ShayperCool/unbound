@@ -456,6 +456,7 @@ namespace UnityEngine
         {
             if (m_Destroyed) return;
             m_Destroyed = true;
+            if (this is Texture) Texture.s_DestroyedEpoch++;
             ObjectDispatch.Destroyed(this);
             OnEngineDestroy();
             ObjectRegistry.Unregister(this);

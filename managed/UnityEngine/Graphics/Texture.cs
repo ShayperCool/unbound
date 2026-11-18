@@ -10,6 +10,10 @@ namespace UnityEngine
     {
         public static readonly int GenerateAllMips = -1;
 
+        /// <summary>Counts textures destroyed: materials holding one send it again
+        /// (Material.Sync).</summary>
+        internal static int s_DestroyedEpoch;
+
         /// <summary>Sets the mipmap streaming debug view's material properties: Unbound streams no
         /// mipmaps, so there is nothing to show (measured to return: tests/projects/runtimeapis
         /// texture.streaming_debug_properties).</summary>

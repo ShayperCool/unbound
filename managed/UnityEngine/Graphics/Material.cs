@@ -60,6 +60,7 @@ namespace UnityEngine
             internal bool m_Inheriting;
             internal HashSet<string> m_DisabledPasses;
             internal int m_LodEpoch;
+            internal int m_DestroyedTextureEpoch;
             internal string m_SentShader;
             internal bool m_InheritQueue;
             internal bool m_InheritFlags;
@@ -1038,7 +1039,9 @@ namespace UnityEngine
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
             if (!m_Textures.TryGetValue(nameID, out var slot)) return null;
             if (slot.ElementBinding && Declared(nameID) != ShaderPropertyType.Texture) { Missing(nameID, "a texture"); return null; }
-            return slot.Texture;
+            // A destroyed texture reads as null itself, not as its destroyed object (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/defaulttextures destroyed.*.held).
+            return slot.Texture ? slot.Texture : null;
         }
 
         TextureSlot Slot(int nameID)
@@ -1552,12 +1555,20 @@ namespace UnityEngine
 
         /// <summary>Sends the material to the renderer when it changed; returns its handle.</summary>
         int m_LodEpoch { get => m_State.m_LodEpoch; set => m_State.m_LodEpoch = value; }
+        int m_DestroyedTextureEpoch { get => m_State.m_DestroyedTextureEpoch; set => m_State.m_DestroyedTextureEpoch = value; }
         string m_SentShader { get => m_State.m_SentShader; set => m_State.m_SentShader = value; }
 
         /// <summary>Whether <paramref name="hdr"/> is a texture's `_HDR` whose texture was set after
         /// any vector of that name.</summary>
         bool TextureDecodeWins(int hdr) =>
             HdrDecode.TextureOf(hdr, out int texture) && m_Textures.ContainsKey(texture) && !m_VectorsAfterTexture.Contains(hdr);
+
+        /// <summary>The texture handle a property holding <paramref name="texture"/> sends: a
+        /// destroyed texture the material still holds samples opaque black, whatever the
+        /// property's default (matches the Unity 6000.0.71f1 Editor, tests/projects/defaulttextures
+        /// destroyed.*).</summary>
+        internal static ulong SentTexture(Texture texture, RenderTextureSubElement element) =>
+            texture is not null && !texture ? TextureHandles.Of(TextureElements.DestroyedTexture) : TextureElements.MaterialHandle(texture, element);
 
         internal unsafe ulong Sync()
         {
@@ -1569,6 +1580,15 @@ namespace UnityEngine
                 if (m_Shader != null && m_Shader.DrawnName != m_SentShader) m_Dirty = true;
             }
             Inherit();
+            // A texture was destroyed since the last send: one the material holds samples
+            // differently now (see DestroyedTexture).
+            if (m_DestroyedTextureEpoch != Texture.s_DestroyedEpoch)
+            {
+                m_DestroyedTextureEpoch = Texture.s_DestroyedEpoch;
+                if (!m_Dirty)
+                    foreach (var p in m_Textures)
+                        if (p.Value.Texture is not null && !p.Value.Texture) { m_Dirty = true; break; }
+            }
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
             m_SentShader = m_Shader != null ? m_Shader.DrawnName : "Hidden/InternalErrorShader";
@@ -1598,7 +1618,7 @@ namespace UnityEngine
             }
             foreach (var p in m_Textures)
             {
-                Add(p.Key, 2, default, TextureElements.MaterialHandle(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
+                Add(p.Key, 2, default, SentTexture(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
                 int hdr = HdrDecode.IdOf(p.Key);
                 if (TextureDecodeWins(hdr) || !m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);
             }

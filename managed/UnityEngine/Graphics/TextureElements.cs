@@ -94,6 +94,22 @@ namespace Unbound.Runtime
         static ulong DepthHandle(UnityEngine.RenderTexture rt) => TextureHandles.Of(rt) | DepthElement;
 
         static UnityEngine.Texture2D s_Gray;
+        static UnityEngine.Texture2D s_Destroyed;
+
+        /// <summary>What a material's texture property samples once its texture is destroyed:
+        /// opaque black, whatever the property's default (measured on 2D properties:
+        /// tests/projects/defaulttextures destroyed.*).</summary>
+        internal static UnityEngine.Texture2D DestroyedTexture
+        {
+            get
+            {
+                if (s_Destroyed != null) return s_Destroyed;
+                var t = new UnityEngine.Texture2D(1, 1, UnityEngine.TextureFormat.RGBA32, false) { name = "UnboundDestroyedTexture" };
+                t.SetPixels32(new[] { new UnityEngine.Color32(0, 0, 0, 255) });
+                t.Apply(false, false);
+                return s_Destroyed = t;
+            }
+        }
 
         /// <summary>The texture a global binding of nothing samples: gray with half alpha, an sRGB
         /// 16x16 texture (measured: 0.2158 linear, alpha 0.502, over 16x16 texels).</summary>
