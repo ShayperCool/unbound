@@ -91,7 +91,13 @@ def job(work, repeat):
 
 
 def editor(work, space, dry_run=False):
-    if MACOS and not dry_run:
+    if MACOS and dry_run:
+        for repeat in REPEATS:
+            print(json.dumps({'label': 'camerastack-'+repeat, 'editor': str(macos_editor.editor()), 'windowed': True,
+                              'project': str(work/'projects'/repeat), 'env': {'STACK_PROBE_OUT': str(work/repeat)},
+                              'timeout': HARD_TIMEOUT}, indent=1))
+        return 0
+    if MACOS:
         codes = []
         for repeat in REPEATS:
             project, out = copy_project(work/'projects'/repeat, space), fresh_output(work/repeat)

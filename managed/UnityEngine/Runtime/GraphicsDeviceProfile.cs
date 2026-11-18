@@ -88,7 +88,8 @@ namespace Unbound.Runtime
         /// macOS Editor's Game view, tests/projects/camerastack `metal/Linear` *.part.bH*, two
         /// captures on an Apple M2 Pro; its LDR and full-screen intermediates and every Gamma case
         /// start from the decoded colors, as on the Linux devices). Unmeasured for explicit
-        /// targets.</summary>
+        /// targets and for a partial deferred camera without HDR (its light buffer is half float
+        /// in Unbound, so it takes this seed too).</summary>
         internal bool PartialScreenSeedUndecoded { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>

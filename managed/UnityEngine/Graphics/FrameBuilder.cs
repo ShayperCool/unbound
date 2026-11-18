@@ -1672,7 +1672,7 @@ namespace Unbound.Runtime
                 // On the screen the intermediate starts as the screen under the camera's rect:
                 // Depth only and Don't Clear keep the color earlier cameras drew there.
                 else if (!deferred && msaaTarget != null && !joins && resolveTarget == null && keepsColor)
-                    SeedFromScreen(msaaTarget, camera.pixelRect);
+                    SeedFromScreen(msaaTarget, camera.pixelRect, !fullScreen);
                 int width = (int)viewport.width, height = (int)viewport.height;
                 // The camera's textures, as the camera asks and as directional shadows need
                 // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
@@ -1719,7 +1719,7 @@ namespace Unbound.Runtime
                     // Depth only and Don't Clear: the light buffer starts as what is under the
                     // camera, as a forward intermediate does (measured on the screen: a perspective
                     // deferred camera in a stack, tests/projects/camerastack *.def.persp).
-                    if (keepsColor) SeedLightBuffer(camera, onScreen, cameraTarget, sceneTarget);
+                    if (keepsColor) SeedLightBuffer(camera, onScreen, cameraTarget, sceneTarget, !fullScreen);
                     forwardOpaque = RenderDeferredOpaque(camera, context, sceneTarget, gbufferDepth, viewport, transparent);
                 }
                 // The forward opaque objects (in deferred, those without a Deferred pass; their
@@ -2160,9 +2160,9 @@ namespace Unbound.Runtime
         /// <summary>A deferred camera's light buffer seeded with the color under the camera, as a
         /// forward intermediate is: the screen's under its rect, else its whole explicit target
         /// (the buffer goes back onto the whole target).</summary>
-        static void SeedLightBuffer(Camera camera, bool onScreen, RenderTexture cameraTarget, RenderTexture light)
+        static void SeedLightBuffer(Camera camera, bool onScreen, RenderTexture cameraTarget, RenderTexture light, bool partial)
         {
-            if (onScreen) SeedFromScreen(light, camera.pixelRect);
+            if (onScreen) SeedFromScreen(light, camera.pixelRect, partial);
             else if (cameraTarget != null && cameraTarget != light) SeedFromTarget(cameraTarget, light);
         }
 
@@ -2180,12 +2180,12 @@ namespace Unbound.Runtime
         /// whole of a screen camera's intermediate (its pixel size). The screen is copied as the
         /// bytes it stores into an 8-bit texture of the same encoding (sRGB in Linear color
         /// space), so sampling reads the colors the screen shows.</summary>
-        static void SeedFromScreen(RenderTexture intermediate, Rect pixelRect)
+        static void SeedFromScreen(RenderTexture intermediate, Rect pixelRect, bool partial)
         {
             int width = Math.Max(1, Screen.width), height = Math.Max(1, Screen.height);
-            // A device whose partial HDR intermediates read the screen's bytes as linear values
-            // (GraphicsDeviceProfile.PartialScreenSeedUndecoded): the copy is not sRGB there.
-            bool partial = pixelRect.x > 0 || pixelRect.y > 0 || pixelRect.width < width || pixelRect.height < height;
+            // A device whose partial (camera rect not the whole screen) HDR intermediates read the
+            // screen's bytes as linear values (GraphicsDeviceProfile.PartialScreenSeedUndecoded):
+            // the copy is not sRGB there.
             bool undecoded = partial && Unbound.Runtime.GraphicsDeviceProfile.Current.PartialScreenSeedUndecoded
                 && GraphicsFormatUtility.IsHDRFormat(intermediate.graphicsFormat);
             var screen = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32,

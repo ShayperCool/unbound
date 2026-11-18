@@ -547,7 +547,9 @@ struct DepthBlit {
     format: wgpu::TextureFormat,
     samples: u32,
     /// The rows are read mirrored: exactly one end is stored as the screen, whose rows a
-    /// top-down device stores the other way (as `CopyTexture` copies between them).
+    /// top-down device stores the other way, so the depth lands in the other end's row order
+    /// (unlike `CopyTexture`, which copies the rows as stored and only counts a region's rows
+    /// from the screen's top).
     flip: bool,
 }
 
@@ -2562,7 +2564,9 @@ impl UnityRenderer {
             .vulkan_plugins
             .as_mut()
             .and_then(|p| p.depth_resolve(destination, self.frame_number + 1));
-        // A screen stored top-down counts its rows from the top, as CopyTexture reads them.
+        // A depth copy between a top-down screen and a texture mirrors the rows (measured on
+        // Metal: tests/projects/camerastack `metal/*` *.full.bH.def.persp; Vulkan's screen is
+        // top-down too, unmeasured there).
         let flip = self.conventions.top_down(true)
             && self.stored_as_screen(source) != self.stored_as_screen(destination);
         match (from, to, to_view) {
