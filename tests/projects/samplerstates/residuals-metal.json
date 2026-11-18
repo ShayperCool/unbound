@@ -1,5 +1,5 @@
 {
- "The macOS Editor's Metal device reads a depth texture's sample as the depth in red, green and blue and 1 in alpha, as OpenGL Core does (tests/projects/samplerstates metal.jsonl, Unity 6000.0.71f1, Apple M2 Pro). Unbound samples the depth through a one-channel copy, so green and blue read 0; wgpu has no texture view swizzle, and filling all channels needs a per-binding program variant. Open.": [
+ "The macOS Editor's Metal device reads a depth texture's sample as the depth in red, green and blue and 1 in alpha (OpenGL Core and Vulkan: red only; tests/projects/samplerstates metal.jsonl, Unity 6000.0.71f1, Apple M2 Pro). Unbound samples the depth through a one-channel copy, so green and blue read 0; wgpu has no texture view swizzle, and filling all channels needs a per-binding program variant. Open.": [
   "DepthChannels.split",
   "DepthChannels.split.raw",
   "DepthChannels.splitLinear",

@@ -1664,10 +1664,17 @@ pub(crate) fn fit(
                 TypeInner::Sampler { .. } => {
                     // A sampler the program declares and never samples through binds nothing.
                     slot.sampler |= used.contains(&variable);
+                    // The device that refuses no wrongly spelt name reads it leniently.
+                    let read = |n: &str| match named_samplers {
+                        Some(rule) if !rule.refuses_misspelt_inline => {
+                            InlineSampler::read_leniently(n)
+                        }
+                        _ => InlineSampler::from_name(n),
+                    };
                     if key.0 == name {
-                        slot.inline = InlineSampler::from_name(name);
+                        slot.inline = read(name);
                     } else if !textures_named(module, &key.0) {
-                        slot.inline = InlineSampler::from_name(&key.0);
+                        slot.inline = read(&key.0);
                     }
                 }
                 _ => {}

@@ -182,8 +182,8 @@ impl GraphicsDevice {
     /// inline state, and a wrongly spelt inline state; the macOS Editor's Metal compiler checks
     /// each stage on its own (a sampler named for a texture of the other stage only is refused:
     /// tests/projects/samplerstates `Vertex`, `UsedVertex`) and refuses no wrongly spelt inline
-    /// state (`Bad*` draw, each as the texture's bilinear sample, which its own state and the
-    /// `Linear` its name spells both give), `metal.jsonl`, two captures on an Apple M2 Pro.
+    /// state, which it reads leniently (`Bad*` draw; `InlineSampler::read_leniently`),
+    /// `metal.jsonl`, two captures on an Apple M2 Pro.
     pub fn named_samplers(self) -> Option<NamedSamplers> {
         match self {
             Self::OpenGLCore => None,

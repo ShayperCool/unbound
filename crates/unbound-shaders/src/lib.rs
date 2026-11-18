@@ -310,6 +310,24 @@ impl InlineSampler {
     /// None for a name without a filter or without a wrap word (no inline state); an error, in
     /// the Editor's words, for a name that spells one wrongly.
     pub fn parse(name: &str) -> std::result::Result<Option<InlineSampler>, String> {
+        InlineSampler::read(name, true)
+    }
+
+    /// The state a sampler's name spells as the macOS Editor's Metal compiler reads it, which
+    /// refuses no wrongly spelt name: the same words and precedence with nothing refused (two
+    /// filters are the linear one, `Clamp` with `Repeat` or `Mirror` clamps), and an invalid
+    /// anisotropic level is none. Measured on an Apple M2 Pro (two identical captures): a
+    /// point-filtered repeating texture through `sampler_PointLinearClamp` and
+    /// `sampler_LinearPointClamp` samples bilinear and clamped, through `sampler_PointClampRepeat`,
+    /// `sampler_PointClampMirror`, `sampler_PointClampAniso3` and `my_point_clamp_aniso3_sampler`
+    /// point and clamped, whatever the texture's own state (tests/projects/samplerstates `Bad*`
+    /// are the probe's rows, bilinear names on a bilinear texture). An invalid level's own
+    /// effect (none, or another level) is not measured.
+    pub fn read_leniently(name: &str) -> Option<InlineSampler> {
+        InlineSampler::read(name, false).ok().flatten()
+    }
+
+    fn read(name: &str, strict: bool) -> std::result::Result<Option<InlineSampler>, String> {
         let n = name.to_ascii_lowercase();
         // `trilinear` holds `linear`: that one occurrence is not a second filter.
         let trilinear = n.find("trilinear");
@@ -327,7 +345,7 @@ impl InlineSampler {
         if filters == 0 || words.iter().all(|(axes, _)| axes.is_none()) {
             return Ok(None);
         }
-        if filters > 1 {
+        if filters > 1 && strict {
             return Err(format!(
                 "Unrecognized inline sampler name '{n}' - only 1 filter mode can be selected at once ('point', 'linear' or `trilinear`"
             ));
@@ -335,7 +353,7 @@ impl InlineSampler {
         // A word that names no axis is the whole sampler's.
         let whole = |k: usize| words[k].0 == Some([false; 3]);
         for (other, k) in [("repeat", 1), ("mirror", 3)] {
-            if whole(0) && whole(k) {
+            if whole(0) && whole(k) && strict {
                 return Err(format!(
                     "Unrecognized inline sampler name '{n}' - can't have both 'clamp' and '{other}'"
                 ));
@@ -359,6 +377,7 @@ impl InlineSampler {
                 match (digit(0), digit(1), digit(2)) {
                     (Some(level @ (2 | 4 | 8)), None, None) => level as i32,
                     (Some(1), Some(6), None) => 16,
+                    _ if !strict => 1,
                     _ => {
                         return Err(format!(
                             "Unrecognized inline sampler name '{n}' - invalid anisotropic filter value. Only 2/4/8/16 are valid sample counts."
@@ -3096,6 +3115,64 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             let metal = compile(unbound_graphics::GraphicsDevice::Metal).unwrap();
             assert!(metal.textures.contains(&"_B".to_string()));
         }
+    }
+
+    /// The macOS Editor's Metal compiler reads a wrongly spelt inline name as the words it spells
+    /// with the strict reading's precedence and nothing refused: two filters are the linear one,
+    /// `Clamp` with another wrap word clamps, an invalid anisotropic level is none (measured with
+    /// a point-filtered repeating texture, which these states and the texture's own tell apart;
+    /// see [`InlineSampler::read_leniently`]). A Metal program's slot takes that state; Vulkan
+    /// refuses the program; a correctly spelt name reads alike both ways.
+    #[test]
+    fn metal_reads_a_wrongly_spelt_inline_sampler_leniently() {
+        let state = |filter, wrap| {
+            Some(InlineSampler {
+                filter,
+                wrap: [wrap; 3],
+                aniso: 1,
+            })
+        };
+        for (name, expected) in [
+            ("sampler_PointLinearClamp", state(1, 1)),
+            ("sampler_LinearPointClamp", state(1, 1)),
+            ("sampler_PointClampRepeat", state(0, 1)),
+            ("sampler_PointClampMirror", state(0, 1)),
+            ("sampler_PointClampAniso3", state(0, 1)),
+            ("my_point_clamp_aniso3_sampler", state(0, 1)),
+        ] {
+            assert!(InlineSampler::parse(name).is_err(), "{name}");
+            assert_eq!(InlineSampler::read_leniently(name), expected, "{name}");
+        }
+        for name in [
+            "sampler_PointClamp",
+            "sampler_LinearRepeat_Aniso8",
+            "sampler_B",
+        ] {
+            assert_eq!(
+                InlineSampler::read_leniently(name),
+                InlineSampler::from_name(name),
+                "{name}"
+            );
+        }
+        let source = "#pragma vertex vert\n#pragma fragment frag\nTexture2D _B; SamplerState sampler_PointLinearClamp;\n\
+             float4 vert(float4 position : POSITION) : SV_POSITION { return position; }\n\
+             float4 frag(float4 position : SV_POSITION) : SV_Target { return _B.Sample(sampler_PointLinearClamp, position.xy); }\n";
+        let compile = |device| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler.compile(&program(source, false), &[], false)
+        };
+        let metal = compile(unbound_graphics::GraphicsDevice::Metal).unwrap();
+        let slot = metal
+            .textures
+            .iter()
+            .position(|t| t == "_PointLinearClamp")
+            .map(|k| metal.texture_slots[k].inline);
+        assert_eq!(slot, Some(state(1, 1)), "{:?}", metal.textures);
+        assert!(compile(unbound_graphics::GraphicsDevice::Vulkan).is_err());
     }
 
     /// The macOS Editor's Metal compiler resolves each stage's samplers against that stage's

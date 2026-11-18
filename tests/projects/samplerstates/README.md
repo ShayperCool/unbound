@@ -179,11 +179,15 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
   `UsedVertex` (the fragment stage samples a cube through `sampler_B`, only the vertex stage loads
   `_B`) are refused ("Unrecognized sampler 'sampler_B' - does not match any texture ... (on
   metal)") and draw with the error shader, where Vulkan draws them;
-- a wrongly spelt inline name is no error: every `Bad*` program draws `_B`'s bilinear sample,
-  which `_B`'s own state and the `Linear` each name spells give alike (these cases do not tell
-  the two apart);
+- a wrongly spelt inline name is no error: the name is read with the same words and precedence
+  and nothing refused (two filters are the linear one, `Clamp` with `Repeat` or `Mirror` clamps,
+  an invalid anisotropic level is none), whatever the texture's own state. Every `Bad*` program
+  draws `_B`'s bilinear sample, which does not tell this from `_B`'s own state; a separate macOS
+  Editor capture (two identical) of a point-filtered repeating texture through such names does
+  (`InlineSampler::read_leniently`); rows of it here would need the Linux references recorded
+  again, a follow-up;
 - a depth texture's sample reads the depth in red, green and blue and 1 in alpha (`DepthChannels`,
-  `DepthOnly.depth`), as on OpenGL Core;
+  `DepthOnly.depth`), where OpenGL Core and Vulkan read it in red only;
 - a `Depth` target sampled through its own state in a program that also compares it gives the
   comparison's result (`DepthState.*` first channel, whatever its shadowSamplingMode), where
   Vulkan reads the stored depth;
