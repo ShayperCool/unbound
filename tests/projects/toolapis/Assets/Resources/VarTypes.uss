@@ -1,0 +1,8 @@
+/* A var() whose value has the wrong type for the property, beside valid declarations. */
+.bad { --r: 20px; border-width: 2px; border-color: var(--r); border-radius: var(--r); width: 40px; height: 30px; }
+.badwidth { --c: rgb(0, 255, 0); border-color: blue; border-left-width: var(--c); border-top-width: 3px; }
+.good { --c: rgb(0, 0, 255); border-width: 1px; border-color: var(--c); }
+.parent { border-color: red; color: rgb(10, 20, 30); }
+.childbad { --r: 5px; color: var(--r); border-top-color: var(--r); }
+.later { border-color: rgb(255, 255, 0); }
+.later.bad { border-color: var(--r); }

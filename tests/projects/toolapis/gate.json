@@ -1,0 +1,10 @@
+{
+  "commands": ["python3 tests/projects/toolapis/run.py gate"],
+  "summary": "toolapis: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/TextureGenerator.cs",
+    "managed/UnityEngine/Editor/TextureImporterSettings.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/UIElements/Style/StyleResolver.cs"
+  ]
+}
