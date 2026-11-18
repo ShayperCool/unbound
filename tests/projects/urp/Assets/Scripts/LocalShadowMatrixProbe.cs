@@ -6,8 +6,9 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>Records what CullingResults computes for point (every cube face) and spot light
-/// shadows (matrices, culling spheres and planes) over light positions, ranges, angles and field of
-/// view biases, from inside a render (where a cull is possible).</summary>
+/// shadows (matrices, culling spheres, planes and culling matrices) over light positions, ranges,
+/// angles and field of view biases, from inside a render (where a cull is possible). The
+/// BatchRendererGroup probe (tests/projects/brg) records the same on OpenGL Core and Vulkan.</summary>
 public static class LocalShadowMatrixProbe
 {
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
@@ -17,10 +18,13 @@ public static class LocalShadowMatrixProbe
     static string Split(ShadowSplitData sd)
     {
         var planes = string.Join(",", Enumerable.Range(0, sd.cullingPlaneCount).Select(k => { var pl = sd.GetCullingPlane(k); return $"[{F(pl.normal.x)},{F(pl.normal.y)},{F(pl.normal.z)},{F(pl.distance)}]"; }));
-        return $"\"sphere\":{V(sd.cullingSphere)},\"nearPlane\":{F(sd.cullingNearPlane)},\"planes\":[{planes}]";
+        return $"\"sphere\":{V(sd.cullingSphere)},\"nearPlane\":{F(sd.cullingNearPlane)},\"planes\":[{planes}],\"cullingMatrix\":{M(sd.cullingMatrix)}";
     }
 
-    public static void Record(string path)
+    public static void Record(string path) => File.WriteAllText(path, Records());
+
+    /// <summary>One JSON record per line, as <see cref="Record"/> writes them.</summary>
+    public static string Records()
     {
         var sb = new StringBuilder();
         var go = new GameObject("Local Shadow Probe Light");
@@ -67,7 +71,7 @@ public static class LocalShadowMatrixProbe
         target.Release();
         RenderPipelineManager.beginCameraRendering -= Handler;
         Object.DestroyImmediate(go);
-        File.WriteAllText(path, sb.ToString());
+        return sb.ToString();
     }
 
     static int Cull(ScriptableRenderContext context, Camera camera, Light light, out CullingResults cull)

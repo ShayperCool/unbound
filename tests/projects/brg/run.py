@@ -59,6 +59,12 @@ DEVICE = 'opengl'
 MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 MEAN_BOUND = 0.5
 OVER_SHARE = 0.005
+# The local shadow matrix records (`local_shadow_matrices.<i>`, JSON text) compare field by field,
+# numbers within this share of their size (at least 1): the matrices, planes and spheres are
+# computed in single precision, and the Editor's evaluation order is not Unbound's (the measured
+# differences are at most 2e-6).
+MATRIX_RECORDS = 'local_shadow_matrices.'
+MATRIX_TOLERANCE = 1e-5
 
 
 def reference():
@@ -87,7 +93,42 @@ def stage(label):
     for part in ('Scripts', 'Editor', 'Shaders'):
         shutil.copytree(ROOT/'Assets'/part, project/'Assets'/part)
         shutil.copy2(ROOT/'Assets'/(part+'.meta'), project/'Assets'/(part+'.meta'))
+    # The URP probe's point and spot light shadow matrix records (BrgProbe.LocalShadowMatrices).
+    for name in (SHARED_SCRIPT, SHARED_SCRIPT+'.meta'):
+        shutil.copy2(ROOT.parent/'urp/Assets/Scripts'/name, project/'Assets/Scripts'/name)
     return work, project
+
+
+SHARED_SCRIPT = 'LocalShadowMatrixProbe.cs'
+# The errors the renderer reports for draw commands: the Editor logs each distinct one once,
+# after the frame that drew it, so the probe cannot see them; the runner reads them from the log.
+LOGGED_ERRORS = ('A BatchDrawCommand ',)
+
+
+def logged_errors(log):
+    """The log's draw command errors, each with its second line (the IDs it names) and how many
+    times it was logged: rows `log.<i>` ("<count>x <first line> | <second line>", sorted) and
+    `log.count`."""
+    lines = Path(log).read_text(errors='replace').splitlines()
+    counts = {}
+    for i, line in enumerate(lines):
+        at = min((line.find(start) for start in LOGGED_ERRORS if start in line), default=-1)
+        if at < 0:
+            continue
+        message = line[at:]+' | '+(lines[i+1].strip() if i+1 < len(lines) else '')
+        counts[message] = counts.get(message, 0)+1
+    rows = [{'k': f'log.{i}', 'v': f'{counts[m]}x {m}'} for i, m in enumerate(sorted(counts))]
+    return rows+[{'k': 'log.count', 'v': len(counts)}]
+
+
+def add_logged_errors(capture, log):
+    """The log's draw command errors added to the capture's values, before its completion row."""
+    values = capture/VALUES
+    text = values.read_text().splitlines()
+    complete = [line for line in text if json.loads(line).get('k') == 'complete']
+    rest = [line for line in text if line not in complete]
+    added = [json.dumps(row, separators=(',', ':')) for row in logged_errors(log)]
+    values.write_text('\n'.join(rest+added+complete)+'\n')
 
 
 def native(label):
@@ -109,6 +150,9 @@ def native(label):
     results = [editor_runner.run(job) for job in jobs] if DEVICE == 'vulkan' else editor_runner.run_parallel(jobs)
     for result in results:
         print(editor_runner.summary(result))
+    for job in jobs:
+        if (job.out/CAPTURE/VALUES).is_file():
+            add_logged_errors(job.out/CAPTURE, job.out/'editor.log')
     return 0 if all((job.out/CAPTURE/VALUES).is_file() for job in jobs) else 1
 
 
@@ -124,6 +168,7 @@ def engine(label):
     values = work/CAPTURE/VALUES
     if code or not values.is_file() or '"complete"' not in values.read_text():
         sys.exit(f'{label}: exit {code}, capture incomplete; see {work}')
+    add_logged_errors(work/CAPTURE, work/'process.log')
     print('engine', work/CAPTURE)
     return work/CAPTURE
 
@@ -226,6 +271,26 @@ def residual(known, key):
     return next((cause for pattern, cause in known.items() if fnmatch.fnmatchcase(key, pattern)), None)
 
 
+def same_record(expected, actual):
+    """Whether two local shadow matrix records agree: the same fields, lists of the same lengths,
+    equal non-numbers, equal infinities and numbers within MATRIX_TOLERANCE."""
+    def read(text):
+        return json.loads(text.replace('-Infinity', '"-inf"').replace('Infinity', '"inf"'))
+
+    def same(a, b):
+        if isinstance(a, list) and isinstance(b, list):
+            return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))
+        if isinstance(a, dict) and isinstance(b, dict):
+            return a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
+        if isinstance(a, bool) or isinstance(b, bool) or not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+            return a == b
+        return abs(a-b) <= MATRIX_TOLERANCE*max(1.0, abs(a))
+    try:
+        return same(read(expected), read(actual))
+    except (TypeError, ValueError):
+        return False
+
+
 def compare(expected_dir, actual_dir):
     expected_dir, actual_dir = Path(expected_dir), Path(actual_dir)
     known = residuals()
@@ -234,7 +299,8 @@ def compare(expected_dir, actual_dir):
     matched = 0
     for key in sorted(set(want) | set(got)):
         cause = residual(known, key)
-        if key in want and key in got and want[key] == got[key]:
+        if key in want and key in got and (want[key] == got[key] or (
+                key.startswith(MATRIX_RECORDS) and same_record(want[key], got[key]))):
             matched += 1
             if key in known:
                 print(f'resolved residual {key}')

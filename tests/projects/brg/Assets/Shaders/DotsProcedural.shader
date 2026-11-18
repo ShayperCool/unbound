@@ -3,13 +3,15 @@
 // from the origin) shifted by 1.3 units along x for each further group of four (v / 4), so the
 // vertex ids a draw reads show where its shape lies. With _Expand set, each six vertex ids are
 // the two triangles of one such square (ids 0-5 the first square's corners 0, 1, 2, 0, 2, 3).
-// The instance's unity_ObjectToWorld and _BaseColor come from its batch.
+// The instance's unity_ObjectToWorld and _BaseColor come from its batch. With _Show 1 or 2 the
+// colour is instead the per-draw header's mesh bounds centre or extent (0.5 + value / 4 per axis).
 Shader "Probe/DotsProcedural"
 {
     Properties
     {
         _BaseColor ("Color", Color) = (1, 1, 1, 1)
         _Expand ("Expand triangles", Float) = 0
+        _Show ("Show the header's bounds centre (1) or extent (2)", Float) = 0
     }
     SubShader
     {
@@ -28,6 +30,7 @@ Shader "Probe/DotsProcedural"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseColor;
                 float _Expand;
+                float _Show;
             CBUFFER_END
 
             #ifdef UNITY_DOTS_INSTANCING_ENABLED
@@ -65,6 +68,13 @@ Shader "Probe/DotsProcedural"
                 Varyings output;
                 output.positionCS = TransformObjectToHClip(position);
                 output.color = _BaseColor;
+                #ifdef UNITY_DOTS_INSTANCING_ENABLED
+                if (_Show > 0.5)
+                {
+                    float3 bound = _Show < 1.5 ? LoadDOTSInstancedData_MeshLocalBoundCenter() : LoadDOTSInstancedData_MeshLocalBoundExtent();
+                    output.color = float4(saturate(0.5 + 0.25 * bound), 1.0);
+                }
+                #endif
                 return output;
             }
 

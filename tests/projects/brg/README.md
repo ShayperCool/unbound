@@ -120,6 +120,38 @@ view type how many callbacks ran. Scenarios:
   can't draw quads if platform does not support quad topology` once a render (4x for the two
   draws over two renders).
 
+- `procedural_topologies`: the topologies `procedural` leaves out, over the same background:
+  procedural commands of 16-bit indices as a line strip (the outline, `c0`) and as quads (`c1`);
+  procedural indirect commands of vertex ids as a line strip, points and quads (`c2`-`c4`) and of
+  indices as quads and a line strip (`c5`, `c6`); indirect commands of the cube's and the line
+  square's indices as a line strip and quads (`c7`-`c10`). The Editor draws every one; quads as
+  the device draws them (points on OpenGL Core: 16 pixels for eight ids).
+- `procedural_ids`: commands the Editor reports and the per-draw header's mesh bounds. Probe/NoDots
+  procedural, procedural indirect and indirect commands, procedural commands of an unknown batch
+  and of an unknown material and a procedural indirect one of an unknown batch (`c0`-`c5`): none
+  is drawn; the missing-variant error names mesh 0 (`"<null>"`) for the commands without a mesh,
+  the invalid-ID error names mesh 0 for an unknown batch, an unknown material logs nothing. On
+  Vulkan the Editor crashes in its draws of these six commands, so the Vulkan scenario leaves
+  them out (its cells shift; the `errors` scenario's direct Probe/NoDots
+  command is skipped there without a crash, as on OpenGL Core). An indirect command of an unknown material is
+  not recorded: the Vulkan Editor crashes on it, the OpenGL Core one draws it with another
+  material. Then Probe/DotsProcedural coloured by the header's bounds centre and extent
+  (`_Show`; `c<i>.color`: 0.5 + value / 4 per axis): procedural and procedural indirect commands'
+  header bounds are zero; an indirect command of a unit quad mesh has the mesh's extent (0.5,
+  0.5, 0) (its centre is not recorded: it was not stable in the Editor, 0.5, 0.5, 0 in one layout
+  of the scenario and -1.2, -0.8, 0 in another). On Vulkan the indirect one is left out too: the
+  Vulkan Editor crashes drawing Probe/DotsProcedural over a mesh in an indirect command.
+- `local_shadow_matrices.<i>`: what CullingResults computes for point light faces and spot
+  lights over positions, ranges, near planes, field of view biases and angles: the URP probe's
+  `LocalShadowMatrixProbe` (staged from tests/projects/urp), one JSON record each (view and
+  projection matrices, culling sphere, near plane, planes and culling matrix), on each device.
+  The records compare field by field, numbers within 1e-5 of their size (at least 1): the Editor
+  and Unbound round single-precision arithmetic differently (by at most 2e-6 here).
+- `log.<i>`: the draw command errors the Editor writes to its log (each distinct message once,
+  with the line naming the IDs), read from the Editor's log and from Unbound's output by the
+  runner: the Editor delivers them after the frame, so the probe, which records within it, does
+  not see them (`*.logs` rows count none).
+
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures

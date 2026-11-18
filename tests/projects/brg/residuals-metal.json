@@ -1,3 +1,5 @@
 {
-  "procedural*": "the procedural and procedural_graphics scenarios have no Metal reference yet (recorded on the Linux Editor's OpenGL Core and Vulkan devices only); record them with the macOS Editor (run.py native --device metal), including how Metal draws procedural quads, which Unbound warns about and does not draw there for BatchRendererGroup commands"
+  "procedural*": "the procedural, procedural_graphics, procedural_topologies and procedural_ids scenarios have no Metal reference yet (recorded on the Linux Editor's OpenGL Core and Vulkan devices only); record them with the macOS Editor (run.py native --device metal), including how Metal draws procedural quads, which Unbound warns about and does not draw there for BatchRendererGroup commands",
+  "local_shadow_matrices.*": "the local shadow matrix records have no Metal reference yet (recorded on the Linux Editor's OpenGL Core and Vulkan devices only); record them with the macOS Editor",
+  "log.*": "the draw command errors read from the Editor's log have no Metal reference yet (recorded on the Linux Editor's OpenGL Core and Vulkan devices only); record them with the macOS Editor"
 }
