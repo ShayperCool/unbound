@@ -229,10 +229,12 @@ Packed targets on Metal: the macOS Editor stores 4444, 5-6-5 and 1-5-5-5 targets
 formats; a draw or clear keeps each channel's nearest level (from about half precision: 0.7 clears
 and draws to 11/15) and a program reads exactly level / (2^bits - 1) (8/31, 0.2580645, for 0.25 in a
 5-bit channel); a blend of the second of two consecutive Blits reads the unrounded first draw.
+Mip levels and further colors keep levels the same way, their clears included (`mip.*`, `mrt.*`).
 Unbound on Metal keeps the nearest levels in its 8-bit store (`GraphicsDevice::packed_writes_round`,
-4444 targets included): 633/645; the 12 `Packed.*` rows declared in `residuals-metal.json` differ
-because a 5- or 6-bit level has no exact 8-bit value (within 1/510), Unbound's single-precision draw
-keeps 0.7 at 10/15, and Unbound packs between the two Blits of the blend. Before the
+4444 targets included, clears rounded at every level): 643/665; the 22 `Packed.*` rows declared in
+`residuals-metal.json` differ because a 5- or 6-bit level has no exact 8-bit value (within 1/510),
+Unbound's single-precision draw keeps 0.7 at 10/15, and Unbound packs between the two Blits of the
+blend. Before the
 `Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
 the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
 the pipeline failure the program's (`GraphicsDevice::draws_depth_output_without_depth_buffer`: the pass

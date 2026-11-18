@@ -5,12 +5,22 @@
   "Packed.ARGB1555.draw",
   "Packed.ARGB1555.halves.between",
   "Packed.ARGB1555.halves.left",
+  "Packed.ARGB1555.mip.clear",
+  "Packed.ARGB1555.mip.draw",
+  "Packed.ARGB1555.mip.generated",
+  "Packed.ARGB1555.mrt.clear",
   "Packed.ARGB4444.blend",
   "Packed.ARGB4444.draw",
+  "Packed.ARGB4444.mip.draw",
+  "Packed.ARGB4444.mip.generated",
   "Packed.RGB565.blend",
   "Packed.RGB565.clear",
   "Packed.RGB565.draw",
   "Packed.RGB565.halves.between",
-  "Packed.RGB565.halves.left"
+  "Packed.RGB565.halves.left",
+  "Packed.RGB565.mip.clear",
+  "Packed.RGB565.mip.draw",
+  "Packed.RGB565.mip.generated",
+  "Packed.RGB565.mrt.clear"
  ]
 }
