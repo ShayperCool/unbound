@@ -14,11 +14,14 @@ public partial class CmdBuffersProbe
     static readonly bool s_AddedInstancesUndefined = SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal;
 
     /// <summary>A one-layer read (Read) of `image` with the columns of raw instance IDs from
-    /// `count` on masked where added instances read undefined data.</summary>
-    static string OwnColumns(string read, RenderTexture image, int count)
+    /// `count` on masked where added instances read undefined data: on Metal, and with
+    /// `everywhere` on every device (the ID-placed color cases: on the OpenGL Core Editor the six
+    /// clear-colored instances drawn before them did not define what they read, two captures of a
+    /// longer run read colors of earlier sections there).</summary>
+    static string OwnColumns(string read, RenderTexture image, int count, bool everywhere = false)
     {
         int pixels = image.width * image.height;
-        if (!s_AddedInstancesUndefined || read.Length != 4 + pixels * 8) return read;
+        if (!(s_AddedInstancesUndefined || everywhere) || read.Length != 4 + pixels * 8) return read;
         var chars = read.ToCharArray();
         for (int p = 0; p < pixels; p++)
             if (p % image.width >= count)
@@ -116,7 +119,7 @@ public partial class CmdBuffersProbe
             cmd.SetInstanceMultiplier(multiplier);
             cmd.DrawMeshInstanced(quad, 0, mat, 0, matrices, count, block);
             Try(key, () => { Graphics.ExecuteCommandBuffer(cmd); Value(key + ".ok", "true"); });
-            Value(key + ".pixels", block == null ? Read(image) : OwnColumns(Read(image), image, count));
+            Value(key + ".pixels", block == null ? Read(image) : OwnColumns(Read(image), image, count, everywhere: true));
             using var reset = new CommandBuffer();
             reset.SetInstanceMultiplier(1);
             Graphics.ExecuteCommandBuffer(reset);
@@ -144,7 +147,7 @@ public partial class CmdBuffersProbe
             ClearInstanceData(image, quad, byColor);
             Graphics.RenderMeshInstanced(new RenderParams(byColor) { camera = camera, worldBounds = bounds, matProps = two }, quad, 0, matrices, 2);
             camera.Render();
-            Value("device.multiplier.camera.colors." + multiplier + ".pixels", OwnColumns(Read(image), image, 2));
+            Value("device.multiplier.camera.colors." + multiplier + ".pixels", OwnColumns(Read(image), image, 2, everywhere: true));
         }
         using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(2); Graphics.ExecuteCommandBuffer(set); }
         Graphics.DrawMeshInstanced(quad, 0, byId, matrices, 2, null, ShadowCastingMode.Off, false, 0, camera);

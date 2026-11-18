@@ -55,7 +55,8 @@ instances do not read that data (a clearing call with visible colors and placeme
 two captures differed in what they drew, so there the probe records
 `device.multiplier.mesh.{2,3}.*.skipped` instead of drawing those cases and masks (`-`) every column
 from the call's own instance count on in the ID-placed color cases (also those no added instance
-reaches). Unmeasured: what the Metal Editor's added instances read. For the same reason the Metal
+reaches). The OpenGL Core captures mask those columns too: there the clearing call did not define
+them once earlier sections were added (two captures read earlier sections' colors). Unmeasured: what the Metal Editor's added instances read. For the same reason the Metal
 probe does not draw `bind.load.dontCare` (`bind.load.dontCare.skipped`): its draw tests against and
 writes into targets loaded with `DontCare`, whose contents are undefined, and two Metal captures
 differed.
@@ -85,9 +86,7 @@ UNBOUND_CLI=/path/to/unbound python3 tests/projects/cmdbuffers/run.py check
 
 `native` records two batchmode Editors on the NVIDIA GPU; `publish` needs both captures complete and
 byte-identical. `publish --merge` adds only the keys the reference lacks and keeps every existing row
-as it is: the `bind.*` rows were added so, while the captures read three
-`device.multiplier.{placed.colors.2,placed.colors.3,camera.colors.2}.pixels` rows otherwise (the
-instance data past a call's elements, which is undefined; printed by publish). `verify` compares every value exactly and exits nonzero on any difference. `check` runs that
+as it is: the `bind.*` rows were added so. `verify` compares every value exactly and exits nonzero on any difference. `check` runs that
 same strict report, then checks the explicitly required safe Append skip separately: exactly the
 `uav.append.nocounter` payload and its missing Editor warning may differ, the entire 48-word
 buffer must retain its sentinel, and the engine log must contain the counter-owner warning.
