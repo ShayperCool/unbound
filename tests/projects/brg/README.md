@@ -109,6 +109,17 @@ view type how many callbacks ran. Scenarios:
   RawBuffer. ...`, in its log for every list that reads the command) and does not draw it; the
   probe's other indirect commands pass no window there.
 
+- `procedural_graphics`: the same kind of shapes without a batch, as controls for the quads rule
+  (`Assets/Shaders/ProceduralIds.shader`: the ids placed as DotsProcedural's, no DOTS instancing):
+  `Graphics.RenderPrimitives` of six ids as two triangles (`c0`), and eight ids as quads through
+  `Graphics.RenderPrimitives`, `DrawProcedural`, `RenderPrimitivesIndirect` and
+  `DrawProceduralIndirect` (`c1` to `c4`), four ids as quads (`c5`), queued for the camera before
+  each of its two renders, over `procedural_background`; `procedural_graphics.log<i>` lists what
+  the renders log. On both devices alike, direct draws make a quad of each four ids (two squares
+  for eight), while the indirect ones are not drawn: each logs the error `DrawProceduralIndirect
+  can't draw quads if platform does not support quad topology` once a render (4x for the two
+  draws over two renders).
+
 Light contexts record their receiver planes again as `receiver<i>`, compared exactly.
 
     python3 tests/projects/brg/run.py native --label L [--device vulkan]   # two Editor captures
@@ -118,7 +129,7 @@ Light contexts record their receiver planes again as `receiver<i>`, compared exa
 The references (`Reference/unity-6000.0.71f1/opengl`, `.../vulkan`) are two identical captures each
 of the Editor on its OpenGL Core and Vulkan devices, measured on the NVIDIA driver only. The
 Editor draws the batch on both devices (the Manual's platform list names only Vulkan for Linux);
-the images are identical on both, and so are the values but the buffer target, the AddBatch windows each device refuses and the `procedural` scenario (its lines' and points' pixels, its quads and its windowed command). Unbound: every value on both devices (2502 records on OpenGL Core, 2499 on Vulkan), the cascades'
+the images are identical on both, and so are the values but the buffer target, the AddBatch windows each device refuses and the `procedural` scenario (its lines' and points' pixels, its quads and its windowed command; `procedural_graphics` is the same on both). Unbound: every value on both devices (2584 records on OpenGL Core, 2581 on Vulkan), the cascades'
 caster culling planes, culling matrices and conservative culling spheres of the light contexts
 included; every image matches exactly.
 
@@ -133,5 +144,5 @@ target (RawBuffer, as on Vulkan) and the refusals that follow from it. So on mac
 compares Metal with the Metal reference at the same bounds (`check` and `check --device vulkan`
 alike, each saying so). The Metal values match Vulkan's (2301/2326, the rows before the `procedural` scenario) apart from `device` and a one-step
 rounding of read-back colours (`lightmap_arrays.c5.body` and 23 `sorting*` pixel rows). The
-`procedural` scenario is not recorded on Metal yet: `residuals-metal.json` lists its rows until
+`procedural` and `procedural_graphics` scenarios are not recorded on Metal yet: `residuals-metal.json` lists their rows until
 the macOS Editor records them.

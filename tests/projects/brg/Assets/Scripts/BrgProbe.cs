@@ -99,6 +99,7 @@ public unsafe class BrgProbe : MonoBehaviour
             LightmapArrays();
             GpuWritten();
             Procedural();
+            ProceduralGraphics();
         }
         catch (Exception e)
         {
@@ -1308,6 +1309,7 @@ public unsafe class BrgProbe : MonoBehaviour
         m_NoCommands = true;
         Scenario(name + "_background");
         var background = m_LastImage;
+        m_ProcBackground = background;
         m_NoCommands = false;
         m_Views.Clear();
         Scenario(name);
@@ -1333,6 +1335,100 @@ public unsafe class BrgProbe : MonoBehaviour
         DestroyImmediate(ids);
         DestroyImmediate(unlit);
         DestroyImmediate(lines);
+    }
+
+    /// <summary>The scene without the procedural scenario's commands.</summary>
+    Texture2D m_ProcBackground;
+
+    /// <summary>The procedural_graphics scenario's draws, one per cell (the procedural scenario's
+    /// cells 0-5): the API, topology, vertex count and whether six ids make a square.</summary>
+    static readonly (string Api, MeshTopology Topology, int Count, bool Expand)[] s_ProcGraphics =
+    {
+        // A control: one square of two triangles.
+        ("RenderPrimitives", MeshTopology.Triangles, 6, true),
+        ("RenderPrimitives", MeshTopology.Quads, 8, false),
+        ("DrawProcedural", MeshTopology.Quads, 8, false),
+        ("RenderPrimitivesIndirect", MeshTopology.Quads, 8, false),
+        ("DrawProceduralIndirect", MeshTopology.Quads, 8, false),
+        // One quad's four ids.
+        ("RenderPrimitives", MeshTopology.Quads, 4, false),
+    };
+
+    /// <summary>
+    /// Procedural draws without a batch (Graphics.RenderPrimitives, DrawProcedural and their
+    /// indirect forms, queued for the camera before each of its renders) of Probe/ProceduralIds as
+    /// quads, which the devices have no primitive for, and a triangle control, each in a cell of
+    /// its own over the scene without the BatchRendererGroup's commands, and what the two renders
+    /// log (<c>procedural_graphics.log&lt;i&gt;</c>);
+    /// <c>procedural_graphics.c&lt;i&gt;.pixels</c> counts the pixels of cell i that differ from
+    /// that scene (procedural_background), <c>.drawn</c> whether any does.
+    /// </summary>
+    void ProceduralGraphics()
+    {
+        const string name = "procedural_graphics";
+        var shader = Shader.Find("Probe/ProceduralIds");
+        var materials = new Material[s_ProcGraphics.Length];
+        var args = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, s_ProcGraphics.Length, GraphicsBuffer.IndirectDrawArgs.size);
+        var argData = new GraphicsBuffer.IndirectDrawArgs[s_ProcGraphics.Length];
+        for (int c = 0; c < s_ProcGraphics.Length; c++)
+        {
+            var draw = s_ProcGraphics[c];
+            materials[c] = new Material(shader);
+            materials[c].SetColor("_BaseColor", Color.HSVToRGB(c / (float)s_ProcGraphics.Length, 0.85f, 1f));
+            materials[c].SetVector("_Offset", ProcCell(c) + new Vector3(-0.6f, -0.4f, 0f));
+            materials[c].SetFloat("_Scale", 0.35f);
+            materials[c].SetFloat("_Expand", draw.Expand ? 1f : 0f);
+            argData[c] = new GraphicsBuffer.IndirectDrawArgs { vertexCountPerInstance = (uint)draw.Count, instanceCount = 1 };
+        }
+        args.SetData(argData);
+        var bounds = new Bounds(new Vector3(0f, 0f, -2f), Vector3.one * 20f);
+        void Queue()
+        {
+            for (int c = 0; c < s_ProcGraphics.Length; c++)
+            {
+                var draw = s_ProcGraphics[c];
+                var rp = new RenderParams(materials[c]) { camera = m_Camera, worldBounds = bounds };
+                switch (draw.Api)
+                {
+                    case "RenderPrimitives": Graphics.RenderPrimitives(rp, draw.Topology, draw.Count); break;
+                    case "DrawProcedural": Graphics.DrawProcedural(materials[c], bounds, draw.Topology, draw.Count, 1, m_Camera); break;
+                    case "RenderPrimitivesIndirect": Graphics.RenderPrimitivesIndirect(rp, draw.Topology, args, 1, c); break;
+                    case "DrawProceduralIndirect":
+                        Graphics.DrawProceduralIndirect(materials[c], bounds, draw.Topology, args, c * GraphicsBuffer.IndirectDrawArgs.size, m_Camera);
+                        break;
+                }
+            }
+        }
+        m_NoCommands = true;
+        m_Views.Clear();
+        m_Log.Clear();
+        Queue();
+        m_BetweenRenders = Queue;
+        Application.logMessageReceived += Capture;
+        try
+        {
+            Scenario(name);
+            RecordLog(name);
+        }
+        finally
+        {
+            Application.logMessageReceived -= Capture;
+            m_BetweenRenders = null;
+            m_NoCommands = false;
+            m_Views.Clear();
+        }
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int c = 0; c < s_ProcGraphics.Length; c++)
+        {
+            int pixels = ChangedPixels(m_ProcBackground, m_LastImage, ProcCell(c), 0.75f, 0.5f);
+            Row(name + ".c" + c + ".pixels", pixels);
+            Row(name + ".c" + c + ".drawn", pixels > 0);
+        }
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+        args.Dispose();
+        foreach (var material in materials) DestroyImmediate(material);
     }
 
     /// <summary>The windowed command's visible offset (in uints, from its window's start).</summary>
