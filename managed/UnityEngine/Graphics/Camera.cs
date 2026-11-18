@@ -412,10 +412,14 @@ namespace UnityEngine
         }
         Matrix4x4? m_NonJitteredProjection;
 
-        /// <summary>The view-projection (OpenGL clip space, without jitter) of the camera's last
-        /// render by the player loop; until then, the one it had when it was made (measured:
-        /// tests/projects/builtinrp, a camera made in a 640x480 Editor reports a 4:3 field of
-        /// view of 60 degrees; Camera.Render does not change it).</summary>
+        /// <summary>The view-projection (without jitter) of the camera's last render by the player
+        /// loop; until then, the one it had when it was made (measured: tests/projects/builtinrp, a
+        /// camera made in a 640x480 Editor reports a 4:3 field of view of 60 degrees;
+        /// Camera.Render does not change it). Its projection is the device's for a render texture
+        /// (<see cref="GL.GetGPUProjectionMatrix"/> with renderIntoTexture), as the motion vector
+        /// texture is drawn: OpenGL clip space on OpenGL Core, y negated and depth reversed into
+        /// [0, 1] on Metal (tests/projects/builtinrp, the OpenGL Core and the macOS Metal Editors;
+        /// unmeasured on Vulkan, which takes its own GL.GetGPUProjectionMatrix the same way).</summary>
         public Matrix4x4 previousViewProjectionMatrix
         {
             get
@@ -427,10 +431,16 @@ namespace UnityEngine
         Matrix4x4 m_PreviousViewProjection;
         bool m_HasPreviousViewProjection;
 
+        /// <summary>The non-jittered view-projection of <paramref name="view"/> as the motion vector
+        /// texture is drawn with it (see <see cref="previousViewProjectionMatrix"/>): the built-in
+        /// motion vector shader takes both its current and its previous view-projection so.</summary>
+        internal Matrix4x4 MotionViewProjection(Matrix4x4 view) =>
+            Unbound.Runtime.GraphicsDeviceProfile.Current.GpuProjection(nonJitteredProjectionMatrix, true) * view;
+
         /// <summary>Keeps the current view-projection as the previous one.</summary>
         internal void KeepViewProjection()
         {
-            m_PreviousViewProjection = nonJitteredProjectionMatrix * worldToCameraMatrix;
+            m_PreviousViewProjection = MotionViewProjection(worldToCameraMatrix);
             m_HasPreviousViewProjection = true;
         }
 

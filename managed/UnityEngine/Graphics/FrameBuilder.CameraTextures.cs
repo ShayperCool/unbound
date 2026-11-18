@@ -175,8 +175,7 @@ namespace Unbound.Runtime
             GfxStream.SetTarget(TextureHandles.Of(texture), GfxStream.NoTexture);
             GfxStream.Viewport(new Rect(0, 0, width, height));
             GfxStream.Clear(GfxStream.ClearColor, Color.clear);
-            var nonJittered = camera.nonJitteredProjectionMatrix * context.View;
-            GfxStream.GlobalMatrix("_NonJitteredVP", nonJittered);
+            GfxStream.GlobalMatrix("_NonJitteredVP", camera.MotionViewProjection(context.View));
             GfxStream.GlobalMatrix("_PreviousVP", camera.previousViewProjectionMatrix);
             // The camera's motion over the whole view, from the depth texture.
             if (s_CameraDepth != null) GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(s_CameraDepth));
