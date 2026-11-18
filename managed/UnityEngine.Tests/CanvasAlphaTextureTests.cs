@@ -159,8 +159,25 @@ namespace UnityEngine.Tests
             Assert.All(draws, d => Assert.Same(a, AlphaOf(d)));
         }
 
-        /// <summary>Controls: another texture, or a renderer without the first one in front of it,
-        /// starts a batch of its own with its own alpha texture.</summary>
+        /// <summary>Control: a renderer with other rect clipping starts a run of its own (clipped
+        /// batches are not measured).</summary>
+        [Fact]
+        public void OtherRectClippingStartsARunWithItsOwnAlphaTexture()
+        {
+            var main = MakeTexture("main");
+            var a = MakeTexture("alpha a");
+            var b = MakeTexture("alpha b");
+            Renderer("first", main).SetAlphaTexture(a);
+            var clipped = Renderer("second", main);
+            clipped.SetAlphaTexture(b);
+            clipped.EnableRectClipping(new Rect(0f, 0f, 5f, 5f));
+            var draws = Draws();
+            Assert.Equal(2, draws.Count);
+            Assert.Same(a, AlphaOf(draws[0]));
+            Assert.Same(b, AlphaOf(draws[1]));
+        }
+
+        /// <summary>Control: another texture starts a batch of its own with its own alpha texture.</summary>
         [Fact]
         public void AnotherTextureStartsABatchWithItsOwnAlphaTexture()
         {

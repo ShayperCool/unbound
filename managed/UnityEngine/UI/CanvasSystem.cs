@@ -446,21 +446,26 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The draw run the canvas walk is in. Renderers drawn one after another under one
-        /// canvas with the same single material and texture are one batch, and the batch draws
-        /// with its first renderer's alpha texture, whatever the others set (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/uialphaborders canvas `shared*`: adjacent sibling
-        /// renderers). Batches across other draws, which Unity's canvas may also form, are not
-        /// measured: such renderers keep their own alpha textures.</summary>
+        /// canvas with the same single material, texture and rect clipping are one batch, and the
+        /// batch draws with its first renderer's alpha texture, whatever the others set (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders canvas `shared*`: adjacent
+        /// unclipped sibling renderers). Batches across other draws, which Unity's canvas may also
+        /// form, and clipped batches are not measured: renderers with another clip start a run.</summary>
         struct AlphaRun
         {
             Canvas m_Canvas;
             Material m_Material;
             Texture m_Texture, m_Alpha;
+            bool m_Clipped;
+            Rect m_ClipRect;
+            Vector2 m_Softness;
 
             internal Texture AlphaFor(Canvas canvas, Material material, CanvasRenderer cr, int materials)
             {
                 if (materials == 1 && m_Material != null && ReferenceEquals(canvas, m_Canvas)
-                    && ReferenceEquals(material, m_Material) && ReferenceEquals(cr.m_Texture, m_Texture))
+                    && ReferenceEquals(material, m_Material) && ReferenceEquals(cr.m_Texture, m_Texture)
+                    && cr.m_HasRectClipping == m_Clipped
+                    && (!m_Clipped || (cr.m_ClipRect == m_ClipRect && cr.m_ClippingSoftness == m_Softness)))
                     return m_Alpha;
                 if (materials == 1)
                 {
@@ -468,6 +473,9 @@ namespace Unbound.Runtime
                     m_Material = material;
                     m_Texture = cr.m_Texture;
                     m_Alpha = cr.m_AlphaTexture;
+                    m_Clipped = cr.m_HasRectClipping;
+                    m_ClipRect = cr.m_ClipRect;
+                    m_Softness = cr.m_ClippingSoftness;
                 }
                 else this = default;
                 return cr.m_AlphaTexture;
