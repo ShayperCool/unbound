@@ -66,6 +66,7 @@ namespace Unbound.Tests
         static string Instance(long id, string guid, string name) => $@"--- !u!1001 &{id}
 PrefabInstance:
   m_UnboundMissingPrefabName: '{name}'
+  m_UnboundMissingPrefabRoot: {{fileID: {id + 1}}}
   m_Modification:
     m_TransformParent: {{fileID: 0}}
   m_SourcePrefab: {{fileID: 100100000, guid: {guid}, type: 3}}
@@ -107,7 +108,9 @@ Transform:
             var yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n"
                 + Instance(100, Gone, $"First (Missing Prefab with guid: {Gone})")
                 + Instance(200, AlsoGone, $"Other (Missing Prefab with guid: {AlsoGone})")
-                + Instance(300, Gone, $"Second (Missing Prefab with guid: {Gone})");
+                + Instance(300, Gone, $"Second (Missing Prefab with guid: {Gone})")
+                // The hierarchy lists the second instance of Gone first: it names the error.
+                + "--- !u!1660057539 &9223372036854775807\nSceneRoots:\n  m_Roots:\n  - {fileID: 302}\n  - {fileID: 202}\n  - {fileID: 102}\n";
             m_Scene = SceneRegistry.Create("missing", "Assets/MissingPrefabTests.unity", -1);
             m_Scene.IsLoaded = true;
             m_Scene.LoadingState = Scene.LoadingState.Loaded;
@@ -117,13 +120,13 @@ Transform:
         }
 
         [Fact]
-        public void EachLoadLogsOneErrorPerMissingPrefabInGuidOrder()
+        public void EachLoadLogsOneErrorPerMissingPrefabInGuidOrderNamingItsFirstInstanceInTheHierarchy()
         {
             var scene = Load();
             var expected = new[]
             {
                 $"Prefab instance problem. Missing Prefab Asset: 'Other (Missing Prefab with guid: {AlsoGone})'",
-                $"Prefab instance problem: 'First (Missing Prefab with guid: {Gone})'. 2 instances are missing the same Prefab Asset with guid {Gone}.",
+                $"Prefab instance problem: 'Second (Missing Prefab with guid: {Gone})'. 2 instances are missing the same Prefab Asset with guid {Gone}.",
             };
             Assert.Equal(expected, m_Errors);
             // The Editor logs them again whenever it loads the scene (entering Play mode reloads it).

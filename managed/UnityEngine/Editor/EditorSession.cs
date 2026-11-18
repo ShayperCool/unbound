@@ -87,8 +87,6 @@ namespace Unbound.Runtime
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
             DisabledModules.PruneOpenScenes();
-            // The Editor reloads the open scenes for Play mode, logging their missing prefabs again.
-            foreach (var scene in SceneRegistry.Loaded.ToArray()) SceneLoader.LogMissingPrefabs(scene);
             // The open scenes play: their objects wake up as a loaded scene's do.
             var components = new List<Component>();
             foreach (var scene in SceneRegistry.Loaded.ToArray())
@@ -100,6 +98,9 @@ namespace Unbound.Runtime
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Unlink(root.m_Transform);
             Lifecycle.Activate(components);
+            // The Editor reloads the open scenes for Play mode: their missing prefabs are reported
+            // again once the objects have awoken.
+            foreach (var scene in SceneRegistry.Loaded.ToArray()) SceneLoader.LogMissingPrefabs(scene);
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 EditorInitialization.ProcessScene(new Scene(scene.Handle));
             foreach (var scene in SceneRegistry.Loaded.ToArray())

@@ -577,8 +577,6 @@ namespace Unbound.Runtime
         internal static void LoadPrepared(SceneData scene, List<YDocument> documents, Action beforeAwake = null)
         {
             if (documents == null) return;
-            scene.MissingPrefabErrors = MissingPrefabErrors(documents);
-            LogMissingPrefabs(scene);
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);
             foreach (var doc in documents)
                 if (!doc.Stripped) SceneSettings.Apply(doc, file, scene);
@@ -588,23 +586,40 @@ namespace Unbound.Runtime
             // 6000.0 RuntimeInitializeOnLoadMethod: the initial scene is loaded before
             // BeforeSceneLoad, but its scripts have not awakened. Runtime-created objects
             // now belong to that scene rather than an outgoing bootstrap scene.
+            scene.MissingPrefabErrors = MissingPrefabErrors(documents, file);
             ActivateRoots(file.Roots, beforeAwake);
+            // The Editor reports the scene's missing prefabs once its objects have awoken.
+            LogMissingPrefabs(scene);
         }
 
         /// <summary>The Editor's errors for a scene's instances of missing prefabs: one per missing
-        /// prefab, in GUID order, naming its first instance (Unity 6000.0.71f1,
+        /// prefab, in GUID order, naming its first instance in hierarchy order (Unity 6000.0.71f1,
         /// tests/projects/missingprefab).</summary>
-        static List<string> MissingPrefabErrors(List<YDocument> documents)
+        static List<string> MissingPrefabErrors(List<YDocument> documents, LoadedFile file)
         {
-            SortedDictionary<string, (string Name, int Count)> missing = null;
+            List<(string Guid, string Name, Object Root)> instances = null;
             foreach (var doc in documents)
             {
                 if (doc.Stripped || doc.ClassId != EngineTypes.PrefabInstanceId || !doc.Body.TryGet(PrefabLinks.MissingPrefabName, out var name)) continue;
-                var guid = doc.Body.Ref("m_SourcePrefab").Guid ?? "";
-                missing ??= new SortedDictionary<string, (string, int)>(StringComparer.Ordinal);
-                missing[guid] = missing.TryGetValue(guid, out var seen) ? (seen.Name, seen.Count + 1) : (name.Scalar, 1);
+                file.Objects.TryGetValue(doc.Body.Ref(PrefabLinks.MissingPrefabRoot).FileId, out var root);
+                (instances ??= new List<(string, string, Object)>()).Add((doc.Body.Ref("m_SourcePrefab").Guid ?? "", name.Scalar, root));
             }
-            if (missing == null) return null;
+            if (instances == null) return null;
+            var order = new Dictionary<Object, int>(ReferenceEqualityComparer.Instance);
+            void Walk(Transform t)
+            {
+                order[t.m_GameObject] = order.Count;
+                foreach (var child in t.m_Children) Walk(child);
+            }
+            foreach (var root in file.SceneRoots ?? file.Roots) Walk(root.m_Transform);
+            var missing = new SortedDictionary<string, (string Name, int Count, int Order)>(StringComparer.Ordinal);
+            foreach (var (guid, name, root) in instances)
+            {
+                int at = root is not null && order.TryGetValue(root, out var o) ? o : int.MaxValue;
+                missing[guid] = missing.TryGetValue(guid, out var seen)
+                    ? (at < seen.Order ? name : seen.Name, seen.Count + 1, Math.Min(at, seen.Order))
+                    : (name, 1, at);
+            }
             var errors = new List<string>(missing.Count);
             foreach (var pair in missing)
                 errors.Add(pair.Value.Count == 1

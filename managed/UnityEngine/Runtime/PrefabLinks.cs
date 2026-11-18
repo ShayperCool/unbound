@@ -67,6 +67,8 @@ namespace Unbound.Runtime
         /// <summary>The PrefabInstance field the engine sets on an instance of a missing prefab: the
         /// name its root shows.</summary>
         internal const string MissingPrefabName = "m_UnboundMissingPrefabName";
+        /// <summary>The PrefabInstance field naming such an instance's root GameObject.</summary>
+        internal const string MissingPrefabRoot = "m_UnboundMissingPrefabRoot";
 
         static readonly ConditionalWeakTable<Object, PrefabLink> s_Links = new ConditionalWeakTable<Object, PrefabLink>();
 
