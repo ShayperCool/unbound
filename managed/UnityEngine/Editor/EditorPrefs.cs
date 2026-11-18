@@ -127,7 +127,8 @@ namespace UnityEditor
         public static bool buildScriptsOnly { get; set; }
         public static bool buildAppBundle { get; set; }
         public static bool exportAsGoogleAndroidProject { get; set; }
-        public static string[] activeScriptCompilationDefines => ProjectInfo.Defines;
+        public static string[] activeScriptCompilationDefines =>
+            UnityEditor.Build.BuildDefines.HasDelegates ? UnityEditor.Build.BuildDefines.GetScriptCompilationDefines(activeBuildTarget, ProjectInfo.Defines) : ProjectInfo.Defines;
 
         public static bool SwitchActiveBuildTarget(BuildTargetGroup targetGroup, BuildTarget target)
         {

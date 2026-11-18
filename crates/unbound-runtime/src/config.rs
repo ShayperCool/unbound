@@ -106,11 +106,23 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
 
     let mut assemblies = Vec::new();
     let mut plugins: BTreeSet<PathBuf> = BTreeSet::new();
+    // A response file's `-r` may name a plugin no assembly references otherwise (one with Auto
+    // Reference off): it loads like the others; class library references do not.
+    let mut project_plugins: Option<BTreeSet<PathBuf>> = None;
     for result in &compiled.assemblies {
         let script = graph
             .get(&result.name)
             .context("compiled an assembly the graph lacks")?;
         plugins.extend(script.plugins.iter().cloned());
+        if let Some(r) = script
+            .response_file
+            .as_ref()
+            .filter(|r| !r.references.is_empty())
+        {
+            let known = project_plugins
+                .get_or_insert_with(|| project.plugins().into_iter().map(|p| p.file).collect());
+            plugins.extend(r.references.iter().filter(|p| known.contains(*p)).cloned());
+        }
         let scripts: Vec<Json> = script
             .sources
             .par_iter()
@@ -150,6 +162,11 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             "asmdef": script.asmdef.as_ref().map(|a| crate::view::unity_path(project, a)),
             "rootNamespace": script.root_namespace,
             "allowUnsafe": script.allow_unsafe,
+            "responseFile": script
+                .response_file
+                .as_ref()
+                .map(|r| crate::view::unity_path(project, &r.path)),
+            "responseFileDefines": script.response_file.as_ref().map(|r| &r.defines),
         }));
     }
     for plugin in &plugins {

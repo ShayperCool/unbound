@@ -9,7 +9,14 @@
 //! * An assembly builds for the Editor unless its platforms exclude it, and is dropped when its
 //!   `defineConstraints` fail. Predefined assemblies reference every auto-referenced assembly;
 //!   every assembly references the auto-referenced plugins unless `overrideReferences` is set.
-use crate::{assetdb::is_hidden, plugins::Plugin, semver, settings::Settings};
+//! * Each assembly takes its response file's options (see [`crate::response_files`]).
+use crate::{
+    assetdb::is_hidden,
+    plugins::Plugin,
+    response_files::{self, ResponseFile},
+    semver,
+    settings::Settings,
+};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::{
@@ -102,7 +109,8 @@ pub struct ScriptAssembly {
     pub defines: Vec<String>,
     /// Script assemblies referenced, by name.
     pub references: Vec<String>,
-    /// Precompiled plugin DLLs referenced.
+    /// Precompiled plugin DLLs referenced (not counting the response file's references, which
+    /// `CompilationPipeline` does not list).
     pub plugins: Vec<PathBuf>,
     pub analyzers: Vec<PathBuf>,
     pub allow_unsafe: bool,
@@ -112,6 +120,8 @@ pub struct ScriptAssembly {
     /// Compiles against the .NET Standard 2.1 class library.
     pub net_standard: bool,
     pub root_namespace: String,
+    /// The response file whose options the assembly compiles with.
+    pub response_file: Option<ResponseFile>,
 }
 
 #[derive(Debug, Clone)]
@@ -150,6 +160,8 @@ pub struct GraphInput<'a> {
     /// Whether the installation has an engine module assembly (`UnityEngine.IdentifiersModule`),
     /// for the profile's module defines.
     pub has_engine_module: &'a dyn Fn(&str) -> bool,
+    /// The class library's directories, where a response file's `-r` names resolve.
+    pub system_reference_dirs: &'a [PathBuf],
 }
 
 #[derive(Debug, Default)]
@@ -311,6 +323,27 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         }
     }
 
+    // Response files, read once each.
+    let assets = input
+        .roots
+        .iter()
+        .find(|r| !r.is_package && r.virtual_path == "Assets")
+        .map(|r| r.dir.clone());
+    let mut response_cache: HashMap<PathBuf, ResponseFile> = HashMap::new();
+    let mut response_file =
+        |folder: Option<&Path>, warnings: &mut Vec<String>| -> Option<ResponseFile> {
+            let assets = assets.as_deref()?;
+            let path = response_files::applying(assets, folder)?;
+            if let Some(known) = response_cache.get(&path) {
+                return Some(known.clone());
+            }
+            let project = assets.parent().unwrap_or(assets);
+            let parsed = response_files::read(&path, project, input.system_reference_dirs);
+            warnings.extend(parsed.errors.iter().cloned());
+            response_cache.insert(path, parsed.clone());
+            Some(parsed)
+        };
+
     // Defines shared by every assembly.
     let project_defines = input.settings.defines_for(input.target_group);
     let base_defines = |editor_only: bool| {
@@ -349,6 +382,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     };
     let mut included = vec![false; definitions.len()];
     let mut defines_of: Vec<Vec<String>> = vec![Vec::new(); definitions.len()];
+    let mut response_of: Vec<Option<ResponseFile>> = vec![None; definitions.len()];
     for (i, def) in definitions.iter().enumerate() {
         if def.sources.is_empty() || !platform_ok(&def.json) {
             continue;
@@ -368,16 +402,23 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         }
         defines.extend(input.profile.language_defines().iter().cloned());
         dedup(&mut defines);
+        // The response file's defines count for the constraints, not among the assembly's defines.
+        let response = response_file(def.file.parent(), &mut graph.warnings);
+        let mut constraint_defines = defines.clone();
+        if let Some(r) = &response {
+            constraint_defines.extend(r.defines.iter().cloned());
+        }
         if !def
             .json
             .define_constraints
             .iter()
-            .all(|c| constraint_holds(c, &defines))
+            .all(|c| constraint_holds(c, &constraint_defines))
         {
             continue;
         }
         included[i] = true;
         defines_of[i] = defines;
+        response_of[i] = response;
     }
     // An assembly whose references are missing still builds (Unity warns); drop only references.
 
@@ -497,6 +538,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             editor_only: def.json.is_editor_only(),
             net_standard: input.net_standard && !def.json.is_editor_only(),
             root_namespace: def.json.root_namespace.clone(),
+            response_file: response_of[i].clone(),
         });
     }
 
@@ -542,6 +584,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             .map(|p| p.file.clone())
             .collect();
         plugins.extend(nunit(kind.is_editor(), false, &defines));
+        let response = response_file(None, &mut graph.warnings);
         dedup_paths(&mut plugins);
         dedup(&mut references);
         sources.sort_by(|a, b| a.path.cmp(&b.path));
@@ -559,10 +602,18 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             editor_only: kind.is_editor(),
             net_standard: input.net_standard && !kind.is_editor(),
             root_namespace: String::new(),
+            response_file: response,
         });
     }
 
-    assign_analyzers(&mut assemblies, input, &owners, &definitions, &resolve_reference, &roots);
+    assign_analyzers(
+        &mut assemblies,
+        input,
+        &owners,
+        &definitions,
+        &resolve_reference,
+        &roots,
+    );
     graph.assemblies = topological(assemblies)?;
     Ok(graph)
 }
@@ -585,7 +636,7 @@ fn assign_analyzers(
             match owners.get(d) {
                 Some(Owner::Asmdef(i)) => return Some(definitions[*i].json.name.clone()),
                 Some(Owner::Asmref(reference)) => {
-                    return resolve_reference(reference).map(|i| definitions[i].json.name.clone())
+                    return resolve_reference(reference).map(|i| definitions[i].json.name.clone());
                 }
                 None => {}
             }

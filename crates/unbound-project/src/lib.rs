@@ -12,6 +12,7 @@ pub mod net;
 pub mod packages;
 pub mod plugins;
 pub mod releases;
+pub mod response_files;
 pub mod script_class;
 pub mod semver;
 pub mod settings;
@@ -275,7 +276,14 @@ impl Project {
             .filter_map(|p| Some(p.file_name()?.to_str()?.to_string()))
             .collect();
         let engine_modules = self.install.engine_module_names();
+        let mut system_reference_dirs: Vec<PathBuf> = bcl
+            .iter()
+            .filter_map(|p| p.parent().map(Path::to_path_buf))
+            .collect();
+        system_reference_dirs.sort();
+        system_reference_dirs.dedup();
         let mut graph = assemblies::build(&assemblies::GraphInput {
+            system_reference_dirs: &system_reference_dirs,
             has_engine_module: &|name| engine_modules.contains(name),
             bcl_names: &bcl_names,
             net_standard,
@@ -404,5 +412,109 @@ mod tests {
         let removed: Vec<&String> = with.iter().filter(|d| !without.contains(d)).collect();
         assert_eq!(removed.len(), 2, "{removed:?}");
         assert!(without.iter().any(|d| d == "UNITY_6000_0_67"));
+    }
+
+    /// Each assembly takes its asmdef folder's csc.rsp, else the project's: the file's defines
+    /// decide define constraints but are not the assembly's defines, its references compile the
+    /// assembly but are not listed among its plugins, and its other arguments reach the compiler
+    /// (Unity 6000.0.71f1, tests/projects/gameinterop rsp.*).
+    #[test]
+    fn response_files_apply_per_assembly() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-response-files-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        let assets = root.join("Assets");
+        let write = |path: &str, text: &str| {
+            let file = root.join(path);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, text).unwrap();
+        };
+        write("Assets/A.cs", "class A {}\n");
+        write("Assets/Libs/Ref.dll", "");
+        write(
+            "Assets/csc.rsp",
+            "-define:RSP_GLOBAL\n-unsafe\n-r:Assets/Libs/Ref.dll\n-r:Missing.dll\n",
+        );
+        let asmdef = |dir: &str, name: &str, constraints: &str| {
+            write(
+                &format!("Assets/{dir}/{name}.asmdef"),
+                &format!(r#"{{"name": "{name}", "defineConstraints": [{constraints}]}}"#),
+            );
+            write(&format!("Assets/{dir}/{name}.cs"), "class B {}\n");
+        };
+        asmdef("Local", "Local", "");
+        write(
+            "Assets/Local/csc.rsp",
+            "-define:RSP_LOCAL\n-langversion:10\n",
+        );
+        asmdef("Inherit", "Inherit", "");
+        asmdef("Constrained", "Constrained", r#""RSP_GLOBAL""#);
+        asmdef("LocalOnly", "LocalOnly", r#""RSP_LOCAL""#);
+        let data = scratch.join("install/Editor/Data");
+        std::fs::create_dir_all(data.join("Managed/UnityEngine")).unwrap();
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let project = Project {
+            assets: assets.clone(),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            install: UnityInstall { data, version },
+            settings: Settings::default(),
+            packages: Vec::new(),
+            missing_packages: Vec::new(),
+        };
+        let graph = project
+            .script_graph(CompileMode::EditorPlayMode, "Standalone")
+            .unwrap();
+        let _ = std::fs::remove_dir_all(&scratch);
+        let get = |name: &str| graph.get(name);
+        let main = get("Assembly-CSharp").expect("predefined");
+        let rsp = main
+            .response_file
+            .as_ref()
+            .expect("the project's response file");
+        assert_eq!(rsp.path, assets.join("csc.rsp"));
+        assert_eq!(rsp.arguments, ["-define:RSP_GLOBAL", "-unsafe"]);
+        assert_eq!(rsp.references, [root.join("Assets/Libs/Ref.dll")]);
+        assert!(!main.defines.iter().any(|d| d == "RSP_GLOBAL"));
+        assert!(!main.plugins.iter().any(|p| p.ends_with("Ref.dll")));
+        assert!(
+            graph
+                .warnings
+                .iter()
+                .any(|w| w.contains("Missing.dll could not be found"))
+        );
+        let local = get("Local").unwrap().response_file.as_ref().unwrap();
+        assert_eq!(local.arguments, ["-define:RSP_LOCAL", "-langversion:10"]);
+        assert!(local.references.is_empty());
+        assert_eq!(
+            get("Inherit").unwrap().response_file.as_ref().unwrap().path,
+            assets.join("csc.rsp")
+        );
+        assert!(
+            get("Constrained").is_some(),
+            "the project's define satisfies the constraint"
+        );
+        assert!(
+            get("LocalOnly").is_none(),
+            "another assembly's response file does not"
+        );
+        let request = project.compile_request(
+            &graph,
+            CompileMode::EditorPlayMode,
+            true,
+            crate::compile::CodeOptimization::Debug,
+        );
+        let spec = request
+            .assemblies
+            .iter()
+            .find(|a| a.name == "Assembly-CSharp")
+            .unwrap();
+        assert_eq!(spec.response_arguments, ["-define:RSP_GLOBAL", "-unsafe"]);
+        assert!(spec.plugins.iter().any(|p| p.ends_with("Ref.dll")));
     }
 }

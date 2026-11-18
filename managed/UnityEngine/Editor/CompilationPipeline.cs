@@ -102,6 +102,16 @@ namespace UnityEditor.Compilation
             (m_AssemblyReferences ?? Array.Empty<Assembly>()).Select(a => a.outputPath).Concat(m_CompiledAssemblyReferences ?? Array.Empty<string>()).ToArray();
     }
 
+    /// <summary>A response file's options (<see cref="CompilationPipeline.ParseResponseFile"/>).</summary>
+    public partial class ResponseFileData
+    {
+        public string[] Defines;
+        public string[] FullPathReferences;
+        public string[] Errors;
+        public string[] OtherArguments;
+        public bool Unsafe;
+    }
+
     /// <summary>The compiler settings of an assembly. A new instance has the defaults of Unity
     /// 6000.0.71f1 (tests/projects/gameinterop compilation.options_new).</summary>
     public partial class ScriptCompilerOptions
@@ -162,6 +172,7 @@ namespace UnityEditor.Compilation
     {
         static Assembly[] s_Assemblies, s_PlayerAssemblies;
         static int s_Generation = -1;
+        static int s_DefinesVersion = -1;
 
         /// <summary>The release's compiler language version, compiler arguments and analyzers (the
         /// compatibility profile's), and whether the project's API compatibility level for its
@@ -183,6 +194,10 @@ namespace UnityEditor.Compilation
             RoslynAnalyzerDllPaths = (string[])s_Compiler.Analyzers.Clone(),
             RoslynAnalyzerRulesetPath = "",
             AnalyzerConfigPath = "",
+            // The response file the assembly compiled with, by its full path.
+            ResponseFiles = string.IsNullOrEmpty(d.ResponseFile)
+                ? Array.Empty<string>()
+                : new[] { UnityEngine.ProjectInfo.ProjectPath.Replace('\\', '/').TrimEnd('/') + "/" + d.ResponseFile },
         };
 
         static IEnumerable<GameAssembly> ScriptAssemblies() => GameDomain.Descriptions.Where(d => d.PluginGuid == null);
@@ -191,8 +206,9 @@ namespace UnityEditor.Compilation
         /// Editor builds them (its code optimization), and as a player build would (release).</summary>
         static Assembly[] All(bool player = false)
         {
-            if (s_Generation != GameDomain.Generation)
+            if (s_Generation != GameDomain.Generation || s_DefinesVersion != UnityEditor.Build.BuildDefines.Version)
             {
+                s_DefinesVersion = UnityEditor.Build.BuildDefines.Version;
                 s_Assemblies = BuildAll(s_CodeOptimization);
                 s_PlayerAssemblies = BuildAll(CodeOptimization.Release);
                 s_Generation = GameDomain.Generation;
@@ -216,7 +232,7 @@ namespace UnityEditor.Compilation
                 foreach (var r in d.References)
                     if (!visiting.Contains(r) && pending.TryGetValue(r, out var target)) references.Add(Build(target, visiting));
                 visiting.Remove(d.Name);
-                var assembly = new Assembly(d.Name, $"Library/ScriptAssemblies/{d.Name}.dll", d.Sources, d.Defines, references.ToArray(), d.CompiledReferences,
+                var assembly = new Assembly(d.Name, $"Library/ScriptAssemblies/{d.Name}.dll", d.Sources, WithDelegateDefines(d.Defines), references.ToArray(), d.CompiledReferences,
                     d.Editor ? AssemblyFlags.EditorAssembly : AssemblyFlags.None, OptionsOf(d, optimization), d.RootNamespace ?? "");
                 byName[d.Name] = assembly;
                 built.Add(assembly);
@@ -296,7 +312,28 @@ namespace UnityEditor.Compilation
             return d?.RootNamespace ?? "";
         }
 
-        public static string[] GetDefinesFromAssemblyName(string assemblyName) => Named(assemblyName)?.Defines.ToArray();
+        /// <summary>An assembly definition's defines, with those that BuildDefines delegates add; null
+        /// for a predefined assembly or an unknown name (Unity 6000.0.71f1, tests/projects/gameinterop
+        /// builddefines.pipeline, rsp.defines_from_name).</summary>
+        public static string[] GetDefinesFromAssemblyName(string assemblyName)
+        {
+            var d = Named(assemblyName);
+            return d == null || d.Asmdef.Length == 0 ? null : WithDelegateDefines(d.Defines);
+        }
+
+        /// <summary>The defines an assembly definition's response file gives it (its own, else the
+        /// project's), or null for a predefined assembly or an unknown name.</summary>
+        public static string[] GetResponseFileDefinesFromAssemblyName(string assemblyName)
+        {
+            var d = Named(assemblyName);
+            return d == null || d.Asmdef.Length == 0 ? null : d.ResponseFileDefines;
+        }
+
+        /// <summary>Defines with those the BuildDefines delegates add for the active target.</summary>
+        static string[] WithDelegateDefines(string[] defines) =>
+            UnityEditor.Build.BuildDefines.HasDelegates
+                ? UnityEditor.Build.BuildDefines.GetScriptCompilationDefines(EditorUserBuildSettings.activeBuildTarget, defines)
+                : (string[])defines.Clone();
 
         public static string[] GetPrecompiledAssemblyNames() =>
             GameDomain.Descriptions.Where(d => d.PluginGuid != null).Select(d => d.Name + ".dll").ToArray();
@@ -309,6 +346,91 @@ namespace UnityEditor.Compilation
             if (d == null) return null;
             var path = AssetDatabase.GUIDToAssetPath(d.PluginGuid);
             return string.IsNullOrEmpty(path) ? d.Dll : path;
+        }
+
+        /// <summary>A response file's options as the Editor reads them (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/gameinterop rsp.parse.*): arguments separated by spaces, quoted
+        /// parts kept whole, <c>#</c> ending a line; <c>-define</c>/<c>-d</c> symbols, <c>-r</c>/<c>-reference</c>
+        /// paths resolved against the system directories then the project directory (which wins),
+        /// <c>-unsafe</c>, and every other argument with a <c>/</c> prefix. Unbound's compile reads
+        /// project response files in the same way (crates/unbound-project/src/response_files.rs).</summary>
+        public static ResponseFileData ParseResponseFile(string relativePath, string projectDirectory, string[] systemReferenceDirectories)
+        {
+            var data = new ResponseFileData { Defines = Array.Empty<string>(), FullPathReferences = Array.Empty<string>(), Errors = Array.Empty<string>(), OtherArguments = Array.Empty<string>() };
+            var path = System.IO.Path.IsPathRooted(relativePath) ? relativePath : System.IO.Path.Combine(projectDirectory ?? "", relativePath);
+            path = path.Replace('\\', '/');
+            if (!System.IO.File.Exists(path)) return data;
+            var defines = new List<string>();
+            var references = new List<string>();
+            var errors = new List<string>();
+            var other = new List<string>();
+            var separators = new[] { ';', ',' };
+            foreach (var token in ResponseFileTokens(System.IO.File.ReadAllText(path)))
+            {
+                int colon = token.IndexOf(':');
+                string arg = colon < 0 ? token : token.Substring(0, colon), value = colon < 0 ? "" : token.Substring(colon + 1);
+                if (arg.Length > 0 && arg[0] == '-') arg = "/" + arg.Substring(1);
+                if (arg == "/d" || arg == "/define") defines.AddRange(value.Split(separators));
+                else if (arg == "/r" || arg == "/reference")
+                {
+                    var parts = value.Split(separators);
+                    if (value.Length == 0) errors.Add("No value set for reference");
+                    else if (parts.Length != 1) errors.Add("Cannot specify multiple aliases using single /reference option");
+                    else if (parts[0].Length > 0)
+                    {
+                        var reference = parts[0].Substring(parts[0].IndexOf('=') + 1);
+                        var full = ResolveReference(reference, projectDirectory, systemReferenceDirectories);
+                        if (full != null) references.Add(full.Replace('\\', '/'));
+                        else errors.Add($"{path}: not parsed correctly: {reference} could not be found as a system library.\n" +
+                            "If this was meant as a user reference please provide the relative path from project root (parent of the Assets folder) in the response file.");
+                    }
+                }
+                else if (arg == "/unsafe" || arg == "/unsafe+") data.Unsafe = true;
+                else other.Add(arg + (value.Length == 0 ? "" : ":" + (value.Any(char.IsWhiteSpace) ? "\"" + value + "\"" : value)));
+            }
+            data.Defines = defines.ToArray();
+            data.FullPathReferences = references.ToArray();
+            data.Errors = errors.ToArray();
+            data.OtherArguments = other.ToArray();
+            return data;
+        }
+
+        static string ResolveReference(string reference, string projectDirectory, string[] systemReferenceDirectories)
+        {
+            if (System.IO.Path.IsPathRooted(reference)) return reference;
+            var user = System.IO.Path.Combine(projectDirectory ?? "", reference);
+            if (System.IO.File.Exists(user)) return user;
+            foreach (var directory in systemReferenceDirectories ?? Array.Empty<string>())
+            {
+                var system = System.IO.Path.Combine(directory, reference);
+                if (System.IO.File.Exists(system)) return system;
+            }
+            return null;
+        }
+
+        static List<string> ResponseFileTokens(string text)
+        {
+            var tokens = new List<string>();
+            var current = new System.Text.StringBuilder();
+            foreach (var line in text.Split('\n', '\r'))
+            {
+                for (int i = 0; i < line.Length; i++)
+                {
+                    char c = line[i];
+                    if (c == '"' || c == '\'')
+                    {
+                        for (i++; i < line.Length && line[i] != c; i++) current.Append(line[i]);
+                    }
+                    else if (c == ' ')
+                    {
+                        if (current.Length > 0) { tokens.Add(current.ToString()); current.Clear(); }
+                    }
+                    else if (c == '#') break;
+                    else current.Append(c);
+                }
+                if (current.Length > 0) { tokens.Add(current.ToString()); current.Clear(); }
+            }
+            return tokens;
         }
 
         /// <summary>Whether defines satisfy an asmdef's define constraints: every constraint holds,
@@ -466,5 +588,56 @@ namespace Bee.BeeDriver
     /// type name; scripts only compare or print it).</summary>
     internal sealed class ActiveBuild
     {
+    }
+}
+
+namespace UnityEditor.Scripting.Compilers
+{
+    /// <summary>The response file names the Editor reads: <c>csc.rsp</c>, and at the project root the
+    /// obsolete <c>mcs.rsp</c> (Unity 6000.0.71f1, tests/projects/gameinterop rsp.obsolete_names;
+    /// crates/unbound-project/src/response_files.rs reads them).</summary>
+    internal partial class CompilerSpecificResponseFiles
+    {
+        public static string[] MicrosoftCSharpCompilerObsolete = { "mcs.rsp" };
+    }
+}
+
+namespace UnityEditor.Build
+{
+    internal delegate void GetScriptCompilationDefinesDelegate(BuildTarget target, System.Collections.Generic.HashSet<string> defines);
+
+    /// <summary>The script defines of a build target, with those editor code adds through
+    /// getScriptCompilationDefinesDelegates. As in the Editor, the defines a delegate adds reach what
+    /// the compilation pipeline reports (assemblies, EditorUserBuildSettings) but not the code
+    /// already compiled, which was built before the delegate registered (Unity 6000.0.71f1,
+    /// tests/projects/gameinterop builddefines.*).</summary>
+    internal partial class BuildDefines
+    {
+        static GetScriptCompilationDefinesDelegate s_Delegates;
+        /// <summary>Changes whenever a delegate is added or removed.</summary>
+        internal static int Version;
+
+        internal static bool HasDelegates => s_Delegates != null;
+
+        public static event GetScriptCompilationDefinesDelegate getScriptCompilationDefinesDelegates
+        {
+            add { s_Delegates += value; Version++; }
+            remove { s_Delegates -= value; Version++; }
+        }
+
+        /// <summary>The given defines and those each delegate adds for the target.</summary>
+        public static string[] GetScriptCompilationDefines(BuildTarget target, string[] defines)
+        {
+            var set = new System.Collections.Generic.HashSet<string>(defines ?? System.Array.Empty<string>());
+            if (s_Delegates != null)
+                foreach (GetScriptCompilationDefinesDelegate call in s_Delegates.GetInvocationList())
+                {
+                    try { call(target, set); }
+                    catch (System.Exception e) { UnityEngine.Debug.LogException(e); }
+                }
+            var result = new string[set.Count];
+            set.CopyTo(result);
+            return result;
+        }
     }
 }

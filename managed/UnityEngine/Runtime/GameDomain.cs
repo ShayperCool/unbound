@@ -34,6 +34,10 @@ namespace Unbound.Runtime
         internal string Asmdef = "";
         internal string RootNamespace = "";
         internal bool AllowUnsafe;
+        /// <summary>The response file it compiled with, as a project path ("Assets/csc.rsp"), or null.</summary>
+        internal string ResponseFile;
+        /// <summary>The defines of the response file, for an assembly definition's assembly (null without one).</summary>
+        internal string[] ResponseFileDefines;
     }
 
     /// <summary>

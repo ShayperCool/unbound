@@ -45,6 +45,9 @@ pub struct AssemblySpec {
     pub skip_code_gen: bool,
     /// Compiled with optimizations (`/optimize+`).
     pub optimize: bool,
+    /// The response file's arguments, after the request's own options (its references are
+    /// among `plugins`).
+    pub response_arguments: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -278,6 +281,9 @@ impl Project {
                 references: a.references.clone(),
                 plugins: {
                     let mut plugins = a.plugins.clone();
+                    if let Some(r) = &a.response_file {
+                        plugins.extend(r.references.iter().cloned());
+                    }
                     // IL post-processors build against the Editor's ILPostProcessor API.
                     if is_post_processor(&a.name) {
                         plugins.push(
@@ -299,6 +305,11 @@ impl Project {
                         && a.sources
                             .iter()
                             .all(|s| immutable.iter().any(|root| s.file.starts_with(root)))),
+                response_arguments: a
+                    .response_file
+                    .as_ref()
+                    .map(|r| r.arguments.clone())
+                    .unwrap_or_default(),
             })
             .collect();
         let engine_references = self.engine_references(mode);

@@ -52,6 +52,9 @@ public sealed class AssemblySpec
     /// <summary>Compiled with optimizations (<c>/optimize+</c>): the Editor's Release code
     /// optimization, or a package that cannot be edited.</summary>
     public bool Optimize { get; set; }
+    /// <summary>The response file's arguments (<c>csc.rsp</c>), after the request's own options;
+    /// its references are among <see cref="Plugins"/>.</summary>
+    public List<string> ResponseArguments { get; set; } = new();
 }
 
 /// <summary>An engine module whose built-in package the project does not have.</summary>

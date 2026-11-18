@@ -243,6 +243,8 @@ public sealed class AssemblyConfig
     public string? Asmdef { get; set; }
     public string? RootNamespace { get; set; }
     public bool AllowUnsafe { get; set; }
+    public string? ResponseFile { get; set; }
+    public List<string>? ResponseFileDefines { get; set; }
 }
 
 public sealed class ScriptConfig
@@ -306,6 +308,8 @@ public static unsafe class Game
                     Asmdef = a.Asmdef ?? "",
                     RootNamespace = a.RootNamespace ?? "",
                     AllowUnsafe = a.AllowUnsafe,
+                    ResponseFile = a.ResponseFile,
+                    ResponseFileDefines = a.ResponseFileDefines?.ToArray(),
                 };
                 foreach (var s in a.Scripts) ga.Scripts.Add((s.ClassName ?? s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);

@@ -120,11 +120,13 @@ public sealed partial class CompilerService
                 return result;
             }
 
-            var parseOptions = new CSharpParseOptions(
-                ParseLanguageVersion(request.LanguageVersion),
-                DocumentationMode.None,
-                SourceCodeKind.Regular,
-                spec.Defines.Concat(OptionDefines(request.CompilerOptions)));
+            var commandLine = CommandLine(spec, request);
+            if (commandLine.Errors.Count > 0)
+            {
+                result.Errors.AddRange(commandLine.Errors.Select(d => ToInfo(d, request.DisabledModules)));
+                return Done(result, "failed", watch);
+            }
+            var parseOptions = commandLine.Parse;
             if (state.ParseOptions == null || !state.ParseOptions.Equals(parseOptions))
             {
                 state.ParseOptions = parseOptions;
@@ -194,6 +196,11 @@ public sealed partial class CompilerService
                     // the symbols of stack traces.
                     pdbFilePath: key + ".pdb",
                     includePrivateMembers: false));
+            foreach (var option in commandLine.Ignored)
+            {
+                result.Warnings++;
+                result.WarningList.Add(new DiagnosticInfo { Id = "UNBOUND0003", Message = $"Unbound does not apply the response file option {option}" });
+            }
             foreach (var diagnostic in generatorDiagnostics.Concat(failedStage ?? emit!.Diagnostics))
             {
                 if (diagnostic.Severity == DiagnosticSeverity.Error || GeneratorFailed(diagnostic))
@@ -310,7 +317,7 @@ public sealed partial class CompilerService
             source.File.Tree = FinalizerGuard.Parse(text, state.ParseOptions!, source.Path, !spec.NoEngineReferences);
         });
         var trees = sources.Select(s => s.File.Tree!).ToList();
-        var options = CompilationOptions(spec, request);
+        var options = CommandLine(spec, request).Compilation;
         var previous = state.Compilation;
         CSharpCompilation compilation;
         if (previous != null && previous.Options.Equals(options))
@@ -346,60 +353,50 @@ public sealed partial class CompilerService
         return compilation;
     }
 
-    static CSharpCompilationOptions CompilationOptions(AssemblySpec spec, CompileRequest request)
+    /// <summary>An assembly's options, read from its compiler command line as the Editor builds it:
+    /// the release's language version, the assembly's unsafe and optimization flags, the release's
+    /// arguments, then the response file's (a later option wins: Unity 6000.0.71f1,
+    /// tests/projects/gameinterop rsp.*).</summary>
+    sealed record Options(CSharpParseOptions Parse, CSharpCompilationOptions Compilation, List<Diagnostic> Errors, List<string> Ignored);
+
+    /// <summary>Options that change what the compiler does but that Unbound does not apply.</summary>
+    static readonly string[] s_IgnoredOptions = { "analyzer", "a", "additionalfile", "ruleset", "resource", "res", "linkresource", "linkres",
+        "link", "l", "addmodule", "keyfile", "keycontainer", "delaysign", "publicsign", "win32res", "win32icon", "win32manifest", "doc", "generatedfilesout" };
+
+    static Options CommandLine(AssemblySpec spec, CompileRequest request)
     {
-        var suppressed = new Dictionary<string, ReportDiagnostic>();
-        foreach (var option in request.CompilerOptions)
+        var args = new List<string> { "-target:library", "-langversion:" + request.LanguageVersion, spec.Optimize ? "-optimize+" : "-optimize-" };
+        if (spec.AllowUnsafe) args.Add("-unsafe");
+        args.AddRange(request.CompilerOptions);
+        args.AddRange(spec.ResponseArguments);
+        var parsed = CSharpCommandLineParser.Default.Parse(args, string.IsNullOrEmpty(request.ProjectPath) ? Directory.GetCurrentDirectory() : request.ProjectPath, sdkDirectory: null);
+        // Without source files or an output the parser warns; those are not the options' fault.
+        var errors = parsed.Errors.Where(d => d.Severity == DiagnosticSeverity.Error && d.Id is not ("CS2008" or "CS1562")).ToList();
+        var ignored = spec.ResponseArguments.Where(a =>
         {
-            var value = OptionValue(option, "nowarn");
-            if (value == null) continue;
-            foreach (var id in value.Split(',', ';'))
-            {
-                var trimmed = id.Trim();
-                if (trimmed.Length == 0) continue;
-                suppressed[trimmed.StartsWith("CS") ? trimmed : "CS" + trimmed.PadLeft(4, '0')] = ReportDiagnostic.Suppress;
-            }
-        }
+            if (a.Length < 2 || (a[0] != '-' && a[0] != '/')) return false;
+            var name = a.Substring(1).Split(':', 2)[0].TrimEnd('+', '-');
+            return s_IgnoredOptions.Contains(name, StringComparer.OrdinalIgnoreCase);
+        }).ToList();
+        var parse = new CSharpParseOptions(parsed.ParseOptions.LanguageVersion, DocumentationMode.None, SourceCodeKind.Regular,
+            spec.Defines.Concat(parsed.ParseOptions.PreprocessorSymbolNames));
+        var c = parsed.CompilationOptions;
         // Binding redirect notes that the Editor does not show either.
-        suppressed["CS1701"] = ReportDiagnostic.Suppress;
-        suppressed["CS1702"] = ReportDiagnostic.Suppress;
-        return new CSharpCompilationOptions(
+        var diagnostics = c.SpecificDiagnosticOptions.SetItem("CS1701", ReportDiagnostic.Suppress).SetItem("CS1702", ReportDiagnostic.Suppress);
+        var compilation = new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: spec.Optimize ? OptimizationLevel.Release : OptimizationLevel.Debug,
-                allowUnsafe: spec.AllowUnsafe || request.CompilerOptions.Any(o => OptionValue(o, "unsafe") != null),
+                optimizationLevel: c.OptimizationLevel,
+                checkOverflow: c.CheckOverflow,
+                allowUnsafe: c.AllowUnsafe,
                 deterministic: true,
                 concurrentBuild: true,
-                nullableContextOptions: NullableContextOptions.Disable,
-                specificDiagnosticOptions: suppressed,
+                nullableContextOptions: c.NullableContextOptions,
+                generalDiagnosticOption: c.GeneralDiagnosticOption,
+                warningLevel: c.WarningLevel,
+                specificDiagnosticOptions: diagnostics,
                 assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default);
+        return new Options(parse, compilation, errors, ignored);
     }
-
-    static IEnumerable<string> OptionDefines(List<string> options)
-    {
-        foreach (var option in options)
-        {
-            var value = OptionValue(option, "define") ?? OptionValue(option, "d");
-            if (value == null) continue;
-            foreach (var symbol in value.Split(',', ';'))
-                if (symbol.Trim().Length > 0)
-                    yield return symbol.Trim();
-        }
-    }
-
-    /// <summary><c>/name:value</c>, <c>-name:value</c>, or <c>/name</c> (empty value).</summary>
-    static string? OptionValue(string option, string name)
-    {
-        if (option.Length < 2 || (option[0] != '/' && option[0] != '-')) return null;
-        var body = option.Substring(1);
-        if (body.Equals(name, StringComparison.OrdinalIgnoreCase) || body.Equals(name + "+", StringComparison.OrdinalIgnoreCase))
-            return "";
-        if (body.StartsWith(name + ":", StringComparison.OrdinalIgnoreCase))
-            return body.Substring(name.Length + 1);
-        return null;
-    }
-
-    static LanguageVersion ParseLanguageVersion(string text) =>
-        LanguageVersionFacts.TryParse(text, out var version) ? version : LanguageVersion.CSharp9;
 
     (string Identity, MetadataReference Reference) FileRef(string path)
     {
@@ -427,6 +424,7 @@ public sealed partial class CompilerService
         builder.Append(spec.AllowUnsafe).Append('\n');
         builder.Append(spec.Optimize ? "optimize" : "debug").Append('\n');
         foreach (var option in request.CompilerOptions) builder.Append(option).Append('\n');
+        foreach (var argument in spec.ResponseArguments) builder.Append("rsp ").Append(argument).Append('\n');
         foreach (var define in spec.Defines) builder.Append(define).Append(';');
         builder.Append('\n');
         foreach (var (path, file) in sources) builder.Append(path).Append('=').Append(file.Hash).Append('\n');
@@ -481,11 +479,8 @@ public sealed partial class CompilerService
         var manifest = Path.ChangeExtension(dll, null) + ".sources";
         if (!File.Exists(manifest)) return null;
         var store = Path.Combine(request.CacheDir, "sources");
-        var parseOptions = new CSharpParseOptions(
-            ParseLanguageVersion(request.LanguageVersion),
-            DocumentationMode.None,
-            SourceCodeKind.Regular,
-            spec.Defines.Concat(OptionDefines(request.CompilerOptions)));
+        var commandLine = CommandLine(spec, request);
+        var parseOptions = commandLine.Parse;
         var lines = File.ReadAllLines(manifest).Where(l => l.Length > 65).ToArray();
         var trees = new SyntaxTree[lines.Length];
         bool missing = false;
@@ -500,7 +495,7 @@ public sealed partial class CompilerService
             trees[i] = FinalizerGuard.Parse(text, parseOptions, path, !spec.NoEngineReferences);
         });
         if (missing) return null;
-        var compilation = CSharpCompilation.Create(spec.Name, trees, references, CompilationOptions(spec, request));
+        var compilation = CSharpCompilation.Create(spec.Name, trees, references, commandLine.Compilation);
         return WithGenerators(null, spec, request, compilation, new List<Diagnostic>());
     }
 
@@ -518,8 +513,8 @@ public sealed partial class CompilerService
     {
         var paths = AnalyzerPaths(spec, request).Where(File.Exists).ToList();
         if (paths.Count == 0) return compilation;
-        var options = (CSharpParseOptions)compilation.SyntaxTrees.FirstOrDefault()?.Options
-            ?? new CSharpParseOptions(ParseLanguageVersion(request.LanguageVersion));
+        var options = (CSharpParseOptions?)compilation.SyntaxTrees.FirstOrDefault()?.Options
+            ?? CommandLine(spec, request).Parse;
         var key = string.Join("\n", paths) + "\n" + request.ProjectPath;
         GeneratorDriver driver;
         if (state != null && state.Generators != null && state.GeneratorsKey == key)
