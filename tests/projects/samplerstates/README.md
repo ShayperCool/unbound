@@ -180,8 +180,9 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
   `_B`) are refused ("Unrecognized sampler 'sampler_B' - does not match any texture ... (on
   metal)") and draw with the error shader, where Vulkan draws them;
 - a wrongly spelt inline name is no error: the name is read with the same words and precedence
-  and nothing refused (two filters are the linear one, `Clamp` with `Repeat` or `Mirror` clamps,
-  an invalid anisotropic level is none), whatever the texture's own state. Every `Bad*` program
+  and nothing refused (of two filters the linear or trilinear one, `Clamp` with `Repeat` or
+  `Mirror` clamps; an invalid anisotropic level is taken as none, unmeasured), whatever the
+  texture's own state. Every `Bad*` program
   draws `_B`'s bilinear sample, which does not tell this from `_B`'s own state; a separate macOS
   Editor capture (two identical) of a point-filtered repeating texture through such names does
   (`InlineSampler::read_leniently`); rows of it here would need the Linux references recorded

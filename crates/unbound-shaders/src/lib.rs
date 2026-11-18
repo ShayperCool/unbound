@@ -314,15 +314,17 @@ impl InlineSampler {
     }
 
     /// The state a sampler's name spells as the macOS Editor's Metal compiler reads it, which
-    /// refuses no wrongly spelt name: the same words and precedence with nothing refused (two
-    /// filters are the linear one, `Clamp` with `Repeat` or `Mirror` clamps), and an invalid
-    /// anisotropic level is none. Measured on an Apple M2 Pro (two identical captures): a
-    /// point-filtered repeating texture through `sampler_PointLinearClamp` and
-    /// `sampler_LinearPointClamp` samples bilinear and clamped, through `sampler_PointClampRepeat`,
-    /// `sampler_PointClampMirror`, `sampler_PointClampAniso3` and `my_point_clamp_aniso3_sampler`
-    /// point and clamped, whatever the texture's own state (tests/projects/samplerstates `Bad*`
-    /// are the probe's rows, bilinear names on a bilinear texture). An invalid level's own
-    /// effect (none, or another level) is not measured.
+    /// refuses no wrongly spelt name: the same words and precedence with nothing refused (of two
+    /// filters trilinear, then linear; `Clamp` with `Repeat` or `Mirror` clamps), and an invalid
+    /// anisotropic level is taken as none. Measured on an Apple M2 Pro (two identical captures)
+    /// with a texture of two texels, whatever its own state (point and repeat, bilinear and clamp,
+    /// point and mirror), at u 0.4, 1.4, -0.4 and 1.9: through `sampler_PointLinearClamp`,
+    /// `sampler_LinearPointClamp` and `sampler_TrilinearPointClamp` it samples filtered and
+    /// clamped (without mips trilinear and linear are not told apart), through
+    /// `sampler_PointClampRepeat`, `sampler_PointClampMirror`, `sampler_PointMirrorClamp`,
+    /// `sampler_PointClampAniso3` and `my_point_clamp_aniso3_sampler` point and clamped
+    /// (tests/projects/samplerstates `Bad*` are the probe's rows, bilinear names on a bilinear
+    /// texture). An invalid level's own effect (none, or another level) is not measured.
     pub fn read_leniently(name: &str) -> Option<InlineSampler> {
         InlineSampler::read(name, false).ok().flatten()
     }
@@ -3118,10 +3120,10 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
     }
 
     /// The macOS Editor's Metal compiler reads a wrongly spelt inline name as the words it spells
-    /// with the strict reading's precedence and nothing refused: two filters are the linear one,
-    /// `Clamp` with another wrap word clamps, an invalid anisotropic level is none (measured with
-    /// a point-filtered repeating texture, which these states and the texture's own tell apart;
-    /// see [`InlineSampler::read_leniently`]). A Metal program's slot takes that state; Vulkan
+    /// with the strict reading's precedence and nothing refused: a filter word over `Point`,
+    /// `Clamp` over another wrap word (both measured with textures whose own states these differ
+    /// from; see [`InlineSampler::read_leniently`]), an invalid anisotropic level taken as none
+    /// (unmeasured). A Metal program's slot takes that state; Vulkan
     /// refuses the program; a correctly spelt name reads alike both ways.
     #[test]
     fn metal_reads_a_wrongly_spelt_inline_sampler_leniently() {
@@ -3137,6 +3139,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             ("sampler_LinearPointClamp", state(1, 1)),
             ("sampler_PointClampRepeat", state(0, 1)),
             ("sampler_PointClampMirror", state(0, 1)),
+            ("sampler_PointMirrorClamp", state(0, 1)),
+            ("sampler_TrilinearPointClamp", state(2, 1)),
             ("sampler_PointClampAniso3", state(0, 1)),
             ("my_point_clamp_aniso3_sampler", state(0, 1)),
         ] {
