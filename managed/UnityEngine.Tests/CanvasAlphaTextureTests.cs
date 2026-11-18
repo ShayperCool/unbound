@@ -177,6 +177,27 @@ namespace UnityEngine.Tests
             Assert.Same(b, AlphaOf(draws[1]));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AnotherClipRectOrSoftnessStartsARunWithItsOwnAlphaTexture(bool softness)
+        {
+            var main = MakeTexture("main");
+            var a = MakeTexture("alpha a");
+            var b = MakeTexture("alpha b");
+            var first = Renderer("first", main);
+            first.SetAlphaTexture(a);
+            first.EnableRectClipping(new Rect(0f, 0f, 5f, 5f));
+            var second = Renderer("second", main);
+            second.SetAlphaTexture(b);
+            second.EnableRectClipping(softness ? new Rect(0f, 0f, 5f, 5f) : new Rect(1f, 0f, 5f, 5f));
+            if (softness) second.clippingSoftness = new Vector2(2f, 2f);
+            var draws = Draws();
+            Assert.Equal(2, draws.Count);
+            Assert.Same(a, AlphaOf(draws[0]));
+            Assert.Same(b, AlphaOf(draws[1]));
+        }
+
         /// <summary>Control: another texture starts a batch of its own with its own alpha texture.</summary>
         [Fact]
         public void AnotherTextureStartsABatchWithItsOwnAlphaTexture()

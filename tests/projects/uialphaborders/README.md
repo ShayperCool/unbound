@@ -28,7 +28,7 @@ solid background (64, 76, 89) in a 320x180 game view and reads the screen at the
 | CanvasRenderer.SetAlphaTexture | "passed to the Shader under the _AlphaTex property". | It overrides the material's `_AlphaTex`; without one the material's own (else the shader's white default) is sampled; the last call wins; `Clear` drops it; a RawImage keeps it. Renderers drawn one after another with one material and texture take the first one's alpha texture. |
 | Sprite.associatedAlphaSplitTexture | The alpha texture made for ETC1 split alpha; null when none. | Null for every sprite: the Editor imports a Split Alpha Channel texture as ETC_RGB4 without its alpha and makes no alpha texture; with the sRGB flag on, the linear project's ETC2 promotion keeps the alpha as ETC2_RGBA8. A secondary texture named `_AlphaTex` is used by neither Image nor SpriteRenderer. |
 
-Unbound matches every value. Images: within 1/255 (`image_limits.json` lists the residuals and
+Unbound matches every value. Images: imgui within 1/255, canvas within 3/255 on the split-alpha sprites (`image_limits.json` lists the residuals and
 their causes). Unmeasured: other graphics devices and drivers, a gamma project, `GUI.matrix`
 rotation with radiuses, canvas batches across other draws or with rect clipping, player builds'
 split alpha.
