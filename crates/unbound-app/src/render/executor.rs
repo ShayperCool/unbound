@@ -333,19 +333,20 @@ enum CopyKind {
     ToR8,
     ToRgba8,
     ToBgra8,
-    /// An RGBA8 target's texels as a 5-6-5 or 5-5-5-1 target keeps them (`PACKED_TEXELS_WGSL`:
-    /// the Editor's OpenGL Core and Vulkan devices keep a value drawn into such a target at its
+    /// An RGBA8 target's texels as a 5-6-5, 5-5-5-1 or 4-4-4-4 target keeps them
+    /// (`PACKED_TEXELS_WGSL`: the Editor's devices keep a value drawn into such a target at its
     /// channels' bits, measured by tests/projects/samplerstates Packed.*; Unbound stores RGBA8
     /// and packs a level drawn into before anything reads it, `mark_packed`).
     Packed565,
     Packed5551,
+    Packed4444,
 }
 
 // The texture protocol supports 1, 2, 4 and 8 samples.
 const COPY_SAMPLE_CLASSES: usize = 4;
 
 impl CopyKind {
-    const COUNT: usize = 11;
+    const COUNT: usize = 12;
 
     fn index(self) -> usize {
         self as usize
@@ -2542,8 +2543,29 @@ impl UnityRenderer {
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
             CopyKind::ToR8 | CopyKind::ToRgba8 | CopyKind::ToBgra8 => CHANNEL_COPY_WGSL.into(),
-            CopyKind::Packed565 => PACKED_TEXELS_WGSL.replace("BITS", "vec4<u32>(5u, 6u, 5u, 0u)"),
-            CopyKind::Packed5551 => PACKED_TEXELS_WGSL.replace("BITS", "vec4<u32>(5u, 5u, 5u, 1u)"),
+            CopyKind::Packed565 | CopyKind::Packed5551 | CopyKind::Packed4444 => {
+                let bits = match kind {
+                    CopyKind::Packed565 => resources::PACKED_565_BITS,
+                    CopyKind::Packed5551 => resources::PACKED_5551_BITS,
+                    _ => resources::PACKED_4444_BITS,
+                };
+                PACKED_TEXELS_WGSL
+                    .replace(
+                        "BITS",
+                        &format!(
+                            "vec4<u32>({}u, {}u, {}u, {}u)",
+                            bits[0], bits[1], bits[2], bits[3]
+                        ),
+                    )
+                    .replace(
+                        "ROUNDS",
+                        if self.conventions.packed_writes_round {
+                            "true"
+                        } else {
+                            "false"
+                        },
+                    )
+            }
         };
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
@@ -2566,7 +2588,10 @@ impl UnityRenderer {
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::R8Unorm,
             ),
-            CopyKind::ToRgba8 | CopyKind::Packed565 | CopyKind::Packed5551 => (
+            CopyKind::ToRgba8
+            | CopyKind::Packed565
+            | CopyKind::Packed5551
+            | CopyKind::Packed4444 => (
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::Rgba8Unorm,
             ),
@@ -3200,6 +3225,7 @@ impl UnityRenderer {
             let kind = match packed {
                 owned::PACKED_565 => CopyKind::Packed565,
                 owned::PACKED_5551 => CopyKind::Packed5551,
+                owned::PACKED_4444 => CopyKind::Packed4444,
                 _ => continue,
             };
             let Some((texture, layer, level)) = image else {
@@ -6067,7 +6093,9 @@ fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
 /// clears round (`DeviceConventions::packed_clears_round`) and the cleared level is a texture's
 /// first, else as given (its packing then truncates it as a draw's: on the Vulkan Editor a
 /// clear of mip level 1 and a further color's clear at level 0 differ so, Unity 6000.0.71f1,
-/// tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`).
+/// tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`). Where the device's
+/// writes round too (Metal) the level is the nearest one's byte (`resources::packed_clear`); Metal
+/// clears are measured at the first level only.
 fn packed_clear(
     conventions: DeviceConventions,
     packed: u8,
@@ -6077,15 +6105,16 @@ fn packed_clear(
     if !conventions.packed_clears_round || level != 0 {
         return color;
     }
-    match packed {
-        owned::PACKED_565 => resources::packed_clear(color, [5, 6, 5, 0]),
-        owned::PACKED_5551 => resources::packed_clear(color, [5, 5, 5, 1]),
-        _ => color,
+    match resources::packed_bits(packed) {
+        Some(bits) => resources::packed_clear(color, bits, conventions.packed_writes_round),
+        None => color,
     }
 }
 
 /// A packed target's texels (`CopyKind::Packed565`): each 8-bit channel keeps its top `BITS` bits,
-/// repeated below them to fill the byte (0 bits: no channel, read as 1).
+/// repeated below them to fill the byte, or (`ROUNDS`, `DeviceConventions::packed_writes_round`)
+/// rounds to the nearest of its `BITS` bits' levels, kept as the nearest 8-bit value
+/// (`resources::level_byte`); 0 bits: no channel, read as 1.
 const PACKED_TEXELS_WGSL: &str = r#"
 @group(0) @binding(0) var source: texture_2d<f32>;
 
@@ -6098,6 +6127,11 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 fn keep(value: f32, bits: u32) -> f32 {
     if (bits == 0u) {
         return 1.0;
+    }
+    if (ROUNDS) {
+        let levels = f32((1u << bits) - 1u);
+        let level = floor(clamp(value, 0.0, 1.0) * levels + 0.5);
+        return floor(level * 255.0 / levels + 0.5) / 255.0;
     }
     let byte = u32(round(clamp(value, 0.0, 1.0) * 255.0));
     var widened = (byte >> (8u - bits)) << (8u - bits);
@@ -6497,6 +6531,13 @@ mod tests {
         assert_eq!(packed_clear(vulkan, owned::PACKED_565, 1, color), color);
         assert_eq!(packed_clear(gl, owned::PACKED_565, 0, color), color);
         assert_eq!(packed_clear(vulkan, 0, 0, color), color);
+        // Metal rounds each channel to its nearest level, 4-4-4-4 included (0.7 at half
+        // precision is 11 of 15), kept as that level's nearest byte (`metal.jsonl` Packed.*.clear).
+        let metal = DeviceConventions::of(GraphicsDevice::Metal);
+        assert_eq!(
+            packed_clear(metal, owned::PACKED_4444, 0, color),
+            [68.0 / 255.0, 136.0 / 255.0, 85.0 / 255.0, 187.0 / 255.0]
+        );
     }
 
     #[test]

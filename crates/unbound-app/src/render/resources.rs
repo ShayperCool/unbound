@@ -572,7 +572,7 @@ pub struct GpuTexture {
     pub logical: Option<(u32, u32)>,
     /// Stored in the screen's channel order (a screen camera's stand-in).
     pub screen_order: bool,
-    /// The channel bits drawn values keep (`owned::PACKED_565`, `owned::PACKED_5551`; 0: none).
+    /// The channel bits drawn values keep (`owned::PACKED_*`; 0: none).
     pub packed: u8,
     pub format: i32,
     pub mip_count: u32,
@@ -794,17 +794,57 @@ pub fn widen_bits(level: u32, bits: u32) -> u32 {
     widened & 0xff
 }
 
+/// A channel level `level` of `bits` bits as the nearest 8-bit value, `level * 255 / (2^bits - 1)`
+/// rounded (a 5-bit 3 is 25 where repeating its bits gives 27): the 8-bit stand-in of a level the
+/// device stores at its own bits and reads as exactly `level / (2^bits - 1)`
+/// (`DeviceConventions::packed_writes_round`; `PACKED_TEXELS_WGSL` does the same on the GPU).
+pub fn level_byte(level: u32, bits: u32) -> u32 {
+    let levels = (1u32 << bits) - 1;
+    (level * 255 + levels / 2) / levels
+}
+
+/// The channel bits of each packed kind (`owned::PACKED_*`): red, green, blue, alpha; 0 no
+/// channel, which reads 1.
+pub const PACKED_565_BITS: [u32; 4] = [5, 6, 5, 0];
+pub const PACKED_5551_BITS: [u32; 4] = [5, 5, 5, 1];
+pub const PACKED_4444_BITS: [u32; 4] = [4, 4, 4, 4];
+
+/// The channel bits of a texture's packed kind (`GpuTexture::packed`), none for its own store.
+pub fn packed_bits(packed: u8) -> Option<[u32; 4]> {
+    match packed {
+        owned::PACKED_565 => Some(PACKED_565_BITS),
+        owned::PACKED_5551 => Some(PACKED_5551_BITS),
+        owned::PACKED_4444 => Some(PACKED_4444_BITS),
+        _ => None,
+    }
+}
+
 /// A clear color of a packed target on a device whose clears round to its channels' `bits`
 /// (`DeviceConventions::packed_clears_round`; 0 bits: no channel, which reads 1), as the 8-bit
-/// value its store then keeps.
-pub fn packed_clear(color: [f32; 4], bits: [u32; 4]) -> [f32; 4] {
+/// value its store then keeps: the level's bits repeated, or, where the device's writes round
+/// (`rounds`), the level of the color at half precision as its nearest 8-bit value
+/// ([`level_byte`]): the Metal Editor clears 0.7 to 11 of 15, which 0.7 at single precision
+/// (10.4999998 of 15) would not round to (tests/projects/samplerstates `metal.jsonl`
+/// Packed.ARGB4444.clear).
+pub fn packed_clear(color: [f32; 4], bits: [u32; 4], rounds: bool) -> [f32; 4] {
     std::array::from_fn(|i| {
         let b = bits[i];
         if b == 0 {
             return 1.0;
         }
-        let level = (color[i].clamp(0.0, 1.0) * ((1u32 << b) - 1) as f32).round() as u32;
-        widen_bits(level, b) as f32 / 255.0
+        let value = color[i].clamp(0.0, 1.0);
+        let value = if rounds {
+            f16_to_f32(f32_to_f16(value))
+        } else {
+            value
+        };
+        let level = (value * ((1u32 << b) - 1) as f32).round() as u32;
+        let byte = if rounds {
+            level_byte(level, b)
+        } else {
+            widen_bits(level, b)
+        };
+        byte as f32 / 255.0
     })
 }
 
@@ -2412,16 +2452,54 @@ mod tests {
         assert_eq!(widen_bits(1, 1), 255);
         assert_eq!(widen_bits(0, 1), 0);
         assert_eq!(widen_bits(15, 4), 255);
-        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], [5, 6, 5, 0]);
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], PACKED_565_BITS, false);
         assert_eq!(
             clear.map(|v| (v * 255.0).round() as u32),
             [66, 130, 74, 255]
         );
-        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], [5, 5, 5, 1]);
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], PACKED_5551_BITS, false);
         assert_eq!(
             clear.map(|v| (v * 255.0).round() as u32),
             [66, 132, 74, 255]
         );
+    }
+
+    /// Where the device's writes round (Metal), each channel is the nearest of its levels, read
+    /// as `level / (2^bits - 1)` (tests/projects/samplerstates `metal.jsonl` Packed.*: 0.25, 0.5,
+    /// 0.3, 0.7 cleared read 8/31, 16/31, 9/31, 1 in a 1-5-5-5 target, 4/15, 8/15, 5/15, 11/15 in a
+    /// 4-4-4-4 one); the 8-bit store keeps the nearest byte. 4-bit levels are exact bytes (255 is
+    /// 17 * 15), 5- and 6-bit ones are not, and rounding differs from repeating the bits.
+    #[test]
+    fn rounded_levels_keep_the_nearest_byte() {
+        for bits in [1, 4, 5, 6] {
+            let levels = (1u32 << bits) - 1;
+            for level in 0..=levels {
+                let exact = level as f64 * 255.0 / levels as f64;
+                assert!(
+                    (level_byte(level, bits) as f64 - exact).abs() <= 0.5,
+                    "{level}/{levels}"
+                );
+            }
+        }
+        for level in 0..=15 {
+            assert_eq!(level_byte(level, 4), level * 17);
+            assert_eq!(level_byte(level, 4), widen_bits(level, 4));
+        }
+        assert_eq!(level_byte(3, 5), 25);
+        assert_eq!(widen_bits(3, 5), 27);
+        assert_eq!(level_byte(11, 6), 45);
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], PACKED_5551_BITS, true);
+        assert_eq!(
+            clear.map(|v| (v * 255.0).round() as u32),
+            [66, 132, 74, 255]
+        );
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], PACKED_4444_BITS, true);
+        assert_eq!(
+            clear.map(|v| (v * 255.0).round() as u32),
+            [68, 136, 85, 187]
+        );
+        assert_eq!(packed_bits(owned::PACKED_4444), Some(PACKED_4444_BITS));
+        assert_eq!(packed_bits(0), None);
     }
 
     #[test]

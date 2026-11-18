@@ -184,12 +184,24 @@ impl GraphicsDevice {
         !matches!(self, Self::Metal)
     }
 
-    /// Whether a clear of a 5-6-5 or 5-5-5-1 render target rounds its color to the channels'
-    /// bits directly: the Vulkan Editor clears 0.5 to 32 of 63 (and 16 of 31), where a draw, and
-    /// every OpenGL Core write, keeps the top bits of the 8-bit value (31 of 63)
-    /// (tests/projects/samplerstates Packed.*.clear). Unmeasured on Metal (false).
+    /// Whether a clear of a packed render target rounds its color to the channels' bits
+    /// directly: the Vulkan Editor clears 0.5 to 32 of 63 (and 16 of 31) in a 5-6-5 target, where
+    /// a draw, and every OpenGL Core write, keeps the top bits of the 8-bit value (31 of 63); the
+    /// Metal Editor clears as it draws, rounding ([`Self::packed_writes_round`])
+    /// (tests/projects/samplerstates Packed.*.clear, `vulkan.jsonl`, `metal.jsonl`).
     pub fn packed_clears_round(self) -> bool {
-        matches!(self, Self::Vulkan)
+        matches!(self, Self::Vulkan | Self::Metal)
+    }
+
+    /// Whether a draw into a packed render target (4-4-4-4 included) keeps each channel's nearest
+    /// level, read back as exactly `level / (2^bits - 1)`: the macOS Editor's Metal device
+    /// stores the formats themselves (0.5 reads 16/31 in a 5-bit channel, 0.7 11/15 in a 4-bit
+    /// one), where OpenGL Core and Vulkan keep the top bits of an 8-bit value and 4-4-4-4 targets
+    /// at 8 bits (tests/projects/samplerstates `metal.jsonl` Packed.*, an Apple M2 Pro). A blend
+    /// within one pass reads the unrounded value there: the probe's added 0.04 lands on 0.3, not on
+    /// its rounded 9/31.
+    pub fn packed_writes_round(self) -> bool {
+        matches!(self, Self::Metal)
     }
 
     /// Whether a graphics program samples a texture through the texture's own sampler state

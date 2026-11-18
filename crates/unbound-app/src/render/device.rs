@@ -136,6 +136,8 @@ pub struct DeviceConventions {
     pub mip_bias: bool,
     /// Clears of packed targets round to their bits (`GraphicsDevice::packed_clears_round`).
     pub packed_clears_round: bool,
+    /// Draws into packed targets round to their bits (`GraphicsDevice::packed_writes_round`).
+    pub packed_writes_round: bool,
 }
 
 impl DeviceConventions {
@@ -154,6 +156,7 @@ impl DeviceConventions {
             screen_bgra: device.screen_bgra(),
             mip_bias: device.applies_mip_bias(),
             packed_clears_round: device.packed_clears_round(),
+            packed_writes_round: device.packed_writes_round(),
         }
     }
 

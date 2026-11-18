@@ -97,10 +97,15 @@ namespace Unbound.Runtime
         /// channel, 0.2 48/255), no alpha as 1 (5-6-5) and alpha as one bit (1-5-5-5); a blended
         /// draw reads them so too. A 4444 target keeps 8-bit values. Measured on the Editor's
         /// OpenGL Core and Vulkan devices (tests/projects/samplerstates Packed.*, NVIDIA; Vulkan's
-        /// clear rounds where Unbound truncates). False: Unbound's 8-bit store, on Metal, whose Editor
-        /// keeps the channels' bits by another rule (tests/projects/samplerstates metal.jsonl Packed.*,
-        /// not modelled: residuals-metal.json).</summary>
+        /// clear rounds where Unbound truncates). The Metal Editor keeps them by another rule, the
+        /// renderer's (`GraphicsDevice::packed_writes_round`): each channel's nearest level, read as
+        /// exactly level / (2^bits - 1), which Unbound's 8-bit store keeps as its nearest byte
+        /// (tests/projects/samplerstates metal.jsonl Packed.*, residuals-metal.json).</summary>
         internal bool PackedTargetsKeepChannelBits { get; init; }
+        /// <summary>A 4444 target keeps its channels' 4 bits too (Metal: 0.25 drawn reads 4/15,
+        /// tests/projects/samplerstates metal.jsonl Packed.ARGB4444.*); OpenGL Core and Vulkan
+        /// keep 8-bit values there.</summary>
+        internal bool Packs4444Targets { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
@@ -253,6 +258,8 @@ namespace Unbound.Runtime
             EditorConservativeRaster = false,
             HiddenSurfaceRemovalOnGPU = true,
             PartialScreenSeedUndecoded = true,
+            PackedTargetsKeepChannelBits = true,
+            Packs4444Targets = true,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
             Compressed3DTextures = true,

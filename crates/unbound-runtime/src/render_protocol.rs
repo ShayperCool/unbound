@@ -553,7 +553,7 @@ pub mod owned {
         /// screen is): the texture a screen camera draws into in its place.
         pub screen_order: bool,
         /// The channel bits a render target keeps of what is drawn into it: 0 its 8-bit store,
-        /// [`PACKED_565`], [`PACKED_5551`].
+        /// [`PACKED_565`], [`PACKED_5551`], [`PACKED_4444`].
         pub packed: u8,
     }
 
@@ -561,6 +561,8 @@ pub mod owned {
     pub const PACKED_565: u8 = 1;
     /// A 1-5-5-5 target: color channels keep 5 bits, alpha 1.
     pub const PACKED_5551: u8 = 2;
+    /// A 4-4-4-4 target: every channel keeps 4 bits.
+    pub const PACKED_4444: u8 = 3;
 
     impl Texture {
         /// # Safety

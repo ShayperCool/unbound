@@ -569,16 +569,23 @@ namespace UnityEngine
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
         const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128,
-            ScreenOrder = 1 << 16, Packed565 = 1 << 17, Packed5551 = 2 << 17;
+            ScreenOrder = 1 << 16, Packed565 = 1 << 17, Packed5551 = 2 << 17, Packed4444 = 3 << 17;
 
-        /// <summary>The packet bits of a 5-6-5 or 1-5-5-5 target whose drawn values the device keeps
-        /// at its channels' bits (GraphicsDeviceProfile.PackedTargetsKeepChannelBits), else 0.</summary>
-        internal int PackedChannelBits() => !GraphicsDeviceProfile.Current.PackedTargetsKeepChannelBits ? 0 : m_Descriptor.graphicsFormat switch
+        /// <summary>The packet bits of a 5-6-5, 1-5-5-5 or (GraphicsDeviceProfile.Packs4444Targets)
+        /// 4-4-4-4 target whose drawn values the device keeps at its channels' bits
+        /// (GraphicsDeviceProfile.PackedTargetsKeepChannelBits), else 0.</summary>
+        internal int PackedChannelBits()
         {
-            GraphicsFormat.R5G6B5_UNormPack16 or GraphicsFormat.B5G6R5_UNormPack16 => Packed565,
-            GraphicsFormat.A1R5G5B5_UNormPack16 or GraphicsFormat.B5G5R5A1_UNormPack16 or GraphicsFormat.R5G5B5A1_UNormPack16 => Packed5551,
-            _ => 0,
-        };
+            var device = GraphicsDeviceProfile.Current;
+            if (!device.PackedTargetsKeepChannelBits) return 0;
+            return m_Descriptor.graphicsFormat switch
+            {
+                GraphicsFormat.R5G6B5_UNormPack16 or GraphicsFormat.B5G6R5_UNormPack16 => Packed565,
+                GraphicsFormat.A1R5G5B5_UNormPack16 or GraphicsFormat.B5G5R5A1_UNormPack16 or GraphicsFormat.R5G5B5A1_UNormPack16 => Packed5551,
+                GraphicsFormat.R4G4B4A4_UNormPack16 or GraphicsFormat.B4G4R4A4_UNormPack16 when device.Packs4444Targets => Packed4444,
+                _ => 0,
+            };
+        }
 
         /// <summary>Stored as the screen is (a screen camera's stand-in): the renderer keeps it in
         /// the screen's channel order and shows it to native plugins as the screen.</summary>

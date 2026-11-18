@@ -33,14 +33,19 @@ namespace Unbound.Tests
         }
 
         /// <summary>The texture packet says which targets keep their channels' bits: 5-6-5 and
-        /// 1-5-5-5 on the Linux devices, not 4444 or RGBA8, nothing on Metal (unmeasured).</summary>
+        /// 1-5-5-5 on the Linux devices, not 4444 or RGBA8; 4444 too on Metal (samplerstates
+        /// metal.jsonl Packed.ARGB4444.*), not RGBA8 or float there.</summary>
         [Theory]
         [InlineData("OpenGLCore", RenderTextureFormat.RGB565, 1 << 17)]
         [InlineData("Vulkan", RenderTextureFormat.RGB565, 1 << 17)]
         [InlineData("OpenGLCore", RenderTextureFormat.ARGB1555, 2 << 17)]
         [InlineData("OpenGLCore", RenderTextureFormat.ARGB4444, 0)]
         [InlineData("OpenGLCore", RenderTextureFormat.ARGB32, 0)]
-        [InlineData("Metal", RenderTextureFormat.RGB565, 0)]
+        [InlineData("Metal", RenderTextureFormat.RGB565, 1 << 17)]
+        [InlineData("Metal", RenderTextureFormat.ARGB1555, 2 << 17)]
+        [InlineData("Metal", RenderTextureFormat.ARGB4444, 3 << 17)]
+        [InlineData("Metal", RenderTextureFormat.ARGB32, 0)]
+        [InlineData("Metal", RenderTextureFormat.ARGBFloat, 0)]
         public void PackedTargetsSayWhichChannelBitsTheyKeep(string device, RenderTextureFormat format, int bits)
         {
             Assert.Equal(bits, On(device, () =>
