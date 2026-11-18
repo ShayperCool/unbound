@@ -450,7 +450,7 @@ public static class LitAuthoring
     /// <summary>The follow-ups of the outputs above: lit outputs drawn from a list that is not
     /// sorted, by the pipeline's lights (opaque quads told to draw through an indirect buffer)
     /// and by 2D lights (the sprite graph's quads blended over what is behind them, their sort
-    /// turned off); meshes of an output of two meshes, chosen per particle by its mesh index or
+    /// turned off, culled by each camera's frustum); meshes of an output of two meshes, chosen per particle by its mesh index or
     /// by the size it takes on screen; a quad output drawn by a graph of the older Visual
     /// Effect target; and outputs of the forward renderer's kinds (lit quads, meshes) drawn
     /// through the 2D renderer (LitProbe.cs: `lit listed` .. `mesh 2d`).</summary>
@@ -476,6 +476,8 @@ public static class LitAuthoring
         spritesOutput.SetSettingValue("shaderGraph", ShaderGraph(SpriteLitGraph));
         spritesOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
         spritesOutput.SetSettingValue("sort", VFXAbstractParticleOutput.SortActivationMode.Off);
+        // Culled by the camera's frustum: each camera draws a list of its own, not sorted.
+        spritesOutput.SetSettingValue("frustumCulling", true);
         ((IVFXSlotContainer)spritesOutput).inputSlots.First(s => s.property.type == typeof(Texture2D)).value = Quarters;
         Burst(spritesSpawn, 9f);
         SetRandom(spritesInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
