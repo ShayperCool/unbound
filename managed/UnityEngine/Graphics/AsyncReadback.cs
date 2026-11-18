@@ -262,13 +262,16 @@ namespace Unbound.Runtime
                 && !GraphicsFormatUtility.IsDepthStencilFormat(format));
 
         /// <summary>A request in the texture's own format: that format's layout, or the packed
-        /// words of a packed format where the device reads them (TargetReadbackRule.PackedWords).</summary>
+        /// words of a packed render texture where the device reads them
+        /// (TargetReadbackRule.PackedWords; textures of those formats are unmeasured and keep
+        /// failing, and so does a request naming the packed format explicitly).</summary>
         internal static ReadbackFormat Own(Texture src)
         {
             if (src == null) return null;
             var format = src.graphicsFormat;
             return ReadbackFormat.Of(format)
-                ?? (GraphicsDeviceProfile.Current.TargetReadback?.PackedWords?.Contains(format) == true ? ReadbackFormat.Packed(format) : null);
+                ?? (src is RenderTexture && GraphicsDeviceProfile.Current.TargetReadback?.PackedWords?.Contains(format) == true
+                    ? ReadbackFormat.Packed(format) : null);
         }
 
         internal static Result Texture(Texture src, int mipIndex, ReadbackFormat format, Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false, bool validateSource = true)
@@ -456,9 +459,12 @@ namespace Unbound.Runtime
 
         /// <summary>An unsigned float of 5 exponent bits (bias 15) and <paramref name="mantissaBits"/>,
         /// rounded to the nearest (the 10- and 11-bit floats of B10G11R11); its largest finite
-        /// value for larger ones, 0 for negative ones and NaN.</summary>
+        /// value for larger finite ones, infinity and NaN as the format writes them, 0 for
+        /// negative ones.</summary>
         internal static uint UnsignedFloat(float value, int mantissaBits)
         {
+            if (float.IsNaN(value)) return (31u << mantissaBits) | ((1u << mantissaBits) - 1);
+            if (float.IsPositiveInfinity(value)) return 31u << mantissaBits;
             if (!(value > 0f)) return 0;
             uint largest = (30u << mantissaBits) | ((1u << mantissaBits) - 1);
             uint bits = BitConverter.SingleToUInt32Bits(value);
