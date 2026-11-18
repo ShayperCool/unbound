@@ -21,7 +21,8 @@ public sealed class HotReloadRequest
 public sealed class HotReloadResponse
 {
     /// <summary><c>applied</c> (patched in place), <c>unchanged</c>, <c>compile-errors</c> (the game
-    /// keeps its code) or <c>restart-required</c> (with the reason).</summary>
+    /// keeps its code), <c>restart-required</c> (with the reason) or <c>reload-deferred</c> (the
+    /// restart waits for EditorApplication.UnlockReloadAssemblies).</summary>
     public string Status { get; set; } = "";
     public string? Reason { get; set; }
     /// <summary>The restart is needed because the edited code was compiled with optimizations.</summary>
@@ -183,6 +184,15 @@ internal static class HotReload
     /// (EditorInitialization).</summary>
     static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch, bool optimized = false)
     {
+        // Locked reloads (EditorApplication.LockReloadAssemblies) wait for the last unlock.
+        if (UnityEditor.EditorApplication.ReloadLocked)
+        {
+            UnityEditor.EditorApplication.DeferReload();
+            response.Status = "reload-deferred";
+            response.Reason = reason;
+            response.Milliseconds = watch.ElapsedMilliseconds;
+            return response;
+        }
         UnityEditor.AssemblyReloadEvents.RaiseBefore();
         response.Status = "restart-required";
         response.Reason = reason;

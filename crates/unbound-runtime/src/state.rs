@@ -945,6 +945,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             crate::game::request_compilation();
             Ok("{}".to_string())
         }
+        "script-reload" => {
+            // The reload a locked session deferred (EditorApplication.UnlockReloadAssemblies).
+            crate::game::request_restart();
+            Ok("{}".to_string())
+        }
         "scripting-defines" => {
             // PlayerSettings.SetScriptingDefineSymbols: the group's defines for the run's
             // compilations (the caller asks for the compilation when the active group changed).

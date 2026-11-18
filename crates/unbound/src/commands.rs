@@ -1310,12 +1310,25 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
     install_shader_declarations(&project, &args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;
     game.run_headless(u32::MAX, width, height);
-    let code = game.exit_code().unwrap_or(3);
+    let exit = game.exit_code();
+    let code = exit.unwrap_or(3);
     drop(game);
-    // A compilation the scripts asked for (or new scripting defines) reloads them: the tests run
-    // again in a relaunched session, as `run` does.
-    if unbound_runtime::restart_requested() {
-        return relaunch();
+    // A reload of the scripts outside the Test Framework's lock (at their load: a compilation they
+    // asked for, new scripting defines) runs the tests again in a relaunched session, as `run`
+    // does; a run that keeps asking stops with an error instead of relaunching without end. A
+    // reload the lock deferred to the end of the run does not: the run exits with its results, as
+    // the Editor's `-runTests` does.
+    if unbound_runtime::restart_requested() && exit.is_none() {
+        let relaunches: u32 = std::env::var(TEST_RELAUNCHES_VARIABLE)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        if relaunches >= MAX_TEST_RELAUNCHES {
+            anyhow::bail!(
+                "the scripts asked for a reload in {MAX_TEST_RELAUNCHES} test sessions in a row; stopping"
+            );
+        }
+        return relaunch_with(&[(TEST_RELAUNCHES_VARIABLE, (relaunches + 1).to_string())]);
     }
     println!("test results: {}", results.display());
     std::process::exit(code);
@@ -1329,6 +1342,11 @@ pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     Ok(())
 }
 
+/// How many times `unbound test` relaunched in a row for a reload of the scripts.
+const TEST_RELAUNCHES_VARIABLE: &str = "UNBOUND_TEST_RELAUNCHES";
+/// More reloads in a row than any test setup needs: scripts that ask for one on every load.
+const MAX_TEST_RELAUNCHES: u32 = 8;
+
 /// Set for a session that relaunched for a script edit (read once by the managed editor domain load).
 const SCRIPT_RELOAD_VARIABLE: &str = "UNBOUND_SCRIPT_RELOAD";
 
@@ -1336,6 +1354,11 @@ const SCRIPT_RELOAD_VARIABLE: &str = "UNBOUND_SCRIPT_RELOAD";
 /// not be patched in, and the new session compiles and plays the edited code (the compile cache
 /// keeps the restart short).
 fn relaunch() -> Result<()> {
+    relaunch_with(&[])
+}
+
+/// [`relaunch`] with more environment variables for the new session.
+fn relaunch_with(env: &[(&str, String)]) -> Result<()> {
     let exe = std::env::current_exe()?;
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     tracing::info!("restarting the game with the edited code");
@@ -1349,6 +1372,9 @@ fn relaunch() -> Result<()> {
     // Scripting defines scripts set stay set (the project's files are not written).
     if let Some(defines) = unbound_runtime::scripting_define_overrides() {
         command.env(unbound_runtime::DEFINES_VARIABLE, defines);
+    }
+    for (name, value) in env {
+        command.env(name, value);
     }
     #[cfg(unix)]
     {

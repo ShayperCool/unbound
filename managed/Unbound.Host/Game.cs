@@ -314,6 +314,7 @@ public static unsafe class Game
                 if (type != null) ScriptMessages.ExecutionOrders[type] = order;
             }
             PlayerLoopDriver.HandleTerminationSignals();
+            UnityEditor.EditorApplication.s_EditModeSession = settings.EditMode;
             if (settings.EditMode) PlayerLoopDriver.BootEditMode(settings.FirstScene);
             else PlayerLoopDriver.Boot(settings.FirstScene);
             // The game's assemblies are adapted and loaded: the rewriters' resolved references

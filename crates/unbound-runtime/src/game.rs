@@ -51,6 +51,12 @@ static DEFINE_OVERRIDES: Mutex<BTreeMap<String, Vec<String>>> = Mutex::new(BTree
 /// group key).
 pub const DEFINES_VARIABLE: &str = "UNBOUND_SCRIPTING_DEFINES";
 
+/// A reload a locked session deferred (`EditorApplication.UnlockReloadAssemblies`): the session
+/// stops for its restart.
+pub(crate) fn request_restart() {
+    RESTART.store(true, Ordering::SeqCst);
+}
+
 pub(crate) fn request_compilation() {
     COMPILE_REQUESTED.store(true, Ordering::SeqCst);
 }
@@ -415,6 +421,10 @@ impl Game {
                     }
                     RESTART.store(true, Ordering::SeqCst);
                 }
+                "reload-deferred" => tracing::info!(
+                    "the scripts reload when EditorApplication.UnlockReloadAssemblies is called ({})",
+                    response["reason"].as_str().unwrap_or("")
+                ),
                 other => tracing::warn!("hot reload: {other}"),
             }
         }

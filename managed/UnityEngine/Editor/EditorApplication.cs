@@ -166,10 +166,46 @@ namespace UnityEditor
             return false;
         }
 
-        [Unbound.EditorFaithful("Unbound never reloads assemblies while playing")]
-        public static void LockReloadAssemblies() { }
-        [Unbound.EditorFaithful("Unbound never reloads assemblies while playing")]
-        public static void UnlockReloadAssemblies() { }
+        static int s_ReloadLocks;
+        static bool s_ReloadPending;
+
+        /// <summary>The session is an Edit-mode one (<c>unbound test</c>): the Test Framework holds the
+        /// reload lock for its whole run and expects a reload to resume it, which a restarted session
+        /// cannot.</summary>
+        internal static bool s_EditModeSession;
+
+        /// <summary>The reload a locked session deferred: beforeAssemblyReload, then the session
+        /// restarts (Unbound's reload of the scripts). An Edit-mode session goes on with the loaded
+        /// scripts instead (the Editor's <c>-runTests</c> exits before its reload). Tests replace it.</summary>
+        internal static Action s_DeferredReload = () =>
+        {
+            if (s_EditModeSession)
+            {
+                Debug.LogWarning("Unbound: the scripts asked for a reload during an Edit-mode session (unbound test), which does not reload them; the run goes on with the loaded scripts");
+                return;
+            }
+            AssemblyReloadEvents.RaiseBefore();
+            Native.Call("script-reload", "{}");
+        };
+
+        /// <summary>No assembly reloads until as many unlocks: a compilation still compiles and
+        /// raises its events, its reload waits for the last unlock (the Test Framework holds the lock
+        /// during a run).</summary>
+        public static void LockReloadAssemblies() => s_ReloadLocks++;
+
+        public static void UnlockReloadAssemblies()
+        {
+            if (s_ReloadLocks > 0) s_ReloadLocks--;
+            if (s_ReloadLocks != 0 || !s_ReloadPending) return;
+            s_ReloadPending = false;
+            s_DeferredReload();
+        }
+
+        /// <summary>Whether a reload now must wait (<see cref="DeferReload"/>).</summary>
+        internal static bool ReloadLocked => s_ReloadLocks > 0;
+
+        /// <summary>Remembers a reload asked for while locked, for the last unlock.</summary>
+        internal static void DeferReload() => s_ReloadPending = true;
         public static void OpenProject(string projectPath, params string[] args) =>
             Stubs.Ignored("EditorApplication.OpenProject", "does not open another project");
         /// <summary>The Editor exits with the code (the Test Framework's run result).</summary>
