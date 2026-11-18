@@ -24,14 +24,13 @@ Look for:
 - a changed oracle, reference, tolerance or assertion; behaviour that differs between Unity
   releases but is not in the compatibility profile; committed evidence, run output, environment
   dumps or test-game names.
-- missing Unity evidence. A crash-class fix (an exception, crash, object or component Unbound
-  fails to create, or API member that throws where Unity works) needs no Editor probe when Unity's
+- missing Unity evidence. A crash-class fix (an exception, crash, object or component Unbound fails
+  to create, or API member that throws where Unity works) needs no Editor probe when Unity's
   behaviour is unambiguous (documented for the release, or plainly no throw and no log in the
-  Editor): a test that fails
-  without the fix and passes with it, plus a rerun of the project where it was seen, is enough.
-  Do block such a fix when the resulting values, objects, order, callbacks or log lines are in
-  doubt, or whether Unity creates the object at all, and block a fix of a value, visual, timing or
-  order difference made without an Editor reference.
+  Editor): a test that fails without the fix and passes with it, plus a rerun of the project where
+  it was seen, is enough. Do block such a fix when the resulting values, objects, order, callbacks
+  or log lines are in doubt, or whether Unity creates the object at all, and block a fix of a
+  value, visual, timing or order difference made without an Editor reference.
 
 Do not redesign the change, ask for extra probes without a concrete doubt, or block on style.
 

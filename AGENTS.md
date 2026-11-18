@@ -85,10 +85,10 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 - Crash-class defects (an exception, a crash, an object or component Unbound fails to create, an
   API member that throws where Unity works) need no Editor probe when Unity's behaviour is
   unambiguous (documented for the release, or plainly no throw and no log in the Editor): the fix,
-  a test that fails before it and passes after it, and a rerun of the project where it was seen
-  (a debug check, not named in Git) are the evidence. Probe when
-  the resulting values, objects, order, callbacks or log lines, or the object's creation, are in
-  doubt; value, visual, timing and order differences always need an Editor reference.
+  a test that fails before it and passes after it, and a rerun of the project where it was seen (a
+  debug check, not named in Git) are the evidence. Probe when the resulting values, objects, order,
+  callbacks or log lines, or the object's creation, are in doubt; value, visual, timing and order
+  differences always need an Editor reference.
 
 ## Multi-agent work
 
