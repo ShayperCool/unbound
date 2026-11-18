@@ -73,7 +73,8 @@ namespace Unbound.Runtime
 
         /// <summary>The lists an output update of a system writes when it chooses each particle's
         /// mesh, of several, by its size on screen (its source says so; it writes one list per
-        /// mesh, `outputBuffer0`, `outputBuffer1`, ...): the buffers its output's mesh tasks draw.
+        /// mesh, `outputBuffer0`, `outputBuffer1`, ...): the lists its output's mesh tasks count
+        /// (`indirectIndex`), which a sorted output draws sorted into buffers of its own.
         /// An update choosing among one mesh only culls by size, which is drawn.</summary>
         static List<int> ListsChosenBySize(in VFXEditorSystemDesc system, VFXShaderSourceDesc[] sources)
         {

@@ -227,7 +227,8 @@ namespace Unbound.Runtime
                     if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
-                    if (bySize != null && tasks[t].type == VFXTaskType.ParticleMeshOutput && bySize.Contains(Buffer(tasks[t], "indirectBuffer")))
+                    // The list a mesh task counts (sorted into another buffer or not).
+                    if (bySize != null && tasks[t].type == VFXTaskType.ParticleMeshOutput && bySize.Contains(Parameter(tasks[t], "indirectIndex", -1)))
                         refusals[s][t] ??= LodRefusal;
                     if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit(source)) continue;
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;

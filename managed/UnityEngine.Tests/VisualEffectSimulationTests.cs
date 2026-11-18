@@ -1076,10 +1076,11 @@ namespace UnityEngine.Tests
                 for (int i = 0; i < lists.Length; i++) buffers[i] = new VFXMapping("outputBuffer" + i, lists[i]);
                 return new VFXEditorTaskDesc { type = VFXTaskType.PerCameraUpdate, shaderSourceIndex = source, buffers = buffers };
             }
-            VFXEditorTaskDesc Drawing(VFXEditorTaskDesc task, int list, int source)
+            VFXEditorTaskDesc Drawing(VFXEditorTaskDesc task, int list, int source, int drawn = -1)
             {
                 task.shaderSourceIndex = source;
-                task.buffers = new[] { new VFXMapping("indirectBuffer", list) };
+                task.buffers = new[] { new VFXMapping("indirectBuffer", drawn < 0 ? list : drawn) };
+                task.parameters = new[] { task.parameters[0], task.parameters[1], new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", list) };
                 return task;
             }
             var bySizeSources = new[]
@@ -1096,6 +1097,14 @@ namespace UnityEngine.Tests
                 } } },
                 bySizeSources);
             Assert.Equal(new[] { null, VFXOutput.LodRefusal, VFXOutput.LodRefusal, null, null, null, null }, bySize[0]);
+            // Sorted: each mesh task draws its list sorted into a buffer of its own; still refused.
+            var sortedBySize = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[]
+                {
+                    Update(0, 1, 2), Drawing(otherMesh, 1, 2, 8), Drawing(listed, 2, 2, 9),
+                } } },
+                bySizeSources);
+            Assert.Equal(new[] { null, VFXOutput.LodRefusal, VFXOutput.LodRefusal }, sortedBySize[0]);
             // Two outputs of meshes, each with its own shader, are each drawn.
             otherMesh.shaderSourceIndex = 5;
             var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
