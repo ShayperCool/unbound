@@ -87,14 +87,10 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ settings
 
+        /// <summary>Whether the avatar has a root motion transform, whatever the controller or
+        /// <see cref="applyRootMotion"/> (see <see cref="Avatar.HasRootMotion"/>).</summary>
         public bool hasRootMotion
-        {
-            get
-            { MainThreadCheck.Check("get_hasRootMotion");
-                Unbound.Runtime.Stubs.Ignored("Animator.hasRootMotion", "is always false (the avatar root motion node is not read yet)");
-                return false;
-            }
-        }
+        { get { MainThreadCheck.Check("get_hasRootMotion"); return m_Avatar != null && m_Avatar.HasRootMotion; } }
 
         public bool isInitialized { get { MainThreadCheck.Check("get_isInitialized"); return Compat.MainThreadContextsMeasured ? m_Initialized : m_Player != null; } }
 

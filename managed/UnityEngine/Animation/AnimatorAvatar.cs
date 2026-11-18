@@ -29,6 +29,9 @@ namespace UnityEngine
         /// <summary>A model's generic avatar: valid, its hierarchy is not needed.</summary>
         bool m_ModelGeneric;
         AvatarConstant m_GenericSkeleton;
+        /// <summary>A serialized avatar's root motion transform (its skeleton index; -1 for none, as
+        /// for every model's avatar: the importer bakes a root node's motion into the clips).</summary>
+        int m_SerializedRootMotionBone = -1;
 
         internal void SetConstant(AvatarConstant constant)
         {
@@ -76,10 +79,16 @@ namespace UnityEngine
 
         public bool isHuman => Constant?.IsHuman ?? false;
 
+        /// <summary>A valid generic avatar with a root motion transform (an <see cref="AvatarBuilder"/>
+        /// one built with a transform it found); humanoid avatars have none (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/awakerootmotion).</summary>
+        internal bool HasRootMotion => isValid && !isHuman && (m_Constant != null ? m_Constant.RootMotionBoneIndex : m_SerializedRootMotionBone) != -1;
+
         public HumanDescription humanDescription => m_Description.Copy();
 
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            m_SerializedRootMotionBone = body.Get("m_Avatar")?.Get("m_RootMotionBoneIndex")?.AsInt(-1) ?? -1;
             var root = body.Ref("m_UnboundRoot");
             m_Root = root.IsNull ? null : resolver.Resolve(root, typeof(GameObject)) as GameObject;
             if (body.Get("m_UnboundSkeletonOrder") is YNode order)
