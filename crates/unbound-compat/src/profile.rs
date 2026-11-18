@@ -2,10 +2,12 @@
 //!
 //! Unity releases are grouped by family, `MAJOR.MINOR` (`6000.0`, `2022.3`, ...): every patch of a
 //! family is one version for compatibility purposes (see [`crate::MeasuredFamily`]). A profile
-//! covers one family: its data tables (define symbols, compiler options) are captured from one real
+//! covers one family: its data tables (defines, compiler options) are captured from one real
 //! Editor release of the family (its `release`) and live in `data/profiles/unity-<major>.<minor>.json`;
-//! every project on the family uses them. A family without tables uses the nearest one (the newest
-//! older family, else the oldest newer one). Behaviour switches are [`Feature`]s with the first
+//! every project on the family uses them. What an installation ships (which engine module
+//! assemblies) is a fact of that installation, not of the family ([`ProfileData::module_defines`]).
+//! A family without tables uses the nearest one (the newest older family, else the oldest newer
+//! one). Behaviour switches are [`Feature`]s with the first
 //! release that has them. Code asks [`Profile::has`] instead of comparing versions itself.
 use crate::version::UnityVersion;
 use serde::Deserialize;

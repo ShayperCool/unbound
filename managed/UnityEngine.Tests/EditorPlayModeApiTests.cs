@@ -14,7 +14,7 @@ namespace UnityEngine.Tests
     public sealed class EditorPlayModeApiTests
     {
         [Fact]
-        public void TypeNamesUseTheWholeMeasuredTableAndRejectAnotherRelease()
+        public void TypeNamesUseTheWholeMeasuredTableAndRejectAnotherFamily()
         {
             string release = ProjectInfo.UnityVersion;
             try
@@ -29,8 +29,13 @@ namespace UnityEngine.Tests
                 }
                 Assert.Null(UnityEditor.UnityType.FindTypeByName("gameobject"));
                 Assert.Equal("key", Assert.Throws<ArgumentNullException>(() => UnityEditor.UnityType.FindTypeByName(null)).ParamName);
+                int gameObject = UnityEditor.UnityType.FindTypeByName("GameObject").persistentTypeID;
+                // Another patch of the family answers from the same measured table.
+                ProjectInfo.UnityVersion = "6000.0.67f1";
+                Assert.Equal(gameObject, UnityEditor.UnityType.FindTypeByName("GameObject").persistentTypeID);
+                // Another family has no measured table.
                 ProjectInfo.UnityVersion = "6000.1.0f1";
-                Assert.NotNull(ClassCoverage.UnityTable(ProjectInfo.UnityVersion));
+                Assert.Null(ClassCoverage.UnityTable(ProjectInfo.UnityVersion));
                 Assert.Throws<NotSupportedException>(() => UnityEditor.UnityType.FindTypeByName("GameObject"));
             }
             finally { ProjectInfo.UnityVersion = release; }
