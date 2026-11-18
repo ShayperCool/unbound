@@ -101,6 +101,12 @@ class EditorJob:
         return 'editor-gpu' if self.graphics else 'editor-cpu'
 
     def command(self):
+        """The Editor's command line: on Linux through VirtualGL where it draws (`vglrun -d egl`);
+        on macOS arm64 as tests/macos_editor.py starts it (directly, on Metal)."""
+        if MACOS_ARM64:
+            import macos_editor
+            return macos_editor.command(self.project, self.out, self.args, windowed=not self.batch, log=self.log,
+                                        editor_binary=self.editor, nographics=not self.graphics)
         mode = (['-batchmode'] if self.batch else [])+([] if self.graphics else ['-nographics'])
         prefix = ['vglrun', '-d', 'egl'] if self.graphics and not self.vulkan else []
         device = ['-force-vulkan'] if self.vulkan else []
@@ -612,7 +618,7 @@ def run_macos(job):
     if job.vulkan:
         raise SystemExit(f'{job.label}: the Vulkan Editor runs on Linux; on macOS the Editor draws with Metal')
     env = {**job.env, 'PWD': str(job.project)}
-    command = [str(job.editor), *job.args]
+    command = job.command()
     if job.launch_inputs is not None:
         write_launch_inputs({'label': job.label, 'kind': job.kind, 'command': command, 'project': str(job.project),
                              'out': str(job.out), 'launch_inputs': job.launch_inputs}, {**os.environ, **env})

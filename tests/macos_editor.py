@@ -25,6 +25,13 @@ def editor():
     return editor_path()
 
 
+def command(project, out, args, windowed=False, log=None, editor_binary=None, nographics=False):
+    """The Editor command line `capture` runs (without its timeout wrapper)."""
+    mode = ([] if windowed else ['-batchmode'])+(['-nographics'] if nographics else [])
+    return [str(editor_binary or editor()), *mode, '-projectPath', str(project), *args,
+            '-logFile', str(log or Path(out)/'editor.log')]
+
+
 def capture(project, out, args, env, timeout=900, windowed=False, log=None, editor_binary=None,
             nographics=False, cwd=None):
     """Runs the Editor (`editor_binary`, default the release's) on `project` with `args` (in
@@ -37,12 +44,10 @@ def capture(project, out, args, env, timeout=900, windowed=False, log=None, edit
     out.mkdir(parents=True, exist_ok=True)
     if (out/EXIT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {out/EXIT}')
-    mode = ([] if windowed else ['-batchmode'])+(['-nographics'] if nographics else [])
-    command = ['timeout', '-s', 'KILL', str(timeout), str(editor_binary or editor()), *mode, '-projectPath',
-               str(project), *args, '-logFile', str(log or out/'editor.log')]
+    editor_command = command(project, out, args, windowed, log, editor_binary, nographics)
     with (out/'editor.out').open('w') as stream:
-        code = subprocess.run(command, env={**os.environ, **env}, stdout=stream, stderr=subprocess.STDOUT,
-                              cwd=cwd).returncode
+        code = subprocess.run(['timeout', '-s', 'KILL', str(timeout), *editor_command], env={**os.environ, **env},
+                              stdout=stream, stderr=subprocess.STDOUT, cwd=cwd).returncode
     (out/EXIT).write_text(f'{code}\n')
     return code
 
