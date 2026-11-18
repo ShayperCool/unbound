@@ -3,6 +3,9 @@
 
     run.py native --label L          two independent GPU Editor captures (L-1, L-2) through the job pool
     run.py publish L-1 L-2           two byte-identical captures become Reference/unity-<version>.jsonl
+    run.py publish --merge L-1 L-2   the same, adding only the keys the reference lacks (rows a
+                                     probe extension records last); every existing row stays as
+                                     it is, and those the captures read otherwise are printed
     run.py engine --label L          an Unbound capture (UNBOUND_CLI, else UNBOUND, else target/release)
     run.py verify --candidate PATH   compare a capture with the reference
     run.py check                     an engine run into a new directory, then verify (the landing gate)
@@ -67,11 +70,35 @@ def engine(label):
     return 0 if code == 0 and (out/OUT).exists() else 1
 
 
-def publish(labels, section=None):
+def merge_new_keys(target, candidate):
+    """Adds the candidate's keys the reference lacks, in the candidate's order, before the
+    completion marker; existing rows stay as they are (those read otherwise are printed)."""
+    def rows(path):
+        return [(json.loads(line), line) for line in path.read_text().splitlines() if line.strip()]
+    old, new = rows(target), rows(candidate)
+    values = {row['k']: row['v'] for row, _ in old}
+    for row, _ in new:
+        if row['k'] in values and values[row['k']] != row['v']:
+            print('kept the reference value of', row['k'], '(the captures read another)')
+    # The lines as written, so that every existing row stays byte for byte.
+    added = [line for row, line in new if row['k'] not in values]
+    complete = [line for row, line in old if row['k'] == 'complete']
+    combined = [line for row, line in old if row['k'] != 'complete'] + added + complete
+    target.write_text(''.join(line + '\n' for line in combined))
+    print('added', len(added), 'keys to', target)
+    return 0
+
+
+def publish(labels, section=None, merge=False):
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
     target = reference_file(ROOT, 'jsonl')
+    if merge:
+        candidate = WORK/('publish-' + labels[0])/OUT
+        code = editor_runner.publish([WORK/label for label in labels], candidate, lambda d: [OUT], write,
+                                     complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+        return code or merge_new_keys(target, candidate)
     if section != 'devices':
         return editor_runner.publish([WORK/label for label in labels], target, lambda d: [OUT], write,
                                      complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
@@ -138,6 +165,7 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
     parser.add_argument('--section', choices=['devices'])
+    parser.add_argument('--merge', action='store_true', help='publish: add only the keys the reference lacks')
     args = parser.parse_args()
     if args.mode in ('native', 'engine') and (not args.label or Path(args.label).name != args.label):
         parser.error('--label must be a single directory name')
@@ -146,7 +174,7 @@ def main():
     if args.mode == 'engine':
         return engine(args.label)
     if args.mode == 'publish':
-        return publish(args.labels, args.section)
+        return publish(args.labels, args.section, args.merge)
     if args.mode == 'check':
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
         return engine(label) or verify(WORK/label/OUT, safe_append_skip=True)

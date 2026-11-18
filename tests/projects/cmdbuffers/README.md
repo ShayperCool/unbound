@@ -36,6 +36,13 @@ fragment programs in `Assets/Resources/UavWrite*.shader`). Every case records it
 * **Readbacks into slices** (`slice.*`, `cmd.slice.*`): `AsyncGPUReadback.RequestIntoNativeSlice` and
   `CommandBuffer.RequestAsyncReadbackIntoNativeSlice` of buffers (ranges), textures (regions, formats),
   too small, larger and strided slices.
+* **Render target bindings** (`bind.*`, recorded last): `CommandBuffer.SetRenderTarget(RenderTargetBinding)`
+  with one to four of four 4x4 targets and a draw of four outputs (`BindingMrt.shader`), the depth
+  target (a depth texture, cleared, the first color's identifier, a color's own depth buffer, None),
+  the None target through the other overloads (also with another target bound before), clears of
+  the bound colors, load and store actions, mismatched, empty and too many arrays, a default binding,
+  one color, a `RenderTargetSetup`, a mip, array slices (also -1) and a cube face given to the call
+  or carried by the identifiers; `sizeInBytes` of the binding and of the color/depth overloads.
 
 ## Recording
 
@@ -46,7 +53,10 @@ UNBOUND_CLI=/path/to/unbound python3 tests/projects/cmdbuffers/run.py check
 ```
 
 `native` records two batchmode Editors on the NVIDIA GPU; `publish` needs both captures complete and
-byte-identical. `verify` compares every value exactly and exits nonzero on any difference. `check` runs that
+byte-identical. `publish --merge` adds only the keys the reference lacks and keeps every existing row
+as it is: the `bind.*` rows were added so, while the captures read three
+`device.multiplier.{placed.colors.2,placed.colors.3,camera.colors.2}.pixels` rows otherwise (the
+instance data past a call's elements, which is undefined; printed by publish). `verify` compares every value exactly and exits nonzero on any difference. `check` runs that
 same strict report, then checks the explicitly required safe Append skip separately: exactly the
 `uav.append.nocounter` payload and its missing Editor warning may differ, the entire 48-word
 buffer must retain its sentinel, and the engine log must contain the counter-owner warning.
@@ -54,6 +64,21 @@ All other missing, extra and failing values fail the gate. This is an intentiona
 difference for invalid Append bindings, not an insignificant visual residual.
 
 ## What the Editor does (OpenGLCore, RTX 4060)
+
+* **Render target bindings**: a draw writes each fragment output into the binding's color of that
+  index; the depth texture is tested and written, the first color's identifier as depth target is
+  that color's own depth buffer (none here: no depth test). A None depth or color target, through
+  the binding or any other overload, binds nothing: the draws go nowhere, not into the target bound
+  before. The call's mip, cube face and slice apply to every color, whatever the identifiers carry;
+  slice -1 is slice 0. `ClearRenderTarget` clears every bound color (one background color each with
+  an array). The Clear load action throws `ArgumentException: RenderBufferLoadAction.Clear is not
+  supported` (color or depth); DontCare loads and stores and Resolve keep the contents. Wrong arrays
+  throw when recorded: "The number of color render targets must be at least 1, but was 0", "...
+  (9) and exceeds the maximum supported number of render targets (8)", "The number of color load
+  actions provided (1) does not match the number of color render targets (2)", and for stores the
+  color count twice; a default binding a NullReferenceException. Sizes: 152 bytes for a binding (any
+  count, any level), for a color with a depth target (any level, with actions) and for an array of
+  colors; 36 for one color with actions, a face or a slice.
 
 * A random write target binds at the program's UAV register; a buffer without a register is at u1
   (after its one render target). It wins over a material's or draw's buffer of the same name, which

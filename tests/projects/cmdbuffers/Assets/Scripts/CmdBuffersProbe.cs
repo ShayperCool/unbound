@@ -120,6 +120,16 @@ public partial class CmdBuffersProbe : MonoBehaviour
             yield return fences.Current;
         }
         if (code == 0) { DeviceCommands(); DeviceCallbacks(); }
+        // Recorded last, so that the rows above read the state they always did.
+        if (code == 0 && !devicesOnly)
+        {
+            try { BindingTargets(); }
+            catch (Exception e)
+            {
+                Value("fatal", Q(e.ToString()));
+                code = 1;
+            }
+        }
         foreach (var d in disposables) d.Dispose();
         foreach (var o in made) if (o != null) DestroyImmediate(o);
         Value("complete", B(code == 0));
