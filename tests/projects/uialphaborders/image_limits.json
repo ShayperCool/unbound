@@ -1,0 +1,14 @@
+{
+ "canvas.png": {
+  "mean": 0.02,
+  "worst": 1,
+  "over8": 0,
+  "reason": "512 pixels of the ETC_RGB4 sprite's Image and SpriteRenderer differ by 1/255: Unbound's own ETC1 encoder and decode (the Editor's encoder is not used; docs/COMPATIBILITY_GAPS.md, Android ETC). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
+ },
+ "imgui.png": {
+  "mean": 0.15,
+  "worst": 1,
+  "over8": 0,
+  "reason": "About 7400 pixels of the translucent rounded and blit draws over the opaque blue bases (third row) differ by 1/255: rounding of the blend of a half-transparent tint (cause not resolved). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
+ }
+}
