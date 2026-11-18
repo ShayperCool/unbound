@@ -61,12 +61,14 @@ namespace UnityEditor
         /// <summary>
         /// The game's working directory is Unbound's project view (<c>Library/Unbound/ProjectView</c>):
         /// a directory of links to each top-level project entry and to each package as
-        /// <c>Packages/&lt;name&gt;</c>. A path naming a top-level link, the view's <c>Packages</c>
-        /// folder or an embedded package's link (one in the project's Packages folder) names the
-        /// project's own entry (Unbound's reading, unmeasured). The view itself (the project folder)
-        /// and a package kept elsewhere (the Editor's built-in packages, a package cache or store, a
-        /// local package outside Packages) are not deleted and are reported: what the Editor does
-        /// with them is unmeasured. Paths below those links reach the project's files through them.
+        /// <c>Packages/&lt;name&gt;</c>. Unbound's reading (unmeasured): a path naming a top-level
+        /// link, the view's <c>Packages</c> folder or an embedded package's link (one whose package
+        /// is in the project's Packages folder) names the project's own entry; paths below those
+        /// links reach the project's files through them. Refused and reported, as what the Editor
+        /// does there is unmeasured or would take Unbound's own files: a package kept elsewhere (the
+        /// Editor's built-in packages, a package cache or store, a local package outside Packages)
+        /// and everything below it, the project folder, its Library folder and Library/Unbound with
+        /// everything in it (also by the project's own path).
         /// </summary>
         static ViewEntry ThroughProjectView(string full, out string projectEntry, out string viewEntry)
         {
@@ -78,34 +80,59 @@ namespace UnityEditor
             if (Path.GetFileName(view) != "ProjectView" || Path.GetFileName(unbound) != "Unbound" || Path.GetFileName(library) != "Library")
                 return ViewEntry.None;
             string project = Path.GetDirectoryName(library);
-            // Compared as physical paths: the working directory is spelled without the links above
-            // it (a temporary or home directory may be one), the configured view with them.
-            string physicalView = ConsoleLogPath.Resolve(view);
-            string physicalPackages = Path.Combine(physicalView, "Packages");
-            string physicalFull = ConsoleLogPath.Resolve(full);
-            if (physicalFull == physicalView) return ViewEntry.Unsupported;
-            if (physicalFull == physicalPackages)
+            // Both spellings: the working directory is spelled without the links above it (a
+            // temporary or home directory may be one), the configured view with them.
+            string inView = Relative(full, view);
+            if (inView == null)
             {
-                projectEntry = Path.Combine(project, "Packages");
-                viewEntry = full;
+                string inProject = Relative(full, project);
+                return inProject != null && Protected(inProject) ? ViewEntry.Unsupported : ViewEntry.None;
+            }
+            if (Protected(inView)) return ViewEntry.Unsupported;
+            string[] parts = inView.Split('/');
+            string link = Path.Combine(view, parts[0]);
+            if (parts[0] == "Packages")
+            {
+                if (parts.Length == 1)
+                {
+                    projectEntry = Path.Combine(project, "Packages");
+                    viewEntry = link;
+                    return ViewEntry.ProjectEntry;
+                }
+                link = Path.Combine(link, parts[1]);
+                string package = new FileInfo(link).LinkTarget;
+                if (package == null) return ViewEntry.None;
+                package = Path.GetFullPath(package, Path.GetDirectoryName(link));
+                // A package that is not embedded is not the project's, at any depth below its link.
+                if (Relative(package, Path.Combine(project, "Packages")) is not string embedded || embedded.Length == 0)
+                    return Path.Exists(package) ? ViewEntry.Unsupported : ViewEntry.None;
+                if (parts.Length > 2) return ViewEntry.None;
+                projectEntry = package;
+                viewEntry = link;
                 return ViewEntry.ProjectEntry;
             }
-            string parent = Path.GetDirectoryName(full);
-            string physicalParent = ConsoleLogPath.Resolve(parent);
-            if (physicalParent != physicalView && physicalParent != physicalPackages) return ViewEntry.None;
-            string target = new FileInfo(full).LinkTarget;
+            if (parts.Length > 1) return ViewEntry.None;
+            string target = new FileInfo(link).LinkTarget;
             if (target == null) return ViewEntry.None;
-            target = Path.GetFullPath(target, parent);
-            if (physicalParent == physicalPackages && !Path.Exists(target)) return ViewEntry.None;
-            if (physicalParent == physicalPackages)
-            {
-                string embedded = ConsoleLogPath.Resolve(Path.Combine(project, "Packages")) + Path.DirectorySeparatorChar;
-                string physicalTarget = ConsoleLogPath.Resolve(Path.GetDirectoryName(target)) + Path.DirectorySeparatorChar + Path.GetFileName(target);
-                if (!physicalTarget.StartsWith(embedded, StringComparison.Ordinal)) return ViewEntry.Unsupported;
-            }
-            projectEntry = target;
-            viewEntry = full;
+            projectEntry = Path.GetFullPath(target, view);
+            viewEntry = link;
             return ViewEntry.ProjectEntry;
+        }
+
+        /// <summary>The folders whose loss would take the project or Unbound's own files with them.</summary>
+        static bool Protected(string relative) =>
+            relative.Length == 0 || relative == "Library" || relative == "Library/Unbound" || relative.StartsWith("Library/Unbound/", StringComparison.Ordinal);
+
+        /// <summary><paramref name="path"/> below <paramref name="root"/> ("" for the root itself),
+        /// as spelled or physically, or null outside it.</summary>
+        static string Relative(string path, string root)
+        {
+            foreach (string spelling in new[] { root, ConsoleLogPath.Resolve(root) })
+            {
+                if (path == spelling) return "";
+                if (path.StartsWith(spelling + "/", StringComparison.Ordinal)) return path.Substring(spelling.Length + 1);
+            }
+            return null;
         }
     }
 }

@@ -118,7 +118,9 @@ namespace UnityEngine.Tests
             var shared = Make("store/com.example.shared/package.json");
             var other = Make("project/Other/o.txt");
             Directory.CreateSymbolicLink(Path.Combine(project, "UserLink"), Path.GetDirectoryName(outside));
-            foreach (var name in new[] { "Builds", "Logs", "Assets", "UserLink", "Other" })
+            var libraryFile = Make("project/Library/Other/l.txt");
+            var unboundFile = Make("project/Library/Unbound/cache.bin");
+            foreach (var name in new[] { "Builds", "Logs", "Assets", "UserLink", "Other", "Library" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
             Directory.CreateSymbolicLink(Path.Combine(view, "Packages", "com.example.tool"), Path.GetDirectoryName(embedded));
             Directory.CreateSymbolicLink(Path.Combine(view, "Packages", "com.example.shared"), Path.GetDirectoryName(shared));
@@ -151,9 +153,20 @@ namespace UnityEngine.Tests
                 Assert.False(FileUtil.DeleteFileOrDirectory("Packages/com.example.shared"));
                 Assert.True(File.Exists(shared));
                 Assert.True(Directory.Exists(Path.Combine(view, "Packages", "com.example.shared")));
+                Assert.False(FileUtil.DeleteFileOrDirectory("Packages/com.example.shared/package.json"));
+                Assert.True(File.Exists(shared));
                 Assert.False(FileUtil.DeleteFileOrDirectory("."));
                 Assert.True(File.Exists(other));
-                Assert.Equal(reported + 2, Hits());
+                // The Library folder and Unbound's own folder in it, also by the project's own path.
+                Assert.False(FileUtil.DeleteFileOrDirectory("Library"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/cache.bin"));
+                Assert.False(FileUtil.DeleteFileOrDirectory(Path.Combine(project, "Library", "Unbound")));
+                Assert.True(File.Exists(unboundFile));
+                Assert.True(Directory.Exists(view));
+                Assert.Equal(reported + 6, Hits());
+                // Control: other Library content is the project's to delete.
+                Assert.True(FileUtil.DeleteFileOrDirectory("Library/Other/l.txt"));
+                Assert.False(File.Exists(libraryFile));
                 // The Packages folder: the project's goes, and the view's folder of links with it.
                 Assert.True(FileUtil.DeleteFileOrDirectory("Packages"));
                 Assert.False(Directory.Exists(Path.Combine(project, "Packages")));
