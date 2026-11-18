@@ -947,6 +947,9 @@ namespace Unbound.Runtime
         static bool SimulateCurrent(float deltaTime, int layers)
         {
             if (s_MembershipPending) SceneMembershipChanged();
+            // A valid local physics scene steps even before anything joined it (Unbound's choice,
+            // unmeasured: the measured steps have members); the default one needs its world.
+            if (s_World == null && !ReferenceEquals(s_Space, s_Default)) EnsureWorld();
             if (s_World == null) return false;
             if (deltaTime < 0f) return false;
             Physics2D.ApplyTuning();
@@ -1016,17 +1019,30 @@ namespace Unbound.Runtime
             // Reaction forces come from the impulses of the last (sub-)step.
             Physics2DJoints.AfterStep(s_World, subStepTime);
             s_Listener.Dispatch();
-            // Removals in other physics scenes made by these callbacks waited for this dispatch to end.
-            if (s_Locals.Count > 0) DispatchRemovalsElsewhere();
             Flush();
             return true;
         }
 
-        static void DispatchRemovalsElsewhere()
+        static bool s_DrainingRemovals;
+
+        /// <summary>Removals one physics scene's callbacks make in another wait while those callbacks
+        /// are being dispatched; once the outermost dispatch ends, every physics scene sends them,
+        /// until none is left.</summary>
+        static void DispatchPendingRemovals()
         {
-            if (!ReferenceEquals(s_Space, s_Default)) s_Default.Listener.DispatchRemovals();
-            for (int i = 0; i < s_Locals.Count; i++)
-                if (!ReferenceEquals(s_Locals[i], s_Space)) s_Locals[i].Listener.DispatchRemovals();
+            if (s_Locals.Count == 0 || s_Dispatching || s_DrainingRemovals) return;
+            s_DrainingRemovals = true;
+            try
+            {
+                bool sent;
+                do
+                {
+                    sent = s_Default.Listener.DispatchOwnRemovals();
+                    for (int i = 0; i < s_Locals.Count; i++) sent |= s_Locals[i].Listener.DispatchOwnRemovals();
+                }
+                while (sent);
+            }
+            finally { s_DrainingRemovals = false; }
         }
 
         // ------------------------------------------------------------------ sub-stepping
@@ -1515,8 +1531,16 @@ namespace Unbound.Runtime
             // Reentrant removals wait until both sides of the current notification have run.
             internal void DispatchRemovals()
             {
+                DispatchOwnRemovals();
+                DispatchPendingRemovals();
+            }
+
+            /// <summary>Sends this physics scene's pending removal exits; whether it sent any.</summary>
+            internal bool DispatchOwnRemovals()
+            {
                 using var scope = Enter(m_Owner);
-                if (s_Dispatching) return;
+                if (s_Dispatching) return false;
+                bool sent = false;
                 s_Dispatching = true;
                 try
                 {
@@ -1531,10 +1555,12 @@ namespace Unbound.Runtime
                         next.RemovalExit = next.ExitPending = false;
                         RemovePublicContactPair(next);
                         Send(next, Phase.Exit);
+                        sent = true;
                         if (next.Touching == 0 && !next.EnterPending) Forget(next);
                     }
                 }
                 finally { s_Dispatching = false; }
+                return sent;
             }
 
             /// <summary>Sends the callbacks of the step that just ended.</summary>

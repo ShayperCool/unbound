@@ -22,11 +22,28 @@ namespace UnityEngine.Tests
         }
     }
 
-    /// <summary>Deactivates a target when its GameObject first collides.</summary>
+    /// <summary>Deactivates a target when its GameObject first collides, or when a contact ends.</summary>
     public class DeactivateOnCollision2D : MonoBehaviour
     {
         public GameObject target;
-        void OnCollisionEnter2D(Collision2D c) { if (target != null) target.SetActive(false); }
+        public bool onExit;
+        void OnCollisionEnter2D(Collision2D c) { if (!onExit && target != null) target.SetActive(false); }
+        void OnCollisionExit2D(Collision2D c) { if (onExit && target != null) target.SetActive(false); }
+    }
+
+    /// <summary>On its first collision, moves a body of another scene under this GameObject and gives
+    /// it a new collider, both inside the callback.</summary>
+    public class AdoptOnCollision2D : MonoBehaviour
+    {
+        public Rigidbody2D adopted;
+        public BoxCollider2D added;
+        void OnCollisionEnter2D(Collision2D c)
+        {
+            if (added != null || adopted == null) return;
+            adopted.transform.SetParent(transform, true);
+            added = adopted.gameObject.AddComponent<BoxCollider2D>();
+            added.offset = new Vector2(0f, 2f);
+        }
     }
 
     /// <summary>
@@ -49,6 +66,7 @@ namespace UnityEngine.Tests
 
         public LocalPhysicsScene2DTests()
         {
+            Physics2D.autoSyncTransforms = true;
             Physics2D.gravity = new Vector2(0f, -9.81f);
             Physics2D.queriesHitTriggers = true;
             Physics2D.queriesStartInColliders = true;
@@ -313,6 +331,63 @@ namespace UnityEngine.Tests
             Physics2D.SyncTransforms();
             Assert.Same(carrier, collider.attachedRigidbody);
             Assert.Contains(collider, Physics2D.OverlapPointAll(new Vector2(30f, 5f)));
+        }
+
+        [Fact]
+        public void AReparentAcrossScenesKeepsTheWorldPose()
+        {
+            Physics2D.autoSyncTransforms = false;
+            var local = LocalScene();
+            var body = Box("Kept", new Vector2(0f, 5f), local);
+            body.gravityScale = 0f;
+            var holder = Make("TurnedHolder", new Vector2(100f, 0f));
+            holder.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+            body.transform.SetParent(holder.transform, true);
+            Assert.Equal(0f, body.position.x, 4);
+            Assert.Equal(5f, body.position.y, 4);
+            Assert.Equal("Kept", Physics2D.Raycast(new Vector2(0f, 10f), Vector2.down, 100f).collider.name);
+            Assert.Null(Physics2D.Raycast(new Vector2(100f, 10f), Vector2.down, 100f).collider);
+        }
+
+        [Fact]
+        public void ABodyAdoptedFromAnotherSceneInACallbackGetsItsNewColliderOnceItHasMoved()
+        {
+            var local = LocalScene();
+            var adopted = Box("Adopted", new Vector2(60f, 5f), local);
+            adopted.gravityScale = 0f;
+            Floor("AdoptFloor", new Vector2(-20f, 0f));
+            var dropper = Box("Adopter", new Vector2(-20f, 1.6f));
+            var adopter = dropper.gameObject.AddComponent<AdoptOnCollision2D>();
+            adopter.adopted = adopted;
+            Run(30);
+            Assert.NotNull(adopter.added);
+            Assert.Equal(m_Active, adopted.gameObject.scene);
+            // The collider made while the body was still in the local physics scene attaches to it
+            // once both are in the default one.
+            Assert.Same(adopted, adopter.added.attachedRigidbody);
+            Assert.Contains(adopter.added, Physics2D.OverlapPointAll(adopted.position + new Vector2(0f, 2f)));
+        }
+
+        [Fact]
+        public void ARemovalOutsideAStepWhoseExitRemovesInAnotherSceneSendsBothExits()
+        {
+            var local = LocalScene();
+            var physics = local.GetPhysicsScene2D();
+            Floor("LocalFloor", new Vector2(20f, 0f), local);
+            var resting = Box("LocalResting", new Vector2(20f, 1f), local);
+            var log = resting.gameObject.AddComponent<ContactRecorder>();
+            var defaultFloor = Floor("DefaultFloor", new Vector2(-20f, 0f));
+            var defaultResting = Box("DefaultResting", new Vector2(-20f, 1f));
+            var chain = defaultResting.gameObject.AddComponent<DeactivateOnCollision2D>();
+            chain.onExit = true;
+            chain.target = resting.gameObject;
+            Step(physics, 5);
+            Run(5);
+            log.log.Clear();
+
+            Object.DestroyImmediate(defaultFloor);
+            Assert.False(resting.gameObject.activeSelf);
+            Assert.Contains("CollisionExit:LocalFloor", log.log);
         }
 
         [Fact]

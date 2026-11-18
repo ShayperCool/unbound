@@ -304,6 +304,7 @@ namespace Unbound.Runtime
                 worldScale = t.lossyScale;
             }
             var oldParent = t.m_Parent;
+            bool sceneChanged = false;
             // The whole subtree (inactive objects too) hears of it before the relinking (measured:
             // tests/projects/messages).
             Messaging.SendToHierarchy(t, "OnBeforeTransformParentChanged");
@@ -325,9 +326,7 @@ namespace Unbound.Runtime
                 if (parent.m_GameObject.m_Scene != go.m_Scene)
                 {
                     SceneRegistry.SetSceneRecursive(t, parent.m_GameObject.m_Scene);
-                    // Its 2D bodies and colliders go to that scene's physics scene (the 3D ones
-                    // move at the next physics access).
-                    Unbound.Runtime.Physics2DWorld.SceneMembershipChanged();
+                    sceneChanged = true;
                 }
             }
 
@@ -344,6 +343,9 @@ namespace Unbound.Runtime
             bool isActive = go.ActiveInHierarchyNoThrow;
             if (wasActive != isActive)
                 Lifecycle.OnHierarchyActiveChanged(go, isActive);
+            // Once its world pose is kept and its messages are sent, its 2D bodies and colliders go
+            // to the new scene's physics scene (the 3D ones move at the next physics access).
+            if (sceneChanged) Unbound.Runtime.Physics2DWorld.SceneMembershipChanged();
         }
 
         internal static List<Transform> Siblings(Transform t)
