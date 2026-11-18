@@ -125,10 +125,10 @@ unchanged. The dirty-content and missing-reset failures are much larger than the
 The probe declares `metal`: on macOS arm64 it records the macOS Editor (6000.0.71f1, Metal, Apple
 M2 Pro) into `Reference/unity-<version>/metal/` and gates against it with
 `image_limits-metal.json`. The Metal Editor's values are those of the Linux reference; its images
-differ. Against them Unbound on Metal is within 8 channel steps everywhere except four single-pixel
-columns of `vector-1.25.png` at the gradients' wrap and mirror seams, where both Editors sample the
-gradient as at its neighbours and the engine the next row of the image's own atlas (the Editor
-samples its dynamic-atlas copy, as on Linux). The gradient-stroked line with NaN gradient
-coordinates, most of the Linux limits of `vector-1.png` and `vector-1.25.png`, is drawn by the
-Metal Editor as by the engine: that difference is the Linux Editor's OpenGL Core device.
-
+differ. Against them Unbound on Metal is within 8 channel steps everywhere except, in
+`vector-1.25.png`, three single-pixel columns at the gradients' wrap and mirror seams, where both
+Editors draw the gradient as at its neighbours (likely the engine samples the next row of the
+image's own atlas, the Editor its dynamic-atlas copy, as on Linux; not isolated), and two pixels of
+a white region's top row the engine tints by 9 steps. Measured: the Metal Editor draws the
+gradient-stroked line with NaN gradient coordinates, most of the Linux limits of `vector-1.png` and
+`vector-1.25.png`, as the engine does, where the Linux Editor (OpenGL Core, NVIDIA) does not.
