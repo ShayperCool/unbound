@@ -195,7 +195,8 @@ In dependency order; each item ends with an Editor-reference probe.
       (`tests/projects/vfxlit`); unlit quads, triangles and octagons are also drawn through
       an indirect buffer, sorted or not (`tests/projects/vfxoutputs`), lit quads through a
       sorted one (`tests/projects/vfxlit`); composed Shader Graph quad outputs, unlit and lit
-      by 2D lights, through the forward and the 2D renderer (`tests/projects/vfxlit`). Not yet:
+      by 2D lights through the 2D renderer, unlit through the forward renderer
+      (`tests/projects/vfxlit`). Not yet:
       lit outputs through an indirect buffer that is not sorted, mesh outputs through an
       indirect buffer, points, lines and cubes, and motion vectors (such an output says once
       that it is not drawn; its system runs).
