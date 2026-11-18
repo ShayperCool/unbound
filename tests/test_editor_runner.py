@@ -418,6 +418,8 @@ class MacosRunTest(unittest.TestCase):
         self.assertIn('exit with 0', er.result_problem(self.root/'e'))
         with self.assertRaises(SystemExit):
             self.run_job(self.job('e', batch=True))
+        with self.assertRaises(SystemExit):
+            self.run_job(self.job('v', vulkan=True))
 
     def test_windowed_capture_records_its_exit_and_runs_on_macos_only(self):
         out = self.root/'x'
@@ -438,8 +440,6 @@ class MacosRunTest(unittest.TestCase):
             self.assertIsNone(er.log_gpu_problem(nvidia))
             self.assertIn('NVIDIA', er.log_gpu_problem(metal))
             self.assertIn('NVIDIA', er.log_gpu_problem('Renderer: llvmpipe\n'))
-        with self.assertRaises(SystemExit):
-            self.run_job(self.job('v', vulkan=True))
 
     def test_parallel_jobs_run_one_after_another(self):
         jobs = [self.job(f'p{i}', batch=True, env={'FAKE_DEVICE': 'Apple M2 Pro'}) for i in range(2)]
