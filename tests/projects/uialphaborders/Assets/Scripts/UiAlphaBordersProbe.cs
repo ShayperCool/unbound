@@ -116,6 +116,14 @@ public class UiAlphaBordersProbe : MonoBehaviour
         GUI.DrawTexture(new Rect(70, 110, 45, 45), m_White, fill, false, 0, new Color(1f, 1f, 1f, .5f), 0, 15);
         GUI.DrawTexture(new Rect(130, 110, 45, 45), m_White, fill, true, 0, new Color(1f, 1f, 1f, .5f), 5, 10);
         GUI.DrawTexture(new Rect(190, 110, 45, 45), m_Fade, fill, true, 0, white, new Vector4(2, 6, 2, 6), new Vector4(10, 0, 10, 0));
+        // DrawTextureWithTexCoords with alphaBlend off and a translucent tint; negative widths and radiuses.
+        var tint = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, .5f);
+        GUI.DrawTextureWithTexCoords(new Rect(250, 110, 30, 20), m_Fade, new Rect(0, 0, 1, 1), false);
+        GUI.color = tint;
+        GUI.DrawTexture(new Rect(285, 110, 30, 20), m_White, fill, true, 0, white, -2, 0);
+        GUI.DrawTexture(new Rect(250, 135, 30, 20), m_White, fill, true, 0, white, 0, -5);
+        GUI.DrawTexture(new Rect(285, 135, 30, 20), m_White, fill, true, 0, white, new Vector4(-1, 3, 0, 0), new Vector4(-4, 0, 6, 0));
     }
 
     /// <summary>A RectTransform child of <paramref name="canvas"/> at a pixel position from the
@@ -215,10 +223,12 @@ public class UiAlphaBordersProbe : MonoBehaviour
         var split = Resources.Load<Sprite>("SplitSprite");
         var secondary = Resources.Load<Sprite>("SecondarySprite");
         var plainSprite = Resources.Load<Sprite>("PlainSprite");
+        var splitSrgb = Resources.Load<Sprite>("SplitSrgbSprite");
+        RecordSprite("sprite.splitSrgb", splitSrgb);
         RecordSprite("sprite.split", split);
         RecordSprite("sprite.secondary", secondary);
         RecordSprite("sprite.plain", plainSprite);
-        var sprites = new[] { ("split", split, (Material)null), ("secondary", secondary, null), ("plain", plainSprite, null), ("split.default", split, plain) };
+        var sprites = new[] { ("split", split, (Material)null), ("secondary", secondary, null), ("plain", plainSprite, null), ("split.default", split, plain), ("splitSrgb", splitSrgb, null) };
         for (int i = 0; i < sprites.Length; i++)
         {
             var image = Place(canvas, "image." + sprites[i].Item1, 4 + 40 * i, 100, typeof(Image)).GetComponent<Image>();
@@ -228,7 +238,7 @@ public class UiAlphaBordersProbe : MonoBehaviour
         }
 
         // Row at y 60: SpriteRenderers of the same sprites (centred on their cells).
-        var renderers = new[] { ("split", split), ("secondary", secondary), ("plain", plainSprite) };
+        var renderers = new[] { ("split", split), ("secondary", secondary), ("plain", plainSprite), ("splitSrgb", splitSrgb) };
         for (int i = 0; i < renderers.Length; i++)
         {
             var go = new GameObject("sprite." + renderers[i].Item1);

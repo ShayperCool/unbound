@@ -279,7 +279,8 @@ namespace UnityEngine
         /// <summary>
         /// Whether a border or a rounded corner is asked for. Documented: zero widths draw the full
         /// texture and zero radiuses leave the corners square, which keeps the plain quad. Negative
-        /// or NaN widths and radiuses count as zero (Unbound's choice, unmeasured).
+        /// widths and radiuses count as zero (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/uialphaborders imgui); NaN ones too (unmeasured).
         /// </summary>
         internal static bool DrawTextureNeedsShape(Vector4 borderWidths, Vector4 borderRadiuses) =>
             DrawTexturePositive(borderWidths) != Vector4.zero || DrawTexturePositive(borderRadiuses) != Vector4.zero;

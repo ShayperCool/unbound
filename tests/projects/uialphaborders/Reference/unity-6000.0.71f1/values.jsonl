@@ -1,6 +1,9 @@
 {"k":"imgui.screen","v":[320,180]}
 {"k":"imgui.repaints","v":1}
 {"k":"shader.UI/DefaultETC1","v":"UI/DefaultETC1"}
+{"k":"sprite.splitSrgb.texture","v":["SplitSrgbSprite","ETC2_RGBA8"]}
+{"k":"sprite.splitSrgb.associatedAlphaSplitTexture","v":null}
+{"k":"sprite.splitSrgb.secondary","v":[]}
 {"k":"sprite.split.texture","v":["SplitSprite","ETC_RGB4"]}
 {"k":"sprite.split.associatedAlphaSplitTexture","v":null}
 {"k":"sprite.split.secondary","v":[]}
@@ -14,8 +17,10 @@
 {"k":"image.secondary.materialForRendering","v":"UI/Default"}
 {"k":"image.plain.materialForRendering","v":"UI/Default"}
 {"k":"image.split.default.materialForRendering","v":"UI/Default"}
+{"k":"image.splitSrgb.materialForRendering","v":"UI/Default"}
 {"k":"spriterenderer.split.material","v":"Sprites/Default"}
 {"k":"spriterenderer.secondary.material","v":"Sprites/Default"}
 {"k":"spriterenderer.plain.material","v":"Sprites/Default"}
+{"k":"spriterenderer.splitSrgb.material","v":"Sprites/Default"}
 {"k":"canvas.screen","v":[320,180]}
 {"k":"complete","v":true}
