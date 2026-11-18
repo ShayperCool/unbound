@@ -1082,7 +1082,7 @@ namespace UnityEngine.Tests
             Assert.Equal("it draws strips through an indirect buffer that is not sorted, which is not measured yet", VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 2)), material));
             Assert.Equal("it draws a strip system's particles one by one through an indirect buffer, which is not measured yet", VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
             Assert.Equal("ParticleMeshOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, meshes, material));
-            Assert.Equal("outputs of a Shader Graph are not drawn yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
+            Assert.Equal("it draws with a material variant (a graph compiled for editing), which is not measured yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
             Assert.StartsWith("it keeps buffers of the frame before (motion vectors)", VFXOutput.Refusal(system, previous, material));
             // What the generated shader says of itself: an unlit output's passes are drawn...
@@ -1103,6 +1103,11 @@ namespace UnityEngine.Tests
             Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"ShadowCaster\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'MotionVectors' is not drawn yet", VFXOutput.SourceRefusal(lit.Replace("\"DepthNormals\"", "\"MotionVectors\"")));
             Assert.Equal("its pass 'DBufferProjectorVFX' is not drawn yet", VFXOutput.SourceRefusal(unlit.Replace("\"DepthOnly\"", "\"DBufferProjectorVFX\"")));
+            // A Shader Graph output of a 2D sprite graph: its sprite and normals passes are drawn
+            // by the 2D renderer, its forward pass by the others.
+            const string sprite = "Shader \"Hidden/VFX/G/S/Output Particle|Shader Graph Quad - Sprite Lit\" { SubShader { Pass { Tags { \"LightMode\"=\"Universal2D\" } }\n"
+                + "Pass { Tags { \"LightMode\"=\"NormalsRendering\" } } Pass { Tags { \"LightMode\"=\"UniversalForward\" } } Pass { Tags { \"LightMode\"=\"SceneSelectionPass\" } } } }";
+            Assert.Null(VFXOutput.SourceRefusal(sprite));
             // Read for each output task of a compiled graph from the shader source it names:
             // not for a kernel, a task without a source of the graph's, or a source out of range.
             var compiled = new[]

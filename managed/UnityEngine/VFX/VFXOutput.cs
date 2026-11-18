@@ -160,7 +160,9 @@ namespace Unbound.Runtime
                 if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not done yet";
                 if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes or can sort";
             }
-            if (task.usesMaterialVariant) return "outputs of a Shader Graph are not drawn yet";
+            // The graph compiler gives a Shader Graph output a material variant only when it
+            // compiles a graph for editing; an imported graph's output draws with its material.
+            if (task.usesMaterialVariant) return "it draws with a material variant (a graph compiled for editing), which is not measured yet";
             // An output with motion vectors keeps each particle's last frame in buffers of its own.
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
             if (sourceRefusal != null) return sourceRefusal;
@@ -174,11 +176,13 @@ namespace Unbound.Runtime
         /// opaque lit output's deferred pass and the shadow pass (tests/projects/vfx,
         /// tests/projects/vfxlit). Admitted with them, as the same vertex program writing
         /// depth alone, and not measured: the depth passes of an opaque output (a depth
-        /// prepass, the depth and normals textures). The selection and picking passes are the
-        /// Editor's own and the 2D renderer's pass is never asked for here.</summary>
+        /// prepass, the depth and normals textures). Through the 2D renderer, measured: the
+        /// sprite pass and the normals pass of a light that lights by normals, of Shader Graph
+        /// outputs lit by 2D lights and unlit (tests/projects/vfxlit, `sprite*`). The selection
+        /// and picking passes are the Editor's own.</summary>
         static readonly string[] s_DrawnPasses =
         {
-            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D",
+            "UniversalForwardOnly", "UniversalForward", "UniversalGBuffer", "DepthOnly", "DepthNormals", "DepthNormalsOnly", "ShadowCaster", "SceneSelectionPass", "Picking", "Universal2D", "NormalsRendering",
         };
 
         /// <summary>The define the graph compiler writes into the shader of an output that the
