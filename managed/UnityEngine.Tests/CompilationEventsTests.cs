@@ -169,6 +169,40 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void AnEnterRequestMadeWhileEnteringPlayModeIsIgnored()
+        {
+            // An editor script that asks to enter Play mode from the load of the domain reloaded for
+            // it (Play mode entry has begun): the request is ignored, so Play mode does not report a
+            // change still to come (toolapis playRequest.seen).
+            bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
+            string during = null;
+            AssemblyReloadEvents.AssemblyReloadCallback enter = () =>
+            {
+                EditorApplication.EnterPlaymode();
+                during = PlayState();
+            };
+            AssemblyReloadEvents.afterAssemblyReload += enter;
+            try
+            {
+                Unbound.Runtime.EditorSession.IsPlaying = true;
+                EditorInitialization.BeforePlayMode();
+                Assert.Equal("False/True", during);
+                Assert.Equal("True/True", PlayState());
+                // Control: once in Play mode, a request to leave it stays pending until applied.
+                Unbound.Runtime.EditorSession.StartedInEditMode = true;
+                EditorApplication.ExitPlaymode();
+                Assert.Equal("True/False", PlayState());
+            }
+            finally
+            {
+                AssemblyReloadEvents.afterAssemblyReload -= enter;
+                Unbound.Runtime.EditorSession.Request(true);
+                Unbound.Runtime.EditorSession.StartedInEditMode = false;
+                Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
+            }
+        }
+
         /// <summary>isPlaying and isPlayingOrWillChangePlaymode, as "playing/willChange" (Unbound's
         /// session states, not values an Editor capture records).</summary>
         static string PlayState() => EditorApplication.isPlaying + "/" + EditorApplication.isPlayingOrWillChangePlaymode;

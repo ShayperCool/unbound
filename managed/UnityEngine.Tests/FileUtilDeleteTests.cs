@@ -182,6 +182,23 @@ namespace UnityEngine.Tests
                 Assert.True(File.Exists(asset));
                 Assert.True(Directory.Exists(Path.Combine(view, "Assets")));
                 Assert.Equal(throughLibrary + 2, Hits());
+                // Into Unbound's folder through a link of the project's own back into its Library:
+                // refused too, the view's own entries as well.
+                Directory.CreateSymbolicLink(Path.Combine(project, "LibraryLink"), Path.Combine(project, "Library"));
+                Directory.CreateSymbolicLink(Path.Combine(view, "LibraryLink"), Path.Combine(project, "LibraryLink"));
+                File.WriteAllText(Path.Combine(view, "kept.txt"), "k");
+                int throughProjectLink = Hits();
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/ProjectView/Assets"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/ProjectView/kept.txt"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("LibraryLink/Unbound/cache.bin"));
+                Assert.True(Directory.Exists(Path.Combine(view, "Assets")));
+                Assert.True(File.Exists(Path.Combine(view, "kept.txt")));
+                Assert.True(File.Exists(unboundFile));
+                Assert.Equal(throughProjectLink + 3, Hits());
+                // Control: other Library content through that link is the project's to delete.
+                var linkedLibraryFile = Make("project/Library/Other/linked.txt");
+                Assert.True(FileUtil.DeleteFileOrDirectory("LibraryLink/Other/linked.txt"));
+                Assert.False(File.Exists(linkedLibraryFile));
                 // Control: a file a script wrote in its working directory (the view) is its to delete.
                 File.WriteAllText(Path.Combine(view, "written.txt"), "w");
                 Assert.True(FileUtil.DeleteFileOrDirectory("written.txt"));

@@ -159,8 +159,10 @@ namespace UnityEditor
                 string landing = parent == null ? full : Path.Combine(ConsoleLogPath.Resolve(parent), Path.GetFileName(full));
                 if (Same(landing, m_PhysicalProject) || Same(landing, m_PhysicalLibrary)) return true;
                 // Library/Unbound and what is in it, except the view's own entries (links, handled
-                // above, and what a script wrote in its working directory).
-                if (Below(landing, m_PhysicalUnbound) != null && !(inView is { Length: > 0 } && Below(landing, m_PhysicalView) is { Length: > 0 }))
+                // above, and what a script wrote in its working directory) named in the view
+                // itself: one reached through a link into Library (a project's own link) is refused.
+                if (Below(landing, m_PhysicalUnbound) != null && !(inView is { Length: > 0 } && Below(landing, m_PhysicalView) is { Length: > 0 } inViewLanding
+                        && Same(inViewLanding, inView)))
                     return true;
                 // A folder that holds one of those goes with it.
                 if (Below(m_PhysicalProject, landing) != null) return true;

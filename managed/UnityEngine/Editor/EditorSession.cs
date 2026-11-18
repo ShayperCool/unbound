@@ -49,6 +49,9 @@ namespace Unbound.Runtime
 
         internal static void Request(bool play)
         {
+            // A request to enter Play mode while entering it is ignored: nothing stays pending
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis playRequest.seen).
+            if (play && s_EnteringPlayMode) return;
             if (play == IsPlaying)
             {
                 s_Request = 0;
