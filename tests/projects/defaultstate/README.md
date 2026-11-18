@@ -666,3 +666,8 @@ against the reference and every kept capture; the rest of each row stays exact a
 implementation's value stays exact. `Terrain.freeUnusedRenderingResources` returns either value
 before TerrainData is assigned (one kept pair differed), as `keepUnusedRenderingResources` does,
 and gets the same two-value context entry.
+
+The local 2D physics scene slice adds the static `PhysicsSceneExtensions2D` to the handwritten
+inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree on its one row (excluded,
+static), inserted after `PhysicsSceneExtensions` where the captures place it; every earlier row and
+inventory entry is byte-identical (15,750 rows).

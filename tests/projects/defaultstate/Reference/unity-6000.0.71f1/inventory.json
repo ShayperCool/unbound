@@ -4831,6 +4831,12 @@
       "type": "UnityEngine.PhysicsSceneExtensions"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.Physics2DModule",
+      "status": "static",
+      "type": "UnityEngine.PhysicsSceneExtensions2D"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.Physics2DModule",
       "status": "candidate",

@@ -5393,6 +5393,7 @@
 {"key":"UnityEngine.PhysicsScene2D/Property/UnityEngine.PhysicsScene2D/subStepCount","status":"value","value":"0"}
 {"key":"UnityEngine.PhysicsScene2D/Property/UnityEngine.PhysicsScene2D/subStepLostTime","status":"value","value":"0"}
 {"key":"UnityEngine.PhysicsSceneExtensions/@factory","status":"excluded","value":"static"}
+{"key":"UnityEngine.PhysicsSceneExtensions2D/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.PhysicsShape2D/@factory","status":"value","value":"struct"}
 {"key":"UnityEngine.PhysicsShape2D/Property/UnityEngine.PhysicsShape2D/adjacentEnd","status":"value","value":"UnityEngine.Vector2{x=0;y=0}"}
 {"key":"UnityEngine.PhysicsShape2D/Property/UnityEngine.PhysicsShape2D/adjacentStart","status":"value","value":"UnityEngine.Vector2{x=0;y=0}"}
