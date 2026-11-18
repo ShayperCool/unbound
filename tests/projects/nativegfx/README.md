@@ -8,9 +8,12 @@ uses the low-level native plugin interface and records what it gets; the scripts
     python3 tests/projects/nativegfx/run.py check      # engine run compared with Reference/
 
 Current NVIDIA primary results against Unity 6000.0.71f1 are OpenGL Core 554/613 with
-59 declared residuals and Vulkan 1217/1236 with 19. The OpenGL stencil profile is
-582/654 with 72; the Vulkan stencil profile is 1451/1470 with 19 declared
-residuals. Vulkan attachment capabilities and multisample color
+59 declared residuals and Vulkan 1289/1306 with 17. The OpenGL stencil profile is
+582/654 with 72; the Vulkan stencil profile is 1523/1540 with 17 declared
+residuals. Both Vulkan profiles end with 70 `byId.*` controls: a custom blit's source texture
+ID passed to `AccessTextureByID` (ARGB32 and ARGBHalf 7x3 targets, 1/2/4/8 samples, with and
+without bindTextureMS) names the image GetNativeTexturePtr names, and the plugin's clear of it is
+what the texture samples afterwards. Vulkan attachment capabilities and multisample color
 usage close 63 of its 64 earlier differences. All 518 earlier Vulkan reference
 rows are byte-identical; 49 allocation controls and 298 resolve-access and
 setter controls are appended. The foreign-format extension adds 70 rows to both Vulkan profiles; the stencil

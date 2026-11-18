@@ -1233,4 +1233,74 @@
 {"k":"readbackValidation.alpha.Alpha8.3.state","v":"False:3:2:1:96"}
 {"k":"readbackValidation.alpha.Alpha8.3.data","v":"000000000000803f0000803f0000803f"}
 {"k":"readbackValidation.alpha.Alpha8.3.logs","v":[]}
+{"k":"byId.ARGB32.1.False.created","v":true}
+{"k":"byId.ARGB32.1.False.before","v":[0.749019623,0.498039216,0.250980407,1]}
+{"k":"byId.ARGB32.1.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.1.False.after","v":[0.125490203,0.623529434,0.874509811,1]}
+{"k":"byId.ARGB32.1.False.logs","v":[]}
+{"k":"byId.ARGB32.2.False.created","v":true}
+{"k":"byId.ARGB32.2.False.before","v":[0.749019623,0.498039216,0.250980407,1]}
+{"k":"byId.ARGB32.2.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.2.False.after","v":[0.125490203,0.623529434,0.874509811,1]}
+{"k":"byId.ARGB32.2.False.logs","v":[]}
+{"k":"byId.ARGB32.2.True.created","v":true}
+{"k":"byId.ARGB32.2.True.before","v":[0.749019623,0.749019623,0.4375,0.125]}
+{"k":"byId.ARGB32.2.True.native","v":"id=1 ok=1 samePointer=1 samples=2 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.2.True.after","v":[0.125490203,0.125490203,0.4375,0.125]}
+{"k":"byId.ARGB32.2.True.logs","v":[]}
+{"k":"byId.ARGB32.4.False.created","v":true}
+{"k":"byId.ARGB32.4.False.before","v":[0.749019623,0.498039216,0.250980407,1]}
+{"k":"byId.ARGB32.4.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.4.False.after","v":[0.125490203,0.623529434,0.874509811,1]}
+{"k":"byId.ARGB32.4.False.logs","v":[]}
+{"k":"byId.ARGB32.4.True.created","v":true}
+{"k":"byId.ARGB32.4.True.before","v":[0.749019623,0.749019623,0.4375,0.25]}
+{"k":"byId.ARGB32.4.True.native","v":"id=1 ok=1 samePointer=1 samples=4 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.4.True.after","v":[0.125490203,0.125490203,0.4375,0.25]}
+{"k":"byId.ARGB32.4.True.logs","v":[]}
+{"k":"byId.ARGB32.8.False.created","v":true}
+{"k":"byId.ARGB32.8.False.before","v":[0.749019623,0.498039216,0.250980407,1]}
+{"k":"byId.ARGB32.8.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.8.False.after","v":[0.125490203,0.623529434,0.874509811,1]}
+{"k":"byId.ARGB32.8.False.logs","v":[]}
+{"k":"byId.ARGB32.8.True.created","v":true}
+{"k":"byId.ARGB32.8.True.before","v":[0.749019623,0.749019623,0.4375,0.5]}
+{"k":"byId.ARGB32.8.True.native","v":"id=1 ok=1 samePointer=1 samples=8 format=37 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGB32.8.True.after","v":[0.125490203,0.125490203,0.4375,0.5]}
+{"k":"byId.ARGB32.8.True.logs","v":[]}
+{"k":"byId.ARGBHalf.1.False.created","v":true}
+{"k":"byId.ARGBHalf.1.False.before","v":[0.75,0.5,0.25,1]}
+{"k":"byId.ARGBHalf.1.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.1.False.after","v":[0.125,0.625,0.875,1]}
+{"k":"byId.ARGBHalf.1.False.logs","v":[]}
+{"k":"byId.ARGBHalf.2.False.created","v":true}
+{"k":"byId.ARGBHalf.2.False.before","v":[0.75,0.5,0.25,1]}
+{"k":"byId.ARGBHalf.2.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.2.False.after","v":[0.125,0.625,0.875,1]}
+{"k":"byId.ARGBHalf.2.False.logs","v":[]}
+{"k":"byId.ARGBHalf.2.True.created","v":true}
+{"k":"byId.ARGBHalf.2.True.before","v":[0.75,0.75,0.4375,0.125]}
+{"k":"byId.ARGBHalf.2.True.native","v":"id=1 ok=1 samePointer=1 samples=2 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.2.True.after","v":[0.125,0.125,0.4375,0.125]}
+{"k":"byId.ARGBHalf.2.True.logs","v":[]}
+{"k":"byId.ARGBHalf.4.False.created","v":true}
+{"k":"byId.ARGBHalf.4.False.before","v":[0.75,0.5,0.25,1]}
+{"k":"byId.ARGBHalf.4.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.4.False.after","v":[0.125,0.625,0.875,1]}
+{"k":"byId.ARGBHalf.4.False.logs","v":[]}
+{"k":"byId.ARGBHalf.4.True.created","v":true}
+{"k":"byId.ARGBHalf.4.True.before","v":[0.75,0.75,0.4375,0.25]}
+{"k":"byId.ARGBHalf.4.True.native","v":"id=1 ok=1 samePointer=1 samples=4 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.4.True.after","v":[0.125,0.125,0.4375,0.25]}
+{"k":"byId.ARGBHalf.4.True.logs","v":[]}
+{"k":"byId.ARGBHalf.8.False.created","v":true}
+{"k":"byId.ARGBHalf.8.False.before","v":[0.75,0.5,0.25,1]}
+{"k":"byId.ARGBHalf.8.False.native","v":"id=1 ok=1 samePointer=1 samples=1 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.8.False.after","v":[0.125,0.625,0.875,1]}
+{"k":"byId.ARGBHalf.8.False.logs","v":[]}
+{"k":"byId.ARGBHalf.8.True.created","v":true}
+{"k":"byId.ARGBHalf.8.True.before","v":[0.75,0.75,0.4375,0.5]}
+{"k":"byId.ARGBHalf.8.True.native","v":"id=1 ok=1 samePointer=1 samples=8 format=97 extent=7x3 usage=151 cleared=1"}
+{"k":"byId.ARGBHalf.8.True.after","v":[0.125,0.125,0.4375,0.5]}
+{"k":"byId.ARGBHalf.8.True.logs","v":[]}
 {"k":"complete","v":true}

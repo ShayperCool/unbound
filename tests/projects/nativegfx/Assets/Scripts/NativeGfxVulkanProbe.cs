@@ -297,6 +297,7 @@ public partial class NativeGfxVulkanProbe : MonoBehaviour
         ForeignStorageControls();
         if (Environment.GetEnvironmentVariable("NATIVEGFX_STENCIL") == "1") SampleStencilControls();
         ReadbackValidationControls();
+        ByIdControls();
         Value("complete", B(code == 0));
         File.WriteAllText(output, records.ToString());
         Application.logMessageReceived -= OnLog;

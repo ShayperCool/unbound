@@ -13,7 +13,7 @@ static class MsaaControls
         RenderTexture.active=source; cpu.ReadPixels(new Rect(0,0,1,1),0,0);
         RenderTexture.active=previous; Color c=cpu.GetPixel(0,0); UnityEngine.Object.DestroyImmediate(cpu); return c;
     }
-    static void Sample(Action<string,string> row, string key, RenderTexture source, bool bound)
+    internal static void Sample(Action<string,string> row, string key, RenderTexture source, bool bound)
     {
         var previous=RenderTexture.active;
         var material=new Material(Shader.Find(bound ? "Probe/NativeGfx/MsaaRead" : "Probe/NativeGfx/MsaaSingle"));

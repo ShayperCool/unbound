@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -106,6 +107,10 @@ typedef struct IUnityGraphicsVulkan {
     int (*AccessBuffer)(void* nativeBuffer, VkPipelineStageFlags stages, VkAccessFlags access, int mode, UnityVulkanBuffer* out);
     void (*EnsureOutsideRenderPass)(void);
     void (*EnsureInsideRenderPass)(void);
+    void (*AccessQueue)(void (*callback)(int,void*),int eventID,void* data,bool flush);
+    bool (*ConfigureSwapchain)(const void* configuration);
+    bool (*AccessTextureByID)(uint32_t textureID,const SubResource* sub,VkImageLayout layout,
+                             VkPipelineStageFlags stages,VkAccessFlags access,int mode,UnityVulkanImage* out);
 } IUnityGraphicsVulkan;
 
 static const Guid kGraphics = {0x7CBA0A9CA4DDB544ULL, 0x8C5AD4926EB17B11ULL};
@@ -815,3 +820,34 @@ static void on_stencil_chain_event(int event_id)
     s_stencil_initialize=0;
 }
 EXPORT void* NativeGfxVk_StencilChainEvent(void) {return (void*)on_stencil_chain_event;}
+
+// Access an actual texture ID supplied by the custom-blit callback.
+typedef struct {
+    uint32_t source;
+    void* destination;
+    unsigned int command, commandParam, commandFlags;
+} BlitParams;
+static void* s_byid_pointer;
+static char s_byid_result[512];
+static void on_byid_blit(int eventID,void* data)
+{
+    (void)eventID;
+    const BlitParams* params=(const BlitParams*)data;
+    UnityVulkanImage image={0};
+    UnityVulkanRecordingState state={0};
+    if(s_vulkan) s_vulkan->EnsureOutsideRenderPass();
+    bool ok=s_vulkan && params && s_vulkan->AccessTextureByID(params->source,NULL,VK_IMAGE_LAYOUT_GENERAL,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,VK_ACCESS_TRANSFER_WRITE_BIT,PipelineBarrier,&image);
+    bool recording=ok && s_vulkan->CommandRecordingState(&state,0) && state.renderPass==VK_NULL_HANDLE;
+    bool cleared=recording && vk.CmdClearColorImage && (image.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    if(cleared) {
+        const VkClearColorValue color={{.125f,.625f,.875f,1.f}};
+        vk.CmdClearColorImage(state.commandBuffer,image.image,VK_IMAGE_LAYOUT_GENERAL,&color,1,&kColorRange);
+    }
+    snprintf(s_byid_result,sizeof s_byid_result,"id=%d ok=%d samePointer=%d samples=%d format=%d extent=%ux%u usage=%d cleared=%d",
+        params && params->source!=0,ok,s_byid_pointer && *(const VkImage*)s_byid_pointer==image.image,
+        image.samples,image.format,image.extent.width,image.extent.height,image.usage,cleared);
+}
+EXPORT void* NativeGfxVk_ByIdBlit(void) { return (void*)on_byid_blit; }
+EXPORT void NativeGfxVk_ByIdPointer(void* pointer) { s_byid_pointer=pointer; s_byid_result[0]=0; }
+EXPORT int NativeGfxVk_ByIdRecord(char* buffer,int capacity) { return snprintf(buffer,capacity,"%s",s_byid_result); }

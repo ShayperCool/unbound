@@ -197,7 +197,7 @@ impl UnityRenderer {
     }
 
     /// Resolve copies follow the completed passes that wrote their source.
-    fn resolve_msaa_source(
+    pub(super) fn resolve_msaa_source(
         &mut self,
         source: &wgpu::Texture,
         force: bool,

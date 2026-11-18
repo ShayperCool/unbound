@@ -437,6 +437,8 @@ struct Scope {
     /// (by index; put in their resting layouts before the callback's commands).
     accessed_buffers: Vec<u64>,
     accessed_textures: Vec<usize>,
+    /// Those of them accessed for writing.
+    written_textures: Vec<usize>,
 }
 
 impl Scope {
@@ -654,6 +656,7 @@ impl Scope {
             pass: self.pass,
             accessed_buffers: self.accessed_buffers,
             accessed_textures: self.accessed_textures,
+            written_textures: self.written_textures,
         }
     }
 }
@@ -664,6 +667,7 @@ struct Finished {
     pass: Option<PluginPass>,
     accessed_buffers: Vec<u64>,
     accessed_textures: Vec<usize>,
+    written_textures: Vec<usize>,
 }
 
 fn subresources(
@@ -830,6 +834,16 @@ unsafe extern "C" fn command_recording_state(
     })
 }
 
+/// The access flags that write an image.
+const WRITE_ACCESS: vk::AccessFlags = vk::AccessFlags::from_raw(
+    vk::AccessFlags::SHADER_WRITE.as_raw()
+        | vk::AccessFlags::COLOR_ATTACHMENT_WRITE.as_raw()
+        | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE.as_raw()
+        | vk::AccessFlags::TRANSFER_WRITE.as_raw()
+        | vk::AccessFlags::HOST_WRITE.as_raw()
+        | vk::AccessFlags::MEMORY_WRITE.as_raw(),
+);
+
 /// `AccessTexture` and its kin: the image a lookup finds in the callback's scope, after the
 /// barrier into `layout` a `PipelineBarrier` access records, described as the Editor describes
 /// it (the layout field left 0, the memory empty). False without a scope or the image.
@@ -857,6 +871,10 @@ fn access_image(
         };
         if !scope.accessed_textures.contains(&entry.texture) {
             scope.accessed_textures.push(entry.texture);
+        }
+        if access_flags.intersects(WRITE_ACCESS) && !scope.written_textures.contains(&entry.texture)
+        {
+            scope.written_textures.push(entry.texture);
         }
         match mode {
             ACCESS_OBSERVE_ONLY => {}
@@ -917,7 +935,7 @@ unsafe extern "C" fn access_texture_by_id(
     out: *mut UnityVulkanImage,
 ) -> bool {
     access_image(
-        |s| s.by_handle.get(&(id as u64)).map(|t| t.texture),
+        |s| s.by_handle.get(&(id as u64)).map(|t| t.color()),
         sub,
         layout,
         stages,
@@ -936,6 +954,18 @@ fn render_buffer_image(scope: &Scope, pointer: *mut c_void, resolve: bool) -> Op
 }
 
 impl TextureImages {
+    /// The color image a native texture pointer and a texture ID name: a bindTextureMS
+    /// target's samples, else the texture (Unity 6000.0.71f1 Vulkan Editor,
+    /// tests/projects/nativegfx `byId.*`: a custom blit's source ID gives the image
+    /// GetNativeTexturePtr gives).
+    fn color(self) -> ImageEntry {
+        if self.bind_ms {
+            self.msaa.unwrap_or(self.texture)
+        } else {
+            self.texture
+        }
+    }
+
     fn render_buffer(self, depth: bool, resolve: bool) -> Option<ImageEntry> {
         match (depth, resolve) {
             (true, false) => self.depth,
@@ -1976,13 +2006,14 @@ impl UnityRenderer {
                 let t = r.view.texture();
                 image_entry(&self.adapter, t, t.format(), &mut candidates)
             });
-            let pointer_color = if gpu.bind_ms {
-                msaa.unwrap_or(texture)
-            } else {
-                texture
+            let images = TextureImages {
+                texture,
+                msaa,
+                depth,
+                bind_ms: gpu.bind_ms,
             };
             for (is_depth, entry) in [
-                (false, Some(pointer_color)),
+                (false, Some(images.color())),
                 (true, published_depth.or(depth)),
             ] {
                 if let (Some(entry), Some(slot)) =
@@ -1994,15 +2025,7 @@ impl UnityRenderer {
                     by_pointer.insert(Arc::as_ptr(slot) as usize, entry);
                 }
             }
-            by_handle.insert(
-                handle,
-                TextureImages {
-                    texture,
-                    msaa,
-                    depth,
-                    bind_ms: gpu.bind_ms,
-                },
-            );
+            by_handle.insert(handle, images);
         }
         let buffers = self
             .buffers
@@ -2034,6 +2057,7 @@ impl UnityRenderer {
             layouts: HashMap::new(),
             accessed_buffers: Vec::new(),
             accessed_textures: Vec::new(),
+            written_textures: Vec::new(),
         };
         if !scope.enter(inside) {
             tracing::error!("Unbound: no command buffer for a Vulkan plugin callback");
@@ -2093,6 +2117,26 @@ impl UnityRenderer {
             })
         };
         commands.push(encoder.finish());
+        // A multisampled target's single-sample image the plugin reached is what its texture
+        // samples from then on: published to the retained resolve shaders read
+        // (tests/projects/nativegfx `byId.*.False.after`, Unity 6000.0.71f1 Vulkan Editor: a
+        // custom blit's clear of it is what the texture samples).
+        let mut published: Option<wgpu::CommandEncoder> = None;
+        for &i in &finished.written_textures {
+            let Some(copies) = self.resolve_msaa_source(&candidates[i].0, true) else {
+                continue;
+            };
+            let encoder = published.get_or_insert_with(|| {
+                self.device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("unbound vulkan plugin publish"),
+                    })
+            });
+            for copy in copies {
+                copy.encode(encoder);
+            }
+        }
+        commands.extend(published.map(|encoder| encoder.finish()));
         self.queue.submit(commands);
         let kept = finished
             .accessed_buffers
@@ -2933,6 +2977,11 @@ mod tests {
                 );
                 assert_eq!(selected(true, false), Some(3));
                 assert_eq!(selected(true, true), None);
+                // A pointer and a texture ID name the samples only of a bindTextureMS target.
+                assert_eq!(
+                    images.color().image.as_raw(),
+                    if multisampled && bind_ms { 2 } else { 1 }
+                );
                 assert!(
                     (TextureImages {
                         depth: None,
