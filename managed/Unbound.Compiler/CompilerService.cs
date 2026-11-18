@@ -360,7 +360,7 @@ public sealed partial class CompilerService
     sealed record Options(CSharpParseOptions Parse, CSharpCompilationOptions Compilation, List<Diagnostic> Errors, List<string> Ignored);
 
     /// <summary>Options that change what the compiler does but that Unbound does not apply.</summary>
-    static readonly string[] s_IgnoredOptions = { "analyzer", "a", "additionalfile", "ruleset", "resource", "res", "linkresource", "linkres",
+    static readonly string[] s_IgnoredOptions = { "analyzer", "a", "additionalfile", "resource", "res", "linkresource", "linkres",
         "link", "l", "addmodule", "keyfile", "keycontainer", "delaysign", "publicsign", "win32res", "win32icon", "win32manifest", "doc", "generatedfilesout" };
 
     static Options CommandLine(AssemblySpec spec, CompileRequest request)
@@ -368,17 +368,31 @@ public sealed partial class CompilerService
         var args = new List<string> { "-target:library", "-langversion:" + request.LanguageVersion, spec.Optimize ? "-optimize+" : "-optimize-" };
         if (spec.AllowUnsafe) args.Add("-unsafe");
         args.AddRange(request.CompilerOptions);
-        args.AddRange(spec.ResponseArguments);
+        // The compiler reads each of the response file's lines as a command line of its own.
+        foreach (var argument in spec.ResponseArguments)
+            args.AddRange(CommandLineParser.SplitCommandLineIntoArguments(argument, removeHashComments: false));
         var parsed = CSharpCommandLineParser.Default.Parse(args, string.IsNullOrEmpty(request.ProjectPath) ? Directory.GetCurrentDirectory() : request.ProjectPath, sdkDirectory: null);
         // Without source files or an output the parser warns; those are not the options' fault.
         var errors = parsed.Errors.Where(d => d.Severity == DiagnosticSeverity.Error && d.Id is not ("CS2008" or "CS1562")).ToList();
+        var language = parsed.ParseOptions.LanguageVersion;
+        // The release's compiler is older than Unbound's: "latest", "preview" and the like mean its
+        // newest version, and a version past it is refused as that compiler refuses it.
+        if (request.LanguageVersionMax != null && LanguageVersionFacts.TryParse(request.LanguageVersionMax, out var max) && language > max)
+        {
+            var asked = args.LastOrDefault(a => a.Length > 1 && (a[0] == '-' || a[0] == '/') && a.Substring(1).StartsWith("langversion:", StringComparison.OrdinalIgnoreCase));
+            var value = asked?.Substring(asked.IndexOf(':') + 1) ?? "";
+            if (LanguageVersionFacts.TryParse(value, out var named) && named.MapSpecifiedToEffectiveVersion() == named && named > max)
+                errors.Add(Diagnostic.Create(new DiagnosticDescriptor("CS1617", "Invalid option",
+                    $"Invalid option '{value}' for /langversion: the release's compiler knows C# up to {request.LanguageVersionMax}", "Compiler", DiagnosticSeverity.Error, true), Location.None));
+            language = max;
+        }
         var ignored = spec.ResponseArguments.Where(a =>
         {
             if (a.Length < 2 || (a[0] != '-' && a[0] != '/')) return false;
             var name = a.Substring(1).Split(':', 2)[0].TrimEnd('+', '-');
             return s_IgnoredOptions.Contains(name, StringComparer.OrdinalIgnoreCase);
         }).ToList();
-        var parse = new CSharpParseOptions(parsed.ParseOptions.LanguageVersion, DocumentationMode.None, SourceCodeKind.Regular,
+        var parse = new CSharpParseOptions(language, DocumentationMode.None, SourceCodeKind.Regular,
             spec.Defines.Concat(parsed.ParseOptions.PreprocessorSymbolNames));
         var c = parsed.CompilationOptions;
         // Binding redirect notes that the Editor does not show either.
@@ -425,6 +439,7 @@ public sealed partial class CompilerService
         builder.Append(spec.Optimize ? "optimize" : "debug").Append('\n');
         foreach (var option in request.CompilerOptions) builder.Append(option).Append('\n');
         foreach (var argument in spec.ResponseArguments) builder.Append("rsp ").Append(argument).Append('\n');
+        builder.Append(request.LanguageVersionMax).Append('\n');
         foreach (var define in spec.Defines) builder.Append(define).Append(';');
         builder.Append('\n');
         foreach (var (path, file) in sources) builder.Append(path).Append('=').Append(file.Hash).Append('\n');

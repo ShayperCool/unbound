@@ -102,4 +102,39 @@ public static class Extra
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    /// <summary>The release's compiler is older than Unbound's: a symbolic -langversion means its
+    /// newest version, and a newer explicit one is refused. A line's arguments split as the
+    /// compiler splits a response file's lines.</summary>
+    [Fact]
+    public void LanguageVersionsStopAtTheReleasesCompiler()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var file = Path.Combine(root, "Probe.cs");
+            // A raw string literal: C# 11.
+            File.WriteAllText(file, Source + "public static class Raw { public const string Text = \"\"\"raw\"\"\"; }\n");
+            CompileRequest Limited(params string[] response)
+            {
+                var request = Request(root, file, response);
+                request.LanguageVersionMax = "10.0";
+                return request;
+            }
+            var latest = Assert.Single(new CompilerService().Compile(Limited("-langversion:latest")).Assemblies);
+            Assert.Equal("failed", latest.Status);
+            Assert.Contains(latest.Errors, e => e.Id == "CS8936" || e.Id == "CS9058" || e.Message.Contains("raw string"));
+            var newer = Assert.Single(new CompilerService().Compile(Limited("-langversion:11")).Assemblies);
+            Assert.Equal("failed", newer.Status);
+            Assert.Contains(newer.Errors, e => e.Id == "CS1617");
+            // Control: without a known limit, latest is Unbound's compiler's.
+            Assert.Equal("compiled", Assert.Single(new CompilerService().Compile(Request(root, file, "-langversion:latest")).Assemblies).Status);
+
+            File.WriteAllText(file, Source);
+            var split = Assert.Single(new CompilerService().Compile(Request(root, file, "-define:RSP_A\t-define:RSP_B")).Assemblies);
+            Assert.Equal("compiled", split.Status);
+            Assert.Equal("A,B", Constant(split, "Defines"));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
 }

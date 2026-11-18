@@ -21,6 +21,9 @@ pub struct CompileRequest {
     /// The modules runtime assemblies lack because the project's packages leave them out.
     pub disabled_modules: Vec<crate::modules::DisabledModule>,
     pub language_version: String,
+    /// The newest C# version the installation's compiler knows (what a response file's
+    /// `-langversion:latest` means), when the installation has one.
+    pub language_version_max: Option<String>,
     pub compiler_options: Vec<String>,
     pub analyzers: Vec<PathBuf>,
     /// The project directory, which the Editor hands to source generators.
@@ -331,6 +334,7 @@ impl Project {
             runtime_engine_references,
             disabled_modules: graph.disabled_modules.clone(),
             language_version: self.profile.data.language_version.clone(),
+            language_version_max: self.install.compiler_language_max(),
             compiler_options: self.profile.data.compiler_options.clone(),
             analyzers: self
                 .profile

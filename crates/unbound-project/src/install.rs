@@ -40,7 +40,10 @@ impl UnityInstall {
             path.pop();
         }
         let Some(data) = data_dir(&path) else {
-            bail!("{} is not a Unity installation (no Editor/Data or Unity.app/Contents)", path.display());
+            bail!(
+                "{} is not a Unity installation (no Editor/Data or Unity.app/Contents)",
+                path.display()
+            );
         };
         Ok(Self { data, version })
     }
@@ -53,7 +56,11 @@ impl UnityInstall {
     /// The `Unity` executable: `Editor/Unity` on Linux, `Unity.app/Contents/MacOS/Unity` on macOS.
     pub fn editor_executable(&self) -> PathBuf {
         let mac = self.data.join("MacOS/Unity");
-        if mac.is_file() { mac } else { self.data.join("../Unity") }
+        if mac.is_file() {
+            mac
+        } else {
+            self.data.join("../Unity")
+        }
     }
 
     /// The directories of the installed platform modules (`AndroidPlayer`, ...).
@@ -63,6 +70,19 @@ impl UnityInstall {
 
     pub fn managed_engine_dir(&self) -> PathBuf {
         self.data.join("Managed/UnityEngine")
+    }
+
+    /// The newest C# version the installation's own compiler (`DotNetSdkRoslyn`) knows, from its
+    /// Roslyn version: what `-langversion:latest` means in the Editor. None when the installation
+    /// has no compiler to read.
+    pub fn compiler_language_max(&self) -> Option<String> {
+        let deps = std::fs::read_to_string(self.data.join("DotNetSdkRoslyn/csc.deps.json")).ok()?;
+        let key = "\"Microsoft.CodeAnalysis.CSharp/";
+        let start = deps.find(key)? + key.len();
+        let mut parts = deps[start..].split(['.', '-', '"']);
+        let major: u32 = parts.next()?.parse().ok()?;
+        let minor: u32 = parts.next()?.parse().ok()?;
+        roslyn_language_max(major, minor).map(str::to_string)
     }
 
     /// The names of the engine assemblies the installation ships (`UnityEngine.CoreModule`, ...):
@@ -186,7 +206,13 @@ fn is_api_reference_module(data: &Path, module: &Path) -> bool {
 pub fn data_dir(path: &Path) -> Option<PathBuf> {
     ["", "Data", "Editor/Data", "Contents", "Unity.app/Contents"]
         .iter()
-        .map(|sub| if sub.is_empty() { path.to_path_buf() } else { path.join(sub) })
+        .map(|sub| {
+            if sub.is_empty() {
+                path.to_path_buf()
+            } else {
+                path.join(sub)
+            }
+        })
         .find(|dir| dir.join("Managed").is_dir() && dir.join("Resources").is_dir())
 }
 
@@ -227,7 +253,9 @@ pub fn hub_dirs() -> Vec<PathBuf> {
 
 /// The data directory of the Hub installation of exactly `version`, if there is one.
 pub fn installed_data(version: &str) -> Option<PathBuf> {
-    hub_dirs().iter().find_map(|hub| data_dir(&hub.join(version)))
+    hub_dirs()
+        .iter()
+        .find_map(|hub| data_dir(&hub.join(version)))
 }
 
 pub fn home() -> PathBuf {
@@ -306,4 +334,20 @@ mod tests {
         assert!(!has_api_reference_platforms(&mac));
         std::fs::remove_dir_all(&root).unwrap();
     }
+}
+
+/// The newest C# version a Roslyn release compiles (its `latest`), from Roslyn's release notes:
+/// 3.0-3.7 C# 8, 3.8-3.11 C# 9, 4.0-4.3 C# 10, 4.4-4.7 C# 11, 4.8-4.10 C# 12, 4.11-4.13 C# 13,
+/// later C# 14.
+pub fn roslyn_language_max(major: u32, minor: u32) -> Option<&'static str> {
+    Some(match (major, minor) {
+        (3, 0..=7) => "8.0",
+        (3, _) => "9.0",
+        (4, 0..=3) => "10.0",
+        (4, 4..=7) => "11.0",
+        (4, 8..=10) => "12.0",
+        (4, 11..=13) => "13.0",
+        (4, _) | (5, _) => "14.0",
+        _ => return None,
+    })
 }

@@ -22,6 +22,9 @@ public sealed class CompileRequest
     /// <summary>The modules the project's packages leave out of the runtime assemblies.</summary>
     public List<DisabledModule> DisabledModules { get; set; } = new();
     public string LanguageVersion { get; set; } = "9.0";
+    /// <summary>The newest C# version the release's compiler knows: what a response file's
+    /// <c>-langversion:latest</c> means there; null when not known.</summary>
+    public string? LanguageVersionMax { get; set; }
     /// <summary>Command-line style options the Editor passes: <c>/nowarn:0169</c>.</summary>
     public List<string> CompilerOptions { get; set; } = new();
     /// <summary>Roslyn analyzers and source generators (paths) applied to every assembly.</summary>
