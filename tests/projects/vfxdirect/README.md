@@ -48,8 +48,11 @@ its events from `Update`; each asks for a count of particles at a place and of a
   which none does. The system's count is what was spawned, in the frame of the event.
 - `on play`: one particle when the effect starts; `SendEvent("OnPlay")` at frame 10 (one
   more); `Play` with attributes asking for three at frame 15; `Reinit()` at frame 20 (one
-  again).
-- `both`: four by the event at frame 5 among the spawn context's.
+  again); then, in this system whose particles never die, a count of 2.7 at frame 25 (two),
+  of 0.5 at frame 28 (none) and of -1 at frame 30 (the seven left of the room). Its count is
+  what was spawned, so the rows show each of these.
+- `both`: four by the event at frame 5 among the spawn context's, and three more at frame 12,
+  a frame the spawn context spawns in as well (it spawns one every six frames).
 - `two`: three at frame 5, in both systems.
 - `paused`: `DirectHit` paused from frame 8 to frame 16, sent four at frame 10: they are
   spawned in that frame, and stand still until the pause ends.

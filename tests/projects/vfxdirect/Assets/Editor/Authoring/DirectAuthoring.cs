@@ -132,65 +132,11 @@ public static class DirectAuthoring
         AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(resource), ImportAssetOptions.ForceUpdate);
     }
 
-    /// <summary>A spawner, an initialize, an update and an output of the kind asked for,
-    /// linked; returns them.</summary>
-    static (VFXBasicSpawner Spawn, VFXBasicInitialize Init, VFXBasicUpdate Update, TOutput Output) System<TOutput>(VFXGraph graph, uint capacity) where TOutput : VFXContext
-    {
-        var spawn = Make<VFXBasicSpawner>();
-        var init = Make<VFXBasicInitialize>();
-        var update = Make<VFXBasicUpdate>();
-        var output = Make<TOutput>();
-        graph.AddChild(spawn);
-        graph.AddChild(init);
-        graph.AddChild(update);
-        graph.AddChild(output);
-        spawn.LinkTo(init);
-        init.LinkTo(update);
-        update.LinkTo(output);
-        init.GetData().SetSettingValue("capacity", capacity);
-        return (spawn, init, update, output);
-    }
-
-    /// <summary>An input of a model by its name; the names it has are said when it has
-    /// none of that name.</summary>
-    static VFXSlot Input(VFXModel model, string name)
-    {
-        var slots = ((IVFXSlotContainer)model).inputSlots;
-        var slot = slots.FirstOrDefault(s => s.name == name);
-        if (slot == null) throw new InvalidOperationException(model.GetType().Name + " has no input '" + name + "': " + string.Join(", ", slots.Select(s => s.name)));
-        return slot;
-    }
-
-    static VFXParameter Parameter(VFXGraph graph, Type type, string name, object value)
-    {
-        var parameter = VFXLibrary.GetParameters().First(d => d.modelType == type).CreateInstance();
-        parameter.SetSettingValue("m_ExposedName", name);
-        parameter.SetSettingValue("m_Exposed", true);
-        parameter.value = value;
-        graph.AddChild(parameter);
-        return parameter;
-    }
-
-    static void Link(VFXSlot from, VFXSlot to)
-    {
-        if (!from.Link(to)) throw new InvalidOperationException("cannot link " + from.property.type.Name + " '" + from.name + "' to " + to.property.type.Name + " '" + to.name + "'");
-    }
-
     static void ConstantRate(VFXBasicSpawner spawn, float rate)
     {
         var block = Make<VFXSpawnerConstantRate>();
         spawn.AddChild(block);
         block.inputSlots[0].value = rate;
-    }
-
-    /// <summary>One burst at the start.</summary>
-    static void Burst(VFXBasicSpawner spawn, float count)
-    {
-        var block = Make<VFXSpawnerBurst>();
-        spawn.AddChild(block);
-        block.SetSettingValue("repeat", VFXSpawnerBurst.RepeatMode.Single);
-        Input(block, "Count").value = count;
-        Input(block, "Delay").value = 0f;
     }
 
     static SetAttribute Set(VFXContext context, string attribute, object value)
@@ -236,8 +182,8 @@ public static class DirectAuthoring
 
     // ------------------------------------------------------------------------------ scene
 
-    /// <summary>The probe scene: a camera, one flat ambient colour and no reflection, so
-    /// that what lights the particles is the lights the probe makes.</summary>
+    /// <summary>The probe scene: a camera and one flat ambient colour (the probe's outputs
+    /// are unlit).</summary>
     static void BuildScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

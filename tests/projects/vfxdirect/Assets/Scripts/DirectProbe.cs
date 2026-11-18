@@ -78,8 +78,8 @@ public sealed class DirectProbe : MonoBehaviour
             // What each effect is sent, and when, is in Update below.
             m_Hit = Draw("hit", "DirectHit", 6, 11, 16, 21, 26, 34);
             m_Keep = Draw("keep", "DirectKeep", 6, 11, 16, 21);
-            m_OnPlay = Draw("on play", "DirectOnPlay", 4, 11, 16, 22);
-            m_Both = Draw("both", "DirectAndSpawner", 6, 11, 20);
+            m_OnPlay = Draw("on play", "DirectOnPlay", 4, 11, 16, 22, 34);
+            m_Both = Draw("both", "DirectAndSpawner", 6, 11, 13, 17, 20);
             m_Two = Draw("two", "DirectTwo", 6, 11);
             m_Paused = Draw("paused", "DirectHit", 9, 12, 17, 20);
             foreach (var stage in m_Stages)
@@ -186,6 +186,11 @@ public sealed class DirectProbe : MonoBehaviour
                 Send(m_Two, 3f, new Vector3(0.5f, 0.5f, 0f), Color.green);
                 break;
             case 8: m_Paused.Effect.pause = true; break;
+            case 12:
+                // An event in a frame the spawn context spawns in too (it spawns one every
+                // six frames, from frame 6 on): three, of a colour and at a place of their own.
+                Send(m_Both, 3f, new Vector3(-0.8f, -0.6f, 0f), Color.green);
+                break;
             case 10:
                 Send(m_Hit, 4f, new Vector3(0.8f, 0.6f, 0f), Color.red);
                 Send(m_Keep, 3f, new Vector3(0.8f, 0.6f, 0f), Color.red);
@@ -212,6 +217,17 @@ public sealed class DirectProbe : MonoBehaviour
             case 25:
                 // More than the system's room.
                 Send(m_Hit, 100f, new Vector3(0f, 0.9f, 0f), Color.cyan);
+                // On the system that kills nothing, which counts what it spawns at once and
+                // has room for seven more since it started over: a count that is not whole.
+                m_OnPlay.Effect.SendEvent("OnPlay", Attribute(m_OnPlay, 2.7f, new Vector3(-0.6f, 0.5f, 0f), Color.yellow));
+                break;
+            case 28:
+                // Less than one.
+                m_OnPlay.Effect.SendEvent("OnPlay", Attribute(m_OnPlay, 0.5f, new Vector3(-0.6f, -0.5f, 0f), Color.magenta));
+                break;
+            case 30:
+                // Less than none.
+                m_OnPlay.Effect.SendEvent("OnPlay", Attribute(m_OnPlay, -1f, new Vector3(0.6f, -0.5f, 0f), Color.cyan));
                 break;
             case 32:
                 // Less than one.
