@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Rendering;
 using Xunit;
 
@@ -263,12 +264,61 @@ namespace UnityEngine.Tests
                 // Control: the other types keep their own modes.
                 Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.LensFlare));
 
-                var shader = Shader.Find("Unlit/Color");
+                var shader = CustomShader();
+                Assert.NotNull(shader);
                 GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, shader);
                 Assert.Same(shader, GraphicsSettings.GetCustomShader(BuiltinShaderType.MotionVectors));
                 Assert.Equal(BuiltinShaderMode.UseBuiltin, GraphicsSettings.GetShaderMode(BuiltinShaderType.MotionVectors));
                 GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, null);
                 Assert.Null(GraphicsSettings.GetCustomShader(BuiltinShaderType.MotionVectors));
+            }
+            finally
+            {
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+            }
+        }
+
+        Shader CustomShader() => Own(UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/RuntimeApis/Custom\" { SubShader { Pass { } } }"));
+
+        static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
+        [Fact]
+        public void CustomBuiltInShadersTheRendererDoesNotApplyAreReported()
+        {
+            const string Custom = "0123456789abcdef0123456789abcdef";
+            try
+            {
+                using (var logs = new RecordedLogs())
+                {
+                    GraphicsSettings.LoadShaderModes(
+                        new Dictionary<string, int> { ["m_ScreenSpaceShadows"] = 2, ["m_LensFlare"] = 2, ["m_Deferred"] = 1, ["m_DepthNormals"] = 0 },
+                        new Dictionary<string, (string, long)>
+                        {
+                            ["m_ScreenSpaceShadows"] = (Custom, 4800000),
+                            // Controls: a built-in shader in custom mode, a custom shader in built-in mode, a disabled type.
+                            ["m_LensFlare"] = ("0000000000000000f000000000000000", 102),
+                            ["m_Deferred"] = (Custom, 4800000),
+                            ["m_DepthNormals"] = (Custom, 4800000),
+                        });
+                    var warning = Assert.Single(logs.Logged, l => l.Contains("custom built-in shaders"));
+                    Assert.StartsWith("Warning: Unbound: the project's custom built-in shaders (m_ScreenSpaceShadows) are not applied", warning);
+                }
+
+                // A custom shader is reported only for a type in custom mode.
+                var shader = CustomShader();
+                Assert.NotNull(shader);
+                int custom = Hits("GraphicsSettings.SetCustomShader");
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, shader);
+                Assert.Equal(custom, Hits("GraphicsSettings.SetCustomShader"));
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.ScreenSpaceShadows, shader);
+                Assert.Equal(custom + 1, Hits("GraphicsSettings.SetCustomShader"));
+
+                // A mode other than the built-in shader is reported.
+                int mode = Hits("GraphicsSettings.SetShaderMode");
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.MotionVectors, BuiltinShaderMode.UseBuiltin);
+                Assert.Equal(mode, Hits("GraphicsSettings.SetShaderMode"));
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.MotionVectors, BuiltinShaderMode.Disabled);
+                Assert.Equal(mode + 1, Hits("GraphicsSettings.SetShaderMode"));
             }
             finally
             {
