@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/emitgeometry/run.py gate"
+  ],
+  "summary": "emitgeometry: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/CommandBuffer.cs",
+    "managed/UnityEngine/UI/CanvasSystem.cs"
+  ]
+}
