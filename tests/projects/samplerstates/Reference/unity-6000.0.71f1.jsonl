@@ -633,4 +633,13 @@
 {"k":"Packed.ARGBFloat.halves.left","v":[0.2,0.2,0.2,0.2]}
 {"k":"Packed.ARGBFloat.halves.between","v":[0.4,0.4,0.4,0.4]}
 {"k":"Packed.ARGBFloat.blend","v":[0.29,0.54,0.34,0.74]}
+{"k":"DepthReads.kernel.first.t0","v":[0.25000003,0,0,1]}
+{"k":"DepthReads.kernel.first.t1","v":[0.75,0,0,1]}
+{"k":"DepthReads.uint.first.high","v":[16000,0,0,16256]}
+{"k":"DepthReads.uint.first.low","v":[1,0,0,0]}
+{"k":"DepthReads.float","v":[0.25000003,0,0,1]}
+{"k":"DepthReads.kernel.after.t0","v":[0.25000003,0,0,1]}
+{"k":"DepthReads.kernel.after.t1","v":[0.75,0,0,1]}
+{"k":"DepthReads.uint.after.high","v":[16000,0,0,16256]}
+{"k":"DepthReads.uint.after.low","v":[1,0,0,0]}
 {"k":"complete","v":true}
