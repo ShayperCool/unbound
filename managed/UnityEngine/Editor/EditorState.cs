@@ -164,8 +164,8 @@ namespace UnityEditor
         public static Object[] GetFiltered(Type type, SelectionMode mode) => Filtered(type, mode).ToArray();
     }
 
-    /// <summary>Script reloads: the session a script edit restarts raises these around the restart
-    /// (beforeAssemblyReload in the old session, afterAssemblyReload in the new one).</summary>
+    /// <summary>Script reloads: every editor domain load ends with afterAssemblyReload, and a session
+    /// a script edit restarts raises beforeAssemblyReload before the restart.</summary>
     public static partial class AssemblyReloadEvents
     {
         public delegate void AssemblyReloadCallback();

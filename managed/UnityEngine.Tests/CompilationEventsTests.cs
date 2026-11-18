@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEditor.Compilation;
 using Xunit;
 
@@ -70,7 +71,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void TheHotReloadReportsCompiledAndFailedAssembliesAndTheRestAsNotRequired()
+        public void TheHotReloadReportsAssembliesWithChangedInputsAndTheRestAsNotRequired()
         {
             var seen = new List<string>();
             Action<object> onStarted = c => seen.Add("started");
@@ -93,14 +94,14 @@ namespace UnityEngine.Tests
                     "started",
                     "finished Library/ScriptAssemblies/A.dll error CS1525: bad;warning CS0219: unused",
                     "notRequired Library/ScriptAssemblies/B.dll",
-                    "notRequired Library/ScriptAssemblies/C.dll",
+                    "finished Library/ScriptAssemblies/C.dll ",
                     "notRequired Library/ScriptAssemblies/D.dll",
                     "finished Library/ScriptAssemblies/E.dll ",
                 }, seen);
-                // Control: a compile that compiled nothing raises nothing.
+                // Control: a compile whose inputs did not change raises nothing.
                 seen.Clear();
                 var nothing = new Unbound.Compiler.CompileResponse();
-                nothing.Assemblies.AddRange(new[] { Result("C", "cached"), Result("D", "unchanged") });
+                nothing.Assemblies.AddRange(new[] { Result("D", "unchanged"), Result("F", "skipped") });
                 Unbound.Host.HotReload.RaiseCompilationEvents(nothing);
                 Assert.Empty(seen);
             }
@@ -110,6 +111,28 @@ namespace UnityEngine.Tests
                 CompilationPipeline.assemblyCompilationFinished -= onAssemblyFinished;
                 CompilationPipeline.assemblyCompilationNotRequired -= onNotRequired;
             }
+        }
+
+        [Fact]
+        public void AnEditorDomainLoadEndsWithAfterAssemblyReload()
+        {
+            // Once, at the end of the load (its order after the load callbacks: compileevents start.end).
+            var seen = new List<string>();
+            AssemblyReloadEvents.AssemblyReloadCallback after = () => seen.Add("afterAssemblyReload");
+            AssemblyReloadEvents.afterAssemblyReload += after;
+            bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
+            try
+            {
+                Unbound.Runtime.EditorSession.BeginEnteringPlayMode();
+                EditorInitialization.LoadEditorDomain(enteringPlayMode: true);
+            }
+            finally
+            {
+                Unbound.Runtime.EditorSession.EndEnteringPlayMode();
+                Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
+                AssemblyReloadEvents.afterAssemblyReload -= after;
+            }
+            Assert.Equal(new[] { "afterAssemblyReload" }, seen);
         }
 
         [Fact]
