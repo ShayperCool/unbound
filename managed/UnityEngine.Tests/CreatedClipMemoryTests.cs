@@ -50,7 +50,7 @@ namespace Unbound.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredPreviousAccounting()
         {
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             var clip = AudioClip.Create("probe", 1000, 1, 44100, true);
             try { Assert.Equal(4936L, Profiler.GetRuntimeMemorySizeLong(clip)); }
             finally { Object.DestroyImmediate(clip); }

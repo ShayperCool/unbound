@@ -600,7 +600,7 @@ namespace Unbound.Tests
                 Assert.False(font.HasCharacter('\u001f'));
                 Assert.False(font.HasCharacter('\0'));
                 // Another release keeps asking the face.
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.False(font.HasCharacter('\u2603'));
                 Assert.True(font.HasCharacter('A'));
             }

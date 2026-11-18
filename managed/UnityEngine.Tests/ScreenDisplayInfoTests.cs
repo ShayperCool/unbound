@@ -127,7 +127,7 @@ namespace UnityEngine.Tests
             Assert.Equal(1898, Screen.mainWindowDisplayInfo.height);
             // Unmeasured release: the host's own size and modes.
             Screen.ResetDisplayForTests();
-            ProjectInfo.UnityVersion = "6000.0.0f1";
+            ProjectInfo.UnityVersion = TestRelease.Unmeasured;
             Assert.Equal(1964, Screen.currentResolution.height);
             Assert.Equal(3, Screen.resolutions.Length);
         }

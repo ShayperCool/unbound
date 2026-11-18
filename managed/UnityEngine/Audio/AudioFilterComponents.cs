@@ -528,7 +528,7 @@ namespace Unbound.Runtime
             bool measured = c is AudioChorusFilter ? Compat.ModulatedDelayMeasured
                 : c is AudioDistortionFilter ? Compat.DistortionMeasured
                 : true;
-            return measured ? null : c.GetType().Name + " is measured only for Unity 6000.0.71f1";
+            return measured ? null : c.GetType().Name + " is measured only for " + Compat.MeasuredFamilies;
         }
 
         /// <summary>False (with one error per component) when a parameter is not a number.</summary>

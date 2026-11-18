@@ -35,7 +35,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", false, 4, 0f)]
         [InlineData("6000.0.71f1", true, 2, 0f)]
-        [InlineData("6000.0.72f1", false, 2, .125f)]
+        [InlineData("6000.3.0f1", false, 2, .125f)]
         public void PublicGeometrySelectsTheMeasuredPartitionAndRefinement(string version, bool delaunay,
             int expectedShapes, float expectedRadius)
         {
@@ -118,7 +118,7 @@ namespace UnityEngine.Tests
         }
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", false)]
         public void OutlinePointOverlapSelectsTheMeasuredRelease(string version, bool overlaps)
         {
             Physics2DWorld.Reset(); ProjectInfo.UnityVersion = version;

@@ -167,7 +167,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredReenableVelocityReport()
         {
-            NavigationTestRelease.At("6000.0.72f1", () =>
+            NavigationTestRelease.At("6000.3.0f1", () =>
             {
                 var agent = Agent(new Vector3(-4f, 0f, -1f));
                 agent.velocity = new Vector3(1f, 0f, 0f);

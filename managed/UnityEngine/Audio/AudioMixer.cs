@@ -479,7 +479,7 @@ namespace UnityEngine.Audio
         internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
-                throw new NotSupportedException("AudioMixerGroup instantiation is measured only for Unity 6000.0.71f1.");
+                throw new NotSupportedException("AudioMixerGroup instantiation is measured only for " + Compat.MeasuredFamilies + ".");
             // A loaded group gets its parent when its mixer is built (defensive: routing through a
             // clone is refused, so its parent is not used today).
             m_Mixer?.Build();
@@ -562,7 +562,7 @@ namespace UnityEngine.Audio
             {
                 if (!effect.IsSidechain) continue;
                 if (!Compat.MixerSidechainMeasured)
-                    throw new NotSupportedException("AudioMixer Send, Receive and Duck Volume are measured only for Unity 6000.0.71f1");
+                    throw new NotSupportedException("AudioMixer Send, Receive and Duck Volume are measured only for " + Compat.MeasuredFamilies);
                 if (effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 if (effect.m_SendTarget != null && m_Mixer.FindEffectGroup(effect.m_SendTarget) == null)
@@ -598,7 +598,7 @@ namespace UnityEngine.Audio
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
                 if (!bypass && effect.m_EnableWetMix && (rule.StaticWet || (reverb && wetDb > 0f))) effect.RequireMeasuredOutput();
                 if (!bypass && effect.m_EnableWetMix && rule.StaticWet && !Compat.MixerStaticWetMeasured)
-                    throw new NotSupportedException("AudioMixer static wet mixing is measured only for Unity 6000.0.71f1");
+                    throw new NotSupportedException("AudioMixer static wet mixing is measured only for " + Compat.MeasuredFamilies);
                 if (!bypass && effect.m_EnableWetMix && (!float.IsFinite(wetDb) || wetDb > rule.MaxWetDb))
                     throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB exceeds the measured maximum " + rule.MaxWetDb + " dB for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 // tests/projects/mixerduck measures Send levels up to 0 dB.
@@ -723,7 +723,7 @@ namespace UnityEngine.Audio
         internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
-                throw new NotSupportedException("AudioMixerSnapshot instantiation is measured only for Unity 6000.0.71f1.");
+                throw new NotSupportedException("AudioMixerSnapshot instantiation is measured only for " + Compat.MeasuredFamilies + ".");
             var copy = new AudioMixerSnapshot { m_Mixer = m_Mixer, m_SnapshotId = m_SnapshotId };
             foreach (var pair in m_Values) copy.m_Values[pair.Key] = pair.Value;
             foreach (var pair in m_TransitionTypes) copy.m_TransitionTypes[pair.Key] = pair.Value;
@@ -869,7 +869,7 @@ namespace Unbound.Runtime
         /// <summary>Fails for a release whose DSP for this effect is not measured.</summary>
         void RequireMeasured(bool measured)
         {
-            if (!measured) throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only for Unity 6000.0.71f1");
+            if (!measured) throw new NotSupportedException("AudioMixer " + m_EffectName + " is measured only for " + Compat.MeasuredFamilies);
         }
         /// <summary>The output covered by Normalize and static slot wet mixing (6000.0.71f1 Linux
         /// Editor, tests/projects/audionormalize, tests/projects/audiopitch). The native mixer checks

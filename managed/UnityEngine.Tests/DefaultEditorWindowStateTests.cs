@@ -59,7 +59,7 @@ namespace UnityEngine.Tests
         public void OtherReleasesRetainTheirPriorWindowState()
         {
             using var engine = MainThreadCheck.Engine();
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             var window = ScriptableObject.CreateInstance<Window>();
             try
             {

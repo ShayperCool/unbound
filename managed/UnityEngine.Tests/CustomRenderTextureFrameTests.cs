@@ -204,7 +204,7 @@ namespace Unbound.Tests
         public void OtherReleasesRetainThePreviousUnmeasuredScheduling()
         {
             using var scope = new Scope();
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             OnDemandRendering.renderFrameInterval = 3;
             var texture = Make();
             Step(4);

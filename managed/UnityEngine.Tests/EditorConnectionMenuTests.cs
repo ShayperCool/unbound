@@ -130,7 +130,7 @@ namespace UnityEngine.Tests
                 hits.TryRemove(diagnostic, out _);
                 Assert.False(Menu.GetEnabled("Edit/Play"));
                 Assert.Contains(capture.Warnings, message => message.Contains(diagnostic));
-                EditorSession.IsPlaying = true; ProjectInfo.UnityVersion = "6000.0.70f1";
+                EditorSession.IsPlaying = true; ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.False(Menu.GetEnabled("Edit/Pause"));
             }
             finally
@@ -152,7 +152,7 @@ namespace UnityEngine.Tests
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 var callback = new PlainReceiver();
                 Assert.Equal("Specified cast is not valid.", Assert.Throws<InvalidCastException>(() => connection.UnregisterConnection(callback.State)).Message);
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.NotEqual("Specified cast is not valid.", Assert.Throws<InvalidCastException>(() => connection.UnregisterDisconnection(callback.State)).Message);
             }
             finally { ProjectInfo.UnityVersion = release; Object.DestroyImmediate(connection); }

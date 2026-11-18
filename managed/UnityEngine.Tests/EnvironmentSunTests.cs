@@ -37,7 +37,7 @@ namespace Unbound.Tests
                 // Keyed on the projection, not on the shader: a cubemap sky gets it too.
                 Assert.Equal(Vector4.zero, FrameBuilder.SkyboxLightProperties(camera, other)[color]);
                 // Unmeasured release: the sky is projected as drawn.
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.Equal(drawn, FrameBuilder.SkyboxLightProperties(camera, sky)[color]);
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 Assert.True(sky.IsKeywordEnabled("_SUNDISK_HIGH_QUALITY"));

@@ -408,7 +408,7 @@ namespace UnityEngine.Tests
         // Animator's output keeps off its source port takes no part in the blend.
         [Theory]
         [InlineData("6000.0.71f1", 0.15f, false)]
-        [InlineData("6000.0.70f1", 0.25f, false)]
+        [InlineData("6000.1.0f1", 0.25f, false)]
         [InlineData("6000.0.71f1", 0.15f, true)]
         public void AVisibilityReturnReblendsWeightsChangedWhileCulled(string release, float replayed, bool withInertOutput)
         {

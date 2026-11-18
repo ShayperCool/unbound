@@ -190,7 +190,7 @@ namespace Unbound.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredSetterBehavior()
         {
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             var scene = m_Scenes.Loaded("Other release");
             var root = Root("root");
             root.hideFlags = HideFlags.HideAndDontSave;

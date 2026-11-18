@@ -55,7 +55,7 @@ namespace Unbound.Tests
         [Theory]
         [InlineData("6000.0.71f1", TextureDimension.Tex2D, 1)]
         [InlineData("6000.0.71f1", TextureDimension.Tex3D, 3)]
-        [InlineData("6000.0.70f1", TextureDimension.Tex2D, 3)]
+        [InlineData("6000.1.0f1", TextureDimension.Tex2D, 3)]
         public void AllocatedMipCountDistinguishesMultisampledAndVolumeResources(string version, TextureDimension dimension, int expected)
         {
             var previous = ProjectInfo.UnityVersion;

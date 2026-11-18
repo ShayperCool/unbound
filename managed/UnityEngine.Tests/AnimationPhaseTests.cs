@@ -49,7 +49,7 @@ namespace UnityEngine.Tests
         // single pass of unmeasured releases keeps them before it too.
         [Theory]
         [InlineData("6000.0.71f1")]
-        [InlineData("6000.0.70f1")]
+        [InlineData("6000.1.0f1")]
         public void StateCallbacksPrecedeMovementWithAnOutput(string release)
         {
             string version = ProjectInfo.UnityVersion;
@@ -154,7 +154,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", true)]
         // Unmeasured releases keep the single pass in the Begin leaf.
-        [InlineData("6000.0.70f1", false)]
+        [InlineData("6000.1.0f1", false)]
         public void TheAutomaticUpdateMovesInTheBeginLeafAndWritesInTheEndLeaf(string release, bool split)
         {
             string version = ProjectInfo.UnityVersion;

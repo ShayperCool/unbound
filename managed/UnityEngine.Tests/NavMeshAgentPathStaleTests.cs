@@ -243,7 +243,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredIdleMoveStaleness()
         {
-            NavigationTestRelease.At("6000.0.72f1", () =>
+            NavigationTestRelease.At("6000.3.0f1", () =>
             {
                 var agent = Agent(new Vector3(-6f, 0f, 0f));
                 NavMesh.SetLinkActive(m_Link, false);

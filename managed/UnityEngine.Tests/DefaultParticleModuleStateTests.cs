@@ -131,7 +131,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void UnmeasuredReleasesKeepTheirExistingMissingOwnerBehavior()
         {
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.Throws<NullReferenceException>(() => default(ParticleSystem.MainModule).duration);
         }
     }

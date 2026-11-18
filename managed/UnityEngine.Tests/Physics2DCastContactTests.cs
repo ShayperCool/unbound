@@ -58,7 +58,7 @@ namespace UnityEngine.Tests
         }
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", false)]
         public void ContactClippingSelectsItsMeasuredReleaseAndReportsTheFallback(string version, bool measured)
         {
             const string member = "Physics2D cast contact features";

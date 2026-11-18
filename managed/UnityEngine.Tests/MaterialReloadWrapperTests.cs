@@ -94,7 +94,7 @@ namespace Unbound.Tests
         public void OtherReleasesKeepTheirUnmeasuredSavedMetadataBehavior()
         {
             string previous = ProjectInfo.UnityVersion;
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             try
             {
                 m_First.name = "edited";

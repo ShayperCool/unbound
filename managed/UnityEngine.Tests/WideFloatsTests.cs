@@ -301,7 +301,7 @@ public static class S { public static float Scale(float a, float t) { float r = 
                 Assert.False(Unbound.Runtime.Compat.ScriptFloatsWide);
                 Unbound.Runtime.Compat.MonoFloats = true;
                 Assert.True(Unbound.Runtime.Compat.ScriptFloatsWide);
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 Assert.False(Unbound.Runtime.Compat.ScriptFloatsWide);
             }
             finally

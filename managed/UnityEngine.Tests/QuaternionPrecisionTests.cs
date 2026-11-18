@@ -90,7 +90,7 @@ namespace UnityEngine.Tests
             var q = new Quaternion(0f, 0f, .199367926f, .9799247f);
             Bits(Quaternion.Normalize(q), 0, 0, 1045178140, 1065016409);
             Bits(QuaternionMath.Normalize(q), 0, 0, 1045178139, 1065016408);
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.False(Compat.QuaternionApiPrecisionMeasured);
             Bits(Quaternion.Normalize(q), 0, 0, 1045178139, 1065016408);
         }

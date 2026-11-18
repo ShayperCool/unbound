@@ -657,8 +657,8 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", true)]
         [InlineData("6000.0.71f1", false)]
-        [InlineData("6000.0.72f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", true)]
+        [InlineData("6000.3.0f1", false)]
         public void LeavingALinkReportsNoPathUntilAWalkingUpdate(string release, bool autoTraverse)
         {
             NavigationTestRelease.At(release, () =>
@@ -739,7 +739,7 @@ namespace UnityEngine.Tests
         /// the last step.</summary>
         [Theory]
         [InlineData("6000.0.71f1")]
-        [InlineData("6000.0.72f1")]
+        [InlineData("6000.3.0f1")]
         public void APausedUpdateReportsThePathsAppliedInIt(string release)
         {
             NavigationTestRelease.At(release, () =>

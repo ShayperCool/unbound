@@ -48,7 +48,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", false)]
         public void ActivatingAMixerSubmitsSilentSiblingGroups(string release, bool eager)
         {
             ProjectInfo.UnityVersion = release;
@@ -134,7 +134,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void InitialSnapshotUsesTheMeasuredEditorSelectionWithStartFallback()
         {
-            foreach (var release in new[] { "6000.0.71f1", "6000.0.70f1" })
+            foreach (var release in new[] { "6000.0.71f1", "6000.1.0f1" })
             foreach (bool selected in new[] { false, true })
             {
                 ProjectInfo.UnityVersion = release;
@@ -392,7 +392,7 @@ namespace UnityEngine.Tests
             Assert.True(mixer.SetFloat("Wet", 31f));
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             Assert.True(mixer.SetFloat("Wet", 3f));
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
         }
 
@@ -442,13 +442,17 @@ namespace UnityEngine.Tests
             var (_, group, effect) = Fixture(); effect.m_EffectName = kind;
             foreach (Action submit in new Action[] { () => group.DspConfiguration(), () => AudioBackend.Current.UpdateGroup(group) })
             {
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
-                ProjectInfo.UnityVersion = "6000.0.71f1";
-                effect.m_EnableWetMix = true;
-                Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(submit).Message);
-                effect.m_EnableWetMix = false;
-                submit();
+                // Every release of the measured family builds the chain (6000.0.67f1 threw here).
+                foreach (var release in new[] { "6000.0.71f1", "6000.0.67f1", "6000.0.0f1" })
+                {
+                    ProjectInfo.UnityVersion = release;
+                    effect.m_EnableWetMix = true;
+                    Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(submit).Message);
+                    effect.m_EnableWetMix = false;
+                    submit();
+                }
             }
         }
 
@@ -535,7 +539,7 @@ namespace UnityEngine.Tests
         [InlineData("6000.0.71f1", -1)]
         [InlineData("6000.0.71f1", 6)]
         [InlineData("6000.0.71f1", 99)]
-        [InlineData("6000.0.72f1", 0)]
+        [InlineData("6000.3.0f1", 0)]
         public void UnmeasuredSidechainTransitionProfilesFailBeforeChangingTheSnapshot(string release, int transition)
         {
             ProjectInfo.UnityVersion = release;
@@ -737,7 +741,7 @@ namespace UnityEngine.Tests
             Assert.True(mixer.GetFloat("Attack", out var rawAttack)); Assert.Equal(attack, rawAttack);
             Assert.Equal(expectedRelease, config.GetProperty("release").GetSingle());
             Assert.True(mixer.GetFloat("Release", out var rawRelease)); Assert.Equal(release, rawRelease);
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
         }
 
@@ -959,7 +963,7 @@ namespace UnityEngine.Tests
                 mixer.SetFloat("Pitch", 1f); effect.m_EnableWetMix = true;
                 group.DspConfiguration();
                 effect.m_EnableWetMix = false;
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
                 effect.m_Bypass = true; group.DspConfiguration();
             }
@@ -982,9 +986,9 @@ namespace UnityEngine.Tests
                 : new[] { "Level" };
             UseEffect(mixer, effect, name, parameters);
             group.DspConfiguration();
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             var error = Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
-            Assert.Contains("AudioMixer " + name + " is measured only for Unity 6000.0.71f1", error.Message);
+            Assert.Contains("AudioMixer " + name + " is measured only for " + Compat.MeasuredFamilies, error.Message);
             effect.m_Bypass = true; group.DspConfiguration();
             effect.m_Bypass = false; group.m_BypassEffects = true; group.DspConfiguration();
         }
@@ -1055,7 +1059,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", 4000f)]
-        [InlineData("6000.0.72f1", 5000f)]
+        [InlineData("6000.3.0f1", 5000f)]
         [InlineData("not a release", 5000f)]
         public void ClearFloatGetterReadsTheSnapshotExceptAMeasuredSubmittedOverride(string release, float submittedRead)
         {
@@ -1102,7 +1106,7 @@ namespace UnityEngine.Tests
                 Assert.True(AudioSettings.Reset(config));
                 Assert.Equal(AudioSpeakerMode.Mono, AudioSettings.GetConfiguration().speakerMode);
                 group.DspConfiguration();
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 config.dspBufferSize = 512;
@@ -1137,7 +1141,7 @@ namespace UnityEngine.Tests
                 Assert.True(AudioSettings.Reset(config));
                 Assert.Equal(AudioSpeakerMode.Prologic, AudioSettings.GetConfiguration().speakerMode);
                 group.DspConfiguration();
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 config.dspBufferSize = 512;
@@ -1207,7 +1211,7 @@ namespace UnityEngine.Tests
                     AudioSettings.GetDSPBufferSize(out int frames, out _);
                     Assert.Equal(pair.Item2, frames);
                 }
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 var legacy = original; legacy.dspBufferSize = 16384;
                 Assert.True(AudioSettings.Reset(legacy));
                 Assert.Equal(16384, AudioSettings.GetConfiguration().dspBufferSize);
@@ -1246,7 +1250,7 @@ namespace UnityEngine.Tests
                 mixer.SetFloat("Wet", 31f);
                 Assert.Throws<NotSupportedException>(submit);
                 mixer.SetFloat("Wet", -6f);
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
                 ProjectInfo.UnityVersion = "6000.0.71f1";
                 var config = AudioSettings.GetConfiguration(); config.dspBufferSize = 384;

@@ -382,7 +382,7 @@ namespace UnityEngine.Tests
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0);
                 animator.updateMode = AnimatorUpdateMode.Normal;
                 float before = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
-                ProjectInfo.UnityVersion = "6000.0.72f1";
+                ProjectInfo.UnityVersion = "6000.3.0f1";
                 AnimationTestLoop.Update(fixedStep: false);
                 Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > before);
             }

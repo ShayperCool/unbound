@@ -510,7 +510,7 @@ namespace UnityEngine.Tests
                 source.UpdateMotion(0);
                 source.SendPacket(19, null, 1, false);
                 Assert.Equal(0.2f, m_Backend.ParamsOf(19).SpatialBlend);
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 source.spatialBlend = 0.5f;
                 source.SendPacket(19, null, 1, false);
                 Assert.Equal(64, m_Backend.ParamsOf(19).CurveLength);

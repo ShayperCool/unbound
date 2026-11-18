@@ -5,7 +5,9 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// Behaviour that differs between Unity releases, chosen by the project's release (the managed
-    /// side of the compatibility profile). Each answer names what was measured.
+    /// side of the compatibility profile). Each answer names what was measured. Releases are grouped
+    /// by family (MAJOR.MINOR, <see cref="Family"/>): an answer measured on 6000.0.71f1 serves every
+    /// release of the 6000.0 family, and "other releases" below are the other families.
     /// </summary>
     internal static class Compat
     {
@@ -16,88 +18,88 @@ namespace Unbound.Runtime
         // Payload production/access and other releases remain unsupported or unmeasured.
         internal const int ObjectChangeStreamStorageWords = 12;
 
-        /// <summary>Editor name lookup uses only an exact measured class table. The doctor's
-        /// family fallback describes coverage and must not supply another release's API answers.</summary>
+        /// <summary>Editor name lookup uses the class table measured for the release's family
+        /// (exactly its measured release's): another family's table must not supply its answers.</summary>
         internal static System.Collections.Generic.SortedDictionary<int, ClassCoverage.UnityClass> EditorClassTable(string release)
-            => ClassCoverage.UnityTable(release, exact: true)
-                ?? throw new NotSupportedException("UnityType metadata has not been measured for Unity " + release + ".");
+            => ClassCoverage.UnityTable(MeasuredRelease(FamilyOf(release)), exact: true)
+                ?? throw new NotSupportedException("UnityType metadata has not been measured for Unity " + release + ": it is measured only for " + MeasuredFamilies + ".");
 
         /// <summary>Managed argument and cast messages measured by editortuples and editorapi on
         /// 6000.0.71f1. Other releases retain their previous unmeasured runtime messages.</summary>
-        internal static bool EditorManagedResourceErrors => Release == (6000, 0, 71, 'f', 1);
+        internal static bool EditorManagedResourceErrors => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Play/Pause/Step menu availability in Play mode, editorapi 6000.0.71f1.
         /// Other lifecycle phases and releases remain unsupported.</summary>
-        internal static bool EditorPlayMenusMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool EditorPlayMenusMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Service-owned preference retention measured by editorservices and analyticssession on 6000.0.71f1.
         /// Other releases keep their previous complete DeleteAll behavior, unmeasured.</summary>
-        internal static bool ServicePreferencesPreserved => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ServicePreferencesPreserved => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Material scalar validation measured by assetadapters on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured value storage.</summary>
-        internal static bool PhysicsMaterialValuesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PhysicsMaterialValuesMeasured => Family == ReleaseFamily.Unity6000_0;
         // Attribute URL observed by attributeinheritance on 6000.0.71f1.
-        internal static string RayTracingShaderHelpURL => Release == (6000, 0, 71, 'f', 1)
+        internal static string RayTracingShaderHelpURL => Family == ReleaseFamily.Unity6000_0
             ? "https://docs.unity3d.com//6000.0/Documentation/ScriptReference/Rendering.RayTracingShader.html"
             : throw new NotSupportedException("RayTracingShader help URL has not been measured for this Unity release.");
         /// <summary>Drag boundary events reach ancestor trickle callbacks in uitkruntime on
         /// 6000.0.71f1. Other releases use the documented target-only propagation, unmeasured here.</summary>
-        internal static bool DragBoundaryEventsTrickle => Release == (6000, 0, 71, 'f', 1);
+        internal static bool DragBoundaryEventsTrickle => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Pointer angle conversion and lazy reads measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous independent angle values.</summary>
-        internal static bool PointerAnglesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PointerAnglesMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>JSON string transfer measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous embedded-null handling.</summary>
-        internal static bool JsonStringTransferMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool JsonStringTransferMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
-        internal static bool UncreatedObjectWrappersMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool UncreatedObjectWrappersMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Removed window settings measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured setting storage.</summary>
-        internal static bool RemovedEditorSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RemovedEditorSettingsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Managed constructor defaults measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured initialization.</summary>
-        internal static bool DefaultConstructorStateMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool DefaultConstructorStateMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Local file response status measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured status reporting.</summary>
-        internal static bool LocalFileRequestStatusMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool LocalFileRequestStatusMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Collider-owned material copies measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured reuse across colliders.</summary>
-        internal static bool PhysicsMaterialInstancesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PhysicsMaterialInstancesMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Removed query settings ignore writes in the defaultstate 6000.0.71f1 reference.
         /// Other releases retain their previous, unmeasured per-command storage.</summary>
-        internal static bool RemovedPhysicsSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RemovedPhysicsSettingsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Invalid 3D callback payload access measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured null fallback.</summary>
-        internal static bool PhysicsCallbackPayloadsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PhysicsCallbackPayloadsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Joint-drive input ranges measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured stored drive values.</summary>
-        internal static bool PhysicsJointDrivesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PhysicsJointDrivesMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Removed reverb settings and warnings measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured stub response.</summary>
-        internal static bool RemovedAudioSettingsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RemovedAudioSettingsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Particle module properties without an owner, measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured missing-owner behavior.</summary>
-        internal static bool ParticleModuleHandlesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleModuleHandlesMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Removed particle members reject access in the defaultstate 6000.0.71f1 reference.
         /// Other releases retain their previous unmeasured compatibility paths.</summary>
-        internal static bool RemovedParticleMembersMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RemovedParticleMembersMeasured => Family == ReleaseFamily.Unity6000_0;
         // Shared result code of Unity exception constructors in the defaultstate 6000.0.71f1 reference.
         internal const int UnityExceptionResult = -2147467261;
         /// <summary>Refresh-rate fractions, invalid-rate ordering and rounded integer conversion,
         /// measured by defaultstate on 6000.0.71f1. Other releases keep their unmeasured previous rules.</summary>
-        internal static bool RefreshRateFractionsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RefreshRateFractionsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The errors of scene loads the build list cannot serve, measured by apierrors
         /// on 6000.0.71f1: the build profile wording, and an empty name or a negative index with
         /// their own error. Other releases keep the earlier build settings texts (releases before
         /// Unity 6 have no build profiles; later ones are not measured).</summary>
-        internal static bool SceneLoadErrorsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SceneLoadErrorsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Component factory eligibility measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured creation rules.</summary>
-        internal static bool ComponentFactoryEligibilityMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ComponentFactoryEligibilityMeasured => Family == ReleaseFamily.Unity6000_0;
         internal static bool NativeComponentIsAbstract(Type type) => ComponentFactoryEligibilityMeasured
             && (type == typeof(UnityEngine.Behaviour) || type == typeof(UnityEngine.Renderer)
                 || type == typeof(UnityEngine.Collider2D) || type == typeof(UnityEngine.Joint2D)
@@ -108,76 +110,76 @@ namespace Unbound.Runtime
 
         /// <summary>Runtime compressed channel formats and readback controls measured by
         /// tests/projects/texturecompression on 6000.0.71f1. Other releases keep their previous formats.</summary>
-        internal static bool RuntimeTextureCompressionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RuntimeTextureCompressionMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Runtime NavMesh one-cell region merging, measured by tests/projects/navmesh
         /// on 6000.0.71f1. Other releases retain the previous, unmeasured zero-cell threshold.</summary>
-        internal static bool NavMeshRegionMergingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshRegionMergingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Neighbour candidates cover the radius and predicted travel; nonfinite
         /// radius and velocity assignments are rejected. Measured by tests/projects/navmesh
         /// and avoidance on 6000.0.71f1. Other releases retain the previous, unmeasured
         /// point insertion and input handling.</summary>
-        internal static bool NavMeshPredictionBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshPredictionBoundsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Local heading, the movement threshold and up-axis alignment, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured quaternion interpolation.</summary>
-        internal static bool NavMeshOrientationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshOrientationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The current corridor reports its endpoint independently of hasPath; hasPath and
         /// steeringTarget report the corners found after each step, the corridor's length and the
         /// link state. Measured by tests/projects/navlinks and navmesh on 6000.0.71f1. Other
         /// releases retain the previous, unmeasured arrival-dependent reports.</summary>
-        internal static bool NavMeshCorridorReportingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshCorridorReportingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Stopping distance selects planned speed before braking, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain their previous,
         /// unmeasured immediate stop.</summary>
-        internal static bool NavMeshStoppingDistanceMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshStoppingDistanceMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A runtime point link's start and end each attach to the one polygon nearest to
         /// them among all the agent type's NavMesh data (within the agent type's climb), measured by
         /// tests/projects/navpath `--profile layers` on 6000.0.71f1. Other releases keep attaching
         /// to every tile over them, unmeasured.</summary>
-        internal static bool NavMeshLinkBindingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshLinkBindingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Straight paths keep points that are not exactly equal (a path's end 1e-7 m from
         /// its start is a second corner), measured by tests/projects/navarrival `query.*` on
         /// 6000.0.71f1. Other releases retain Detour's colocation threshold, unmeasured.</summary>
-        internal static bool NavMeshStraightPathExactMergeMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshStraightPathExactMergeMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A braking agent arrives on the step that leaves at most
         /// <see cref="NavMeshBrakingArrivalDistance"/> to the end, measured by tests/projects/navarrival
         /// `lane.*` on 6000.0.71f1 (0.0000992 arrives, 0.000131 keeps moving). Other releases
         /// retain the previous, unmeasured arrival within a millimetre before the step.</summary>
-        internal static bool NavMeshBrakingArrivalMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshBrakingArrivalMeasured => Family == ReleaseFamily.Unity6000_0;
 
         internal const float NavMeshBrakingArrivalDistance = 1e-4f;
 
         /// <summary>Braking prepares and reports the next velocity from the steering plan,
         /// measured by tests/projects/navbaked on 6000.0.71f1. Other releases retain
         /// their previous, unmeasured use of the avoidance sample while braking.</summary>
-        internal static bool NavMeshBrakingPlanMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshBrakingPlanMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>An arrived agent retains its destination request and resumes it when moved
         /// away, measured by tests/projects/navlinks on 6000.0.71f1. Other releases retain the
         /// previous, unmeasured cancellation of the completed request.</summary>
-        internal static bool NavMeshDestinationRetentionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshDestinationRetentionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A surface move without a destination renews the standing corridor's endpoint
         /// and stale version, measured by tests/projects/navlinks on 6000.0.71f1. Other releases
         /// retain the previous, unmeasured corridor and staleness until the next update.</summary>
-        internal static bool NavMeshIdleMoveMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshIdleMoveMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Enabling an agent starts its reported velocity at zero, measured by
         /// tests/projects/navlinks on 6000.0.71f1. Other releases retain the previous,
         /// unmeasured velocity report until the next update.</summary>
-        internal static bool NavMeshEnableVelocityMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshEnableVelocityMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Link activation updates query access immediately and invalidates an agent's
         /// corridor at its next update (Unity 6000.0.71f1, tests/projects/navlinks). Other releases
         /// retain the previous immediate mesh rebuild.</summary>
-        internal static bool NavMeshLinkActivationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool NavMeshLinkActivationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Script code evaluates float32 expressions with double intermediates and rounds them
         /// where its IL stores a float32 (locals, arguments, fields, array elements, boxes, call
@@ -186,7 +188,7 @@ namespace Unbound.Runtime
         /// (user decision 2026-11-13: an artefact of the Editor's Mono runtime that IL2CPP builds do not
         /// share), and then only for the measured release; otherwise game code keeps CoreCLR's float32
         /// evaluation.</summary>
-        internal static bool ScriptFloatsWide => MonoFloats && Release == (6000, 0, 71, 'f', 1);
+        internal static bool ScriptFloatsWide => MonoFloats && Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The opt-in to the Editor's Mono float evaluation of game code: the environment
         /// variable UNBOUND_MONO_FLOATS set to 1, true or on when the engine starts.</summary>
@@ -206,121 +208,121 @@ namespace Unbound.Runtime
         /// <summary>Quaternion API accumulation and axis-conversion intermediates, measured by
         /// tests/projects/quaternioneuler on 6000.0.71f1. Other releases retain their unmeasured
         /// single-precision arithmetic.</summary>
-        internal static bool QuaternionApiPrecisionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool QuaternionApiPrecisionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Font asset ligature imports stop the batch at a duplicate in
         /// tests/projects/fontlayout, Unity 6000.0.71f1. Other releases skip duplicates.</summary>
-        internal static bool FontLigatureDuplicateBatchMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontLigatureDuplicateBatchMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Ligature character information uses the last consumed source element in
         /// tests/projects/fontlayout, Unity 6000.0.71f1. Other releases retain the starting span.</summary>
-        internal static bool FontLigatureSourceSpanMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontLigatureSourceSpanMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Preferred text size applies mark tables independently of feature switches
         /// in tests/projects/fontlayout, Unity 6000.0.71f1. Other releases honor the switches.</summary>
-        internal static bool FontPreferredMarksMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontPreferredMarksMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Null mark matrix anchors retain header coordinates in the measured queries.
         /// tests/projects/fontmarks, Unity 6000.0.71f1.</summary>
-        internal static bool FontMarkNullAnchorMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontMarkNullAnchorMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The measured font feature lookup-index queries return records only for -1.
         /// tests/projects/fontfeatures, Unity 6000.0.71f1.</summary>
-        internal static bool FontFeatureLookupIndexQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
-        internal static bool FontPairQueriesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FontFeatureLookupIndexQueriesMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal static bool FontPairQueriesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Panel atlas packing, texture ownership and dirty/reset transitions measured
         /// in tests/projects/uitkvector, Unity 6000.0.71f1. Other releases keep direct sampling,
         /// whose seams and texture lifetime remain unmeasured.</summary>
-        internal static bool DynamicPanelAtlasMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool DynamicPanelAtlasMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Vector and rounded stencil shapes stay with an element's retained geometry
         /// until repaint. Measured in tests/projects/uitkvector on Unity 6000.0.71f1.
         /// Other releases retain per-paint mask generation, unmeasured.</summary>
-        internal static bool RetainedStencilShapesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RetainedStencilShapesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Legacy generator pivot translation uses updated bounds, and primes the base
         /// space separately. Measured in tests/projects/textcolor on Unity 6000.0.71f1.
         /// Other releases retain generation-extents translation and batched glyph requests, unmeasured.</summary>
-        internal static bool LegacyGeneratorBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool LegacyGeneratorBoundsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Legacy dynamic fonts: per-character OS fallback through the font names and the fallback families, and the built-in font without font data and Font.HasCharacter of dynamic fonts, measured in tests/projects/glyphraster.</summary>
-        internal static bool LegacyGlyphRasterMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool LegacyGlyphRasterMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Constructor, animation-job API contexts and component initialization defaults measured in tests/projects/threadapis.</summary>
-        internal static bool MainThreadContextsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MainThreadContextsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Invoke deadlines and delayed-call points measured in tests/projects/invokesteps.</summary>
-        internal static bool InvokeTimingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool InvokeTimingMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Separate preparation and activation of scene operations, measured by
         /// tests/projects/editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
-        internal static bool SceneAsyncPreparationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SceneAsyncPreparationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Public root hide flag ownership and component propagation measured by
         /// tests/projects/hiddenflags on Unity 6000.0.71f1.</summary>
-        internal static bool HideFlagsRootOwnershipMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool HideFlagsRootOwnershipMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Material reload wrapper identity and shared state, tests/projects/materialalias
         /// on Unity 6000.0.71f1. Other releases retain the unmeasured previous wrapper.</summary>
-        internal static bool MaterialReloadWrappersMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MaterialReloadWrappersMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Captured exception formatting, tests/projects/stackcapture on 6000.0.71f1.
         /// Other releases retain their unmeasured previous exception text.</summary>
-        internal static bool CapturedStackTracesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool CapturedStackTracesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Created clip stream memory follows the creation option and two truncated
         /// buffers, tests/projects/clipmemory on 6000.0.71f1. Other releases remain unmeasured.</summary>
-        internal static bool CreatedClipStreamMemoryMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool CreatedClipStreamMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Created text and binary payload allocation accounting, Unity 6000.0.71f1
         /// (tests/projects/textassetmemory).</summary>
-        internal static bool TextAssetMemoryMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool TextAssetMemoryMeasured => Family == ReleaseFamily.Unity6000_0;
 
 
         /// <summary>CRT loading, callback delivery and render-cycle scheduling,
         /// tests/projects/crtload on 6000.0.71f1. Other releases retain unmeasured prior behavior.</summary>
-        internal static bool CustomRenderTextureLifecycleMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool CustomRenderTextureLifecycleMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Pending Starts without an earlier callback visit run at the PostLateUpdate
         /// scripting point, measured by editorcallbacks/SceneLoop on Unity 6000.0.71f1.</summary>
-        internal static bool PendingStartsAfterLateUpdate => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PendingStartsAfterLateUpdate => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Camera dependency repair measured by
         /// flarelayerdependency in Unity 6000.0.71f1.</summary>
-        internal static bool FlareCameraRepairMeasured => Release == (6000, 0, 71, 'f', 1);
-        internal static bool FlareCameraRepairMeasuredFor(string release) => Parse(release ?? "") == (6000, 0, 71, 'f', 1);
+        internal static bool FlareCameraRepairMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal static bool FlareCameraRepairMeasuredFor(string release) => FamilyOf(release) == ReleaseFamily.Unity6000_0;
 
         /// <summary>Deferred object lifetime at delayed scripting points, measured in
         /// tests/projects/destroyphases, plus activation destruction guards in hiddenflags,
         /// on Unity 6000.0.71f1.</summary>
-        internal static bool DestroyPhasesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool DestroyPhasesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Scene objects read from files use positive instance IDs, independently of asset
         /// persistence, measured by instanceids on 6000.0.71f1. Other releases are unmeasured.</summary>
-        internal static bool SceneFileInstanceIdsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SceneFileInstanceIdsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Automatic rendering follows the public player loop and precedes end-of-frame
         /// coroutine resumes. Its first Play frame renders without end-of-frame completion. Measured
         /// by destroyphases and eofstartup on 6000.0.71f1; other releases retain their prior timing.</summary>
-        internal static bool RenderingAfterPublicLoop => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RenderingAfterPublicLoop => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Simulation mode checks, contact refresh across sub-steps and contact payload
         /// sampling/impulse accumulation, measured by physics2dadvanced and physics2ddynamics
         /// on Unity 6000.0.71f1.</summary>
-        internal static bool Physics2DSimulationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool Physics2DSimulationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Generated 2D collider frames, partitions, manual settings and outline point tests, measured by
         /// geometryframe2d on Unity 6000.0.71f1.</summary>
-        internal static bool Physics2DGeneratedGeometryMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool Physics2DGeneratedGeometryMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Cast polygon contact clipping and witness selection, measured by
         /// query2dparity on Unity 6000.0.71f1.</summary>
-        internal static bool Physics2DCastContactsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool Physics2DCastContactsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Slide contact spacing, iteration accounting and argument validation,
         /// measured by physics2dadvanced on Unity 6000.0.71f1.</summary>
-        internal static bool Physics2DSlideMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool Physics2DSlideMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The fixed scheduler uses the same whole-tick time domain as the frame clock,
         /// measured by physics2dadvanced automatic modes on Unity 6000.0.71f1.</summary>
-        internal static bool FixedClockTicksMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool FixedClockTicksMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>What a scene without lighting data stores and reflects: a zero ambient probe
         /// and a black cube, or the built-in lighting data when an earlier release saved its
@@ -328,7 +330,7 @@ namespace Unbound.Runtime
         /// (nodata*, legacy*) on Unity 6000.0.71f1. In other releases Unbound gives such a scene
         /// zero and black with a warning: releases before Unity 6 bake both by default (the
         /// Unity 6 upgrade guide), and later ones are not measured.</summary>
-        internal static bool SceneWithoutLightingDataMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SceneWithoutLightingDataMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The project's release's major version (2022, 6000, ...).</summary>
         internal static int Major
@@ -343,22 +345,22 @@ namespace Unbound.Runtime
 
         /// <summary>Old GUILayer documents are discarded on scene load in the measured release
         /// (tests/projects/classids). Other releases retain the unsupported-class diagnostic.</summary>
-        internal static bool RemovesLegacyGuiLayer(string release) => Parse(release ?? "") == (6000, 0, 71, 'f', 1);
+        internal static bool RemovesLegacyGuiLayer(string release) => FamilyOf(release) == ReleaseFamily.Unity6000_0;
 
         /// <summary>Asset resource ownership and clone diagnostics measured by assetinstantiate
         /// in 6000.0.71f1. Other releases require their own measurement.</summary>
-        internal static bool AssetCloneResourcesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AssetCloneResourcesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Linux Editor display answers measured by inputplatform on 6000.0.71f1.
         /// Screen's resolution choices describe the Editor, while DisplayInfo comes from the OS.</summary>
-        internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Release == (6000, 0, 71, 'f', 1);
+        internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>macOS Editor display answers measured by macdisplay on 6000.0.71f1: the
         /// usable area (the work area) as the current resolution and the display info's size, at
         /// the host's exact refresh ratio; the resolutions the display modes' sizes at that rate,
         /// the current mode's as the usable area, plus the desktop's size in points without a rate.
         /// Other releases keep the host's answers until measured.</summary>
-        internal static bool MacEditorDisplayMeasured => OperatingSystem.IsMacOS() && Release == (6000, 0, 71, 'f', 1);
+        internal static bool MacEditorDisplayMeasured => OperatingSystem.IsMacOS() && Family == ReleaseFamily.Unity6000_0;
 
         // Standard sizes measured on a desktop larger than every size in the list. The smaller
         // captures establish that each dimension is filtered independently against the desktop.
@@ -381,147 +383,147 @@ namespace Unbound.Runtime
         };
 
         /// <summary>Group input startup fades follow the mixer graph's processing age, including
-        /// groups first used later (tests/projects/mixerduck, exactly 6000.0.71f1).</summary>
-        internal static bool MixerGraphStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// groups first used later (tests/projects/mixerduck, 6000.0.71f1).</summary>
+        internal static bool MixerGraphStartupMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Static effect-slot Wet mixing measured on 6000.0.71f1 by the five
         /// audio effect probes. Other releases keep rejecting this unmeasured mechanism.</summary>
-        internal static bool MixerStaticWetMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerStaticWetMeasured => Family == ReleaseFamily.Unity6000_0;
 
 
         /// <summary>The Editor starts with its saved mixer snapshot selection, measured on
-        /// exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain the start
+        /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain the start
         /// snapshot until their Editor selection behavior is measured.</summary>
-        internal static bool MixerSnapshotSelectionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerSnapshotSelectionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Trailing attenuation submits gain directly; interior attenuation ramps per
-        /// frame. Measured on exactly 6000.0.71f1 (tests/projects/mixersuspend, mixerduck).
+        /// frame. Measured on 6000.0.71f1 (tests/projects/mixersuspend, mixerduck).
         /// Other releases retain their unmeasured gain ramp.</summary>
-        internal static bool MixerParameterGainMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerParameterGainMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>AudioSettings.Reset invalidates generated clip data and reloads
-        /// imported data once per shared resource. Measured on exactly 6000.0.71f1
+        /// imported data once per shared resource. Measured on 6000.0.71f1
         /// (tests/projects/mixersuspend); clone ownership/loading uses AssetCloneResourcesMeasured.
         /// Other releases retain their existing clip data until measured.</summary>
-        internal static bool AudioClipResetDataMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioClipResetDataMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Closing offline capture for a reset processes the old output buffer,
         /// measured on 6000.0.71f1 by tests/projects/mixersuspend's reset delivery control.
         /// Other releases retain their unmeasured reset delivery.</summary>
-        internal static bool AudioResetCaptureTailMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioResetCaptureTailMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Script-created clip duration uses whole milliseconds, measured on exactly
         /// 6000.0.71f1 (tests/projects/mixersuspend). Imported duration remains sample-based.
         /// Other releases retain sample-based duration until measured.</summary>
-        internal static bool ScriptAudioClipDurationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ScriptAudioClipDurationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Decoded resampling uses a single-precision rate ratio and holds the final
         /// frame until non-looping playback ends,
-        /// measured on exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain
+        /// measured on 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain
         /// a double rate ratio and zero padding until measured; looping still wraps.</summary>
-        internal static bool DecodedAudioResamplingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool DecodedAudioResamplingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Destroy requests stop AudioSource voices before the deferred object
         /// destruction, including sources below a destroyed GameObject. Measured on exactly
         /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain end-of-frame cleanup.</summary>
-        internal static bool AudioSourceDestroyRequestMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioSourceDestroyRequestMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A streamed clip's cached buffer is owned by the most recent voice
         /// that starts it; stopping its source releases the buffer. Measured on exactly
         /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases keep their previous
         /// loading and stop behavior until measured.</summary>
-        internal static bool StreamingClipBufferLifetimeMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool StreamingClipBufferLifetimeMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
-        /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
-        internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
+        internal static bool MixerSidechainMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Linear scaled-time Send and Duck Volume snapshot changes, measured by
         /// tests/projects/mixerduck. Unscaled-time transitions remain unmeasured.</summary>
-        internal static bool MixerTimedSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerTimedSidechainMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Normalized snapshot progress accumulation, measured by the live public
         /// parameter trace in tests/projects/audiodistortion. Other releases retain elapsed-time division.</summary>
-        internal static bool MixerSnapshotProgressMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerSnapshotProgressMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Single-snapshot scalar curves and linear weighted-array transitions,
-        /// measured by tests/projects/mixerduck on exactly 6000.0.71f1.</summary>
-        internal static bool MixerSnapshotCurvesMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// measured by tests/projects/mixerduck on 6000.0.71f1.</summary>
+        internal static bool MixerSnapshotCurvesMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Default mixer Pitch Shifter DSP measured on exactly 6000.0.71f1.
+        /// <summary>Default mixer Pitch Shifter DSP measured on 6000.0.71f1.
         /// Other releases fail until their kernels and state have been measured.</summary>
-        internal static bool MixerPitchShifterMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerPitchShifterMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Mixer Normalize's linked peak envelope, measured on exactly 6000.0.71f1
+        /// <summary>Mixer Normalize's linked peak envelope, measured on 6000.0.71f1
         /// (tests/projects/audionormalize). Other releases fail until measured.</summary>
-        internal static bool MixerNormalizeMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerNormalizeMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The modulated Q14 delay line that mixer Chorus and Flange and AudioChorusFilter
-        /// share, measured on exactly 6000.0.71f1 (tests/projects/audiochorus,
+        /// share, measured on 6000.0.71f1 (tests/projects/audiochorus,
         /// tests/projects/audioflange). Other releases fail until measured.</summary>
-        internal static bool ModulatedDelayMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ModulatedDelayMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Compressor DSP parameter clamps, measured by tests/projects/audiopitch.</summary>
-        internal static bool MixerCompressorParametersMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerCompressorParametersMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Speaker-wide effects, measured by tests/projects/audiopitch's surround profile.</summary>
-        internal static bool AudioSurroundEffectsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioSurroundEffectsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Every decoded input of a clip of three to eight channels, 2D or spatial,
         /// streamed or not, to every output layout, measured by audiopitch/VOICE_INPUT.md,
         /// SIX_LAYOUTS.md, SIX_SPATIAL.md and INPUT_CONTEXTS.md. Wider clips, streamed downloads
         /// and spatial voices in Prologic output are rejected on this release.</summary>
-        internal static bool AudioMultichannelVoicesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioMultichannelVoicesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Block-constant effect parameters applying the measured history rules,
         /// measured on 6000.0.71f1 by tests/projects/audiodistortion's live profile.</summary>
-        internal static bool MixerEffectTransitionsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerEffectTransitionsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Shared effect-slot wet/dry gains over 64 frames, measured on 6000.0.71f1
         /// by tests/projects/audiodistortion's live profile. Other releases keep static slots.</summary>
-        internal static bool MixerWetTransitionsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerWetTransitionsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Component tails end one DSP buffer after the last voice's containing
         /// buffer, including partial device periods (tests/projects/audioreverb, 6000.0.71f1).
         /// Other releases retain their previous render-chunk frontier until measured.</summary>
-        internal static bool AudioComponentTailMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioComponentTailMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Echo component delay converts to unsigned whole milliseconds before the shared
         /// mixer kernel's frame conversion (tests/projects/audiodistortion, 6000.0.71f1).
         /// Other releases retain their previous float setter and 10 ms DSP minimum until measured.</summary>
-        internal static bool AudioComponentEchoDelayMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioComponentEchoDelayMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Listener component ordering and per-source bypass, measured on exactly
         /// 6000.0.71f1 by tests/projects/audiodistortion. Other releases retain reverb-only
         /// listener support and their prior bypassEffects routing until measured.</summary>
-        internal static bool AudioListenerChainMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioListenerChainMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Mono/stereo source mapping, gain ramps, distance curves, relative-velocity
         /// Doppler and interpolation lookahead measured by tests/projects/audiodistortion on
         /// 6000.0.71f1. Other releases retain the previous approximate matrix, sampled curves,
         /// inverse-source-velocity Doppler and max-distance clamp until measured.</summary>
-        internal static bool AudioSpatialStereoMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioSpatialStereoMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Source/listener bypass activation, retained disabled units and source chain
         /// reconnection measured by tests/projects/audiodistortion live controls on
         /// 6000.0.71f1. Other releases keep the previous bypass and disabled-unit behavior.</summary>
-        internal static bool AudioComponentActivationMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioComponentActivationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         // Per-voice zone send placement and completion (tests/projects/audioreverb).
-        internal static bool AudioZoneVoiceSendMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioZoneVoiceSendMeasured => Family == ReleaseFamily.Unity6000_0;
 
         // First zone processing defaults (tests/projects/audioreverb).
-        internal static bool AudioZoneStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AudioZoneStartupMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The Distortion waveshaper of the mixer effect and AudioDistortionFilter, measured
-        /// on exactly 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
-        internal static bool DistortionMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// on 6000.0.71f1 (tests/projects/audiodistortion). Other releases fail until measured.</summary>
+        internal static bool DistortionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>AudioMixer.GetFloat after ClearFloat, before the next audio update, measured on
-        /// exactly 6000.0.71f1 (tests/projects/mixerparams): an override already submitted to audio
+        /// 6000.0.71f1 (tests/projects/mixerparams): an override already submitted to audio
         /// still reads until that update. Every release reads the snapshot value for a clear of an
         /// unsubmitted override, as GetFloat documents; other releases read it for a submitted one
         /// too (the exception is unmeasured there; docs/COMPATIBILITY_GAPS.md).</summary>
-        internal static bool MixerClearFloatSubmissionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool MixerClearFloatSubmissionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Where Input's errors point to its settings: 6000.0's Editor says (measured)
         /// "Edit -> Project Settings... -> Input Manager"; earlier releases "Edit -> Settings -> Input".</summary>
@@ -529,29 +531,29 @@ namespace Unbound.Runtime
 
         /// <summary>Start batches (a step's rate and burst births, and Emit(count)): their
         /// initialization, birth ages and removal of births that die at their start, measured
-        /// by tests/projects/particlerandom and particlemeshshape texture/clip/* for exactly
+        /// by tests/projects/particlerandom and particlemeshshape texture/clip/* on
         /// 6000.0.71f1. Other releases keep the per-particle emission path until measured.</summary>
-        internal static bool ParticleRateBatchesMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleRateBatchesMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Combined shape modifiers measured by tests/projects/particlerandom.
         /// Other releases retain their existing sampling until measured.</summary>
-        internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleShapeModifiersMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Batch physics queries use the last synchronized transforms even with
         /// autoSyncTransforms enabled (physicsbatch, 6000.0.71f1). Other releases retain automatic
         /// preparation until measured.</summary>
-        internal static bool PhysicsBatchRetainsSyncedTransforms => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PhysicsBatchRetainsSyncedTransforms => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Terrain tree material bindings retain their creation material, measured in
         /// tests/projects/physicsbatch on 6000.0.71f1. Other releases keep assignment propagation
         /// until their binding lifetime is measured.</summary>
-        internal static bool TerrainTreeMaterialRetainsCreationBinding => Release == (6000, 0, 71, 'f', 1);
+        internal static bool TerrainTreeMaterialRetainsCreationBinding => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>The release Unbound's rendering parity was measured on (tests/projects/*
+        /// <summary>The family Unbound's rendering parity was measured for (tests/projects/*
         /// Reference/unity-6000.0.71f1). The rendering answers below give its measured behaviour
-        /// to exactly that release; the other releases' answers are listed in
+        /// to every release of the 6000.0 family; the other families' answers are listed in
         /// docs/COMPATIBILITY_GAPS.md ("Rendering rules measured on one release").</summary>
-        internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool RenderingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>DrawMeshNow and CommandBuffer.DrawMesh keep the submitted winding, including
         /// negative determinants (samplerstates StencilFaces/RendererFaces). Other releases retain
@@ -600,80 +602,80 @@ namespace Unbound.Runtime
         /// <summary>The automatic Animator update split over two player-loop leaves (state machines,
         /// events and movement in DirectorUpdateAnimationBegin; pose writes and IK passes, layer by
         /// layer over all Animators, in DirectorUpdateAnimationEnd; the fixed-step leaves likewise),
-        /// measured by tests/projects/animcallbacks on exactly 6000.0.71f1
+        /// measured by tests/projects/animcallbacks on 6000.0.71f1
         /// (<see cref="AnimationPhases"/>). Other releases keep Unbound's earlier single pass in the
         /// Begin leaf (unmeasured there).</summary>
-        internal static bool AnimationUpdateSplitMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AnimationUpdateSplitMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on exactly
         /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
-        internal static bool HumanPlayableMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool HumanPlayableMixerMotionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Humanoid root motion and bodies composed by AnimationLayerMixerPlayables over
         /// humanoid clips and mixers (override layers by weight through their masks' body parts,
         /// additive layers leaving the motion), measured by tests/projects/humanoid mixer.* on exactly
         /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
-        internal static bool HumanPlayableLayerMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool HumanPlayableLayerMixerMotionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>After skipped updates, a visibility return replays the last event intervals of
         /// clips that a mixer or layer mixer combined (at any depth), but not of a clip that is the
         /// output's source or is reached only through passthrough playables (6000.0.71f1,
         /// animculling explicit/later and explicit/eventShape). Other releases fire no events on
         /// visibility return, as the culling documentation describes.</summary>
-        internal static bool PlayableEventsReplayOnVisibility => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PlayableEventsReplayOnVisibility => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A CullCompletely-culled Animator holds only the animation playables of its
         /// outputs' trees (and what is below them); plain and script playables above them keep the
-        /// graph's clock. Measured by tests/projects/animculling clock/ on exactly 6000.0.71f1.
+        /// graph's clock. Measured by tests/projects/animculling clock/ on 6000.0.71f1.
         /// Other releases (unmeasured) hold each culled output's whole source tree, as Unbound did
         /// before, but with the measured hold itself: it wins over other outputs reaching a held
         /// playable and pauses held behaviours instead of preparing them with a zero step.
         /// The same measured release also re-blends a held clip/mixer tree whose weights changed
         /// while culled at the visibility return (animculling humanMixerShape/live,
         /// genericMixerSum/liveCulled); other releases replay the last blend and warn.</summary>
-        internal static bool PlayableCullingHoldsAnimationPlayablesOnly => Release == (6000, 0, 71, 'f', 1);
+        internal static bool PlayableCullingHoldsAnimationPlayablesOnly => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Animator automatic Play-entry timing and startup controls measured by
-        /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor, and the time of a state
+        /// tests/projects/animstartup in 6000.0.71f1's Linux Editor, and the time of a state
         /// a Play or CrossFade request enters (held for the update it enters in: animstartup's Play
         /// offsets, humanoid playState and crossFade*). Other releases retain the existing behavior
         /// (the entered state advances) until measured.</summary>
-        internal static bool AnimatorStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool AnimatorStartupMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Root-space skinned bounds, single-bone defaults and cached public world
         /// bounds measured by skinnedbounds in the Linux 6000.0.71f1 Editor.</summary>
-        internal static bool SkinnedBoundsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SkinnedBoundsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Birth sub-emitter origins, emission intervals and ages measured by
         /// tests/projects/particlerandom (Simulate) and tests/projects/particlerender birthstart/*
         /// (the frame's update). Other releases retain their previous path.</summary>
-        internal static bool ParticleBirthStepsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleBirthStepsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Sub-emitters of every type play from each update of their playing parent and
         /// stop at the end of a frame that leaves them empty, measured by
         /// tests/projects/particlerender birthstart/* and subemitters played/* on 6000.0.71f1.
         /// Other releases keep the previous rule (a child plays once it receives particles).</summary>
-        internal static bool ParticleSubEmitterStartMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleSubEmitterStartMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Prewarm simulates the longest start lifetime plus the sub-emitter chains'
         /// lifetimes in one call ending on a loop's end, keeps the clock where it ends and emits
         /// sub-emitter children within their lifetime of the end without aging them, measured by
         /// tests/projects/particlerender prewarm/* on 6000.0.71f1. Other releases keep the previous
         /// model (one longest lifetime from time 0, then time 0) until measured.</summary>
-        internal static bool ParticlePrewarmMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticlePrewarmMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Start lifetimes take a reciprocal estimate with two Newton corrections
         /// instead of a correctly rounded division, measured by tests/projects/particlerandom
         /// (birthclock/, model/clock/). Other releases keep the division until measured.</summary>
-        internal static bool ParticleLifetimeReciprocalEstimate => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleLifetimeReciprocalEstimate => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>BakeTexture of mesh particles whose bake has a 16-bit index buffer fills the
         /// indices texture with that buffer read as 32-bit words (two indices a texel), measured
         /// by tests/projects/particlerender meshindex/* and bake/mesh on 6000.0.71f1. Other
         /// releases write one index a texel, as for billboards, until measured.</summary>
-        internal static bool ParticleMeshBakeTextureReadsIndexPairs => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ParticleMeshBakeTextureReadsIndexPairs => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
@@ -691,43 +693,71 @@ namespace Unbound.Runtime
         /// contactmodify3d in 6000.0.71f1. Other releases retain unconditional point reporting and
         /// collider-plus-body delivery until
         /// measured (docs/COMPATIBILITY_GAPS.md).</summary>
-        internal static bool SelectiveContactReportsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool SelectiveContactReportsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>ContinuousDynamic also sweeps Discrete dynamic targets, measured by
         /// physicsccdhinge geometry-controls in 6000.0.71f1. Other releases retain the previous
         /// exclusion until their pair eligibility is measured.</summary>
-        internal static bool CcdDiscreteDynamicTargetsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool CcdDiscreteDynamicTargetsMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Constrained velocity assignments and dynamic pose publication,
         /// measured by physicsccdhinge on 6000.0.71f1. Other releases remain unmeasured.</summary>
-        internal static bool ConstrainedBodyStateMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ConstrainedBodyStateMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Convex collider-local cooking and pose separation measured by physicsccdhinge
         /// on 6000.0.71f1. Other releases retain body-frame cooking until measured.</summary>
-        internal static bool ConvexColliderFrameMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ConvexColliderFrameMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Collider updates, attachment transfers, static mesh actor replacement and
         /// idle-scene lifetime measured by physicsccdhinge in 6000.0.71f1.</summary>
-        internal static bool ColliderLifetimeMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ColliderLifetimeMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Hinge solver limit clamping and contact padding measured by physicsccdhinge in 6000.0.71f1.
         /// Other releases keep the previous unclamped limits and 0.01-radian default pad.</summary>
-        internal static bool HingeLimitClampingMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool HingeLimitClampingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>The project's release as numbers and stage letter (6000.0.71f1: 6000, 0, 71,
         /// 'f', 1); null when it cannot be read.</summary>
-        internal static (int Major, int Minor, int Patch, char Stage, int Build)? Release
+        internal static (int Major, int Minor, int Patch, char Stage, int Build)? Release => Current.Parsed;
+
+        /// <summary>The measured release family of the project's release: every release of a
+        /// family (MAJOR.MINOR; any patch, stage or build) gets the answers measured on the
+        /// family's <see cref="MeasuredRelease"/>. Another family (6000.1, 6000.3) is another
+        /// version and keeps the unmeasured behaviour until it is measured. The Rust side asks
+        /// the same question (unbound_compat::MeasuredFamily).</summary>
+        internal static ReleaseFamily Family => Current.Family;
+
+        /// <summary>The measured family of <paramref name="release"/> (for a release other than
+        /// the project's).</summary>
+        internal static ReleaseFamily FamilyOf(string release) => FamilyOf(Parse(release ?? ""));
+
+        static ReleaseFamily FamilyOf((int Major, int Minor, int Patch, char Stage, int Build)? release)
+            => release is { Major: 6000, Minor: 0 } ? ReleaseFamily.Unity6000_0 : ReleaseFamily.Unmeasured;
+
+        /// <summary>The Editor release a family's answers were measured on; null for
+        /// <see cref="ReleaseFamily.Unmeasured"/>.</summary>
+        internal static string MeasuredRelease(ReleaseFamily family) => family switch
+        {
+            ReleaseFamily.Unity6000_0 => "6000.0.71f1",
+            _ => null,
+        };
+
+        /// <summary>Names the measured families in messages of the paths other families lack.</summary>
+        internal const string MeasuredFamilies = "the Unity 6000.0 release family (measured on 6000.0.71f1)";
+
+        // Parsed once per version string: hot paths (per draw, per particle) ask. The cache is
+        // replaced whole, so another thread sees a consistent entry.
+        static ParsedRelease Current
         {
             get
             {
-                // Parsed once per version string: hot paths (per draw, per particle) ask. The
-                // cache is replaced whole, so another thread sees a consistent pair.
                 var v = UnityEngine.ProjectInfo.UnityVersion ?? "";
                 var cached = s_Release;
-                if (cached != null && string.Equals(cached.Version, v, StringComparison.Ordinal)) return cached.Parsed;
+                if (cached != null && string.Equals(cached.Version, v, StringComparison.Ordinal)) return cached;
                 var parsed = Parse(v);
-                s_Release = new ParsedRelease(v, parsed);
-                return parsed;
+                cached = new ParsedRelease(v, parsed, FamilyOf(parsed));
+                s_Release = cached;
+                return cached;
             }
         }
 
@@ -735,7 +765,13 @@ namespace Unbound.Runtime
         {
             internal readonly string Version;
             internal readonly (int Major, int Minor, int Patch, char Stage, int Build)? Parsed;
-            internal ParsedRelease(string version, (int, int, int, char, int)? parsed) { Version = version; Parsed = parsed; }
+            internal readonly ReleaseFamily Family;
+            internal ParsedRelease(string version, (int, int, int, char, int)? parsed, ReleaseFamily family)
+            {
+                Version = version;
+                Parsed = parsed;
+                Family = family;
+            }
         }
 
         static ParsedRelease s_Release;
@@ -756,11 +792,11 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Whether the shader keyword registry and keyword types below are measured for the
-        /// project's release: exactly 6000.0.71f1 (tests/projects/shaderkeywords
+        /// project's release family: 6000.0, measured on 6000.0.71f1 (tests/projects/shaderkeywords
         /// Reference/unity-6000.0.71f1.jsonl). The Rust side gives keyword-space rules to the same
-        /// release only (unbound_compat::ShaderKeywordRules). Other patches of the family are not
-        /// measured: they keep the name-based behaviour (every name is a global keyword) with a
-        /// warning, not an extrapolated table.</summary>
+        /// family only (unbound_compat::ShaderKeywordRules). Other families are not measured: they
+        /// keep the name-based behaviour (every name is a global keyword) with a warning, not an
+        /// extrapolated table.</summary>
         internal static bool ShaderKeywordsMeasured => RenderingMeasured;
 
         /// <summary>The standalone ray tracing shader's main object, measured for distinct source
@@ -801,5 +837,15 @@ namespace Unbound.Runtime
         {
             "STEREO_INSTANCING_ON", "UNITY_SINGLE_PASS_STEREO", "STEREO_MULTIVIEW_ON", "STEREO_CUBEMAP_RENDER_ON",
         };
+    }
+
+    /// <summary>A Unity release family (MAJOR.MINOR) with measured answers (see
+    /// <see cref="Compat.Family"/>).</summary>
+    internal enum ReleaseFamily
+    {
+        /// <summary>No measured answers: every gate keeps its unmeasured behaviour.</summary>
+        Unmeasured,
+        /// <summary>Unity 6000.0, measured on 6000.0.71f1.</summary>
+        Unity6000_0,
     }
 }

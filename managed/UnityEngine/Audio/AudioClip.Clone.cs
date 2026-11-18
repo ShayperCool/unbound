@@ -26,7 +26,7 @@ namespace UnityEngine
         internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
-                throw new NotSupportedException("AudioClip instantiation is measured only for Unity 6000.0.71f1.");
+                throw new NotSupportedException("AudioClip instantiation is measured only for " + Compat.MeasuredFamilies + ".");
             var copy = new AudioClip
             {
                 m_Channels = m_Channels,

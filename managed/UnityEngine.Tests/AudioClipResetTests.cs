@@ -108,7 +108,7 @@ namespace UnityEngine.Tests
         public void ScriptDurationUsesCompleteMilliseconds(int frequency, int frames, float duration)
         {
             var clip = Clip(frames, 1, frequency); Assert.Equal(duration, clip.length);
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.Equal((float)((double)frames / frequency), clip.length);
         }
     }

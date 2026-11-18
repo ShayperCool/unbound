@@ -26,8 +26,8 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", true)]
         [InlineData("6000.0.71f1", false)]
-        [InlineData("6000.0.70f1", true)]
-        [InlineData("6000.0.70f1", false)]
+        [InlineData("6000.1.0f1", true)]
+        [InlineData("6000.1.0f1", false)]
         public void RejectionUsesTheMeasuredRouteAndPublicLogsKeepTheirLogger(string release, bool enabled)
         {
             string previousRelease = ProjectInfo.UnityVersion;

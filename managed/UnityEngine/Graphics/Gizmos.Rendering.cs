@@ -45,7 +45,7 @@ namespace UnityEngine
         internal static void Render(Camera camera)
         {
             if (!GameViewEnabled) return;
-            if (!Compat.RenderingMeasured) throw new NotSupportedException("Unbound: Game-view gizmos have only been measured for Unity 6000.0.71f1.");
+            if (!Compat.RenderingMeasured) throw new NotSupportedException("Unbound: Game-view gizmos have only been measured for " + Compat.MeasuredFamilies + ".");
             var scripts = ArrayPool<MonoBehaviour>.Shared.Rent(s_Scripts.Count);
             int count = s_Scripts.Count;
             s_Scripts.CopyTo(scripts);

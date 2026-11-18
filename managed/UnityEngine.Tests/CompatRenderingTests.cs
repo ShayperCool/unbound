@@ -17,7 +17,7 @@ namespace Unbound.Tests
     {
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.70f1", false)]
+        [InlineData("6000.1.0f1", false)]
         [InlineData("6000.1.2f1", false)]
         [InlineData("2022.3.10f1", false)]
         [InlineData("not a version", false)]
@@ -40,7 +40,7 @@ namespace Unbound.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", -24)]
-        [InlineData("6000.0.70f1", 24)]
+        [InlineData("6000.1.0f1", 24)]
         [InlineData("2022.3.10f1", 24)]
         public void DepthStorageKeepsStencilPresenceOnTheMeasuredProfile(string release, int depthOnly)
         {

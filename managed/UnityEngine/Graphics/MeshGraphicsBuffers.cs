@@ -123,7 +123,7 @@ namespace UnityEngine
             foreach (var submesh in data.SubMeshes)
                 if (submesh.topology == MeshTopology.Quads) count += submesh.indexCount / 4 * 6;
             if (count != data.IndexCount && !Compat.RenderingMeasured)
-                throw new NotSupportedException("Unbound: quad mesh GPU buffers have only been measured for Unity 6000.0.71f1.");
+                throw new NotSupportedException("Unbound: quad mesh GPU buffers have only been measured for " + Compat.MeasuredFamilies + ".");
             // Raw/Structured 16-bit buffers include a final alignment word when needed.
             if (Compat.RenderingMeasured && (m_IndexBufferTarget & (GraphicsBuffer.Target.Raw | GraphicsBuffer.Target.Structured)) != 0)
                 count = (count * stride + 3) / 4 * 4 / stride;

@@ -51,7 +51,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", 0f, 70)]
         [InlineData("6000.0.71f1", 2.4f, 70)]
-        [InlineData("6000.0.72f1", 0f, 73)]
+        [InlineData("6000.3.0f1", 0f, 73)]
         public void OneCellBorderRegionsJoinTheirNeighbourInMeasuredRelease(string release, float height, int vertices)
         {
             string previous = ProjectInfo.UnityVersion;

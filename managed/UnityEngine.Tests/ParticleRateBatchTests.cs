@@ -19,7 +19,7 @@ namespace UnityEngine.Tests
             Assert.Equal(25, Births(0.05f, true));
             Assert.InRange(Births(0.2f, true, 0.2f), 9, 10);
             Assert.Equal(Births(0.05f, false), Births(0.25f, false));
-            Assert.InRange(Births(0.25f, true, release: "6000.0.0f1"), 24, 26);
+            Assert.InRange(Births(0.25f, true, release: TestRelease.Unmeasured), 24, 26);
         }
 
         /// <summary>A long step emits and carries the emission phase as its advance within the loop:

@@ -44,7 +44,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherReleasesRetainEmptyFallbacks()
         {
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.Equal(0, default(TypeCache.TypeCollection).Count);
             Assert.Equal(0, default(TypeCache.MethodCollection).Count);
             Assert.Equal(0, default(TypeCache.FieldInfoCollection).Count);

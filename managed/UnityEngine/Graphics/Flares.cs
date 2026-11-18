@@ -61,7 +61,7 @@ namespace UnityEngine
         {
             if (go.FindComponent<FlareLayer>() == null || go.FindComponent<Camera>() != null) return;
             if (!Compat.FlareCameraRepairMeasured)
-                throw new NotSupportedException("FlareLayer without Camera: load repair is measured only in Unity 6000.0.71f1 (tests/projects/flarelayerdependency)");
+                throw new NotSupportedException("FlareLayer without Camera: load repair is measured only for " + Unbound.Runtime.Compat.MeasuredFamilies + " (tests/projects/flarelayerdependency)");
             var camera = ComponentFactory.Create(typeof(Camera), go);
             camera.IsPersistentAsset = persistent;
             go.m_Components.Add(camera);

@@ -476,7 +476,7 @@ namespace Unbound.Tests
                 {
                     RenderSettings.skybox = sky;
                     RenderSettings.ambientMode = AmbientMode.Skybox;
-                    foreach (var (version, counts) in new[] { ("6000.0.71f1", false), ("6000.0.70f1", true) })
+                    foreach (var (version, counts) in new[] { ("6000.0.71f1", false), ("6000.1.0f1", true) })
                     {
                         ProjectInfo.UnityVersion = version;
                         sun.color = Color.white;

@@ -41,7 +41,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void PriorProfileRetainsIndependentPointerValues()
         {
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             var e = new Pointer(); e.SetAngles(0.7f, 1.2f); e.SetTilt(new Vector2(0.2f, -0.3f));
             Assert.Equal(0.7f, e.altitudeAngle); Assert.Equal(1.2f, e.azimuthAngle); Assert.Equal(new Vector2(0.2f, -0.3f), e.tilt);
             e.Dispose();
@@ -159,7 +159,7 @@ namespace UnityEngine.Tests
             Assert.Equal("before", JsonUtility.FromJson<TextData>(source).text);
             JsonUtility.FromJsonOverwrite(source, data); Assert.Equal("before", data.text);
             data.text = "previous"; UnityEditor.EditorJsonUtility.FromJsonOverwrite(source, data); Assert.Equal("before", data.text);
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.Equal("before\0after", JsonUtility.FromJson<TextData>(source).text);
             Assert.Contains("\\u0000", JsonUtility.ToJson(new TextData { text = "before\0after" }));
         }

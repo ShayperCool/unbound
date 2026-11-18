@@ -385,7 +385,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherReleasesRetainTheirUnmeasuredHeadingInterpolation()
         {
-            NavigationTestRelease.At("6000.0.72f1", () =>
+            NavigationTestRelease.At("6000.3.0f1", () =>
             {
                 var agent = Agent(new Vector3(-5f, 0f, -4f));
                 agent.updateUpAxis = false;
@@ -428,7 +428,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData("6000.0.71f1", 0f, true)]
         [InlineData("6000.0.71f1", 0.6f, true)]
-        [InlineData("6000.0.72f1", 0.6f, false)]
+        [InlineData("6000.3.0f1", 0.6f, false)]
         public void EndpointReportingSurvivesArrivalInTheMeasuredProfile(string release, float stoppingDistance, bool keepsTarget)
         {
             NavigationTestRelease.At(release, () =>

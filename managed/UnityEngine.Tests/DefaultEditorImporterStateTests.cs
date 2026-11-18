@@ -171,7 +171,7 @@ namespace UnityEngine.Tests
         public void UnmeasuredReleasesRetainTheirExistingManualWrapperBehavior()
         {
             using var engine = MainThreadCheck.Engine();
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             var importer = new TextureImporter();
             try
             {

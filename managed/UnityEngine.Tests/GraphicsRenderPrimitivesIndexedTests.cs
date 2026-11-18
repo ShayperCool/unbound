@@ -200,7 +200,7 @@ namespace Unbound.Tests
                 Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 6, 0, 0);
                 Assert.Equal(1u, Assert.Single(TakeQueued()).Setup.Value.Instances);
                 // Unmeasured release: zero instances draw nothing (Compat.ZeroIndexedInstancesDrawOne).
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 6, 0, 0);
                 Assert.Empty(TakeQueued());
                 // A count of one is drawn on every release.

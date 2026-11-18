@@ -88,7 +88,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void UnmeasuredReleaseRetainsPriorStreamingLoadAndStopBehavior()
         {
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             var clip = Clip(); Assert.True(clip.LoadAudioData());
             Assert.Equal(AudioDataLoadState.Unloaded, clip.loadState);
             var source = Source(clip); source.Play(); source.Stop();
@@ -169,7 +169,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void UnmeasuredReleaseKeepsDeferredPlaybackCleanup()
         {
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             var source = Source(Clip(stream: false)); source.Play(); Object.Destroy(source);
             Assert.True(source.isPlaying); Destruction.BeginDelivery(); Destruction.DeliverRequested(); Destruction.FlushEndOfFrame(); Assert.False(source);
         }

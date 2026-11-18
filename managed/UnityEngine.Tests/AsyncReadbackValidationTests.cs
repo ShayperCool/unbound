@@ -23,8 +23,8 @@ namespace Unbound.Tests
         [InlineData("6000.0.71f1", TextureFormat.BGRA32, false)]
         [InlineData("6000.0.71f1", TextureFormat.RGBA32, true)]
         [InlineData("6000.0.71f1", TextureFormat.RGBA32, false)]
-        [InlineData("6000.0.70f1", TextureFormat.BGRA32, true)]
-        [InlineData("6000.0.70f1", TextureFormat.BGRA32, false)]
+        [InlineData("6000.1.0f1", TextureFormat.BGRA32, true)]
+        [InlineData("6000.1.0f1", TextureFormat.BGRA32, false)]
         [InlineData("6000.0.71f1", TextureFormat.RGBA32, true, true)]
         [InlineData("6000.0.71f1", TextureFormat.RGBA32, false, true)]
         [InlineData("6000.0.71f1", TextureFormat.Alpha8, true, false, false, "OpenGLCore")]
@@ -103,7 +103,7 @@ namespace Unbound.Tests
         [Theory]
         [InlineData("6000.0.71f1", "Vulkan", true)]
         [InlineData("6000.0.71f1", "OpenGLCore", false)]
-        [InlineData("6000.0.70f1", "Vulkan", false)]
+        [InlineData("6000.1.0f1", "Vulkan", false)]
         public void AlphaReadPixelsSupportFollowsMeasuredDeviceProfile(string release, string device, bool supported)
         {
             string previousRelease = ProjectInfo.UnityVersion;

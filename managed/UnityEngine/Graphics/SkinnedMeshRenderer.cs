@@ -589,7 +589,7 @@ namespace UnityEngine
         {
             if (HasMeasuredCullingBounds || m_Mesh == null) return;
             Stubs.Ignored("SkinnedMeshRenderer bounds outside measured support",
-                "root-space culling bounds are measured for Unity 6000.0.71f1 with authored local bounds, " +
+                "root-space culling bounds are measured for the Unity 6000.0 release family with authored local bounds, " +
                 "or a rigid single-bone mesh. Offscreen bounds updates for multi-bone, blend-shape and cloth meshes " +
                 "and automatic bounds after raw vertex/weight buffer edits or for other runtime meshes remain unsupported; " +
                 "provide localBounds and disable updateWhenOffscreen");

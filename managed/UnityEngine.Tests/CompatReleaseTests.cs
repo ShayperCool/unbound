@@ -12,7 +12,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", false)]
         [InlineData("6000.1.2f1", false)]
         [InlineData("2022.3.10f1", false)]
         public void Physics2DSimulationAndPayloadSelectOnlyTheMeasuredRelease(string release, bool measured)
@@ -32,7 +32,7 @@ namespace UnityEngine.Tests
                 measured &= Compat.ConstrainedBodyStateMeasured && Compat.ConvexColliderFrameMeasured && Compat.ColliderLifetimeMeasured;
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread()-before);
             Assert.True(measured);
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.False(Compat.ConstrainedBodyStateMeasured || Compat.ConvexColliderFrameMeasured || Compat.ColliderLifetimeMeasured);
         }
 
@@ -49,7 +49,7 @@ namespace UnityEngine.Tests
                     && Compat.MixerPitchShifterMeasured && Compat.MixerClearFloatSubmissionMeasured && Compat.MixerSidechainMeasured && Compat.MixerSnapshotProgressMeasured && Compat.MixerSnapshotCurvesMeasured && Compat.MixerTimedSidechainMeasured && Compat.MixerGraphStartupMeasured && Compat.MixerEffectTransitionsMeasured && Compat.MixerWetTransitionsMeasured && Compat.AudioResetCaptureTailMeasured && Compat.AudioSurroundEffectsMeasured && Compat.AudioMultichannelVoicesMeasured && Compat.MixerCompressorParametersMeasured;
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             Assert.True(all);
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.False(Compat.ModulatedDelayMeasured || Compat.DistortionMeasured || Compat.MixerNormalizeMeasured
                 || Compat.MixerPitchShifterMeasured || Compat.MixerClearFloatSubmissionMeasured || Compat.MixerSidechainMeasured || Compat.MixerSnapshotProgressMeasured || Compat.MixerSnapshotCurvesMeasured || Compat.MixerTimedSidechainMeasured || Compat.MixerGraphStartupMeasured || Compat.MixerEffectTransitionsMeasured || Compat.MixerWetTransitionsMeasured || Compat.AudioResetCaptureTailMeasured || Compat.AudioSurroundEffectsMeasured || Compat.AudioMultichannelVoicesMeasured || Compat.MixerCompressorParametersMeasured);
         }

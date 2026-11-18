@@ -9,7 +9,7 @@ namespace UnityEngine
         internal Object CloneObject()
         {
             if (!Compat.AssetCloneResourcesMeasured)
-                throw new System.NotSupportedException("Font instantiation is measured only for Unity 6000.0.71f1.");
+                throw new System.NotSupportedException("Font instantiation is measured only for " + Compat.MeasuredFamilies + ".");
             if (m_Dynamic)
                 Debug.LogError("Font Error: Cloning a dynamic font is not supported and may result in incorrect font rendering.");
             var copy = new Font

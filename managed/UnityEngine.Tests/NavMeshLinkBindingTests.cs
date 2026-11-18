@@ -38,7 +38,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", NavMeshPathStatus.PathPartial)]
-        [InlineData("6000.0.72f1", NavMeshPathStatus.PathComplete)]
+        [InlineData("6000.3.0f1", NavMeshPathStatus.PathComplete)]
         public void ALinkOnTheLowerFloorDoesNotServeTheUpperOne(string release, NavMeshPathStatus upper)
         {
             NavigationTestRelease.At(release, () =>

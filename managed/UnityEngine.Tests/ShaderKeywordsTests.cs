@@ -485,7 +485,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnUnmeasuredReleaseKeepsNameBasedGlobalKeywords()
         {
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Shader.ResetGlobalKeywordsForTests();
             var logs = Errors(() =>
             {

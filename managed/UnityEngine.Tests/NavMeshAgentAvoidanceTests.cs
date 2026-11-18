@@ -182,7 +182,7 @@ namespace UnityEngine.Tests
         [InlineData("6000.0.71f1", -5f, 1f, true)]
         [InlineData("6000.0.71f1", 5f, 1f, false)]
         [InlineData("6000.0.71f1", -5f, -1f, true)]
-        [InlineData("6000.0.72f1", -5f, 1f, false)]
+        [InlineData("6000.3.0f1", -5f, 1f, false)]
         public void PredictedNeighbourTravelCanEnterTheQueryBeforeItsPosition(string release, float velocity, float direction, bool expected)
         {
             string previous = ProjectInfo.UnityVersion;

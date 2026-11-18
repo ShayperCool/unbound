@@ -370,7 +370,7 @@ namespace UnityEngine.Tests
             Assert.Equal(5000f, Assert.Single(Collected(source)).Delay);
             echo.delay = 1.25f;
             Assert.Equal(1f, Assert.Single(Collected(source)).Delay);
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             echo.delay = 17.5f;
             Assert.Equal(17.5f, Assert.Single(Collected(source)).Delay);
         }
@@ -852,11 +852,11 @@ namespace UnityEngine.Tests
             distortion.gameObject.AddComponent<AudioDistortionFilter>();
             Assert.Equal(2, Collected(chorus).Length);
             Assert.Single(Collected(distortion));
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.Empty(Collected(chorus));
             Assert.Empty(Collected(distortion));
-            Assert.Single(Errors("AudioChorusFilter is measured only for Unity 6000.0.71f1"));
-            Assert.Single(Errors("AudioDistortionFilter is measured only for Unity 6000.0.71f1"));
+            Assert.Single(Errors("AudioChorusFilter is measured only for " + Compat.MeasuredFamilies));
+            Assert.Single(Errors("AudioDistortionFilter is measured only for " + Compat.MeasuredFamilies));
             ProjectInfo.UnityVersion = "6000.0.71f1";
             Assert.Equal(2, Collected(chorus).Length);
         }
@@ -962,7 +962,7 @@ namespace UnityEngine.Tests
             Assert.Equal(AudioFilterStage.Bypassed, table[1].Stage);
             Assert.Equal(filters.Select(c => unchecked((ulong)(long)c.GetInstanceID())), table.Take(6).Select(d => d.Id));
             Assert.Empty(Errors("AudioListener 'ears'"));
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.False(Compat.AudioListenerChainMeasured);
             Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
             Assert.Equal(AudioFilterKind.Reverb, table[0].Kind);
@@ -975,7 +975,7 @@ namespace UnityEngine.Tests
             scripted.AddComponent<AudioReverbFilter>();
             Assert.Equal(1, AudioFilterChain.CollectListener(other, true, ref table));
             Assert.Empty(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'"));
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             Assert.Equal(0, AudioFilterChain.CollectListener(other, true, ref table));
             Assert.Contains("listener filter components are not applied", Assert.Single(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'")));
             ProjectInfo.UnityVersion = "6000.0.71f1";
@@ -1388,7 +1388,7 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Errors);
             alternate.GetComponent<AudioHighPassFilter>().enabled = false;
             other.enabled = true;
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             UpdateWithoutAdvancing();
             Assert.Equal(0, m_Backend.LastFrame.Flags & AudioFrameFlags.ListenerChain);
             data = new[] { 0.25f, -0.25f };
@@ -1443,7 +1443,7 @@ namespace UnityEngine.Tests
             source.SendPacket(9, null, 1, false);
             Assert.NotEqual(0u, m_Backend.ParamsOf(9).Flags & AudioSourceFlags.BypassListenerEffects);
             source.bypassListenerEffects = false;
-            ProjectInfo.UnityVersion = "6000.0.70f1";
+            ProjectInfo.UnityVersion = "6000.1.0f1";
             source.SendPacket(9, null, 1, false);
             Assert.NotEqual(0u, m_Backend.ParamsOf(9).Flags & AudioSourceFlags.BypassListenerEffects);
         }

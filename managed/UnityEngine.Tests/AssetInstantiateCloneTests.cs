@@ -232,7 +232,7 @@ namespace UnityEngine.Tests
         {
             var source = AudioClip.Create("tone", 8, 1, 8000, false);
             var font = new Font();
-            ProjectInfo.UnityVersion = "6000.0.72f1";
+            ProjectInfo.UnityVersion = "6000.3.0f1";
             Assert.Throws<NotSupportedException>(() => Object.Instantiate(source));
             Assert.Throws<NotSupportedException>(() => Object.Instantiate(font));
             Object.DestroyImmediate(source);Object.DestroyImmediate(font);

@@ -27,7 +27,7 @@ namespace UnityEngine.Tests
         }
         [Theory]
         [InlineData("6000.0.71f1", 1)]
-        [InlineData("6000.0.72f1", 3)]
+        [InlineData("6000.3.0f1", 3)]
         public void TheMeasuredReleaseUsesOneConnectedShape(string version, int count)
         {
             Physics2DWorld.Reset(); ProjectInfo.UnityVersion = version;

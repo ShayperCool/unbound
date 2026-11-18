@@ -29,7 +29,7 @@ namespace UnityEngine.Tests
                 }
                 Assert.Null(UnityEditor.UnityType.FindTypeByName("gameobject"));
                 Assert.Equal("key", Assert.Throws<ArgumentNullException>(() => UnityEditor.UnityType.FindTypeByName(null)).ParamName);
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 Assert.NotNull(ClassCoverage.UnityTable(ProjectInfo.UnityVersion));
                 Assert.Throws<NotSupportedException>(() => UnityEditor.UnityType.FindTypeByName("GameObject"));
             }

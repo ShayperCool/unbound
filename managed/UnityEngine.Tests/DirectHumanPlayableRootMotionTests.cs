@@ -416,7 +416,7 @@ namespace UnityEngine.Tests
         public void UnmeasuredHumanMixerContextsStayDiagnostic(string context)
         {
             string version = ProjectInfo.UnityVersion;
-            ProjectInfo.UnityVersion = context == "release" ? "6000.0.72f1" : "6000.0.71f1";
+            ProjectInfo.UnityVersion = context == "release" ? "6000.3.0f1" : "6000.0.71f1";
             var root = Rig(out var animator, out var avatar);
             var clip = Clip();
             var graph = PlayableGraph.Create("unsupported-human-mixer");

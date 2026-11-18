@@ -152,7 +152,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         [InlineData("6000.0.71f1", true)]
-        [InlineData("6000.0.72f1", false)]
+        [InlineData("6000.3.0f1", false)]
         [InlineData("6000.1.0f1", false)]
         [InlineData("2022.3.0f1", false)]
         public void ProfilesSelectOnlyTheMeasuredRelease(string version, bool measured)

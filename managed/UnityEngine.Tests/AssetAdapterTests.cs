@@ -36,7 +36,7 @@ namespace UnityEngine.Tests
                 two.friction = 100001; Assert.Equal(100000, two.friction); Assert.Equal(count, capture.Errors.Count);
                 two.friction = float.NaN; Assert.Equal(100000, two.friction);
                 Assert.Contains("PhysicsMaterial2D.friction assign attempt for 'range2d' is not valid. Input friction is { NaN }.", capture.Errors);
-                ProjectInfo.UnityVersion = "6000.0.70f1";
+                ProjectInfo.UnityVersion = "6000.1.0f1";
                 three.staticFriction = -2; Assert.Equal(-2, three.staticFriction);
                 two.friction = float.NaN; Assert.True(float.IsNaN(two.friction));
             }
