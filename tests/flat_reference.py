@@ -39,6 +39,9 @@ def record(probe, variable, label, method, windowed):
         project = out/'project'
         for part in ('Assets', 'Packages', 'ProjectSettings'):
             shutil.copytree(PROJECTS/probe/part, project/part)
+        # Probes read inputs committed under Reference (bundles, clips): the Linux files, not metal/.
+        shutil.copytree(PROJECTS/probe/'Reference', project/'Reference', ignore=lambda d, names:
+                        ['metal'] if Path(d) == PROJECTS/probe/'Reference' else [])
         (project/'ProjectSettings/ProjectVersion.txt').write_text(f'm_EditorVersion: {unity_version()}\n')
         (out/'capture').mkdir()
         result = editor_runner.run(editor_runner.EditorJob(
