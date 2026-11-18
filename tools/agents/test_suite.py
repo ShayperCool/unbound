@@ -510,6 +510,18 @@ class ImageTests(unittest.TestCase):
         lines, regressed = suite.compare_runs({'probes': {'p': new}}, {'probes': {'p': old}})
         self.assertTrue(regressed)
         self.assertIn('(command changed)', lines[-1])
+        # An argument appended: paired, judged and listed as changed.
+        strict = {'status': 'pass', 'steps': [dict(new['steps'][0], step=new['steps'][0]['step'] + ' --strict')]}
+        self.assertEqual(len(suite.images_worse(old, strict)), 1)
+        self.assertEqual(len(suite.images_unmatched(old, strict)[2]), 1)
+        # Another value of the same option is another step (a profile removed, another added).
+        def profile(name, mean):
+            sid = f'p/run.py check --profile {name}'
+            return {'status': 'pass', 'steps': [{'kind': 'compare', 'command': sid, 'step': sid,
+                                                 'images': {'': {'mean': mean, 'worst': 0, 'over': 0}}}]}
+        self.assertEqual(suite.images_worse(profile('motion', 0.0), profile('occlusion', 0.5)), [])
+        self.assertEqual(suite.images_unmatched(profile('motion', 0.0), profile('occlusion', 0.5)),
+                         (['p/run.py check --profile motion'], ['p/run.py check --profile occlusion'], []))
         # Two changed steps with the same script and first argument: not paired by guessing.
         two = lambda gates, mean: {'steps': run(gates[0], mean)['steps'] + run(gates[1], mean)['steps']}
         old2, new2 = two(['/r/tests/a.json', '/r/tests/b.json'], 0.1), two(['/r/tests/c.json', '/r/tests/d.json'], 5.0)

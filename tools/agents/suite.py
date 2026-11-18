@@ -991,6 +991,19 @@ def coarse_id(sid):
     return ' '.join(tokens[:1] + [first])
 
 
+def changed_command(old, new):
+    """Whether new is old's command changed by paths or by added or removed arguments, not by
+    another value of the same arguments ('--profile motion' is not '--profile occlusion'): the
+    arguments that are not paths of one are in the other, in order."""
+    def words(sid):
+        return [token for token in sid.partition(' #')[0].split() if '/' not in token]
+    def within(short, long):
+        rest = iter(long)
+        return all(token in rest for token in short)
+    a, b = words(old), words(new)
+    return within(a, b) or within(b, a)
+
+
 def step_ids(steps, label=None):
     """(step record, identity, complete) of each compare step that ran, a repeated identity
     numbered in order. The identity is the one the step recorded ('step'); records written before
@@ -1034,17 +1047,19 @@ def recorded_images(result, label=None):
     return images
 
 
-def matched_steps(old, new, labels=(None, None)):
+def matched_steps(old, new, labels=(None, None), with_changed=False):
     """{baseline step identity: this run's step identity} for the compare steps of both runs, by
     their commands, not their positions. An incomplete baseline identity (a cut command) matches
     the first unmatched step of this run whose identity extends it. Steps left over on both sides
     are paired when their script and first argument (coarse_id) are those of exactly one step on
-    each side: a step whose command changed is still judged. A result without step records is
-    identified by its recorded measurements. labels: each run's {label} value (run_label)."""
+    each side and one command is the other changed (changed_command): a step whose command changed
+    is still judged. A result without step records is
+    identified by its recorded measurements. labels: each run's {label} value (run_label).
+    with_changed: also the baseline identities paired that way."""
     after = [sid for _, sid, _ in step_ids(new.get('steps'), labels[1])] or list(recorded_images(new, labels[1]))
     before = ([(sid, complete) for _, sid, complete in step_ids(old.get('steps'), labels[0])]
               or [(sid, True) for sid in recorded_images(old, labels[0])])
-    matched, pending = {}, []
+    matched, pending, changed = {}, [], []
     for sid, complete in before:
         if sid in after:
             matched[sid] = sid
@@ -1064,9 +1079,10 @@ def matched_steps(old, new, labels=(None, None)):
         key = coarse_id(sid)
         olds = [other for other in left if coarse_id(other) == key]
         news = [other for other in right if coarse_id(other) == key]
-        if len(olds) == 1 and len(news) == 1:
+        if len(olds) == 1 and len(news) == 1 and changed_command(sid, news[0]):
             matched[sid] = news[0]
-    return matched
+            changed.append(sid)
+    return (matched, changed) if with_changed else matched
 
 
 def images_worse(old, new, labels=(None, None)):
@@ -1094,11 +1110,10 @@ def images_unmatched(old, new, labels=(None, None)):
     run's steps without one in the baseline, [(baseline identity, this run's identity)] of steps
     paired by coarse_id). Listed, not judged: images_worse judges every pair."""
     before, after = recorded_images(old, labels[0]), recorded_images(new, labels[1])
-    matched = matched_steps(old, new, labels)
+    matched, paired = matched_steps(old, new, labels, with_changed=True)
     gone = sorted(sid for sid in before if sid not in matched)
     added = sorted(sid for sid in after if sid not in set(matched.values()))
-    changed = sorted((sid, other) for sid, other in matched.items() if sid in before and other != sid
-                     and coarse_id(sid) == coarse_id(other) and not other.startswith(sid.partition(' #')[0]))
+    changed = sorted((sid, matched[sid]) for sid in paired if sid in before)
     return gone, added, changed
 
 
