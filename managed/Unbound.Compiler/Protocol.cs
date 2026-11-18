@@ -90,6 +90,8 @@ public sealed class AssemblyResult
     public string? InterfaceHash { get; set; }
     public List<DiagnosticInfo> Errors { get; set; } = new();
     public int Warnings { get; set; }
+    /// <summary>The compiler's warnings, as the Editor reports them with an assembly's compilation.</summary>
+    public List<DiagnosticInfo> WarningList { get; set; } = new();
     public long Milliseconds { get; set; }
 }
 

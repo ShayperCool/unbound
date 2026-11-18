@@ -200,6 +200,7 @@ public sealed partial class CompilerService
                 else if (diagnostic.Severity == DiagnosticSeverity.Warning)
                 {
                     result.Warnings++;
+                    result.WarningList.Add(ToInfo(diagnostic, request.DisabledModules));
                 }
             }
             if (emit == null || !emit.Success || generatorDiagnostics.Any(GeneratorFailed))
