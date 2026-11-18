@@ -5,7 +5,10 @@ per channel to four decimals, what a shader samples from each texture property's
 (`white`, `black`, `gray`, `grey`, `bump`, `red`, `linearGray`), from a sampler without a property,
 from each default again after the material set the property to null, and from the built-in
 textures of `Texture2D` (`whiteTexture`, `blackTexture`, `grayTexture`, `linearGrayTexture`,
-`normalTexture`, `redTexture`) set on a property, with each one's `graphicsFormat`. The project is
+`normalTexture`, `redTexture`) set on a property, with each one's `graphicsFormat`, and, for each
+default, a property whose texture (a 4x4 texture of one colour) was destroyed after the material
+took it: what `GetTexture` returns (`destroyed.<default>.held`: `none` is null itself) and what the
+shader samples. The project is
 in the linear colour space (`tests/projects/resources` measures the defaults in gamma space).
 Numbers compare within 0.002.
 
@@ -15,6 +18,8 @@ Measured in the Unity 6000.0.71f1 Editor (two identical captures, NVIDIA driver)
   normal reads 0.498, 0.498, 1, 1). `gray`, `grey` and a sampler without a property are colours,
   decoded from sRGB.
 * A property set to null samples its default.
+* A property whose texture was destroyed reads null from `GetTexture` (not the destroyed object)
+  and samples opaque black (0, 0, 0, 1), whatever its default.
 * `Texture2D.normalTexture` and `linearGrayTexture` are `R8G8B8A8_UNorm`, the other built-in
   textures `R8G8B8A8_SRGB`; `blackTexture` and `redTexture` have alpha 0, `grayTexture` 127/255 in
   every channel.

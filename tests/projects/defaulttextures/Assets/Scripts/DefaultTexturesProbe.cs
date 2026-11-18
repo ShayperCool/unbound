@@ -67,6 +67,24 @@ public sealed class DefaultTexturesProbe : MonoBehaviour
             Rec("null." + Defaults[i], Sample(material, i));
             Destroy(material);
         }
+        // A property whose texture was destroyed: the material still holds it (it compares equal
+        // to null), and what the shader samples then.
+        for (int i = 0; i < 7; i++)
+        {
+            var material = new Material(shader);
+            var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            var texels = new Color32[16];
+            for (int t = 0; t < texels.Length; t++) texels[t] = new Color32(64, 128, 192, 255);
+            texture.SetPixels32(texels);
+            texture.Apply();
+            material.SetTexture("_T" + i, texture);
+            DestroyImmediate(texture);
+            var held = material.GetTexture("_T" + i);
+            m_Out.Append("{\"k\":\"destroyed.").Append(Defaults[i]).Append(".held\",\"v\":\"")
+                .Append(ReferenceEquals(held, null) ? "none" : held == null ? "destroyed" : "alive").Append("\"}\n");
+            Rec("destroyed." + Defaults[i], Sample(material, i));
+            Destroy(material);
+        }
         var builtins = new (string, Texture2D)[]
         {
             ("whiteTexture", Texture2D.whiteTexture), ("blackTexture", Texture2D.blackTexture),
