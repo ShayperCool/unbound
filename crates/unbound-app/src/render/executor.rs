@@ -6244,6 +6244,10 @@ pub fn trace_render() -> bool {
     })
 }
 
+/// A Deferred pass with an unmeasured stencil operation under the engine's stencil was warned of.
+static UNMEASURED_GBUFFER_STENCIL: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 /// A `RenderStateBlock`'s overrides over a pass's render state; the stencil reference drawn with.
 fn apply_override(
     state: &mut crate::materials::RenderState,
@@ -6277,13 +6281,28 @@ fn apply_override(
         state.gui_ztest = false;
     }
     if o.mask & state_mask::ENGINE_STENCIL != 0 {
-        // Compare Always (8), pass Replace (2), keep (0) on failures: the engine's bits over
-        // the pass's own reference and write mask.
+        // Compare Always (8), pass Replace (2), keep (0) on failures: the engine's bits, with
+        // the pass's own reference where its pass operation is Keep (0) or Replace (2), whatever
+        // its test; with IncrSat (3) the engine's bits alone (tests/projects/builtinfx
+        // `deferredStencil.*`). The other operations are unmeasured: taken as IncrSat, warned.
         let bits = o.stencil_ref as u32 & 0xff;
-        let (own_ref, own_write) = state
-            .stencil
-            .as_ref()
-            .map_or((0, 0), |s| (stencil_ref, s.write_mask as u32));
+        let (own_ref, own_write) = match state.stencil.as_ref() {
+            Some(s) if matches!(s.pass, 0 | 2) => (stencil_ref, s.write_mask as u32),
+            Some(s) => {
+                if s.pass != 3
+                    && !UNMEASURED_GBUFFER_STENCIL.swap(true, std::sync::atomic::Ordering::Relaxed)
+                {
+                    tracing::warn!(
+                        "Unbound: a Deferred pass's stencil operation {} is unmeasured: its reference is not written, as with IncrSat",
+                        s.pass
+                    );
+                }
+                (0, 0)
+            }
+            // A Stencil block that neither tests nor writes (Always and Keep) is no stencil
+            // state, its reference kept: written as Keep writes it (`alwaysKeep` 0xC8).
+            None => (stencil_ref, if stencil_ref != 0 { 0xff } else { 0 }),
+        };
         state.stencil = Some(crate::materials::StencilState {
             comp: 8,
             pass: 2,
@@ -6465,6 +6484,22 @@ mod tests {
         assert_eq!((s.comp, s.write_mask, s.back[0]), (8, 0xff, 8));
         // The engine's bits are set whatever the pass's own reference has there.
         assert_eq!(apply_override(&mut { declared }, 0x41, &engine), 0xC1);
+        // Keep writes the reference as Replace does; IncrSat leaves the engine's bits alone
+        // (`equalKeep` 0xC1, `alwaysIncr` 0xC0).
+        let with_pass = |pass| crate::materials::RenderState {
+            stencil: declared
+                .stencil
+                .map(|s| crate::materials::StencilState { pass, ..s }),
+            ..declared
+        };
+        assert_eq!(apply_override(&mut with_pass(0), 1, &engine), 0xC1);
+        let mut incr = with_pass(3);
+        assert_eq!(apply_override(&mut incr, 16, &engine), 0xC0);
+        assert_eq!(incr.stencil.map(|s| s.write_mask), Some(0xC0));
+        // An idle block (Always, Keep: no stencil state) with its reference 8 (`alwaysKeep` 0xC8).
+        let mut idle = crate::materials::RenderState::default();
+        assert_eq!(apply_override(&mut idle, 8, &engine), 0xC8);
+        assert_eq!(idle.stencil.map(|s| s.write_mask), Some(0xff));
     }
 
     /// A packed clear rounds to the channels' bits on a device whose clears round, at a

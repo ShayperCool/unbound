@@ -1,16 +1,33 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public partial class FxProbe
 {
     /// <summary>Recorded last: the stencil a deferred camera leaves for the passes after its
-    /// lighting. A Standard sphere (left), a sphere whose Deferred pass writes stencil 2 (right)
-    /// and the background; a transparent quad over the view draws white where the stencil, masked
-    /// by `_Mask`, equals `_Ref`: each bit alone (`deferredStencil.bit&lt;n&gt;.*`), 0 and 2 under
-    /// every bit (`.ref0`, `.ref2`). True where it draws.</summary>
+    /// lighting. A Standard sphere (left), a sphere whose Deferred pass writes stencil 2 (right),
+    /// the background, and above them four small spheres whose Deferred passes test or write
+    /// otherwise: Ref 1 Comp Equal with Pass Keep (`equalKeep`), Ref 4 Comp Equal with Pass Replace
+    /// (`equalReplace`), Ref 8 Comp Always with Pass Keep (`alwaysKeep`), Ref 16 Comp Always with
+    /// Pass IncrSat (`alwaysIncr`), against the cleared stencil; a transparent quad over the view
+    /// draws white where the stencil, masked by `_Mask`, equals `_Ref`: each bit alone
+    /// (`deferredStencil.bit&lt;n&gt;.*`), 0 and 2 under every bit (`.ref0`, `.ref2`). True where it
+    /// draws.</summary>
     void DeferredStencil()
     {
         var standard = Primitive(PrimitiveType.Sphere, new Vector3(-1f, 0.5f, 0f), Standard(new Color(0.3f, 0.3f, 0.3f), 0f));
         var written = Primitive(PrimitiveType.Sphere, new Vector3(1f, 0.5f, 0f), Unlit(Color.white, "Probe/DeferredStencil"));
+        GameObject Small(float x, float reference, CompareFunction comp, StencilOp pass)
+        {
+            var m = Unlit(Color.white, "Probe/DeferredStencil");
+            m.SetFloat("_Ref", reference);
+            m.SetFloat("_Comp", (float)comp);
+            m.SetFloat("_Pass", (float)pass);
+            return Primitive(PrimitiveType.Sphere, new Vector3(x, 1.4f, 0f), m, 0.5f);
+        }
+        var equalKeep = Small(-1.5f, 1, CompareFunction.Equal, StencilOp.Keep);
+        var equalReplace = Small(-0.5f, 4, CompareFunction.Equal, StencilOp.Replace);
+        var alwaysKeep = Small(0.5f, 8, CompareFunction.Always, StencilOp.Keep);
+        var alwaysIncr = Small(1.5f, 16, CompareFunction.Always, StencilOp.IncrementSaturate);
         Directional(new Vector3(50f, -30f, 0f), Color.white, 0.8f);
         var camera = MakeCamera();
         camera.renderingPath = RenderingPath.DeferredShading;
@@ -23,7 +40,11 @@ public partial class FxProbe
             var p = camera.WorldToScreenPoint(o.transform.position);
             return new Vector2Int((int)p.x, (int)p.y);
         }
-        var points = new[] { ("standard", At(standard)), ("written", At(written)), ("background", new Vector2Int(2, Height - 3)) };
+        var points = new[]
+        {
+            ("standard", At(standard)), ("written", At(written)), ("background", new Vector2Int(2, Height - 3)),
+            ("equalKeep", At(equalKeep)), ("equalReplace", At(equalReplace)), ("alwaysKeep", At(alwaysKeep)), ("alwaysIncr", At(alwaysIncr)),
+        };
         void Probe(string name, int reference, int mask)
         {
             test.SetFloat("_Ref", reference);

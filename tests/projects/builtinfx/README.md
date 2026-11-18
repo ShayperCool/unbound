@@ -137,10 +137,11 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   "Screenspace cascaded shadow map support is disabled in graphics settings") and deferred
   reflections; deferred shading, halos and flares still draw. The stencil a deferred camera leaves
   for its later passes (`deferredStencil.*`, recorded last): bits 6 and 7 over every object its
-  G-buffer pass draws, with the bits a Deferred pass's own stencil writes beside them (an object
-  whose Deferred pass writes 2 Replace reads 0xC2), none over the background (the Manual: the
-  base pass's stencil test is ignored, its writes kept; unmeasured: pass operations other than
-  Replace). A sphere moved between two
+  G-buffer pass draws, with a Deferred pass's own stencil reference beside them whatever its test
+  when its pass operation is Keep or Replace (Ref 2 Always Replace reads 0xC2, Ref 1 Equal Keep
+  0xC1, Ref 4 Equal Replace 0xC4, Ref 8 Always Keep 0xC8 against the cleared stencil), the
+  engine's bits alone with IncrSat (Ref 16: 0xC0), none over the background (the Manual: the base
+  pass's stencil test is ignored; other operations unmeasured). A sphere moved between two
   `Camera.Render` calls of the frame it is first drawn in has no object motion in the second
   (`settings_motionVectors_custom`). Unbound draws them alike
   (`GraphicsSettings.RendererShader`), with these differences: `settings_deferred_builtin` and

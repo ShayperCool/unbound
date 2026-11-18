@@ -1,13 +1,15 @@
-// A deferred object whose Deferred pass writes stencil 2 (Comp Always, Pass Replace); gray albedo.
+// A deferred object whose Deferred pass has its own stencil: by default it writes 2 (Comp Always,
+// Pass Replace); _Ref, _Comp (CompareFunction) and _Pass (StencilOp) change it. Gray albedo.
 Shader "Probe/DeferredStencil"
 {
+    Properties { _Ref ("Ref", Float) = 2 _Comp ("Comp", Float) = 8 _Pass ("Pass", Float) = 2 }
     SubShader
     {
         Tags { "RenderType"="Opaque" }
         Pass
         {
             Tags { "LightMode"="Deferred" }
-            Stencil { Ref 2 Comp Always Pass Replace }
+            Stencil { Ref [_Ref] Comp [_Comp] Pass [_Pass] }
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
