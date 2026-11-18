@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 from editor_runner import EditorJob, run, summary, result_problem
-from probe_paths import shared_runtime
+from probe_paths import run_root, shared_runtime
 
 
 def main(fixture, name, prefix, script, array, blocks, acceptance=None):
@@ -106,7 +106,7 @@ def main(fixture, name, prefix, script, array, blocks, acceptance=None):
                 output.write(source.read_bytes())
         verify(target, args.rate)
     else:
-        work = args.work or Path.home()/'.cache/unbound'/('audio-'+name+'-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+        work = args.work or run_root(fixture, name+'-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
         work.mkdir(parents=True, exist_ok=False)
         runtime = args.runtime or shared_runtime(Path(os.environ['UNBOUND']), work/'runtime')
         subprocess.run([sys.executable, str(fixture.parents[1]/'authored_project.py'), 'assemble', fixture.name,

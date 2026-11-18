@@ -3,7 +3,7 @@
 This companion to `editorcallbacks` measures Unity 6000.0.71f1 Play Mode in the
 built-in pipeline on the Linux GPU Editor. The fixture uses private copies of
 Editor-authored scenes and a prefab. Generated captures, logs and repeats live
-under `$XDG_CACHE_HOME/unbound/q192/`.
+under `$XDG_CACHE_HOME/unbound/validation/runs/editorcallbacks/`.
 
 `First` and `Second` place a prefab root at different positions among plain roots.
 The driver persists across single loads. The default capture covers first and

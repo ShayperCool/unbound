@@ -12,9 +12,9 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO / 'tests'))
 from editor_runner import EditorJob, publish, run, summary, vulkan_display_env
+from probe_paths import run_root
 
 SOURCE = PROBE / 'SceneLoop'
-CACHE = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'unbound/q192'
 # The full case ladder finishes near frame 50; isolated profiles finish before frame 16.
 MATRIX_FRAMES = 160
 PROFILE_FRAMES = 30
@@ -55,7 +55,7 @@ def main():
     if Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    work = CACHE / args.label
+    work = run_root(PROBE, args.label)
     names = {'single_first': 'scene-loop-single-first', 'force_only': 'scene-loop-force',
              'starts_only': 'scene-loop-starts', 'queue_only': 'scene-loop-queue', 'queue_three': 'scene-loop-queue-three'}
     name = next((name for flag, name in names.items() if getattr(args, flag)), 'scene-loop')

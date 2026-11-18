@@ -1,4 +1,6 @@
 {
-  "commands": ["python3 tests/projects/mixerparams/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+  "commands": [
+    "python3 tests/projects/mixerparams/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --work \"${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/mixerparams/gate-$(date +%Y%m%d-%H%M%S-%N)\""
+  ],
   "summary": "147 values, \\d+ failures"
 }
