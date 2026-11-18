@@ -97,7 +97,9 @@ namespace Unbound.Runtime
         /// channel, 0.2 48/255), no alpha as 1 (5-6-5) and alpha as one bit (1-5-5-5); a blended
         /// draw reads them so too. A 4444 target keeps 8-bit values. Measured on the Editor's
         /// OpenGL Core and Vulkan devices (tests/projects/samplerstates Packed.*, NVIDIA; Vulkan's
-        /// clear rounds where Unbound truncates). False: Unbound's 8-bit store (unmeasured, Metal).</summary>
+        /// clear rounds where Unbound truncates). False: Unbound's 8-bit store, on Metal, whose Editor
+        /// keeps the channels' bits by another rule (tests/projects/samplerstates metal.jsonl Packed.*,
+        /// not modelled: residuals-metal.json).</summary>
         internal bool PackedTargetsKeepChannelBits { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>

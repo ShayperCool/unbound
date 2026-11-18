@@ -1,5 +1,5 @@
 {
- "The Metal Editor stores ARGB4444, RGB565 and ARGB1555 render textures with 4, 5 or 6 bits per channel (and 1 alpha bit); Unbound on Metal stores them with 8 bits per channel, so draws, clears, blends and filtered reads keep finer values. Unresolved (the targets' storage formats on wgpu Metal).": [
+ "The Metal Editor stores ARGB4444, RGB565 and ARGB1555 render textures with 4, 5 or 6 bits per channel (and 1 alpha bit); Unbound on Metal stores them as RGBA8, an 8-bit alpha channel included, so draws, clears, blends and filtered reads keep finer values. Unresolved (the targets' storage formats on wgpu Metal).": [
   "Packed.ARGB1555.blend",
   "Packed.ARGB1555.clear",
   "Packed.ARGB1555.draw",

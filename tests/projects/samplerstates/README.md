@@ -82,8 +82,8 @@ blending read those values. A clear keeps the top bits on OpenGL Core and rounds
 clears to 130/255 in 6 bits, 132/255 in 5).
 
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
-`--device vulkan`) with the device's reference. `residuals.json` and `residuals-vulkan.json`
-list the remaining cases and their causes. Texture-owned non-comparing depth state now reads
+`--device vulkan`) with the device's reference. `residuals.json`, `residuals-vulkan.json` and
+`residuals-metal.json` list the remaining cases and their causes. Texture-owned non-comparing depth state now reads
 stored depth on the measured NVIDIA devices. Vulkan has no remaining scalar residuals; OpenGL
 Core retains six comparison-lane residuals across comparison-only and comparison-plus-Load kernels.
 The mixed compute kernels now compile and their raw Load lanes match in all four cases;
