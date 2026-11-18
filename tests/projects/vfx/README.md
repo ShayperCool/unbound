@@ -405,12 +405,12 @@ change; at frame 8 it stops and at frame 10 plays again, both without attributes
 what the blocks before it left, in this update or the last; an event's attributes replace the
 spawn context's (one sent without them gives the asset's initial values); when the context
 plays, the inputs hold what was last evaluated (nothing yet at the first play: every bit set).
-A second spawn context of the graph takes its loop duration from its own lifetime read with Get
-Attribute (Current); a block sets that lifetime to the exposed `L2` (0.25, 0.5 from frame 7) and a
-script block (`LoopReads`) writes down the loop's duration, index and time and the lifetime held,
-when the context plays and in its first twenty updates (`event reads/loop-*`). The duration is the
-lifetime the context holds when it plays: the event's (the asset's 1, the 11 of the attributes sent
-at frame 5), not what its block sets afterwards.
+A second spawn context of the graph, started by the event `Loop`, takes its loop duration from its
+own lifetime read with Get Attribute (Current); a block sets that lifetime to the exposed `L2` (0.25,
+0.5 from frame 7) and a script block (`LoopReads`) writes down the loop's duration, index and time
+and the lifetime held, when the context plays and in its first twenty updates
+(`event reads/loop-*`). `Loop` is sent at frame 4 with a lifetime of 0.1 (loops of three updates)
+and at frame 12 without attributes (the asset's lifetime, 1).
 The two contexts' reads of the lifetime are one expression of the graph: what the first context's
 blocks hold when it plays again is what either context evaluated last (`f00` at plays 2 and 3: the
 second context's lifetime).

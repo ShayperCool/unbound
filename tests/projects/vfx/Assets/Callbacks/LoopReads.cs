@@ -3,7 +3,7 @@ using UnityEngine.VFX;
 
 /// <summary>
 /// A spawner block written as a script, for the probe's controls of event attributes read in a
-/// spawn context: in a spawn context whose loop duration is its own lifetime as Get Attribute
+/// spawn context: in a spawn context (started by the event `Loop`) whose loop duration is its own lifetime as Get Attribute
 /// (Current) reads it, it writes down the loop's duration, index and time and the lifetime the
 /// context holds, when it plays and in its first twenty updates (counted across plays), under
 /// the rows `loop-play<n>` and `loop-update<n>` of <see cref="OpsInputs.Logs"/>.

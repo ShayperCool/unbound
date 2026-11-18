@@ -599,8 +599,8 @@ public static class GraphAuthoring
     /// "Event attributes read in a spawn context"): a spawn context whose blocks, in order, are a
     /// script block reading its event attributes through Get Attribute (Current), blocks setting
     /// the lifetime (exposed), the colour (from the lifetime as read), the seed and alive
-    /// (exposed), and a second script block reading them again; and a second spawn context
-    /// whose loop duration is its own lifetime as read there.</summary>
+    /// (exposed), and a second script block reading them again; and a second spawn context,
+    /// started by the event `Loop`, whose loop duration is its own lifetime as read there.</summary>
     static void EventReadings()
     {
         var graph = NewGraph("OpsEvent", OperationFolder);
@@ -635,9 +635,14 @@ public static class GraphAuthoring
         SetFrom("seed", Parameter(graph, typeof(uint), "S", 5u).outputSlots[0]);
         SetFrom("alive", Parameter(graph, typeof(bool), "A", true).outputSlots[0]);
         Reads(typeof(EventReadsSecond));
-        // A second spawn context whose loop lasts its own lifetime as read there; a block sets
-        // the lifetime (the exposed `L2`) and a script block writes the loop down.
+        // A second spawn context, started by the event `Loop`, whose loop lasts its own
+        // lifetime as read there; a block sets the lifetime (the exposed `L2`) and a script
+        // block writes the loop down.
         var (loop, _, _, _) = System(graph, 8);
+        var start = Make<VFXBasicEvent>();
+        start.SetSettingValue("eventName", "Loop");
+        graph.AddChild(start);
+        start.LinkTo(loop, 0, 0);
         loop.SetSettingValue("loopDuration", VFXBasicSpawner.LoopMode.Constant);
         Link(Current("lifetime"), Input(loop, "LoopDuration"));
         var setLifetime = Make<VFXSpawnerSetAttribute>();
