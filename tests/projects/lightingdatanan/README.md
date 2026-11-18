@@ -38,3 +38,9 @@ cubemaps, a black default reflection, no lightmap placement.
     python3 tests/projects/lightingdatanan/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/lightingdatanan/run.py publish A B        # two identical captures
     python3 tests/projects/lightingdatanan/run.py gate               # the land gate
+
+On macOS arm64 the gate compares with `Reference/unity-6000.0.71f1/metal/` (tests/value_probe.py
+`metal`), two identical captures of the macOS Editor in batch mode (Metal) on an Apple M2 Pro: its
+values are the OpenGL Core ones and its images differ from them by the device's rounding (means
+0.19 and 0.10, no pixel over 8). Unbound on Metal: 15/15 values; `frame.png` mean 0.09 (0.25 against the OpenGL Core
+image), `sun.png` mean 0.62 with 10 pixels over 8, as against the OpenGL Core image (Unbound's own).

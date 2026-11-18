@@ -8,4 +8,4 @@ import value_probe  # noqa: E402
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(Path(__file__).resolve().parent, 'ProbeRunner.Record', 'SHADER_RESOURCES_OUT',
-                              tolerance=0, engine_args=['--frames', '10', '--size', '96x64']))
+                              tolerance=0, engine_args=['--frames', '10', '--size', '96x64'], metal=True))

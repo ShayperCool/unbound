@@ -8,4 +8,4 @@ import value_probe  # noqa: E402
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(Path(__file__).resolve().parent, 'ProbeRunner.Record', 'LIGHTING_DATA_NAN_OUT',
-                              tolerance=0, engine_args=['--frames', '10', '--size', '160x90']))
+                              tolerance=0, engine_args=['--frames', '10', '--size', '160x90'], metal=True))

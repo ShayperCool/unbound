@@ -28,3 +28,8 @@ texture), so the textures share one.
     python3 tests/projects/shaderresources/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/shaderresources/run.py publish A B        # two identical captures
     python3 tests/projects/shaderresources/run.py gate               # the engine vs Reference/
+
+On macOS arm64 the gate compares with `Reference/unity-6000.0.71f1/metal/` (tests/value_probe.py
+`metal`), two identical captures of the macOS Editor in batch mode (Metal) on an Apple M2 Pro: its
+values are the OpenGL Core ones but for `member.copy.2` and `member.direct.2`, where one channel's
+0.5 is stored as 128 instead of 127 (the device's rounding). Unbound on Metal: 12/12.
