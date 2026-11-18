@@ -9,6 +9,8 @@ namespace UnityEngine
     {
         internal const string NotPlaying = "Animator is not playing an AnimatorController";
         internal const string NoController = "Animator does not have an AnimatorController";
+        internal const string NotInitialized = "Animator has not been initialized.";
+        internal const string Inactive = "Game object with animator is inactive";
         internal const string StateNotFound = "Animator.GotoState: State could not be found";
 
         internal static string InvalidLayer(int layer) => $"Invalid Layer Index '{layer}'";

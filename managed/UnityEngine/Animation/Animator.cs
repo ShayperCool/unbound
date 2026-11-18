@@ -358,16 +358,48 @@ namespace UnityEngine
             return m_Player;
         }
 
-        AnimatorPlayer PlayerOrWarn(string warning = AnimatorErrors.NotPlaying)
+        /// <summary>What a member needs the playing controller for: a parameter's value, the
+        /// controller's definition (its counts), a layer's state, or playing a state.</summary>
+        enum Use { Parameter, Definition, State, Play }
+
+        /// <summary>The playing controller, or null after the warning the member gives without one
+        /// (Unity 6000.0.71f1, tests/projects/apierrors `animator.bare_*` and gameinterop
+        /// `animator.*`): without a controller every member warns that none is playing, and playing
+        /// a state that there is none; an invalid controller (an override controller with nothing
+        /// to override) leaves the Animator uninitialized, which only the parameters report; on an
+        /// inactive object the definition is still read, and playing a state names the inactive
+        /// object.</summary>
+        AnimatorPlayer PlayerOrWarn(Use use)
         {
             var player = EnsurePlayer();
-            if (player == null && m_LogWarnings) Debug.LogWarning(warning, this);
-            return player;
+            if (player != null || !m_LogWarnings) return player;
+            string warning;
+            if (m_Controller == null) warning = use == Use.Play ? AnimatorErrors.NoController : AnimatorErrors.NotPlaying;
+            else if (m_Controller.Graph == null) warning = use == Use.Parameter ? AnimatorErrors.NotInitialized : null;
+            else if (m_GameObject != null && !m_GameObject.activeInHierarchy)
+                warning = use == Use.Play ? AnimatorErrors.Inactive : use == Use.Definition ? null : AnimatorErrors.NotPlaying;
+            else warning = AnimatorErrors.NotPlaying;
+            if (warning != null) Debug.LogWarning(warning, this);
+            return null;
+        }
+
+        /// <summary>The controller's definition while nothing plays it: that of a valid controller
+        /// on an inactive object (gameinterop `animator.Inactive.parameter_count`).</summary>
+        ControllerGraph Definition(out AnimatorPlayer player)
+        {
+            player = PlayerOrWarn(Use.Definition);
+            return player?.Graph ?? (m_Controller != null && m_GameObject != null && !m_GameObject.activeInHierarchy ? m_Controller.Graph : null);
         }
 
         // Initialization follows hierarchy activation, including disabled Animators
-        // (Unity 6000.0.71f1, tests/projects/threadapis).
-        internal override void OnEngineHierarchyActivated() => m_Initialized = true;
+        // (Unity 6000.0.71f1, tests/projects/threadapis); an invalid controller is not
+        // initialized and is reported once (tests/projects/gameinterop animator.OverrideEmpty).
+        internal override void OnEngineHierarchyActivated()
+        {
+            m_Initialized = m_Controller == null || m_Controller.Graph != null;
+            if (!m_Initialized && m_LogWarnings)
+                Debug.LogWarning($"The Animator Controller ({m_Controller.m_Name}) you have used is not valid. Animations will not play", this);
+        }
 
         internal override void OnEngineEnable()
         {
@@ -627,7 +659,7 @@ namespace UnityEngine
 
         int Parameter(string name, AnimatorControllerParameterType? expected, out AnimatorPlayer player)
         {
-            player = PlayerOrWarn();
+            player = PlayerOrWarn(Use.Parameter);
             if (player == null) return -1;
             int index = player.ParameterIndex(name);
             if (index < 0)
@@ -640,7 +672,7 @@ namespace UnityEngine
 
         int Parameter(int id, AnimatorControllerParameterType? expected, out AnimatorPlayer player)
         {
-            player = PlayerOrWarn();
+            player = PlayerOrWarn(Use.Parameter);
             if (player == null) return -1;
             int index = player.ParameterIndex(id);
             if (index < 0)
@@ -773,16 +805,16 @@ namespace UnityEngine
             }
         }
 
-        public int parameterCount { get { MainThreadCheck.Check("get_parameterCount"); return PlayerOrWarn()?.Graph.Parameters.Length ?? 0; } }
+        public int parameterCount { get { MainThreadCheck.Check("get_parameterCount"); return Definition(out _)?.Parameters.Length ?? 0; } }
 
         public AnimatorControllerParameter GetParameter(int index)
         {
             // The parameter's lookup and then the count for the message, each warning without a
             // controller (the release's reference assemblies).
-            var player = PlayerOrWarn();
-            if (player == null || index < 0 || index >= player.Graph.Parameters.Length)
+            var graph = Definition(out _);
+            if (graph == null || index < 0 || index >= graph.Parameters.Length)
                 throw new IndexOutOfRangeException("Index must be between 0 and " + parameterCount);
-            return CopyParameter(player.Graph.Parameters[index]);
+            return CopyParameter(graph.Parameters[index]);
         }
 
         static AnimatorControllerParameter CopyParameter(ParameterDef p) => new AnimatorControllerParameter
@@ -832,13 +864,13 @@ namespace UnityEngine
         // ------------------------------------------------------------------ layers
 
         public int layerCount
-        { get { MainThreadCheck.Check("get_layerCount"); return PlayerOrWarn()?.Layers.Length ?? 0; } }
+        { get { MainThreadCheck.Check("get_layerCount"); return PlayerOrWarn(Use.Definition)?.Layers.Length ?? 0; } }
 
         /// <summary>The layer members' checks: a controller playing, then the layer's index (the
         /// Unity 6000.0.71f1 Editor warns for each, tests/projects/apierrors `animator.*`).</summary>
         bool Layer(int layerIndex, out AnimatorPlayer player)
         {
-            player = PlayerOrWarn();
+            player = PlayerOrWarn(Use.State);
             if (player == null) return false;
             if (layerIndex >= 0 && layerIndex < player.Layers.Length) return true;
             Debug.LogWarning(AnimatorErrors.InvalidLayer(layerIndex), this);
@@ -959,7 +991,7 @@ namespace UnityEngine
         {
             state = null;
             layerIndex = -1;
-            player = PlayerOrWarn(m_Controller == null ? AnimatorErrors.NoController : AnimatorErrors.NotPlaying);
+            player = PlayerOrWarn(Use.Play);
             if (player == null) return false;
             if (layer >= player.Layers.Length || layer < -1)
             {
