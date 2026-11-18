@@ -9,7 +9,12 @@
 --device selects the graphics device of both sides: opengl (the default: the Linux Editor's own
 device, on a private display through VirtualGL; Unbound with --force-glcore; the reference is
 Reference/unity-R.jsonl) or vulkan (the Editor with -force-vulkan on the GPU-backed display :0,
-Unbound with --force-vulkan; Reference/unity-R/vulkan.jsonl).
+Unbound with --force-vulkan; Reference/unity-R/vulkan.jsonl) or metal (macOS arm64: the macOS
+Editor in batch mode, which draws with Metal, through tests/macos_editor.py; Unbound with its own
+device there; Reference/unity-R/metal.jsonl). On macOS the engine draws with Metal, so every engine
+run and check there is a Metal one, compared with the Metal reference (which sampler state a
+program samples through is the device's answer: AGENTS.md Platforms); it says so when another
+device is named.
 
 The probe's script and shaders are staged over a fresh copy of the UI Toolkit fixture
 (tests/projects/uitk: its scene runs the script) under
@@ -17,12 +22,13 @@ $XDG_CACHE_HOME/unbound/validation/runs/samplerstates/<label>; nothing is writte
 publish. A capture replaces an existing reference only when it keeps every row of it as it is
 (a probe with added cases, recorded again). The release is $UNBOUND_PROBE_UNITY_VERSION (else
 tests/probe_paths.py's default). Every missing, extra and failing value is printed; the keys the
-device's residuals file lists (residuals.json, residuals-vulkan.json) are printed with their
+device's residuals file lists (residuals.json, residuals-vulkan.json, residuals-metal.json) are printed with their
 reason and do not fail the check.
 """
 import argparse
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -35,18 +41,21 @@ sys.path.insert(0, str(ROOT.parent/'nativegfx'))
 from probe_paths import reference_file, reference_root, run_root, unity_version  # noqa: E402
 import compare  # noqa: E402
 import editor_runner  # noqa: E402
+import macos_editor  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'capture/values.jsonl'
 DEVICE = 'opengl'
+# Metal is the macOS Editor's device and Unbound's there: macOS records and checks Metal.
+MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 
 
 def reference():
-    return reference_file(ROOT, 'jsonl') if DEVICE == 'opengl' else reference_root(ROOT)/'vulkan.jsonl'
+    return reference_file(ROOT, 'jsonl') if DEVICE == 'opengl' else reference_root(ROOT)/f'{DEVICE}.jsonl'
 
 
 def residuals():
-    return ROOT/('residuals.json' if DEVICE == 'opengl' else 'residuals-vulkan.json')
+    return ROOT/('residuals.json' if DEVICE == 'opengl' else f'residuals-{DEVICE}.json')
 
 
 def stage(label):
@@ -63,6 +72,14 @@ def stage(label):
 
 
 def native(label):
+    if DEVICE == 'metal':
+        codes = []
+        for repeat in (f'{label}-1', f'{label}-2'):
+            work, project = stage(repeat)
+            codes.append(macos_editor.capture(project, work, ['-executeMethod', 'ProbeRunner.Record'],
+                                              {'SAMPLER_STATES_OUT': str(work/'capture')}, timeout=1500))
+            print(repeat, 'exit', codes[-1])
+        return 0 if not any(codes) and all((run_root(ROOT, f'{label}-{n}')/OUT).is_file() for n in (1, 2)) else 1
     jobs = []
     for repeat in (f'{label}-1', f'{label}-2'):
         work, project = stage(repeat)
@@ -82,7 +99,7 @@ def engine(label):
     env = dict(os.environ, SAMPLER_STATES_OUT=str(work/'capture'))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
                '--no-watch', '--frames', '35', '--size', '320x180',
-               '--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')]
+               *([] if MACOS else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])]
     with (work/'process.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     values = work/OUT
@@ -107,8 +124,11 @@ def publish(labels):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(first/OUT, path)
     fresh.unlink(missing_ok=True)
-    editor_runner.publish([run_root(ROOT, label) for label in labels], fresh, lambda d: [OUT], write,
-                          complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
+    if DEVICE == 'metal':
+        write(fresh, macos_editor.agreeing([run_root(ROOT, label) for label in labels], OUT, lambda d: [OUT]))
+    else:
+        editor_runner.publish([run_root(ROOT, label) for label in labels], fresh, lambda d: [OUT], write,
+                              complete=[editor_runner.jsonl_complete(OUT)], gpu=True)
     if target.exists() and not kept(target, fresh):
         fresh.unlink()
         sys.exit(f'the captures change rows of the reference; not replacing {target}')
@@ -129,10 +149,17 @@ def main():
     parser.add_argument('mode', choices=['native', 'engine', 'publish', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
     args = parser.parse_args()
     global DEVICE
     DEVICE = args.device
+    if MACOS and DEVICE != 'metal' and args.mode in ('native', 'publish'):
+        parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
+    if MACOS and DEVICE != 'metal' and args.mode in ('engine', 'check'):
+        print(f'samplerstates: macOS draws with Metal; checking the Metal reference, not the {DEVICE} one')
+        DEVICE = 'metal'
+    if DEVICE == 'metal' and not MACOS:
+        parser.error('--device metal runs on macOS arm64 only')
     if args.mode == 'publish':
         if len(args.labels) != 2:
             parser.error('publish takes two native labels')

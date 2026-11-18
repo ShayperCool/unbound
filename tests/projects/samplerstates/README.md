@@ -169,6 +169,33 @@ a warning elsewhere. Depth-copy pipelines distinguish normalized storage and mul
 The 525-row references retain all 489 earlier records unchanged, with two matching captures
 per device on Unity 6000.0.71f1, NVIDIA only. Other drivers remain unmeasured.
 
+Metal (`Reference/unity-6000.0.71f1/metal.jsonl`, `--device metal`, the device every macOS run
+uses): two identical captures of the macOS Editor in batch mode on an Apple M2 Pro. A program
+samples through the sampler it names, as on Vulkan (the inline, wrap, volume and anisotropic rows
+are Vulkan's), with these differences (70 rows differ from Vulkan's):
+
+- the compiler resolves each stage's samplers against that stage's textures alone: `Vertex` (the
+  vertex stage samples `_A` through `sampler_B`, only the fragment stage uses `_B`) and
+  `UsedVertex` (the fragment stage samples a cube through `sampler_B`, only the vertex stage loads
+  `_B`) are refused ("Unrecognized sampler 'sampler_B' - does not match any texture ... (on
+  metal)") and draw with the error shader, where Vulkan draws them;
+- a wrongly spelt inline name is no error: every `Bad*` program draws `_B`'s bilinear sample,
+  which `_B`'s own state and the `Linear` each name spells give alike (these cases do not tell
+  the two apart);
+- a depth texture's sample reads the depth in red, green and blue and 1 in alpha (`DepthChannels`,
+  `DepthOnly.depth`), as on OpenGL Core;
+- a `Depth` target sampled through its own state in a program that also compares it gives the
+  comparison's result (`DepthState.*` first channel, whatever its shadowSamplingMode), where
+  Vulkan reads the stored depth;
+- a program that writes the depth drawn into a target without a depth buffer draws nothing (the
+  Editor fails to make the pipeline: `Fill.color` keeps what the target held);
+- the device's own values, recorded as they are: `MirrorOnce` (`MirrorWrap.*`,
+  `InlineMirrorOnce`; Metal has no mirror-once mode), `Cmp*` and `Compute.Compare*`, and the
+  16-bit depth with stencil made as `D32_SFloat_S8_UInt`.
+
+Unbound on Metal: 578/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`);
+the depth channels and the pipeline failure are open (`residuals-metal.json`).
+
 The Unity 6000.0 [RenderTexture.depth contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-depth.html)
 lists 16-bit depth precision; the existing Stencil controls check the absence of stencil.
 [Texture.filterMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Texture-filterMode.html)

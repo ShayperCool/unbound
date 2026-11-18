@@ -1,0 +1,16 @@
+{
+ "The macOS Editor's Metal device reads a depth texture's sample as the depth in red, green and blue and 1 in alpha, as OpenGL Core does (tests/projects/samplerstates metal.jsonl, Unity 6000.0.71f1, Apple M2 Pro). Unbound samples the depth through a one-channel copy, so green and blue read 0; wgpu has no texture view swizzle, and filling all channels needs a per-binding program variant. Open.": [
+  "DepthChannels.split",
+  "DepthChannels.split.raw",
+  "DepthChannels.splitLinear",
+  "DepthChannels.splitLinear.raw",
+  "DepthChannels.map",
+  "DepthChannels.map.raw",
+  "DepthChannels.mapLinear",
+  "DepthChannels.mapLinear.raw",
+  "DepthOnly.depth"
+ ],
+ "The macOS Editor's Metal device draws nothing with a program that writes the depth into a target without a depth buffer: it fails to make the pipeline (\"Metal: Error creating pipeline state (Probe/SamplerStates/Fill): depthAttachmentPixelFormat is not valid and shader writes to depth\"), so the target keeps what it held. Unbound draws the program's color. Open.": [
+  "Fill.color"
+ ]
+}
