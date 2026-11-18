@@ -44,6 +44,7 @@ public sealed class LitProbe : MonoBehaviour
     Stage m_Exposed;
     Stage m_Sorting;
     Stage m_MeshSorted;
+    Stage m_MeshPaused;
     int m_Staged;
     Material m_Lit;
 
@@ -157,6 +158,9 @@ public sealed class LitProbe : MonoBehaviour
             m_MeshSorted = Draw("mesh sorted", "MeshSorted", 5, 10);
             Lamp(Draw("mesh lit sorted", "MeshLitSorted", 5), LightType.Point);
             Draw("mesh listed", "MeshListed", 5);
+            // The sorted meshes paused at frame 6, their mesh changed at frame 8, drawn at frame
+            // 10.
+            m_MeshPaused = Draw("mesh paused", "MeshSorted", 5, 10);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
@@ -349,6 +353,11 @@ public sealed class LitProbe : MonoBehaviour
     /// frame named is simulated: each is drawn two frames later.</summary>
     void Act()
     {
+        if (m_Frame == 6)
+        {
+            m_MeshPaused.Effect.pause = true;
+            Rec("act/mesh paused/f006", "pause=" + (m_MeshPaused.Effect.pause ? 1 : 0));
+        }
         if (m_Frame == 8)
         {
             var renderer = m_Sorting.Effect.GetComponent<Renderer>();
@@ -357,6 +366,9 @@ public sealed class LitProbe : MonoBehaviour
             m_MeshSorted.Effect.SetMesh("Shape", LoadMesh("Spike"));
             var now = m_MeshSorted.Effect.GetMesh("Shape");
             Rec("act/mesh sorted/f008", "Shape=Spike -> Shape=" + (now == null ? "<null>" : now.name));
+            m_MeshPaused.Effect.SetMesh("Shape", LoadMesh("Spike"));
+            var paused = m_MeshPaused.Effect.GetMesh("Shape");
+            Rec("act/mesh paused/f008", "Shape=Spike -> Shape=" + (paused == null ? "<null>" : paused.name));
         }
         var effect = m_Exposed.Effect;
         string what = null;

@@ -134,7 +134,9 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   higher values", and only "within a sorting layer, a sublayer, and a render queue" by the
   distance to the camera (Unity 6000.0 manual, 2D renderer sorting).
 - `mesh sorted` (frames 5 and 10: at frame 8 `Shape` is set to the spike, of one submesh,
-  `act/mesh sorted/f008`), `mesh lit sorted` (with a point light), `mesh listed`: meshes drawn
+  `act/mesh sorted/f008`), `mesh paused` (the same, paused at frame 6 before the mesh is set: a
+  paused effect still takes steps of no time, `tests/projects/vfx`, and draws the new mesh), `mesh lit sorted` (with a point
+  light), `mesh listed`: meshes drawn
   through an indirect buffer, one draw of each submesh the mask names, of as many instances as
   the list counts.
 - `graph unlit`: `GraphUnlit` through the forward renderer; its renderer casts shadows
