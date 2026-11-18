@@ -14,6 +14,12 @@ A probe's script writes `values.jsonl` into the directory named by its output va
     run.py publish A B          two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]     the engine on a fresh copy, compared with Reference/
 
+A probe that declares `metal` has values the graphics device decides (its rounding, formats and
+answers: AGENTS.md Platforms). On macOS arm64, where the Editor and Unbound draw with Metal, it
+records with the macOS Editor in batch mode (which draws with Metal), publishes to
+Reference/unity-<release>/metal/ and gates against that, with `residuals-metal.json` and
+`image_limits-metal.json` in place of the files below; elsewhere it is unchanged.
+
 Values compare exactly, except numbers: |expected - actual| <= `tolerance` (the probe's own,
 named in its README). Every missing, extra and differing key is printed. Images print their
 mean and worst max-channel difference and the pixels over 8; without a limit that is no verdict
@@ -31,6 +37,7 @@ import json
 import math
 import os
 from pathlib import Path
+import platform
 import shutil
 import struct
 import subprocess
@@ -48,6 +55,20 @@ REPO = TESTS.parent
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 VALUES = 'values.jsonl'
 COMPLETE = {'k': 'complete', 'v': True}
+# Set by main for a probe that declares `metal` on macOS arm64: its Metal reference and files.
+METAL = False
+MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
+
+
+def reference_dir(probe):
+    """The reference the probe records and gates against here (its Metal one on macOS, see METAL)."""
+    return reference_root(probe)/'metal' if METAL else reference_root(probe)
+
+
+def device_file(probe, name):
+    """`name` next to the probe's run.py, `<stem>-metal<suffix>` for its Metal reference."""
+    path = Path(probe)/name
+    return path.with_name(f'{path.stem}-metal{path.suffix}') if METAL else path
 
 
 PARTS = ('Assets', 'Packages', 'ProjectSettings')
@@ -179,7 +200,7 @@ def image_difference(expected, actual):
 
 def residuals(probe):
     """{key: reason} of the probe's residuals.json (none without one)."""
-    path = Path(probe)/'residuals.json'
+    path = device_file(probe, 'residuals.json')
     if not path.exists():
         return {}
     known = {}
@@ -193,7 +214,7 @@ def residuals(probe):
 
 def image_limits(probe):
     """{image: (mean, worst, over 8, reason)} of the probe's image_limits.json (none without one)."""
-    path = Path(probe)/'image_limits.json'
+    path = device_file(probe, 'image_limits.json')
     if not path.exists():
         return {}
     limits = {}
@@ -220,7 +241,7 @@ def macos_editor():
 
 def record_macos(out, project, capture, method, variable, timeout):
     """A batch-mode capture with the macOS Editor: no display and no GPU check, so only for
-    values that depend on neither the OS nor the graphics device."""
+    values that depend on neither the OS nor the graphics device, or for a Metal reference."""
     env = {**os.environ, variable: str(capture)}
     with (out/'editor.out').open('w') as log:
         try:
@@ -240,7 +261,7 @@ def record_macos(out, project, capture, method, variable, timeout):
 
 
 def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False):
-    if sys.platform == 'darwin' and not (macos_batch and batch):
+    if sys.platform == 'darwin' and not ((macos_batch or METAL) and batch):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
     project = assemble(probe, out, base)
@@ -271,7 +292,7 @@ def publish_macos(probe, roots):
         if [VALUES, *images(root/'capture')] != names or any(
                 (root/'capture'/name).read_bytes() != (first/name).read_bytes() for name in names):
             raise SystemExit(f'{root.name} differs from {roots[0].name}; not publishing')
-    target = reference_root(probe)
+    target = reference_dir(probe)
     if target.exists():
         raise SystemExit(f'refusing to overwrite {target}')
     target.mkdir(parents=True)
@@ -320,7 +341,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                '--no-watch', *engine_args], env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-    reference = reference_root(probe)
+    reference = reference_dir(probe)
     expected = read_values(reference/VALUES)
     try:
         actual = read_values(capture/VALUES)
@@ -359,7 +380,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
 
 
 def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None,
-         macos_batch=False):
+         macos_batch=False, metal=False):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
@@ -368,7 +389,11 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     gives itself more). base is (another probe's directory, paths in it): parts of that probe's
     project (scenes, bakes, settings) this probe's own files are laid over. macos_batch: the
     probe's values depend on neither the OS nor the graphics device, so it may be recorded with
-    the macOS Editor in batch mode."""
+    the macOS Editor in batch mode. metal: the graphics device decides the probe's values, so on
+    macOS arm64 it records, publishes and gates against a Metal reference (see the module's
+    docstring)."""
+    global METAL
+    METAL = metal and MACOS_ARM64
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')

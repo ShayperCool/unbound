@@ -44,3 +44,18 @@ python3 tests/projects/cubecompression/run.py gate                 # engine vs R
 
 The gate compares every value within 1e-6: the uncompressed controls read back the Editor's
 values, whose text differs from the engine's by at most 1e-8 (float formatting).
+
+## Metal (macOS arm64)
+
+The sampled texels are the graphics device's: on macOS arm64 the runner records with the macOS
+Editor in batch mode (Metal) and gates against `Reference/unity-6000.0.71f1/metal/values.jsonl`
+(tests/value_probe.py `metal`), two byte-identical captures on an Apple M2 Pro. Against the OpenGL
+Core reference, Metal keeps every format, size and conversion row and the float cubemaps' texels.
+It differs in the texels of every sRGB cubemap, by up to 0.0019 (Metal's are at full float
+precision, the OpenGL Core reference's at half precision), more in the DXT1 and DXT5 ones, by up
+to 0.0145 (the device's block decode), and in the converted faces of `LdrPlain` and
+`LdrCompressed` by one 8-bit step in 8 and 48 of 192 values.
+
+`ConvertTexture` converts an RGB24 cubemap's face on Metal too, which renders into no RGB24
+target: Unbound draws such a face (as a compressed one) into a target of the device's compatible
+render format (`SystemInfo.GetCompatibleFormat`) before the blit into the destination.
