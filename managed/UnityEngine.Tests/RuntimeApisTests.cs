@@ -326,6 +326,45 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The load-time report needs a custom-mode shader the built-in renderer could
+        /// draw with: none when every quality level uses a render pipeline, none for a project
+        /// whose shader list is missing (a custom mode without a shader resolves to none).</summary>
+        [Fact]
+        public void CustomBuiltInShadersAreReportedOnlyWhereTheBuiltInRendererDraws()
+        {
+            const string Custom = "0123456789abcdef0123456789abcdef";
+            var modes = new Dictionary<string, int> { ["m_ScreenSpaceShadows"] = 2 };
+            var shaders = new Dictionary<string, (string, long)> { ["m_ScreenSpaceShadows"] = (Custom, 4800000) };
+            try
+            {
+                using (var logs = new RecordedLogs())
+                {
+                    GraphicsSettings.LoadShaderModes(modes, shaders, builtinRenderer: false);
+                    Assert.DoesNotContain(logs.Logged, l => l.Contains("custom built-in shaders"));
+                    Assert.Equal(BuiltinShaderMode.UseCustom, GraphicsSettings.GetShaderMode(BuiltinShaderType.ScreenSpaceShadows));
+                    GraphicsSettings.LoadShaderModes(modes, null);
+                    Assert.DoesNotContain(logs.Logged, l => l.Contains("custom built-in shaders"));
+                    Assert.Null(GraphicsSettings.GetCustomShader(BuiltinShaderType.ScreenSpaceShadows));
+                    // Control: the built-in renderer with the shader.
+                    GraphicsSettings.LoadShaderModes(modes, shaders);
+                    Assert.Single(logs.Logged, l => l.Contains("custom built-in shaders"));
+                }
+                var project = new GraphicsSettings.ProjectRenderPipeline();
+                Assert.True(project.UsesBuiltinRenderer);
+                project.Default = (Custom, 11400000);
+                Assert.False(project.UsesBuiltinRenderer);
+                project.Default = null;
+                project.QualityLevels.Add((Custom, 11400000));
+                Assert.False(project.UsesBuiltinRenderer);
+                project.QualityLevels.Add(null);
+                Assert.True(project.UsesBuiltinRenderer);
+            }
+            finally
+            {
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+            }
+        }
+
         [Fact]
         public void CommandSizesAreTheEditorsAndStartOnFourByteBoundaries()
         {

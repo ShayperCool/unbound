@@ -547,6 +547,10 @@ namespace UnityEngine.Rendering
         {
             internal (string Guid, long FileId)? Default;
             internal List<(string Guid, long FileId)?> QualityLevels = new List<(string, long)?>();
+
+            /// <summary>Whether some quality level draws with the built-in renderer: no default
+            /// pipeline, and no levels or a level without its own pipeline.</summary>
+            internal bool UsesBuiltinRenderer => Default == null && (QualityLevels.Count == 0 || QualityLevels.Contains(null));
             internal Dictionary<string, (string Guid, long FileId)> GlobalSettings = new Dictionary<string, (string, long)>();
         }
 
@@ -618,8 +622,12 @@ namespace UnityEngine.Rendering
         /// reflections disabled; disabling one later keeps its shader, set_mode.depth_disabled.shader).
         /// Not measured: a built-in-mode type whose stored shader is a custom one, and a setting
         /// missing from the project's graphics settings. A custom-mode setting whose shader is not
-        /// one of Unity's built-in shaders is reported: the built-in renderer does not draw with it.</summary>
-        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null)
+        /// one of Unity's built-in shaders is reported when the built-in renderer can draw the
+        /// project (<paramref name="builtinRenderer"/>: no render pipeline for every quality
+        /// level): it does not draw with it. A project whose quality levels all use a render
+        /// pipeline draws with neither (its pipeline's own shaders), so nothing is reported.</summary>
+        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null,
+            bool builtinRenderer = true)
         {
             List<string> notApplied = null;
             for (int i = 0; i < s_ShaderModes.Length; i++)
@@ -634,7 +642,7 @@ namespace UnityEngine.Rendering
                     && shader.Guid != Unbound.Runtime.BuiltinShaders.ExtraGuid && shader.Guid != Unbound.Runtime.BuiltinShaders.DefaultGuid)
                     (notApplied ??= new List<string>()).Add(setting);
             }
-            if (notApplied != null)
+            if (notApplied != null && builtinRenderer)
                 Debug.LogWarning("Unbound: the project's custom built-in shaders (" + string.Join(", ", notApplied) + ") are not applied: " + RendererOwnShaders);
         }
 
