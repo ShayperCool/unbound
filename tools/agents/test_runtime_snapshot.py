@@ -21,7 +21,8 @@ def capture(cli, managed, destination, cache):
 class RuntimeSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        # Resolved: on macOS the temporary directory lies behind the /var -> /private/var link.
+        self.root = Path(self.temp.name).resolve()
         # Fixture references belong to a task even in a detached integration
         # checkout. Tests of main and live ownership override this explicitly.
         owner = mock.patch.object(runtime, 'task_owner', return_value={
@@ -519,7 +520,14 @@ class RuntimeSnapshotTests(unittest.TestCase):
         summary = self.root/'agents/suite/legacy/summary.json'
         summary.parent.mkdir(parents=True)
         summary.write_text(json.dumps({'commit': 'completed-commit', 'work': str(reference.parent)}))
-        with mock.patch.object(runtime.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)):
+        real = subprocess.run
+
+        # git answers that the commit landed; other commands (process listing on macOS) run.
+        def git_landed(command, *args, **kwargs):
+            if command[0] == 'git':
+                return subprocess.CompletedProcess(command, 0)
+            return real(command, *args, **kwargs)
+        with mock.patch.object(runtime.subprocess, 'run', side_effect=git_landed):
             self.assertEqual(runtime.cleanup(cache=self.cache, days=0, repo=self.root), [])
         self.assertTrue(reference.exists())
 

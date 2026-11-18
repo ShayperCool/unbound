@@ -19,6 +19,9 @@ import tempfile
 import time
 import uuid
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import processes
+
 FORMAT_VERSION = 1
 MANIFEST = 'runtime-manifest.json'
 
@@ -93,6 +96,8 @@ def remove_snapshot(path):
 
 
 def process_start(pid):
+    if processes.MACOS:
+        return processes.start_time(pid)
     try:
         return Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()[19]
     except (OSError, IndexError):
@@ -132,9 +137,36 @@ def register(snapshot, destination, cache, *, retained=False):
     return destination
 
 
+def snapshot_uses(executable, cwd, arguments, environment, snapshots, run_directories):
+    """The snapshots a live process uses: its executable, arguments and runtime variables inside
+    the snapshot store, and the runtimes of the runs it works in."""
+    found = set()
+    paths = [executable] if executable else []
+    for directory in (cwd, *cwd.parents):
+        found.update(run_directories.get(directory, ()))
+    # Admission wrappers can be alive before the engine executable starts.
+    for argument in arguments:
+        value = os.fsdecode(argument).split('=', 1)[-1]
+        if value.startswith('/'):
+            paths.append(value)
+        elif value.startswith(('./', '../', 'runtime/')):
+            paths.append(str(cwd/value))
+    for variable in environment:
+        if variable.startswith((b'UNBOUND_RUNTIME=', b'UNBOUND_CLI=', b'UNBOUND=')):
+            paths.append(os.fsdecode(variable.split(b'=', 1)[1]))
+    for value in paths:
+        try:
+            path = Path(value).resolve()
+        except (OSError, ValueError):
+            continue
+        if snapshots in path.parents:
+            found.add(path.relative_to(snapshots).parts[0])
+    return found
+
+
 def active_snapshots(cache):
     """Also protect manual engine runs whose short-lived capture process exited."""
-    if not Path('/proc/self/stat').is_file():
+    if not processes.MACOS and not Path('/proc/self/stat').is_file():
         raise OSError('cannot inspect live runtime processes; snapshot collection requires /proc')
     found = set()
     snapshots = (cache/'snapshots').resolve()
@@ -146,28 +178,18 @@ def active_snapshots(cache):
         reference = Path(record['path'])
         if reference.name == 'runtime':
             run_directories.setdefault(reference.parent.resolve(), set()).add(record['snapshot'])
+    if processes.MACOS:
+        for process in processes.darwin_processes(os.getuid()):
+            found |= snapshot_uses(process.executable, process.cwd or Path('/'), process.arguments,
+                                   process.environment, snapshots, run_directories)
+        return found
     for process in Path('/proc').glob('[0-9]*'):
         try:
             if process.stat().st_uid != os.getuid():
                 continue
-            paths = [os.readlink(process/'exe')]
-            cwd = Path(os.readlink(process/'cwd'))
-            for directory in (cwd, *cwd.parents):
-                found.update(run_directories.get(directory, ()))
-            # Admission wrappers can be alive before the engine executable starts.
-            for argument in (process/'cmdline').read_bytes().split(b'\0'):
-                value = os.fsdecode(argument).split('=', 1)[-1]
-                if value.startswith('/'):
-                    paths.append(value)
-                elif value.startswith(('./', '../', 'runtime/')):
-                    paths.append(str(cwd/value))
-            for variable in (process/'environ').read_bytes().split(b'\0'):
-                if variable.startswith((b'UNBOUND_RUNTIME=', b'UNBOUND_CLI=', b'UNBOUND=')):
-                    paths.append(os.fsdecode(variable.split(b'=', 1)[1]))
-            for value in paths:
-                path = Path(value).resolve()
-                if snapshots in path.parents:
-                    found.add(path.relative_to(snapshots).parts[0])
+            found |= snapshot_uses(os.readlink(process/'exe'), Path(os.readlink(process/'cwd')),
+                                   (process/'cmdline').read_bytes().split(b'\0'),
+                                   (process/'environ').read_bytes().split(b'\0'), snapshots, run_directories)
         except (OSError, ValueError):
             continue
     return found
@@ -385,6 +407,10 @@ def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=Fa
         for directory in ('references', 'pins'):
             for temporary in (cache/directory).glob('*.tmp'):
                 discard(temporary)
+        # A released reference goes unless a live process or a baseline holds its snapshot: what
+        # the loop below adds for kept references protects snapshots, not other released links
+        # (else whether a link goes depends on the order the references are listed in).
+        held = set(protected)
         for path in (cache/'references').glob('*'):
             if path.name.endswith('.tmp'):
                 continue
@@ -407,10 +433,6 @@ def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=Fa
                                and reference.parent.name.startswith('sheriff-') and not record.get('explicit_release'))
             if (record.get('release_requested') and not pending_sheriff and not record.get('retained')
                     and not live and record['snapshot'] not in held):
-        # A released reference goes unless a live process or a baseline holds its snapshot: what
-        # the loop below adds for kept references protects snapshots, not other released links
-        # (else whether a link goes depends on the order the references are listed in).
-        held = set(protected)
                 if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
                     if not discard(reference):
                         protected.add(record['snapshot'])

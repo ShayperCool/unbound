@@ -23,7 +23,8 @@ class JanitorTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        # Resolved: on macOS the temporary directory lies behind the /var -> /private/var link.
+        self.root = Path(self.temporary.name).resolve()
         self.cache = self.root/'local/unbound'
         self.volume = self.root/'volume'
         self.builds = self.volume/'builds'
@@ -90,6 +91,43 @@ class JanitorTests(unittest.TestCase):
         self.assertEqual([row['path'] for row in self.rows('would_remove')], [str(old)])
         self.assertTrue(linked.is_dir())
         self.assertTrue(old.is_dir())  # dry-run did not delete
+
+    def test_runs_in_the_caches_own_validation_directory_are_found(self):
+        # macOS: probes write to $XDG_CACHE_HOME/unbound/validation itself, no link to a volume.
+        validation = self.cache/'validation'
+        old = validation/'runs/probe/gate-1'
+        newest = validation/'runs/probe/gate-2'
+        live = validation/'runs/probe/gate-0'
+        for path in (live, old, newest):
+            path.mkdir(parents=True)
+            (path/'output').write_text('capture')
+        for age, path in enumerate((live, old, newest)):
+            os.utime(path, (1_000_000+age, 1_000_000+age))
+        self.j = janitor.Janitor(self.repo)
+        self.assertEqual(self.j.validation, validation.resolve())
+        self.collect_applied(processes=[live/'output'])
+        self.assertFalse(old.exists())
+        self.assertTrue(newest.is_dir() and live.is_dir())
+
+    def test_a_linked_validation_directory_is_followed_to_the_volume(self):
+        # Linux: the cache's validation link names the build volume's unbound-validation.
+        target = self.volume/'unbound-validation'
+        target.mkdir()
+        (self.cache/'validation').symlink_to(target)
+        self.assertEqual(janitor.Janitor(self.repo).validation, target)
+
+    def test_without_the_queue_task_caches_stay_and_runs_go(self):
+        # A Mac has no orchestrator queue: no task is known to have landed.
+        (self.cache/'agents/QUEUE.md').unlink()
+        task = self.volume/'q1/old'
+        task.mkdir(parents=True)
+        (task/'output').write_text('task output')
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        self.collect_applied()
+        self.assertTrue(task.is_dir())
+        self.assertFalse(old.exists())
+        self.assertTrue(newest.is_dir())
+        self.assertEqual(len(self.rows('queue_missing')), 1)
 
     def test_old_instances_of_a_probe_are_removed_except_the_newest(self):
         old, older, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
@@ -1028,6 +1066,23 @@ class JanitorTests(unittest.TestCase):
         self.assertIn(str(self.builds), units['unbound-janitor.service'])
         self.assertIn('--apply --repo', units['unbound-janitor.service'])
         self.assertIn('WorkingDirectory='+str(self.repo)+'\n', units['unbound-janitor.service'])
+
+    def test_launchd_agent_runs_the_janitor_hourly_with_the_retention_asked_for(self):
+        import plistlib
+        agent = plistlib.loads(install_janitor.launchd_agent(self.repo, dict(os.environ), run_hours=12))
+        self.assertEqual(agent['Label'], 'com.unbound.janitor')
+        self.assertEqual(agent['StartInterval'], 3600)
+        self.assertEqual(agent['WorkingDirectory'], str(self.repo))
+        arguments = agent['ProgramArguments']
+        self.assertEqual(arguments[1:5], [str(self.repo/'tools/agents/janitor.py'), '--apply', '--repo', str(self.repo)])
+        self.assertEqual(arguments[-2:], ['--run-hours', '12'])
+        self.assertEqual(agent['EnvironmentVariables']['UNBOUND_BUILD_ROOT'], str(self.builds))
+        self.assertIn('/usr/sbin', agent['EnvironmentVariables']['PATH'])
+        self.assertEqual(agent['StandardOutPath'], str(self.cache/'agents/janitor/launchd.log'))
+        # Without a retention the janitor's own default applies, on Linux as before.
+        self.assertNotIn('--run-hours', plistlib.loads(install_janitor.launchd_agent(self.repo, {}))['ProgramArguments'])
+        self.assertNotIn('--run-hours', install_janitor.units(self.repo, {})['unbound-janitor.service'])
+        self.assertIn('--run-hours 12\n', install_janitor.units(self.repo, {}, run_hours=12)['unbound-janitor.service'])
 
 
 if __name__ == '__main__':

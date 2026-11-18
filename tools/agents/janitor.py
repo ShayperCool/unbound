@@ -32,6 +32,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build
+import processes
 from slot import main_checkout, slot_root, worktrees
 from run_cache_index import DirectoryChanged, DirectoryIndex, Entry
 import runtime_snapshot
@@ -296,15 +297,44 @@ def children(path):
         raise
 
 
+def argument_paths(cwd, values):
+    """The paths in a process's arguments and environment (`NAME=value`): absolute ones, and
+    relative ones from its working directory."""
+    paths = []
+    for raw in values:
+        value = os.fsdecode(raw).split('=', 1)[-1]
+        # Colon-separated paths also cover library/search environments.
+        for part in value.split(os.pathsep):
+            if part.startswith('/'):
+                paths.append(Path(part))
+            elif part and '/' in part and not part.startswith('-'):
+                paths.append(cwd/part)
+    return paths
+
+
+def darwin_process_paths(uid, exclude_pid=None):
+    """process_paths on macOS (tools/agents/processes.py): the same paths of every live process
+    of the user, failing closed alike."""
+    found = set()
+    for process in processes.darwin_processes(uid, exclude=(os.getpid(), exclude_pid)):
+        cwd = process.cwd or Path('/')
+        paths = [cwd, *([process.executable] if process.executable else []), *process.files,
+                 *argument_paths(cwd, [*process.arguments, *process.environment])]
+        found.update(p.resolve() for p in paths if p.is_absolute())
+    return found
+
+
 def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=None):
     """Open descriptors, mapped files, cwd, executables and pending commands.
 
     Other users cannot access private caches. Fail closed for unreadable processes
     of this user, except processes that exited during discovery.
     """
+    uid = os.getuid() if uid is None else uid
+    if processes.MACOS and proc == Path('/proc'):
+        return darwin_process_paths(uid, exclude_pid)
     if not (proc/'self/stat').is_file():
         raise OSError('janitor requires Linux /proc process inspection')
-    uid = os.getuid() if uid is None else uid
     found = set()
     for process in proc.glob('[0-9]*'):
         try:
@@ -324,14 +354,7 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=
                     paths.append(Path(fields[5].removesuffix(' (deleted)')))
             arguments = (process/'cmdline').read_bytes().split(b'\0')
             variables = (process/'environ').read_bytes().split(b'\0')
-            for raw in [*arguments, *variables]:
-                value = os.fsdecode(raw).split('=', 1)[-1]
-                # Colon-separated paths also cover library/search environments.
-                for part in value.split(os.pathsep):
-                    if part.startswith('/'):
-                        paths.append(Path(part))
-                    elif part and '/' in part and not part.startswith('-'):
-                        paths.append(cwd/part)
+            paths.extend(argument_paths(cwd, [*arguments, *variables]))
             found.update(p.resolve() for p in paths if p.is_absolute())
         except OSError as error:
             if gone(error) or not process.exists():
@@ -566,7 +589,10 @@ class Janitor:
         self.cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
         self.builds = build.build_root()
         self.volume = self.builds.parent
-        self.validation = self.volume/'unbound-validation'
+        # Where probes write their runs (tests/probe_paths.py validation_cache): on Linux a link to
+        # the build volume's unbound-validation, on macOS a directory of the cache itself.
+        probes = self.cache/'validation'
+        self.validation = probes.resolve() if probes.is_dir() else self.volume/'unbound-validation'
         self.runtimes = runtime_snapshot.cache_root().resolve()
         self.apply, self.idle_hours, self.run_hours, self.suite_days = apply, idle_hours, run_hours, suite_days
         self.log, self.scan_seconds, self.run_seconds = log, scan_seconds, run_seconds
@@ -693,7 +719,16 @@ class Janitor:
 
     def refresh_queue(self):
         queue = self.cache/'agents/QUEUE.md'
-        info = queue.stat()
+        try:
+            info = queue.stat()
+        except FileNotFoundError:
+            # A machine without the orchestrator's queue (a Mac whose queue is on the Linux
+            # machine): no task is known to have landed, so every task cache stays; runs keep
+            # their age, link and live-process guards.
+            if self.queue_signature != 'missing':
+                self.emit('queue_missing', path=str(queue))
+            self.states, self.active, self.queue_signature = {}, set(), 'missing'
+            return
         signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
         if signature != self.queue_signature:
             self.states = task_states(queue)
