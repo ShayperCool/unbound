@@ -393,23 +393,32 @@ pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
     })
 }
 
-/// Whether a depth copy holds the depth in red, green and blue (alpha 1) rather than in red
-/// alone: what sampling a depth texture reads on the run's graphics device
-/// (`GraphicsDevice::depth_sample_fills_color`). The copy's own channels give it, since wgpu
-/// views have no channel swizzle.
+/// Whether a depth copy a draw samples outside a comparison holds the depth in red, green and
+/// blue (alpha 1) rather than in red alone: what sampling a depth texture reads on the run's
+/// graphics device (`GraphicsDevice::depth_sample_fills_color`). The copy's own channels give
+/// it, since wgpu views have no channel swizzle.
 pub fn depth_copy_fills_color() -> bool {
     unbound_runtime::graphics_device::get().depth_sample_fills_color()
 }
 
+/// Whether a depth copy has the four channels of a [`depth_copy_fills_color`] copy.
+pub fn filled_depth_copy(format: wgpu::TextureFormat) -> bool {
+    matches!(
+        format,
+        wgpu::TextureFormat::Rgba32Float
+            | wgpu::TextureFormat::Rgba16Float
+            | wgpu::TextureFormat::Rgba16Unorm
+    )
+}
+
 /// The format of a depth-only render target's depth copy: filterable 32-bit floats where the
-/// device filters them, else half floats; four channels where the depth fills them
-/// ([`depth_copy_fills_color`]).
-pub fn float_depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
+/// device filters them, else half floats; four channels when `filled`.
+pub fn float_depth_copy_format(device: &wgpu::Device, filled: bool) -> wgpu::TextureFormat {
     use wgpu::TextureFormat as F;
     let full = device
         .features()
         .contains(wgpu::Features::FLOAT32_FILTERABLE);
-    match (full, depth_copy_fills_color()) {
+    match (full, filled) {
         (true, false) => F::R32Float,
         (false, false) => F::R16Float,
         (true, true) => F::Rgba32Float,
@@ -417,12 +426,13 @@ pub fn float_depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
     }
 }
 
-/// The normalized 16-bit format of a D16 depth copy ([`depth_copy_fills_color`] decides its
-/// channels) and what the device can do with it.
-pub fn normalized_depth_copy_format() -> (wgpu::TextureFormat, Option<wgpu::TextureFormatFeatures>)
-{
+/// The normalized 16-bit format of a D16 depth copy (four channels when `filled`) and what the
+/// device can do with it.
+pub fn normalized_depth_copy_format(
+    filled: bool,
+) -> (wgpu::TextureFormat, Option<wgpu::TextureFormatFeatures>) {
     let caps = norm_format_caps();
-    if depth_copy_fills_color() {
+    if filled {
         (wgpu::TextureFormat::Rgba16Unorm, caps.rgba16)
     } else {
         (wgpu::TextureFormat::R16Unorm, caps.r16)
@@ -430,16 +440,17 @@ pub fn normalized_depth_copy_format() -> (wgpu::TextureFormat, Option<wgpu::Text
 }
 
 /// A filterable color copy of a depth buffer: normalized 16-bit storage for D16 where supported,
-/// otherwise the device's float copy format.
+/// otherwise the device's float copy format; four channels when `filled`.
 pub fn depth_copy_view(
     device: &wgpu::Device,
     width: u32,
     height: u32,
     depth_format: wgpu::TextureFormat,
+    filled: bool,
 ) -> wgpu::TextureView {
     // Normalized 16-bit filtering retains the depth format's interpolation precision.
     // Measured on Unity 6000.0.71f1 OpenGL Core and Vulkan, NVIDIA: samplerstates D16Filter.*.
-    let (normalized_format, normalized_caps) = normalized_depth_copy_format();
+    let (normalized_format, normalized_caps) = normalized_depth_copy_format(filled);
     let normalized = depth_format == wgpu::TextureFormat::Depth16Unorm
         && normalized_caps.is_some_and(|caps| {
             caps.allowed_usages.contains(
@@ -454,7 +465,7 @@ pub fn depth_copy_view(
     let format = if normalized {
         normalized_format
     } else {
-        float_depth_copy_format(device)
+        float_depth_copy_format(device, filled)
     };
     if depth_format == wgpu::TextureFormat::Depth16Unorm && !normalized {
         tracing::warn!(
@@ -1855,7 +1866,15 @@ pub fn upload_texture_with(
                 })
             });
             let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some()).then(|| {
-                depth_copy_view(device, width, height, depth_format(device, t.depth_bits))
+                // One channel: a draw that samples it outside a comparison makes it four where the
+                // device fills them (the executor's `fill_depth_copy`); comparisons read the depth.
+                depth_copy_view(
+                    device,
+                    width,
+                    height,
+                    depth_format(device, t.depth_bits),
+                    false,
+                )
             });
             let native_depth = (t.retain_resolve && !t.bind_ms && samples > 1 && layers == 1)
                 .then(|| depth_texture.as_ref())

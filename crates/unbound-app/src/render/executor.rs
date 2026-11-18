@@ -721,7 +721,7 @@ pub struct UnityRenderer {
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
-        CopyKind::COUNT * COPY_SAMPLE_CLASSES],
+        CopyKind::COUNT * COPY_SAMPLE_CLASSES * 2],
     /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample,
     /// format, resolve sample, rows mirrored).
     depth_blit_pipelines: HashMap<
@@ -1524,6 +1524,7 @@ impl UnityRenderer {
             });
             return (bg, alpha_only);
         }
+        self.fill_depth_copy(handle);
         let mut key = {
             let t = self.texture_or_default(handle, default);
             if let Some(bg) = &t.bind_groups[slot] {
@@ -1965,6 +1966,18 @@ impl UnityRenderer {
             });
             integer_views.push(Some(target));
         }
+        // A depth-only texture a float slot samples outside a comparison reads its filled copy.
+        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
+            if is_2d(*dim)
+                && !slot.comparison
+                && !slot.depth()
+                && !slot.integer()
+                && !slot.multisampled
+                && !handle::split(raw[k]).1
+            {
+                self.fill_depth_copy(*h);
+            }
+        }
         let generations: Vec<(u64, u64)> = slots
             .iter()
             .zip(&raw)
@@ -2229,6 +2242,36 @@ impl UnityRenderer {
         })
     }
 
+    /// Where the device's depth samples fill the color channels, the four-channel depth copy of
+    /// depth-only texture `handle`, which a draw samples outside a comparison: made the first time
+    /// (then brought up to date before that draw, as a new depth element is). A target sampled only
+    /// through comparisons (a shadow map) keeps its one-channel copy.
+    fn fill_depth_copy(&mut self, handle: u64) {
+        if !resources::depth_copy_fills_color() {
+            return;
+        }
+        let Some(t) = self.textures.get(&handle) else {
+            return;
+        };
+        let Some(copy) = t.depth_copy.as_ref().filter(|_| t.format == 5) else {
+            return;
+        };
+        if resources::filled_depth_copy(copy.texture().format()) {
+            return;
+        }
+        let Some(depth_format) = t.depth_format() else {
+            return;
+        };
+        let view = resources::depth_copy_view(&self.device, t.width, t.height, depth_format, true);
+        self.generation += 1;
+        let generation = self.generation;
+        let t = self.textures.get_mut(&handle).unwrap();
+        t.depth_copy = Some(view);
+        t.generation = generation;
+        t.bind_groups = [None, None];
+        self.depth_reads.insert(handle, true);
+    }
+
     /// A render target's depth element for a float slot: its depth copy, made the first time
     /// (then brought up to date before the draw that samples it), and kept up to date after the
     /// passes that draw into it. None (with an error) for a texture without a depth buffer.
@@ -2265,7 +2308,14 @@ impl UnityRenderer {
         }
         let (width, height) = (t.width, t.height);
         let depth_format = t.depth_format()?;
-        let view = resources::depth_copy_view(&self.device, width, height, depth_format);
+        // Sampled through a float slot: four channels where the device's depth samples fill them.
+        let view = resources::depth_copy_view(
+            &self.device,
+            width,
+            height,
+            depth_format,
+            resources::depth_copy_fills_color(),
+        );
         self.generation += 1;
         let generation = self.generation;
         let t = self.textures.get_mut(&handle).unwrap();
@@ -2426,14 +2476,18 @@ impl UnityRenderer {
         texture
     }
 
-    /// The pipeline that writes a depth buffer's depth into a float color texture.
+    /// The pipeline that writes a depth buffer's depth into a float color texture (of four
+    /// channels when `filled`: [`resources::filled_depth_copy`]).
     fn depth_copy_pipeline(
         &mut self,
         kind: CopyKind,
         samples: u32,
+        filled: bool,
     ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
-        let index =
-            kind.index() * COPY_SAMPLE_CLASSES + samples.max(1).min(8).trailing_zeros() as usize;
+        let index = (kind.index() * COPY_SAMPLE_CLASSES
+            + samples.max(1).min(8).trailing_zeros() as usize)
+            * 2
+            + filled as usize;
         if let Some(p) = &self.depth_copy_pipelines[index] {
             return p.clone();
         }
@@ -2456,11 +2510,11 @@ impl UnityRenderer {
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
                 wgpu::TextureSampleType::Float { filterable: false },
-                resources::float_depth_copy_format(device),
+                resources::float_depth_copy_format(device, filled),
             ),
             CopyKind::Depth16 | CopyKind::Depth16Multisampled => (
                 wgpu::TextureSampleType::Float { filterable: false },
-                resources::normalized_depth_copy_format().0,
+                resources::normalized_depth_copy_format(filled).0,
             ),
             CopyKind::UintBits => (
                 wgpu::TextureSampleType::Float { filterable: false },
@@ -5263,8 +5317,9 @@ impl UnityRenderer {
                     continue;
                 }
                 Op::DepthCopy(c) => {
+                    let filled = resources::filled_depth_copy(c.target.texture().format());
                     let (pipeline, layout) =
-                        self.depth_copy_pipeline(c.kind, c.depth.texture().sample_count());
+                        self.depth_copy_pipeline(c.kind, c.depth.texture().sample_count(), filled);
                     let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: Some("unbound depth copy"),
                         layout: &layout,
@@ -5298,7 +5353,7 @@ impl UnityRenderer {
                     // Texels in another storage are drawn into a level of the destination's first.
                     let repacked = c.channels.as_ref().map(|channels| {
                         let (pipeline, layout) =
-                            self.depth_copy_pipeline(channels.kind, c.source.sample_count());
+                            self.depth_copy_pipeline(channels.kind, c.source.sample_count(), false);
                         let texture = self.repack_texture(
                             c.destination.format().remove_srgb_suffix(),
                             channels.size,
