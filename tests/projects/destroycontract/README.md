@@ -91,3 +91,22 @@ Exactly 855 of 1115 reference keys change from the batch recording:
 The other 260 keys and all comparator rules are byte-identical. `PREDICTIONS.json`
 retains the precommitted hypotheses; only its existing core API README digest is
 refreshed to the current file. `Controls/controls.py` passes all 270 controls.
+
+## Metal (macOS)
+
+On macOS arm64 the runner records the windowed macOS Editor, which draws with Metal, started
+directly (`tests/editor_runner.py`), and `publish` would write `Reference/unity-<version>/metal.jsonl`;
+the device, its launch flags and the strict checks of the Editor's result, command and log are
+`tests/guarded_editor.py`'s (OpenGL Core through VirtualGL on Linux). The preflight's compile
+fixture there is a batchmode Editor run of a fresh copy of this probe:
+`python3 tests/guarded_editor.py fixture --probe tests/projects/destroycontract --release <version> --label <label>`
+prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
+update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
+first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+
+Not recorded on Metal: two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro
+differ from the Linux reference in the device keys and in 886 `cb.wfeof` states, the macOS Editor
+resuming WaitForEndOfFrame once more, in the first frame: the windowed Editor's first Game-view
+frame, a windowing difference rather than a graphics device's answer (AGENTS.md Platforms), so the
+Mac compares with the Linux reference, where Unbound on Metal fails only the two device keys.

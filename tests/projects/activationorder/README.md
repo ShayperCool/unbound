@@ -186,3 +186,21 @@ recorded residuals (Unity documents no order between these objects; `docs/COMPAT
 "Order and text Unity's documentation leaves open"). A run on macOS also differs in the
 OS-decided `context.platform` and `context.graphicsDeviceType`. Any other failing key, or a
 change in these eight, is a regression.
+
+## Metal (macOS)
+
+On macOS arm64 the runner records the windowed macOS Editor, which draws with Metal, started
+directly (`tests/editor_runner.py`), and `publish` writes `Reference/unity-<version>/metal.jsonl`;
+the device, its launch flags and the strict checks of the Editor's result, command and log are
+`tests/guarded_editor.py`'s (OpenGL Core through VirtualGL on Linux). The preflight's compile
+fixture there is a batchmode Editor run of a fresh copy of this probe:
+`python3 tests/guarded_editor.py fixture --probe tests/projects/activationorder --release <version> --label <label>`
+prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
+update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
+first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+
+Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ from the Linux
+reference only in the OS-decided `context.platform` (OSXEditor) and `context.graphicsDeviceType`
+(Metal). Unbound on Metal fails the same 8 of 208 keys there (the cross-object callback orders
+above); against the Linux reference it also fails those two.

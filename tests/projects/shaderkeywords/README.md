@@ -244,3 +244,23 @@ Linux (the landing gate of 2026-11-17, 1510/1510). A Mac run of 2026-11-17 faile
 message change; a current Mac run is expected to fail only the OS-decided `context.platform` and
 `context.graphicsDeviceType`.
 Anything else is a regression.
+
+## Metal (macOS)
+
+On macOS arm64 the runner records the windowed macOS Editor, which draws with Metal, started
+directly (`tests/editor_runner.py`), and `publish` writes `Reference/unity-<version>/metal.jsonl`;
+the device, its launch flags and the strict checks of the Editor's result, command and log are
+`tests/guarded_editor.py`'s (OpenGL Core through VirtualGL on Linux). The preflight's compile
+fixture there is a batchmode Editor run of a fresh copy of this probe:
+`python3 tests/guarded_editor.py fixture --probe tests/projects/shaderkeywords --release <version> --label <label>`
+prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
+update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
+first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+
+Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ from the Linux
+reference in 5 keys: the device keys, and the Metal device enables the global keywords
+`UNITY_DEVICE_SUPPORTS_NATIVE_16BIT`, `UNITY_DEVICE_SUPPORTS_WAVE_32` and
+`UNITY_DEVICE_SUPPORTS_WAVE_ANY` from the start (`global.enabled.initial`, `.after`, `.restored`).
+Unbound on Metal fails those 3 keys (it enables no device capability keyword: their variants'
+16-bit and wave code is not translated; open).
