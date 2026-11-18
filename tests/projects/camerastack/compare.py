@@ -84,7 +84,13 @@ def main():
             print(f'value {k}: unity {json.dumps(ref[k])} unbound {json.dumps(cand[k])}')
             bad += 1
     names = sorted(n for n in os.listdir(ref_dir) if n.endswith('.png'))
-    extra = sorted(n for n in os.listdir(cand_dir) if n.endswith('.png') and n not in names)
+    # Images the Editor drew otherwise in two captures (unstable.json, a Vulkan reference's):
+    # no reference to compare with, listed and not counted as extra.
+    unstable_path = os.path.join(ref_dir, 'unstable.json')
+    unstable = json.load(open(unstable_path)) if os.path.exists(unstable_path) else []
+    for n in unstable:
+        print(f'unstable in the Editor, not compared: {n}')
+    extra = sorted(n for n in os.listdir(cand_dir) if n.endswith('.png') and n not in names and n not in unstable)
     for n in extra:
         print(f'extra image {n}')
     passed = 0
@@ -113,6 +119,7 @@ def main():
         else:
             print(f'{name}: {count} pixels differ, mean {total/(w1*h1):.2f}, worst {worst}, box {box}')
     print(f'camerastack: {len(ref)-bad}/{len(ref)} values; {passed}/{len(names)} images pass'
+          f'{"; " + str(len(unstable)) + " unstable in the Editor" if unstable else ""}'
           f'{"; " + str(len(extra)) + " extra images" if extra else ""}')
     return int(bad > 0 or passed != len(names) or bool(extra))
 

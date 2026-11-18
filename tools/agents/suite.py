@@ -617,6 +617,12 @@ def recipes(release):
             driver('run.py', 'unbound', '--release', '{release}', '--space', space, '--label', '{label}-'+space,
                    env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
             py('compare.py', '{probe}/Reference/unity-{release}/'+space, f'{{runs}}-{space}/unbound')]
+        # On the Vulkan device too, against the Vulkan Editor's capture (its top-down screen).
+        if (PROJECTS/'camerastack/Reference'/f'unity-{release}'/'vulkan'/space).is_dir():
+            R['camerastack'] += [
+                driver('run.py', 'unbound', '--release', '{release}', '--space', space, '--device', 'vulkan',
+                       '--label', '{label}-vulkan-'+space, env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
+                py('compare.py', '{probe}/Reference/unity-{release}/vulkan/'+space, f'{{runs}}-vulkan-{space}/unbound')]
     R['indirectspec'] = []
     for profile in ('linear', 'gamma'):
         R['indirectspec'] += [

@@ -213,7 +213,8 @@ target each code over 1023 at 8 bits (512 reads 128/255), from Unbound's store
 (`RenderTexture.QuantizeReadTexels`); a B8G8R8A8_SNorm target keeps signed channels (0.25 reads
 32/127), and ReadPixels into RGBA32 truncates them (32/127 reads 64/255, 64/127 128/255).
 `residuals-metal.json` lists the one remaining difference, B10G11R11's alpha into RGBA32 (Unbound
-184/185 on Metal). Shaders sampling a 4444 or 5-6-5 target read its 8-bit store (wgpu has no
-render format of those layouts): open, unprobed.
+184/185 on Metal). Shaders sampling a 4444 target read 8-bit values on the Linux devices; a 5-6-5 or 1-5-5-5 target
+keeps its channels' bits there (tests/projects/samplerstates Packed.*, GraphicsDeviceProfile
+PackedTargetsKeepChannelBits); unmeasured on Metal, where Unbound's 8-bit store is sampled.
 Whether the Vulkan Editor's ReadPixels reads a B8G8R8A8
 target is unmeasured; Unbound keeps refusing every target without ReadPixels usage there.

@@ -59,6 +59,16 @@ Unbound on Metal: 192/192 images and 387/387 values in both color spaces. A Don'
 camera over the screen takes the screen's depth with the rows the right way up (before, its
 `full.bH.def.persp` images drew B where A's red quad hides it).
 
+Vulkan (`Reference/unity-6000.0.71f1/vulkan/<space>`, `--device vulkan`: the Linux Editor with
+-force-vulkan on the GPU-backed display, two pairs of captures per color space, the values the
+same in all four). A Don't Clear deferred camera over the screen takes the screen's depth the
+right way up, as on Metal (`*.full.bH.def.persp`; Vulkan's screen is top-down too). In the cases
+where an LDR A is followed by a B that clears only depth or nothing (`q0.aL.bD.*`, `q0.aL.bN.*`,
+14 Linear and 12 Gamma images) the Vulkan Editor draws some objects in its error color, and
+which ones changes from capture to capture: every frame of such a case is listed in the
+reference's `unstable.json` and not compared (`compare.py` reports them). Unbound on Vulkan:
+178/178 Linear and 180/180 Gamma images, 387/387 values in both.
+
 Run from the repository root; the runner takes one launcher lease per Editor through
 `tests/editor_runner.py` (do not wrap it in `with-heavy-job`):
 
@@ -67,6 +77,11 @@ Run from the repository root; the runner takes one launcher lease per Editor thr
     UNBOUND_CLI=$UNBOUND python3 tests/projects/camerastack/run.py unbound --release 6000.0.71f1 --space Linear --label U-Linear
     python3 tests/projects/camerastack/compare.py tests/projects/camerastack/Reference/unity-6000.0.71f1/Linear \
         ~/.cache/unbound/validation/runs/camerastack/U-Linear/unbound
+
+    # Vulkan: two pairs per color space, published together (every capture must agree on a case)
+    python3 tests/projects/camerastack/run.py editor  --release 6000.0.71f1 --space Linear --device vulkan --label V-Linear
+    python3 tests/projects/camerastack/run.py editor  --release 6000.0.71f1 --space Linear --device vulkan --label V2-Linear
+    python3 tests/projects/camerastack/run.py publish --release 6000.0.71f1 --space Linear --device vulkan --label V-Linear --also V2-Linear
 
 `compare.py` checks every value and every case image (a pixel differs when a channel is more than
 3/255 off) and exits 1 on any missing, extra or failing one.

@@ -10,7 +10,14 @@
                                                      the environment's UNBOUND_MANAGED_DIR selects
                                                      the engine)
 
-S is Linear or Gamma. Every capture runs on a fresh copy of the probe's Assets/Packages/
+S is Linear or Gamma. --device vulkan records and runs the Vulkan device (the Editor with
+-force-vulkan on the GPU-backed display :0, the repeats one after the other; Unbound with
+--force-vulkan) into Reference/unity-R/vulkan/S; the default is the OpenGL Core device
+(Reference/unity-R/S). The Vulkan Editor draws some cases that read a target's undefined
+contents otherwise from capture to capture (whole objects in the error color in some frames):
+publish (with --also LABEL for more pairs) keeps the cases whose frames every capture agrees
+on and lists every frame of the others in unstable.json, which compare.py reports and does not
+compare; the values must agree. Every capture runs on a fresh copy of the probe's Assets/Packages/
 ProjectSettings (Gamma: with the color space switched in the copy) under
 $XDG_CACHE_HOME/unbound/validation/runs/camerastack/<label> (one label per color space); nothing
 is written here except by publish, which refuses to overwrite an existing reference. Each Editor runs through
@@ -38,7 +45,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_root, run_root
 from editor_runner import EditorJob, load_result, publish as publish_repeats, result_problem, \
-    run_parallel, summary
+    run as run_job, run_parallel, summary
 
 import macos_editor  # noqa: E402
 
@@ -48,6 +55,7 @@ MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
+DEVICE = 'opengl'
 # The probe writes its values once, at the end of Play mode, after about 400 frames.
 PROGRESS_TIMEOUT = 600
 HARD_TIMEOUT = 1200
@@ -79,7 +87,7 @@ def fresh_output(directory):
 def job(work, repeat):
     project, out = work/'projects'/repeat, work/repeat
     return EditorJob(project, out/'editor.log', out, env={'STACK_PROBE_OUT': str(out)},
-                     timeout=HARD_TIMEOUT, progress_files=[out/'values.jsonl'],
+                     timeout=HARD_TIMEOUT, vulkan=DEVICE == 'vulkan', progress_files=[out/'values.jsonl'],
                      progress_timeout=PROGRESS_TIMEOUT, label='camerastack-'+repeat,
                      launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
                                     'paths': {'assets': str(project/'Assets'),
@@ -114,7 +122,8 @@ def editor(work, space, dry_run=False):
     for j in jobs:
         copy_project(j.project, space)
         fresh_output(j.out)
-    results = run_parallel(jobs)
+    # The Vulkan Editors share the display :0: one after the other.
+    results = [run_job(j) for j in jobs] if DEVICE == 'vulkan' else run_parallel(jobs)
     for result in results:
         print(summary(result))
     return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
@@ -172,7 +181,7 @@ def write_reference(target, first):
     print('published', target, len(images(first)), 'images')
 
 
-def publish(work, space):
+def publish(work, space, also=()):
     repeats = [work/r for r in REPEATS]
     for repeat in repeats:
         if not repeat.is_dir():
@@ -190,8 +199,40 @@ def publish(work, space):
             sys.exit(f'refusing to overwrite reference: {target}')
         write_reference(target, macos_editor.agreeing(repeats, 'values.jsonl', lambda d: ['values.jsonl', *images(d)]))
         return 0
-    return publish_repeats(repeats, reference_root(PROBE)/space, lambda d: ['values.jsonl', *images(d)],
+    if DEVICE == 'vulkan':
+        repeats += [run_root(PROBE, label)/r for label in also for r in REPEATS]
+        return publish_agreeing(repeats, reference_root(PROBE)/'vulkan'/space)
+    target = reference_root(PROBE)/space
+    return publish_repeats(repeats, target, lambda d: ['values.jsonl', *images(d)],
                            write_reference, complete=[capture_problem], gpu=True)
+
+
+def publish_agreeing(repeats, target):
+    """The values (identical in every repeat) and the cases whose frames all repeats agree on;
+    every frame of the other cases goes to unstable.json."""
+    for repeat in repeats:
+        problem = capture_problem(repeat)
+        if problem:
+            sys.exit(f'{repeat.name}: {problem}; not publishing')
+    if target.exists():
+        sys.exit(f'refusing to overwrite reference: {target}')
+    values = [(r/'values.jsonl').read_bytes() for r in repeats]
+    if any(v != values[0] for v in values):
+        sys.exit('the repeats record different values; not publishing')
+    first = repeats[0]
+    def case(name):
+        return name.rsplit('.f', 1)[0]
+    differing = {case(name) for name in images(first)
+                 if any((r/name).read_bytes() != (first/name).read_bytes() for r in repeats[1:])}
+    stable = [n for n in images(first) if case(n) not in differing]
+    unstable = [n for n in images(first) if case(n) in differing]
+    target.mkdir(parents=True)
+    shutil.copyfile(first/'values.jsonl', target/'values.jsonl')
+    for name in stable:
+        shutil.copyfile(first/name, target/name)
+    (target/'unstable.json').write_text(json.dumps(unstable, indent=1) + '\n')
+    print('published', target, len(stable), 'images,', len(unstable), 'unstable')
+    return 0
 
 
 def unbound(work, space):
@@ -201,7 +242,8 @@ def unbound(work, space):
     env = dict(os.environ, STACK_PROBE_OUT=str(out))
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
-                                 '--no-watch', '--frames', '2000', '--size', '160x90'],
+                                 '--no-watch', '--frames', '2000', '--size', '160x90',
+                                 *(['--force-vulkan'] if DEVICE == 'vulkan' else [])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     return result.returncode
@@ -214,7 +256,13 @@ def main():
     parser.add_argument('--release', required=True)
     parser.add_argument('--space', required=True, choices=('Linear', 'Gamma'))
     parser.add_argument('--dry-run', action='store_true', help='editor: print the jobs without launching')
+    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--also', action='append', default=[], help='publish --device vulkan: the repeats of another label too')
     args = parser.parse_args()
+    global DEVICE
+    DEVICE = args.device
+    if MACOS and DEVICE == 'vulkan':
+        parser.error('macOS has no Vulkan device: its captures are Metal ones')
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     if args.dry_run and args.mode != 'editor':
@@ -226,7 +274,7 @@ def main():
     if args.mode == 'unbound':
         return unbound(work, args.space)
     if args.mode == 'publish':
-        return publish(work, args.space)
+        return publish(work, args.space, args.also)
     return check(work)
 
 
