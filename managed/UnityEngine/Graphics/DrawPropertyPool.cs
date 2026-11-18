@@ -8,7 +8,9 @@ namespace Unbound.Runtime
     /// per-object lights) while draws are emitted: a renderer list or a single draw opens a scope,
     /// and the dictionaries handed out in it are reused once it ends. The command
     /// stream copies a draw's properties when the draw is written, so nothing keeps them past
-    /// their scope.
+    /// their scope. Some owners rely on that and write the boxes of the values they pass every
+    /// frame in place (a terrain's detail constants): a draw kept past the frame it was collected
+    /// in would see later values.
     /// </summary>
     internal static class DrawPropertyPool
     {
