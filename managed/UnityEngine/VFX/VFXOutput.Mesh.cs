@@ -59,17 +59,18 @@ namespace Unbound.Runtime
         static string MeshRefusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
         {
             if (Parameter(task, MeshParameter, -1) < 0 || Parameter(task, SubMeshMaskParameter, -1) < 0) return "its task names no mesh or no submesh mask";
+            int sharing = 0;
             foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
-                if (other.type == VFXTaskType.ParticleMeshOutput && other.shaderSourceIndex == task.shaderSourceIndex && !ReferenceEquals(other.parameters, task.parameters))
-                    return "it is one of several meshes of an output, which is not measured yet";
-            return null;
+                if (other.type == VFXTaskType.ParticleMeshOutput && other.shaderSourceIndex == task.shaderSourceIndex) sharing++;
+            return sharing > 1 ? "it is one of several meshes of an output, which is not measured yet" : null;
         }
 
         /// <summary>Computes the arguments of each submesh the mask names from the list's count
         /// in <paramref name="counts"/>, each entry described by its submesh as the mesh has it
-        /// now. Every entry is reserved before any is filled: a reservation may make the
-        /// entries' buffer anew, losing what was filled into the one before. False when they
-        /// cannot be.</summary>
+        /// now. Every entry is reserved before any is filled: a fill after a reservation may make
+        /// the entries' buffer anew, losing what was filled into the one before (draws collected
+        /// earlier keep the old one: <see cref="VFXRetiredBuffers"/>). False when they cannot
+        /// be.</summary>
         bool FillMeshArguments(VFXIndirectArgs arguments, GraphicsBuffer counts)
         {
             var values = m_System.Effect.Values;
@@ -100,6 +101,27 @@ namespace Unbound.Runtime
             m_MeshDescribed[at] = count;
             m_MeshDescribed[at + 1] = first;
             m_MeshDescribed[at + 2] = baseVertex;
+        }
+
+        /// <summary>Whether each submesh the mask names has an entry described by that submesh
+        /// as the mesh has it now: a script may change the mesh or the mask in a frame where
+        /// the system takes no step (paused), whose lists are not made for the camera again.</summary>
+        bool MeshArgumentsCurrent()
+        {
+            var values = m_System.Effect.Values;
+            if (!(values.GetObject(m_MeshExpression) is Mesh mesh) || !mesh) return true;
+            uint mask = values.GetWord(m_SubMeshMaskExpression);
+            int subMeshes = Math.Min(mesh.subMeshCount, MaskBits);
+            for (int subMesh = 0; subMesh < subMeshes && mask != 0; subMesh++, mask >>= 1)
+            {
+                if ((mask & 1) == 0) continue;
+                if (m_MeshEntries[subMesh] < 0) return false;
+                var descriptor = mesh.GetSubMesh(subMesh);
+                int at = subMesh * SubMeshWords;
+                if (m_MeshDescribed[at] != (uint)descriptor.indexCount || m_MeshDescribed[at + 1] != (uint)descriptor.indexStart || m_MeshDescribed[at + 2] != (uint)descriptor.baseVertex)
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>Adds the draws of the output's mesh, one for each submesh of the mask: of

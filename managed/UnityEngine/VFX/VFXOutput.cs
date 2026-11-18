@@ -358,8 +358,9 @@ namespace Unbound.Runtime
             if (Indirect)
             {
                 if (!arguments.Ready() || Sorted && !VFXSort.Shared.Usable()) return;
-                // Arguments made anew since this camera's were computed are computed again.
-                if (m_FilledGeneration != arguments.Generation && !FillArguments()) return;
+                // Arguments made anew since this camera's were computed are computed again, and a
+                // mesh output's when its mesh or mask changed since.
+                if ((m_FilledGeneration != arguments.Generation || m_MeshEntries != null && !MeshArgumentsCurrent()) && !FillArguments()) return;
             }
             var effect = m_System.Effect;
             for (int i = 0; i < m_BufferNames.Length; i++)

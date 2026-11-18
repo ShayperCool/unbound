@@ -181,8 +181,9 @@ namespace Unbound.Runtime
 
         /// <summary>Whether entries can be filled now (the package's kernels are there), with a
         /// buffer for every entry reserved so far: an output takes the entries' buffer only
-        /// after this, so that no entry reserved later makes it anew under a draw collected
-        /// before.</summary>
+        /// after this. An entry reserved later (a mesh output's submesh, as its mask names it)
+        /// may make the buffer anew at its fill; draws collected before keep the old one until
+        /// a later frame (<see cref="VFXRetiredBuffers"/>).</summary>
         internal bool Ready()
         {
             if (!Usable()) return false;
