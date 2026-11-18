@@ -83,7 +83,7 @@ namespace UnityEngine
                 AlbedoBoost = 1f,
                 IndirectScale = 1f,
                 BounceScale = 1f,
-                Lightmapper = DefaultLightmapper,
+                Lightmapper = Lightmapper.ProgressiveCPU,
                 LightmapMaxSize = 1024,
                 LightmapResolution = 40f,
                 LightmapPadding = 2,
@@ -167,17 +167,21 @@ namespace UnityEngine
         public float albedoBoost { get => m_State.AlbedoBoost; set => m_State.AlbedoBoost = Mathf.Clamp(value, k_MinAlbedoBoost, k_MaxAlbedoBoost); }
         public float indirectScale { get => m_State.IndirectScale; set => m_State.IndirectScale = Mathf.Clamp(value, 0f, k_MaxIndirectScale); }
 
-        /// <summary>The lightmapper a new LightingSettings has, which the obsolete Enlighten backend
-        /// bakes with too: the Editor's default, ProgressiveGPU on macOS (the Unity 6000.0.71f1 macOS
-        /// Editor, Apple M2 Pro: tests/projects/lightingassets metal/values.jsonl) and ProgressiveCPU
-        /// on Linux (values.jsonl).</summary>
-        static Lightmapper DefaultLightmapper =>
-            Application.platform == RuntimePlatform.OSXEditor ? Lightmapper.ProgressiveGPU : Lightmapper.ProgressiveCPU;
+        /// <summary>The lightmapper a LightingSettings bakes with, which is what it reads: the stored
+        /// one, except that the obsolete Enlighten backend bakes with the progressive CPU lightmapper,
+        /// and the macOS Editor, which has no CPU lightmapper on Apple silicon, bakes that with the GPU
+        /// one: a new object, Enlighten and a stored ProgressiveCPU all read ProgressiveGPU there (the
+        /// Unity 6000.0.71f1 macOS Editor, Apple M2 Pro: tests/projects/lightingassets
+        /// metal/values.jsonl; Linux reads ProgressiveCPU, values.jsonl). Other values read as stored.</summary>
+        static Lightmapper Effective(Lightmapper stored) =>
+            (int)stored is 0 or (int)Lightmapper.ProgressiveCPU
+                ? (Application.platform == RuntimePlatform.OSXEditor ? Lightmapper.ProgressiveGPU : Lightmapper.ProgressiveCPU)
+                : stored;
 
         public Lightmapper lightmapper
         {
-            get => m_State.Lightmapper;
-            set => m_State.Lightmapper = (int)value == 0 ? DefaultLightmapper : value;
+            get => Effective(m_State.Lightmapper);
+            set => m_State.Lightmapper = (int)value == 0 ? Lightmapper.ProgressiveCPU : value;
         }
 
         /// <summary>The closest power of two within 32..4096.</summary>

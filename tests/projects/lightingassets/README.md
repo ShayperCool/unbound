@@ -137,5 +137,7 @@ The global mixed-output controls also run during startup, then repeat global and
 
 On macOS arm64 `record`/`publish`/`gate` use `Reference/unity-6000.0.71f1/metal/` (values and
 images; two identical captures of the macOS Editor, Metal, Apple M2 Pro); the warm-up state records
-stay shared. The macOS Editor gives a new LightingSettings, and the obsolete Enlighten backend, the
-ProgressiveGPU lightmapper (Linux: ProgressiveCPU).
+stay shared. The macOS Editor bakes a new LightingSettings, the obsolete Enlighten backend and a
+stored ProgressiveCPU one with the ProgressiveGPU lightmapper, which `lightmapper` reads there
+(Linux: ProgressiveCPU). Unbound there: 349 records, 0 failing (against the Linux reference: 3
+images over their means).

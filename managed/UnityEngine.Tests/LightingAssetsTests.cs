@@ -118,8 +118,9 @@ namespace Unbound.Tests
 
         // ---------------------------------------------------------------- LightingSettings
 
-        /// <summary>The host Editor's default lightmapper: ProgressiveGPU on macOS, ProgressiveCPU on
-        /// Linux (tests/projects/lightingassets metal/values.jsonl, values.jsonl).</summary>
+        /// <summary>What the host Editor bakes a new, Enlighten or ProgressiveCPU LightingSettings
+        /// with: ProgressiveGPU on macOS, ProgressiveCPU on Linux (tests/projects/lightingassets
+        /// metal/values.jsonl, values.jsonl).</summary>
         static LightingSettings.Lightmapper EditorsLightmapper =>
             OperatingSystem.IsMacOS() ? LightingSettings.Lightmapper.ProgressiveGPU : LightingSettings.Lightmapper.ProgressiveCPU;
 
@@ -201,7 +202,8 @@ namespace Unbound.Tests
             s.mixedBakeMode = (MixedLightingMode)(-1); Assert.Equal(MixedLightingMode.Shadowmask, s.mixedBakeMode);
             s.directionalityMode = (LightmapsMode)5; Assert.Equal(LightmapsMode.NonDirectional, s.directionalityMode);
             s.lightmapper = 0; Assert.Equal(EditorsLightmapper, s.lightmapper);
-            s.lightmapper = LightingSettings.Lightmapper.ProgressiveCPU; Assert.Equal(LightingSettings.Lightmapper.ProgressiveCPU, s.lightmapper);
+            s.lightmapper = LightingSettings.Lightmapper.ProgressiveCPU; Assert.Equal(EditorsLightmapper, s.lightmapper);
+            s.lightmapper = LightingSettings.Lightmapper.ProgressiveGPU; Assert.Equal(LightingSettings.Lightmapper.ProgressiveGPU, s.lightmapper);
             s.lightmapper = (LightingSettings.Lightmapper)5; Assert.Equal(5, (int)s.lightmapper);
             s.lightmapCompression = (LightmapCompression)9; Assert.Equal(LightmapCompression.HighQuality, s.lightmapCompression);
             s.sampling = (LightingSettings.Sampling)4; Assert.Equal(LightingSettings.Sampling.Fixed, s.sampling);
