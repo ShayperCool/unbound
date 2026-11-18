@@ -1514,14 +1514,30 @@ fn android_imports_are_etc_compressed() {
     let opaque_npot = png(20, 12, |x, y| [x as u8 * 9, y as u8 * 9, 40, 255]);
     let automatic = import(&opaque_npot, &no_mips, ProjectCompression::default());
     assert!(automatic.blocks.is_none() && automatic.approximation.is_some());
-    // Split Alpha Channel is not produced: the import keeps its pixels.
-    let split = import(
-        &transparent,
-        &format!("{plain}{etc1}    allowsAlphaSplitting: 1\n"),
-        ProjectCompression::default(),
+    // Split Alpha Channel splits nothing in the Editor: ETC_RGB4 drops the alpha; promoted to
+    // ETC2 in a linear project (sRGB flag on), the texture keeps it as ETC2_RGBA8, and an
+    // opaque one stays ETC2_RGB.
+    let split_meta = format!("{plain}{etc1}    allowsAlphaSplitting: 1\n");
+    let split = import(&transparent, &split_meta, ProjectCompression::default());
+    assert_eq!(
+        split.blocks.as_ref().map(|b| b.format),
+        Some(BlockFormat::Etc1)
     );
-    assert!(split.blocks.is_none() && split.approximation.is_some());
-    assert!(split.mips[0].data.chunks(4).any(|t| t[3] < 255));
+    let promoted = import_in(
+        &transparent,
+        &split_meta,
+        ProjectCompression::default(),
+        false,
+    );
+    assert_eq!(
+        promoted.blocks.map(|b| b.format),
+        Some(BlockFormat::Etc2Rgba8)
+    );
+    let opaque_split = import_in(&opaque, &split_meta, ProjectCompression::default(), false);
+    assert_eq!(
+        opaque_split.blocks.map(|b| b.format),
+        Some(BlockFormat::Etc2Rgb)
+    );
     // A linear project stores sRGB-flagged ETC1 as ETC2_RGB (normal maps too, whose flag stays
     // on), linear-flagged textures stay ETC1.
     let linear = |meta: &str, bytes: &[u8]| {

@@ -730,7 +730,7 @@ impl ProjectCompression {
 /// the `.meta`'s sRGB flag is on (normal maps too, whose flag stays on); an explicit one stays
 /// uncompressed unless both sides are powers of two (20x12 without mips: RGB24 in Gamma,
 /// ETC2_RGB in Linear). Other targets and default formats, automatic ETC_RGB4 at sizes that are
-/// not powers of two, Split Alpha Channel, automatic 2D HDR without Crunch on Android, EAC
+/// not powers of two, automatic 2D HDR without Crunch on Android, EAC
 /// imports, arrays, volumes, Crunch-compressed cubemaps and the other texture types are
 /// unmeasured. A cubemap's faces are stored as 2D textures of the face size (a float cubemap on
 /// Android as a float lightmap). The 6000.0.71f1 profile
@@ -917,12 +917,16 @@ pub fn storage(
     if (format == BlockFormat::Bc6h) != hdr && !rgbm_encoding {
         return unsupported(&format!("{format:?} from {:?} data", texture.format));
     }
-    if format == BlockFormat::Etc1 && s.split_alpha {
-        return unsupported("ETC_RGB4 textures with Split Alpha Channel");
-    }
-    // ETC1 has no sRGB variant: a linear project stores sRGB-flagged textures as ETC2.
+    // ETC1 has no sRGB variant: a linear project stores sRGB-flagged textures as ETC2. Split
+    // Alpha Channel splits nothing in the Editor (a sprite has no associated alpha texture): an
+    // ETC_RGB4 texture drops its alpha as ETC1 does, and one promoted to ETC2 keeps it as
+    // ETC2_RGBA8 (matches the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders).
     let format = if format == BlockFormat::Etc1 && !gamma && s.srgb_flag {
-        BlockFormat::Etc2Rgb
+        if s.split_alpha && texture.has_alpha {
+            BlockFormat::Etc2Rgba8
+        } else {
+            BlockFormat::Etc2Rgb
+        }
     } else {
         format
     };
@@ -1492,7 +1496,7 @@ impl Importer for TextureImporter {
     // 45: cubemaps are block-compressed as the build target stores them, faces top-down.
     // 46: BC6H imports' pixels are what their blocks decode to (floats).
     // 47: the maps of SpeedTree 9 trees import with the settings the trees give them.
-    const VERSION: u32 = 47;
+    const VERSION: u32 = 48;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);
