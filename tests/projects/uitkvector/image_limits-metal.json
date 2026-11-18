@@ -1,0 +1,170 @@
+{
+  "atlas-absent-dirty.png": {
+    "mean": 0.003,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-bitmap-font-added.png": {
+    "mean": 0.002,
+    "worst": 5,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-bitmap-font-initial.png": {
+    "mean": 0.002,
+    "worst": 5,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-dirty.png": {
+    "mean": 0.01,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-filter.png": {
+    "mean": 0.003,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-growth.png": {
+    "mean": 0.038,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-initial.png": {
+    "mean": 0.011,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-no-user.png": {
+    "mean": 0.033,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-one-user.png": {
+    "mean": 0.036,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-readd.png": {
+    "mean": 0.003,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-reset.png": {
+    "mean": 0.003,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-resize-before.png": {
+    "mean": 0.005,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-resize-dirty.png": {
+    "mean": 0.003,
+    "worst": 3,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-resize-repaint.png": {
+    "mean": 0.005,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-resize-unmarked.png": {
+    "mean": 0.005,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-reuse.png": {
+    "mean": 0.036,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "atlas-unmarked.png": {
+    "mean": 0.011,
+    "worst": 7,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-1.25.png": {
+    "mean": 0.026,
+    "worst": 233,
+    "over8": 38,
+    "reason": "Four single-pixel columns, 12 rows each, at the wrap and mirror seams of the gradients' rows: both Editors (Metal and Linux OpenGL Core) sample the gradient there as at its neighbours, where the engine samples the next row of the image's own atlas (the Editor samples its dynamic-atlas copy of the gradients; see image_limits.json). Elsewhere as the other images. Unlike on Linux, the Metal Editor draws the gradient-stroked line with NaN gradient coordinates as the engine does."
+  },
+  "vector-1.png": {
+    "mean": 0.011,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-before.png": {
+    "mean": 0.007,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-hidden-parent.png": {
+    "mean": 0.007,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-padding-after.png": {
+    "mean": 0.004,
+    "worst": 3,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-padding-before.png": {
+    "mean": 0.004,
+    "worst": 3,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-padding-percent.png": {
+    "mean": 0.004,
+    "worst": 3,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-reclip.png": {
+    "mean": 0.007,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-repaint.png": {
+    "mean": 0.007,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-unmarked.png": {
+    "mean": 0.007,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  },
+  "vector-control-visible-overflow.png": {
+    "mean": 0.013,
+    "worst": 8,
+    "over8": 0,
+    "reason": "Coverage of antialiased path and glyph edges and atlas texel rounding, at most 8 channel steps (macOS Editor on Metal, Apple M2 Pro, against the engine on Metal)."
+  }
+}

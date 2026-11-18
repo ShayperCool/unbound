@@ -119,3 +119,16 @@ The added atlas images retain rectangle-edge coverage differences also present w
 textures directly: their separate limits record the measured mean and worst differences, all
 with no pixel above eight channel steps. The comparator prints every raw metric. All limits established before Q505 remain
 unchanged. The dirty-content and missing-reset failures are much larger than these fringes.
+
+## Metal (macOS)
+
+The probe declares `metal`: on macOS arm64 it records the macOS Editor (6000.0.71f1, Metal, Apple
+M2 Pro) into `Reference/unity-<version>/metal/` and gates against it with
+`image_limits-metal.json`. The Metal Editor's values are those of the Linux reference; its images
+differ. Against them Unbound on Metal is within 8 channel steps everywhere except four single-pixel
+columns of `vector-1.25.png` at the gradients' wrap and mirror seams, where both Editors sample the
+gradient as at its neighbours and the engine the next row of the image's own atlas (the Editor
+samples its dynamic-atlas copy, as on Linux). The gradient-stroked line with NaN gradient
+coordinates, most of the Linux limits of `vector-1.png` and `vector-1.25.png`, is drawn by the
+Metal Editor as by the engine: that difference is the Linux Editor's OpenGL Core device.
+
