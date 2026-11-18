@@ -1069,6 +1069,18 @@
       "type": "UnityEditor.BuildPipeline"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.BuildPlayerOptions"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.BuildPlayerWindow"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
