@@ -125,7 +125,7 @@ namespace Unbound.Runtime
             body.Add("m_LightmapFlags", Number((int)m.globalIlluminationFlags));
             body.Add("m_EnableInstancingVariants", Number(m.enableInstancing ? 1 : 0));
             body.Add("m_DoubleSidedGI", Number(m.doubleSidedGI ? 1 : 0));
-            body.Add("m_CustomRenderQueue", Number(m.rawRenderQueue));
+            body.Add("m_CustomRenderQueue", Number(m.SerializedRenderQueue));
             var tags = YText.Map();
             foreach (var key in Sorted(m.m_Tags.Keys)) tags.Add(UnityYamlWriter.Scalar(key), Text(m.m_Tags[key]));
             if (tags.Keys.Count == 0) tags.Flow = true;

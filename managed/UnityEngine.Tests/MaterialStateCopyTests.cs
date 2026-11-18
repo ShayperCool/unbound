@@ -522,5 +522,67 @@ namespace UnityEngine.Tests
             variant.CopyMatchingPropertiesFromMaterial(source);
             Assert.Equal(before + 1, Hits(MatchingIntoVariant));
         }
+
+        // ------------------------------------------------------------------ serialized objects
+
+        static SerializedProperty Saved(SerializedObject so, string list, string name)
+        {
+            var array = so.FindProperty("m_SavedProperties." + list);
+            for (int i = 0; i < array.arraySize; i++)
+            {
+                var entry = array.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("first").stringValue == name) return entry.FindPropertyRelative("second");
+            }
+            return null;
+        }
+
+        /// <summary>A SerializedObject over several materials writes what changed into each, at the
+        /// same paths, and each keeps the rest of its own data (Unity 6000.0.71f1, tests/projects/gameinterop
+        /// mat.multi.*). Old behaviour: the second took the first's whole saved properties.</summary>
+        [Fact]
+        public void AMultiObjectEditWritesOnlyTheChangedValuesIntoEachMaterial()
+        {
+            var shader = Make("Geometry", "KW_A");
+            var a = Own(new Material(shader));
+            var b = Own(new Material(shader));
+            a.SetFloat("_Value", 0.25f); a.SetFloat("_Other", 1.25f); a.EnableKeyword("KW_A"); a.renderQueue = 2100;
+            b.SetFloat("_Value", 0.75f); b.SetFloat("_Other", 1.75f);
+            var so = new SerializedObject(new Object[] { a, b });
+            Assert.True(Saved(so, "m_Floats", "_Value").hasMultipleDifferentValues);
+            Saved(so, "m_Floats", "_Value").floatValue = 0.5f;
+            so.FindProperty("m_CustomRenderQueue").intValue = 2400;
+            Assert.True(so.ApplyModifiedPropertiesWithoutUndo());
+            Assert.Equal((0.5f, 0.5f), (a.GetFloat("_Value"), b.GetFloat("_Value")));
+            Assert.Equal((2400, 2400), (a.renderQueue, b.renderQueue));
+            // What was not edited stays each material's own.
+            Assert.Equal((1.25f, 1.75f), (a.GetFloat("_Other"), b.GetFloat("_Other")));
+            Assert.Equal((true, false), (a.IsKeywordEnabled("KW_A"), b.IsKeywordEnabled("KW_A")));
+        }
+
+        /// <summary>A variant that takes its parent's queue keeps its own stored queue: its
+        /// SerializedObject reads and applies that value while renderQueue stays the parent's
+        /// (Unity 6000.0.71f1, tests/projects/gameinterop mat.variant.*).</summary>
+        [Fact]
+        public void AVariantsSerializedQueueIsItsOwnWhileItTakesItsParentsQueue()
+        {
+            var (parent, variant) = Family(Make("Geometry"));
+            parent.renderQueue = 2100;
+            Assert.Equal(2100, variant.renderQueue);
+            var so = new SerializedObject(variant);
+            var queue = so.FindProperty("m_CustomRenderQueue");
+            Assert.Equal(-1, queue.intValue);
+            queue.intValue = 2300;
+            Assert.True(so.ApplyModifiedPropertiesWithoutUndo());
+            Assert.Equal(2100, variant.renderQueue);
+            Assert.Equal(2300, new SerializedObject(variant).FindProperty("m_CustomRenderQueue").intValue);
+            // Control: a material that is not a variant reads and takes its queue.
+            var plain = Own(new Material(parent.shader));
+            plain.renderQueue = 2200;
+            var own = new SerializedObject(plain);
+            Assert.Equal(2200, own.FindProperty("m_CustomRenderQueue").intValue);
+            own.FindProperty("m_CustomRenderQueue").intValue = 2250;
+            own.ApplyModifiedPropertiesWithoutUndo();
+            Assert.Equal(2250, plain.renderQueue);
+        }
     }
 }

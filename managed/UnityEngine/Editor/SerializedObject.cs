@@ -105,8 +105,15 @@ namespace UnityEditor
                 var target = m_Targets[i];
                 if (target == null) continue;
                 var tree = TypeTreeTargets.Of(target);
-                if (tree != null) TypeTreeSerialized.Apply(m_UnboundRoot, tree);
-                else SerializedTree.Apply(m_UnboundRoot, target, primary: i == 0);
+                if (tree == null) SerializedTree.Apply(m_UnboundRoot, target, primary: i == 0);
+                else if (i == 0) TypeTreeSerialized.Apply(m_UnboundRoot, tree);
+                else
+                {
+                    // Another target takes what changed, over its own data.
+                    var own = TypeTreeSerialized.BuildRoot(tree, target);
+                    SerializedTree.CopyChanged(m_UnboundRoot, own);
+                    TypeTreeSerialized.Apply(own, tree);
+                }
             }
             SerializedTree.ClearDirty(m_UnboundRoot);
             m_Modified = false;

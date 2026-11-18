@@ -127,6 +127,9 @@ namespace UnityEngine
         {
             internal Shader m_Shader;
             internal int m_CustomRenderQueue = -1;
+            /// <summary>A variant's own m_CustomRenderQueue, as its data holds it while it takes its
+            /// parent's queue (what its SerializedObject reads).</summary>
+            internal int m_SerializedQueue = -1;
             internal readonly Dictionary<int, float> m_Floats = new Dictionary<int, float>();
             internal readonly Dictionary<int, int> m_Ints = new Dictionary<int, int>();
             internal readonly Dictionary<int, Vector4> m_Vectors = new Dictionary<int, Vector4>();
@@ -171,6 +174,12 @@ namespace UnityEngine
 
         Shader m_Shader { get => m_State.m_Shader; set => m_State.m_Shader = value; }
         internal int m_CustomRenderQueue { get => m_State.m_CustomRenderQueue; set => m_State.m_CustomRenderQueue = value; }
+        int m_SerializedQueue { get => m_State.m_SerializedQueue; set => m_State.m_SerializedQueue = value; }
+
+        /// <summary>The queue the material's data holds: a variant that takes its parent's queue
+        /// keeps its own value, which a SerializedObject reads and applies without overriding the
+        /// parent's (Unity 6000.0.71f1, tests/projects/gameinterop mat.variant.*).</summary>
+        internal int SerializedRenderQueue => m_Parent != null && m_InheritQueue ? m_SerializedQueue : m_CustomRenderQueue;
         internal Dictionary<int, float> m_Floats { get => m_State.m_Floats; }
         internal Dictionary<int, int> m_Ints { get => m_State.m_Ints; }
         internal Dictionary<int, Vector4> m_Vectors { get => m_State.m_Vectors; }
@@ -297,6 +306,7 @@ namespace UnityEngine
             m_Sheet = source.m_Sheet;
             if (m_Sheet != null) m_Sheet.Shared = true;
             m_CustomRenderQueue = source.m_CustomRenderQueue;
+            m_SerializedQueue = source.m_SerializedQueue;
             foreach (var p in source.m_Floats) m_Floats[p.Key] = p.Value;
             foreach (var p in source.m_Ints) m_Ints[p.Key] = p.Value;
             foreach (var p in source.m_Vectors) m_Vectors[p.Key] = p.Value;
@@ -1587,6 +1597,7 @@ namespace UnityEngine
             var shaderRef = body.Ref("m_Shader");
             m_Shader = shaderRef.IsNull ? null : resolver.Resolve(shaderRef, typeof(Shader)) as Shader;
             m_CustomRenderQueue = body.Int("m_CustomRenderQueue", -1);
+            m_SerializedQueue = m_CustomRenderQueue;
             var keywords = body.Str("m_ShaderKeywords");
             foreach (var k in keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries)) m_Keywords.Add(k);
             // Keywords the shader does not declare are kept too (shaderKeywords lists them), as

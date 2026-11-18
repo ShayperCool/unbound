@@ -1050,6 +1050,31 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>A multi-object edit for another target: the values that changed in
+        /// <paramref name="source"/> (the first target's tree) set at the same paths of
+        /// <paramref name="target"/>, that target's own tree, which keeps the rest (Unity 6000.0.71f1,
+        /// tests/projects/gameinterop mat.multi.*). A replaced subtree, or an array whose size
+        /// changed, is copied whole (not measured).</summary>
+        internal static void CopyChanged(SerializedNode source, SerializedNode target)
+        {
+            if (!source.Dirty || target == null || target.Kind != source.Kind) return;
+            switch (source.Kind)
+            {
+                case SerializedNodeKind.Leaf:
+                case SerializedNodeKind.Component:
+                case SerializedNodeKind.ArraySize:
+                    if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
+                    return;
+            }
+            if (source.Replaced || (source.Kind == SerializedNodeKind.Array && source.ArrayCount != target.ArrayCount))
+            {
+                CopyData(target, source);
+                return;
+            }
+            for (int i = 0; i < source.Children.Count && i < target.Children.Count; i++)
+                CopyChanged(source.Children[i], target.Children[i]);
+        }
+
         static void MarkDirty(SerializedNode node)
         {
             for (var n = node; n != null; n = n.Parent) n.Dirty = true;
