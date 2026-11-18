@@ -172,20 +172,27 @@ impl Default for AudioImporter {
 impl Importer for AudioImporter {
     type Output = ImportedAudio;
     const KIND: &'static str = "audio";
-    const VERSION: u32 = 3;
+    // 4: converted PCM samples (mono downmix, resampling) are stored as 16-bit samples.
+    const VERSION: u32 = 4;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
         let (channels, mut sample_rate, mut samples) = decode(source, bytes).context("decoding")?;
         let mut channels = channels;
+        let mut converted = false;
         if settings.force_to_mono && channels > 1 {
             samples = downmix(&samples, channels as usize, settings.normalize);
             channels = 1;
+            converted = true;
         }
         let target = settings.sample.sample_rate_override;
         if settings.sample.sample_rate_setting == 2 && target > 0 && target != sample_rate {
             samples = resample(&samples, channels as usize, sample_rate, target);
             sample_rate = target;
+            converted = true;
+        }
+        if converted && settings.sample.compression_format == PCM {
+            quantize_pcm16(&mut samples);
         }
         // ADPCM (FMOD's) keeps blocks of 64 frames: the clip is as long as its last block.
         if settings.sample.compression_format == 2 {
@@ -290,6 +297,19 @@ pub fn decode_packets(
     Ok((channels, sample_rate, samples))
 }
 
+/// `AudioCompressionFormat.PCM`.
+const PCM: i32 = 0;
+
+/// Converted samples as a PCM import stores them: 16-bit, full scale 32767 truncated toward zero,
+/// read back over 32768 (matches the Unity 6000.0.71f1 Editor, tests/projects/assetpostprocessors
+/// Tone.wav forced to mono: every sample, the downmix's peak reading -32767/32768; resampled clips
+/// are unmeasured).
+pub fn quantize_pcm16(samples: &mut [f32]) {
+    for s in samples {
+        *s = (s.clamp(-1.0, 1.0) * 32767.0).trunc() / 32768.0;
+    }
+}
+
 /// Averages the channels; with `normalize` the result is scaled so its peak is 1.
 pub fn downmix(samples: &[f32], channels: usize, normalize: bool) -> Vec<f32> {
     let mut mono: Vec<f32> = samples
@@ -362,6 +382,19 @@ mod f32_bytes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_pcm_mono_downmix_is_stored_as_16_bit_samples_with_its_peak_at_32767() {
+        // Two stereo frames (-8000, -12000) and (-7224, -11752) of 32768: their means are -10000
+        // and -9488, and normalized the first is the peak.
+        let stereo = [-8000.0, -12000.0, -7224.0, -11752.0].map(|s: f32| s / 32768.0);
+        let mut mono = super::downmix(&stereo, 2, true);
+        super::quantize_pcm16(&mut mono);
+        assert_eq!(mono, vec![-32767.0 / 32768.0, -31089.0 / 32768.0]);
+        // Out of range samples clamp; fractions truncate toward zero; silence stays silent.
+        let mut wide = vec![1.5, -2.0, 0.0, 0.99 / 32767.0, -1.99 / 32767.0];
+        super::quantize_pcm16(&mut wide);
+        assert_eq!(wide, vec![32767.0 / 32768.0, -32767.0 / 32768.0, 0.0, 0.0, -1.0 / 32768.0]);
+    }
 
     const META: &str = r#"fileFormatVersion: 2
 guid: 95ae7d4f554d8b944a386dd2f0648975
