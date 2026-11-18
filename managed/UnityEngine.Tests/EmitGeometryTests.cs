@@ -50,9 +50,24 @@ namespace UnityEngine.Tests
             Assert.Equal(without + 1, Copies(m_Camera));
             ScriptableRenderContext.EmitGeometryForCamera(m_Camera);
             ScriptableRenderContext.EmitWorldGeometryForSceneView(m_Camera);
-            Assert.Equal(without + 2, Copies(m_Camera));
-            // The culling took them: the next one draws the canvases as without emission.
+            Assert.Equal(without + 3, Copies(m_Camera));
+            // Every later culling of the camera in the render has them (Game.cullTwice); the
+            // next render starts without.
+            Assert.Equal(without + 3, Copies(m_Camera));
+            Culling.EndRender();
             Assert.Equal(without, Copies(m_Camera));
+        }
+
+        /// <summary>An emission after a culling is not in that culling's results
+        /// (tests/projects/emitgeometry Game.emitAfterCull).</summary>
+        [Fact]
+        public void AnEmissionAfterACullingIsNotInIt()
+        {
+            Assert.True(m_Camera.TryGetCullingParameters(out var parameters));
+            var before = Culling.Get(Culling.Cull(ref parameters));
+            ScriptableRenderContext.EmitGeometryForCamera(m_Camera);
+            Assert.Equal(1, before.CanvasCopies);
+            Assert.Equal(2, Copies(m_Camera));
         }
 
         [Fact]
@@ -64,6 +79,37 @@ namespace UnityEngine.Tests
             // Not culled in its render: dropped when the render ends.
             Culling.EndRender();
             Assert.Equal(1, Copies(m_Other));
+        }
+
+        /// <summary>The context's SetupCameraProperties sets the camera's pixel rectangle as the
+        /// viewport; binding the camera target again covers the whole target
+        /// (tests/projects/emitgeometry viewport.setup, viewport.cameraTarget).</summary>
+        [Fact]
+        public void SetupCameraPropertiesSetsTheCamerasViewport()
+        {
+            var target = new RenderTexture(64, 32, 24);
+            try
+            {
+                m_Camera.targetTexture = target;
+                m_Camera.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+                new ScriptableRenderContext().SetupCameraProperties(m_Camera);
+                Assert.Equal(new Rect(32f, 0f, 32f, 32f), GfxStream.Current.Viewport);
+                using (var buffer = new CommandBuffer())
+                {
+                    buffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+                    var context = new ScriptableRenderContext();
+                    context.SetupCameraProperties(m_Camera);
+                    context.ExecuteCommandBuffer(buffer);
+                }
+                Assert.NotEqual(new Rect(32f, 0f, 32f, 32f), GfxStream.Current.Viewport);
+            }
+            finally
+            {
+                m_Camera.rect = new Rect(0f, 0f, 1f, 1f);
+                m_Camera.targetTexture = null;
+                RenderTexture.active = null;
+                Object.DestroyImmediate(target);
+            }
         }
 
         [Fact]

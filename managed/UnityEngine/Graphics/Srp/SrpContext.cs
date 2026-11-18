@@ -900,7 +900,8 @@ namespace UnityEngine.Rendering
         IntPtr m_Ptr;
 
         /// <summary>Adds one more copy of the camera's UI geometry (its world space canvases and
-        /// the screen space canvases that render with it) to the camera's next culling: a Preview
+        /// the screen space canvases that render with it) to the camera's cullings that follow in
+        /// the pipeline's render: a Preview
         /// camera, whose cullings draw no canvases, draws them once, any other camera once more
         /// than it would. Null is taken and does nothing. Matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/emitgeometry and tests/projects/runtimeapis context.emit_geometry_*.</summary>
@@ -908,7 +909,7 @@ namespace UnityEngine.Rendering
 
         /// <summary>As <see cref="EmitGeometryForCamera"/> (with a Scene view camera it would show the
         /// Scene view's UI; Unbound has no Scene view): each call adds one more copy of the camera's
-        /// UI geometry to its next culling (tests/projects/emitgeometry).</summary>
+        /// UI geometry to its cullings that follow in the render (tests/projects/emitgeometry).</summary>
         public static void EmitWorldGeometryForSceneView(Camera cullingCamera) => Culling.EmitUI(cullingCamera);
 
         static int s_Next;
@@ -955,17 +956,22 @@ namespace UnityEngine.Rendering
         public void SetupCameraProperties(Camera camera, bool stereoSetup, int eye) => SetupCamera(camera, bindTarget: true);
 
         /// <summary>The camera's built-in variables for what draws next. The context's call also
-        /// binds the camera's target, whatever the pipeline set before (measured:
-        /// tests/projects/emitgeometry target.otherBeforeSetup), as
-        /// SetRenderTarget(BuiltinRenderTextureType.CameraTarget) binds it; a command buffer's
-        /// (<paramref name="bindTarget"/> false: the render graph runs it inside a pass) keeps the
-        /// target (unmeasured).</summary>
+        /// binds the camera's target, whatever the pipeline set before, with the camera's pixel
+        /// rectangle as the viewport, which a clear then keeps to (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/emitgeometry target.otherBeforeSetup and viewport.setup; a
+        /// SetRenderTarget(BuiltinRenderTextureType.CameraTarget) after it covers the whole target
+        /// again, viewport.cameraTarget); a command buffer's (<paramref name="bindTarget"/> false:
+        /// the render graph runs it inside a pass) keeps the target and viewport (unmeasured).</summary>
         internal static void SetupCamera(Camera camera, bool bindTarget)
         {
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             s_Camera = camera;
             Camera.Internal_SetCurrent(camera);
-            if (bindTarget) CommandBuffer.BindCameraTarget(camera);
+            if (bindTarget)
+            {
+                CommandBuffer.BindCameraTarget(camera);
+                GfxStream.Viewport(camera.pixelRect);
+            }
             GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix, GfxStream.CameraProperties);
         }
 
@@ -1242,11 +1248,11 @@ namespace Unbound.Runtime
             return id;
         }
 
-        /// <summary>The cameras with emitted UI geometry no culling took yet.</summary>
+        /// <summary>The cameras with emitted UI geometry in the pipeline's current render.</summary>
         static readonly List<Camera> s_Emitting = new List<Camera>();
 
-        /// <summary>One more copy of the camera's canvases in its next culling
-        /// (ScriptableRenderContext.EmitGeometryForCamera, EmitWorldGeometryForSceneView).</summary>
+        /// <summary>One more copy of the camera's canvases in its cullings that follow in this
+        /// render (ScriptableRenderContext.EmitGeometryForCamera, EmitWorldGeometryForSceneView).</summary>
         internal static void EmitUI(Camera camera)
         {
             if (camera is null) return;
@@ -1255,16 +1261,14 @@ namespace Unbound.Runtime
 
         /// <summary>How many times a culling of <paramref name="camera"/> draws its canvases: once
         /// for every camera type but Preview, whose cullings draw none, plus once per emission
-        /// since its last culling, which this one takes (measured with Game, Reflection, Preview
-        /// and SceneView cameras, emitting before culling: tests/projects/emitgeometry; nothing
-        /// emitted carries over to the next render). A second culling of the camera in the same
-        /// render gets no emitted copies (unmeasured).</summary>
+        /// made before it in this render: an emission after a culling is not in it, and every
+        /// later culling of the camera takes it too (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/emitgeometry: Game, Reflection, Preview and SceneView cameras,
+        /// Game.emitAfterCull and Game.cullTwice; nothing emitted carries over to the next render).</summary>
         static int TakeCanvasCopies(Camera camera)
         {
             if (camera is null) return 0;
-            int copies = (camera.cameraType == CameraType.Preview ? 0 : 1) + camera.m_EmittedUI;
-            camera.m_EmittedUI = 0;
-            return copies;
+            return (camera.cameraType == CameraType.Preview ? 0 : 1) + camera.m_EmittedUI;
         }
 
         /// <summary>Drops the emissions no culling took when a pipeline's render ends.</summary>
