@@ -9,6 +9,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnInstantiatedGroupKeepsItsMixerButIsNoneOfItsGroups()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mixer = new AudioMixer { name = "Mixer" };
             var master = new AudioMixerGroup { name = "Master", m_Mixer = mixer, m_GroupId = "g", m_VolumeGuid = "v" };
             var music = new AudioMixerGroup { name = "Music", m_Mixer = mixer, m_Parent = master };
@@ -28,6 +29,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void RoutingThroughAnInstantiatedGroupIsRefused()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mixer = new AudioMixer { name = "Mixer" };
             var master = new AudioMixerGroup { name = "Master", m_Mixer = mixer };
             mixer.m_Groups.Add(master);
@@ -50,6 +52,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnInstantiatedSnapshotCopiesItsValues()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mixer = new AudioMixer { name = "Mixer" };
             var snapshot = new AudioMixerSnapshot { name = "Snapshot", m_Mixer = mixer, m_SnapshotId = "s" };
             snapshot.m_Values["p"] = 2f;

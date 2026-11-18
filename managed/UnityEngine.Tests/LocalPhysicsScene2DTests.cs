@@ -186,6 +186,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ALocalSceneStepsInAnySimulationModeAndTheDefaultOneOnlyInScript()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var local = LocalScene();
             var physics = local.GetPhysicsScene2D();
             var body = Box("Mode", new Vector2(0f, 5f), local);

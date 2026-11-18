@@ -62,6 +62,7 @@ namespace Unbound.Tests
         [Fact]
         public void ALegacyFormatTheDeviceCannotRenderFallsBackWithTheEditorsWarning()
         {
+            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             var handler = Debug.unityLogger.logHandler;
             var collect = new Collect();
             try
@@ -101,6 +102,7 @@ namespace Unbound.Tests
         [Fact]
         public void ACommandBufferTemporaryOfALegacyFormatFallsBackWhenRecorded()
         {
+            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             var handler = Debug.unityLogger.logHandler;
             var collect = new Collect();
             int id = Shader.PropertyToID("_PackedTemporary");

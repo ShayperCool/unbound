@@ -191,6 +191,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ClassesAreFoundByNameInAnyCase()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.Equal("GameObject", UnityType.FindTypeByNameCaseInsensitive("gameobject").name);
             Assert.Equal(4, UnityType.FindTypeByNameCaseInsensitive("TRANSFORM").persistentTypeID);
             Assert.Null(UnityType.FindTypeByNameCaseInsensitive("NoSuchType"));

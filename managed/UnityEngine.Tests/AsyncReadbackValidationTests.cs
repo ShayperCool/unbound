@@ -152,6 +152,7 @@ namespace Unbound.Tests
             "Unbound: ReadPixels of an A2B10G10R10_UNormPack32 target into R16G16B16A16_SFloat is unmeasured on Metal; refused as into RGBAFloat (the texture is left unchanged).", false)]
         public void TargetReadsFollowTheDevicesRule(string device, GraphicsFormat target, TextureFormat destination, string refusal, bool asserted)
         {
+            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             var previousDevice = GraphicsDeviceProfile.Current;
             var logger = Debug.unityLogger;
             var previousHandler = logger.logHandler;
@@ -212,12 +213,15 @@ namespace Unbound.Tests
         /// <summary>An explicit request logs the usage error before the unreadable format's own
         /// (metal.jsonl readback.A1R5G5B5_UNormPack16.asyncfloat).</summary>
         [Fact]
-        public void ExplicitRequestsOfUnreadableTargetsLogBothErrorsInOrder() =>
+        public void ExplicitRequestsOfUnreadableTargetsLogBothErrorsInOrder()
+        {
+            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             TargetReadback("Metal", GraphicsFormat.A1R5G5B5_UNormPack16, null, explicitFloat: true, new[]
             {
                 "'A1R5G5B5_UNormPack16' doesn't support ReadPixels usage on this platform. Async GPU readback failed.",
                 "AsyncGPUReadback - A1RGB5 UNorm (72) graphics format is not supported as source for async read back",
             });
+        }
 
         static void TargetReadback(string device, GraphicsFormat target, string refusal, bool explicitFloat, string[] errors = null)
         {
