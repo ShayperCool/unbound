@@ -352,12 +352,14 @@ namespace UnityEngine.Tests
             Assert.Equal(new int[8], clearedHits.ToArray());
         }
 
-        [Fact]
-        public void AParentsClearFinishesAChildsStartedJobFirst()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AParentsClearFinishesAChildsStartedJobFirst(bool stop)
         {
             // Control outside the probe: a child job already handed to the workers finishes before
-            // its parent's Clear(true) empties it, so nothing of its copy comes back over particles
-            // emitted afterwards.
+            // its parent's Clear(true) (or Stop with clearing) empties it, so nothing of its copy
+            // comes back over particles emitted afterwards.
             var (parent, _) = Make(1);
             var (child, _) = Make(3);
             child.transform.SetParent(parent.transform, false);
@@ -367,7 +369,8 @@ namespace UnityEngine.Tests
                 if (s.gameObject != parent.gameObject) return;
                 var handle = new WriteIndexJob().Schedule(child);
                 JobHandle.ScheduleBatchedJobs();
-                parent.Clear(true);
+                if (stop) parent.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                else parent.Clear(true);
                 finishedByClear = !child.m_JobsPending && handle.IsCompleted;
                 child.Emit(new ParticleSystem.EmitParams { position = new Vector3(9f, 9f, 9f), applyShapeToPosition = false }, 1);
             };
@@ -376,6 +379,36 @@ namespace UnityEngine.Tests
             var particles = ParticlesOf(child);
             Assert.Single(particles);
             Assert.Equal(new Vector3(9f, 9f, 9f), particles[0].position);
+        }
+
+        [Fact]
+        public void AFlushFromAnotherThreadLeavesAParticleJobToTheMainThread()
+        {
+            // The copy is main-thread work: a worker's ScheduleBatchedJobs does not start the job,
+            // which then sees an Emit the main thread makes afterwards.
+            var mainThread = typeof(PlayerLoopDriver).GetField("s_MainThreadId", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var previousMainThread = mainThread.GetValue(null);
+            mainThread.SetValue(null, Environment.CurrentManagedThreadId);
+            try
+            {
+                var (ps, _) = Make(2);
+                using var count = new NativeArray<int>(1, Allocator.Persistent);
+                bool startedByWorker = true;
+                JobScript.OnMessage = s =>
+                {
+                    var handle = new CountJob { Count = count }.Schedule(ps);
+                    var worker = new System.Threading.Thread(() => JobHandle.ScheduleBatchedJobs());
+                    worker.Start();
+                    worker.Join();
+                    startedByWorker = JobSystem.HasRun(handle) || ps.m_JobFillDue == false;
+                    ps.Emit(1);
+                };
+                Frame();
+                Assert.False(startedByWorker);
+                Assert.Equal(3, count[0]);
+                Assert.Equal(3, ps.particleCount);
+            }
+            finally { mainThread.SetValue(null, previousMainThread); }
         }
 
         [Fact]

@@ -598,7 +598,9 @@ namespace Unbound.Runtime.Jobs
         [ThreadStatic] static List<JobRecord> t_BeforeStart;
 
         /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work, outside the lock. It
-        /// is main-thread work: a flush from another thread leaves such jobs batched (see Flush).</summary>
+        /// is main-thread work: a flush from another thread leaves such jobs batched (see Flush). A
+        /// Complete runs it on the completing thread (RunNow); particle jobs, the only users, are
+        /// completed by the main thread.</summary>
         static void RunBatchBeforeStart()
         {
             if (!PlayerLoopDriver.IsMainThread) return;

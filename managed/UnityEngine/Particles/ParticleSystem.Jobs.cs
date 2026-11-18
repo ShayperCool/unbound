@@ -18,7 +18,7 @@ namespace UnityEngine
         /// <summary>A job runs, or ran, on this update's copy, which goes back to the particles.</summary>
         internal bool m_JobsPending;
         /// <summary>The pending jobs have not started: the copy is made when the first one does.</summary>
-        bool m_JobFillDue;
+        internal bool m_JobFillDue;
         Action m_FillJobBuffers;
         /// <summary>The frame's update, or a Simulate call, stepped the system: its job message is due.</summary>
         internal bool m_SteppedThisFrame, m_SteppedBySimulate;
