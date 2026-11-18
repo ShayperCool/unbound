@@ -43,7 +43,8 @@ namespace Unbound.Runtime
     /// list of the particles to draw that the system's kernels make (the update kernel, an
     /// output-update kernel at each step, or one for each camera that sees the effect), sorted
     /// when the output sorts (<see cref="VFXSort"/>), whose count gives the draw's arguments
-    /// (<see cref="VFXIndirectArgs"/>); and meshes the output draws itself. The quads of a strip
+    /// (<see cref="VFXIndirectArgs"/>); and meshes, drawn by the output itself or through an
+    /// indirect buffer (arguments of each submesh). The quads of a strip
     /// output go from each particle of a strip to the next: for all the strips' room (the
     /// vertex program leaves out those past a strip's last particle), or from each particle of
     /// a sorted list. What an output draws itself, or from a sorted list, may be lit by the
@@ -74,7 +75,7 @@ namespace Unbound.Runtime
         /// element counts the particles to draw (of key and index pairs when sorted), and its
         /// entry of arguments; -1 for one drawn directly.</summary>
         readonly int m_CountBuffer = -1, m_ArgsEntry = -1;
-        readonly bool m_CountPairs, m_Sorted;
+        readonly bool m_Indirect, m_CountPairs, m_Sorted;
         int m_FilledGeneration = -1;
 
         internal VFXOutput(VFXParticleSystem system, in VFXEditorTaskDesc task, Material material)
@@ -99,9 +100,12 @@ namespace Unbound.Runtime
             if (Parameter(task, IndirectDrawName) != 0)
             {
                 var data = system.Effect.Data;
+                m_Indirect = true;
                 m_CountBuffer = Parameter(task, "indirectIndex");
                 m_CountPairs = m_CountBuffer < data.GpuBuffers.Length && data.GpuBuffers[m_CountBuffer].stride == VFXIndirectArgs.KeyIndexPairBytes;
-                m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
+                // A mesh output's entries are its submeshes', reserved as its mask names them.
+                if (task.type == VFXTaskType.ParticleMeshOutput) m_MeshEntries = NoMeshEntries();
+                else m_ArgsEntry = VFXIndirectArgs.Shared.Reserve(ArgumentsKind(task.type));
                 m_Sorted = ReadsSortedList(task);
             }
         }
@@ -113,7 +117,7 @@ namespace Unbound.Runtime
         readonly bool m_Strips;
 
         /// <summary>Whether the output draws through an indirect buffer.</summary>
-        internal bool Indirect => m_ArgsEntry >= 0;
+        internal bool Indirect => m_Indirect;
 
         /// <summary>The system whose particles the output draws.</summary>
         internal VFXParticleSystem System => m_System;
@@ -128,7 +132,11 @@ namespace Unbound.Runtime
         /// <summary>The kind of indirect arguments of an output task's primitive.</summary>
         internal static VFXIndirectArgs.Kind ArgumentsKind(VFXTaskType type) => (VFXIndirectArgs.Kind)(type - VFXTaskType.ParticlePointOutput);
 
-        internal void Release() => VFXIndirectArgs.Shared.Release(m_ArgsEntry);
+        internal void Release()
+        {
+            VFXIndirectArgs.Shared.Release(m_ArgsEntry);
+            ReleaseMeshEntries();
+        }
 
         /// <summary>Whether a task draws particles (an output of any primitive).</summary>
         internal static bool IsOutput(VFXTaskType type) =>
@@ -155,8 +163,6 @@ namespace Unbound.Runtime
             }
             if (Parameter(task, IndirectDrawName) != 0)
             {
-                // Meshes are drawn for the particles the system has to draw, not from a list.
-                if (task.type == VFXTaskType.ParticleMeshOutput) return "it draws meshes through an indirect buffer, which is not done yet";
                 if (SortsForAll(system)) return "its system sorts one list for all its outputs, which is not done yet";
                 if (!ListMade(system, task)) return "it draws a list of particles no task of its system makes or can sort";
             }
@@ -167,7 +173,7 @@ namespace Unbound.Runtime
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
             if (sourceRefusal != null) return sourceRefusal;
             if (!(processor is Material)) return "its shader was not imported";
-            if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(task);
+            if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(system, task);
             return null;
         }
 
@@ -334,7 +340,8 @@ namespace Unbound.Runtime
         internal bool FillArguments()
         {
             var arguments = VFXIndirectArgs.Shared;
-            if (!arguments.Fill(m_ArgsEntry, m_System.Effect.GpuBuffer(m_CountBuffer, 0), m_CountPairs)) return false;
+            var counts = m_System.Effect.GpuBuffer(m_CountBuffer, 0);
+            if (m_MeshEntries != null ? !FillMeshArguments(arguments, counts) : !arguments.Fill(m_ArgsEntry, counts, m_CountPairs)) return false;
             m_FilledGeneration = arguments.Generation;
             return true;
         }
@@ -378,7 +385,7 @@ namespace Unbound.Runtime
             }
             if (m_Task.type == VFXTaskType.ParticleMeshOutput)
             {
-                CollectMeshes(renderer, quads, camera, into);
+                CollectMeshes(renderer, quads, Indirect ? arguments.Arguments : null, camera, into);
                 return;
             }
             var primitive = PrimitiveOf(m_Task.type);

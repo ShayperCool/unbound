@@ -1046,18 +1046,28 @@ namespace UnityEngine.Tests
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingOne, Indirect(2, 3), material));
             var sorting = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.GlobalSort } } };
             Assert.Equal("its system sorts one list for all its outputs, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
-            // A mesh output's task names its mesh and the mask of its submeshes, and draws
-            // itself; one through an indirect buffer is not drawn (an output of several meshes
-            // compiles to one such task per mesh).
-            var meshes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput, parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("sortPriority", 0) } };
+            // A mesh output's task names its mesh and the mask of its submeshes; it draws itself
+            // or through an indirect buffer. An output of several meshes compiles to one such
+            // task per mesh, all with the output's shader: not drawn.
+            var meshes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput, shaderSourceIndex = 4, parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("sortPriority", 0) } };
             Assert.Null(VFXOutput.Refusal(system, meshes, material));
-            var oneOfSeveral = new VFXEditorTaskDesc
+            var listed = new VFXEditorTaskDesc
             {
                 type = VFXTaskType.ParticleMeshOutput,
+                shaderSourceIndex = 4,
                 parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 1) },
                 buffers = new[] { new VFXMapping("indirectBuffer", 1) },
             };
-            Assert.Equal("it draws meshes through an indirect buffer, which is not done yet", VFXOutput.Refusal(system, oneOfSeveral, material));
+            Assert.Null(VFXOutput.Refusal(system, listed, material));
+            var second = listed;
+            second.parameters = new[] { new VFXMapping("mesh", 3), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 2) };
+            var severalMeshes = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { second, listed } };
+            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, listed, material));
+            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, second, material));
+            // Two outputs of meshes, each with its own shader, are each drawn.
+            second.shaderSourceIndex = 5;
+            var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { second, listed } };
+            Assert.Null(VFXOutput.Refusal(twoOutputs, listed, material));
             Assert.Equal("its task names no mesh or no submesh mask", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, meshes, null));
             Assert.Null(VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 0) } }, material));

@@ -136,13 +136,20 @@ namespace Unbound.Runtime
         {
             int entry = m_Free.Count != 0 ? m_Free.Pop() : m_Used++;
             if (m_Descriptions.Length < m_Used * DescriptionWords) Array.Resize(ref m_Descriptions, m_Descriptions.Length * 2);
+            Describe(entry, kind, indexCount, firstIndex, baseVertex);
+            return entry;
+        }
+
+        /// <summary>Describes a reserved entry anew (a mesh's submesh changed): its next fill
+        /// computes arguments of that.</summary>
+        internal void Describe(int entry, Kind kind, uint indexCount, uint firstIndex, uint baseVertex)
+        {
             int at = entry * DescriptionWords;
             m_Descriptions[at] = (uint)kind;
             m_Descriptions[at + 1] = indexCount;
             m_Descriptions[at + 2] = firstIndex;
             m_Descriptions[at + 3] = baseVertex;
             m_DescriptionsChanged = true;
-            return entry;
         }
 
         /// <summary>Gives an entry back.</summary>

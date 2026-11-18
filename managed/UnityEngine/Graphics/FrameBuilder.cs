@@ -302,6 +302,15 @@ namespace Unbound.Runtime
             Dictionary<int, object> properties, CameraContext camera, List<DrawItem> into) =>
             AddRendererDraw(renderer, mesh, subMesh, material, model, new DrawSetup { Instances = instances }, properties, camera, into);
 
+        /// <summary>A renderer's draw of instances of a submesh of a mesh that is not the
+        /// renderer's own, its counts read on the GPU from arguments at <paramref name="offset"/>
+        /// bytes of buffer <paramref name="args"/> (DrawMeshInstancedIndirect's layout), with one
+        /// material and the draw's own values (an effect's output of meshes through an indirect
+        /// buffer).</summary>
+        internal static void AddIndirectInstancedDraw(Renderer renderer, Mesh mesh, int subMesh, Material material, Matrix4x4 model, ulong args, int offset,
+            Dictionary<int, object> properties, CameraContext camera, List<DrawItem> into) =>
+            AddRendererDraw(renderer, mesh, subMesh, material, model, new DrawSetup { Instances = 1, Args = args, Offset = (uint)offset, Indexed = true }, properties, camera, into);
+
         static void AddRendererDraw(Renderer renderer, Mesh mesh, int subMesh, Material material, Matrix4x4 model, DrawSetup setup,
             Dictionary<int, object> properties, CameraContext camera, List<DrawItem> into)
         {
