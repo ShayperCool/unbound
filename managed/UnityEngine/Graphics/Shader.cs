@@ -77,6 +77,33 @@ namespace UnityEngine
             }
         }
 
+        Unbound.Runtime.ShaderPassInfo m_PassInfo;
+        int m_PassInfoLod = int.MinValue, m_PassInfoGeneration = -1;
+        string m_PassInfoPipeline, m_PassInfoName;
+
+        /// <summary>The renderer's passes of the shader as drawn now (<see cref="Unbound.Runtime.ShaderPassInfo.Of"/>),
+        /// kept while its name (<see cref="UnityEditor.ShaderUtil.UpdateShaderAsset(Shader, string)"/> may
+        /// rename it), maximum LOD and the render pipeline stay the same, so a draw reads them
+        /// without building its drawn name.</summary>
+        internal Unbound.Runtime.ShaderPassInfo PassInfo
+        {
+            get
+            {
+                int lod = EffectiveLOD;
+                if (m_PassInfoGeneration != Unbound.Runtime.ShaderPassInfo.s_Generation || lod != m_PassInfoLod
+                    || !string.Equals(m_PassInfoPipeline, s_GlobalRenderPipeline, StringComparison.Ordinal)
+                    || !ReferenceEquals(m_PassInfoName, m_Name) || m_PassInfo == null)
+                {
+                    m_PassInfo = Unbound.Runtime.ShaderPassInfo.Of(this);
+                    m_PassInfoLod = lod;
+                    m_PassInfoPipeline = s_GlobalRenderPipeline;
+                    m_PassInfoName = m_Name;
+                    m_PassInfoGeneration = Unbound.Runtime.ShaderPassInfo.s_Generation;
+                }
+                return m_PassInfo;
+            }
+        }
+
         /// <summary>Whether a maximum LOD leaves the shader (and its fallbacks) without a SubShader:
         /// its renderers draw nothing (measured: not the error shader).</summary>
         internal bool IsLodHidden

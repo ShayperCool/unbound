@@ -22,7 +22,11 @@ namespace Unbound.Runtime
         // The same bounded traversal serves preparation and shadow drawing, including cycles.
         const int FallbackPassLimit = 8;
         internal static Func<string, string> s_CallForTests;
-        internal static void ResetForTests() { s_Cache.Clear(); s_CallForTests = null; }
+        internal static void ResetForTests() { s_Cache.Clear(); s_CallForTests = null; s_Generation++; }
+
+        /// <summary>Counts clears of the cache: a shader's own copy of its info (Shader.PassInfo)
+        /// is stale once it changes.</summary>
+        internal static int s_Generation;
 
         internal static Shader FindPassSource(Shader shader, Func<ShaderPassInfo, bool> matches, out ShaderPassInfo info)
         {

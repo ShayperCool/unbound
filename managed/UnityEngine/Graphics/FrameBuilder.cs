@@ -1028,9 +1028,9 @@ namespace Unbound.Runtime
                     SelectTaggedState(tagged, drawn ?? ReplacementMaterial(item.Material, overrideShader), drawnPass, ref block);
                 }
                 if (motion) NextDrawMotion(item);
-                if (pass == GfxStream.TaggedPasses && ShaderPassInfo.Of(item.Material.shader) is ShaderPassInfo listed)
-                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(TaggedPasses(item.Material, listed, s_PassTagScratch).Count);
-                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes);
+                int drawnPasses = pass == GfxStream.TaggedPasses && item.Material.shader?.PassInfo is { Found: true } listed
+                    ? TaggedPasses(item.Material, listed, s_PassTagScratch).Count : 1;
+                EmitDraw(item, s_MaterialHandles[i], pass, lightmaps, probes, srp: true, proxyVolumes: proxyVolumes, passes: drawnPasses);
             }
             if (block >= 0) GfxStream.StateOverride(null);
         }
@@ -1100,8 +1100,8 @@ namespace Unbound.Runtime
             var info = item.Material.HasDisabledPasses ? ShaderPassInfo.Of(item.Material.shader) : null;
             if (info == null)
             {
-                Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(ShaderPassInfo.Of(item.Material.shader)?.ForwardPasses.Count ?? 1);
-                EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2, dispatch: dispatch);
+                EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2, dispatch: dispatch,
+                    passes: item.Material.shader?.PassInfo is { Found: true } drawn ? drawn.ForwardPasses.Count : 1);
                 return;
             }
             foreach (var p in info.ForwardPasses)
@@ -1144,7 +1144,7 @@ namespace Unbound.Runtime
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
             Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
-            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true)
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown, bool srp = false, bool proxyVolumes = true, int passes = 1)
         {
             using var pooled = DrawPropertyPool.Begin();
             Describe(item);
@@ -1189,8 +1189,13 @@ namespace Unbound.Runtime
             try
             {
                 if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties);
-                else GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                else
+                {
+                    // (The pass count for the render counters, set just before the item's own draw.)
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
+                    GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                     item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false);
+                }
             }
             finally
             {

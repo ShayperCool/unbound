@@ -39,6 +39,7 @@ namespace Unbound.Runtime.Profiling
                 s_FurtherInstance = false;
                 return;
             }
+            if (passes == 0) return;
             if (passes > 1)
             {
                 s_Draws += passes;
@@ -54,11 +55,14 @@ namespace Unbound.Runtime.Profiling
             s_LastPass = pass;
         }
 
-        /// <summary>The next draw command draws <paramref name="passes"/> passes (0: none).</summary>
-        internal static void NextDrawPasses(int passes) => s_NextPasses = Math.Max(passes, 1);
+        /// <summary>The next draw command draws <paramref name="passes"/> passes (0: none, nothing
+        /// counts).</summary>
+        internal static void NextDrawPasses(int passes) => s_NextPasses = Math.Max(passes, 0);
 
-        /// <summary>The next draw command draws every pass of <paramref name="material"/>'s shader.</summary>
-        internal static void NextDrawAllPasses(UnityEngine.Material material) => NextDrawPasses(material != null ? material.passCount : 1);
+        /// <summary>The next draw command draws every pass of <paramref name="material"/>'s shader,
+        /// as the renderer lists them (one when it does not know the shader).</summary>
+        internal static void NextDrawAllPasses(UnityEngine.Material material) =>
+            NextDrawPasses(material != null && material.shader is { } shader && shader.PassInfo is { Found: true } info ? info.Passes.Count : 1);
 
         /// <summary>The next draw is instance <paramref name="index"/> of an instancing call: only
         /// the first counts.</summary>

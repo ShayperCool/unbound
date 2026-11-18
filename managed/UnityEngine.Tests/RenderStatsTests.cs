@@ -62,6 +62,60 @@ namespace UnityEngine.Tests
             ProfilerCore.EndFrame();
             Assert.Equal(3, draws.LastValue);
             Assert.Equal(3, setPasses.LastValue);
+            // A command for no pass (a shader without forward passes) counts nothing.
+            RenderStats.NextDrawPasses(0);
+            GfxStream.Draw(1, 0, 9, GfxStream.ForwardPasses, Matrix4x4.identity, Color.white);
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            Assert.Equal(0, draws.LastValue);
+        }
+
+        sealed class Collect : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Lines = new System.Collections.Generic.List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+            public void LogException(System.Exception exception, Object context) => Lines.Add(exception.Message);
+        }
+
+        /// <summary>Every pass of a shader under a render pipeline: the renderer's pass list counts,
+        /// read without the public passCount (whose SubShader selection under a pipeline is
+        /// reported as unmeasured) and without a log line.</summary>
+        [Fact]
+        public void AllPassesUnderARenderPipelineCountTheRenderersPassesQuietly()
+        {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/RenderStats/TwoPass\" { SubShader { Pass { } Pass { } } }");
+            var material = new Material(shader);
+            var pipeline = Shader.globalRenderPipeline;
+            var handler = Debug.unityLogger.logHandler;
+            var collect = new Collect();
+            using var draws = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
+            try
+            {
+                ShaderPassInfo.ResetForTests();
+                ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    shader = name, found = true, tags = new System.Collections.Generic.Dictionary<string, string>(),
+                    passes = new[] { new { name = "A", tags = new System.Collections.Generic.Dictionary<string, string>() },
+                        new { name = "B", tags = new System.Collections.Generic.Dictionary<string, string>() } },
+                });
+                Shader.globalRenderPipeline = "UniversalPipeline";
+                Debug.unityLogger.logHandler = collect;
+                ProfilerCore.EndFrame();
+                RenderStats.NextDrawAllPasses(material);
+                GfxStream.Draw(1, 0, 9, GfxStream.AllPasses, Matrix4x4.identity, Color.white);
+                GfxStream.Flush();
+                ProfilerCore.EndFrame();
+                Assert.Equal(2, draws.LastValue);
+                Assert.Empty(collect.Lines);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+                Shader.globalRenderPipeline = pipeline;
+                ShaderPassInfo.ResetForTests();
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(shader);
+            }
         }
     }
 }
