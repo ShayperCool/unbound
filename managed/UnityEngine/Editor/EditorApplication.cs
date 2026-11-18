@@ -46,8 +46,18 @@ namespace UnityEditor
         /// <summary>The Editor's update, run from an Edit mode frame.</summary>
         internal static void RunEditorCallbacksNow() => RunEditorCallbacks();
 
+        /// <summary>The Editor's update in a frame's loop. The first Play mode frame runs it after
+        /// EnteredPlayMode instead, at the frame's end (Unity 6000.0.71f1, tests/projects/toolapis
+        /// playRequest.seen).</summary>
+        static void RunFrameEditorCallbacks()
+        {
+            if (PlayerLoopDriver.IsPlayModeEntryFrame) return;
+            RunEditorCallbacks();
+        }
+
         static void RunEditorCallbacks()
         {
+            ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }
             catch (Exception e) { Debug.LogException(e); }
             var calls = delayCall;

@@ -40,6 +40,8 @@ namespace UnityEditor
             public string Name;
             public abstract void Undo();
             public abstract void Redo();
+            /// <summary>Notes the changes the operation made (done or redone), or its undo made.</summary>
+            public virtual void NoteChanges(bool undone) { }
             public virtual bool Concerns(Object o) => false;
         }
 
@@ -62,7 +64,7 @@ namespace UnityEditor
         static void Add(Operation operation)
         {
             if (s_Processing) return;
-            ObjectChangeEvents.NoteUndoChange();
+            operation.NoteChanges(undone: false);
             s_Redo.Clear();
             Current(true).Operations.Add(operation);
         }
@@ -113,14 +115,14 @@ namespace UnityEditor
         public static void RegisterCreatedObjectUndo(Object objectToUndo, string name)
         {
             if (objectToUndo == null) return;
-            Add(new CreatedOperation { Target = objectToUndo, Name = name });
+            Add(CreatedOperation.Of(objectToUndo, name));
         }
 
         public static Component AddComponent(GameObject gameObject, Type type)
         {
             if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
             var component = gameObject.AddComponent(type);
-            if (component != null) Add(new CreatedOperation { Target = component, Name = "Add " + type.Name });
+            if (component != null) Add(CreatedOperation.Of(component, "Add " + type.Name));
             return component;
         }
 
@@ -129,7 +131,13 @@ namespace UnityEditor
         public static void DestroyObjectImmediate(Object objectToUndo)
         {
             if (objectToUndo == null) return;
-            Add(new DestroyedOperation { Description = $"{objectToUndo.GetType().Name} '{objectToUndo.name}'", Name = "Destroy Object" });
+            var go = objectToUndo as GameObject;
+            Add(new DestroyedOperation
+            {
+                Description = $"{objectToUndo.GetType().Name} '{objectToUndo.name}'", Name = "Destroy Object", Target = objectToUndo,
+                Id = ObjectChangeEvents.Id(objectToUndo), ParentId = go != null ? ObjectChangeEvents.ParentId(go.transform.parent) : 0,
+                Scene = ObjectChangeEvents.SceneOf(objectToUndo),
+            });
             Object.DestroyImmediate(objectToUndo);
         }
 
@@ -139,7 +147,7 @@ namespace UnityEditor
         public static void SetTransformParent(Transform transform, Transform newParent, bool worldPositionStays, string name)
         {
             if (transform == null) throw new ArgumentNullException(nameof(transform));
-            var operation = new ParentOperation { Target = transform, Before = transform.parent, After = newParent, Name = name };
+            var operation = new ParentOperation { Target = transform, Before = transform.parent, After = newParent, Name = name, BeforeScene = transform.gameObject.scene };
             operation.State = new StateOperation(transform, name);
             transform.SetParent(newParent, worldPositionStays);
             Add(operation);
@@ -172,7 +180,6 @@ namespace UnityEditor
 
         public static void FlushUndoRecordObjects()
         {
-            ObjectChangeEvents.NoteUndoChange();
             willFlushUndoRecord?.Invoke();
         }
 
@@ -202,14 +209,21 @@ namespace UnityEditor
 
         static void Apply(Group group, bool redo)
         {
-            ObjectChangeEvents.NoteUndoChange();
             s_Processing = true;
             try
             {
                 if (redo)
-                    foreach (var o in group.Operations) Run(o.Redo);
+                    foreach (var o in group.Operations)
+                    {
+                        Run(o.Redo);
+                        o.NoteChanges(undone: false);
+                    }
                 else
-                    for (int i = group.Operations.Count - 1; i >= 0; i--) Run(group.Operations[i].Undo);
+                    for (int i = group.Operations.Count - 1; i >= 0; i--)
+                    {
+                        Run(group.Operations[i].Undo);
+                        group.Operations[i].NoteChanges(undone: true);
+                    }
             }
             finally
             {
@@ -304,11 +318,24 @@ namespace UnityEditor
             }
 
             public override bool Concerns(Object o) => m_Target == o;
+
+            public override void NoteChanges(bool undone) => ObjectChangeEvents.NoteProperties(m_Target);
         }
 
         sealed class CreatedOperation : Operation
         {
             public Object Target;
+            /// <summary>The GameObject made, or the one the component was added to, its ID and scene
+            /// (an undo destroys the object).</summary>
+            GameObject m_Owner;
+            int m_OwnerId;
+            Scene m_Scene;
+
+            internal static CreatedOperation Of(Object target, string name)
+            {
+                var owner = target as GameObject ?? (target as Component)?.gameObject;
+                return new CreatedOperation { Target = target, Name = name, m_Owner = owner, m_OwnerId = ObjectChangeEvents.Id(owner), m_Scene = ObjectChangeEvents.SceneOf(owner) };
+            }
 
             public override void Undo()
             {
@@ -319,11 +346,36 @@ namespace UnityEditor
                 Debug.LogError($"Unbound: redoing the creation of an object undo destroyed is not supported ({Name}).");
 
             public override bool Concerns(Object o) => Target == o;
+
+            public override void NoteChanges(bool undone)
+            {
+                if (!ObjectChangeEvents.Listening) return;
+                if (m_Owner is null)
+                    Stubs.NotImplemented("ObjectChangeEvents for a created object that is neither a GameObject nor a component");
+                else if (Target is Component)
+                    ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructure, new ChangeGameObjectStructureEventArgs(m_OwnerId, m_Scene));
+                else if (undone)
+                    ObjectChangeEvents.Note(ObjectChangeKind.DestroyGameObjectHierarchy, new DestroyGameObjectHierarchyEventArgs(m_OwnerId, 0, m_Scene));
+                else
+                    ObjectChangeEvents.Note(ObjectChangeKind.CreateGameObjectHierarchy, new CreateGameObjectHierarchyEventArgs(m_OwnerId, m_Scene));
+            }
         }
 
         sealed class DestroyedOperation : Operation
         {
             public string Description;
+            public Object Target;
+            public int Id, ParentId;
+            public Scene Scene;
+
+            public override void NoteChanges(bool undone)
+            {
+                if (!ObjectChangeEvents.Listening || undone) return;
+                if (Target is GameObject)
+                    ObjectChangeEvents.Note(ObjectChangeKind.DestroyGameObjectHierarchy, new DestroyGameObjectHierarchyEventArgs(Id, ParentId, Scene));
+                else
+                    Stubs.NotImplemented("ObjectChangeEvents for a destroyed object that is not a GameObject");
+            }
 
             public override void Undo() =>
                 Debug.LogError($"Unbound: undoing the destruction of {Description} is not supported (the object is not recreated).");
@@ -335,6 +387,16 @@ namespace UnityEditor
         {
             public Transform Target, Before, After;
             public StateOperation State;
+            public Scene BeforeScene;
+
+            public override void NoteChanges(bool undone)
+            {
+                if (!ObjectChangeEvents.Listening || Target == null) return;
+                var (from, to) = undone ? (After, Before) : (Before, After);
+                var scene = Target.gameObject.scene;
+                ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectParent, new ChangeGameObjectParentEventArgs(
+                    ObjectChangeEvents.Id(Target.gameObject), undone ? scene : BeforeScene, ObjectChangeEvents.ParentId(from), scene, ObjectChangeEvents.ParentId(to)));
+            }
 
             public override void Undo()
             {

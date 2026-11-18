@@ -27,23 +27,6 @@ namespace UnityEditor
         public static event Action bakeCancelled;
         public static event Action lightingDataCleared;
     }
-    public static partial class ObjectChangeEvents
-    {
-        public delegate void ObjectChangeEventsHandler(ref ObjectChangeEventStream stream);
-        public static event ObjectChangeEventsHandler changesPublished;
-        internal static void NoteUndoChange()
-        {
-            if (changesPublished != null) Stubs.NotImplemented("ObjectChangeEvents undo payload streams");
-        }
-    }
-    // Payload storage and access remain unsupported until a change-stream producer exists.
-    [Unbound.Stub]
-    public unsafe partial struct ObjectChangeEventStream : IDisposable
-    {
-        fixed long m_OpaqueStorage[Compat.ObjectChangeStreamStorageWords];
-        [Unbound.Stub]
-        public void Dispose() => throw new NotSupportedException("ObjectChangeEventStream payloads are not supported.");
-    }
     public static partial class ClipboardUtility
     {
         public static event Action<GameObject[]> pastedGameObjects;
