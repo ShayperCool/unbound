@@ -21,6 +21,8 @@ namespace UnityEngine
             internal bool ElementBinding;
             internal Vector2 Scale = Vector2.one;
             internal Vector2 Offset;
+            /// <summary>The renderer has the destroyed-texture stand-in for it (Material.Sync).</summary>
+            internal bool SentDestroyed;
         }
 
         // Reload wrappers share one material's values and renderer state. Ordinary copies
@@ -1587,7 +1589,7 @@ namespace UnityEngine
                 m_DestroyedTextureEpoch = Texture.s_DestroyedEpoch;
                 if (!m_Dirty)
                     foreach (var p in m_Textures)
-                        if (p.Value.Texture is not null && !p.Value.Texture) { m_Dirty = true; break; }
+                        if (!p.Value.SentDestroyed && p.Value.Texture is not null && !p.Value.Texture) { m_Dirty = true; break; }
             }
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
@@ -1618,6 +1620,7 @@ namespace UnityEngine
             }
             foreach (var p in m_Textures)
             {
+                p.Value.SentDestroyed = p.Value.Texture is not null && !p.Value.Texture;
                 Add(p.Key, 2, default, SentTexture(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
                 int hdr = HdrDecode.IdOf(p.Key);
                 if (TextureDecodeWins(hdr) || !m_Vectors.ContainsKey(hdr)) Add(hdr, 1, (Vector4)HdrDecode.Of(p.Value.Texture), 0, default);

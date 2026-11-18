@@ -23,6 +23,22 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(m_Shader);
         }
 
+        /// <summary>A material already sent with a texture is sent again when the texture is
+        /// destroyed (the common case: a draw before the destruction).</summary>
+        [Fact]
+        public void AMaterialSentWithATextureIsSentAgainOnceWhenItIsDestroyed()
+        {
+            var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            m_Material.SetTexture("_T", texture);
+            m_Material.Sync();
+            Assert.False(m_Material.m_Dirty);
+            var slot = m_Material.m_Textures[Shader.PropertyToID("_T")];
+            Assert.False(slot.SentDestroyed);
+            Object.DestroyImmediate(texture);
+            m_Material.Sync();
+            Assert.True(slot.SentDestroyed);
+        }
+
         [Fact]
         public void ADestroyedTextureReadsNullAndSamplesOpaqueBlack()
         {

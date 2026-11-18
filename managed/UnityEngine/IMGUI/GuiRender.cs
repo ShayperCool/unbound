@@ -516,6 +516,7 @@ namespace Unbound.Runtime
         }
 
         static Material s_TextureMaterial, s_TextMaterial;
+        static readonly int s_ManualTex2SRGB = Shader.PropertyToID("_ManualTex2SRGB");
 
         /// <summary>Unity's own IMGUI shaders: Hidden/Internal-GUITextureClip (a texture tinted by
         /// the vertex colours) and Hidden/Internal-GUITextureClipText (glyphs: the font's alpha).
@@ -537,7 +538,9 @@ namespace Unbound.Runtime
                 material.SetMatrix("unity_GUIClipTextureMatrix", Matrix4x4.zero);
                 material.SetColor("_Color", Color.white);
             }
-            material.SetFloat("_ManualTex2SRGB", QualitySettings.activeColorSpace == ColorSpace.Linear ? 1f : 0f);
+            // Set only when it changes: a set sends the material to the renderer again.
+            float toGamma = QualitySettings.activeColorSpace == ColorSpace.Linear ? 1f : 0f;
+            if (material.GetFloat(s_ManualTex2SRGB) != toGamma) material.SetFloat(s_ManualTex2SRGB, toGamma);
             return material;
         }
 
