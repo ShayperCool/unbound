@@ -500,7 +500,9 @@ namespace UnityEngine
         public void SetTexture(Texture texture) => m_Texture = texture;
 
         /// <summary>The texture each draw of this renderer passes to the shader as <c>_AlphaTex</c>
-        /// (6000.0 Scripting API); null passes none.</summary>
+        /// (6000.0 Scripting API); null passes none; the last call wins (tests/projects/uialphaborders
+        /// canvas etc1.replaced). A renderer batched after another draws with that one's
+        /// (CanvasSystem.AlphaRun).</summary>
         public void SetAlphaTexture(Texture texture) => m_AlphaTexture = texture;
 
         /// <summary>The geometry is copied, as in Unity: uGUI fills one shared worker mesh for
@@ -549,8 +551,9 @@ namespace UnityEngine
             ReleaseClipMaterials();
             m_Mesh = null;
             m_Texture = null;
-            // Unbound's choice (unmeasured; the API says only "Remove all cached vertices"): the
-            // alpha texture goes with the texture, until the graphic sets them again.
+            // The API says only "Remove all cached vertices"; the alpha texture goes with the
+            // texture, until it is set again (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/uialphaborders canvas etc1.cleared).
             m_AlphaTexture = null;
             m_MaterialCount = 0;
         }

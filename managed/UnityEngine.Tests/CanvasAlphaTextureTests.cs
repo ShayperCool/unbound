@@ -11,8 +11,8 @@ namespace UnityEngine.Tests
     /// <summary>
     /// CanvasRenderer.SetAlphaTexture, from the Unity 6000.0 Scripting API: "The Alpha Texture that
     /// will be passed to the Shader under the _AlphaTex property". Asserted on the draws the canvas
-    /// collects, not on pixels. Facts named "Unmeasured" guard a choice the documentation does not
-    /// make (Clear, a null alpha texture); they are not a claim about Unity.
+    /// collects, not on pixels; what the documentation leaves open (Clear, a null alpha texture,
+    /// batching) is as the Unity 6000.0.71f1 Editor draws it (tests/projects/uialphaborders canvas).
     /// </summary>
     public class CanvasAlphaTextureTests : IDisposable
     {
@@ -115,7 +115,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void Unmeasured_ANullAlphaTexturePassesNone()
+        public void ANullAlphaTexturePassesNone()
         {
             var alpha = MakeTexture("alpha");
             var renderer = Renderer("graphic", MakeTexture("main"));
@@ -129,10 +129,10 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void Unmeasured_ClearDropsTheAlphaTexture()
+        public void ClearDropsTheAlphaTexture()
         {
-            // The API says only "Remove all cached vertices"; Unbound's Clear also drops the
-            // texture, and the alpha texture with it, until the graphic sets them again.
+            // The API says only "Remove all cached vertices"; Clear also drops the texture, and the
+            // alpha texture with it, until they are set again (uialphaborders canvas etc1.cleared).
             var main = MakeTexture("main");
             var renderer = Renderer("graphic", main);
             renderer.SetAlphaTexture(MakeTexture("alpha"));
@@ -143,14 +143,31 @@ namespace UnityEngine.Tests
             Assert.Null(AlphaOf(draw));
         }
 
+        /// <summary>Renderers drawn one after another with one material and texture are one batch,
+        /// drawn with the first one's alpha texture (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/uialphaborders canvas shared.half and shared2.none).</summary>
         [Fact]
-        public void RenderersWithDifferentAlphaTexturesAreNotDrawnTogether()
+        public void AdjacentRenderersOfOneMaterialAndTextureTakeTheFirstAlphaTexture()
         {
             var main = MakeTexture("main");
             var a = MakeTexture("alpha a");
-            var b = MakeTexture("alpha b");
             Renderer("first", main).SetAlphaTexture(a);
-            Renderer("second", main).SetAlphaTexture(b);
+            Renderer("second", main).SetAlphaTexture(MakeTexture("alpha b"));
+            Renderer("third", main);
+            var draws = Draws();
+            Assert.Equal(3, draws.Count);
+            Assert.All(draws, d => Assert.Same(a, AlphaOf(d)));
+        }
+
+        /// <summary>Controls: another texture, or a renderer without the first one in front of it,
+        /// starts a batch of its own with its own alpha texture.</summary>
+        [Fact]
+        public void AnotherTextureStartsABatchWithItsOwnAlphaTexture()
+        {
+            var a = MakeTexture("alpha a");
+            var b = MakeTexture("alpha b");
+            Renderer("first", MakeTexture("main a")).SetAlphaTexture(a);
+            Renderer("second", MakeTexture("main b")).SetAlphaTexture(b);
             var draws = Draws();
             Assert.Equal(2, draws.Count);
             Assert.Same(a, AlphaOf(draws[0]));

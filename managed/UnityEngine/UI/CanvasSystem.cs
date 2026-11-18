@@ -275,6 +275,7 @@ namespace Unbound.Runtime
             s_HasDrawnBounds = false;
             // Nothing the walk does moves the root: its matrices once for the whole canvas.
             var placement = new RootPlacement(root.transform);
+            m_Run = default;
             Walk(canvas.transform, canvas, placement, camera, into, layer, order, isCanvasRoot: true);
             if (camera == null || first == into.Count) return;
             // Among the camera's draws a canvas sorts as one unit, at the centre of the bounds of
@@ -367,11 +368,13 @@ namespace Unbound.Runtime
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
                 if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, t.localToWorldMatrix);
-                // Each material slot of each renderer is a draw of its own: nothing merges canvas
-                // draws, so renderers with different alpha textures never share one.
+                // Each material slot of each renderer is a draw of its own. A renderer drawn right
+                // after another of the same canvas with the same single material and texture is
+                // batched with it and takes its alpha texture (see AlphaRun).
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
                     var material = cr.GetMaterial(i) ?? DefaultMaterial;
+                    var alphaTexture = m_Run.AlphaFor(canvas, material, cr, cr.m_MaterialCount);
                     into.Add(new FrameBuilder.DrawItem
                     {
                         Mesh = mesh,
@@ -380,7 +383,7 @@ namespace Unbound.Runtime
                         Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = DrawProperties(cr, alwaysGamma),
+                        Properties = DrawProperties(cr, alwaysGamma, alphaTexture),
                         MainTexture = texture,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
@@ -404,6 +407,7 @@ namespace Unbound.Runtime
                 ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
                     root.FromWorld * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
+                m_Run = default;
                 for (int i = 0; i < cr.m_PopMaterialCount && i < cr.m_PopMaterials.Length; i++)
                 {
                     var material = cr.m_PopMaterials[i];
@@ -416,7 +420,7 @@ namespace Unbound.Runtime
                         Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = DrawProperties(cr, alwaysGamma),
+                        Properties = DrawProperties(cr, alwaysGamma, cr.m_AlphaTexture),
                         MainTexture = texture,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
@@ -427,18 +431,50 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>A renderer's per-draw properties, with its alpha texture as <c>_AlphaTex</c>
+        /// <summary>A renderer's per-draw properties, with an alpha texture as <c>_AlphaTex</c>
         /// (CanvasRenderer.SetAlphaTexture, 6000.0 Scripting API: "passed to the Shader under the
         /// _AlphaTex property"), over the material's as its texture is over <c>_MainTex</c>.
-        /// Without one nothing is passed and the material's own value, else the shader's
-        /// default, is sampled (Unbound's choice, unmeasured).</summary>
-        static Dictionary<int, object> DrawProperties(CanvasRenderer cr, bool alwaysGamma)
+        /// Without one nothing is passed and the material's own value, else the shader's default,
+        /// is sampled (matches the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders canvas:
+        /// UI/DefaultETC1 with and without a material _AlphaTex).</summary>
+        static Dictionary<int, object> DrawProperties(CanvasRenderer cr, bool alwaysGamma, Texture alphaTexture)
         {
             var properties = cr.CanvasProperties(alwaysGamma);
-            if (cr.m_AlphaTexture != null) properties[s_AlphaTexProperty] = cr.m_AlphaTexture;
+            if (alphaTexture != null) properties[s_AlphaTexProperty] = alphaTexture;
             else properties.Remove(s_AlphaTexProperty);
             return properties;
         }
+
+        /// <summary>The draw run the canvas walk is in. Renderers drawn one after another under one
+        /// canvas with the same single material and texture are one batch, and the batch draws
+        /// with its first renderer's alpha texture, whatever the others set (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/uialphaborders canvas `shared*`: adjacent sibling
+        /// renderers). Batches across other draws, which Unity's canvas may also form, are not
+        /// measured: such renderers keep their own alpha textures.</summary>
+        struct AlphaRun
+        {
+            Canvas m_Canvas;
+            Material m_Material;
+            Texture m_Texture, m_Alpha;
+
+            internal Texture AlphaFor(Canvas canvas, Material material, CanvasRenderer cr, int materials)
+            {
+                if (materials == 1 && m_Material != null && ReferenceEquals(canvas, m_Canvas)
+                    && ReferenceEquals(material, m_Material) && ReferenceEquals(cr.m_Texture, m_Texture))
+                    return m_Alpha;
+                if (materials == 1)
+                {
+                    m_Canvas = canvas;
+                    m_Material = material;
+                    m_Texture = cr.m_Texture;
+                    m_Alpha = cr.m_AlphaTexture;
+                }
+                else this = default;
+                return cr.m_AlphaTexture;
+            }
+        }
+
+        AlphaRun m_Run;
 
         /// <summary>Whether every vertex of a mesh is fully transparent (what
         /// <c>cullTransparentMesh</c> culls: a graphic's colour is in its vertices).</summary>
