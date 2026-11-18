@@ -4,8 +4,9 @@
 //! environment texel's, one that meets a back face (inside geometry) nothing. The weights are
 //! the probe's `SphericalHarmonicsL2` coefficients per unit of each reference's value.
 use super::math::V3;
+use super::reduction::{SH_PART_WEIGHTS, reduce};
 use super::scene::Scene;
-use super::transport::{Weight, environment_texel, reduce};
+use super::transport::{Weight, environment_texel};
 use crate::data::{Probe, ProbeSet, SH_COEFFICIENTS};
 use anyhow::{Result, ensure};
 use rayon::prelude::*;
@@ -14,12 +15,10 @@ use rayon::prelude::*;
 /// Editor's own number for probes is not measured).
 pub const DEFAULT_PROBE_RAYS: usize = 8192;
 /// References per probe at most, joined through the cluster tree and the environment's levels
-/// as a texel's are; it bounds a probe's data in large systems. (The probe sets of the Unity
-/// 6000.0.71f1 Editor's precompute in tests/projects/realtimegi hold at most 64 references per
-/// probe. With Unbound's tree, which groups clusters by position alone, fewer give more of the
-/// Room's coefficients off: 23 of the base case's 243 at 128, 14 at 512; a likely cause, not
-/// isolated, is that its parents join clusters that face different ways.)
-pub const PROBE_BUDGET: usize = 512;
+/// as a texel's are: the most the Unity 6000.0.71f1 Editor's precompute gives a probe of
+/// tests/projects/realtimegi (its probe sets hold 62 to 64 per probe, since a join can take away
+/// more references than are too many).
+pub const PROBE_BUDGET: usize = 64;
 
 /// A probe's coefficients per unit of a reference's value.
 #[derive(Clone, Copy, Default)]
@@ -129,7 +128,7 @@ pub fn probe_set(
                 }
             }
             let mut refs: Vec<(u32, Sh)> = refs.into_iter().collect();
-            reduce(&mut refs, budget, &scene.hierarchy);
+            reduce(&mut refs, budget, &scene.hierarchy, &SH_PART_WEIGHTS);
             Probe {
                 references: refs
                     .iter()

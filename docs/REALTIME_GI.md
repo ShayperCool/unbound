@@ -779,17 +779,25 @@ is how the Editor's products are made in the measured release, as follows.
   Modelling Tolerance lies in a gap the tolerance ignores; a part all of which is hidden is no
   cluster. A point's renderer and the texel its realtime lightmap UV lies in give the cluster
   material samples (per renderer, its texels and their points) and the bounce resampling (the
-  texels by their share of the points, most first: the runtime reads the first). The clusters,
-  in the order of their voxels along a Morton curve, form a tree of runs of neighbours, each
-  child weighted by its share of its parent's area (Unbound's own grouping, not compared: the
-  transport decides which parents it reads).
+  texels by their share of the points, most first: the runtime reads the first).
+- **Cluster tree** (`tree.rs`): parents over groups of clusters that take alike light, each
+  child weighted by its share of its parent's area, the clusters numbered in the order of its
+  leaves. From the whole system down, a group is split by k-means into the fewest parts (2 to
+  5) that each spread at most 0.7 as far as the group, over what describes a cluster's light:
+  its centre (in voxels), its normal (a unit apart counting as 4 voxels) and what it sees
+  through the scene's surfaces in 32 directions spread over the sphere (per direction its
+  cosine times the distance to the nearest surface up to 8 voxels, over 8, counting as 2
+  voxels). The Editor's trees group clusters by what they see as well (its `Room` tree: 312
+  leaves, at most 5 children per parent, depth 7); its own grouping is not reproduced. With a
+  tree over positions alone (runs of neighbours along a Morton curve) the probe budget below
+  put 118 of the Room's 243 probe coefficients off in `room-base`; with this one 17.
 - Compared with the Editor's clusters: `Room` 336 clusters (312) and 10124 points (10192),
   `RoomAuto` 378 (355) and 10836 points of its renderers but the grid, quad and plane (11456).
   On each large face plane the number of points within a tenth of the Editor's and the mean
   direct light of an unshadowed point light over them (what a cluster's direct input is the
   mean of) within 1.4% (`Room`) and 3.7% (`RoomAuto`, the floor among the shapes) of the
   Editor's. 194 of the Editor's 312 clusters (`RoomAuto`: 225 of 355) have 90% of their points
-  in one of Unbound's, every one of them of the same renderer, and 187 (211) of those read
+  in one of Unbound's, every one of them of the same renderer, and 184 (207) of those read
   their bounce from a texel of the Editor's cluster's points (the texel of most points differs
   between two sets of points). The others join small parts of other planes to a large part
   beside them (the edge faces of the room's slabs) where Unbound joins small parts of one plane
@@ -817,9 +825,19 @@ is how the Editor's products are made in the measured release, as follows.
   rays cover the hemisphere): one that meets a cluster's front adds its share to that cluster,
   one that leaves the scene to the environment texel it leaves through (six faces of 8x8, as a
   cube map stores them), and one that meets a back face or a hidden part nothing. A texel's
-  references are cut to the Irradiance Budget (128): groups that share a coarser value (a tree
-  parent, the environment's next level) are replaced by it with their summed weight, those
-  first whose weights are nearest the coarser value's own shares of its children. The texels
+  references are cut to the Irradiance Budget (128) by the change of light each join makes
+  (`reduction.rs`): the references hang in trees (each system's cluster tree, each face of the
+  environment's levels, a parent of one child standing for nothing), a parent stands for its
+  children by their shares of it, and replacing children by their parent (whose weight is
+  their sum) changes the light by the squared difference of each child's weight from the
+  parent's times its share, over the children less one (per reference it takes away). The
+  joins that change least go first, over all trees at once, until no more than the budget of
+  references with a weight are left; a parent taking more than 10 over the budget of the rays
+  joins only after every other, and a tree's root, once it stands for the tree, may be left out
+  at the cost of its squared weight. This is the order of joins of the Editor's precompute:
+  over Unbound's own transport of the Room's light probes it keeps the Editor's environment
+  references (the same values of the 4x4 and 2x2 levels for the three probes that see much of
+  the environment, one or two apart for three more). The texels
   are solved in segments of a block of 2x2 texels, the first standing for the block, with the
   normal at its centre and per reference the direction its rays arrive from (the nearest of the
   directionality's 255 directions to their mean), the weights quantized to the runtime's 16-bit
@@ -834,28 +852,34 @@ is how the Editor's products are made in the measured release, as follows.
   the wall's top takes 0.9 of its light from the environment in the Editor, 0.52 in Unbound;
   an unresolved hypothesis is that the Editor's ray origins of such texels lie elsewhere than
   on the texel's own footprint). Lit through the probe's Room cases, the solver over Unbound's
-  clusters and transport puts 83, 125, 329 and 553 of the 5070 values of `room-base`,
+  clusters and transport puts 75, 143, 254 and 401 of the 5070 values of `room-base`,
   `-moved`, `-intensity` and `-bounce` outside the comparator's tolerance (median relative
-  error 0.5 to 0.9%; 87 to 458 in the later cases). The transport alone is closer: in a local
-  experiment with the Editor's own cluster geometry (which its precompute keeps outside the
-  project) and Unbound's transport the same cases put 12, 14, 29 and 81 values outside it, so
-  the clusters are most of the difference; what is left of the transport's is the texels next
-  to the emissive panel and behind it and the edge texels above. Ruled out on the way:
-  all of a texel's rays from its centre (more of the values outside the tolerance), each origin
-  taking every 16th ray (its rays all within one wedge of azimuths), and a budget that joins the
-  lightest groups first (five times the values outside it of no budget at all; joining where it
-  changes least is about as good as none). With directional lightmaps (`RoomDirectional`) the
-  directionality is 4.9/255 from the Editor's on average (0.2/255 from the Editor's transport),
+  error 0.5 to 0.7%; 88 to 506 in the later cases; the median relative error of the
+  environment-only cases from `room-gradient` on is 0.9 to 1.7%: without a budget of references
+  their texels are 0.6 to 0.7% below the Editor's at the median whatever the tree, a residual of
+  the transport, cause open, which the earlier budget over a tree of positions happened to
+  offset). The transport alone is closer: in an earlier
+  local experiment (before the present cluster tree and budget) with the Editor's own cluster
+  geometry (which its precompute keeps outside the project) and Unbound's transport the same
+  cases put 12, 14, 29 and 81 values outside it, so the clusters are most of the difference;
+  what is left of the transport's is the texels next to the emissive panel and behind it and
+  the edge texels above. Ruled out on the way: all of a texel's rays from its centre (more of
+  the values outside the tolerance), each origin taking every 16th ray (its rays all within one
+  wedge of azimuths), a budget that joins the lightest groups first (five times the values
+  outside it of no budget at all), and the order of joins above over a tree of positions alone
+  (205 values of `room-base`). With directional lightmaps (`RoomDirectional`) the
+  directionality is 4.8/255 from the Editor's on average (0.2/255 from the Editor's transport),
   the half Lambert term 2.4/255 above it. In a scene of several systems (`scene.rs`) every
   system's rays (and the hidden-origin tests, the visibility's and the light probes') meet
   every system's surfaces, and a texel references the clusters of whichever system its rays
   meet (the Editor's `RoomSystems` reference each other too): the transport's dependencies are
   the environment, its own system and the others in order (Unbound's order; the runtime finds
   each by its id, and the Editor lists them in another). With Unbound's precompute of
-  `RoomSystems`' two systems (the Editor's layout of them) `roomsystems-base` puts 24 of its
+  `RoomSystems`' two systems (the Editor's layout of them) `roomsystems-base` puts 33 of its
   5070 values outside the comparator's tolerance (the Editor's own data: none), the visibility
   of the Editor's points through both systems is the Editor's in 99.2% and 99.0% of the values
-  (through a system's own surfaces alone in 82% and 69%), and each light probe takes the share
+  (through a system's own surfaces alone in 82% and 69%), its clusters' tree sees through
+  both systems' surfaces, and each light probe takes the share
   of its light each system and the environment give it within 0.003 of the Editor's. Each system's
   clusters still leave out only the points its own surfaces hide (a floor under another
   system's wall keeps its points there, while its texels there are hidden), and every
@@ -871,7 +895,7 @@ is how the Editor's products are made in the measured release, as follows.
   Computed for the Editor's own clusters of the Room (their points), 99.5% of the 273 000
   values are the Editor's and every one within a step of it (the stored points are rounded to
   8 bits in their cluster's bounds). With Unbound's clusters, transport and visibility the
-  directional light's Room cases (`room-directional`, `-turned`, `-noshadows`) put 498 to 520
+  directional light's Room cases (`room-directional`, `-turned`, `-noshadows`) put 481 to 506
   of their 5070 lightmap values outside the comparator's tolerance, as the other light cases.
   Measured for the probe's default Lightmap Parameters only: whether the rings, the 2 bits or
   the 0.25 behind the horizon change with other parameters is not.
@@ -880,19 +904,21 @@ is how the Editor's products are made in the measured release, as follows.
   of their direction, in `SphericalHarmonicsL2`'s order and scale (the radiance's projection
   times each band's convolution with the cosine over pi), to what they meet: a cluster's front,
   the environment texel they leave through, nothing for a back face. A probe's references are
-  cut as a texel's are, through the cluster tree and the environment's levels, comparing all
-  nine coefficients, to 512 (the Editor's probe sets of the probe hold at most 64 per probe;
-  with Unbound's tree, which groups clusters by position alone, fewer give more coefficients
-  off: 23 of the 243 of `room-base` at 128, 14 at 512). With Unbound's clusters and transport the
-  Room's nine probes have 14, 23, 56 and 97 of their 243 coefficients beyond the probe
-  comparator's tolerance (plus 1% of their band 0) in `room-base`, `-moved`, `-intensity` and
-  `-bounce`, 50 to 78 in the later light cases, and none in the environment-only ones
+  cut as a texel's are, through the cluster tree and the environment's levels, the
+  coefficients' squared changes counted per band (band 0 as it is, each of band 1's three over
+  3, each of band 2's five over 5), to 64: the most the Editor's probe sets of the probe hold
+  (62 to 64 per probe, a join may take away more references than are too many). Without a
+  budget the Room's probes were 14 coefficients off in `room-base`. With Unbound's clusters and
+  transport the Room's nine probes have 17, 22, 50 and 91 of their 243 coefficients beyond the
+  probe comparator's tolerance (plus 1% of their band 0) in `room-base`, `-moved`, `-intensity`
+  and `-bounce`, 53 to 78 in the later light cases, and none in the environment-only ones
   (`room-gradient`, `-envdata`, `-sky-none`, the environment and its bounce off the clusters);
   how much of the rest comes from the clusters' values and how much from the probes' references
   is not separated. Not measured: probes inside geometry (whose rays all meet back faces and
   take nothing) and outside the system's bounds. A probe reads every system's clusters its
-  rays meet (its dependencies: the environment, then the systems in order). Open: the
-  Editor's own choice of 64 references.
+  rays meet (its dependencies: the environment, then the systems in order). Open: where the
+  Editor's references differ from this order of joins over Unbound's transport (one or two of
+  the environment's for three of the Room's probes, beside the clusters' own differences).
 - **A scene's bake** (`bake.rs`, and `crates/unbound-runtime/src/realtime_gi.rs` `bake`): all of
   the above from a scene's renderers alone (each one's mesh, matrix, realtime lightmap UV
   settings, cluster size, Modelling Tolerance and group of Lightmap Parameters and System Tag)
@@ -908,8 +934,8 @@ is how the Editor's products are made in the measured release, as follows.
   goes through its renderer's matrix by its cofactors (a plane scaled to no height keeps its
   normal). Made from the Room's renderers alone, in
   the scene's order, the Room is one system of 52 x 52 texels in an atlas of 64 as the
-  Editor's, and `room-base` puts 79 of its 5070 values outside the comparator's tolerance (83
-  over the Editor's layout), its light probes 15 of their 243 coefficients (14).
+  Editor's, and `room-base` puts 76 of its 5070 values outside the comparator's tolerance (75
+  over the Editor's layout), its light probes 17 of their 243 coefficients (17).
 
 ### When the engine uses it
 
@@ -1113,8 +1139,8 @@ measure):
   precompute through the same probe: the systems and their layout (as the Editor's for every
   scene of the probe), the clusters, their material samples and bounce
   resampling, the transport, the visibility and the light probes' transport are made and
-  compared ([Unbound's precompute](#unbounds-precompute)); over the Room its lightmaps have 1.6
-  to 11% of their values outside the comparator's tolerance (most of it from the clusters). The
+  compared ([Unbound's precompute](#unbounds-precompute)); over the Room its lightmaps have 1.5
+  to 10% of their values outside the comparator's tolerance (most of it from the clusters). The
   engine uses it for a scene the Editor would bake when it opens it
   (`Lightmapping.bakeOnSceneLoad`, no lighting data), cached by a content hash and format
   version ([When the engine uses it](#when-the-engine-uses-it)). Open: lighting that matches the

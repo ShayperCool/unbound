@@ -2,22 +2,26 @@
 //! which renderers form a system and where they lie ([`systems`]),
 //! the clusters of a system's surfaces ([`clusters`]) and the transport into its realtime
 //! lightmap texels ([`transport`]) and the visibility of directional lights ([`visibility`]),
-//! traced through [`geometry`], every system of a scene through all of them ([`scene`]).
+//! traced through [`geometry`], every system of a scene through all of them ([`scene`]); the
+//! clusters' tree ([`tree`]) and the budget of references it serves ([`reduction`]).
 //! See docs/REALTIME_GI.md.
 
 /// The version of what the precompute makes: a change of any stage's output (the systems,
 /// clusters, transport, visibility or probes) changes it, so that cached bakes made before it
 /// are made again (`unbound-runtime` keys its cache by it).
 /// 1: the first bake of a scene from its renderers.
-pub const FORMAT_VERSION: u32 = 1;
+/// 2: the cluster tree by what clusters see, references cut by the change of light.
+pub const FORMAT_VERSION: u32 = 2;
 pub mod bake;
 pub mod clusters;
 pub mod geometry;
 mod math;
 pub mod probes;
+mod reduction;
 pub mod scene;
 pub mod systems;
 pub mod transport;
+mod tree;
 pub mod visibility;
 
 #[cfg(test)]

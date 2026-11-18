@@ -6,6 +6,7 @@
 //! reads them, with each reference's direction for the directionality.
 use super::clusters::{CULL_RAYS, Instance, around, hemisphere, hidden, push_off};
 use super::math::{V3, add, dot, normalized, scale};
+use super::reduction::{TEXEL_PART_WEIGHTS, reduce};
 use super::scene::Scene;
 use crate::data::{ENVIRONMENT_VALUES, Segment, Transport};
 use crate::directionality::{
@@ -301,8 +302,13 @@ impl Hierarchy {
         }
     }
 
+    /// The value one coarser than `r` (`None` at a tree's root).
+    pub(super) fn parent(&self, r: u32) -> Option<u32> {
+        coarser(r, self.refs, &self.tree_parent)
+    }
+
     /// The children of `p` (a reference one coarser) and their shares.
-    fn children(&self, p: u32, out: &mut Vec<(u32, f32)>) {
+    pub(super) fn children(&self, p: u32, out: &mut Vec<(u32, f32)>) {
         out.clear();
         if p < self.refs.environment {
             if let Some(list) = self.tree_children.get(p as usize) {
@@ -345,71 +351,6 @@ impl Weight for (f32, V3) {
     }
     fn parts(&self) -> &[f32] {
         std::slice::from_ref(&self.0)
-    }
-}
-
-/// Cuts references (sorted, each with its weight) down to `budget`: groups that share a coarser
-/// value are replaced by it with their joined weight, those first whose weights are nearest the
-/// coarser value's own shares of its children (where the replacement changes least); when no
-/// two share one, the cheapest are raised to their coarser values. Until few enough are left or
-/// all are the coarsest (the tree's roots, the environment's six faces).
-pub(super) fn reduce<W: Weight>(refs: &mut Vec<(u32, W)>, budget: usize, h: &Hierarchy) {
-    let mut children = Vec::new();
-    while refs.len() > budget {
-        let mut groups: std::collections::BTreeMap<u32, usize> = Default::default();
-        for &(r, _) in refs.iter() {
-            if let Some(p) = coarser(r, h.refs, &h.tree_parent) {
-                *groups.entry(p).or_default() += 1;
-            }
-        }
-        // Each joinable group's change: how far its weights are from the coarser value's
-        // shares of their sum, over all its children and every part of the weights.
-        let parts = refs.first().map_or(0, |r| r.1.parts().len());
-        let weight = |r: u32, k: usize| {
-            refs.binary_search_by_key(&r, |x| x.0)
-                .map_or(0.0, |i| refs[i].1.parts()[k])
-        };
-        let mut joinable: Vec<(f32, u32, usize)> = Vec::new();
-        for (&p, &n) in &groups {
-            h.children(p, &mut children);
-            let mut change = 0.0;
-            for k in 0..parts {
-                let total: f32 = children.iter().map(|&(c, _)| weight(c, k)).sum();
-                change += children
-                    .iter()
-                    .map(|&(c, share)| (weight(c, k) - total * share).abs())
-                    .sum::<f32>();
-            }
-            joinable.push((change, p, n));
-        }
-        if joinable.is_empty() {
-            return;
-        }
-        joinable.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-        let mut excess = refs.len() - budget;
-        let mut chosen = std::collections::HashSet::new();
-        if joinable.iter().any(|&(_, _, n)| n > 1) {
-            for &(_, p, n) in joinable.iter().filter(|j| j.2 > 1) {
-                if excess == 0 {
-                    break;
-                }
-                chosen.insert(p);
-                excess = excess.saturating_sub(n - 1);
-            }
-        } else {
-            // No two share a coarser value: the cheapest are raised to theirs (as many as are
-            // too many), so that they meet others there.
-            chosen.extend(joinable.iter().take(excess).map(|j| j.1));
-        }
-        let mut merged: std::collections::BTreeMap<u32, W> = Default::default();
-        for &(r, w) in refs.iter() {
-            let key = match coarser(r, h.refs, &h.tree_parent) {
-                Some(p) if chosen.contains(&p) => p,
-                _ => r,
-            };
-            merged.entry(key).or_default().join(&w);
-        }
-        *refs = merged.into_iter().collect();
     }
 }
 
@@ -495,7 +436,12 @@ pub fn transport(
         .map(|o| match o {
             Some(list) if !list.is_empty() => {
                 let mut g = gather(list, scene, &rays);
-                reduce(&mut g.refs, settings.budget, &scene.hierarchy);
+                reduce(
+                    &mut g.refs,
+                    settings.budget,
+                    &scene.hierarchy,
+                    &TEXEL_PART_WEIGHTS,
+                );
                 Some(g)
             }
             Some(_) => Some(Gathered::default()),

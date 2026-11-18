@@ -6,6 +6,7 @@
 //! in. The clusters form a tree whose parents stand for groups of them.
 use super::geometry::Bvh;
 use super::math::{V3, add, cross, dot, frame, lerp, normalized, radical_inverse, scale, sub};
+use super::tree;
 use crate::data::{ClusterMaterials, InputSamples};
 use anyhow::{Result, ensure};
 use rayon::prelude::*;
@@ -29,8 +30,6 @@ const CANDIDATES: usize = 8;
 /// back face before it does.
 pub(super) const CULL_RAYS: usize = 16;
 const CULL_BACK_FACES: usize = 4;
-/// Children per parent of the cluster tree at most.
-const TREE_CHILDREN: usize = 8;
 /// The cluster of a triangle no cluster holds: other geometry hides all of its part.
 pub const NO_CLUSTER: u32 = u32::MAX;
 /// Voxel parts of a system at most (the precompute's memory grows with them).
@@ -284,8 +283,55 @@ pub(super) fn hidden(bvh: &Bvh, rays: &[V3], p: V3, n: V3, push: f32, gap: f32) 
     back > CULL_BACK_FACES || closed == rays.len()
 }
 
-/// The system's clusters. `width` and `height`: the system's output size in texels.
+/// The surfaces of renderers as a hierarchy to trace (finite triangles, each facing the side
+/// its vertex normals face, its winding's where they cancel or are zero).
+pub fn surfaces<'a>(instances: impl IntoIterator<Item = &'a Instance<'a>>) -> Bvh {
+    let (mut source, mut facing) = (Vec::new(), Vec::new());
+    for inst in instances {
+        for t in inst.triangles {
+            if t.iter().any(|&v| v as usize >= inst.positions.len()) {
+                continue;
+            }
+            let p = t.map(|v| inst.positions[v as usize]);
+            if p.iter().flatten().all(|v| v.is_finite()) {
+                facing.push(triangle_facing(inst, t, p));
+                source.push(p);
+            }
+        }
+    }
+    Bvh::new(source, facing)
+}
+
+/// The side triangle `t` (at `p`) of `inst` faces.
+fn triangle_facing(inst: &Instance, t: &[u32; 3], p: [V3; 3]) -> V3 {
+    let sum = add(
+        add(inst.normals[t[0] as usize], inst.normals[t[1] as usize]),
+        inst.normals[t[2] as usize],
+    );
+    if dot(sum, sum) > 0.0 && sum.iter().all(|v| v.is_finite()) {
+        sum
+    } else {
+        cross(sub(p[1], p[0]), sub(p[2], p[0]))
+    }
+}
+
+/// The system's clusters, alone in its scene. `width` and `height`: the system's output size in
+/// texels.
 pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Clustering> {
+    cluster_in(instances, width, height, None)
+}
+
+/// The system's clusters in a scene of other systems: `scene`, the surfaces of every renderer
+/// of the scene ([`surfaces`]), is what its clusters see as the tree groups them (what is hidden
+/// is still decided by the system's own surfaces). `width` and `height`: the system's output
+/// size in texels.
+pub fn cluster_in(
+    instances: &[Instance],
+    width: u32,
+    height: u32,
+    scene: Option<&Bvh>,
+) -> Result<Clustering> {
+    let sight = scene;
     ensure!(!instances.is_empty(), "a system without renderers");
     ensure!(
         width > 0 && height > 0 && width <= u16::MAX as u32 && height <= u16::MAX as u32,
@@ -324,18 +370,7 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
                     }
                 }
             }
-            // The side its vertex normals face; its winding's where they cancel or are zero.
-            let sum = add(
-                add(inst.normals[t[0] as usize], inst.normals[t[1] as usize]),
-                inst.normals[t[2] as usize],
-            );
-            facing.push(
-                if dot(sum, sum) > 0.0 && sum.iter().all(|v| v.is_finite()) {
-                    sum
-                } else {
-                    cross(sub(p[1], p[0]), sub(p[2], p[0]))
-                },
-            );
+            facing.push(triangle_facing(inst, t, p));
             source.push(p);
         }
     }
@@ -552,8 +587,6 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         }
     }
 
-    // Clusters in the order of their voxels along a Morton curve (then of their first piece),
-    // so that the tree's groups are runs of neighbours.
     let mut cluster_pieces: HashMap<u32, Vec<u32>> = HashMap::new();
     for k in 0..pieces.len() as u32 {
         cluster_pieces
@@ -565,8 +598,10 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
     for c in &mut clusters {
         c.sort_unstable();
     }
-    // A piece's voxel in the grid of the smallest voxels (the voxels of renderers of other
-    // cluster sizes are in other grids from the same corner).
+    // The clusters in the order of their voxels along a Morton curve (then of their first
+    // piece): a deterministic order the tree's ties follow. A piece's voxel is in the grid of
+    // the smallest voxels (the voxels of renderers of other cluster sizes are in other grids
+    // from the same corner).
     let cells: Vec<[i32; 3]> = pieces
         .iter()
         .map(|p| {
@@ -595,25 +630,43 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         .par_iter()
         .map(|list| cluster_points(list, &pieces, &gaps, &scene, &rays))
         .collect();
+    let mut triangles = Vec::new();
+    let mut tri_facing = Vec::new();
+    let mut triangle_cluster = Vec::new();
+    // The clusters with points; a cluster all of which is hidden is none, its surface kept.
+    let mut kept: Vec<ClusterPoints> = Vec::with_capacity(clusters.len());
+    for m in made {
+        if m.points.is_empty() {
+            triangle_cluster.extend(std::iter::repeat_n(NO_CLUSTER, m.triangles.len()));
+            triangles.extend(m.triangles);
+            tri_facing.extend(m.facing);
+        } else {
+            kept.push(m);
+        }
+    }
+    ensure!(
+        !kept.is_empty(),
+        "a system all of whose surface other geometry hides"
+    );
+    // The tree over them, the clusters numbered in the order of its leaves.
+    let features: Vec<[f32; tree::FEATURES]> = kept
+        .par_iter()
+        .map(|m| {
+            let points: Vec<(V3, V3)> = m.points.iter().map(|(v, _)| (v.p, v.n)).collect();
+            tree::features(&points, sight.unwrap_or(&scene), smallest)
+        })
+        .collect();
+    let kept_areas: Vec<f32> = kept.iter().map(|m| m.area).collect();
+    let tree = tree::build(&features, &kept_areas);
+    let mut kept: Vec<Option<ClusterPoints>> = kept.into_iter().map(Some).collect();
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     let mut cluster_points_at = vec![0u32];
     let mut point_texels = Vec::new();
     let mut point_instances = Vec::new();
-    let mut areas = Vec::with_capacity(clusters.len());
-    let mut triangles = Vec::new();
-    let mut tri_facing = Vec::new();
-    let mut triangle_cluster = Vec::new();
-    let mut kept = Vec::with_capacity(clusters.len());
-    for (list, m) in clusters.iter().zip(made) {
-        if m.points.is_empty() {
-            triangle_cluster.extend(std::iter::repeat_n(NO_CLUSTER, m.triangles.len()));
-            triangles.extend(m.triangles);
-            tri_facing.extend(m.facing);
-            continue;
-        }
-        let c = kept.len();
-        kept.push(list.clone());
+    let mut areas = Vec::with_capacity(kept.len());
+    for (c, &k) in tree.order.iter().enumerate() {
+        let m = kept[k].take().expect("each cluster once");
         for (v, instance) in m.points {
             positions.push(v.p);
             normals.push(v.n);
@@ -630,19 +683,12 @@ pub fn cluster(instances: &[Instance], width: u32, height: u32) -> Result<Cluste
         triangles.extend(m.triangles);
         tri_facing.extend(m.facing);
     }
-
-    ensure!(
-        !kept.is_empty(),
-        "a system all of whose surface other geometry hides"
-    );
-    let kept_cells: Vec<[i32; 3]> = kept.iter().map(|c| cells[c[0] as usize]).collect();
-    let (tree_children, tree_weights) = tree(&kept_cells, &areas);
     let input = InputSamples {
         positions,
         normals,
         cluster_points: cluster_points_at,
-        tree_children,
-        tree_weights,
+        tree_children: tree.children,
+        tree_weights: tree.weights,
     };
     let (materials, bounce_samples, bounce) =
         samples(&input, &point_texels, &point_instances, instances.len());
@@ -821,52 +867,6 @@ fn grouped(points: &[(Vertex, u32)]) -> Vec<Vec<(Vertex, u32)>> {
         out.push(group);
     }
     out
-}
-
-/// The cluster tree: parents over runs of neighbouring clusters (`cells`: each cluster's voxel in
-/// the grid of the smallest voxels), bottom up, each child weighted by its share of its parent's
-/// area (in 255ths), up to a single root.
-fn tree(cells: &[[i32; 3]], areas: &[f32]) -> (Vec<u8>, Vec<u8>) {
-    let mut level: Vec<([i32; 3], f32)> =
-        cells.iter().copied().zip(areas.iter().copied()).collect();
-    let mut children = Vec::new();
-    let mut weights = Vec::new();
-    let mut shift = 1;
-    while level.len() > 1 && shift < 31 {
-        let mut next: Vec<([i32; 3], f32)> = Vec::new();
-        let (mut level_children, mut level_weights) = (Vec::new(), Vec::new());
-        let mut i = 0;
-        while i < level.len() {
-            let cell = level[i].0.map(|v| v >> shift);
-            let mut j = i + 1;
-            while j < level.len() && j - i < TREE_CHILDREN && level[j].0.map(|v| v >> shift) == cell
-            {
-                j += 1;
-            }
-            let area: f32 = level[i..j].iter().map(|c| c.1).sum();
-            level_children.push((j - i) as u8);
-            let mut given = 0u32;
-            for (k, c) in level[i..j].iter().enumerate() {
-                let w = if k + 1 == j - i {
-                    255 - given.min(255)
-                } else {
-                    ((c.1 / area * 255.0).round() as u32).min(255 - given)
-                };
-                given += w;
-                level_weights.push(w as u8);
-            }
-            next.push((level[i].0, area));
-            i = j;
-        }
-        shift += 1;
-        // A cell size that groups nothing adds no level.
-        if next.len() < level.len() {
-            children.extend(level_children);
-            weights.extend(level_weights);
-            level = next;
-        }
-    }
-    (children, weights)
 }
 
 /// The material samples (per cluster and renderer, the texels of its points) and the bounce

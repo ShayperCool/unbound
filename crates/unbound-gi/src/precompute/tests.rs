@@ -649,8 +649,8 @@ fn a_texel_facing_a_near_surface_takes_its_light_from_its_clusters() {
 
 #[test]
 fn the_budget_bounds_a_texels_references() {
-    // A floor under a lid of many small clusters: the references of each texel fit the budget
-    // and still add up to all of its light.
+    // A floor under a lid of many small clusters: the references of each texel fit the budget,
+    // each standing for the light of what it joins; what is left out is little light.
     let ground = floor(8.0, 8.0);
     let mut lid = Mesh::default();
     lid.quad(
@@ -662,14 +662,17 @@ fn the_budget_bounds_a_texels_references() {
     let unlimited = texel_weights(&transport_of(&[&ground, &lid], 64, 100_000));
     let limited = texel_weights(&transport_of(&[&ground, &lid], 64, 16));
     assert!(unlimited.values().any(|l| l.len() > 32));
+    let mut kept = 0f32;
     for (texel, list) in &limited {
         assert!(list.len() <= 16, "{texel:?}: {}", list.len());
         let (a, b): (f32, f32) = (
             list.iter().map(|r| r.1).sum(),
             unlimited[texel].iter().map(|r| r.1).sum(),
         );
-        assert!((a - b).abs() < 0.01, "{texel:?}: {a} {b}");
+        assert!(a <= b + 0.01 && a > 0.9 * b, "{texel:?}: {a} {b}");
+        kept += a / b / limited.len() as f32;
     }
+    assert!(kept > 0.97, "{kept}");
 }
 
 #[test]
@@ -892,7 +895,10 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
         // Nothing along x or z.
         assert!(sum[2].abs() < 0.01 && sum[3].abs() < 0.01, "{sum:?}");
     }
-    // With a budget of 8 its references are joined to at most eight, keeping their sum.
+    // With a budget of 8 its references are joined to at most eight, each standing for the light
+    // of what it joins: the floor's and the sky's facing the probe most are kept, the sky's
+    // seen at a grazing angle may be left out.
+    let unlimited = p.clone();
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
         &scene(&c),
@@ -901,14 +907,24 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
         8,
     )
     .unwrap();
+    let kept = &set.probes[0];
+    assert!(kept.references.len() <= 8, "{:?}", kept.references);
+    let band0 = |p: &crate::data::Probe, dep: u8| -> f32 {
+        p.references
+            .iter()
+            .zip(&p.weights)
+            .filter(|(r, _)| r.0 == dep)
+            .map(|(_, w)| w[0])
+            .sum()
+    };
+    // All of the floor's light, the sky's above.
+    assert!((band0(kept, 1) - band0(&unlimited, 1)).abs() < 1e-3);
+    let sky = band0(kept, 0);
     assert!(
-        set.probes[0].references.len() <= 8,
-        "{:?}",
-        set.probes[0].references
+        sky > 1.0 / 6.0 - 0.01 && sky <= band0(&unlimited, 0) + 1e-3,
+        "{sky}"
     );
-    let total: f32 = set.probes[0].weights.iter().map(|w| w[0]).sum();
-    assert!((total - 1.0).abs() < 0.01, "{total}");
-    // Down to the coarsest values: the tree's root and the five environment faces the sky covers.
+    // Down to one reference: the tree of most light, the floor's root.
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
         &scene(&c),
@@ -917,11 +933,12 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
         1,
     )
     .unwrap();
-    assert_eq!(
-        set.probes[0].references.len(),
-        6,
+    let one = &set.probes[0];
+    assert_eq!(one.references.len(), 1, "{:?}", one.references);
+    assert!(
+        one.references[0].0 == 1 && (one.weights[0][0] - 0.5).abs() < 0.01,
         "{:?}",
-        set.probes[0].references
+        one.weights
     );
     assert!(super::probes::probe_set(&[[0.0; 3]], &scene(&c), [8; 16], 0, 4).is_err());
     // Under the floor its rays up meet the floor's back and take nothing; those down leave the

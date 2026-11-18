@@ -2,7 +2,7 @@
 //! their layout ([`super::systems`]), each system's clusters, the transport, the directional
 //! visibility and the light probes' transport through every system ([`super::scene`]), in the
 //! form the runtime reads the Editor's data in ([`crate::data::Precomputed`]).
-use super::clusters::{Clustering, Instance, cluster};
+use super::clusters::{Clustering, Instance, cluster_in, surfaces};
 use super::math::V3;
 use super::probes::{DEFAULT_PROBE_RAYS, PROBE_BUDGET, probe_set};
 use super::scene::Scene;
@@ -214,12 +214,14 @@ pub fn bake(all: &[BakeRenderer], probes: &[V3]) -> Result<Baked> {
                 .collect()
         })
         .collect();
+    // What the clusters of every system see: the surfaces of the whole scene.
+    let surroundings = surfaces(instances.iter().flatten());
     let clusterings: Vec<Clustering> = instances
         .iter()
         .zip(&layouts)
         .enumerate()
         .map(|(s, (instances, layout))| {
-            cluster(instances, layout.width, layout.height)
+            cluster_in(instances, layout.width, layout.height, Some(&surroundings))
                 .with_context(|| format!("the clusters of system {s}"))
         })
         .collect::<Result<_>>()?;
