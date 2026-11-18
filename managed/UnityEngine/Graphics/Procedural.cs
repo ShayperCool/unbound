@@ -57,8 +57,30 @@ namespace Unbound.Runtime
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);
         }
 
+        /// <summary>The Editor's error for a non-indexed indirect procedural draw of quads, logged
+        /// for each draw when it is drawn; the draw is not drawn (measured on OpenGL Core and Vulkan,
+        /// tests/projects/brg procedural_graphics: Graphics.RenderPrimitivesIndirect and
+        /// DrawProceduralIndirect; direct procedural quads are drawn, four ids to a quad).</summary>
+        internal const string IndirectQuadsError = "DrawProceduralIndirect can't draw quads if platform does not support quad topology";
+
+        /// <summary>Whether a non-indexed indirect procedural draw of <paramref name="topology"/>
+        /// is refused (quads), with <see cref="IndirectQuadsError"/>.</summary>
+        internal static bool RefusesIndirect(UnityEngine.MeshTopology topology)
+        {
+            if (topology != UnityEngine.MeshTopology.Quads) return false;
+            UnityEngine.Debug.LogError(IndirectQuadsError);
+            return true;
+        }
+
+        /// <summary>Whether a queued draw is a non-indexed indirect procedural draw of quads, which
+        /// no list draws (a camera's that would draw it logs <see cref="IndirectQuadsError"/>).</summary>
+        internal static bool IsIndirectQuads(in Immediate.QueuedMesh q) =>
+            q.Setup is DrawSetup setup && setup.Args != 0 && !setup.Indexed && setup.Indices == 0
+            && s_Meshes.TryGetValue((UnityEngine.MeshTopology.Quads, IndirectVertices), out var quads) && ReferenceEquals(q.Mesh, quads);
+
         internal static void DrawIndirect(UnityEngine.Matrix4x4 matrix, UnityEngine.Material material, int shaderPass, UnityEngine.MeshTopology topology, ulong args, int argsOffset, Dictionary<int, object> properties)
         {
+            if (RefusesIndirect(topology)) return;
             var mesh = Get(topology, IndirectVertices);
             GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset });
             GfxStream.Draw(mesh.Sync(), 0, material.Sync(), shaderPass < 0 ? GfxStream.AllPasses : shaderPass, matrix, UnityEngine.Color.white, properties: properties);

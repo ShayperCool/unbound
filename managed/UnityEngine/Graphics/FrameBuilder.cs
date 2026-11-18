@@ -924,6 +924,12 @@ namespace Unbound.Runtime
                     q.WorldBounds ?? WorldBounds(q.Mesh.bounds, q.Matrix), shadowCulling)) continue;
                 if ((filtering.renderingLayerMask & q.RenderingLayerMask) == 0) continue;
                 if (!defaultSortingLayer) continue;
+                if (ProceduralMeshes.IsIndirectQuads(q))
+                {
+                    // Refused (with the Editor's error) by a list that would draw it.
+                    if (q.Material != null && !OutsideList(q.Material, q.Material.renderQueue, range, s_PassTagScratch)) ProceduralMeshes.RefusesIndirect(MeshTopology.Quads);
+                    continue;
+                }
                 s_Items.Add(QueuedItem(context, q));
             }
             // BatchRendererGroup draw commands (default sorting layer): a shadow caster list takes
@@ -2026,6 +2032,11 @@ namespace Unbound.Runtime
                 if (q.Camera != null && q.Camera != camera.Camera) continue;
                 if ((mask & (1 << q.Layer)) == 0) continue;
                 bool seen = q.WorldBounds is not Bounds world || InFrustum(culling, world);
+                if (ProceduralMeshes.IsIndirectQuads(q))
+                {
+                    if (seen && q.Lighting.Cast != ShadowCastingMode.ShadowsOnly) ProceduralMeshes.RefusesIndirect(MeshTopology.Quads);
+                    continue;
+                }
                 var item = QueuedItem(camera, q);
                 s_Queued.Add(item);
                 if (seen && item.Lighting.Cast != ShadowCastingMode.ShadowsOnly) into.Add(item);

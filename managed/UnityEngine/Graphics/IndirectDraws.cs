@@ -352,6 +352,7 @@ namespace UnityEngine
 
         static void ProceduralIndirectNow(MeshTopology topology, ulong args, int argsOffset)
         {
+            if (ProceduralMeshes.RefusesIndirect(topology)) return;
             GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset });
             Immediate.DrawNow(ProceduralMeshes.Get(topology, ProceduralMeshes.IndirectVertices), 0, Matrix4x4.identity);
         }
