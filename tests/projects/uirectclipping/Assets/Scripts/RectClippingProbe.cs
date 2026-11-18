@@ -166,7 +166,10 @@ public class RectClippingProbe : MonoBehaviour
             if(frameBuilder!=null)
             {
                 RenderTexture.active=target;GL.Clear(true,true,Color.clear);
-                frameBuilder.GetMethod("DrawOverlayCanvases",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{camera});
+                // The internal method may take optional parameters after the camera; leave them at their defaults.
+                var draw=frameBuilder.GetMethod("DrawOverlayCanvases",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static);
+                var drawArgs=new object[draw.GetParameters().Length];drawArgs[0]=camera;for(int a=1;a<drawArgs.Length;a++)drawArgs[a]=System.Type.Missing;
+                draw.Invoke(null,drawArgs);
             }
             else
             {
