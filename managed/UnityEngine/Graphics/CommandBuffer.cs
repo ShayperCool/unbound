@@ -731,10 +731,10 @@ namespace UnityEngine.Rendering
                 bool blocks = BlockFormats.BlockBytes(source2D.format) > 0 || BlockFormats.BlockBytes(destination2D.format) > 0;
                 if (blocks && srcWidth < 0 && srcElement == 0 && dstElement == 0)
                     Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
-                // Two readable textures copy their CPU data too, a region as a whole level (the 6000.0
-                // Scripting API's CommandBuffer.CopyTexture; the macOS Editor, tests/projects/
-                // cmdbuffers metal.jsonl `metal.copy.bgra32.rgba32.cpu`).
-                else if (!blocks && source2D.isReadable && destination2D.isReadable)
+                // Two readable textures copy their CPU data too, a region as well as a whole level
+                // (the 6000.0 Scripting API's CommandBuffer.CopyTexture; the macOS Editor,
+                // tests/projects/cmdbuffers metal.jsonl `metal.copy.bgra32.rgba32.cpu`).
+                else if (!blocks && srcElement == 0 && dstElement == 0 && source2D.isReadable && destination2D.isReadable)
                     Texture2D.CopyRetained(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY);
             }
             ulong source = TextureHandles.Of(sourceTexture), destination = TextureHandles.Of(destinationTexture);

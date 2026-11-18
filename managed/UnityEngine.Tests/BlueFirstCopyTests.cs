@@ -159,6 +159,15 @@ namespace Unbound.Tests
             var expected = (Color32[])blank.Clone();
             expected[0] = rgba.GetPixels32()[3];
             Assert.Equal(expected, region.GetPixels32());
+            // A region between the two orders moves the bytes as a whole level does.
+            var bgraRegion = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true));
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.CopyTexture(source, 0, 0, 0, 0, 2, 2, bgraRegion, 0, 0, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Assert.Equal("40c814ff4bb139f6569a5eed618383e4",
+                string.Concat(bgraRegion.GetPixelData<byte>(0).ToArray().Select(b => b.ToString("x2"))));
         }
     }
 }

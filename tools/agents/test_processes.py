@@ -93,6 +93,18 @@ class FailClosedTests(unittest.TestCase):
         self.assertNotIn(Path('/work/run/--flag').resolve(), found)
 
 
+class StartTimeTests(unittest.TestCase):
+    def test_an_unexpected_answer_is_an_error_and_an_empty_one_a_gone_process(self):
+        with mock.patch.object(processes, '_sysctl', return_value=b'\0'*100):
+            with self.assertRaisesRegex(OSError, 'kinfo_proc of 100 bytes'):
+                processes.start_time(10)
+        with mock.patch.object(processes, '_sysctl', return_value=b''):
+            self.assertIsNone(processes.start_time(10))
+        start = struct.pack('qi', 1_800_000_000, 250_000) + b'\0'*(processes.KINFO_PROC_SIZE-12)
+        with mock.patch.object(processes, '_sysctl', return_value=start):
+            self.assertEqual(processes.start_time(10), '1800000000250000')
+
+
 @unittest.skipUnless(processes.MACOS, 'reads live processes on macOS')
 class LiveTests(unittest.TestCase):
     def test_a_child_is_read_with_its_cwd_open_file_arguments_and_environment(self):

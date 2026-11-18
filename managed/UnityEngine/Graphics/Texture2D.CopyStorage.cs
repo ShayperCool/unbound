@@ -10,8 +10,9 @@ namespace UnityEngine
         /// GPU copy (a width of -1: the whole level, its bytes as they are, so that a BGRA32 level
         /// copied into an RGBA32 one trades red and blue, as the Unity 6000.0.71f1 macOS Editor's
         /// CommandBuffer.CopyTexture does, tests/projects/cmdbuffers metal.jsonl
-        /// `metal.copy.bgra32.rgba32.cpu`); other levels keep theirs, and a region that leaves
-        /// either level copies nothing here (the GPU copy reports it).</summary>
+        /// `metal.copy.bgra32.rgba32.cpu`; a region its texels' bytes alike, between formats of one
+        /// texel size); other levels keep theirs, and a region that leaves either level copies
+        /// nothing here (the GPU copy reports it).</summary>
         internal static void CopyRetained(Texture2D source, int sourceMip, int x, int y, int width, int height,
             Texture2D destination, int destinationMip, int destinationX, int destinationY)
         {
@@ -20,7 +21,25 @@ namespace UnityEngine
                 left >= 0 && bottom >= 0 && h >= 0 && (long)left + w <= t.width && (long)bottom + h <= t.height;
             if (width >= 0 && (!Fits(source, x, y, width, height) || !Fits(destination, destinationX, destinationY, width, height))) return;
             if (width < 0) source.CopyRetainedLevel(destination);
-            else source.CopyRetainedPixels(destination, x, y, width, height, destinationX, destinationY);
+            else source.CopyRetainedBytes(destination, x, y, width, height, destinationX, destinationY);
+        }
+
+        /// <summary>A fitted region of the first level into <paramref name="destination"/>'s, its
+        /// texels' bytes as they are, between formats of one texel size (others copy nothing).</summary>
+        void CopyRetainedBytes(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)
+        {
+            int texel = TexelBytes;
+            if (texel == 0 || texel != destination.TexelBytes) return;
+            if (!EnsureRetainedPixels() || !destination.EnsureRetainedPixels()) return;
+            var from = EncodeLevel(0);
+            var to = destination.EncodeLevel(0);
+            for (int row = 0; row < height; row++)
+                Buffer.BlockCopy(from, ((y + row) * m_Width + x) * texel, to,
+                    ((destinationY + row) * destination.m_Width + destinationX) * texel, width * texel);
+            destination.DecodeLevel(to, 0);
+            destination.m_UnreadableRaw = null;
+            destination.DropIfNotReadable();
+            DropIfNotReadable();
         }
 
         internal void CopyRetainedPixels(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)

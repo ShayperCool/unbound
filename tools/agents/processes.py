@@ -3,8 +3,9 @@
 
 Linux reads /proc in those tools. macOS has no /proc: `lsof` lists each process's working
 directory, executable, mapped and open files, `sysctl(KERN_PROCARGS2)` its arguments and
-environment, and `sysctl(KERN_PROC_PID)` its start time. Both readers fail closed: a live process of the user that
-cannot be read is an error, while one that exits during the reading is skipped.
+environment, and `sysctl(KERN_PROC_PID)` its start time. Both readers fail closed: a live
+process of the user that cannot be read is an error, while one that exits during the reading is
+skipped.
 """
 from dataclasses import dataclass, field
 import ctypes
