@@ -33,6 +33,16 @@ pub enum GraphicsDevice {
     Vulkan = 21,
 }
 
+/// How a device's shader compiler checks the samplers a program names
+/// ([`GraphicsDevice::named_samplers`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NamedSamplers {
+    /// Each stage's samplers resolve against the textures of that stage alone.
+    pub per_stage: bool,
+    /// A wrongly spelt inline state (two filters, `Clamp` with `Repeat`, `Aniso3`) is an error.
+    pub refuses_misspelt_inline: bool,
+}
+
 /// How a device's shaders and rasterizer see clip space and textures (Unity's per-platform
 /// shader macros and the GPU projection it computes, `GL.GetGPUProjectionMatrix`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -160,10 +170,32 @@ impl GraphicsDevice {
     /// Whether a graphics program samples a texture through the texture's own sampler state
     /// whatever sampler it names, an inline one or another texture's: OpenGL Core, where the
     /// state is the texture's. The other devices sample through the sampler a program names
-    /// (tests/projects/samplerstates, the OpenGL Core and Vulkan Editors; the Manual excludes
-    /// only OpenGL from inline samplers; unmeasured on Metal).
+    /// (tests/projects/samplerstates, the OpenGL Core, Vulkan and macOS Metal Editors; the
+    /// Manual excludes only OpenGL from inline samplers).
     pub fn samples_through_texture_state(self) -> bool {
-        matches!(self, Self::OpenGLCore)
+        self.named_samplers().is_none()
+    }
+
+    /// How the shader compiler checks the samplers a graphics program names, where programs
+    /// sample through them ([`Self::samples_through_texture_state`] is false); None where they
+    /// do not. The Vulkan Editor refuses a sampler that is no texture's of either stage and no
+    /// inline state, and a wrongly spelt inline state; the macOS Editor's Metal compiler checks
+    /// each stage on its own (a sampler named for a texture of the other stage only is refused:
+    /// tests/projects/samplerstates `Vertex`, `UsedVertex`) and refuses no wrongly spelt inline
+    /// state (`Bad*` draw, each as the texture's bilinear sample, which its own state and the
+    /// `Linear` its name spells both give), `metal.jsonl`, two captures on an Apple M2 Pro.
+    pub fn named_samplers(self) -> Option<NamedSamplers> {
+        match self {
+            Self::OpenGLCore => None,
+            Self::Vulkan => Some(NamedSamplers {
+                per_stage: false,
+                refuses_misspelt_inline: true,
+            }),
+            Self::Metal => Some(NamedSamplers {
+                per_stage: true,
+                refuses_misspelt_inline: false,
+            }),
+        }
     }
 
     /// Whether the shader compiler provides the precision texture and sampler type names

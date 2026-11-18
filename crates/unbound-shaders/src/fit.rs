@@ -1545,20 +1545,21 @@ pub(crate) fn texture_property(name: &str, sampler: bool) -> Option<String> {
 }
 
 /// `uav_registers`: the UAV registers the fragment source declares, by buffer name;
-/// `texture_state`: the device samples a texture through the texture's own sampler state
-/// (`GraphicsDevice::samples_through_texture_state`); `opengl_shading_language`: the program
+/// `named_samplers`: how the device checks the samplers a program names, None where it samples
+/// a texture through the texture's own sampler state (`GraphicsDevice::named_samplers`,
+/// `samples_through_texture_state`); `opengl_shading_language`: the program
 /// is drawn as OpenGL shading language (`Settings::opengl_shading_language`).
 pub(crate) fn fit(
     vertex: &[u32],
     fragment: &[u32],
     uav_registers: &HashMap<String, u32>,
     clip: ClipSpace,
-    texture_state: bool,
+    named_samplers: Option<unbound_graphics::NamedSamplers>,
     opengl_shading_language: bool,
 ) -> Result<Compiled> {
-    let own = |stage: &[u32]| match texture_state {
-        true => crate::samplers::own_samplers(stage),
-        false => Ok(stage.to_vec()),
+    let own = |stage: &[u32]| match named_samplers {
+        None => crate::samplers::own_samplers(stage),
+        Some(_) => Ok(stage.to_vec()),
     };
     let (vertex, fragment) = (own(vertex)?, own(fragment)?);
     // Drawn as OpenGL shading language, a texture the program still samples through several
@@ -1674,8 +1675,13 @@ pub(crate) fn fit(
             names.insert(key);
         }
     }
-    if !texture_state {
-        named_samplers_resolve(&[&vertex, &fragment])?;
+    match named_samplers {
+        Some(rule) if rule.per_stage => {
+            named_samplers_resolve(&[&vertex], rule)?;
+            named_samplers_resolve(&[&fragment], rule)?;
+        }
+        Some(rule) => named_samplers_resolve(&[&vertex, &fragment], rule)?,
+        None => {}
     }
     // A main texture that is compared too or has further variables is a slot of the
     // program's, like a typed one; so is one the program never samples through its own sampler
@@ -1911,12 +1917,13 @@ fn referenced(module: &Module) -> HashSet<Handle<naga::GlobalVariable>> {
         .collect()
 }
 
-/// Where a program samples through the samplers it names, each sampler it uses is one of a
-/// texture the program (either stage) uses, or an inline state: the Vulkan Editor refuses a
-/// program with any other, or with a wrongly spelt inline state, in these words
+/// Where a program samples through the samplers it names, each sampler `stages` use is one of a
+/// texture they use, or an inline state: the Vulkan Editor (both stages together) and the
+/// Metal one (each stage alone) refuse a program with any other, in these words
 /// (tests/projects/samplerstates `Shapes`, where the program declares the sampler's texture
-/// and does not use it, and `Used*`, where it uses it).
-fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
+/// and does not use it, and `Used*`, where it uses it); a wrongly spelt inline state is refused
+/// where `rule` says so (Vulkan).
+fn named_samplers_resolve(stages: &[&Module], rule: unbound_graphics::NamedSamplers) -> Result<()> {
     let used: Vec<(&Module, HashSet<Handle<naga::GlobalVariable>>)> =
         stages.iter().map(|m| (*m, referenced(m))).collect();
     let variables = |sampler: bool| {
@@ -1951,7 +1958,8 @@ fn named_samplers_resolve(stages: &[&Module]) -> Result<()> {
             Ok(None) => bail!(
                 "Unrecognized sampler '{named}' - does not match any texture and is not a recognized inline name (should contain filter and wrap modes)"
             ),
-            Err(wrong) => bail!("{wrong}"),
+            Err(wrong) if rule.refuses_misspelt_inline => bail!("{wrong}"),
+            Err(_) => {}
         }
     }
     Ok(())

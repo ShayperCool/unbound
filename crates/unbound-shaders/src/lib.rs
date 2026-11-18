@@ -34,7 +34,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 64;
+pub const FORMAT_VERSION: u32 = 65;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -970,7 +970,7 @@ impl ShaderCompiler {
             &fragment_spv,
             &uav_registers(&fragment_source),
             fit::ClipSpace::of(self.settings.device.conventions()),
-            self.settings.device.samples_through_texture_state(),
+            self.settings.device.named_samplers(),
             self.settings.opengl_shading_language,
         )?;
         compiled.keywords = selected;
@@ -2192,12 +2192,23 @@ float4 frag(V i) : SV_Target {
                 slot(further_main, 1)
             ]
         );
-        // Vulkan and Metal bind textures and samplers apart: the texture is one binding, sampled
-        // through each sampler the program names.
-        for device in [
-            unbound_graphics::GraphicsDevice::Vulkan,
-            unbound_graphics::GraphicsDevice::Metal,
-        ] {
+        // Vulkan binds textures and samplers apart: the texture is one binding, sampled through
+        // each sampler the program names. Metal resolves each stage's samplers against that
+        // stage's textures, so it refuses this program, whose vertex stage samples `_A` through
+        // `sampler_B` and uses no `_B` (samplerstates `Vertex`, `metal.jsonl`).
+        let mut metal = ShaderCompiler::new(Settings {
+            device: unbound_graphics::GraphicsDevice::Metal,
+            ..Settings::default()
+        })
+        .unwrap();
+        let refused = metal
+            .compile(&program(source, false), &[], false)
+            .unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Unrecognized sampler 'sampler_b'"),
+            "{refused:#}"
+        );
+        for device in [unbound_graphics::GraphicsDevice::Vulkan] {
             let mut apart = ShaderCompiler::new(Settings {
                 device,
                 ..Settings::default()
@@ -3047,10 +3058,10 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
         }
     }
 
-    /// A wrongly spelt inline sampler is the Editor's error where programs sample through the
-    /// samplers they name, whether its name starts with `sampler` or not; OpenGL Core, which
-    /// does not read the name, compiles the program and samples the texture's own state
-    /// (tests/projects/samplerstates `Bad*`).
+    /// A wrongly spelt inline sampler is the Vulkan Editor's error, whether its name starts with
+    /// `sampler` or not; OpenGL Core, which does not read the name, compiles the program and
+    /// samples the texture's own state, and so does the macOS Editor's Metal compiler, which
+    /// reads names but refuses no wrongly spelt one (tests/projects/samplerstates `Bad*`).
     #[test]
     fn a_wrongly_spelt_inline_sampler_is_refused_where_programs_name_their_samplers() {
         for (sampler, error) in [
@@ -3082,7 +3093,59 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             );
             let own = compile(unbound_graphics::GraphicsDevice::OpenGLCore).unwrap();
             assert!(own.textures.contains(&"_B".to_string()));
+            let metal = compile(unbound_graphics::GraphicsDevice::Metal).unwrap();
+            assert!(metal.textures.contains(&"_B".to_string()));
         }
+    }
+
+    /// The macOS Editor's Metal compiler resolves each stage's samplers against that stage's
+    /// textures: a sampler named for a texture only the other stage uses is refused there, while
+    /// Vulkan (both stages together) and OpenGL Core (the textures' own states) draw it
+    /// (tests/projects/samplerstates `Vertex`, `UsedVertex`, `metal.jsonl`). A control: the same
+    /// sampler with its texture in its own stage compiles on Metal.
+    #[test]
+    fn metal_resolves_each_stage_samplers_against_its_own_textures() {
+        let source = |vertex: &str, fragment: &str| {
+            format!(
+                "#pragma vertex vert\n#pragma fragment frag\n\
+                 Texture2D _A; SamplerState sampler_A; Texture2D _B; SamplerState sampler_B;\n\
+                 struct V {{ float4 pos : SV_POSITION; float4 c : COLOR; }};\n\
+                 V vert(float4 position : POSITION) {{ V o; o.pos = position; o.c = {vertex}; return o; }}\n\
+                 float4 frag(V i) : SV_Target {{ return i.c + {fragment}; }}\n"
+            )
+        };
+        let compile = |device, vertex: &str, fragment: &str| {
+            let mut compiler = ShaderCompiler::new(Settings {
+                device,
+                ..Settings::default()
+            })
+            .unwrap();
+            compiler.compile(&program(&source(vertex, fragment), false), &[], false)
+        };
+        // `sampler_B` samples `_A` in the vertex stage; `_B` is sampled in the fragment stage only.
+        let (vertex, fragment) = (
+            "_A.SampleLevel(sampler_B, position.xy, 0)",
+            "_B.Sample(sampler_B, i.pos.xy)",
+        );
+        let refused =
+            compile(unbound_graphics::GraphicsDevice::Metal, vertex, fragment).unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Unrecognized sampler 'sampler_b'"),
+            "{refused:#}"
+        );
+        compile(unbound_graphics::GraphicsDevice::Vulkan, vertex, fragment).unwrap();
+        compile(
+            unbound_graphics::GraphicsDevice::OpenGLCore,
+            vertex,
+            fragment,
+        )
+        .unwrap();
+        compile(
+            unbound_graphics::GraphicsDevice::Metal,
+            "_B.SampleLevel(sampler_B, position.xy, 0)",
+            fragment,
+        )
+        .unwrap();
     }
 
     /// Where a program samples through the sampler it names, a sampler that is neither a
