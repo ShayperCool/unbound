@@ -1,0 +1,12 @@
+#pragma kernel Groups
+
+RWStructuredBuffer<uint> _Out;
+
+// One thread per group: _Out[0] counts the groups, _Out[1 + x + 4y + 16z] marks each one.
+[numthreads(1, 1, 1)]
+void Groups(uint3 gid : SV_GroupID)
+{
+    uint cell = 1 + gid.x + gid.y * 4 + gid.z * 16;
+    InterlockedAdd(_Out[0], 1);
+    _Out[cell] = cell;
+}

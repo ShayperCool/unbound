@@ -97,6 +97,9 @@ public partial class CmdBuffersProbe : MonoBehaviour
             Instanced();
             IndexedDraws();
             ComputeParams();
+            // Before the frame probes: called after the later sections, these draws drew nothing in the
+            // macOS Editor (which section's state stops them is not resolved).
+            MetalDeviceAnswers();
             }
         }
         catch (Exception e)
