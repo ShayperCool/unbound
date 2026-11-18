@@ -572,7 +572,7 @@ namespace UnityEngine
 
         /// <summary>The packet bits of a 5-6-5 or 1-5-5-5 target whose drawn values the device keeps
         /// at its channels' bits (GraphicsDeviceProfile.PackedTargetsKeepChannelBits), else 0.</summary>
-        int PackedChannelBits() => !GraphicsDeviceProfile.Current.PackedTargetsKeepChannelBits ? 0 : m_Descriptor.graphicsFormat switch
+        internal int PackedChannelBits() => !GraphicsDeviceProfile.Current.PackedTargetsKeepChannelBits ? 0 : m_Descriptor.graphicsFormat switch
         {
             GraphicsFormat.R5G6B5_UNormPack16 or GraphicsFormat.B5G6R5_UNormPack16 => Packed565,
             GraphicsFormat.A1R5G5B5_UNormPack16 or GraphicsFormat.B5G5R5A1_UNormPack16 or GraphicsFormat.R5G5B5A1_UNormPack16 => Packed5551,
