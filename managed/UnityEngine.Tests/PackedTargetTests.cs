@@ -81,7 +81,7 @@ namespace Unbound.Tests
                 finally { Object.DestroyImmediate(rt); }
             }
         }
-    
+
         /// <summary>CommandBuffer.GetTemporaryRT with a legacy format the device cannot render
         /// falls back as RenderTexture.GetTemporary does, warned when the command is recorded
         /// (unmeasured for the command buffer); OpenGL Core keeps 4444 (control).</summary>
