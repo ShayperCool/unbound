@@ -1,7 +1,8 @@
 # vfxlit probe
 
 Visual Effect Graph outputs that the pipeline lights, outputs that draw each particle as a mesh,
-and the shadows of both (com.unity.visualeffectgraph 17.0.4 under URP 17, the Editor's built-in
+the shadows of both, and outputs drawn by a Shader Graph, through the forward renderer and the 2D
+renderer (com.unity.visualeffectgraph 17.0.4 under URP 17, the Editor's built-in
 packages, unmodified): small graphs of the probe's own, each drawn in front of a camera of its
 own, recorded by the same script in the Unity Editor and in Unbound. The outputs here draw
 themselves, in the order their system keeps its particles (opaque, or added to what is behind):
@@ -45,10 +46,25 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   context sets each one's size from a curve and its colour from a gradient over its life
   (`Set Size over Life`, `Set Color over Life`): the output's own program samples both.
 
+- `SpriteLit`, `SpriteUnlit`: quads of `Output Particle ShaderGraph Quad` (the composed output)
+  drawn by the render pipeline package's own graphs for particles, `VFXSpriteLit` (lit by 2D
+  lights) and `VFXSpriteUnlit`, whose texture is the image whose quarters differ; spread over a
+  depth of one unit, each of a colour and a turn of its own.
+- `GraphUnlit`: the same output drawn by `Assets/Graphs/Unlit.shadergraph`, the graph package's
+  default graph (URP Unlit, opaque) written with its support for particles on, as the authoring
+  copies it.
+- `SpriteClassic`: `VFXSpriteLit` given to `Output Particle Quad` instead, through that
+  output's own Shader Graph setting.
+- `PlainUnlit`: such quads drawn by `Output Particle Quad` without a Shader Graph, blended over
+  what is behind.
+
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The pipeline asset
-(`Assets/Settings/ProbeURP.asset`) has two renderers: a forward one and a deferred one
-(`ProbeDeferred.asset`); main light shadows are on (one cascade, hard), additional lights are
-per pixel and cast no shadows. The scene has one flat ambient colour and no reflection.
+(`Assets/Settings/ProbeURP.asset`) has three renderers: a forward one, a deferred one
+(`ProbeDeferred.asset`) and a 2D one (`Probe2DRenderer.asset`, the 2D renderer's defaults); main light shadows are on (one cascade, hard), additional lights are
+per pixel and cast no shadows. The scene has one flat ambient colour and no reflection, and 2D
+lights, which only the 2D renderer draws by: a global one (white, 0.4) and, at the places of
+`sprite point`, `sprite normals` and `sprite classic`, a point light of radius two, the one of
+`sprite normals` lighting by normals (accurate, at a distance of one).
 
 ## What is recorded
 
@@ -100,6 +116,20 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   and for a name it does not have, the three others for a name it does not have), and `SetMesh`
   and `SetTexture` when given an object that was destroyed (`MissingReferenceException`);
   `null/Shape after`: the mesh the effect then answers, the one it had.
+- Through the 2D renderer, each at a place of a row of their own where the scene's 2D lights
+  stand: `sprite` (`SpriteLit` under the global light), `sprite point`, `sprite normals` (with
+  the point light that lights by normals: the outputs' normals pass is drawn), `sprite unlit`,
+  `sprite classic` (nothing is drawn: the output given the graph through its own setting has no
+  material, `renderer/sprite classic`), `plain 2d` (`PlainUnlit`).
+- `sprite sorting`: `SpriteUnlit` between two unlit sprites of the image whose quarters differ
+  (untinted), one in sorting order -1 nearer the camera than the effect, one in order 1 further
+  away: the 2D renderer draws them by their order, not by their distance (frame 5). At frame 8
+  the effect's renderer is set to order 2 (`act/sprite sorting/f008`) and is drawn after both
+  (frame 10). "Unity renders sublayers in numerical order, so lower values render behind
+  higher values", and only "within a sorting layer, a sublayer, and a render queue" by the
+  distance to the camera (Unity 6000.0 manual, 2D renderer sorting).
+- `graph unlit`: `GraphUnlit` through the forward renderer; its renderer casts shadows
+  (`renderer/graph unlit`).
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays
   incomplete).
 
@@ -115,8 +145,7 @@ adds to that is not separated.
 
 ## Not covered
 
-- Outputs with motion vectors (they keep buffers of the frame before), outputs of
-  a Shader Graph, lit strips, several meshes per output or a mesh chosen by distance, lit
+- Outputs with motion vectors (they keep buffers of the frame before), lit strips, several meshes per output or a mesh chosen by distance, lit
   outputs drawn through an indirect buffer that is not sorted and mesh outputs through any
   indirect buffer (unlit quads through an unsorted one are `tests/projects/vfxoutputs`): not
   drawn; each says so once for its asset.
@@ -143,6 +172,11 @@ adds to that is not separated.
   outputs of an effect are drawn where it shows.
 - A script that sets the renderer's shadow casting itself; a mesh destroyed while an effect uses
   it (the Editor then answers with an object that is no longer there).
+- Shader Graph outputs other than the composed quad output with the graphs here: lit Shader
+  Graphs of the forward renderer, other topologies, strips, graphs of the deprecated Visual
+  Effect target given to an output's own setting, material overrides of a graph that allows
+  them; sprites in sorting layers other than the default one, sprite masks, 2D shadows and the
+  camera sorting layer texture with effects.
 - Other devices than OpenGL Core in the Editor.
 
 ## Running

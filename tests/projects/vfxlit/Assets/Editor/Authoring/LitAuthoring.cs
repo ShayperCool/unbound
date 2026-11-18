@@ -5,9 +5,11 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.VFX;
 using UnityEditor.VFX.Block;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEditor.VFX.URP;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.VFX;
 
 /// <summary>
@@ -31,6 +33,7 @@ public static class LitAuthoring
         LitQuads();
         Meshes();
         SortedAndCurves();
+        ShaderGraphs();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -320,6 +323,72 @@ public static class LitAuthoring
         Save(dying);
     }
 
+    /// <summary>Where the stages drawn through the 2D renderer stand: one row of their own,
+    /// a hundred apart (LitProbe.cs places them the same way). The scene's 2D lights stand
+    /// at these places.</summary>
+    static Vector3 Place2D(int place) => new Vector3(1000f + 100f * place, 2000f, 0f);
+
+    /// <summary>The render pipeline package's own graphs for particles: lit by 2D lights and
+    /// unlit, as sprites.</summary>
+    const string SpriteLitGraph = "Packages/com.unity.render-pipelines.universal/Shaders/2D/VFXSpriteLit.shadergraph";
+    const string SpriteUnlitGraph = "Packages/com.unity.render-pipelines.universal/Shaders/2D/VFXSpriteUnlit.shadergraph";
+    /// <summary>The graph package's default graph (URP Unlit, opaque), which does not draw
+    /// particles itself: the probe's copy of it does.</summary>
+    const string DefaultGraph = "Packages/com.unity.visualeffectgraph/ShaderGraph/VFXDefault.shadergraph";
+    const string UnlitGraph = GraphFolder + "/Unlit.shadergraph";
+
+    static ShaderGraphVfxAsset ShaderGraph(string path) =>
+        AssetDatabase.LoadAllAssetsAtPath(path).OfType<ShaderGraphVfxAsset>().FirstOrDefault()
+        ?? throw new InvalidOperationException(path + " has no graph for particles");
+
+    /// <summary>Outputs drawn by a Shader Graph: quads of `Output Particle ShaderGraph Quad`
+    /// drawn by the render pipeline package's sprite graphs through the 2D renderer, and by
+    /// an unlit graph (the graph package's default one, made to draw particles) through the
+    /// forward renderer; and the lit sprite graph given to `Output Particle Quad`.</summary>
+    static void ShaderGraphs()
+    {
+        File.WriteAllText(UnlitGraph, File.ReadAllText(Path.GetFullPath(DefaultGraph)).Replace("\"m_SupportVFX\": false", "\"m_SupportVFX\": true"));
+        AssetDatabase.ImportAsset(UnlitGraph, ImportAssetOptions.ForceUpdate);
+        (VFXGraph, VFXBasicInitialize, VFXContext) Drawn<TOutput>(string name, string shaderGraph) where TOutput : VFXContext
+        {
+            var graph = NewGraph(name);
+            var (spawn, init, _, output) = System<TOutput>(graph, 16);
+            if (output is VFXAbstractComposedParticleOutput) output.SetSettingValue("m_Topology", new ParticleTopologyPlanarPrimitive(VFXPrimitiveType.Quad));
+            output.SetSettingValue("shaderGraph", ShaderGraph(shaderGraph));
+            // The graphs' own texture: the image whose quarters differ.
+            var texture = ((IVFXSlotContainer)output).inputSlots.FirstOrDefault(s => s.property.type == typeof(Texture2D))
+                ?? throw new InvalidOperationException(name + ": the output of " + shaderGraph + " takes no texture");
+            texture.value = Quarters;
+            Burst(spawn, 9f);
+            // Spread in depth too: through the 2D renderer what is drawn first does not follow
+            // the distance to the camera alone.
+            SetRandom(init, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+            SetRandom(init, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+            SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+            Set(init, "size", 0.7f);
+            return (graph, init, output);
+        }
+
+        Save(Drawn<VFXComposedParticleOutput>("SpriteLit", SpriteLitGraph).Item1);
+        Save(Drawn<VFXComposedParticleOutput>("SpriteUnlit", SpriteUnlitGraph).Item1);
+        Save(Drawn<VFXComposedParticleOutput>("GraphUnlit", UnlitGraph).Item1);
+        // The graph given to `Output Particle Quad` instead, whose own setting takes it.
+        Save(Drawn<VFXPlanarPrimitiveOutput>("SpriteClassic", SpriteLitGraph).Item1);
+        // The output of the probe's other unlit quads, without a Shader Graph, through the 2D
+        // renderer.
+        var plain = NewGraph("PlainUnlit");
+        var (plainSpawn, plainInit, _, plainOutput) = System<VFXPlanarPrimitiveOutput>(plain, 16);
+        plainOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        Input(plainOutput, "mainTexture").value = Quarters;
+        Burst(plainSpawn, 9f);
+        SetRandom(plainInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(plainInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+        SetRandom(plainInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Set(plainInit, "alpha", 0.8f);
+        Set(plainInit, "size", 0.7f);
+        Save(plain);
+    }
+
     // ---------------------------------------------------------------------------- helpers
 
     static T Make<T>() where T : VFXModel => ScriptableObject.CreateInstance<T>();
@@ -510,6 +579,38 @@ public static class LitAuthoring
         RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Custom;
         RenderSettings.customReflectionTexture = null;
         RenderSettings.reflectionIntensity = 0f;
+        // The 2D lights: a dim white one over every place, a point light at the second
+        // place (`sprite point`), one at the third that lights by normals (`sprite
+        // normals`), and one at the fifth (`sprite classic`).
+        AddLight2D("global", Light2D.LightType.Global, Vector3.zero, Color.white, 0.4f, false);
+        AddLight2D("point", Light2D.LightType.Point, Place2D(1) + new Vector3(0.6f, 0.5f, 0f), new Color(1f, 0.6f, 0.3f), 1.5f, false);
+        AddLight2D("normals", Light2D.LightType.Point, Place2D(2) + new Vector3(0.6f, 0.5f, 0f), new Color(1f, 0.6f, 0.3f), 1.5f, true);
+        AddLight2D("classic", Light2D.LightType.Point, Place2D(4) + new Vector3(0.6f, 0.5f, 0f), new Color(0.3f, 0.6f, 1f), 1.5f, false);
         EditorSceneManager.SaveScene(scene, Scene);
+    }
+
+    /// <summary>A 2D light of the scene lighting every sorting layer, with a radius of two
+    /// (a point light), by normals or not.</summary>
+    static void AddLight2D(string name, Light2D.LightType type, Vector3 position, Color color, float intensity, bool normals)
+    {
+        var go = new GameObject("light2d " + name);
+        go.transform.position = position;
+        var light = go.AddComponent<Light2D>();
+        light.lightType = type;
+        light.color = color;
+        light.intensity = intensity;
+        light.pointLightInnerRadius = 0.2f;
+        light.pointLightOuterRadius = 2f;
+        var so = new SerializedObject(light);
+        var layers = so.FindProperty("m_ApplyToSortingLayers");
+        var ids = SortingLayer.layers.Select(l => l.id).ToArray();
+        layers.arraySize = ids.Length;
+        for (int i = 0; i < ids.Length; i++) layers.GetArrayElementAtIndex(i).intValue = ids[i];
+        if (normals)
+        {
+            so.FindProperty("m_NormalMapQuality").intValue = (int)Light2D.NormalMapQuality.Accurate;
+            so.FindProperty("m_NormalMapDistance").floatValue = 1f;
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 }

@@ -21,6 +21,8 @@ public sealed class LitProbe : MonoBehaviour
     const int k_LastFrame = 26;
     /// <summary>The pipeline asset's second renderer: the deferred one.</summary>
     const int k_DeferredRenderer = 1;
+    /// <summary>The pipeline asset's third renderer: the 2D one.</summary>
+    const int k_2DRenderer = 2;
 
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<Stage> m_Stages = new List<Stage>();
@@ -40,6 +42,7 @@ public sealed class LitProbe : MonoBehaviour
     }
 
     Stage m_Exposed;
+    Stage m_Sorting;
     int m_Staged;
     Material m_Lit;
 
@@ -127,6 +130,26 @@ public sealed class LitProbe : MonoBehaviour
             // and quads sized and coloured over their life by their output.
             Lamp(Draw("lit sorted", "LitSorted", 5, 12), LightType.Point);
             Draw("curve output", "CurveOutput", 6, 12, 24);
+            // Through the 2D renderer, each at a place of its own where the scene's 2D lights
+            // stand (LitAuthoring.Place2D): Shader Graph outputs of the render pipeline's
+            // sprite graphs under the dim global light, a point light, a point light that
+            // lights by normals; unlit; the lit graph given to a quad output of the kind
+            // without one; and an output without a Shader Graph.
+            Draw2D("sprite", "SpriteLit", 0, 5);
+            Draw2D("sprite point", "SpriteLit", 1, 5);
+            Draw2D("sprite normals", "SpriteLit", 2, 5);
+            Draw2D("sprite unlit", "SpriteUnlit", 3, 5);
+            Draw2D("sprite classic", "SpriteClassic", 4, 5);
+            Draw2D("plain 2d", "PlainUnlit", 5, 5);
+            // Unlit sprites before and after the effect by their sorting order, each where its
+            // distance to the camera would put it the other way round; at frame 8 the effect's
+            // renderer is ordered after both.
+            m_Sorting = Draw2D("sprite sorting", "SpriteUnlit", 6, 5, 10);
+            Sprite2D(m_Sorting, "behind", -1, new Vector3(-0.6f, -0.6f, -3f));
+            Sprite2D(m_Sorting, "before", 1, new Vector3(0.6f, 0.6f, 3f));
+            // A Shader Graph output (the graph package's default graph) through the forward
+            // renderer.
+            Draw("graph unlit", "GraphUnlit", 5);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
@@ -217,9 +240,32 @@ public sealed class LitProbe : MonoBehaviour
     }
 
     /// <summary>A stage for an effect of a graph: the frames named are saved.</summary>
-    Stage Draw(string key, string graph, params int[] frames)
+    Stage Draw(string key, string graph, params int[] frames) => DrawAt(key, graph, new Vector3(1000f + 100f * m_Staged++, 0f, 0f), frames);
+
+    /// <summary>A stage drawn through the 2D renderer at a place of the row the scene's 2D
+    /// lights stand in (LitAuthoring.Place2D).</summary>
+    Stage Draw2D(string key, string graph, int place, params int[] frames)
     {
-        var origin = new Vector3(1000f + 100f * m_Staged++, 0f, 0f);
+        var stage = DrawAt(key, graph, new Vector3(1000f + 100f * place, 2000f, 0f), frames);
+        stage.Camera.GetUniversalAdditionalCameraData().SetRenderer(k_2DRenderer);
+        return stage;
+    }
+
+    /// <summary>An unlit sprite of the image whose quarters differ, two units wide, untinted,
+    /// at a place of the stage, in the default sorting layer at the order given.</summary>
+    void Sprite2D(Stage stage, string name, int order, Vector3 offset)
+    {
+        var texture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Objects/Quarters.png");
+        var go = new GameObject("sprite " + stage.Key + " " + name);
+        go.transform.position = stage.Origin + offset;
+        var sprite = go.AddComponent<SpriteRenderer>();
+        sprite.sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), texture.width / 2f);
+        sprite.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
+        sprite.sortingOrder = order;
+    }
+
+    Stage DrawAt(string key, string graph, Vector3 origin, int[] frames)
+    {
         VisualEffect effect = null;
         if (graph != null)
         {
@@ -296,6 +342,12 @@ public sealed class LitProbe : MonoBehaviour
     /// frame named is simulated: each is drawn two frames later.</summary>
     void Act()
     {
+        if (m_Frame == 8)
+        {
+            var renderer = m_Sorting.Effect.GetComponent<Renderer>();
+            renderer.sortingOrder = 2;
+            Rec("act/sprite sorting/f008", "sortingOrder=2 -> sortingLayer=" + renderer.sortingLayerName + " sortingOrder=" + renderer.sortingOrder);
+        }
         var effect = m_Exposed.Effect;
         string what = null;
         switch (m_Frame)

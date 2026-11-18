@@ -5,6 +5,8 @@
         "Unity.VisualEffectGraph.Runtime",
         "Unity.RenderPipelines.Universal.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.2D.Runtime",
+        "Unity.ShaderGraph.Editor",
         "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [
