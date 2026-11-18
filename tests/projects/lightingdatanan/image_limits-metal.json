@@ -5,6 +5,6 @@
   },
   "sun.png": {
     "mean": 0.63, "worst": 37, "over8": 10,
-    "reason": "The procedural sky's simple sun disk, as against the OpenGL Core reference (image_limits.json): the disk's edge pixels differ by up to 37; the disk itself and the sky elsewhere within 2. Two identical Unbound runs."
+    "reason": "Against the Metal reference, the same residual as against the OpenGL Core one (image_limits.json), the procedural sky's simple sun disk: the disk's edge pixels differ by up to 37; the disk itself and the sky elsewhere within 2. Two identical Unbound runs."
   }
 }

@@ -44,4 +44,5 @@ On macOS arm64 the gate compares with `Reference/unity-6000.0.71f1/metal/` (test
 values are the OpenGL Core ones and its images differ from them by the device's rounding (means
 0.19 and 0.10, no pixel over 8). Unbound on Metal: 15/15 values; `frame.png` mean 0.09, five pixels
 over 8 (up to 10) on the spheres' top silhouettes, `sun.png` mean 0.62 (limit 0.63), ten pixels over 8 (up to
-37) at the sun disk's edge, as against the OpenGL Core image (`image_limits-metal.json`).
+37) at the sun disk's edge, the same residual as against the OpenGL Core reference
+(`image_limits-metal.json`).

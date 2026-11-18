@@ -19,7 +19,7 @@ answers: AGENTS.md Platforms). On macOS arm64, where the Editor and Unbound draw
 records with the macOS Editor in batch mode (which draws with Metal), publishes to
 Reference/unity-<release>/metal/ and gates against that, with `residuals-metal.json` and
 `image_limits-metal.json` in place of the files below (a probe that has one of those files
-needs its Metal counterpart, empty where nothing applies); elsewhere it is unchanged.
+needs its Metal counterpart, `{}` where nothing applies); elsewhere it is unchanged.
 
 Values compare exactly, except numbers: |expected - actual| <= `tolerance` (the probe's own,
 named in its README). Every missing, extra and differing key is printed. Images print their
@@ -68,7 +68,7 @@ def reference_dir(probe):
 
 def device_file(probe, name):
     """`name` next to the probe's run.py, `<stem>-metal<suffix>` for its Metal reference. A probe
-    with the file for its other references needs a Metal one too (an empty one where nothing
+    with the file for its other references needs a Metal one too (`{}` where nothing
     applies): its limits or residuals are never dropped silently."""
     path = Path(probe)/name
     if not METAL:
@@ -337,6 +337,8 @@ def publish(probe, labels):
 
 
 def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None):
+    # The limits and residuals are read first: a missing Metal counterpart stops before the run.
+    residuals(probe), image_limits(probe)
     out = run_root(probe, label)
     if authored:
         project = out/'project'
