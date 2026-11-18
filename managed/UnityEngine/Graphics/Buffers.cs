@@ -163,6 +163,7 @@ namespace Unbound.Runtime
         {
             var (offset, bytes) = Prepare(data, start, bufferStart, count, names);
             Write(offset, bytes);
+            ResetCounterAfterData();
         }
 
         internal unsafe void SetData<T>(NativeArray<T> data, int start, int bufferStart, int count, Names names) where T : struct
@@ -170,6 +171,13 @@ namespace Unbound.Runtime
             var (offset, bytes) = Prepare(Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data), data.Length,
                 Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>(), start, bufferStart, count, names);
             Write(offset, bytes);
+            ResetCounterAfterData();
+        }
+
+        /// <summary>The device's counter after a SetData (GraphicsDeviceProfile.SetDataResetsCounter).</summary>
+        void ResetCounterAfterData()
+        {
+            if (HasCounter && GraphicsDeviceProfile.Current.SetDataResetsCounter) GpuBufferOps.SetCounter(this, 0);
         }
 
         /// <summary>A GraphicsBuffer.LockBufferForWrite is open on the buffer.</summary>
@@ -457,7 +465,8 @@ namespace Unbound.Runtime
         /// <summary>Writes a hidden counter into a buffer: nothing for buffers without one, nor (the
         /// renderer decides, by device: `GraphicsDevice::copies_unused_counters`) for one whose
         /// counter no dispatch has bound yet; an offset that is not a multiple of 4 warns and still
-        /// copies there; one past the end asserts and copies nothing.</summary>
+        /// copies there; one past the end copies nothing and asserts where the device does
+        /// (GraphicsDeviceProfile.CopyCountAssertsRange).</summary>
         internal static void CopyCount(GpuBufferStorage source, GpuBufferStorage destination, long offset)
         {
             if (source == null) throw new ArgumentNullException("src");
@@ -465,7 +474,8 @@ namespace Unbound.Runtime
             if (offset % 4 != 0) UnityEngine.Debug.LogWarning("dstOffsetBytes must be a multiple of 4");
             if (offset < 0 || offset + 4 > destination.Size)
             {
-                UnityEngine.Debug.LogAssertion("Assertion failed on expression: 'dstOffset + size <= m_size'");
+                if (GraphicsDeviceProfile.Current.CopyCountAssertsRange)
+                    UnityEngine.Debug.LogAssertion("Assertion failed on expression: 'dstOffset + size <= m_size'");
                 return;
             }
             if (source.Released || destination.Released || !source.HasCounter) return;

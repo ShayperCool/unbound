@@ -102,6 +102,16 @@ namespace Unbound.Runtime
         /// exactly level / (2^bits - 1), which Unbound's 8-bit store keeps as its nearest byte
         /// (tests/projects/samplerstates metal.jsonl Packed.*, residuals-metal.json).</summary>
         internal bool PackedTargetsKeepChannelBits { get; init; }
+        /// <summary>ComputeBuffer/GraphicsBuffer.SetData of an Append or Counter buffer sets its
+        /// hidden counter to 0 (Metal: a counter appended to 14, then SetData, copies 0,
+        /// tests/projects/gpubuffers metal `append.cb.setdata.count`; the OpenGL Core Editor keeps
+        /// 14). Measured for a whole ComputeBuffer.SetData; Unbound applies it to every SetData
+        /// of the buffer (CommandBuffer.SetBufferData unmeasured, kept).</summary>
+        internal bool SetDataResetsCounter { get; init; }
+        /// <summary>ComputeBuffer.CopyCount into a destination too small at the offset asserts
+        /// `dstOffset + size &lt;= m_size` (OpenGL Core); the Metal Editor copies nothing there
+        /// silently (tests/projects/gpubuffers metal `append.cb.copybeyond`).</summary>
+        internal bool CopyCountAssertsRange { get; init; } = true;
         /// <summary>A 4444 target keeps its channels' 4 bits too (Metal: 0.25 drawn reads 4/15,
         /// tests/projects/samplerstates metal.jsonl Packed.ARGB4444.*); OpenGL Core and Vulkan
         /// keep 8-bit values there.</summary>
@@ -260,6 +270,8 @@ namespace Unbound.Runtime
             PartialScreenSeedUndecoded = true,
             PackedTargetsKeepChannelBits = true,
             Packs4444Targets = true,
+            SetDataResetsCounter = true,
+            CopyCountAssertsRange = false,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
             Compressed3DTextures = true,
