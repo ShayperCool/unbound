@@ -189,6 +189,16 @@ namespace Unbound.Runtime
         /// pipeline lights.</summary>
         const string LitDefine = "#define URP_LIT 1";
 
+        /// <summary>The pass of a Shader Graph output that 2D lights light (the sprite graphs'
+        /// normals pass), which writes no <see cref="LitDefine"/>.</summary>
+        const string Lit2DPass = "\"NormalsRendering\"";
+
+        /// <summary>Whether an output's generated shader is lit: by the pipeline's lights or by
+        /// 2D lights. Both are measured only as other lit outputs are (drawing themselves or a
+        /// sorted list, not strips).</summary>
+        static bool IsLit(string source) =>
+            source.Contains(LitDefine, StringComparison.Ordinal) || source.Contains(Lit2DPass, StringComparison.Ordinal);
+
         /// <summary>A lit output is measured where it draws itself and where it draws a sorted
         /// list (an alpha blended one sorts by default: tests/projects/vfxlit, `lit sorted`);
         /// through a list that is not sorted only unlit outputs are (tests/projects/vfxoutputs),
@@ -215,7 +225,7 @@ namespace Unbound.Runtime
                     if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
-                    if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !source.Contains(LitDefine, StringComparison.Ordinal)) continue;
+                    if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit(source)) continue;
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
                     else if (Parameter(tasks[t], IndirectDrawName) != 0 && !ReadsSortedList(tasks[t])) refusals[s][t] = LitIndirectRefusal;
                 }

@@ -1165,6 +1165,17 @@ namespace UnityEngine.Tests
                 new[] { new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(quads, 0), From(quads, 1) } } },
                 new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
             Assert.Equal(new[] { VFXOutput.LitStripRefusal, null }, litStrips[0]);
+            // A Shader Graph output lit by 2D lights (no lighting define, a normals pass) is lit
+            // too: drawn from a sorted list, not from one that is not sorted, nor as strips.
+            var sprites = VFXOutput.SourceRefusals(
+                new[]
+                {
+                    new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 3), 0), From(Indirect(2, 2), 0), From(Indirect(2, 2), 1) } },
+                    new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(Joined(Indirect(2, 3)), 0) } },
+                },
+                new[] { new VFXShaderSourceDesc { source = sprite }, new VFXShaderSourceDesc { source = sprite.Replace("\"NormalsRendering\"", "\"UniversalForward\"").Replace("Sprite Lit", "Sprite Unlit") } });
+            Assert.Equal(new[] { null, VFXOutput.LitIndirectRefusal, null }, sprites[0]);
+            Assert.Equal(new[] { VFXOutput.LitStripRefusal }, sprites[1]);
 
             var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material);
             asset.m_Data.Systems[1].tasks[0].parameters = Indirect(2, 3).parameters;
