@@ -268,10 +268,11 @@ namespace Unbound.UIElements
         };
 
         /// <summary>
-        /// Whether values a var() gave fit the property's colours: a colour property takes colours
-        /// (or keywords) only and other properties no colour. A value that does not fit makes the
-        /// declaration `unset`, as an unresolvable variable does: a length in border-color or color
-        /// and a colour in border-left-width (matches the Unity 6000.0.71f1 Editor,
+        /// Whether values a var() gave fit the property's colours: a colour property takes colours,
+        /// colour names and keywords only, and other properties no colour. A value that does not
+        /// fit makes the declaration `unset`, as an unresolvable variable does: a length in
+        /// border-color or color and a colour in border-left-width; a named colour (white,
+        /// transparent) and a var() fallback apply (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/toolapis uss). Other mismatched types are unmeasured and read as before.
         /// </summary>
         static bool ColorsFit(string property, List<UssValue> values)
@@ -281,11 +282,14 @@ namespace Unbound.UIElements
             foreach (var v in values)
             {
                 var type = v.handle.valueType;
-                if (colorProperty ? type != StyleValueType.Color && type != StyleValueType.Keyword : type == StyleValueType.Color)
+                if (colorProperty ? type != StyleValueType.Color && type != StyleValueType.Keyword && !IsColorName(v) : type == StyleValueType.Color)
                     return false;
             }
             return true;
         }
+
+        static bool IsColorName(UssValue v) =>
+            v.handle.valueType == StyleValueType.Enum && StyleProperties.TryGetColor(v.sheet.ReadAsString(v.handle).ToLowerInvariant(), out _);
 
         enum Result { Valid, Invalid, NotFound }
 

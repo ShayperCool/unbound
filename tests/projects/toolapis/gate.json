@@ -1,10 +1,22 @@
 {
-  "commands": ["python3 tests/projects/toolapis/run.py gate"],
+  "commands": [
+    "python3 tests/projects/toolapis/run.py gate"
+  ],
   "summary": "toolapis: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/TextureGenerator.cs",
     "managed/UnityEngine/Editor/TextureImporterSettings.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessorHooks.cs",
+    "managed/UnityEngine/Editor/BuildPlatforms.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
     "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
-    "managed/UnityEngine/UIElements/Style/StyleResolver.cs"
+    "managed/UnityEngine/Graphics/Sprite.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/U2D/SpriteDataAccess.cs",
+    "managed/UnityEngine/Runtime/Components.cs",
+    "managed/UnityEngine/UIElements/Style/StyleReader.cs",
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-runtime/src/state.rs"
   ]
 }

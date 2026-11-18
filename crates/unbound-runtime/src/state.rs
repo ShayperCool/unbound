@@ -1730,6 +1730,11 @@ pub fn release_generated_texture(key: &str) {
     {
         s.textures.write().unwrap().remove(&guid);
     }
+    // Nor does the last traced texture keep them.
+    let mut recent = s.traced_texels.lock().unwrap_or_else(|e| e.into_inner());
+    if recent.as_ref().is_some_and(|(traced, _)| traced == key) {
+        *recent = None;
+    }
 }
 
 /// Where a request's texels come from: an imported texture (its GUID), or the caller's RGBA8

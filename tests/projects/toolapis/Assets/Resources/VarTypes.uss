@@ -6,3 +6,5 @@
 .childbad { --r: 5px; color: var(--r); border-top-color: var(--r); }
 .later { border-color: rgb(255, 255, 0); }
 .later.bad { border-color: var(--r); }
+.named { --n: white; --t: transparent; border-width: 1px; border-color: var(--n); color: var(--t); }
+.fallback { border-width: 1px; border-color: var(--missing, red); }

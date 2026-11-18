@@ -206,6 +206,7 @@ namespace UnityEditor.AssetImporters
         const string k_SizeMismatch = "Image data byte count does not match requested texture import format";
 
         static List<(int Order, Type Type, MethodInfo Method)> s_TextureHooks, s_SpriteHooks;
+        static readonly HashSet<string> s_WarnedSecondary = new HashSet<string>(StringComparer.Ordinal);
 
         public static TextureGenerationOutput GenerateTexture(TextureGenerationSettings settings, NativeArray<Color32> colorBuffer)
         {
@@ -246,6 +247,8 @@ namespace UnityEditor.AssetImporters
         static TextureGenerationOutput Generate(TextureGenerationSettings settings, SourceTextureInformation source, ReadOnlySpan<byte> texels)
         {
             var s = settings.textureImporterSettings;
+            if (settings.secondarySpriteTextures is { Length: > 0 } && s_WarnedSecondary.Add(settings.assetPath ?? ""))
+                Debug.LogWarning($"Unbound: TextureGenerator.GenerateTexture does not give generated sprites secondary textures yet ({settings.assetPath})");
             var key = KeyPrefix + Guid.NewGuid().ToString("N");
             // The texture takes the asset path's file name (none without a path).
             var name = System.IO.Path.GetFileNameWithoutExtension(settings.assetPath ?? "");
@@ -332,10 +335,10 @@ namespace UnityEditor.AssetImporters
             Line(1, "nPOTScale", (int)s.npotScale);
             bool sprite = s.textureType == TextureImporterType.Sprite;
             var data = settings.spriteImportData;
+            if (sprite && s.spriteMode == (int)SpriteImportMode.Polygon && data != null && data.Length > 0)
+                throw new NotSupportedException("Unbound: TextureGenerator.GenerateTexture of a Polygon sprite is not supported yet");
             // A single sprite is the first entry over the whole image: a sheet of one.
-            int mode = !sprite || data == null || data.Length == 0 ? 0
-                : s.spriteMode == (int)SpriteImportMode.Polygon ? s.spriteMode
-                : (int)SpriteImportMode.Multiple;
+            int mode = !sprite || data == null || data.Length == 0 ? 0 : (int)SpriteImportMode.Multiple;
             Line(1, "spriteMode", mode);
             Line(1, "spriteExtrude", s.spriteExtrude);
             Line(1, "spriteMeshType", (int)s.spriteMeshType);

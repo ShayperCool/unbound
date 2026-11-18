@@ -430,7 +430,6 @@ namespace UnityEngine
             return values;
         }
 
-        /// <summary>Takes what was set through the data access API as the sprite's geometry.</summary>
         /// <summary>Whether a script wrote the UVs through SetVertexAttribute: from then on they
         /// stay as written.</summary>
         internal bool m_TexCoordsWritten;
@@ -455,6 +454,7 @@ namespace UnityEngine
                     (m_Rect.y + m_Pivot.y + positions[i].y * ppu) / texture.height);
         }
 
+        /// <summary>Takes what was set through the data access API as the sprite's geometry.</summary>
         internal unsafe void MeshDataChanged()
         {
             var data = m_MeshData;

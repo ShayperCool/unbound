@@ -2954,6 +2954,8 @@
 {"k":"spriteMesh.positionsAgain.texCoord0","v":"(0,0);(1,0);(0.5,1)"}
 {"k":"spriteMesh.positionsAgain.vertices","v":"(-1,-0.5);(1,-0.5);(0.5,0.5)"}
 {"k":"spriteRenderer.added.materials","v":"Sprites-Default/Sprites/Default"}
+{"k":"spriteRenderer.pipeline.added","v":"PipelineDefault2D"}
+{"k":"spriteRenderer.pipeline.instantiated","v":"Sprites-Default"}
 {"k":"spriteCreate.FullRect.packing","v":"packed False mode 0 rotation 0"}
 {"k":"spriteCreate.Tight.packing","v":"packed False mode 0 rotation 0"}
 {"k":"post.True.texture.name","v":"Generated"}
@@ -3150,6 +3152,16 @@
 {"k":"uss.later_bad.borderRadius","v":"20 20"}
 {"k":"uss.later_bad.height","v":"30"}
 {"k":"uss.later_bad.color","v":"(0,0,0,1)"}
+{"k":"uss.named.borderColor","v":"(1,1,1,1) (1,1,1,1) (1,1,1,1) (1,1,1,1)"}
+{"k":"uss.named.borderWidth","v":"1 1 1 1"}
+{"k":"uss.named.borderRadius","v":"0 0"}
+{"k":"uss.named.height","v":"2"}
+{"k":"uss.named.color","v":"(0,0,0,0)"}
+{"k":"uss.fallback.borderColor","v":"(1,0,0,1) (1,0,0,1) (1,0,0,1) (1,0,0,1)"}
+{"k":"uss.fallback.borderWidth","v":"1 1 1 1"}
+{"k":"uss.fallback.borderRadius","v":"0 0"}
+{"k":"uss.fallback.height","v":"2"}
+{"k":"uss.fallback.color","v":"(0,0,0,1)"}
 {"k":"uss.logs","v":""}
 {"k":"logs.end","v":""}
 {"k":"complete","v":true}

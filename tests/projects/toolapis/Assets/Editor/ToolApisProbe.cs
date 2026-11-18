@@ -422,6 +422,30 @@ public static class ToolApisProbe
         var added = holder.AddComponent<SpriteRenderer>();
         Put("spriteRenderer.added.materials", string.Join(",", added.sharedMaterials.Select(m => m == null ? "null" : m.name + "/" + m.shader.name)));
         UnityEngine.Object.DestroyImmediate(holder);
+        // Under a render pipeline whose default 2D material differs, and an instance of a
+        // renderer made before it was set.
+        Guard("spriteRenderer.pipeline", () =>
+        {
+            var before = new GameObject("BeforePipeline").AddComponent<SpriteRenderer>();
+            var pipeline = ScriptableObject.CreateInstance<ToolApisPipelineAsset>();
+            pipeline.material = new Material(Shader.Find("Sprites/Default")) { name = "PipelineDefault2D" };
+            var previous = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+            UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = pipeline;
+            try
+            {
+                var underPipeline = new GameObject("UnderPipeline").AddComponent<SpriteRenderer>();
+                Put("spriteRenderer.pipeline.added", string.Join(",", underPipeline.sharedMaterials.Select(m => m == null ? "null" : m.name)));
+                var copy = UnityEngine.Object.Instantiate(before.gameObject).GetComponent<SpriteRenderer>();
+                Put("spriteRenderer.pipeline.instantiated", string.Join(",", copy.sharedMaterials.Select(m => m == null ? "null" : m.name)));
+                UnityEngine.Object.DestroyImmediate(underPipeline.gameObject);
+                UnityEngine.Object.DestroyImmediate(copy.gameObject);
+            }
+            finally
+            {
+                UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = previous;
+                UnityEngine.Object.DestroyImmediate(before.gameObject);
+            }
+        });
         // Sprites made by script, outside any atlas.
         var source = new Texture2D(16, 16);
         foreach (var mesh in new[] { SpriteMeshType.FullRect, SpriteMeshType.Tight })
@@ -584,7 +608,7 @@ public static class ToolApisProbe
 
     // ------------------------------------------------------------------ USS var() types
 
-    static readonly string[] s_UssCases = { "bad", "badwidth", "good", "parent/childbad", "later bad" };
+    static readonly string[] s_UssCases = { "bad", "badwidth", "good", "parent/childbad", "later bad", "named", "fallback" };
 
     static void UssSetup()
     {

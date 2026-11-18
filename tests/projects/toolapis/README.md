@@ -38,14 +38,17 @@ and compared with Unbound:
   of `Data.toolapis`, imported again in Play mode) and afterwards.
 * Sprites outside an atlas (`Sprite.Create` of both mesh types): packing; a sprite whose positions
   are rewritten through `SpriteDataAccessExtensions` before and after its UVs are written; the
-  materials of a `SpriteRenderer` a script adds and of the PSD prefab's renderers.
+  materials of a `SpriteRenderer` a script adds and of the PSD prefab's renderers, and under a probe
+  render pipeline (`ToolApisPipelineAsset`) whose default 2D material differs: a renderer added then
+  and an instance of one added before (the documented use of `RenderPipelineAsset.default2DMaterial`).
 * A `Material`'s `m_SavedProperties` through `SerializedObject` (the Visual Effect Graph's material
   settings write their float list this way): the floats, ints, colours and textures of a
   `Sprites/Default` material, and the result of replacing the float list with two entries (one the
   shader does not have) and applying it.
 * USS `var()` references whose value has the wrong type for the property (`VarTypes.uss`): a
   length in `border-color` and `color`, a colour in `border-left-width`, beside valid
-  declarations, a parent's colour, and a less specific rule that would otherwise give the colour.
+  declarations, a parent's colour, a less specific rule that would otherwise give the colour, and
+  the controls that must keep working: colour names through `var()` and a `var()` fallback.
   The panel uses a constant pixel size of 1 and an empty theme; the panel's missing-theme warning
   is left out of the logs.
 
@@ -64,7 +67,7 @@ UNBOUND=/path/to/unbound python3 tests/projects/toolapis/run.py gate
 Values compare exactly (tolerance 0). `Packages/packages-lock.json` is the one the Editor wrote: it pins
 the indirect dependencies (Burst 1.8.28) the reference was captured with.
 
-Unbound on macOS, 2026-11-18: 3129/3154 values, 0 failures and 26 recorded residuals
+Unbound on macOS, 2026-11-18: 3141/3166 values, 0 failures and 26 recorded residuals
 (`residuals.json`): the material sheet (not modelled, queued), the `Color` overload's mips (filtered
 from bytes; the Editor filters the float colours), and NotEditable on the PSD importer's texture.
 Before the engine changes, 612 of the first 2079 values matched.
