@@ -1,0 +1,14 @@
+{
+  "name": "com.probe.resolve",
+  "version": "1.0.0",
+  "displayName": "Resolve probe dependencies",
+  "description": "Asks for packages below the Editor's minimum versions (tests/projects/packageresolve).",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.burst": "1.8.4",
+    "com.unity.mathematics": "1.2.1",
+    "com.unity.timeline": "1.7.0",
+    "com.unity.settings-manager": "1.0.3",
+    "com.unity.nuget.newtonsoft-json": "3.0.2"
+  }
+}

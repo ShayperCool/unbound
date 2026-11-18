@@ -92,7 +92,14 @@ pub fn package_infos(project: &Project) -> Vec<Json> {
     project
         .packages
         .iter()
-        .map(|p| package_info(p, direct.contains(&p.name)))
+        // Embedded packages are the project's own: direct dependencies whether or not the
+        // manifest lists them (tests/projects/packageresolve).
+        .map(|p| {
+            package_info(
+                p,
+                direct.contains(&p.name) || p.source == PackageSource::Embedded,
+            )
+        })
         .collect()
 }
 

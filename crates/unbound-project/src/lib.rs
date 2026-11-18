@@ -7,8 +7,8 @@ pub mod compile;
 pub mod editor_archive;
 pub mod install;
 pub mod modules;
-pub mod packages;
 pub mod net;
+pub mod packages;
 pub mod plugins;
 pub mod releases;
 pub mod script_class;
@@ -24,8 +24,8 @@ use std::{
 use unbound_compat::{CompileMode, Profile, UnityVersion};
 
 pub use assemblies::{Graph, ScriptAssembly};
-pub use compile::CodeOptimization;
 pub use assetdb::AssetDb;
+pub use compile::CodeOptimization;
 pub use install::UnityInstall;
 pub use packages::{Package, PackageSource};
 pub use settings::{PlayModeAtlases, Settings};
@@ -72,7 +72,11 @@ impl Project {
         }
         let install = UnityInstall::find(version, profile.release())?;
         let settings = Settings::read(&root)?;
-        let resolution = packages::resolve(&root, &install)?;
+        let resolution = packages::resolve(
+            &root,
+            &install,
+            unbound_compat::PackageResolutionRules::for_version(version),
+        )?;
         Ok(Self {
             assets: root.join("Assets"),
             root,
@@ -280,7 +284,8 @@ impl Project {
             plugins: &plugins,
             asmdef_guid: &guid_of,
         })?;
-        (graph.excluded_modules, graph.disabled_modules) = self.excluded_modules(mode, target_group)?;
+        (graph.excluded_modules, graph.disabled_modules) =
+            self.excluded_modules(mode, target_group)?;
         Ok(graph)
     }
 
@@ -291,7 +296,10 @@ impl Project {
         &self,
         mode: CompileMode,
         target_group: &str,
-    ) -> Result<(std::collections::BTreeSet<String>, Vec<modules::DisabledModule>)> {
+    ) -> Result<(
+        std::collections::BTreeSet<String>,
+        Vec<modules::DisabledModule>,
+    )> {
         let Some((list, _)) = modules::modules_for(&self.install, target_group)? else {
             tracing::warn!(
                 "the Unity installation has no module list (Resources/modules.asset): script assemblies \
@@ -308,8 +316,10 @@ impl Project {
         let names: std::collections::BTreeSet<&str> = packages.iter().map(String::as_str).collect();
         let builtin = self.install.builtin_packages_dir();
         Ok(modules::excluded(&list, &engine, &names, &|package| {
-            let json: serde_json::Value =
-                serde_json::from_slice(&std::fs::read(builtin.join(package).join("package.json")).ok()?).ok()?;
+            let json: serde_json::Value = serde_json::from_slice(
+                &std::fs::read(builtin.join(package).join("package.json")).ok()?,
+            )
+            .ok()?;
             Some(json["displayName"].as_str()?.to_string())
         }))
     }

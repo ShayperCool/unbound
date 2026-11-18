@@ -1,0 +1,11 @@
+{"k":"names","v":"com.probe.resolve com.unity.burst com.unity.collections com.unity.mathematics com.unity.nuget.mono-cecil com.unity.nuget.newtonsoft-json com.unity.settings-manager com.unity.timeline com.unity.ugui"}
+{"k":"package.com.probe.resolve","v":"1.0.0 source Embedded direct True"}
+{"k":"package.com.unity.burst","v":"1.8.28 source Registry direct False"}
+{"k":"package.com.unity.collections","v":"2.1.4 source Registry direct True"}
+{"k":"package.com.unity.mathematics","v":"1.3.2 source Registry direct False"}
+{"k":"package.com.unity.nuget.mono-cecil","v":"1.11.5 source Registry direct False"}
+{"k":"package.com.unity.nuget.newtonsoft-json","v":"3.2.1 source Registry direct True"}
+{"k":"package.com.unity.settings-manager","v":"2.1.0 source Registry direct False"}
+{"k":"package.com.unity.timeline","v":"1.8.10 source Registry direct False"}
+{"k":"package.com.unity.ugui","v":"2.0.0 source BuiltIn direct True"}
+{"k":"complete","v":true}

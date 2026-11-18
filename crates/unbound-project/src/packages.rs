@@ -3,7 +3,8 @@
 //! (built-in), or a package cache (registry and git packages). A registry package no cache has is
 //! unpacked from the tarball the installation ships (`Resources/PackageManager/Editor`) into the
 //! Unbound package store, as the Editor does; without a lock file, the packages' own dependencies are
-//! followed (the highest version asked for wins).
+//! followed (the highest version asked for wins, and where the release's rules say so no version
+//! below the Editor's own minimum for the package: [`PackageResolutionRules`]).
 use crate::install::UnityInstall;
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -11,6 +12,7 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
+use unbound_compat::PackageResolutionRules;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackageSource {
@@ -80,7 +82,9 @@ impl Manifest {
             .flat_map(|r| r.scopes.iter().map(move |scope| (scope, r.url.as_str())))
             .filter(|(scope, _)| {
                 name == scope.as_str()
-                    || name.strip_prefix(scope.as_str()).is_some_and(|rest| rest.starts_with('.'))
+                    || name
+                        .strip_prefix(scope.as_str())
+                        .is_some_and(|rest| rest.starts_with('.'))
             })
             .max_by_key(|(scope, _)| scope.len())
             .map_or(UNITY_REGISTRY, |(_, url)| url)
@@ -116,7 +120,11 @@ pub fn package_caches(project: &Path) -> Vec<PathBuf> {
     caches
 }
 
-pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
+pub fn resolve(
+    project: &Path,
+    install: &UnityInstall,
+    rules: PackageResolutionRules,
+) -> Result<Resolution> {
     let packages_dir = project.join("Packages");
     let manifest: Manifest = serde_json::from_slice(
         &std::fs::read(packages_dir.join("manifest.json")).context("Packages/manifest.json")?,
@@ -142,7 +150,11 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
                 } else if version.contains(".git") || version.starts_with("git") {
                     "git"
                 } else if name.starts_with("com.unity.modules.")
-                    || install.builtin_packages_dir().join(name).join("package.json").exists()
+                    || install
+                        .builtin_packages_dir()
+                        .join(name)
+                        .join("package.json")
+                        .exists()
                 {
                     "builtin"
                 } else {
@@ -167,10 +179,28 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
     let bundled = install.data.join("Resources/PackageManager/Editor");
     let store = crate::cache_root().join("packages");
     let has_lock = std::fs::metadata(packages_dir.join("packages-lock.json")).is_ok();
+    let minimums = if !has_lock && rules.editor_minimum_versions {
+        editor_minimum_versions(&bundled)
+    } else {
+        BTreeMap::new()
+    };
     let mut resolution = Resolution::default();
-    let mut queue: Vec<(String, (String, String, Option<String>))> = wanted.into_iter().collect();
+    // Each entry: the package, what is asked for, and whether a package (not the project) asks.
+    let mut queue: Vec<(String, (String, String, Option<String>), bool)> = wanted
+        .into_iter()
+        .map(|(name, want)| (name, want, false))
+        .collect();
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
-    while let Some((name, (version, source, _hash))) = queue.pop() {
+    while let Some((name, (mut version, source, _hash), indirect)) = queue.pop() {
+        // Without a lock, a package asking for a registry package below the Editor's minimum gets
+        // the minimum; the project's own dependencies keep the version they name.
+        if indirect
+            && source == "registry"
+            && let Some(minimum) = minimums.get(&name)
+            && newer(minimum, &version)
+        {
+            version = minimum.clone();
+        }
         // Without a lock, a package asked for again at a higher version replaces the first.
         if let Some(previous) = seen.get(&name) {
             if !has_lock && source == "registry" && newer(&version, previous) {
@@ -207,14 +237,23 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
                 } else {
                     PackageSource::Registry
                 };
-                let cached = find_in_caches(&caches, &name, (kind == PackageSource::Registry).then_some(&*version));
+                let cached = find_in_caches(
+                    &caches,
+                    &name,
+                    (kind == PackageSource::Registry).then_some(&*version),
+                );
                 let exact = cached.as_ref().is_some_and(|(_, v)| *v == version);
                 if kind == PackageSource::Registry && !exact {
                     let fetched = unpack_bundled(&bundled, &store, &name, &version)
                         .with_context(|| "unpacking the installation's tarball".to_string())
                         .and_then(|found| match found {
                             Some(root) => Ok(Some(root)),
-                            None => download_package(manifest.registry_for(&name), &store, &name, &version),
+                            None => download_package(
+                                manifest.registry_for(&name),
+                                &store,
+                                &name,
+                                &version,
+                            ),
                         });
                     match fetched {
                         Ok(Some(root)) => Some((root, kind, version.clone())),
@@ -235,12 +274,14 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
             && let Some(json) = read_package_json(root)
         {
             for (dependency, wanted_version) in json.dependencies {
-                let source = if dependency.starts_with("com.unity.modules.") || builtin.join(&dependency).join("package.json").exists() {
+                let source = if dependency.starts_with("com.unity.modules.")
+                    || builtin.join(&dependency).join("package.json").exists()
+                {
                     "builtin"
                 } else {
                     "registry"
                 };
-                queue.push((dependency, (wanted_version, source.into(), None)));
+                queue.push((dependency, (wanted_version, source.into(), None), true));
             }
         }
         match found {
@@ -260,17 +301,30 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
 /// The names of the project's packages that decide its engine modules: the resolved ones, the
 /// manifest's own dependencies (the Editor resolves those even when a stale lock lacks them) and
 /// the built-in modules those depend on.
-pub fn module_packages(project: &Path, install: &UnityInstall, resolved: &[Package]) -> std::collections::BTreeSet<String> {
-    let mut names: std::collections::BTreeSet<String> = resolved.iter().map(|p| p.name.clone()).collect();
+pub fn module_packages(
+    project: &Path,
+    install: &UnityInstall,
+    resolved: &[Package],
+) -> std::collections::BTreeSet<String> {
+    let mut names: std::collections::BTreeSet<String> =
+        resolved.iter().map(|p| p.name.clone()).collect();
     if let Ok(bytes) = std::fs::read(project.join("Packages/manifest.json"))
         && let Ok(manifest) = serde_json::from_slice::<Manifest>(&bytes)
     {
         names.extend(manifest.dependencies.into_keys());
     }
     let builtin = install.builtin_packages_dir();
-    let mut queue: Vec<String> = names.iter().filter(|n| n.starts_with("com.unity.modules.")).cloned().collect();
+    let mut queue: Vec<String> = names
+        .iter()
+        .filter(|n| n.starts_with("com.unity.modules."))
+        .cloned()
+        .collect();
     while let Some(name) = queue.pop() {
-        for dependency in read_package_json(&builtin.join(&name)).map(|json| json.dependencies).unwrap_or_default().into_keys() {
+        for dependency in read_package_json(&builtin.join(&name))
+            .map(|json| json.dependencies)
+            .unwrap_or_default()
+            .into_keys()
+        {
             if names.insert(dependency.clone()) {
                 queue.push(dependency);
             }
@@ -279,11 +333,48 @@ pub fn module_packages(project: &Path, install: &UnityInstall, resolved: &[Packa
     names
 }
 
+/// The minimum version of each package the installation's own manifest names
+/// (`Resources/PackageManager/Editor/manifest.json`: `packages.<name>.minimumVersion`); empty when
+/// the installation has none.
+fn editor_minimum_versions(bundled: &Path) -> BTreeMap<String, String> {
+    #[derive(Deserialize)]
+    struct EditorManifest {
+        #[serde(default)]
+        packages: BTreeMap<String, EditorPackage>,
+    }
+    #[derive(Deserialize)]
+    struct EditorPackage {
+        #[serde(default, rename = "minimumVersion")]
+        minimum_version: Option<String>,
+    }
+    let path = bundled.join("manifest.json");
+    let Ok(bytes) = std::fs::read(&path) else {
+        return BTreeMap::new();
+    };
+    match serde_json::from_slice::<EditorManifest>(&bytes) {
+        Ok(manifest) => manifest
+            .packages
+            .into_iter()
+            .filter_map(|(name, p)| p.minimum_version.map(|v| (name, v)))
+            .collect(),
+        Err(e) => {
+            tracing::warn!(
+                "{}: {e}; packages resolve without the Editor's minimum versions",
+                path.display()
+            );
+            BTreeMap::new()
+        }
+    }
+}
+
 /// Whether version `a` is higher than `b` (dotted numbers, a pre-release lower than its release).
 fn newer(a: &str, b: &str) -> bool {
     fn parts(v: &str) -> (Vec<u64>, bool) {
         let (core, pre) = v.split_once('-').map_or((v, false), |(c, _)| (c, true));
-        (core.split('.').map(|p| p.parse().unwrap_or(0)).collect(), pre)
+        (
+            core.split('.').map(|p| p.parse().unwrap_or(0)).collect(),
+            pre,
+        )
     }
     let (pa, pre_a) = parts(a);
     let (pb, pre_b) = parts(b);
@@ -295,7 +386,12 @@ fn newer(a: &str, b: &str) -> bool {
 
 /// The installation's tarball of `name@version` unpacked into the store (`name@version`, its
 /// `package/` folder's contents); None when the installation does not ship that version.
-fn unpack_bundled(bundled: &Path, store: &Path, name: &str, version: &str) -> Result<Option<PathBuf>> {
+fn unpack_bundled(
+    bundled: &Path,
+    store: &Path,
+    name: &str,
+    version: &str,
+) -> Result<Option<PathBuf>> {
     let tarball = bundled.join(format!("{name}-{version}.tgz"));
     if !tarball.is_file() {
         return Ok(None);
@@ -304,14 +400,20 @@ fn unpack_bundled(bundled: &Path, store: &Path, name: &str, version: &str) -> Re
     if read_package_json(&root).is_some_and(|json| json.name == name && json.version == version) {
         return Ok(Some(root));
     }
-    let bytes = std::fs::read(&tarball).with_context(|| format!("opening {}", tarball.display()))?;
+    let bytes =
+        std::fs::read(&tarball).with_context(|| format!("opening {}", tarball.display()))?;
     unpack_tarball(&bytes, store, name, version, "the Unity installation").map(Some)
 }
 
 /// `name@version` downloaded from `registry` (an npm registry: the package's document names its
 /// tarball) and unpacked into the store; None when the registry does not have that version.
 /// `UNBOUND_OFFLINE` forbids the download.
-fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> Result<Option<PathBuf>> {
+fn download_package(
+    registry: &str,
+    store: &Path,
+    name: &str,
+    version: &str,
+) -> Result<Option<PathBuf>> {
     let root = store.join(format!("{name}@{version}"));
     if read_package_json(&root).is_some_and(|json| json.name == name && json.version == version) {
         return Ok(Some(root));
@@ -321,19 +423,28 @@ fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> 
     }
     let url = format!("{}/{name}", registry.trim_end_matches('/'));
     let text = match crate::net::get(&url, |mut response| {
-        Ok(response.body_mut().with_config().limit(64 << 20).read_to_string()?)
+        Ok(response
+            .body_mut()
+            .with_config()
+            .limit(64 << 20)
+            .read_to_string()?)
     }) {
         Ok(text) => text,
         Err(e) if crate::net::is_not_found(&e) => return Ok(None),
         Err(e) => return Err(e).with_context(|| format!("querying {url}")),
     };
-    let document: serde_json::Value = serde_json::from_str(&text).with_context(|| format!("reading {url}"))?;
+    let document: serde_json::Value =
+        serde_json::from_str(&text).with_context(|| format!("reading {url}"))?;
     let Some(tarball) = document["versions"][version]["dist"]["tarball"].as_str() else {
         return Ok(None);
     };
     tracing::info!("package {name}@{version}: downloading {tarball}");
     let bytes = crate::net::get(tarball, |mut response| {
-        Ok(response.body_mut().with_config().limit(1 << 30).read_to_vec()?)
+        Ok(response
+            .body_mut()
+            .with_config()
+            .limit(1 << 30)
+            .read_to_vec()?)
     })
     .with_context(|| format!("downloading {tarball}"))?;
     unpack_tarball(&bytes, store, name, version, registry).map(Some)
@@ -341,7 +452,13 @@ fn download_package(registry: &str, store: &Path, name: &str, version: &str) -> 
 
 /// A package's gzipped npm tarball unpacked into the store as `name@version` (the contents of its
 /// `package/` folder).
-fn unpack_tarball(gzipped: &[u8], store: &Path, name: &str, version: &str, origin: &str) -> Result<PathBuf> {
+fn unpack_tarball(
+    gzipped: &[u8],
+    store: &Path,
+    name: &str,
+    version: &str,
+    origin: &str,
+) -> Result<PathBuf> {
     let root = store.join(format!("{name}@{version}"));
     std::fs::create_dir_all(store)?;
     let staging = store.join(format!(".{name}@{version}.{}", std::process::id()));
@@ -351,8 +468,14 @@ fn unpack_tarball(gzipped: &[u8], store: &Path, name: &str, version: &str, origi
     std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(gzipped), &mut data)?;
     for (path, kind, contents) in tar_entries(&data)? {
         // Everything sits under `package/`; nothing may leave the staging folder.
-        let Ok(relative) = Path::new(&path).strip_prefix("package") else { continue };
-        if relative.as_os_str().is_empty() || relative.components().any(|c| !matches!(c, std::path::Component::Normal(_))) {
+        let Ok(relative) = Path::new(&path).strip_prefix("package") else {
+            continue;
+        };
+        if relative.as_os_str().is_empty()
+            || relative
+                .components()
+                .any(|c| !matches!(c, std::path::Component::Normal(_)))
+        {
             continue;
         }
         let target = staging.join(relative);
@@ -369,7 +492,10 @@ fn unpack_tarball(gzipped: &[u8], store: &Path, name: &str, version: &str, origi
     }
     let _ = std::fs::remove_dir_all(&root);
     std::fs::rename(&staging, &root)?;
-    tracing::info!("package {name}@{version}: unpacked from {origin} into {}", root.display());
+    tracing::info!(
+        "package {name}@{version}: unpacked from {origin} into {}",
+        root.display()
+    );
     Ok(root)
 }
 
@@ -427,8 +553,16 @@ fn tar_entries(data: &[u8]) -> Result<Vec<(String, u8, &[u8])>> {
             Some(name) => name,
             None => {
                 let name = String::from_utf8_lossy(field(&header[0..100])).into_owned();
-                let prefix = if header[257..262] == *b"ustar" { String::from_utf8_lossy(field(&header[345..500])).into_owned() } else { String::new() };
-                if prefix.is_empty() { name } else { format!("{prefix}/{name}") }
+                let prefix = if header[257..262] == *b"ustar" {
+                    String::from_utf8_lossy(field(&header[345..500])).into_owned()
+                } else {
+                    String::new()
+                };
+                if prefix.is_empty() {
+                    name
+                } else {
+                    format!("{prefix}/{name}")
+                }
             }
         };
         entries.push((path, kind, contents));
@@ -556,6 +690,91 @@ mod tests {
         assert_eq!(entries[1].0, long);
         assert_eq!(entries[1].2, b"two");
         assert_eq!(entries[2].0, "package/dir/file.txt");
+    }
+
+    fn write(path: &Path, text: &str) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
+
+    fn package(dir: &Path, name: &str, version: &str, dependencies: &str) {
+        write(
+            &dir.join("package.json"),
+            &format!(
+                r#"{{"name": "{name}", "version": "{version}", "dependencies": {{{dependencies}}}}}"#
+            ),
+        );
+    }
+
+    /// A lock-less project: an embedded package asks for `com.example.dep` 1.0.0 and `com.example.free`
+    /// 1.0.0, the project for `com.example.direct` 1.0.0; the installation's manifest names 2.0.0 as
+    /// each one's minimum but `com.example.free`'s (which has a version only).
+    fn minimum_project(root: &Path) -> (PathBuf, UnityInstall) {
+        let _ = std::fs::remove_dir_all(root);
+        let project = root.join("project");
+        write(
+            &project.join("Packages/manifest.json"),
+            r#"{"dependencies": {"com.example.direct": "1.0.0"}}"#,
+        );
+        package(
+            &project.join("Packages/com.example.embedded"),
+            "com.example.embedded",
+            "1.0.0",
+            r#""com.example.dep": "1.0.0", "com.example.free": "1.0.0""#,
+        );
+        let cache = project.join("Library/PackageCache");
+        for name in ["com.example.dep", "com.example.direct", "com.example.free"] {
+            for version in ["1.0.0", "2.0.0"] {
+                package(&cache.join(format!("{name}@{version}")), name, version, "");
+            }
+        }
+        let data = root.join("Data");
+        write(
+            &data.join("Resources/PackageManager/Editor/manifest.json"),
+            r#"{"packages": {"com.example.dep": {"minimumVersion": "2.0.0", "version": "2.0.0"},
+                "com.example.direct": {"minimumVersion": "2.0.0"}, "com.example.free": {"version": "2.0.0"}}}"#,
+        );
+        let install = UnityInstall {
+            data,
+            version: unbound_compat::UnityVersion::new(6000, 0, 71),
+        };
+        (project, install)
+    }
+
+    fn versions(resolution: &Resolution) -> BTreeMap<String, String> {
+        resolution
+            .packages
+            .iter()
+            .map(|p| (p.name.clone(), p.version.clone()))
+            .collect()
+    }
+
+    #[test]
+    fn lockless_packages_take_the_editors_minimum_where_the_release_does() {
+        let root = std::env::temp_dir().join(format!("unbound-minimums-{}", std::process::id()));
+        let (project, install) = minimum_project(&root);
+        let measured = PackageResolutionRules {
+            editor_minimum_versions: true,
+        };
+        let raised = versions(&resolve(&project, &install, measured).unwrap());
+        assert_eq!(raised["com.example.dep"], "2.0.0");
+        // The project's own dependency keeps the version it names.
+        assert_eq!(raised["com.example.direct"], "1.0.0");
+        // A package with a version but no minimum keeps the version asked for.
+        assert_eq!(raised["com.example.free"], "1.0.0");
+        // Releases without the rule keep the highest version asked for.
+        let kept =
+            versions(&resolve(&project, &install, PackageResolutionRules::default()).unwrap());
+        assert_eq!(kept["com.example.dep"], "1.0.0");
+        assert_eq!(kept["com.example.direct"], "1.0.0");
+        // A lock decides on its own.
+        write(
+            &project.join("Packages/packages-lock.json"),
+            r#"{"dependencies": {"com.example.dep": {"version": "1.0.0", "source": "registry"}}}"#,
+        );
+        let locked = versions(&resolve(&project, &install, measured).unwrap());
+        assert_eq!(locked["com.example.dep"], "1.0.0");
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
