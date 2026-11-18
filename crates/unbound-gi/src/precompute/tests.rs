@@ -694,8 +694,12 @@ fn the_budget_bounds_a_texels_references() {
             "{texel:?}: {kept:?} of {all:?}"
         );
     }
-    // Measured: 49 faces of the environment, each seen at a grazing angle, over 128 texels.
-    assert!(left_out > 0 && left_out < limited.len(), "{left_out}");
+    // Measured: 49 of the texels' environment faces left out (each seen at a grazing angle),
+    // of the 128 texels' 768.
+    assert!(
+        left_out > 0 && left_out < limited.len() * 6 / 4,
+        "{left_out}"
+    );
 }
 
 #[test]

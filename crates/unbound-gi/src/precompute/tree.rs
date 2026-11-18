@@ -368,8 +368,7 @@ mod tests {
     #[test]
     fn a_large_system_with_far_outliers_makes_a_tree() {
         // A grid of 4800 clusters on a floor and 200 far from it in a line, each farther than
-        // the one before: splits that peel one outlier off at a time make a tree 200 levels
-        // deep, well formed.
+        // the one before (spread over three orders of magnitude): the tree stays well formed.
         let mut f = Vec::new();
         for i in 0..4800 {
             f.push(described(
