@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/UI/CanvasSystem.cs",
     "managed/UnityEngine/UI/CanvasSystem.Depths.cs",
-    "managed/UnityEngine/UI/Canvas.cs"
+    "managed/UnityEngine/UI/Canvas.cs",
+    "managed/UnityEngine/Runtime/Components.cs"
   ]
 }

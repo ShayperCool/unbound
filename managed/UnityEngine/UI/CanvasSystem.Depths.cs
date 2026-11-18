@@ -44,7 +44,7 @@ namespace Unbound.Runtime
             {
                 var canvas = s_Canvases[i];
                 if (canvas == null || canvas.m_Destroyed || !canvas.IsActiveAndEnabledNoThrow) continue;
-                if (canvas.m_OverrideSorting || canvas.ParentCanvas() == null) NumberSortingCanvas(canvas);
+                if (canvas.m_OverrideSorting || !HasCanvasAbove(canvas.transform)) NumberSortingCanvas(canvas);
             }
             foreach (var cr in s_NumberedBefore)
                 if (cr.m_DepthPass != s_DepthPass) ClearDepth(cr);
@@ -95,6 +95,14 @@ namespace Unbound.Runtime
                 if (NumberObject(child, root, nested, ref absolute)) { relative++; any = true; }
             }
             return any;
+        }
+
+        /// <summary>Whether a canvas lies above an active canvas's object (its ancestors are active).</summary>
+        static bool HasCanvasAbove(Transform t)
+        {
+            for (var p = t.m_Parent; p != null; p = p.m_Parent)
+                if (CanvasOf(p) != null) return true;
+            return false;
         }
 
         static Canvas CanvasOf(Transform t)
