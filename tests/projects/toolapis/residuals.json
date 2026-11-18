@@ -1,8 +1,5 @@
 {
-  "Object.Instantiate of a GameObject made in the scene keeps its hideFlags in the Editor (the GameObject's 9, its renderer's 8, its Transform 9) while an instance of an imported GameObject and a copy of a made Texture2D get none; Unbound's copies get none. Queued: which kinds and flags a copy keeps (the made GameObject's Transform's own flags were not recorded).": [
-    "imported.madeInstance"
-  ],
-  "Unbound loads the editor domain once: playModeStateChanged(ExitingEditMode), which the Editor sends in the Edit-mode domain before the reload, reaches handlers the Play-mode domain's [InitializeOnLoad] registered, and the first Play mode frame's EditorApplication.update runs before EnteredPlayMode (in the Editor after it). The willChange and isPlaying answers match. Queued: the first frame's update/EnteredPlayMode order.": [
+  "Unbound loads the editor domain once: playModeStateChanged(ExitingEditMode), which the Editor sends in the Edit-mode domain before the reload, reaches handlers the Play-mode domain's [InitializeOnLoad] registered. The willChange and isPlaying answers and the first Play mode frame's update after EnteredPlayMode match.": [
     "playRequest.seen"
   ]
 }

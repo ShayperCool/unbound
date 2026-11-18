@@ -34,7 +34,7 @@ namespace UnityEditor
 
         static EditorApplication()
         {
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.PlayerSendFrameComplete), RunEditorCallbacks);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.PlayerSendFrameComplete), RunFrameEditorCallbacks);
         }
 
         internal static void EnsureRegistered() { }

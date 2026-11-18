@@ -503,6 +503,7 @@ namespace Unbound.Runtime
                 AnimationSystem.EndPlayModeEntry();
                 s_EnteredPlayMode = true;
                 UnityEditor.EditorInitialization.AfterFirstFrame();
+                UnityEditor.EditorApplication.RunEditorCallbacksNow();
             }
             // The Editor runs its own input update after each frame of Play mode.
             NativeInput.EditorUpdate();
