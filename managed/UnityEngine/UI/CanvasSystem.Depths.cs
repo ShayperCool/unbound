@@ -140,17 +140,24 @@ namespace Unbound.Runtime
 
         static void Release(Transform t, Canvas nearest, Canvas root, bool dead)
         {
-            var own = CanvasOf(t);
+            Canvas own = null;
+            bool numbered = false;
+            foreach (var c in t.m_GameObject.m_Components)
+            {
+                if (own == null && c is Canvas canvas && !canvas.m_Destroyed) own = canvas;
+                else if (c is CanvasRenderer cr && cr.m_AbsoluteDepth >= 0) numbered = true;
+            }
             if (own != null)
             {
                 nearest = own;
                 if (own.m_OverrideSorting || root == null) { root = own; dead = !own.IsActiveAndEnabledNoThrow; }
                 else if (!own.IsActiveAndEnabledNoThrow) dead = true;
             }
-            foreach (var c in t.m_GameObject.m_Components)
-                if (c is CanvasRenderer cr && cr.m_AbsoluteDepth >= 0 &&
-                    (dead || cr.m_DepthCanvas != nearest || cr.m_DepthRoot != root))
-                    ClearDepth(cr);
+            if (numbered)
+                foreach (var c in t.m_GameObject.m_Components)
+                    if (c is CanvasRenderer cr && cr.m_AbsoluteDepth >= 0 &&
+                        (dead || cr.m_DepthCanvas != nearest || cr.m_DepthRoot != root))
+                        ClearDepth(cr);
             foreach (var child in t.m_Children) Release(child, nearest, root, dead);
         }
     }
