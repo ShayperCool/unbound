@@ -7,6 +7,9 @@ public class ReparentOnBefore : MonoBehaviour
     public Transform target;
     bool done;
 
+    void OnEnable() => ProbeLog.Event("ReparentOnBefore.OnEnable " + name);
+    void OnDisable() => ProbeLog.Event("ReparentOnBefore.OnDisable " + name);
+
     void OnBeforeTransformParentChanged()
     {
         if (done || target == null) return;

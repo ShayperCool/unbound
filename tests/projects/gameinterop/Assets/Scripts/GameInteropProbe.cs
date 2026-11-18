@@ -260,6 +260,21 @@ public class GameInteropProbe : MonoBehaviour
         Try("reentrant.before.instantiate_p3", () => copy = Instantiate(p3.gameObject));
         if (copy != null) { Row("reentrant.before.copy_p3", Tree(copy.transform)); Destroy(copy); }
 
+        // The interim parent is inactive: the transform hears it is disabled, then enabled again
+        // under the parent it asked for.
+        var r1 = new GameObject("R1").transform;
+        var r2 = new GameObject("R2").transform;
+        var r3 = new GameObject("R3").transform;
+        r2.gameObject.SetActive(false);
+        var z = new GameObject("Z").transform;
+        z.SetParent(r1);
+        z.gameObject.AddComponent<ReparentOnBefore>().target = r2;
+        ProbeLog.Flush("reentrant.inactive.setup");
+        Do("reentrant.inactive", () => z.SetParent(r3));
+        Row("reentrant.inactive.z", Where(z) + " activeInHierarchy=" + z.gameObject.activeInHierarchy + " enabled=" + z.GetComponent<ReparentOnBefore>().isActiveAndEnabled);
+        Row("reentrant.inactive.trees", Tree(r1) + " " + Tree(r2) + " " + Tree(r3));
+        foreach (var t in new[] { r1, r2, r3 }) Destroy(t.gameObject);
+
         var q1 = new GameObject("Q1").transform;
         var q2 = new GameObject("Q2").transform;
         var q3 = new GameObject("Q3").transform;
@@ -288,6 +303,8 @@ public class GameInteropProbe : MonoBehaviour
             Do(key + ".set_trigger", () => animator.SetTrigger("go"));
             Do(key + ".set_bool_hash", () => animator.SetBool(Animator.StringToHash("flag"), true));
             Try(key + ".parameter_count", () => animator.parameterCount);
+            Try(key + ".layer_count", () => animator.layerCount);
+            Try(key + ".layer_name", () => animator.GetLayerName(0));
             Try(key + ".state", () => animator.GetCurrentAnimatorStateInfo(0).IsName("Idle"));
             Do(key + ".play", () => animator.Play("Idle"));
         }

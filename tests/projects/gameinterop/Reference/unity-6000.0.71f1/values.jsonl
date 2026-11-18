@@ -207,6 +207,7 @@
 {"k":"hier.nested_validate.head","v":"none"}
 {"k":"hier.nested_validate.instantiate","v":"returns GameObject 'OuterValidate(Clone)'"}
 {"k":"hier.nested_validate.clone","v":"OuterValidate(Clone)(Lid,Figure(Body(Head(Hat),Arm),Base(Foot)))"}
+{"k":"reentrant.before.before.events","v":"ReparentOnBefore.OnEnable X"}
 {"k":"reentrant.before","v":"returns done"}
 {"k":"reentrant.before.x","v":"under P3 scene=Probe"}
 {"k":"reentrant.before.trees","v":"P1 P2 P3(X)"}
@@ -214,10 +215,18 @@
 {"k":"reentrant.before.instantiate_p2","v":"returns GameObject 'P2(Clone)'"}
 {"k":"reentrant.before.copy_p2","v":"P2(Clone)"}
 {"k":"reentrant.before.instantiate_p3","v":"returns GameObject 'P3(Clone)'"}
+{"k":"reentrant.before.instantiate_p3.events","v":"ReparentOnBefore.OnEnable X"}
 {"k":"reentrant.before.copy_p3","v":"P3(Clone)(X)"}
+{"k":"reentrant.inactive.setup.events","v":"ReparentOnBefore.OnDisable X\nReparentOnBefore.OnEnable Z"}
+{"k":"reentrant.inactive","v":"returns done"}
+{"k":"reentrant.inactive.events","v":"ReparentOnBefore.OnDisable Z\nReparentOnBefore.OnEnable Z"}
+{"k":"reentrant.inactive.z","v":"under R3 scene=Probe activeInHierarchy=True enabled=True"}
+{"k":"reentrant.inactive.trees","v":"R1 R2 R3(Z)"}
+{"k":"reentrant.after.before.events","v":"ReparentOnBefore.OnDisable Z"}
 {"k":"reentrant.after","v":"returns done"}
 {"k":"reentrant.after.y","v":"under Q2 scene=Probe"}
 {"k":"reentrant.after.trees","v":"Q1 Q2(Y) Q3"}
+{"k":"reentrant.events","v":"ReparentOnBefore.OnDisable X"}
 {"k":"animator.Bare.controller","v":"none"}
 {"k":"animator.Bare.initialized","v":"returns True"}
 {"k":"animator.Bare.set_float","v":"returns done"}
@@ -230,6 +239,10 @@
 {"k":"animator.Bare.set_bool_hash.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Bare.parameter_count","v":"returns 0"}
 {"k":"animator.Bare.parameter_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.layer_count","v":"returns 0"}
+{"k":"animator.Bare.layer_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.layer_name","v":"returns "}
+{"k":"animator.Bare.layer_name.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Bare.state","v":"returns False"}
 {"k":"animator.Bare.state.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Bare.play","v":"returns done"}
@@ -245,6 +258,10 @@
 {"k":"animator.Inactive.set_bool_hash","v":"returns done"}
 {"k":"animator.Inactive.set_bool_hash.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Inactive.parameter_count","v":"returns 3"}
+{"k":"animator.Inactive.layer_count","v":"returns 0"}
+{"k":"animator.Inactive.layer_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.layer_name","v":"returns "}
+{"k":"animator.Inactive.layer_name.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Inactive.state","v":"returns False"}
 {"k":"animator.Inactive.state.logs","v":"Warning: Animator is not playing an AnimatorController"}
 {"k":"animator.Inactive.play","v":"returns done"}
@@ -256,6 +273,8 @@
 {"k":"animator.Disabled.set_trigger","v":"returns done"}
 {"k":"animator.Disabled.set_bool_hash","v":"returns done"}
 {"k":"animator.Disabled.parameter_count","v":"returns 3"}
+{"k":"animator.Disabled.layer_count","v":"returns 1"}
+{"k":"animator.Disabled.layer_name","v":"returns Base Layer"}
 {"k":"animator.Disabled.state","v":"returns True"}
 {"k":"animator.Disabled.play","v":"returns done"}
 {"k":"animator.OverrideEmpty.controller","v":"AnimatorOverrideController"}
@@ -269,6 +288,8 @@
 {"k":"animator.OverrideEmpty.set_bool_hash","v":"returns done"}
 {"k":"animator.OverrideEmpty.set_bool_hash.logs","v":"Warning: Animator has not been initialized."}
 {"k":"animator.OverrideEmpty.parameter_count","v":"returns 0"}
+{"k":"animator.OverrideEmpty.layer_count","v":"returns 0"}
+{"k":"animator.OverrideEmpty.layer_name","v":"returns "}
 {"k":"animator.OverrideEmpty.state","v":"returns False"}
 {"k":"animator.OverrideEmpty.play","v":"returns done"}
 {"k":"animator.Override.controller","v":"AnimatorOverrideController"}
@@ -278,6 +299,8 @@
 {"k":"animator.Override.set_trigger","v":"returns done"}
 {"k":"animator.Override.set_bool_hash","v":"returns done"}
 {"k":"animator.Override.parameter_count","v":"returns 3"}
+{"k":"animator.Override.layer_count","v":"returns 1"}
+{"k":"animator.Override.layer_name","v":"returns Base Layer"}
 {"k":"animator.Override.state","v":"returns True"}
 {"k":"animator.Override.play","v":"returns done"}
 {"k":"animator.Controller.controller","v":"AnimatorController"}
@@ -287,6 +310,8 @@
 {"k":"animator.Controller.set_trigger","v":"returns done"}
 {"k":"animator.Controller.set_bool_hash","v":"returns done"}
 {"k":"animator.Controller.parameter_count","v":"returns 3"}
+{"k":"animator.Controller.layer_count","v":"returns 1"}
+{"k":"animator.Controller.layer_name","v":"returns Base Layer"}
 {"k":"animator.Controller.state","v":"returns True"}
 {"k":"animator.Controller.play","v":"returns done"}
 {"k":"animator.assigned.assign","v":"returns done"}

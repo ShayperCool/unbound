@@ -248,7 +248,10 @@ Transform:
         public class MoveOnBefore : MonoBehaviour
         {
             public Transform target;
+            public int enables, disables;
             bool done;
+            void OnEnable() => enables++;
+            void OnDisable() => disables++;
             void OnBeforeTransformParentChanged()
             {
                 if (done) return;
@@ -273,6 +276,19 @@ Transform:
             Assert.Equal(1, p3.childCount);
             Assert.Equal("P2", Tree(Own(Object.Instantiate(p2.gameObject)).transform).Replace("(Clone)", ""));
             Assert.Equal("P3(X)", Tree(Own(Object.Instantiate(p3.gameObject)).transform).Replace("(Clone)", ""));
+
+            // Through an inactive interim parent: disabled there, enabled again where it ends.
+            var r2 = Own(new GameObject("R2")).transform;
+            r2.gameObject.SetActive(false);
+            var z = new GameObject("Z").transform;
+            z.SetParent(p1);
+            var mover = z.gameObject.AddComponent<MoveOnBefore>();
+            mover.target = r2;
+            z.SetParent(p3);
+            Assert.Same(p3, z.parent);
+            Assert.Equal(0, r2.childCount);
+            Assert.True(mover.isActiveAndEnabled);
+            Assert.Equal((2, 1), (mover.enables, mover.disables));
 
             // Control: a reparent to the root from inside the message.
             var y = new GameObject("Y").transform;
@@ -337,6 +353,8 @@ Transform:
             animator.runtimeAnimatorController = Controller();
             const string notPlaying = "Warning: Animator is not playing an AnimatorController";
             Assert.Empty(Logs(() => Assert.Equal(1, animator.parameterCount)));
+            // Its layers are not read.
+            Assert.Equal(new[] { notPlaying }, Logs(() => Assert.Equal(0, animator.layerCount)));
             Assert.Equal(new[] { notPlaying }, Logs(() => animator.SetFloat("speed", 1f)));
             Assert.Equal(new[] { "Warning: Game object with animator is inactive" }, Logs(() => animator.Play("PopupShow")));
             // Control: active, nothing is written and the value is kept.
