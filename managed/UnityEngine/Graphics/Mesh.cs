@@ -25,6 +25,9 @@ namespace UnityEngine
         internal bool m_Dirty = true;
         /// <summary>How many times changes were sent: what a mesh made from this one checks.</summary>
         internal int m_SyncVersion;
+        /// <summary>Where the last upload put each submesh's indices in the renderer's list:
+        /// submesh i's are from entry i to entry i + 1 (see <see cref="UploadedIndexRange"/>).</summary>
+        uint[] m_UploadedStarts;
         /// <summary>Changes whenever the positions or normals are set, also into the arrays the
         /// mesh already has (<see cref="AdoptVertices"/>): caches of them compare it, not only
         /// the arrays.</summary>
@@ -1174,12 +1177,15 @@ namespace UnityEngine
             var indexArray = s_UploadIndices;
             var subs = s_UploadSubmeshes;
             int written = 0;
+            if (m_UploadedStarts == null || m_UploadedStarts.Length != submeshCount + 1) m_UploadedStarts = new uint[submeshCount + 1];
+            m_UploadedStarts[0] = 0;
             for (int i = 0; i < submeshCount; i++)
             {
                 var s = m_SubMeshes[i];
                 int n = SyncedIndexCount(i);
                 subs[i] = new SubMeshPacket { IndexStart = written, IndexCount = n, Topology = (int)s.Topology, BaseVertex = s.BaseVertex };
                 for (int k = 0; k < n; k++) indexArray[written++] = (uint)s.Indices[k];
+                m_UploadedStarts[i + 1] = m_UploadedStarts[i] + UploadedIndexCount(i);
             }
             fixed (Vector3* positions = m_Vertices)
             fixed (Vector3* normals = m_Normals)
@@ -1225,12 +1231,17 @@ namespace UnityEngine
         /// <summary>Where the renderer's index list holds a submesh's indices once uploaded:
         /// the submeshes' indices follow one another in submesh order, a quad's four as two
         /// triangles' six (the renderer's mesh build), whatever ranges <c>SetSubMesh</c> gave them.
-        /// An indirect draw of a submesh reads its indices by these, with its base vertex.</summary>
+        /// An indirect draw of a submesh reads its indices by these, with its base vertex. As the
+        /// last upload placed them; for a mesh changed since (uploaded before it is drawn), as the
+        /// next upload will.</summary>
         internal (uint Start, uint Count, int BaseVertex) UploadedIndexRange(int submesh)
         {
+            int baseVertex = m_SubMeshes[submesh].BaseVertex;
+            if (!m_Dirty && m_UploadedStarts != null && m_UploadedStarts.Length == m_SubMeshes.Count + 1)
+                return (m_UploadedStarts[submesh], m_UploadedStarts[submesh + 1] - m_UploadedStarts[submesh], baseVertex);
             uint start = 0;
             for (int i = 0; i < submesh; i++) start += UploadedIndexCount(i);
-            return (start, UploadedIndexCount(submesh), m_SubMeshes[submesh].BaseVertex);
+            return (start, UploadedIndexCount(submesh), baseVertex);
         }
 
         uint UploadedIndexCount(int submesh)

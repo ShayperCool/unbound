@@ -49,5 +49,38 @@ namespace UnityEngine.Tests
             Assert.Equal((0u, 3u, 0), mesh.UploadedIndexRange(0));
             Assert.Equal((3u, 3u, 0), mesh.UploadedIndexRange(1));
         }
+
+        [Fact]
+        public void UploadedRangesAreTheLastUploadsAndTheNextOnesOnceTheMeshChanges()
+        {
+            var mesh = Grid();
+            mesh.subMeshCount = 2;
+            mesh.SetIndices(new[] { 0, 1, 5, 4 }, MeshTopology.Quads, 0);
+            mesh.SetIndices(new[] { 1, 2, 6 }, MeshTopology.Triangles, 1);
+            mesh.Sync();
+            Assert.Equal((0u, 6u, 0), mesh.UploadedIndexRange(0));
+            Assert.Equal((6u, 3u, 0), mesh.UploadedIndexRange(1));
+            // Changed, not yet uploaded: the ranges the next upload gives.
+            mesh.SetIndices(new[] { 0, 1, 5, 4, 1, 2, 6, 5 }, MeshTopology.Quads, 0);
+            Assert.Equal((12u, 3u, 0), mesh.UploadedIndexRange(1));
+            mesh.Sync();
+            Assert.Equal((0u, 12u, 0), mesh.UploadedIndexRange(0));
+            Assert.Equal((12u, 3u, 0), mesh.UploadedIndexRange(1));
+        }
+
+        [Fact]
+        public void AMeshOutputDrawsTheIndicesAsTheRendererHoldsThem()
+        {
+            // Quads, then triangles placed before them: SetSubMesh's ranges are not the ones drawn.
+            var mesh = Grid();
+            mesh.SetIndexBufferParams(7, IndexFormat.UInt16);
+            mesh.SetIndexBufferData(new ushort[] { 1, 2, 6, 0, 1, 5, 4 }, 0, 0, 7);
+            mesh.subMeshCount = 2;
+            mesh.SetSubMesh(0, new SubMeshDescriptor(3, 4, MeshTopology.Quads), MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetSubMesh(1, new SubMeshDescriptor(0, 3), MeshUpdateFlags.DontRecalculateBounds);
+            Assert.Equal((0u, 6u, 0u), Unbound.Runtime.VFXOutput.Uploaded(mesh, 0));
+            Assert.Equal((6u, 3u, 0u), Unbound.Runtime.VFXOutput.Uploaded(mesh, 1));
+            Assert.Equal(0, mesh.GetSubMesh(1).indexStart);
+        }
     }
 }
