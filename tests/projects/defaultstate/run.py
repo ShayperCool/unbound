@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 import editor_runner
-from probe_paths import reference_root, run_root, unity_version, cache_artifact_path
-from compare import rows, entries, compare, check_constructor_stores, matches, validate_controls
+from probe_paths import MACOS_ARM64, device_reference, reference_root, run_root, unity_version, cache_artifact_path
+from compare import rows, entries, compare, check_constructor_stores, host_decided, matches, validate_controls
 
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -118,14 +118,38 @@ def publish(labels):
     return 0
 
 
+def host_source(probe, file, host):
+    """`probe`'s reference `file` from the Linux Editor, or (`host`) from this host's Editor: on
+    macOS arm64 its Metal counterpart, which must exist."""
+    probe = REPO/'tests/projects'/probe
+    linux = reference_root(probe)/file
+    path = device_reference(linux, probe) if host else linux
+    if host and MACOS_ARM64 and path == linux:
+        raise ValueError(f'no macOS Editor reference for {linux}')
+    return path
+
+
+def expected_rows():
+    """The reference rows, with the rows the host OS decides as this host's Editor measured them."""
+    expected = rows(reference_root(ROOT)/'values.jsonl')
+    hosts = host_decided(json.loads((ROOT/'hostdecided.json').read_text()), unity_version(), expected, host_source)
+    changed = [{'key': key, 'reference': expected[key], 'host': row} for key, row in hosts.items() if row != expected[key]]
+    expected.update(hosts)
+    return expected, changed
+
+
 def check(candidate):
     candidate = cache_artifact_path(candidate)
     debt_document = json.loads((ROOT/'debt.json').read_text())
     debt = entries(debt_document, unity_version())
-    report = compare(rows(reference_root(ROOT)/'values.jsonl'), rows(candidate/'values.jsonl'), debt)
+    expected, hosts = expected_rows()
+    report = compare(expected, rows(candidate/'values.jsonl'), debt)
+    report['hostDecided'] = hosts
     stores = json.loads((candidate/'inventory.json').read_text())['constructorStores']
     report['constructorFailures'] = check_constructor_stores(stores, debt_document['constructorStores'])
     (candidate/'comparison.json').write_text(json.dumps(report, indent=2)+'\n')
+    for row in hosts:
+        print('HOST', json.dumps(row, sort_keys=True))
     for row in report['differences']:
         print('QUEUED' if 'reason' in row else 'FAIL', json.dumps(row, sort_keys=True))
     for key in report['stale']:

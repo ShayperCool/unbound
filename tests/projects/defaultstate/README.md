@@ -115,6 +115,16 @@ exception statuses, empty/duplicate reasons and stale entries fail the gate.
 The variable entries are unresolved comparisons, not parity passes. They need
 relational or initialized-context controls before a default contract can be claimed.
 
+The reference is the Linux Editor's. `hostdecided.json` lists the rows the host OS decides
+(AGENTS.md Platforms); each names the probe that measures the same value on the Linux and
+macOS Editors and the record and field holding it. The check requires the Linux value there to be
+this reference's row, and on macOS arm64 expects the value that probe's macOS Editor
+reference (`metal/`) holds instead, printing a `HOST` line and listing it under `hostDecided` in
+the comparison; a missing macOS reference fails the check. The one such row is
+`LightingSettings.lightmapper`: ProgressiveCPU on Linux, ProgressiveGPU on the macOS Editor
+(tests/projects/lightingassets case `new`). A macOS run of 2026-11-18: 15305 exact rows, 334
+queued, 0 failures (before: the lightmapper row failed).
+
 ## Coverage and migration queue
 
 The initial inventory has 1,032 candidates: 111 components, 31 ScriptableObjects,

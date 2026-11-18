@@ -1,0 +1,14 @@
+{
+  "release": "6000.0.71f1",
+  "entries": [
+    {
+      "key": "UnityEngine.LightingSettings/Property/UnityEngine.LightingSettings/lightmapper",
+      "probe": "lightingassets",
+      "file": "values.jsonl",
+      "record": {"case": "new"},
+      "field": ["settings", "lightmapper"],
+      "value": "enum:{}",
+      "reason": "The host Editor decides the lightmapper a new LightingSettings bakes with and reads: ProgressiveGPU on the macOS Editor (Apple silicon has no CPU lightmapper), ProgressiveCPU on Linux. tests/projects/lightingassets measures the same new object on both hosts (case new: values.jsonl on Linux, metal/values.jsonl on macOS)."
+    }
+  ]
+}

@@ -46,6 +46,38 @@ def entries(document, release):
     return result
 
 
+def host_decided(document, release, reference, source):
+    """The expected rows the host OS decides, read from the probe that measures each on both hosts.
+
+    `source(probe, file, host)` is the path of `probe`'s reference `file` measured on the Linux
+    Editor (host False) or on this host's Editor (host True). Each entry takes one field of the one
+    record matching its `record` fields there. The Linux value must be this probe's reference row,
+    so the source stands for it; the result maps each key to the value measured on this host."""
+    if document['release'] != release:
+        raise ValueError(f"host-decided release {document['release']} does not match {release}")
+    result = {}
+    for entry in document['entries']:
+        key = entry['key']
+        if key in result or not entry.get('reason', '').strip():
+            raise ValueError(f'duplicate host-decided entry or empty reason: {key}')
+
+        def measured(host):
+            path = source(entry['probe'], entry['file'], host)
+            found = [row for row in map(json.loads, Path(path).read_text().splitlines())
+                     if all(row.get(k) == v for k, v in entry['record'].items())]
+            if len(found) != 1:
+                raise ValueError(f'{key}: {len(found)} records match {entry["record"]} in {path}')
+            value = found[0]
+            for part in entry['field']:
+                value = value[part]
+            return {'status': 'value', 'value': entry['value'].format(value)}
+
+        if reference.get(key) != measured(False):
+            raise ValueError(f'{key}: the reference row {reference.get(key)} is not its Linux source value')
+        result[key] = measured(True)
+    return result
+
+
 def matches(actual, entry, side):
     pattern = entry.get(side + 'Pattern')
     if pattern is not None:

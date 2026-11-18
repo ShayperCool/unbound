@@ -7,7 +7,8 @@ from unittest import mock
 
 import run as capture_runner
 
-from compare import rows, entries, compare, check_constructor_stores, matches, validate_controls, CONTROL_VALUES
+import probe_paths
+from compare import rows, entries, compare, check_constructor_stores, host_decided, matches, validate_controls, CONTROL_VALUES
 
 
 def value(text):
@@ -106,6 +107,43 @@ class ComparisonTests(unittest.TestCase):
             with self.assertRaises(ValueError): rows(path)
             path.write_text(path.read_text()*2+json.dumps(dict(key='complete', **value('1')))+'\n')
             with self.assertRaises(ValueError): rows(path)
+
+    def test_host_decided_rows_take_this_hosts_measurement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def write(name, *records):
+                (root/name).write_text(''.join(json.dumps(r)+'\n' for r in records))
+            write('linux.jsonl', {'case': 'other', 'settings': {'mode': 9}}, {'case': 'new', 'settings': {'mode': 1}})
+            write('mac.jsonl', {'case': 'new', 'settings': {'mode': 2}})
+            entry = {'key': 'x', 'probe': 'p', 'file': 'f', 'record': {'case': 'new'}, 'field': ['settings', 'mode'],
+                     'value': 'enum:{}', 'reason': 'host'}
+            document = {'release': 'r', 'entries': [entry]}
+            source = lambda probe, file, host: root/('mac.jsonl' if host else 'linux.jsonl')
+            linux = lambda probe, file, host: root/'linux.jsonl'
+            self.assertEqual(host_decided(document, 'r', {'x': value('enum:1')}, source), {'x': value('enum:2')})
+            self.assertEqual(host_decided(document, 'r', {'x': value('enum:1')}, linux), {'x': value('enum:1')})
+            # The Linux source must be the reference row it stands for.
+            with self.assertRaisesRegex(ValueError, 'not its Linux source'):
+                host_decided(document, 'r', {'x': value('enum:2')}, source)
+            with self.assertRaisesRegex(ValueError, 'not its Linux source'):
+                host_decided(document, 'r', {}, source)
+            write('mac.jsonl', {'case': 'new', 'settings': {'mode': 2}}, {'case': 'new', 'settings': {'mode': 3}})
+            with self.assertRaisesRegex(ValueError, '2 records match'):
+                host_decided(document, 'r', {'x': value('enum:1')}, source)
+            with self.assertRaises(ValueError): host_decided(document, 'other', {'x': value('enum:1')}, source)
+            with self.assertRaises(ValueError):
+                host_decided({'release': 'r', 'entries': [dict(entry, reason=' ')]}, 'r', {'x': value('enum:1')}, source)
+
+    def test_the_lightmapper_row_follows_the_host_editor(self):
+        # Linux reads ProgressiveCPU (1); the macOS Editor ProgressiveGPU (2), from lightingassets.
+        key = 'UnityEngine.LightingSettings/Property/UnityEngine.LightingSettings/lightmapper'
+        for macos, wanted in ((False, 'enum:1'), (True, 'enum:2')):
+            with self.subTest(macos=macos), mock.patch.object(probe_paths, 'MACOS_ARM64', macos), \
+                    mock.patch.object(capture_runner, 'MACOS_ARM64', macos):
+                expected, changed = capture_runner.expected_rows()
+                self.assertEqual(expected[key], value(wanted))
+                self.assertEqual([row['key'] for row in changed], [key] if macos else [])
+                self.assertEqual(len(expected), len(rows(capture_runner.reference_root(capture_runner.ROOT)/'values.jsonl')))
 
     def test_constructor_debt_is_exact_and_detects_fixes(self):
         row = {'constructor': 'C()', 'field': 'x:int', 'expected': 'i4:1', 'actual': 'i4:2'}
