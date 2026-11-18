@@ -109,6 +109,24 @@ class JanitorTests(unittest.TestCase):
         self.assertFalse(beside[0].exists())
         self.assertTrue(beside[1].is_dir())  # each folder keeps its own newest run
 
+    def test_kept_paths_are_counted_in_the_summary_not_logged_each(self):
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        alone = self.directory('unbound-validation/runs/other/gate-1')
+        with self.guards():
+            code = janitor.main(['--repo', str(self.repo), '--apply'])
+        self.assertEqual(code, 0)
+        self.assertFalse(old.exists())
+        self.assertTrue(newest.is_dir() and alone.is_dir())
+        logs = list((self.cache/'agents/janitor').glob('*.jsonl'))
+        rows = [json.loads(line) for line in logs[0].read_text().splitlines()]
+        printed = [json.loads(line) for line in self.output.getvalue().splitlines() if line.startswith('{')]
+        self.assertEqual(rows, printed)
+        self.assertEqual([row for row in rows if row['action'] == 'keep'], [])
+        self.assertEqual([row['path'] for row in rows if row['action'] == 'removed'], [str(old)])
+        kept = rows[-1]['kept']
+        self.assertEqual(rows[-1]['action'], 'summary')
+        self.assertEqual(kept['newest run of its probe'], 2)  # gate-2 of probe, gate-1 of other
+
     def test_sheriff_and_baseline_runs_stay(self):
         sheriff, baseline, plain, newest = self.instances(
             'probe', ['suite-sheriff-S9-abc', 'baseline-2', 'suite-land-q1-s2', 'gate-9'])

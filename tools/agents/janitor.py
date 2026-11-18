@@ -2,7 +2,9 @@
 """Conservative disk hygiene for validation runs, suite labels, completed tasks and orphan targets.
 
 Default is dry-run. Use --apply after inspecting it. JSON lines go to stdout and
-agents/janitor/<timestamp>.jsonl. No worktree or live checkout target is removed.
+agents/janitor/<timestamp>.jsonl: what is removed (or would be), errors and state, and a summary
+that counts what was kept by reason (an hourly run keeps thousands of paths; one line each filled
+the system log). No worktree or live checkout target is removed.
 
 Workers write into the cache all the time (a live Editor rotates its Library folders), so
 nothing here depends on a stable view of the whole cache: one walk lists every link (a directory
@@ -571,6 +573,8 @@ class Janitor:
         self.protected = [Path(p).resolve() for p in extra_protected]
         self.protected_paths = PathSet(self.protected)
         self.removed = self.reclaimable = 0
+        # Paths kept, by reason: counted for the summary, not logged one by one.
+        self.kept = {}
         self.partial = False
         self.deadline = None
         # The promoted suite's protected paths and roots (see promoted_suite_paths).
@@ -745,7 +749,7 @@ class Janitor:
                 if not instances:
                     continue
                 latest = max(instances)[1]
-                self.emit('keep', path=str(latest), reason='newest run of its probe')
+                self.keep(latest, 'newest run of its probe')
                 for _, instance in sorted(instances):
                     if instance != latest and not retained_name(instance.name):
                         yield instance
@@ -764,7 +768,7 @@ class Janitor:
                 if not re.fullmatch(r'q\d+', path.name, re.I) or path.is_symlink() or not path.is_dir():
                     continue
                 if self.states.get(path.name.lower()) != 'landed':
-                    self.emit('keep', path=str(path), reason='task is not landed')
+                    self.keep(path, 'task is not landed')
                     continue
                 # Keep notes at any depth, including their parent directories.
                 for child in children(path):
@@ -838,8 +842,10 @@ class Janitor:
         return None, allocated, reclaimable
 
     def keep(self, path, reason):
+        """Counts a kept path under its reason (a symlink reference: under 'symlink reference')."""
         if reason != 'gone':
-            self.emit('keep', path=str(path), reason=reason)
+            key = reason.split(':', 1)[0]
+            self.kept[key] = self.kept.get(key, 0)+1
 
     def remove_candidates(self):
         """Each candidate is checked and removed in turn. A link from another candidate protects
@@ -1037,7 +1043,7 @@ def main(argv=None):
                 failed = True
             after = free_space(args.repo, args.protect)
             janitor.emit('summary', apply=args.apply, failed=failed, partial=janitor.partial,
-                          removals=janitor.removed,
+                          removals=janitor.removed, kept=janitor.kept,
                           reclaimable_bytes=janitor.reclaimable, free_bytes=after,
                           free_change_bytes={p: after[p]-value for p, value in before.items() if p in after})
     return 1 if failed else 3 if janitor.partial else 0
