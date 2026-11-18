@@ -98,6 +98,7 @@ public class LocalPhysicsProbe : MonoBehaviour
         foreach (var step in Each(Run2D())) yield return step;
         foreach (var step in Each(RunBoth())) yield return step;
         foreach (var step in Each(RunLoaded())) yield return step;
+        foreach (var step in Each(RunReparent())) yield return step;
     }
 
     static IEnumerable<object> Each(IEnumerator steps)
@@ -585,6 +586,127 @@ public class LocalPhysicsProbe : MonoBehaviour
         Put("loaded.later3d", ps.IsValid());
         Put("loaded.later2d", ps2.IsValid());
         Logs("loaded");
+
+        // The unloaded scene's physics scenes in use: stepped, queried, and beside the scene
+        // loaded again with the same modes.
+        Put("stale.simulate3d", Try(() => { ps.Simulate(0.02f); return "ran"; }));
+        Put("stale.simulate2d", Try(() => ps2.Simulate(0.02f)));
+        Put("stale.raycast3d", Try(() => ps.Raycast(new Vector3(0, 10, 0), Vector3.down, 100)));
+        Put("stale.raycast2d", Try(() => Hit(ps2.Raycast(new Vector2(0, 10), Vector2.down, 100))));
+        Put("stale.overlap3d", Try(() => ps.OverlapSphere(Vector3.zero, 5f, new Collider[4], ~0, QueryTriggerInteraction.Collide)));
+        Put("stale.empty3d", Try(() => ps.IsEmpty()));
+        Put("stale.empty2d", Try(() => ps2.IsEmpty()));
+        Logs("stale");
+        var again = SceneManager.LoadSceneAsync("Sim", new LoadSceneParameters(LoadSceneMode.Additive, LocalPhysicsMode.Physics2D | LocalPhysicsMode.Physics3D));
+        while (!again.isDone) yield return null;
+        var reloaded = SceneManager.GetSceneByName("Sim");
+        Put("stale.reload.same3d", reloaded.GetPhysicsScene() == ps);
+        Put("stale.reload.same2d", reloaded.GetPhysicsScene2D() == ps2);
+        Put("stale.reload.oldValid3d", ps.IsValid());
+        Put("stale.reload.oldValid2d", ps2.IsValid());
+        Put("stale.reload.oldEmpty3d", Try(() => ps.IsEmpty()));
+        Put("stale.reload.oldRaycast3d", Try(() => ps.Raycast(new Vector3(0, 10, 0), Vector3.down, 100)));
+        Put("stale.reload.newRaycast3d", reloaded.GetPhysicsScene().Raycast(new Vector3(0, 10, 0), Vector3.down, 100));
+        Put("stale.reload.oldRaycast2d", Try(() => Hit(ps2.Raycast(new Vector2(0, 10), Vector2.down, 100))));
+        Put("stale.reload.newRaycast2d", Hit(reloaded.GetPhysicsScene2D().Raycast(new Vector2(0, 10), Vector2.down, 100)));
+        var unloadAgain = SceneManager.UnloadSceneAsync(reloaded);
+        while (!unloadAgain.isDone) yield return null;
+        Logs("stale.reload");
+    }
+
+    // Bodies reparented across scenes under an inactive parent: the scene they are in, the
+    // callbacks in order with the physics scene they are in at the time, where they are after the
+    // parent is activated, and whether the parent's scene then steps them.
+    IEnumerator RunReparent()
+    {
+        var scene = SceneManager.CreateScene("Reparent", new CreateSceneParameters(LocalPhysicsMode.Physics3D | LocalPhysicsMode.Physics2D));
+        var ps = scene.GetPhysicsScene();
+        var ps2 = scene.GetPhysicsScene2D();
+        var parent = new GameObject("inactiveParent");
+        SceneManager.MoveGameObjectToScene(parent, scene);
+        parent.SetActive(false);
+        var body = Body3("reparented3", new Vector3(30, 5, 0));
+        body.useGravity = false;
+        body.linearVelocity = new Vector3(1, 0, 0);
+        var body2 = Body2("reparented2", new Vector2(30, 5));
+        body2.gravityScale = 0;
+        body2.linearVelocity = new Vector2(1, 0);
+        Physics.SyncTransforms();
+        foreach (var step in Each(Fixed(1))) yield return step;
+        body.gameObject.AddComponent<SceneEvents>();
+        body2.gameObject.AddComponent<SceneEvents>();
+        Events.Clear();
+        Put("reparent.beforeEmpty3d", ps.IsEmpty());
+        Put("reparent.beforeEmpty2d", ps2.IsEmpty());
+
+        body.transform.SetParent(parent.transform, true);
+        body2.transform.SetParent(parent.transform, true);
+        EventsRow("reparent.setParent.events");
+        Put("reparent.setParent.scene3d", body.gameObject.scene.name);
+        Put("reparent.setParent.scene2d", body2.gameObject.scene.name);
+        Put("reparent.setParent.active", body.gameObject.activeInHierarchy);
+        Put("reparent.setParent.empty3d", ps.IsEmpty());
+        Put("reparent.setParent.empty2d", ps2.IsEmpty());
+        Put("reparent.setParent.mainRaycast3d", Physics.Raycast(new Vector3(30, 10, 0), Vector3.down, 100));
+        Put("reparent.setParent.mainRaycast2d", Hit(Physics2D.Raycast(new Vector2(30, 10), Vector2.down, 100)));
+
+        parent.SetActive(true);
+        EventsRow("reparent.activate.events");
+        Put("reparent.activate.empty3d", ps.IsEmpty());
+        Put("reparent.activate.empty2d", ps2.IsEmpty());
+        Put("reparent.activate.velocity3d", body.linearVelocity);
+        Put("reparent.activate.velocity2d", body2.linearVelocity);
+        Put("reparent.activate.localRaycast3d", ps.Raycast(new Vector3(30, 10, 0), Vector3.down, 100));
+        Put("reparent.activate.localRaycast2d", Hit(ps2.Raycast(new Vector2(30, 10), Vector2.down, 100)));
+        Put("reparent.activate.mainRaycast3d", Physics.Raycast(new Vector3(30, 10, 0), Vector3.down, 100));
+        Put("reparent.activate.mainRaycast2d", Hit(Physics2D.Raycast(new Vector2(30, 10), Vector2.down, 100)));
+        var before3 = body.position;
+        var before2 = body2.position;
+        foreach (var step in Each(Fixed(2))) yield return step;
+        Put("reparent.auto.moved3d", body.position != before3);
+        Put("reparent.auto.moved2d", body2.position != before2);
+        ps.Simulate(0.02f);
+        ps2.Simulate(0.02f);
+        Put("reparent.sim.moved3d", body.position != before3);
+        Put("reparent.sim.moved2d", body2.position != before2);
+        EventsRow("reparent.sim.events");
+
+        // Back out under an inactive parent in the main scene, then that parent activated.
+        var mainParent = new GameObject("inactiveMainParent");
+        mainParent.SetActive(false);
+        body.transform.SetParent(mainParent.transform, true);
+        body2.transform.SetParent(mainParent.transform, true);
+        EventsRow("reparent.back.events");
+        Put("reparent.back.scene3d", body.gameObject.scene.name);
+        Put("reparent.back.empty3d", ps.IsEmpty());
+        Put("reparent.back.empty2d", ps2.IsEmpty());
+        mainParent.SetActive(true);
+        EventsRow("reparent.backActivate.events");
+        Put("reparent.backActivate.empty3d", ps.IsEmpty());
+        Put("reparent.backActivate.empty2d", ps2.IsEmpty());
+        Put("reparent.backActivate.mainRaycast3d", Physics.Raycast(new Vector3(30, 10, 0), Vector3.down, 100));
+        Put("reparent.backActivate.mainRaycast2d", Hit(Physics2D.Raycast(new Vector2(30, 10), Vector2.down, 100)));
+        // Controls in one scene: under an inactive parent of the main scene, then out from under
+        // it to an active one (the callbacks' order when the object becomes active).
+        var sameParent = new GameObject("inactiveSameParent");
+        sameParent.SetActive(false);
+        var sameBody = Body3("sameScene3", new Vector3(40, 5, 0));
+        sameBody.useGravity = false;
+        sameBody.gameObject.AddComponent<SceneEvents>();
+        Events.Clear();
+        sameBody.transform.SetParent(sameParent.transform, true);
+        EventsRow("reparent.sameScene.events");
+        var activeParent = new GameObject("activeParent");
+        sameBody.transform.SetParent(activeParent.transform, true);
+        EventsRow("reparent.toActive.events");
+        Put("reparent.toActive.mainRaycast3d", Physics.Raycast(new Vector3(40, 10, 0), Vector3.down, 100));
+        Logs("reparent");
+        Destroy(sameParent);
+        Destroy(activeParent);
+        Destroy(mainParent);
+        var unload = SceneManager.UnloadSceneAsync(scene);
+        while (!unload.isDone) yield return null;
+        Logs("reparent.end");
     }
 
     // A load with one local physics scene: the other stays the default one.

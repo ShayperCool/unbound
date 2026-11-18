@@ -1,7 +1,9 @@
 # Local physics scenes
 
-Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode; the two captures are
-byte-identical and the canonical reference is `Reference/unity-6000.0.71f1.jsonl`. The values
+Unity 6000.0.71f1, recorded twice with the macOS Editor in batch mode, then again with the
+Linux GPU Editor in batch mode with the `stale.*` and `reparent.*` cases added (every earlier row
+the same); each pair of captures is byte-identical and the canonical reference is
+`Reference/unity-6000.0.71f1.jsonl`. The values
 are managed state, scene identities and positions after a few steps rounded to four decimals.
 None depends on the graphics device. The gate compares every row exactly, except the rows that
 `known.json` lists with their reason (recorded residuals, reported by `compare`).
@@ -33,15 +35,28 @@ records, for 3D (`p3.*`) and 2D (`p2.*`) scenes made with `SceneManager.CreateSc
   throw InvalidOperationException; the 3D raycast answers false, the 2D one hits nothing.
 - `both.*`: a scene with both flags gets both local physics scenes, LocalPhysicsMode.None neither.
 - `loaded*`: `Assets/Scenes/Sim.unity` (a 3D and a 2D floor at the origin, authored by
-  `ProbeRunner.MakeScenes`) loaded additively with each mode.
+  `ProbeRunner.MakeScenes`) loaded additively with each mode. A loaded scene's local physics
+  scenes stay valid and empty after its unload, three frames later too, unlike a created
+  scene's.
+- `stale.*`: those physics scenes in use after the unload: Simulate runs and does nothing (2D
+  answers true), raycasts and overlaps find nothing, nothing is logged; the scene loaded again
+  gets new physics scenes, and the old ones stay valid and empty beside them.
+- `reparent.*`: a 3D and a 2D body moved by SetParent under an inactive parent of a local
+  scene, then the parent activated, then back under an inactive parent of the main scene; and in
+  one scene, under an inactive parent and out to an active one (`sameScene`, `toActive`): the
+  bodies join their parent's scene; OnDisable (or OnEnable) comes before
+  OnTransformParentChanged, in the new scene; the local scene holds them only once active; a 3D
+  body keeps its velocity, a 2D one starts at rest; the local scene's Simulate steps them, the
+  automatic simulation does not.
 
 `*.logs` and `*.log<i>` rows hold the messages logged during each case.
 
-Recorded residual (`known.json`): a scene loaded with `LoadSceneAsync` keeps its local physics
-scenes valid and empty after its unload in the Editor, three frames later too, where a created
-scene's are invalid; Unbound follows the documented lifetime for both. Not recorded: a scene's
-physics scene after a scene merge, parenting across scenes, objects moved during a step's
-callbacks, interpolation in local scenes, other releases.
+The LocalPhysicsMode page documents that "the lifetime of the physics Scene(s) is the same as the
+Scene"; the Editor follows it for a created scene and keeps a loaded scene's, which Unbound
+matches for 6000.0 (Compat.LoadedScenePhysicsOutlivesUnload; other releases follow the
+documented lifetime). Not recorded: a scene's physics scene after a scene merge, objects moved
+during a step's callbacks, interpolation in local scenes, a scene loaded synchronously
+(LoadScene, taken as a loaded one), other releases.
 
 ```bash
 python3 tests/projects/localphysics/run.py native --label mac-a   # and mac-b: two Editor captures
