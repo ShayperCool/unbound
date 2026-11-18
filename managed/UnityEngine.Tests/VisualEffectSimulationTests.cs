@@ -1059,14 +1059,15 @@ namespace UnityEngine.Tests
                 buffers = new[] { new VFXMapping("indirectBuffer", 1) },
             };
             Assert.Null(VFXOutput.Refusal(system, listed, material));
-            var second = listed;
-            second.parameters = new[] { new VFXMapping("mesh", 3), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 2) };
-            var severalMeshes = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { second, listed } };
+            var otherMesh = listed;
+            otherMesh.parameters = new[] { new VFXMapping("mesh", 3), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 2) };
+            otherMesh.buffers = new[] { new VFXMapping("indirectBuffer", 2) };
+            var severalMeshes = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
             Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, listed, material));
-            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, second, material));
+            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, otherMesh, material));
             // Two outputs of meshes, each with its own shader, are each drawn.
-            second.shaderSourceIndex = 5;
-            var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { second, listed } };
+            otherMesh.shaderSourceIndex = 5;
+            var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
             Assert.Null(VFXOutput.Refusal(twoOutputs, listed, material));
             Assert.Equal("its task names no mesh or no submesh mask", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput }, material));
             Assert.Equal("its shader was not imported", VFXOutput.Refusal(system, meshes, null));
