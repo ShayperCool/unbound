@@ -22,7 +22,7 @@ overlapping sprites of one sorting order is unspecified).
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1
-python3 tests/projects/svgsprites/run.py author --label author
+python3 tests/projects/svgsprites/author.py --label author
 python3 tests/projects/svgsprites/run.py native --label native-a
 python3 tests/projects/svgsprites/run.py native --label native-b
 python3 tests/projects/svgsprites/run.py publish native-a native-b
@@ -56,3 +56,14 @@ The generated physics shapes come from the package tracing its rendered texture 
 Not covered: the UI SVGImage drawn on a canvas, and
 the 2D Sprite package's sprite editor window (Unbound has no editor windows; registering it still
 warns as unimplemented, while hyperlink-click listeners are kept).
+
+`author.py` authors the inputs and is the driver the authored set is keyed on, so changes to
+`run.py` (capture, publish, check) leave the set valid. Re-authoring it in the Linux Editor on
+2026-11-18 gave new GUIDs and settings in `Authored/`; two Linux captures from it were
+byte-identical to the reference.
+
+On macOS arm64 `publish` writes and `check` reads `Reference/unity-<version>/metal.json`, two
+identical captures of the 6000.0.71f1 macOS Editor (Metal, Apple M2 Pro); 12 of its values differ
+from the Linux reference (rendered image pixels). Unbound on Metal: no differences beyond the
+listed residual pixels.
+
