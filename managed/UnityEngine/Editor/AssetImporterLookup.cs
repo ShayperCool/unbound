@@ -98,6 +98,8 @@ namespace UnityEditor
                 }
             }
             if (importer == null) return null;
+            importer.m_Settings = MetaSettings.Clone(body);
+            importer.m_SettingsType = typeName;
             importer.m_AssetPath = path;
             importer.userData = body.Str("userData");
             importer.assetBundleName = body.Str("assetBundleName");

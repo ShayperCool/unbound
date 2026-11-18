@@ -84,6 +84,13 @@ namespace UnityEditor
 
         public static string[] GetAllAssetPaths() => Entries.Select(e => e.Path).ToArray();
 
+        /// <summary>What the native side imports an asset as (texture, model, audio, folder, ...).</summary>
+        internal static string Kind(string path)
+        {
+            _ = Entries;
+            return path != null && s_ByPath.TryGetValue(path, out var e) ? e.Kind : null;
+        }
+
         /// <summary>Whether the asset's main object is in memory: loaded (a scene that references it
         /// loaded it too) and not unloaded since (Resources.UnloadAsset). Matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/assetloaded.</summary>

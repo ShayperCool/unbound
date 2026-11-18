@@ -114,6 +114,11 @@ namespace UnityEditor
             // an edit restarted (matches the Unity 6000.0.71f1 Editor, tests/projects/compileevents
             // start.load and round*.order).
             UnityEditor.AssemblyReloadEvents.RaiseAfter();
+            // Every domain load then calls OnPostprocessAllAssets (didDomainReload), before the
+            // runtime initializers (tests/projects/assetpostprocessors timeline); Unbound's import
+            // of the opened project runs the preprocessors.
+            AssetPostprocessing.DomainLoaded();
+            AssetPostprocessing.PrepareImports();
         }
 
         /// <summary>The editor domain's load callbacks run as Play mode is entered (in the Editor,

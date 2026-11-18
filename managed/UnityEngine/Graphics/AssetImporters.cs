@@ -200,6 +200,7 @@ namespace Unbound.Runtime
         static LoadedFile ImportTexture(AssetDatabaseRuntime.AssetInfo info)
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
+            UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "texture");
             ulong handle = RenderHandles.Next();
             if (!Native.ImportTexture(handle, info.Guid, out var imported))
                 throw new InvalidOperationException("the texture could not be imported");
@@ -208,10 +209,12 @@ namespace Unbound.Runtime
                 var cube = Cubemap.FromImport(handle, info.Guid, name, imported);
                 var cubeFile = new LoadedFile { MainObject = cube };
                 cubeFile.Objects[CubemapFileId] = cube;
+                UnityEditor.AssetPostprocessing.PostprocessCubemap(info.Path, cube);
                 return cubeFile;
             }
             if (imported.Dimension == 5 || imported.Dimension == 3)
             {
+                UnityEditor.AssetPostprocessing.ReportUnsupported(imported.Dimension == 5 ? "texture2darray" : "texture3d");
                 // The Texture2DArray and Texture3D shapes: one object of the shape's class.
                 Texture layered = imported.Dimension == 5
                     ? Texture2DArray.FromImport(handle, info.Guid, name, imported)
@@ -223,12 +226,15 @@ namespace Unbound.Runtime
             var texture = Texture2D.FromImport(handle, info.Guid, name, imported);
             var file = new LoadedFile { MainObject = texture };
             file.Objects[Texture2DFileId] = texture;
+            var sprites = new List<Sprite>();
             if (imported.SpriteCount > 0)
                 foreach (var (fileId, sprite) in ImportedSprites(texture, info.Guid, name))
                 {
                     file.Objects[fileId] = sprite;
+                    sprites.Add(sprite);
                     UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, fileId);
                 }
+            UnityEditor.AssetPostprocessing.PostprocessTexture(info.Path, texture, sprites.ToArray());
             return file;
         }
 

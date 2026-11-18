@@ -205,7 +205,6 @@ namespace UnityEditor.AssetImporters
 
         const string k_SizeMismatch = "Image data byte count does not match requested texture import format";
 
-        static List<(int Order, Type Type, MethodInfo Method)> s_TextureHooks, s_SpriteHooks;
         static readonly HashSet<string> s_WarnedSecondary = new HashSet<string>(StringComparer.Ordinal);
 
         public static TextureGenerationOutput GenerateTexture(TextureGenerationSettings settings, NativeArray<Color32> colorBuffer)
@@ -260,11 +259,9 @@ namespace UnityEditor.AssetImporters
             var output = new TextureGenerationOutput(texture, Thumbnail(source, texels, linearColor), sprites);
             if (settings.enablePostProcessor)
             {
-                s_TextureHooks ??= AssetPostprocessorHooks.Find("OnPostprocessTexture", new[] { typeof(Texture2D) });
-                s_SpriteHooks ??= AssetPostprocessorHooks.Find("OnPostprocessSprites", new[] { typeof(Texture2D), typeof(Sprite[]) });
-                AssetPostprocessorHooks.Run(s_TextureHooks, settings.assetPath, null, new object[] { texture });
+                AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessTexture", typeof(Texture2D)), settings.assetPath, null, new object[] { texture });
                 if (sprites.Length > 0)
-                    AssetPostprocessorHooks.Run(s_SpriteHooks, settings.assetPath, null, new object[] { texture, sprites });
+                    AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessSprites", typeof(Texture2D), typeof(Sprite[])), settings.assetPath, null, new object[] { texture, sprites });
             }
             return output;
         }

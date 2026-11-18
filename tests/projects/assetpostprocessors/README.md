@@ -67,4 +67,13 @@ python3 tests/projects/assetpostprocessors/run.py publish native-a native-b
 UNBOUND=/path/to/unbound python3 tests/projects/assetpostprocessors/run.py gate
 ```
 
-Values compare exactly (tolerance 0).
+Values compare exactly (tolerance 0). The folder `.meta` files are committed so that both sides
+see them (an asset without one has `importSettingsMissing` set in the Editor); the context's build
+target is left out (it is the Editor's platform).
+
+Unbound on macOS, 2026-11-18: 108/211 values, 0 failures and 103 recorded residuals
+(`residuals.json`, five causes): model postprocessors are not run yet (Unbound's model prefabs
+expand natively in scenes; they are reported once when a model loads), OnPreprocessAsset is given
+only the textures, models and audio clips Unbound imports, the Editor's rewritten `.meta` files,
+the compressed format a block-compressed texture has in OnPostprocessTexture, and the Play mode
+domain's ExitingEditMode (as in compileevents).

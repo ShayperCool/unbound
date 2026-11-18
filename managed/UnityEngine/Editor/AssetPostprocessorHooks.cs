@@ -47,11 +47,13 @@ namespace Unbound.Runtime
             return found;
         }
 
-        /// <summary>Runs each hook on a new postprocessor of its type with this asset path and
-        /// context; a hook's exception is logged and the next one runs.</summary>
-        internal static void Run(List<(int Order, Type Type, MethodInfo Method)> hooks, string assetPath,
-            UnityEditor.AssetImporters.AssetImportContext context, object[] arguments)
+        /// <summary>Runs each hook on a new postprocessor of its type with this asset path, context
+        /// and importer; a hook's exception is logged and the next one runs. Returns the last hook's
+        /// result (OnAssignMaterialModel's material).</summary>
+        internal static object Run(List<(int Order, Type Type, MethodInfo Method)> hooks, string assetPath,
+            UnityEditor.AssetImporters.AssetImportContext context, object[] arguments, AssetImporter importer = null)
         {
+            object result = null;
             foreach (var (_, type, method) in hooks)
             {
                 try
@@ -59,7 +61,8 @@ namespace Unbound.Runtime
                     var postprocessor = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
                     postprocessor.assetPath = assetPath;
                     postprocessor.context = context;
-                    method.Invoke(postprocessor, arguments);
+                    postprocessor.assetImporter = importer;
+                    result = method.Invoke(postprocessor, arguments);
                 }
                 catch (TargetInvocationException e)
                 {
@@ -70,6 +73,7 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            return result;
         }
     }
 }
