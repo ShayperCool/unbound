@@ -295,7 +295,10 @@ TexturePacket {
   i32 render_target;   // bits: 1 render attachment, 2 storage binding, 4 auto-generate mips;
                        // 8 deferred mip updates, 16 retained resolve, 32 bind native MSAA;
                        // 64 compares depth, 128 carries depth sampler state;
-                       // bits 8..15 contain the MSAA sample count
+                       // bits 8..15 contain the MSAA sample count; 1 << 16 screen channel
+                       // order, bits 17..18 packed channel bits, 1 << 19 Unity's B8G8R8A8
+                       // color (where the device stores it blue first, copies to and from
+                       // red-first textures trade red and blue)
   i32 depth_bits;      // 0 none, 16 depth, 24 depth+stencil, -24 depth only, 32 float depth, -32 float depth+stencil
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
   i32 wrap_w;          // TextureWrapMode along W (NativeApi 14): a Texture3D's depth

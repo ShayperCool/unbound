@@ -101,7 +101,8 @@ use std::ffi::c_void;
 /// 89: `generate_texture` imports a script's texels (TextureGenerator.GenerateTexture).
 /// 90: a state override's mask bit `ENGINE_STENCIL` writes the engine's stencil bits (its
 /// reference) beside the pass's own reference bits its read mask keeps.
-pub const NATIVE_API_VERSION: u32 = 90;
+/// 91: texture flag bit 19 marks Unity's B8G8R8A8 color (`owned::Texture::blue_first`).
+pub const NATIVE_API_VERSION: u32 = 91;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

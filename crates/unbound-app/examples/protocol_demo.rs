@@ -171,6 +171,7 @@ fn texture(width: i32, height: i32, format: i32, data: Vec<u8>, filter: i32) -> 
         dimension: 2,
         logical: None,
         screen_order: false,
+        blue_first: false,
         packed: 0,
     }
 }

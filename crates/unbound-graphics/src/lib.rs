@@ -214,6 +214,16 @@ impl GraphicsDevice {
         matches!(self, Self::Metal)
     }
 
+    /// Whether `Graphics.CopyTexture` between an 8-bit four-channel texture stored blue first
+    /// (Unity's `B8G8R8A8` formats on this device) and one stored red first copies the stored
+    /// bytes, red and blue trading places: the macOS Editor's Metal device, in both directions,
+    /// for render textures and textures, a copy's CPU data alike (tests/projects/cmdbuffers
+    /// `metal.jsonl` `metal.copy.*`, `tarray.slices`, `tarray.blit`). OpenGL Core makes no such
+    /// formats blue first; Vulkan is unmeasured (taken as copying the channels).
+    pub fn stores_bgra_blue_first(self) -> bool {
+        matches!(self, Self::Metal)
+    }
+
     /// Whether a draw into a packed render target (4-4-4-4 included) keeps each channel's nearest
     /// level, read back as exactly `level / (2^bits - 1)`: the macOS Editor's Metal device
     /// stores the formats themselves (0.5 reads 16/31 in a 5-bit channel, 0.7 11/15 in a 4-bit

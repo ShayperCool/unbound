@@ -346,7 +346,8 @@ pub struct TexturePacket {
     /// Flags: 1 drawn into, 2 kernels write it, 4 automatic mips, 8 deferred mip updates,
     /// 16 retained MSAA resolve, 32 multisampled images bound, 64/128 depth comparison, bits
     /// 8..15 the MSAA sample count, 1 << 16 stored in the screen's channel order (NativeApi 82),
-    /// bits 17..18 the channel bits drawn values keep: 1 5-6-5, 2 5-5-5-1 (NativeApi 87).
+    /// bits 17..18 the channel bits drawn values keep: 1 5-6-5, 2 5-5-5-1 (NativeApi 87), 1 << 19
+    /// Unity's B8G8R8A8 color (NativeApi 91).
     pub render_target: i32,
     pub depth_bits: i32,
     /// Images (6 for a cubemap); the data holds each image's mip chain in turn.
@@ -552,6 +553,10 @@ pub mod owned {
         /// An 8-bit color stored in the screen's channel order (blue first where the device's
         /// screen is): the texture a screen camera draws into in its place.
         pub screen_order: bool,
+        /// Unity's B8G8R8A8 color (kept red first here): where the device stores it blue first, a
+        /// copy between it and a texture stored red first copies the stored bytes, red and blue
+        /// traded (flag bit 19).
+        pub blue_first: bool,
         /// The channel bits a render target keeps of what is drawn into it: 0 its 8-bit store,
         /// [`PACKED_565`], [`PACKED_5551`], [`PACKED_4444`].
         pub packed: u8,
@@ -592,6 +597,7 @@ pub mod owned {
                 layers: p.layers.max(1),
                 dimension: if p.dimension == 0 { 2 } else { p.dimension },
                 screen_order: p.render_target & (1 << 16) != 0,
+                blue_first: p.render_target & (1 << 19) != 0,
                 packed: ((p.render_target >> 17) & 3) as u8,
                 logical: (p.logical_width > 0 && p.logical_height > 0)
                     .then_some((p.logical_width as u32, p.logical_height as u32)),

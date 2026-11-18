@@ -569,7 +569,7 @@ namespace UnityEngine
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
         const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128,
-            ScreenOrder = 1 << 16, Packed565 = 1 << 17, Packed5551 = 2 << 17, Packed4444 = 3 << 17;
+            ScreenOrder = TexturePacket.ScreenOrder, Packed565 = 1 << 17, Packed5551 = 2 << 17, Packed4444 = 3 << 17;
 
         /// <summary>The packet bits of a 5-6-5, 1-5-5-5 or (GraphicsDeviceProfile.Packs4444Targets)
         /// 4-4-4-4 target whose drawn values the device keeps at its channels' bits

@@ -93,6 +93,10 @@ namespace UnityEngine
         // sampler state must be sent when its first handle is uploaded.
         internal unsafe void UploadTexture(TexturePacket* packet)
         {
+            // Kept red first, a B8G8R8A8 color tells the renderer its order, which a copy into or
+            // out of a red-first texture moves on a device storing it blue first (Metal).
+            if ((packet->RenderTarget & TexturePacket.ScreenOrder) == 0 && TexturePacket.IsBlueFirst(GraphicsFormatOf()))
+                packet->RenderTarget |= TexturePacket.BlueFirst;
             Unbound.Runtime.Native.UploadTexture(m_NativeHandle, packet);
             if (m_MipMapBias != 0f) EmitSamplerMetadata();
         }

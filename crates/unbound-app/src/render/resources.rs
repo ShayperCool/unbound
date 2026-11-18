@@ -572,6 +572,9 @@ pub struct GpuTexture {
     pub logical: Option<(u32, u32)>,
     /// Stored in the screen's channel order (a screen camera's stand-in).
     pub screen_order: bool,
+    /// Unity's B8G8R8A8 color, kept red first (`owned::Texture::blue_first`; where the device
+    /// stores it blue first, copies into and out of red-first textures trade red and blue).
+    pub blue_first: bool,
     /// The channel bits drawn values keep (`owned::PACKED_*`; 0: none).
     pub packed: u8,
     pub format: i32,
@@ -1727,6 +1730,7 @@ pub fn upload_texture_with(
             e.sampler_key = sampler_key;
             e.depth_compare = t.depth_compare;
             e.logical = t.logical;
+            e.blue_first = t.blue_first;
             e.bind_groups = [None, None];
             e
         }
@@ -1997,6 +2001,7 @@ pub fn upload_texture_with(
                 height,
                 logical: t.logical,
                 screen_order: t.screen_order,
+                blue_first: t.blue_first,
                 packed: t.packed,
                 format: t.format,
                 mip_count,
@@ -2201,6 +2206,7 @@ pub fn default_textures(
         dimension: 2,
         logical: None,
         screen_order: false,
+        blue_first: false,
         packed: 0,
     };
     use texture_format::{LINEAR_RGBA8, SRGB_RGBA8};

@@ -143,6 +143,9 @@ pub struct DeviceConventions {
     /// `SV_VertexID` counts from the draw's first vertex
     /// (`GraphicsDevice::vertex_id_from_draw_start`).
     pub vertex_id_from_draw_start: bool,
+    /// Copies between blue-first and red-first 8-bit textures copy the stored bytes
+    /// (`GraphicsDevice::stores_bgra_blue_first`).
+    pub bgra_copies_bytes: bool,
 }
 
 impl DeviceConventions {
@@ -164,6 +167,7 @@ impl DeviceConventions {
             packed_writes_round: device.packed_writes_round(),
             copies_unused_counters: device.copies_unused_counters(),
             vertex_id_from_draw_start: device.vertex_id_from_draw_start(),
+            bgra_copies_bytes: device.stores_bgra_blue_first(),
         }
     }
 

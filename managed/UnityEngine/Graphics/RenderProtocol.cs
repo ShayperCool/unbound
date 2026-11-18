@@ -51,6 +51,15 @@ namespace Unbound.Runtime
         internal const int Depth32StencilBits = -32;
         // Positive 24 keeps stencil; this tag preserves explicit depth-only storage.
         internal const int Depth24Bits = -24;
+        /// <summary>RenderTarget flag: stored in the screen's channel order (NativeApi 82).</summary>
+        internal const int ScreenOrder = 1 << 16;
+        /// <summary>RenderTarget flag: Unity's B8G8R8A8 color, kept red first; a device that
+        /// stores it blue first copies its bytes to and from red-first textures (NativeApi 91).</summary>
+        internal const int BlueFirst = 1 << 19;
+
+        internal static bool IsBlueFirst(UnityEngine.Experimental.Rendering.GraphicsFormat format) =>
+            format is UnityEngine.Experimental.Rendering.GraphicsFormat.B8G8R8A8_UNorm
+                or UnityEngine.Experimental.Rendering.GraphicsFormat.B8G8R8A8_SRGB;
 
         internal int Width;
         internal int Height;

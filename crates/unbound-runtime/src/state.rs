@@ -2052,6 +2052,7 @@ fn upload_imported(
             dimension,
             logical: None,
             screen_order: false,
+            blue_first: false,
             packed: 0,
         },
     );

@@ -336,6 +336,9 @@ enum CopyKind {
     ToR8,
     ToRgba8,
     ToBgra8,
+    /// RGBA8 texels with red and blue traded: the stored bytes of a texture stored blue first
+    /// copied into one stored red first, or back (`DeviceConventions::bgra_copies_bytes`).
+    SwapRedBlue,
     /// An RGBA8 target's texels as a 5-6-5, 5-5-5-1 or 4-4-4-4 target keeps them
     /// (`PACKED_TEXELS_WGSL`: the Editor's devices keep a value drawn into such a target at its
     /// channels' bits, measured by tests/projects/samplerstates Packed.*; Unbound stores RGBA8
@@ -349,7 +352,7 @@ enum CopyKind {
 const COPY_SAMPLE_CLASSES: usize = 4;
 
 impl CopyKind {
-    const COUNT: usize = 12;
+    const COUNT: usize = 13;
 
     fn index(self) -> usize {
         self as usize
@@ -392,6 +395,18 @@ fn channel_copy_kind(
         (F::Rgba8Unorm, F::Bgra8Unorm) if screen_order => Some(CopyKind::ToBgra8),
         _ => None,
     }
+}
+
+/// The [`ChannelCopy`] kind of a copy that trades red and blue (one end stored blue first, the
+/// other red first): between two RGBA8 storages, sRGB or not, the bytes copied as they are.
+fn swapped_copy_kind(
+    source: wgpu::TextureFormat,
+    destination: wgpu::TextureFormat,
+) -> Option<CopyKind> {
+    use wgpu::TextureFormat as F;
+    (source.remove_srgb_suffix() == F::Rgba8Unorm
+        && destination.remove_srgb_suffix() == F::Rgba8Unorm)
+        .then_some(CopyKind::SwapRedBlue)
 }
 
 /// Whether two formats keep their texels alike (they may differ in sRGB decoding): a grab
@@ -506,6 +521,7 @@ struct ArgsCopy {
     destination: wgpu::Buffer,
     destination_offset: u64,
     indexed: bool,
+    zero_first_vertex: bool,
 }
 
 impl ArgsCopy {
@@ -521,26 +537,10 @@ impl ArgsCopy {
             counts,
         );
         encoder.clear_buffer(
-    zero_first_vertex: bool,
             &self.destination,
             self.destination_offset + counts,
             Some(INDIRECT_START_INSTANCE_SIZE),
         );
-    }
-}
-
-/// The bytes of an indirect draw's start instance argument.
-const INDIRECT_START_INSTANCE_SIZE: u64 = 4;
-/// One slot of [`IndirectArgsPool`]: the indexed arguments' 20 bytes (the others use 16).
-const INDIRECT_ARGS_SLOT: u64 = 20;
-
-/// The arguments buffer every indirect draw of a submission draws from, one slot each, grown by
-/// doubling; slots are reused by the next submission, which the queue runs after this one.
-#[derive(Default)]
-struct IndirectArgsPool {
-    buffer: Option<wgpu::Buffer>,
-    used: u64,
-}
         if self.zero_first_vertex {
             // The base vertex (indexed) or start vertex is the word before the start instance.
             encoder.clear_buffer(
@@ -549,9 +549,9 @@ struct IndirectArgsPool {
                 Some(INDIRECT_FIRST_VERTEX_SIZE),
             );
         }
+    }
+}
 
-impl IndirectArgsPool {
-    /// The next slot: its buffer and byte offset.
 /// The base vertex and first bound vertex of a direct draw whose `SV_VertexID` must read the
 /// index alone (`DeviceConventions::vertex_id_from_draw_start`; a non-indexed draw's start vertex
 /// is its shape's base vertex here): a program that reads no vertex inputs draws without the
@@ -570,6 +570,21 @@ fn first_vertex_binding(base_vertex: i32, vertex_inputs: bool, vertices: u64) ->
 /// The bytes of an indirect draw's base vertex (indexed) or start vertex argument.
 const INDIRECT_FIRST_VERTEX_SIZE: u64 = 4;
 
+/// The bytes of an indirect draw's start instance argument.
+const INDIRECT_START_INSTANCE_SIZE: u64 = 4;
+/// One slot of [`IndirectArgsPool`]: the indexed arguments' 20 bytes (the others use 16).
+const INDIRECT_ARGS_SLOT: u64 = 20;
+
+/// The arguments buffer every indirect draw of a submission draws from, one slot each, grown by
+/// doubling; slots are reused by the next submission, which the queue runs after this one.
+#[derive(Default)]
+struct IndirectArgsPool {
+    buffer: Option<wgpu::Buffer>,
+    used: u64,
+}
+
+impl IndirectArgsPool {
+    /// The next slot: its buffer and byte offset.
     fn slot(&mut self, device: &wgpu::Device) -> (wgpu::Buffer, u64) {
         let offset = self.used * INDIRECT_ARGS_SLOT;
         if self
@@ -2274,21 +2289,6 @@ impl UnityRenderer {
     }
 
     /// The copy of a render target's depth into its filterable color copy.
-    fn depth_copy_op(&self, handle: u64) -> Option<DepthCopy> {
-        let t = self.textures.get(&handle)?;
-        let target = t.depth_copy.clone()?;
-        let (depth, multisampled) = match (&t.depth_sample, &t.depth_msaa) {
-            (Some(depth), _) => (depth, false),
-            (None, Some(depth)) => (depth, true),
-            _ => return None,
-        };
-        let normalized = matches!(
-            target.texture().format(),
-            wgpu::TextureFormat::R16Unorm | wgpu::TextureFormat::Rgba16Unorm
-        );
-        let kind = match (multisampled, normalized) {
-            (false, false) => CopyKind::Depth,
-            (true, false) => CopyKind::DepthMultisampled,
     /// A direct draw where `SV_VertexID` counts from the draw's first vertex
     /// ([`first_vertex_binding`]).
     fn draw_from_first_vertex(&self, d: &mut PlannedDraw) {
@@ -2310,6 +2310,21 @@ impl UnityRenderer {
             first_vertex_binding(d.base_vertex, inputs, vertices);
     }
 
+    fn depth_copy_op(&self, handle: u64) -> Option<DepthCopy> {
+        let t = self.textures.get(&handle)?;
+        let target = t.depth_copy.clone()?;
+        let (depth, multisampled) = match (&t.depth_sample, &t.depth_msaa) {
+            (Some(depth), _) => (depth, false),
+            (None, Some(depth)) => (depth, true),
+            _ => return None,
+        };
+        let normalized = matches!(
+            target.texture().format(),
+            wgpu::TextureFormat::R16Unorm | wgpu::TextureFormat::Rgba16Unorm
+        );
+        let kind = match (multisampled, normalized) {
+            (false, false) => CopyKind::Depth,
+            (true, false) => CopyKind::DepthMultisampled,
             (false, true) => CopyKind::Depth16,
             (true, true) => CopyKind::Depth16Multisampled,
         };
@@ -2587,6 +2602,9 @@ impl UnityRenderer {
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
             CopyKind::ToR8 | CopyKind::ToRgba8 | CopyKind::ToBgra8 => CHANNEL_COPY_WGSL.into(),
+            CopyKind::SwapRedBlue => {
+                CHANNEL_COPY_WGSL.replace("return texel;", "return texel.bgra;")
+            }
             CopyKind::Packed565 | CopyKind::Packed5551 | CopyKind::Packed4444 => {
                 let bits = match kind {
                     CopyKind::Packed565 => resources::PACKED_565_BITS,
@@ -2633,6 +2651,7 @@ impl UnityRenderer {
                 wgpu::TextureFormat::R8Unorm,
             ),
             CopyKind::ToRgba8
+            | CopyKind::SwapRedBlue
             | CopyKind::Packed565
             | CopyKind::Packed5551
             | CopyKind::Packed4444 => (
@@ -3972,12 +3991,22 @@ impl UnityRenderer {
                                 continue;
                             }
                             let (destination, at) = self.indirect_args.slot(&self.device);
+                            // One copy serves the call's passes: zeroed only when none reads
+                            // vertex inputs (whose vertices the first vertex moves).
+                            let zero_first_vertex = self.conventions.vertex_id_from_draw_start
+                                && planned.iter().all(|p| match p {
+                                    Planned::Draw(d) => {
+                                        !self.compiled.program(d.program.0).vertex_inputs
+                                    }
+                                    _ => true,
+                                });
                             let copy = ArgsCopy {
                                 source,
                                 source_offset: draw_offset,
                                 destination: destination.clone(),
                                 destination_offset: at,
                                 indexed,
+                                zero_first_vertex,
                             };
                             // Hoisted before the open pass unless a draw in it could have
                             // written the arguments; then the pass ends here.
@@ -3991,22 +4020,12 @@ impl UnityRenderer {
                                 }
                             }
                             buffer = Some(destination);
-                            // One copy serves the call's passes: zeroed only when none reads
-                            // vertex inputs (whose vertices the first vertex moves).
-                            let zero_first_vertex = self.conventions.vertex_id_from_draw_start
-                                && planned.iter().all(|p| match p {
-                                    Planned::Draw(d) => {
-                                        !self.compiled.program(d.program.0).vertex_inputs
-                                    }
-                                    _ => true,
-                                });
                             draw_offset = at;
                         }
                         for p in &mut planned {
                             if let Planned::Draw(p) = p {
                                 p.instances = instances.max(1);
                                 p.indirect = buffer.clone().map(|b| (b, draw_offset, indexed));
-                                zero_first_vertex,
                             }
                         }
                     }
@@ -4035,6 +4054,7 @@ impl UnityRenderer {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
+                                self.draw_from_first_vertex(&mut d);
                                 if let Some(slot) = mesh_instance
                                     && slot.added > 0
                                 {
@@ -4054,7 +4074,6 @@ impl UnityRenderer {
                                     .iter()
                                     .find(|(name, _)| name == "<MeshInstanceBatchLimits>")
                                     .map(|(_, value)| value)
-                                self.draw_from_first_vertex(&mut d);
                                     && limits[0] > 0.0
                                 {
                                     let program = self.compiled.program(d.program.0);
@@ -5062,6 +5081,7 @@ impl UnityRenderer {
                 program: (id, program_offset),
                 instances: 1,
                 first_instance: 0,
+                first_bound_vertex: 0,
                 indirect: None,
                 window,
             }));
@@ -5081,7 +5101,6 @@ impl UnityRenderer {
             None => globals.push((name.to_string(), value)),
         }
     }
-                first_bound_vertex: 0,
 
     /// A `GrabPass` into `name`: the texture (the target's size and format, made or remade as
     /// needed) and its `_TexelSize` set as globals, and the copy of the target into it; none
@@ -5167,6 +5186,7 @@ impl UnityRenderer {
                 dimension: 2,
                 logical: None,
                 screen_order: false,
+                blue_first: false,
                 packed: 0,
             };
             // A blue-first source (the screen on such a device) is grabbed into the same storage,
@@ -5295,8 +5315,18 @@ impl UnityRenderer {
         };
         let screen_order =
             self.conventions.screen_bgra && (screen_end(source) || screen_end(destination));
-        let channel_kind =
-            channel_copy_kind(src.format(), dst.format(), screen_order).filter(|_| {
+        // Unity's B8G8R8A8 textures are kept red first; where the device stores them blue first
+        // a copy into or out of one stored red first moves the stored bytes.
+        let blue_first = |handle: u64| self.textures.get(&handle).is_some_and(|t| t.blue_first);
+        let bytes_swap = self.conventions.bgra_copies_bytes
+            && !screen_end(source)
+            && !screen_end(destination)
+            && blue_first(source) != blue_first(destination);
+        let channel_kind = bytes_swap
+            .then(|| swapped_copy_kind(src.format(), dst.format()))
+            .flatten()
+            .or_else(|| channel_copy_kind(src.format(), dst.format(), screen_order))
+            .filter(|_| {
                 src.dimension() == wgpu::TextureDimension::D2
                     && dst.dimension() == wgpu::TextureDimension::D2
             });
@@ -6729,6 +6759,40 @@ mod tests {
         );
         assert_eq!(channel_copy_kind(F::Bgra8Unorm, F::Rgba8Unorm, false), None);
         assert_eq!(channel_copy_kind(F::Rgba8Unorm, F::Bgra8Unorm, false), None);
+    }
+
+    /// A copy between a B8G8R8A8 texture and a red-first one, where the device stores the first
+    /// blue first (Metal), trades red and blue between RGBA8 storages, sRGB or not
+    /// (tests/projects/cmdbuffers metal.jsonl `metal.copy.*`, `tarray.slices`); other storages
+    /// keep their own rule.
+    #[test]
+    fn blue_first_copies_trade_red_and_blue_between_rgba8_storages() {
+        use wgpu::TextureFormat as F;
+        for (a, b) in [
+            (F::Rgba8Unorm, F::Rgba8Unorm),
+            (F::Rgba8UnormSrgb, F::Rgba8Unorm),
+            (F::Rgba8Unorm, F::Rgba8UnormSrgb),
+        ] {
+            assert_eq!(swapped_copy_kind(a, b), Some(CopyKind::SwapRedBlue));
+        }
+        assert_eq!(swapped_copy_kind(F::Rgba8Unorm, F::R8Unorm), None);
+        assert_eq!(swapped_copy_kind(F::Rgba16Float, F::Rgba8Unorm), None);
+        assert_eq!(swapped_copy_kind(F::Bgra8Unorm, F::Rgba8Unorm), None);
+    }
+
+    /// Where `SV_VertexID` reads the index without the base vertex (Metal, tests/projects/
+    /// cmdbuffers metal.jsonl `metal.vertexid.*`): a program without vertex inputs drops the
+    /// base vertex; one with them binds its buffers from it, the same vertices; a negative base
+    /// vertex or one past the buffers stays.
+    #[test]
+    fn direct_draws_bind_from_the_base_vertex_where_ids_leave_it_out() {
+        assert_eq!(first_vertex_binding(0, true, 90), (0, 0));
+        assert_eq!(first_vertex_binding(9, false, 90), (0, 0));
+        assert_eq!(first_vertex_binding(-2, false, 90), (0, 0));
+        assert_eq!(first_vertex_binding(9, true, 90), (0, 9));
+        assert_eq!(first_vertex_binding(89, true, 90), (0, 89));
+        assert_eq!(first_vertex_binding(90, true, 90), (90, 0));
+        assert_eq!(first_vertex_binding(-2, true, 90), (-2, 0));
     }
 
     /// A grab of the blue-first screen and one of an RGBA8 target of the same size do not share
