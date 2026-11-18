@@ -9,19 +9,20 @@ namespace Unbound.Tests
     [CollectionDefinition("Project release", DisableParallelization = true)]
     public class ProjectReleaseCollection { }
 
-    /// <summary>The rendering rules measured on exactly 6000.0.71f1 hang off one release flag;
-    /// every other release, including other 6000.0 patches, takes the unmeasured answer listed in
+    /// <summary>The rendering rules measured on 6000.0.71f1 hang off one family flag: every release
+    /// of the 6000.0 family gets them, and every other family takes the unmeasured answer listed in
     /// docs/COMPATIBILITY_GAPS.md.</summary>
     [Collection("Project release")]
     public class CompatRenderingTests
     {
         [Theory]
         [InlineData("6000.0.71f1", true)]
+        [InlineData("6000.0.0f1", true)]
         [InlineData("6000.1.0f1", false)]
         [InlineData("6000.1.2f1", false)]
         [InlineData("2022.3.10f1", false)]
         [InlineData("not a version", false)]
-        public void MeasuredRenderingRulesApplyToTheMeasuredReleaseOnly(string release, bool measured)
+        public void MeasuredRenderingRulesApplyToTheMeasuredFamilyOnly(string release, bool measured)
         {
             string version = ProjectInfo.UnityVersion;
             try

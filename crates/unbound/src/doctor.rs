@@ -23,8 +23,8 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[
-    "3D AudioDistortionFilter and AudioChorusFilter are measured only for the Unity 6000.0 release family (on 6000.0.71f1); other families reject these placements.",
-    "AudioListener script/component interleaving is measured only for the Unity 6000.0 release family (on 6000.0.71f1); sharing the listener GameObject with an AudioSource is unsupported.",
+    "3D AudioDistortionFilter and AudioChorusFilter are measured only for the Unity 6000.0 release family (measured on 6000.0.71f1); other families reject these placements.",
+    "AudioListener script/component interleaving is measured only for the Unity 6000.0 release family (measured on 6000.0.71f1); sharing the listener GameObject with an AudioSource is unsupported.",
     "Multichannel voice playback on the measured audio profile supports clips of up to eight channels; wider clips, streamed downloads and spatial voices in Prologic output are unsupported.",
 ];
 

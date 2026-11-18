@@ -180,7 +180,7 @@ three new exact contextual gaps remain queued. The total falls from 1,037 to 269
 
 The first Core slice removes 155 CoreModule rows and one Canvas row. CoreModule retained
 116 rows at that stage. The three compatibility mechanisms for constructor initialization, factory
-eligibility and refresh-rate arithmetic select exactly 6000.0.71f1. Other releases
+eligibility and refresh-rate arithmetic select the 6000.0 family (measured on 6000.0.71f1). Other families
 retain their previous, unmeasured paths; their initialization and invalid-rate behavior
 remain gaps. The generator format is now version 4 after adding the UV return rule.
 

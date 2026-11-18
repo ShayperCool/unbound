@@ -412,7 +412,7 @@ namespace Unbound.Runtime
         /// Other releases retain their unmeasured reset delivery.</summary>
         internal static bool AudioResetCaptureTailMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Script-created clip duration uses whole milliseconds, measured on exactly
+        /// <summary>Script-created clip duration uses whole milliseconds, measured on
         /// 6000.0.71f1 (tests/projects/mixersuspend). Imported duration remains sample-based.
         /// Other releases retain sample-based duration until measured.</summary>
         internal static bool ScriptAudioClipDurationMeasured => Family == ReleaseFamily.Unity6000_0;
@@ -424,12 +424,12 @@ namespace Unbound.Runtime
         internal static bool DecodedAudioResamplingMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Destroy requests stop AudioSource voices before the deferred object
-        /// destruction, including sources below a destroyed GameObject. Measured on exactly
+        /// destruction, including sources below a destroyed GameObject. Measured on
         /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain end-of-frame cleanup.</summary>
         internal static bool AudioSourceDestroyRequestMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>A streamed clip's cached buffer is owned by the most recent voice
-        /// that starts it; stopping its source releases the buffer. Measured on exactly
+        /// that starts it; stopping its source releases the buffer. Measured on
         /// 6000.0.71f1 (tests/projects/mixersuspend). Other releases keep their previous
         /// loading and stop behavior until measured.</summary>
         internal static bool StreamingClipBufferLifetimeMeasured => Family == ReleaseFamily.Unity6000_0;
@@ -492,7 +492,7 @@ namespace Unbound.Runtime
         /// Other releases retain their previous float setter and 10 ms DSP minimum until measured.</summary>
         internal static bool AudioComponentEchoDelayMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Listener component ordering and per-source bypass, measured on exactly
+        /// <summary>Listener component ordering and per-source bypass, measured on
         /// 6000.0.71f1 by tests/projects/audiodistortion. Other releases retain reverb-only
         /// listener support and their prior bypassEffects routing until measured.</summary>
         internal static bool AudioListenerChainMeasured => Family == ReleaseFamily.Unity6000_0;
@@ -609,13 +609,13 @@ namespace Unbound.Runtime
 
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
-        /// culled), measured by animculling humanMixerMotion/humanMixerShape on exactly
+        /// culled), measured by animculling humanMixerMotion/humanMixerShape on
         /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
         internal static bool HumanPlayableMixerMotionMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Humanoid root motion and bodies composed by AnimationLayerMixerPlayables over
         /// humanoid clips and mixers (override layers by weight through their masks' body parts,
-        /// additive layers leaving the motion), measured by tests/projects/humanoid mixer.* on exactly
+        /// additive layers leaving the motion), measured by tests/projects/humanoid mixer.* on
         /// 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
         internal static bool HumanPlayableLayerMixerMotionMeasured => Family == ReleaseFamily.Unity6000_0;
 

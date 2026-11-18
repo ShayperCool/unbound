@@ -77,7 +77,7 @@ there are no vendored changes. Requests are cached per GameObject for each step 
 Type for method discovery. Actor and shape IDs use lifecycle-maintained dictionaries; callback
 identity reads do not scan bodies or allocate.
 
-The measured request rule is selected through Compat for exactly 6000.0.71f1. Other releases
+The measured request rule is selected through Compat for the 6000.0 family (measured on 6000.0.71f1). Other families
 retain unconditional point requests and the previous collider-plus-body message delivery until
 measured; see `docs/COMPATIBILITY_GAPS.md`.
 

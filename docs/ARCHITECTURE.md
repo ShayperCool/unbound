@@ -439,9 +439,9 @@ default `Physics` settings). Code asks the profile (`profile.has(Feature::X)`) i
 versions. A family is one version for compatibility purposes: its tables are captured from one
 Editor release of it (`release` in `data/profiles/unity-<family>.json`), its measured behaviour
 (`MeasuredFamily` in Rust, `Compat.Family` in C#) is measured on that release, and every release of
-the family gets both; behaviour gates and tables are per family, never per patch (API
-availability, `Feature::since`, and module defines still follow the release or the installation). Another family (`6000.3`) is another
-version with its own answers once measured; until then each gate keeps its unmeasured behaviour. A
+the family gets both; behaviour gates and tables are per family, never per patch. Another family
+(`6000.3`) is another version with its own answers once measured; until then each gate keeps its
+unmeasured behaviour. A
 family without tables uses the nearest one (the newest older family, else the oldest newer one)
 with a warning. Version defines (`UNITY_6000_0_23`) and behaviour switches still follow the
 project's own release, and defines that exist only with an engine module
