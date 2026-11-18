@@ -1,5 +1,5 @@
 //! Output configuration measured by tests/projects/audiopitch.
-use crate::UnityVersion;
+use crate::{MeasuredFamily, UnityVersion};
 
 // Unity 6000.0.71f1, tests/projects/audiopitch configuration controls.
 const DEFAULT_BUFFER: u32 = 1024;
@@ -21,10 +21,11 @@ impl AudioOutputRules {
     /// Largest buffer selected by the measured output configuration controls.
     pub const MAXIMUM_BUFFER: u32 = 8192;
     pub fn for_version(version: UnityVersion) -> Self {
+        let measured = version.measured_family() == Some(MeasuredFamily::Unity6000_0);
         Self {
-            requested_buffer_sizes: version == UnityVersion::new(6000, 0, 71),
-            scheduled_start_times: version == UnityVersion::new(6000, 0, 71),
-            multichannel_voices: version == UnityVersion::new(6000, 0, 71),
+            requested_buffer_sizes: measured,
+            scheduled_start_times: measured,
+            multichannel_voices: measured,
         }
     }
 
@@ -36,12 +37,12 @@ impl AudioOutputRules {
                 requested.min(Self::MAXIMUM_BUFFER)
             }
         } else {
-            // Other releases retain the previous unmeasured minimum.
+            // Other families retain the previous unmeasured minimum.
             requested.max(LEGACY_MINIMUM_BUFFER)
         }
     }
 
-    /// Start times and delays select the preceding whole sample frame. Other releases
+    /// Start times and delays select the preceding whole sample frame. Other families
     /// retain the previous, unmeasured nearest-frame conversion.
     pub fn scheduled_frame(self, seconds: f64, rate: u32) -> u64 {
         let frames = seconds.max(0.0) * rate as f64;
@@ -74,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn positive_buffer_requests_are_preserved_only_on_the_measured_release() {
+    fn positive_buffer_requests_are_preserved_only_in_the_measured_family() {
         let measured = AudioOutputRules::for_version(UnityVersion::new(6000, 0, 71));
         assert!(measured.scheduled_start_times);
         assert!(measured.multichannel_voices);
@@ -83,9 +84,16 @@ mod tests {
         }
         assert_eq!(measured.buffer_size(0), 1024);
         assert_eq!(measured.buffer_size(16384), 8192);
+        // Every release of the family gets the measured answers.
         for version in [
-            UnityVersion::new(6000, 0, 70),
-            UnityVersion::new(6000, 0, 72),
+            UnityVersion::new(6000, 0, 0),
+            UnityVersion::new(6000, 0, 67),
+        ] {
+            assert_eq!(AudioOutputRules::for_version(version), measured);
+        }
+        for version in [
+            UnityVersion::new(6000, 3, 0),
+            UnityVersion::new(2022, 3, 71),
         ] {
             let other = AudioOutputRules::for_version(version);
             assert!(!other.scheduled_start_times);

@@ -95,7 +95,7 @@ fn inputs(
     }
 }
 
-const MEASURED: Option<ShaderKeywordRules> = Some(ShaderKeywordRules::Unity6000_0_71f1);
+const MEASURED: Option<ShaderKeywordRules> = Some(ShaderKeywordRules::Unity6000_0);
 
 fn ask(provider: &Provider, name: &str) -> Value {
     serde_json::from_str(&provider.shader(name)).unwrap()
@@ -395,14 +395,14 @@ fn an_unmeasured_release_reports_project_spaces_unknown() {
         Arc::new(AtomicUsize::new(0)),
         Arc::new(AtomicBool::new(true)),
     );
-    i.release = "6000.0.72f1".into();
+    i.release = "6000.3.0f1".into();
     let provider = Provider::new(i);
     let answer = ask(&provider, "Tests/Fixed");
     assert_eq!(answer["found"], true);
     assert_eq!(answer["subshaders_known"], false);
     assert_eq!(answer["keywords_known"], false);
     assert_eq!(answer["transient"], false);
-    assert!(answer["reason"].as_str().unwrap().contains("6000.0.72f1"));
+    assert!(answer["reason"].as_str().unwrap().contains("6000.3.0f1"));
     assert_eq!(answer["keywords"], json!([]));
     let answer = ask_compute(&provider, &compute);
     assert_eq!(answer["keywords_known"], false);

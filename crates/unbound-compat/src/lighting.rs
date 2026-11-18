@@ -1,6 +1,6 @@
 //! How a build target stores baked HDR lighting textures, measured in
 //! tests/projects/lightmapencoding (Unity 6000.0.71f1 Editor, NVIDIA driver).
-use crate::UnityVersion;
+use crate::{MeasuredFamily, UnityVersion};
 use serde::{Deserialize, Serialize};
 
 /// The storage of an HDR lighting texture (a Lightmap-type texture or an HDR cubemap).
@@ -35,15 +35,16 @@ impl LightingEncodings {
     /// Editor's (Standalone High and High, Android and iOS Low and Low, WebGL High and Normal).
     /// Low quality lightmaps are double LDR where the target supports them (Android; iOS is
     /// unmeasured and taken as Android), else RGBM; Normal is RGBM; High keeps half floats. HDR
-    /// cubemaps follow the quality alone: Low double LDR, Normal RGBM, High half floats. Other
-    /// releases keep half floats for both, as before this was measured.
+    /// cubemaps follow the quality alone: Low double LDR, Normal RGBM, High half floats. The
+    /// whole 6000.0 family gets these answers; other families keep half floats for both, as
+    /// before this was measured.
     pub fn resolve(
         version: UnityVersion,
         group: &str,
         lightmap: Option<i64>,
         cubemap: Option<i64>,
     ) -> Self {
-        if version != UnityVersion::new(6000, 0, 71) {
+        if version.measured_family() != Some(MeasuredFamily::Unity6000_0) {
             return Self::default();
         }
         let mobile = matches!(group, "Android" | "iOS" | "iPhone");
@@ -101,9 +102,22 @@ mod tests {
     }
 
     #[test]
-    fn other_releases_keep_half_floats() {
+    fn the_whole_family_is_measured() {
         for version in [
-            UnityVersion::new(6000, 0, 70),
+            UnityVersion::new(6000, 0, 0),
+            UnityVersion::new(6000, 0, 67),
+        ] {
+            assert_eq!(
+                LightingEncodings::resolve(version, "Android", None, None),
+                LightingEncodings::resolve(MEASURED, "Android", None, None)
+            );
+        }
+    }
+
+    #[test]
+    fn other_families_keep_half_floats() {
+        for version in [
+            UnityVersion::new(6000, 3, 0),
             UnityVersion::new(2022, 3, 71),
         ] {
             let e = LightingEncodings::resolve(version, "Android", Some(0), Some(1));

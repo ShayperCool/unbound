@@ -1,17 +1,17 @@
 //! Compatibility profiles: everything that differs between Unity releases.
 //!
-//! A profile covers one release family (`6000.0`, `2022.3`, ...): its data tables (define symbols,
-//! compiler options) are captured from one real Editor release of the family (its `release`) and
-//! live in `data/profiles/unity-<major>.<minor>.json`; every project on the family uses them. A
-//! release that needs its own tables gets `unity-<major>.<minor>.<patch>.json`, which then wins
-//! for projects on exactly that patch. A family without tables uses the nearest one (the newest
+//! Unity releases are grouped by family, `MAJOR.MINOR` (`6000.0`, `2022.3`, ...): every patch of a
+//! family is one version for compatibility purposes (see [`crate::MeasuredFamily`]). A profile
+//! covers one family: its data tables (define symbols, compiler options) are captured from one real
+//! Editor release of the family (its `release`) and live in `data/profiles/unity-<major>.<minor>.json`;
+//! every project on the family uses them. A family without tables uses the nearest one (the newest
 //! older family, else the oldest newer one). Behaviour switches are [`Feature`]s with the first
 //! release that has them. Code asks [`Profile::has`] instead of comparing versions itself.
 use crate::version::UnityVersion;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
-/// Per-family (or per-patch) tables, `data/profiles/unity-<family>[.<patch>].json`.
+/// Per-family tables, `data/profiles/unity-<family>.json`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ProfileData {
     pub family: String,
@@ -158,8 +158,7 @@ pub struct Profile {
     pub approximate: bool,
 }
 
-/// The bundled tables, keyed `<major>.<minor>` (a family) or `<major>.<minor>.<patch>` (one
-/// patch of it).
+/// The bundled tables, keyed by family `<major>.<minor>`.
 const BUNDLED: &[(&str, &str)] = &[(
     "6000.0",
     include_str!("../../../data/profiles/unity-6000.0.json"),
@@ -171,42 +170,28 @@ const BUILTINS: &[(&str, &str)] = &[(
     include_str!("../../../data/profiles/builtin-6000.0.json"),
 )];
 
-/// A bundled table's key: the family and, for a patch table, the patch.
-fn parse_key(key: &str) -> ((u32, u32), Option<u32>) {
+/// A bundled table's family.
+fn parse_key(key: &str) -> (u32, u32) {
     let mut parts = key
         .split('.')
         .map(|p| p.parse::<u32>().expect("profile key is numeric"));
     let major = parts.next().expect("profile key has a major version");
     let minor = parts.next().expect("profile key has a minor version");
-    ((major, minor), parts.next())
+    assert!(parts.next().is_none(), "profile key `{key}` is a family");
+    (major, minor)
 }
 
-/// The entry of `tables` for `version`: its patch's, else its family's, else the nearest
-/// family's (the newest older one, else the oldest newer one). True when it is not the release's
-/// own family.
+/// The entry of `tables` for `version`: its family's, else the nearest family's (the newest older
+/// one, else the oldest newer one). True when it is not the release's own family.
 fn select<'a>(tables: &'a [(&str, &str)], version: UnityVersion) -> Option<(&'a str, bool)> {
-    let keys: Vec<((u32, u32), Option<u32>, &str)> = tables
+    let mut families: Vec<((u32, u32), &str)> = tables
         .iter()
-        .map(|(key, json)| {
-            let (family, patch) = parse_key(key);
-            (family, patch, *json)
-        })
+        .map(|(key, json)| (parse_key(key), *json))
         .collect();
     let family = version.family();
-    if let Some(&(_, _, json)) = keys
-        .iter()
-        .find(|(f, p, _)| *f == family && *p == Some(version.patch))
-    {
+    if let Some(&(_, json)) = families.iter().find(|(f, _)| *f == family) {
         return Some((json, false));
     }
-    if let Some(&(_, _, json)) = keys.iter().find(|(f, p, _)| *f == family && p.is_none()) {
-        return Some((json, false));
-    }
-    let mut families: Vec<((u32, u32), &str)> = keys
-        .iter()
-        .filter(|(_, p, _)| p.is_none())
-        .map(|&(f, _, json)| (f, json))
-        .collect();
     families.sort_by_key(|(f, _)| *f);
     let older = families.iter().rev().find(|(f, _)| *f < family);
     let newer = families.iter().find(|(f, _)| *f > family);
@@ -243,8 +228,8 @@ impl Profile {
         self.version >= feature.since()
     }
 
-    /// The shader keyword metadata rules measured on exactly this project's release (None:
-    /// keyword spaces of project shaders are unknown, see [`crate::ShaderKeywordRules`]).
+    /// The shader keyword metadata rules of this project's release family (None: keyword spaces
+    /// of project shaders are unknown, see [`crate::ShaderKeywordRules`]).
     pub fn shader_keyword_rules(&self) -> Option<crate::ShaderKeywordRules> {
         crate::ShaderKeywordRules::for_release(self.version)
     }
@@ -418,31 +403,28 @@ mod tests {
     }
 
     #[test]
-    fn a_family_uses_its_tables_for_every_patch() {
+    fn a_family_uses_its_tables_and_measured_answers_for_every_patch() {
         let profile = Profile::for_version("6000.0.23f1".parse().unwrap()).unwrap();
         assert!(!profile.approximate);
-        // Measured behaviour is not a family table: 6000.0.23 has no keyword rules.
-        assert_eq!(profile.shader_keyword_rules(), None);
-        let measured = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
+        // Every patch of the family gets the family's measured answers.
         assert_eq!(
-            measured.shader_keyword_rules(),
-            Some(crate::ShaderKeywordRules::Unity6000_0_71f1)
+            profile.shader_keyword_rules(),
+            Some(crate::ShaderKeywordRules::Unity6000_0)
         );
         assert_eq!(profile.release().to_string(), "6000.0.71f1");
         assert_eq!(profile.version_defines()[0], "UNITY_6000_0_23");
+        // Another family is another version: the nearest tables, no measured answers.
+        let other = Profile::for_version("6000.3.0f1".parse().unwrap()).unwrap();
+        assert!(other.approximate);
+        assert_eq!(other.shader_keyword_rules(), None);
     }
 
     #[test]
-    fn patch_tables_win_then_the_family_then_the_nearest_family() {
-        let tables = [
-            ("2022.3", "a"),
-            ("6000.0", "b"),
-            ("6000.0.40", "c"),
-            ("6000.3", "d"),
-        ];
+    fn the_family_wins_then_the_nearest_family() {
+        let tables = [("2022.3", "a"), ("6000.0", "b"), ("6000.3", "d")];
         let pick = |v: &str| select(&tables, v.parse().unwrap());
-        assert_eq!(pick("6000.0.40f1"), Some(("c", false)));
-        assert_eq!(pick("6000.0.41f1"), Some(("b", false)));
+        assert_eq!(pick("6000.0.40f1"), Some(("b", false)));
+        assert_eq!(pick("6000.0.0f1"), Some(("b", false)));
         assert_eq!(pick("6000.2.5f1"), Some(("b", true)));
         assert_eq!(pick("6000.5.0f1"), Some(("d", true)));
         assert_eq!(pick("2021.3.1f1"), Some(("a", true)));

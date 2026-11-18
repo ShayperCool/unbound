@@ -1,5 +1,6 @@
 //! Unity releases and the compatibility profiles that select per-release behaviour.
 mod audio;
+mod family;
 mod lighting;
 mod mtl;
 mod packages;
@@ -10,6 +11,7 @@ mod texture;
 mod version;
 
 pub use audio::AudioOutputRules;
+pub use family::MeasuredFamily;
 pub use lighting::{HdrEncoding, LightingEncodings};
 pub use mtl::{MtlColor, MtlRules, MtlTransparency};
 pub use packages::PackageResolutionRules;

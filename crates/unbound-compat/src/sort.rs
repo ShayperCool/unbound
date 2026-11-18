@@ -4,8 +4,8 @@
 //! end where the Linux Editor leaves them, on every OS (the macOS Editor's libc++ sort is not
 //! reproduced). Measured with the Unity 6000.0.71f1 Editor: sibling order by name
 //! (tests/projects/lightmapuvs Names/OrderFbx and Names/Ties), the lightmap UV unwrap
-//! (tests/projects/lightmapuvs) and the realtime GI system packing. Only 6000.0.71f1 is measured;
-//! other releases are assumed to sort as it does.
+//! (tests/projects/lightmapuvs) and the realtime GI system packing. Only the 6000.0 family is
+//! measured (on 6000.0.71f1); other families are assumed to sort as it does.
 
 /// The Editor's `std::sort`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
