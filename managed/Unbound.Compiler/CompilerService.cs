@@ -27,7 +27,7 @@ namespace Unbound.Compiler;
 public sealed partial class CompilerService
 {
     /// <summary>Bump when the outputs of the same inputs would differ.</summary>
-    const string FormatVersion = "unbound-compiler-5";
+    const string FormatVersion = "unbound-compiler-6";
 
     static readonly string CompilerIdentity =
         typeof(CSharpCompilation).Assembly.GetName().Version + "/" + FormatVersion;
@@ -158,10 +158,14 @@ public sealed partial class CompilerService
             var dll = Path.Combine(dir, key + ".dll");
             var pdb = Path.Combine(dir, key + ".pdb");
             var refDll = Path.Combine(dir, key + ".ref.dll");
+            // The compile's warnings: a cached output reports them as its compile did.
+            var warnings = Path.Combine(dir, key + ".warnings.json");
             result.Dll = dll;
             result.Pdb = pdb;
-            if (File.Exists(dll) && File.Exists(pdb) && File.Exists(refDll))
+            if (File.Exists(dll) && File.Exists(pdb) && File.Exists(refDll) && File.Exists(warnings))
             {
+                result.WarningList = System.Text.Json.JsonSerializer.Deserialize<List<DiagnosticInfo>>(File.ReadAllBytes(warnings)) ?? new();
+                result.Warnings = result.WarningList.Count;
                 var image = File.ReadAllBytes(refDll);
                 state.Interface = MetadataReference.CreateFromImage(image);
                 result.InterfaceHash = Hash(image);
@@ -215,6 +219,8 @@ public sealed partial class CompilerService
             File.WriteAllText(Path.Combine(dir, key + ".sources"), SourceManifest(sources));
             WriteAtomically(pdb, pdbStream);
             WriteAtomically(refDll, refStream);
+            using (var warningStream = new MemoryStream(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(result.WarningList)))
+                WriteAtomically(warnings, warningStream);
             WriteAtomically(dll, peStream);
             var refImage = refStream.ToArray();
             state.Interface = MetadataReference.CreateFromImage(refImage);
