@@ -194,8 +194,9 @@ namespace Unbound.Runtime
         const string Lit2DPass = "\"NormalsRendering\"";
 
         /// <summary>Whether an output's generated shader is lit: by the pipeline's lights or by
-        /// 2D lights. Both are measured only as other lit outputs are (drawing themselves or a
-        /// sorted list, not strips).</summary>
+        /// 2D lights. Neither is drawn through a list that is not sorted nor as strips. An output
+        /// lit by 2D lights is measured drawing a sorted list (tests/projects/vfxlit, `sprite*`);
+        /// one that draws itself is admitted as other lit outputs are, not measured.</summary>
         static bool IsLit(string source) =>
             source.Contains(LitDefine, StringComparison.Ordinal) || source.Contains(Lit2DPass, StringComparison.Ordinal);
 
