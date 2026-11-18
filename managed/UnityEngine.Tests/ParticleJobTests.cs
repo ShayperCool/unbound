@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using Unbound.Runtime.Jobs;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine.ParticleSystemJobs;
@@ -248,10 +249,10 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AScriptsWriteWhileAJobIsPendingIsKept()
+        public void AJobThatHasNotStartedSeesAScriptsWriteInTheMessage()
         {
-            // In the message, with the job not run: the job finishes first, then the write (Unbound's
-            // choice; in Unity the job's later run would win for what it writes, unmeasured).
+            // In the message, with the job not run: the write goes to the particles and the job, run
+            // after the messages, sees it and wins for what it writes (pair.selfClear/selfEmit).
             var (ps, _) = Make(2);
             var particles = new ParticleSystem.Particle[2];
             JobScript.OnMessage = s =>
@@ -264,6 +265,102 @@ namespace UnityEngine.Tests
             Frame();
             ps.GetParticles(particles);
             Assert.Equal(new Vector3(5f, 5f, 5f), particles[0].position);
+            Assert.Equal(new Vector3(0f, 0f, 7f), particles[0].velocity);
+        }
+
+        struct CountJob : IJobParticleSystem
+        {
+            public NativeArray<int> Count;
+
+            public void Execute(ParticleSystemJobData d) => Count[0] = d.count;
+        }
+
+        [Fact]
+        public void APendingJobSeesWhatTheMessageCleared()
+        {
+            // A parent's Clear(true) empties its child before the child's job runs, Emit adds before
+            // the system's own job runs, and Clear(false) leaves the child (pair.* controls).
+            var (parent, _) = Make(1);
+            var (child, _) = Make(3);
+            child.transform.SetParent(parent.transform, false);
+            var (alone, _) = Make(1);
+            var (aloneChild, _) = Make(3);
+            aloneChild.transform.SetParent(alone.transform, false);
+            var (emitter, _) = Make(2);
+            using var childCount = new NativeArray<int>(1, Allocator.Persistent);
+            using var aloneChildCount = new NativeArray<int>(1, Allocator.Persistent);
+            using var emitterCount = new NativeArray<int>(1, Allocator.Persistent);
+            bool notRun = true;
+            JobScript.OnMessage = s =>
+            {
+                JobHandle handle;
+                if (s.gameObject == parent.gameObject)
+                {
+                    handle = new CountJob { Count = childCount }.Schedule(child);
+                    parent.Clear(true);
+                }
+                else if (s.gameObject == alone.gameObject)
+                {
+                    handle = new CountJob { Count = aloneChildCount }.Schedule(aloneChild);
+                    alone.Clear(false);
+                }
+                else if (s.gameObject == emitter.gameObject)
+                {
+                    handle = new CountJob { Count = emitterCount }.Schedule(emitter);
+                    emitter.Emit(1);
+                }
+                else return;
+                notRun &= !JobSystem.HasRun(handle);
+            };
+            Frame();
+            Assert.True(notRun);
+            Assert.Equal(0, childCount[0]);
+            Assert.Equal(0, child.particleCount);
+            Assert.Equal(3, aloneChildCount[0]);
+            Assert.Equal(3, aloneChild.particleCount);
+            Assert.Equal(3, emitterCount[0]);
+            Assert.Equal(3, emitter.particleCount);
+        }
+
+        [Fact]
+        public void AJobThatHasRunIsTakenInBeforeAWriteInTheMessage()
+        {
+            // Control: completed in the message, the job saw the particles before the Clear, and its
+            // writes do not bring them back.
+            var (ps, _) = Make(2);
+            using var count = new NativeArray<int>(1, Allocator.Persistent);
+            JobScript.OnMessage = s =>
+            {
+                new CountJob { Count = count }.Schedule(ps).Complete();
+                new WriteIndexJob().Schedule(ps).Complete();
+                ps.Clear(false);
+            };
+            Frame();
+            Assert.Equal(2, count[0]);
+            Assert.Equal(0, ps.particleCount);
+        }
+
+        [Fact]
+        public void AScheduleThatThrowsLeavesTheParticles()
+        {
+            // The job's container is gone: the schedule throws after taking the system's data, no job
+            // starts, and nothing is copied back over the particles.
+            var (ps, _) = Make(2);
+            var before = ParticlesOf(ps);
+            var gone = new NativeArray<int>(1, Allocator.Persistent);
+            gone.Dispose();
+            Exception thrown = null;
+            JobScript.OnMessage = s =>
+            {
+                try { new CountJob { Count = gone }.Schedule(ps); }
+                catch (Exception e) { thrown = e; }
+            };
+            Frame();
+            Assert.IsType<InvalidOperationException>(thrown);
+            var after = ParticlesOf(ps);
+            Assert.Equal(before[1].position, after[1].position);
+            Assert.Equal(before[1].randomSeed, after[1].randomSeed);
+            Assert.Equal(before[1].remainingLifetime - Dt, after[1].remainingLifetime, 4);
         }
 
         struct ReadMeshIndexJob : IJobParticleSystem

@@ -57,6 +57,9 @@ namespace Unbound.Runtime.Jobs
         /// <summary>Containers to deallocate after the job ([DeallocateOnJobCompletion]).</summary>
         public readonly List<(IntPtr Buffer, Allocator Allocator, AtomicSafetyHandle Safety)> Deallocations = new List<(IntPtr, Allocator, AtomicSafetyHandle)>();
         public Action OnFinished;
+        /// <summary>Main-thread work due before the job starts, run once when it is flushed or run
+        /// (a particle job's copy of its system's particles, see <see cref="JobSystem.SetBeforeStart"/>).</summary>
+        public Action BeforeStart;
         /// <summary>Set once the job's data and ranges are final (deferred arrays and lengths read).</summary>
         public int Prepared;
         /// <summary>The list whose length a deferred parallel-for job iterates (its UnsafeList).</summary>
@@ -573,6 +576,7 @@ namespace Unbound.Runtime.Jobs
         /// <summary>Makes the batched jobs available to the workers.</summary>
         internal static void Flush()
         {
+            RunBatchBeforeStart();
             List<JobRecord> batch;
             lock (s_Lock)
             {
@@ -591,6 +595,42 @@ namespace Unbound.Runtime.Jobs
             }
         }
 
+        [ThreadStatic] static List<JobRecord> t_BeforeStart;
+
+        /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work, outside the lock.</summary>
+        static void RunBatchBeforeStart()
+        {
+            var due = t_BeforeStart ??= new List<JobRecord>();
+            lock (s_Lock)
+                foreach (var record in s_Batch)
+                    if (record.BeforeStart != null && !record.Held) due.Add(record);
+            if (due.Count == 0) return;
+            try
+            {
+                foreach (var record in due) RunBeforeStart(record);
+            }
+            finally { due.Clear(); }
+        }
+
+        static void RunBeforeStart(JobRecord record) => Interlocked.Exchange(ref record.BeforeStart, null)?.Invoke();
+
+        /// <summary>Work the main thread does right before the scheduled job starts: when it is flushed
+        /// to the workers or run by a Complete. Set on the main thread right after Schedule, before
+        /// anything can flush it; a job already handed out runs the work at once.</summary>
+        internal static void SetBeforeStart(JobHandle handle, Action action)
+        {
+            var record = Find(handle);
+            lock (s_Lock)
+            {
+                if (record != null && !record.Flushed && !record.Done)
+                {
+                    record.BeforeStart = action;
+                    return;
+                }
+            }
+            action();
+        }
+
         /// <summary>Hands one engine job to the workers now, leaving the caller's batched jobs
         /// batched: engine work such as an asynchronous file read starts when it is requested.
         /// A job whose dependencies are pending starts when they finish.</summary>
@@ -598,6 +638,7 @@ namespace Unbound.Runtime.Jobs
         {
             var record = Find(handle);
             if (record == null) return;
+            RunBeforeStart(record);
             lock (s_Lock)
             {
                 if (!s_Batch.Remove(record)) return;
@@ -726,6 +767,7 @@ namespace Unbound.Runtime.Jobs
             if (record.Reflection != null)
             {
                 foreach (var dependency in record.Dependencies) dependency.Finished.Wait();
+                RunBeforeStart(record);
                 lock (s_Lock)
                 {
                     PrepareToRun(record);

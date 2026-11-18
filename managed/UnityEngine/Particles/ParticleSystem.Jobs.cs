@@ -9,14 +9,17 @@ using UnityEngine.ParticleSystemJobs;
 namespace UnityEngine
 {
     // The particle system's side of the particle job API (ParticleSystemJobs.cs): the particles a
-    // job sees, as one float array per component, copied from the system when its message's first
-    // job is scheduled and back when the system's update completes or a script uses the system.
+    // job sees, as one float array per component, copied from the system when its first job starts
+    // and back when the system's update completes or a script uses the system.
     public sealed partial class ParticleSystem
     {
         ParticleJobBuffers m_JobBuffers;
         JobHandle m_ManagedJobHandle;
         /// <summary>A job runs, or ran, on this update's copy, which goes back to the particles.</summary>
         internal bool m_JobsPending;
+        /// <summary>The pending jobs have not started: the copy is made when the first one does.</summary>
+        bool m_JobFillDue;
+        Action m_FillJobBuffers;
         /// <summary>The frame's update, or a Simulate call, stepped the system: its job message is due.</summary>
         internal bool m_SteppedThisFrame, m_SteppedBySimulate;
         /// <summary>A script stopped the playing system since its last update.</summary>
@@ -29,8 +32,8 @@ namespace UnityEngine
             m_JobBuffers ??= new ParticleJobBuffers();
             if (!m_JobsPending)
             {
-                m_JobBuffers.Fill(this);
                 m_JobsPending = true;
+                m_JobFillDue = true;
                 ParticleSystemManager.NoteJobs(this);
             }
             return m_JobBuffers.List;
@@ -38,7 +41,24 @@ namespace UnityEngine
 
         internal JobHandle GetManagedJobHandle() => m_ManagedJobHandle;
 
-        internal void SetManagedJobHandle(JobHandle handle) => m_ManagedJobHandle = handle;
+        /// <summary>The job just scheduled on the system: its copy of the particles is made when the
+        /// first of the system's jobs starts, so a job sees what scripts changed in the messages before
+        /// it ran (6000.0.71f1, tests/projects/particlejobs pair.*: Clear, Emit, and a parent's
+        /// Clear(true) or Stop with clearing on its child).</summary>
+        internal void SetManagedJobHandle(JobHandle handle)
+        {
+            m_ManagedJobHandle = handle;
+            if (m_JobFillDue) JobSystem.SetBeforeStart(handle, m_FillJobBuffers ??= FillJobBuffers);
+        }
+
+        void FillJobBuffers()
+        {
+            if (!m_JobFillDue) return;
+            m_JobFillDue = false;
+            if (m_JobBuffers == null) return;
+            try { m_JobBuffers.Fill(this); }
+            catch (Exception e) { Debug.LogException(e, this); }
+        }
 
         /// <summary>A job of one IJobParticleSystem: it gets the system's list as its additional data.</summary>
         internal static unsafe JobHandle ScheduleManagedJob(ref JobsUtility.JobScheduleParameters parameters, void* additionalData) =>
@@ -58,12 +78,14 @@ namespace UnityEngine
             if (m_JobsPending && JobSystem.HasRun(m_ManagedJobHandle)) CompleteManagedJobs();
         }
 
-        /// <summary>A script changes the system: its pending particle jobs finish and their writes are
-        /// taken in first, so the change is not undone when the update ends (tests/projects/particlejobs
-        /// pending.*).</summary>
+        /// <summary>A script changes the system: pending particle jobs that have started finish and their
+        /// writes are taken in first, so the change is not undone when the update ends
+        /// (tests/projects/particlejobs pending.*); jobs that have not started are not run, they see the
+        /// change (pair.self*).</summary>
         internal void SyncForWrite()
         {
             ParticleSystemManager.Sync();
+            if (m_JobFillDue) return;
             CompleteManagedJobs();
         }
 
@@ -86,7 +108,10 @@ namespace UnityEngine
             m_JobsPending = false;
             m_ManagedJobHandle.Complete();
             m_ManagedJobHandle = default;
-            if (!m_Destroyed) m_JobBuffers.Flush(this);
+            // No job started (each schedule threw after taking the data): no copy was made, none goes back.
+            bool copied = !m_JobFillDue;
+            m_JobFillDue = false;
+            if (copied && !m_Destroyed) m_JobBuffers.Flush(this);
         }
 
         /// <summary>The system is gone: its jobs finish and their buffers go.</summary>
@@ -95,6 +120,7 @@ namespace UnityEngine
             m_ManagedJobHandle.Complete();
             m_ManagedJobHandle = default;
             m_JobsPending = false;
+            m_JobFillDue = false;
             m_JobBuffers?.Dispose();
             m_JobBuffers = null;
         }
