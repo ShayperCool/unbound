@@ -234,6 +234,16 @@ public class UiDepthProbe : MonoBehaviour
         Nested("nestZN", oz.transform, false, 0, false);
         Img("zn0", m_Objects["nestZN"]);
         Img("oz1", oz.transform);
+
+        // A root and an overriding canvas at the same sorting order, each with its raycaster:
+        // RaycastAll orders their hits by depth, so the overriding canvas's hit at depth 0 comes
+        // after the root's at 1 and 2 (rt0 is no raycast target).
+        m_EventRoot = Root("OR", RenderMode.ScreenSpaceOverlay, 0).GetComponent<GraphicRaycaster>();
+        Img("rt0", m_EventRoot.transform).raycastTarget = false;
+        Img("rt1", m_EventRoot.transform);
+        Nested("nestRT", m_EventRoot.transform, true, 0, true);
+        Img("rq0", m_Objects["nestRT"]);
+        Img("rt2", m_EventRoot.transform);
     }
 
     void NestedImg(string name, Transform parent, bool overrideSorting, int order)
@@ -268,6 +278,7 @@ public class UiDepthProbe : MonoBehaviour
     }
 
     readonly List<RaycastResult> m_Hits = new List<RaycastResult>();
+    GraphicRaycaster m_EventRoot;
 
     readonly SortedDictionary<string, StringBuilder> m_Groups = new SortedDictionary<string, StringBuilder>(StringComparer.Ordinal);
 
@@ -288,6 +299,12 @@ public class UiDepthProbe : MonoBehaviour
         }
         foreach (var group in m_Groups)
             Value(phase + ".raycast." + group.Key, "[" + group.Value + "]");
+        // The hits under one root raycaster, across its raycasters, where depth decides the order.
+        var under = new StringBuilder();
+        foreach (var hit in m_Hits)
+            if (hit.module.rootRaycaster == m_EventRoot)
+                under.Append(under.Length == 0 ? "" : ",").Append('"').Append(hit.gameObject.name).Append(':').Append(hit.depth).Append('"');
+        Value(phase + ".raycastRoot.OR", "[" + under + "]");
     }
 
     IEnumerator Start()

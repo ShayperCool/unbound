@@ -22,7 +22,8 @@ without a Graphic. Each key `<phase>.<renderer>` is `[absoluteDepth, relativeDep
 Graphic.depth]` (`null` without a Graphic); `<phase>.raycast.<canvas>` lists `name:depth` in
 RaycastAll's order for the hits of one canvas's GraphicRaycaster, which its depths decide; the
 order between raycasters (their canvases' `sortingOrder` and `renderOrder`) is not recorded
-here. Phases: `made` (same frame as built), `initial`, then reparenting, enabling and
+here, except in `<phase>.raycastRoot.OR`: the hits under one root raycaster, a root and an
+overriding canvas at the same sorting order, which RaycastAll orders by depth. Phases: `made` (same frame as built), `initial`, then reparenting, enabling and
 disabling, `overrideSorting` changes, a canvas made late, roots made nested and nested made
 roots, a canvas added and one removed, and `Canvas.ForceUpdateCanvases`. `<phase>.now` keys are
 read right after the change, `reparent.next` one frame later, the others two frames later.
