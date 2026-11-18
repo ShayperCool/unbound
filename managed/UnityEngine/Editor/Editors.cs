@@ -329,6 +329,7 @@ namespace UnityEditor
 
         /// <summary>The Editor's own handlers drop into its project browser, inspector and hierarchy
         /// views, which Unbound does not have: a call reports that instead of approximating a drop.</summary>
+        [global::Unbound.Stub]
         internal static DragAndDropVisualMode DefaultProjectBrowserDropHandlerImpl(int dragUponInstanceId, string dummy, bool perform) =>
             NoView("UnityEditor.DragAndDrop.DefaultProjectBrowserDropHandlerImpl");
 
@@ -502,10 +503,12 @@ namespace UnityEditorInternal
     public partial class InternalEditorUtility
     {
         /// <summary>A drop into the Editor's hierarchy view (the default hierarchy drop handler).</summary>
+        [global::Unbound.Stub]
         public static UnityEditor.DragAndDropVisualMode HierarchyWindowDragByID(int dropTargetInstanceID, UnityEditor.HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) =>
             UnityEditor.DragAndDrop.NoView("UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID");
 
         /// <summary>A drop into the Editor's inspector (the default inspector drop handler).</summary>
+        [global::Unbound.Stub]
         internal static UnityEditor.DragAndDropVisualMode InspectorWindowDrag(Object[] targets, bool perform) =>
             UnityEditor.DragAndDrop.NoView("UnityEditorInternal.InternalEditorUtility.InspectorWindowDrag");
     }
