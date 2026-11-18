@@ -50,12 +50,19 @@ namespace UnityEditor
             // 6000.0.71f1 Editor, tests/projects/compileeventsnoreload start.load).
             if ((EditorSettings.ActiveEnterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) != 0)
             {
+                // Read (and cleared) here too: nothing reloads, but the variable must not outlive the start.
+                ContinuesScriptReload();
+                // The start's load runs in Edit mode: isPlaying and isPlayingOrWillChangePlaymode false.
+                EditorSession.IsPlaying = false;
                 LoadEditorDomain();
                 EditorSession.BeginEnteringPlayMode();
                 try
                 {
                     EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
-                    EnterPlayModeMethods();
+                    // [InitializeOnEnterPlayMode] runs as Play mode is entered, as on the reload path.
+                    PlayModeDomainLoading = true;
+                    try { EnterPlayModeMethods(); }
+                    finally { PlayModeDomainLoading = false; }
                 }
                 finally { EditorSession.EndEnteringPlayMode(); }
                 return;
