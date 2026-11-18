@@ -76,6 +76,62 @@ fn meta_guid(file: &Path) -> Option<String> {
     read_meta_guid(Path::new(&format!("{}.meta", file.display()))).map(|g| g.to_string())
 }
 
+/// A hint for code that compiles for mobile targets only: the files of the first errors branch on
+/// `UNITY_ANDROID` or `UNITY_IOS` while the target is Standalone (the default when the Editor's
+/// active build target is not known).
+fn mobile_target_hint(compiled: &CompileResponse, target: &str) -> Option<String> {
+    if target != "Standalone" {
+        return None;
+    }
+    let mut files: Vec<&str> = compiled
+        .assemblies
+        .iter()
+        .filter(|a| a.status == "failed")
+        .flat_map(|a| a.errors.iter().take(10))
+        .filter_map(|e| e.file.as_deref())
+        .collect();
+    files.sort_unstable();
+    files.dedup();
+    let platforms: std::collections::BTreeSet<&str> = files
+        .iter()
+        .filter_map(|f| std::fs::read_to_string(f).ok())
+        .flat_map(|text| {
+            text.lines()
+                .filter(|l| {
+                    let l = l.trim_start();
+                    l.starts_with("#if") || l.starts_with("#elif")
+                })
+                .flat_map(|l| {
+                    ["UNITY_ANDROID", "UNITY_IOS"]
+                        .into_iter()
+                        .filter(|p| l.contains(p))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    if platforms.is_empty() {
+        return None;
+    }
+    let targets: Vec<&str> = platforms
+        .iter()
+        .map(|p| {
+            if *p == "UNITY_ANDROID" {
+                "--target Android"
+            } else {
+                "--target iOS"
+            }
+        })
+        .collect();
+    Some(format!(
+        "\nhint: the failing code branches on {} and compiles here for the Standalone target (the \
+         default: the Editor's active build target is not known without the project's Library); \
+         try {}",
+        platforms.iter().copied().collect::<Vec<_>>().join(" and "),
+        targets.join(" or ")
+    ))
+}
+
 /// Compiles the game and builds the configuration the managed engine starts from.
 pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOptions) -> Result<Json> {
     let start = Instant::now();
@@ -92,6 +148,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             for error in assembly.errors.iter().take(10) {
                 message.push_str(&format!("\n  {error}"));
             }
+        }
+        if let Some(hint) = mobile_target_hint(&compiled, &options.target) {
+            message.push_str(&hint);
         }
         bail!("the game's code does not compile (as in the Editor, it cannot be played):{message}");
     }
@@ -693,4 +752,47 @@ pub fn read_settings_inputs(project: &Project) {
 /// Script execution order, shared by startup and importer diagnostics.
 pub fn execution_order(meta: &Value) -> Option<i64> {
     meta.get("MonoImporter")?.get("executionOrder")?.as_i64()
+}
+
+#[cfg(test)]
+mod mobile_hint_tests {
+    use super::*;
+    use unbound_project::compile::{AssemblyResult, DiagnosticInfo};
+
+    fn failed(file: &std::path::Path) -> CompileResponse {
+        CompileResponse {
+            failed: 1,
+            assemblies: vec![AssemblyResult {
+                name: "Assembly-CSharp".into(),
+                status: "failed".into(),
+                errors: vec![DiagnosticInfo {
+                    id: "CS0161".into(),
+                    file: Some(file.display().to_string()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn mobile_only_branches_get_a_target_hint() {
+        let dir = std::env::temp_dir().join(format!("unbound-mobile-hint-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mobile = dir.join("Mobile.cs");
+        std::fs::write(
+            &mobile,
+            "int F() {\n#if UNITY_ANDROID\n return 1;\n#elif UNITY_IOS\n return 2;\n#endif\n}\n",
+        )
+        .unwrap();
+        let plain = dir.join("Plain.cs");
+        std::fs::write(&plain, "int F() { } // UNITY_ANDROID in a comment\n").unwrap();
+        let hint = mobile_target_hint(&failed(&mobile), "Standalone").unwrap();
+        assert!(hint.contains("UNITY_ANDROID and UNITY_IOS"), "{hint}");
+        assert!(hint.contains("--target Android or --target iOS"), "{hint}");
+        assert_eq!(mobile_target_hint(&failed(&mobile), "Android"), None);
+        assert_eq!(mobile_target_hint(&failed(&plain), "Standalone"), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
