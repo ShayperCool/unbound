@@ -82,6 +82,12 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   measured release/context and unmeasured cases explicit. Existing raw failures and callback
   sequences stay visible; do not change an oracle, comparator, tolerance or ordering to make
   an unspecified difference disappear. Review observable game effects before changing code.
+- Crash-class defects (an exception, a crash, an object Unbound fails to create, an API member
+  that throws where Unity works) need no Editor probe when Unity's behaviour is unambiguous
+  (documented for the release, or plainly no throw and no log): the fix, a test that fails before
+  it and passes after it, and a rerun of the project where it was seen are the evidence. Probe when
+  the resulting values, objects, order, callbacks or log lines, or the object's creation, are in
+  doubt; value, visual, timing and order differences always need an Editor reference.
 
 ## Multi-agent work
 
