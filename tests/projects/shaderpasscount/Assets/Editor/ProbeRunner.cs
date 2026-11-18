@@ -38,6 +38,7 @@ public static class ProbeRunner
     static bool armed;
     static bool closed;
     static int editTicks;
+    static int enterTicks;
 
     static string Output => Environment.GetEnvironmentVariable(ShaderPassCountProbe.OutputVariable);
 
@@ -85,11 +86,16 @@ public static class ProbeRunner
             SessionState.SetBool(State + "finished", true);
             return;
         }
-        EditorApplication.delayCall += () =>
-        {
-            Event("enter", null);
-            EditorApplication.EnterPlaymode();
-        };
+        EditorApplication.delayCall += Enter;
+    }
+
+    /// <summary>Enters Play mode once (Record's delayCall, else Tick).</summary>
+    static void Enter()
+    {
+        if (SessionState.GetBool(State + "entered", false)) return;
+        SessionState.SetBool(State + "entered", true);
+        Event("enter", null);
+        EditorApplication.EnterPlaymode();
     }
 
     static void Arm()
@@ -122,7 +128,15 @@ public static class ProbeRunner
         }
         if (!SessionState.GetBool(State + "finished", false))
         {
-            if (!EditorApplication.isPlaying || ShaderPassCountProbe.finishedCode == null) return;
+            if (!EditorApplication.isPlaying)
+            {
+                // The windowed macOS Editor does not always run the delayCall Record schedules
+                // during -executeMethod; Play mode is then entered from here, SettleTicks
+                // updates later.
+                if (!SessionState.GetBool(State + "entered", false) && ++enterTicks >= SettleTicks) Enter();
+                return;
+            }
+            if (ShaderPassCountProbe.finishedCode == null) return;
             SessionState.SetInt(State + "code", ShaderPassCountProbe.finishedCode.Value);
             SessionState.SetBool(State + "finished", true);
             Event("finished", ShaderPassCountProbe.finishedCode.Value.ToString(CultureInfo.InvariantCulture));
