@@ -37,6 +37,49 @@ def failing(summary, passed=0, failed=1, step=None, failures=None):
     return result
 
 
+class MetalReferenceTests(unittest.TestCase):
+    """On macOS arm64 a compare step reads the probe's Metal reference where it has one."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.probe = Path(self.directory.name)/'probe'
+        self.root = self.probe/'Reference/unity-R'
+        (self.root/'metal/sub').mkdir(parents=True)
+        (self.root/'sub').mkdir()
+        for name in ('unity-R.png', 'unity-R.jsonl', 'unity-R/metal.png', 'unity-R/sub/a.png',
+                     'unity-R/metal/sub/a.png', 'unity-R/other.png'):
+            (self.probe/'Reference'/name).write_text('x')
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def metal(self, argument):
+        return suite.metal_reference(argument, str(self.probe), 'R')
+
+    def test_a_reference_with_a_metal_one_is_replaced(self):
+        self.assertEqual(self.metal(str(self.probe/'Reference/unity-R.png')), str(self.root/'metal.png'))
+        self.assertEqual(self.metal(str(self.root/'sub/a.png')), str(self.root/'metal/sub/a.png'))
+
+    def test_everything_else_is_kept(self):
+        # No Metal counterpart, the Metal reference itself, another release, the Reference
+        # directory, a residual list and a flag.
+        for argument in (str(self.probe/'Reference/unity-R.jsonl'), str(self.root/'other.png'),
+                         str(self.root/'metal.png'), str(self.root/'metal/sub/a.png'),
+                         str(self.probe/'Reference/unity-S.png'), str(self.root), str(self.probe/'Reference'),
+                         str(self.probe/'image-residuals.json'), '--gate', 3):
+            self.assertEqual(self.metal(argument), argument)
+
+    def test_compare_steps_read_it_on_macos_arm64_only(self):
+        step = suite.Step('compare', ['{probe}/Reference/unity-{release}.png', '{work}/out.png'])
+        values = {'probe': str(self.probe), 'release': 'R', 'work': self.directory.name}
+        engine = suite.Step('engine', ['{probe}/Reference/unity-{release}.png'])
+        with unittest.mock.patch.object(suite, 'MACOS_ARM64', True):
+            self.assertEqual(suite.step_argv(step, values)[0], str(self.root/'metal.png'))
+            self.assertEqual(suite.step_argv(engine, values)[0], str(self.probe/'Reference/unity-R.png'))
+        with unittest.mock.patch.object(suite, 'MACOS_ARM64', False):
+            self.assertEqual(suite.step_argv(step, values)[0], str(self.probe/'Reference/unity-R.png'))
+
+
 class WorseTests(unittest.TestCase):
     def test_more_differences(self):
         old = failing('17 nodes compared, 0 differences || 11 nodes compared, 1 differences')

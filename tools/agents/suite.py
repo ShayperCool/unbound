@@ -92,6 +92,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shlex
 import shutil
@@ -110,6 +111,9 @@ LIMITS = Path.home()/'.cache/compat/job-limits.json'
 ENGINE_TIMEOUT = 1200
 DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
+# macOS arm64, where the Editor and the engine draw with Metal: comparators read a probe's Metal
+# reference where it has one (metal_reference).
+MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
                            stop_tree, require_process_watch, default_release, probe_release,
                            python_with_pil, probe_path)
@@ -1060,8 +1064,29 @@ def private_project(argv, work):
     return argv
 
 
+def metal_reference(argument, probe, release):
+    """On macOS arm64 the probe's Metal reference in place of `argument` where it names one of the
+    probe's references of `release` and the Metal one exists: Reference/unity-R.EXT is
+    Reference/unity-R/metal.EXT, Reference/unity-R/PATH is Reference/unity-R/metal/PATH. The
+    graphics device's answers and rounding follow the macOS Editor there (AGENTS.md Platforms);
+    a probe without a Metal reference compares with the Linux one, as before."""
+    if not isinstance(argument, str):
+        return argument
+    root = Path(probe)/'Reference'/f'unity-{release}'
+    path = Path(argument)
+    if path.parent == root.parent and path.stem == root.name and path.suffix:
+        metal = root/('metal'+path.suffix)
+    elif path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
+        metal = root/'metal'/path.relative_to(root)
+    else:
+        return argument
+    return str(metal) if metal.exists() else argument
+
+
 def step_argv(step, values):
     argv = list(step.argv) if step.literal else substitute(step.argv, values)
+    if MACOS_ARM64 and step.kind in ('compare', 'identical') and not step.literal and 'probe' in values:
+        argv = [metal_reference(a, values['probe'], values.get('release')) for a in argv]
     return private_project(argv, Path(values['work'])) if step.kind == 'engine' else argv
 
 
