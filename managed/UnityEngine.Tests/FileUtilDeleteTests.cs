@@ -164,6 +164,20 @@ namespace UnityEngine.Tests
                 Assert.True(File.Exists(unboundFile));
                 Assert.True(Directory.Exists(view));
                 Assert.Equal(reported + 6, Hits());
+                // Spelled in another case: on a volume that ignores case the same places are refused
+                // (decided on where the path lands); elsewhere these name nothing. Nothing goes either way.
+                bool ignoresCase = Directory.Exists(Path.Combine(project, "LIBRARY"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("packages/com.example.shared/package.json"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("library"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("Library/unbound"));
+                Assert.True(File.Exists(shared));
+                Assert.True(File.Exists(unboundFile));
+                Assert.True(Directory.Exists(view));
+                Assert.Equal(reported + 6 + (ignoresCase ? 3 : 0), Hits());
+                // Control: a file a script wrote in its working directory (the view) is its to delete.
+                File.WriteAllText(Path.Combine(view, "written.txt"), "w");
+                Assert.True(FileUtil.DeleteFileOrDirectory("written.txt"));
+                Assert.False(File.Exists(Path.Combine(view, "written.txt")));
                 // Control: other Library content is the project's to delete.
                 Assert.True(FileUtil.DeleteFileOrDirectory("Library/Other/l.txt"));
                 Assert.False(File.Exists(libraryFile));
