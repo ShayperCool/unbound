@@ -53,7 +53,11 @@ pub struct ProfileData {
     /// (`ENABLE_UNITY_CONSENT` → `UnityEngine.UnityConsentModule`). Which modules an installation
     /// ships is a fact of that installation, not of the family: a 6000.0 patch before a module
     /// was added lacks its assembly and its define, so [`Profile::engine_defines`] leaves the
-    /// define out when the installation the project compiles against has no such assembly.
+    /// define out when the installation the project compiles against has no such assembly. A
+    /// define is listed only where an installation without the module is known to lack the
+    /// define too: a define whose API a module holds does not follow it in general (the 6000.6.3f1
+    /// Editor defines `ENABLE_VR`, whose `XRSettings` the 6000.0 VR module holds, without a VR
+    /// module).
     #[serde(default)]
     pub module_defines: BTreeMap<String, String>,
 }
@@ -491,9 +495,42 @@ mod tests {
         let consent_only = defines(&|m| m != "UnityEngine.IdentifiersModule");
         assert!(has(&consent_only, "ENABLE_UNITY_CONSENT"));
         assert!(!has(&consent_only, "ENABLE_UNITY_CLOUD_IDENTIFIERS"));
-        // Defines without a module entry never depend on the installation.
-        assert!(has(&without, "ENABLE_AUDIO"));
-        assert!(has(&without, "ENABLE_CLOUD_SERVICES"));
+        // Only the measured ties depend on the installation: without any engine module only the
+        // two go. A define whose API a module holds stays without it (the 6000.6.3f1 Editor
+        // defines ENABLE_VR without a VR module).
+        let none = defines(&|_| false);
+        let removed: Vec<&String> = full.iter().filter(|d| !none.contains(d)).collect();
+        assert_eq!(
+            removed,
+            ["ENABLE_UNITY_CONSENT", "ENABLE_UNITY_CLOUD_IDENTIFIERS"]
+        );
+        for define in [
+            "ENABLE_VR",
+            "ENABLE_AUDIO",
+            "ENABLE_CLOUD_SERVICES",
+            "ENABLE_CACHING",
+            "ENABLE_MONO",
+            "ENABLE_PROFILER",
+        ] {
+            assert!(has(&none, define), "{define}");
+        }
+        // Every module entry names a define of the tables (Android's or Standalone's) and an
+        // engine module assembly.
+        let standalone = profile.engine_defines(
+            CompileMode::EditorPlayMode,
+            "Standalone",
+            false,
+            false,
+            InputHandling::InputManager,
+            &|_| true,
+        );
+        for (define, module) in &profile.data.module_defines {
+            assert!(has(&full, define) || has(&standalone, define), "{define}");
+            assert!(
+                module.starts_with("UnityEngine.") && module.ends_with("Module"),
+                "{module}"
+            );
+        }
     }
 
     #[test]
