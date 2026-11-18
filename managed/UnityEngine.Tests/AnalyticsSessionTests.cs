@@ -104,11 +104,13 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>With services enabled in the project's settings (unmeasured), a script's use of
-        /// the session reports it; the session every Play mode starts does not.</summary>
+        /// the session or of RemoteSettings, subscribing included, reports it; the session every
+        /// Play mode starts does not.</summary>
         [Fact]
         public void ServicesEnabledIsReportedOnUseNotAtTheSessionStart()
         {
-            const string member = "AnalyticsSessionInfo with Unity services enabled in project settings";
+            const string member = AnalyticsSessionInfo.SessionServicesMember;
+            const string remote = AnalyticsSessionInfo.RemoteSettingsServicesMember;
             var loaded = typeof(EditorServiceSettings).GetField("s_Loaded", BindingFlags.Static | BindingFlags.NonPublic);
             object wasLoaded = loaded.GetValue(null);
             bool wasConfigured = EditorServiceSettings.Configured;
@@ -121,9 +123,24 @@ namespace UnityEngine.Tests
                 Assert.Equal(before, Hits(member));
                 _ = AnalyticsSessionInfo.sessionId;
                 Assert.Equal(before + 1, Hits(member));
+                // Subscribing alone is a use: such a script waits for events that never come.
+                AnalyticsSessionInfo.SessionStateChanged onState = (state, id, elapsed, changed) => { };
+                AnalyticsSessionInfo.sessionStateChanged += onState;
+                AnalyticsSessionInfo.sessionStateChanged -= onState;
+                Assert.Equal(before + 2, Hits(member));
+                int remoteBefore = Hits(remote);
+                RemoteSettings.UpdatedEventHandler onUpdate = () => { };
+                RemoteSettings.Updated += onUpdate;
+                RemoteSettings.Updated -= onUpdate;
+                Assert.Equal(remoteBefore + 1, Hits(remote));
                 EditorServiceSettings.Configured = false;
                 _ = AnalyticsSessionInfo.sessionId;
-                Assert.Equal(before + 1, Hits(member));
+                AnalyticsSessionInfo.sessionStateChanged += onState;
+                AnalyticsSessionInfo.sessionStateChanged -= onState;
+                RemoteSettings.Updated += onUpdate;
+                RemoteSettings.Updated -= onUpdate;
+                Assert.Equal(before + 2, Hits(member));
+                Assert.Equal(remoteBefore + 1, Hits(remote));
             }
             finally
             {

@@ -42,24 +42,41 @@ namespace UnityEngine.Analytics
         static string s_CustomDeviceId = "";
         static readonly Stopwatch s_Elapsed = new Stopwatch();
 
-        public static event SessionStateChanged sessionStateChanged;
-        public static event IdentityTokenChanged identityTokenChanged;
+        static event SessionStateChanged s_SessionStateChanged;
+        static event IdentityTokenChanged s_IdentityTokenChanged;
+
+        /// <summary>Subscribing is a script's use of the session (no thread check, as Unity's
+        /// field-like events have none).</summary>
+        public static event SessionStateChanged sessionStateChanged
+        {
+            add { CheckServicesDisabled(SessionServicesMember); s_SessionStateChanged += value; }
+            remove => s_SessionStateChanged -= value;
+        }
+
+        public static event IdentityTokenChanged identityTokenChanged
+        {
+            add { CheckServicesDisabled(SessionServicesMember); s_IdentityTokenChanged += value; }
+            remove => s_IdentityTokenChanged -= value;
+        }
+
+        internal const string SessionServicesMember = "AnalyticsSessionInfo with Unity services enabled in project settings";
+        internal const string RemoteSettingsServicesMember = "RemoteSettings with Unity services enabled in project settings";
 
         /// <summary>Only the services-disabled profile is measured: with Unity services enabled in the
         /// project's settings the Editor may fetch settings and raise events, which a script's use of
         /// the session or of RemoteSettings reports (the session itself starts silently, as every
         /// Play mode starts one whether or not a script reads it).</summary>
-        internal static void CheckServicesDisabled(string what)
+        internal static void CheckServicesDisabled(string member)
         {
             EditorServiceSettings.Ensure();
-            if (EditorServiceSettings.Configured) Stubs.NotImplemented(what + " with Unity services enabled in project settings");
+            if (EditorServiceSettings.Configured) Stubs.NotImplemented(member);
         }
 
         /// <summary>A script reads or writes the session on the main thread.</summary>
         static void Check(string binding)
         {
             MainThreadCheck.Check(binding);
-            CheckServicesDisabled("AnalyticsSessionInfo");
+            CheckServicesDisabled(SessionServicesMember);
         }
 
         /// <summary>Play mode started: a new session, the count and ids written to the preferences.</summary>
@@ -82,9 +99,9 @@ namespace UnityEngine.Analytics
         }
 
         internal static void CallSessionStateChanged(AnalyticsSessionState sessionState, long sessionId, long sessionElapsedTime, bool sessionChanged) =>
-            sessionStateChanged?.Invoke(sessionState, sessionId, sessionElapsedTime, sessionChanged);
+            s_SessionStateChanged?.Invoke(sessionState, sessionId, sessionElapsedTime, sessionChanged);
 
-        internal static void CallIdentityTokenChanged(string token) => identityTokenChanged?.Invoke(token);
+        internal static void CallIdentityTokenChanged(string token) => s_IdentityTokenChanged?.Invoke(token);
 
         public static AnalyticsSessionState sessionState { get { Check("get_sessionState"); return s_State; } }
         public static long sessionId { get { Check("get_sessionId"); return s_SessionId; } }
@@ -121,20 +138,43 @@ namespace UnityEngine
     {
         public delegate void UpdatedEventHandler();
 
-        public static event UpdatedEventHandler Updated;
+        static event UpdatedEventHandler s_Updated;
+        static event Action s_BeforeFetchFromServer;
+        static event Action<bool, bool, int> s_Completed;
+
+        /// <summary>Subscribing is a script's use of RemoteSettings (no thread check, as Unity's
+        /// field-like events have none).</summary>
+        public static event UpdatedEventHandler Updated
+        {
+            add { CheckServices(); s_Updated += value; }
+            remove => s_Updated -= value;
+        }
+
+        public static event Action BeforeFetchFromServer
+        {
+            add { CheckServices(); s_BeforeFetchFromServer += value; }
+            remove => s_BeforeFetchFromServer -= value;
+        }
+
+        public static event Action<bool, bool, int> Completed
+        {
+            add { CheckServices(); s_Completed += value; }
+            remove => s_Completed -= value;
+        }
+
+        static void CheckServices() =>
+            UnityEngine.Analytics.AnalyticsSessionInfo.CheckServicesDisabled(UnityEngine.Analytics.AnalyticsSessionInfo.RemoteSettingsServicesMember);
 
         static void Check(string binding)
         {
             MainThreadCheck.Check(binding);
-            UnityEngine.Analytics.AnalyticsSessionInfo.CheckServicesDisabled("RemoteSettings");
+            CheckServices();
         }
-        public static event Action BeforeFetchFromServer;
-        public static event Action<bool, bool, int> Completed;
 
-        internal static void RemoteSettingsUpdated(bool wasLastUpdatedFromServer) => Updated?.Invoke();
-        internal static void RemoteSettingsBeforeFetchFromServer() => BeforeFetchFromServer?.Invoke();
+        internal static void RemoteSettingsUpdated(bool wasLastUpdatedFromServer) => s_Updated?.Invoke();
+        internal static void RemoteSettingsBeforeFetchFromServer() => s_BeforeFetchFromServer?.Invoke();
         internal static void RemoteSettingsUpdateCompleted(bool wasLastUpdatedFromServer, bool settingsChanged, int response) =>
-            Completed?.Invoke(wasLastUpdatedFromServer, settingsChanged, response);
+            s_Completed?.Invoke(wasLastUpdatedFromServer, settingsChanged, response);
 
         [Obsolete("Calling CallOnUpdate() is not necessary any more and should be removed. Use RemoteSettingsUpdated instead", true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
