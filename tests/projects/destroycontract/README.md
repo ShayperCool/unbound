@@ -95,7 +95,7 @@ refreshed to the current file. `Controls/controls.py` passes all 270 controls.
 ## Metal (macOS)
 
 On macOS arm64 the runner records the windowed macOS Editor, which draws with Metal, started
-directly (`tests/editor_runner.py`), and `publish` would write `Reference/unity-<version>/metal.jsonl`;
+directly (`tests/editor_runner.py`), and `publish` refuses (this probe has no Metal reference, below);
 the device, its launch flags and the strict checks of the Editor's result, command and log are
 `tests/guarded_editor.py`'s (OpenGL Core through VirtualGL on Linux). The preflight's compile
 fixture there is a batchmode Editor run of a fresh copy of this probe:
@@ -110,7 +110,8 @@ Editor on an Apple M2 Pro differ from the Linux reference in the device keys and
 states, the macOS Editor resuming WaitForEndOfFrame once more, in the first frame. Unresolved
 which of two differences between the recordings causes it: the windowed Editors' first Game-view
 frame (a windowing difference, which AGENTS.md Platforms leaves to the Linux references), or the
-Play mode entry, through the update handler on macOS (the Mac captures; their `enter` events
-predate the entry path detail) and through Record's delayCall on Linux. A Linux capture entering
+Play mode entry, through the update handler on macOS (inferred: these captures' `enter` events
+predate the entry path detail, and come about 6 s after `record`, as in an activation order capture
+whose event names `update`) and through Record's delayCall on Linux. A Linux capture entering
 from the update handler would separate them. Until then the Mac compares with the Linux
 reference, where Unbound on Metal fails only the two device keys.
