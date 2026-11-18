@@ -31,7 +31,7 @@ namespace Unbound.Runtime
                 {
                     using var construction = MainThreadCheck.Construct(typeof(MonoBehaviour).IsAssignableFrom(type) ? type : null,
                         deserializing ? null : go?.m_Name);
-                    c = (Component)Activator.CreateInstance(type, nonPublic: true);
+                    c = (Component)ObjectConstruction.Create(type);
                 }
             }
             catch (TargetInvocationException e)
@@ -99,7 +99,16 @@ namespace Unbound.Runtime
             if (typeof(Transform).IsAssignableFrom(type))
             {
                 if (type == typeof(RectTransform) && !(go.m_Transform is RectTransform))
+                {
+                    // A loaded prefab asset keeps its Transform (Unity 6000.0.71f1,
+                    // tests/projects/gameinterop hier.rect_transform).
+                    if (Hierarchy.IsLoadedPrefabAsset(go.m_Transform))
+                    {
+                        Log.Engine(LogType.Log, $"Changing Transform on a Prefab instance ({go.name}) is not allowed.", go);
+                        return null;
+                    }
                     return ReplaceTransform(go);
+                }
                 Debug.LogError("A GameObject can only contain one 'Transform' component.", go);
                 return null;
             }
@@ -291,6 +300,32 @@ namespace Unbound.Runtime
 
     internal static class Hierarchy
     {
+        internal const string AssetParentingRefused = "Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption";
+        const string AssetTransformRefused = "Transform resides in a Prefab asset and cannot be set to prevent data corruption";
+
+        /// <summary>A transform of a prefab asset as loaded (not one an importer is building).</summary>
+        internal static bool IsLoadedPrefabAsset(Transform t) =>
+            t.m_GameObject.m_IsPrefabAsset && !ScriptedImports.Importing && !UnityEditor.AssetImporter.AnyImporting;
+
+        /// <summary>Scripts cannot change the hierarchy of a loaded prefab asset: a parent inside an
+        /// asset is refused with one error, an asset's transform moved out of it (to the scene or to
+        /// no parent) with another, and nothing changes (Unity 6000.0.71f1,
+        /// tests/projects/gameinterop hier.*).</summary>
+        internal static bool RefusesAssetParenting(Transform t, Transform parent)
+        {
+            if (parent != null && IsLoadedPrefabAsset(parent))
+            {
+                Debug.LogError(AssetParentingRefused, t);
+                return true;
+            }
+            if (IsLoadedPrefabAsset(t))
+            {
+                Debug.LogError(AssetTransformRefused, t);
+                return true;
+            }
+            return false;
+        }
+
         internal static void SetParent(Transform t, Transform parent, bool worldPositionStays, int siblingIndex)
         {
             var go = t.m_GameObject;
@@ -303,12 +338,15 @@ namespace Unbound.Runtime
                 worldRotation = t.rotation;
                 worldScale = t.lossyScale;
             }
-            var oldParent = t.m_Parent;
             bool sceneChanged = false;
             // The whole subtree (inactive objects too) hears of it before the relinking (measured:
             // tests/projects/messages).
             Messaging.SendToHierarchy(t, "OnBeforeTransformParentChanged");
             if (t.m_Destroyed || (parent != null && parent.m_Destroyed)) return;
+            // A script that hears it may have moved the transform already: it leaves its parent of
+            // now, and the request still decides where it ends up (Unity 6000.0.71f1,
+            // tests/projects/gameinterop reentrant.before).
+            var oldParent = t.m_Parent;
             if (oldParent == null) SceneRegistry.RemoveRoot(go);
             else oldParent.m_Children.Remove(t);
 

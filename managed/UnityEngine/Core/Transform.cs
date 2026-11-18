@@ -706,11 +706,7 @@ namespace UnityEngine
                 Debug.LogError("Cannot make a GameObject a child of itself or of one of its descendants.", this);
                 return;
             }
-            if (m_GameObject.m_IsPrefabAsset != (parent != null && parent.m_GameObject.m_IsPrefabAsset) && parent != null)
-            {
-                Debug.LogError("Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption", this);
-                return;
-            }
+            if (Hierarchy.RefusesAssetParenting(this, parent)) return;
             Hierarchy.SetParent(this, parent, worldPositionStays, -1);
         }
 
@@ -844,6 +840,13 @@ namespace UnityEngine
 
         public void DetachChildren()
         {
+            // A prefab asset keeps its children: one error naming the first (Unity 6000.0.71f1,
+            // tests/projects/gameinterop hier.detach_children).
+            if (m_Children.Count > 0 && Hierarchy.IsLoadedPrefabAsset(this))
+            {
+                Debug.LogError($"{Hierarchy.AssetParentingRefused} (GameObject: '{m_Children[0].m_GameObject.m_Name}').", this);
+                return;
+            }
             for (int i = m_Children.Count - 1; i >= 0; i--)
                 m_Children[i].SetParent(null, true);
         }

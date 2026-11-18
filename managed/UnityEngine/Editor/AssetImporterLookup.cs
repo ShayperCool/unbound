@@ -19,6 +19,9 @@ namespace UnityEditor
         /// during an import the Editor gives the importing instance, afterwards another one with
         /// the .meta's settings (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis
         /// importer.during and importer.after).</summary>
+        /// <summary>True while any importer imports its asset.</summary>
+        internal static bool AnyImporting => s_Importing.Count > 0;
+
         internal static ImportingScope Importing(string path, AssetImporter importer)
         {
             path = path.Replace('\\', '/');

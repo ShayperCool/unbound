@@ -78,6 +78,10 @@ namespace UnityEngine
             // it is set before any component wakes up.
             go.m_Scene = (scene ?? SceneRegistry.DefaultCreationScene()).Handle;
             go.AddTransform(typeof(Transform));
+            // Its Transform's added-component message is refused inside OnValidate (Unity
+            // 6000.0.71f1, tests/projects/gameinterop hier.validate_add).
+            if (ScriptMessages.Validating)
+                Log.Engine(LogType.Warning, $"SendMessage cannot be called during Awake, CheckConsistency, or OnValidate ({go.m_Name}: OnDidAddComponent)", go);
             SceneRegistry.AddRoot(go);
             if (components != null)
                 foreach (var type in components)

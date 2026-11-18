@@ -48,6 +48,7 @@ namespace Unbound.Runtime
             var method = s_OnValidate.GetOrAdd(target.GetType(), t => Find(t, "OnValidate", Type.EmptyTypes));
             if (method == null) return;
             Destruction.ImmediateForbiddenDepth++;
+            t_Validating++;
             try
             {
                 method.Invoke(target, null);
@@ -56,8 +57,17 @@ namespace Unbound.Runtime
             {
                 Debug.LogException(e.InnerException ?? e, target);
             }
-            finally { Destruction.ImmediateForbiddenDepth--; }
+            finally
+            {
+                t_Validating--;
+                Destruction.ImmediateForbiddenDepth--;
+            }
         }
+
+        [ThreadStatic] static int t_Validating;
+
+        /// <summary>True while an OnValidate runs.</summary>
+        internal static bool Validating => t_Validating > 0;
 
         static ScriptMessages Build(Type type)
         {

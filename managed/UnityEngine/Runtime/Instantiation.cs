@@ -30,8 +30,11 @@ namespace Unbound.Runtime
                 // As Unity's: references to the original inside its data point at the copy
                 // (an InputActionAsset's maps name their asset).
                 new SerializedCopier(o => ReferenceEquals(o, so) ? copy : o).CopyScriptObject(so, copy);
-                clone = copy;
-                ((ScriptableObject)clone).RunCreationCallbacks();
+                // Named before it wakes: its Awake sees "(Clone)" (Unity 6000.0.71f1,
+                // tests/projects/gameinterop ctor.data.instantiate).
+                copy.m_Name = so.m_Name + "(Clone)";
+                copy.RunCreationCallbacks();
+                return copy;
             }
             else if (!AssetAdapters.TryClone(original, out clone))
             {
@@ -47,7 +50,7 @@ namespace Unbound.Runtime
         {
             var sourceGo = original as GameObject ?? (original as Component)?.m_GameObject;
             if (sourceGo == null) return Clone(original, null, false, null, null);
-            var parent = parameters.parent;
+            var parent = WithoutPersistentParent(parameters.parent);
             var scene = TargetScene(parent, parameters.scene);
             var clone = Prepare(original, sourceGo, scene, "(Clone)");
             Place(clone, parent, scene, parameters.worldSpace, !parameters.worldSpace, position, rotation);
@@ -55,8 +58,19 @@ namespace Unbound.Runtime
             return clone.Result;
         }
 
+        /// <summary>A loaded prefab asset cannot parent a copy: the copy is made without a parent, in
+        /// the scene a parentless copy goes to, after one error (Unity 6000.0.71f1,
+        /// tests/projects/gameinterop hier.instantiate_under). An importer's own objects can.</summary>
+        static Transform WithoutPersistentParent(Transform parent)
+        {
+            if (parent == null || !Hierarchy.IsLoadedPrefabAsset(parent)) return parent;
+            Debug.LogError("Cannot instantiate objects with a parent which is persistent. New object will be created without a parent.");
+            return null;
+        }
+
         static Object CloneGameObject(Object original, GameObject sourceGo, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation)
         {
+            parent = WithoutPersistentParent(parent);
             var scene = TargetScene(parent, default);
             var clone = Prepare(original, sourceGo, scene, "(Clone)");
             Place(clone, parent, scene, instantiateInWorldSpace, false, position, rotation);
