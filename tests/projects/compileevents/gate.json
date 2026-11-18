@@ -2,6 +2,7 @@
   "commands": ["python3 tests/projects/compileevents/run.py gate"],
   "summary": "compileevents: .*",
   "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/CompilationPipeline.cs",
     "managed/UnityEngine/Editor/EditorInitialization.cs",
     "managed/UnityEngine/Editor/EditorState.cs",

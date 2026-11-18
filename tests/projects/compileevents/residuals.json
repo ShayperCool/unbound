@@ -1,5 +1,9 @@
 {
   "Unbound has one editor domain, loaded as Play mode starts: its editor scripts load before Play mode entry's pre-reload events (ExitingEditMode, beforeAssemblyReload), which the Editor sends in its Edit-mode domain before loading the Play mode one; their beforeAssemblyReload handlers run in the domain that then plays": [
     "start.load"
+  ],
+  "An edit Unbound cannot patch restarts the session, which enters Play mode again ([InitializeOnEnterPlayMode], ExitingEditMode, EnteredPlayMode); the Editor's reload for a script change keeps Play mode": [
+    "round1.playMode",
+    "round3.playMode"
   ]
 }

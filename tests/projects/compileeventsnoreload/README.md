@@ -11,5 +11,8 @@ Editor loaded at its start (`start.load`: its editor scripts' load, `[DidReloadS
 afterAssemblyReload; no beforeAssemblyReload). A script change in Play mode still recompiles and
 reloads the domain as with the default options (the rounds' rows are those of compileevents).
 
-Unbound reads the options from the project's EditorSettings.asset: its one editor domain load sends
-no beforeAssemblyReload when they disable the domain reload.
+Unbound reads the options from the project's EditorSettings.asset: when they keep the domain, its
+one editor domain loads as the Editor's start does (in Edit mode, ending with afterAssemblyReload),
+then Play mode is entered without a reload (ExitingEditMode, `[InitializeOnEnterPlayMode]` with the
+options, EnteredPlayMode). Recorded residuals (`residuals.json`): `round1.playMode` and
+`round3.playMode`, the restarted session's Play mode entry (see compileevents).

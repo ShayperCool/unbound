@@ -41,7 +41,14 @@ public static class CompileEventsProbe
         CompilationPipeline.assemblyCompilationNotRequired += a => Log("notRequired " + a);
         AssemblyReloadEvents.beforeAssemblyReload += () => Log("beforeAssemblyReload");
         AssemblyReloadEvents.afterAssemblyReload += () => Log("afterAssemblyReload");
+        EditorApplication.playModeStateChanged += state => Log("playMode " + state);
         EditorApplication.update += Tick;
+    }
+
+    [InitializeOnEnterPlayMode]
+    static void Entering(EnterPlayModeOptions options)
+    {
+        if (!string.IsNullOrEmpty(Out)) Log("enterPlayMode " + options);
     }
 
     [UnityEditor.Callbacks.DidReloadScripts]
@@ -112,6 +119,12 @@ public static class CompileEventsProbe
         AssetDatabase.Refresh();
     }
 
+    /// <summary>Play mode's own events: its state changes and [InitializeOnEnterPlayMode].</summary>
+    static bool IsPlayModeEvent(string line) => line.StartsWith("playMode ", StringComparison.Ordinal) || line.StartsWith("enterPlayMode ", StringComparison.Ordinal);
+
+    /// <summary>An event's name, with its argument for Play mode's events.</summary>
+    static string Token(string line) => IsPlayModeEvent(line) ? line.Replace(' ', ':') : line.Split(' ')[0];
+
     static void Finish()
     {
         var lines = File.ReadAllLines(EventLog);
@@ -122,7 +135,7 @@ public static class CompileEventsProbe
         // How the domain the rounds start in loaded: its events from the reload entering Play mode
         // on (the Editor loaded others before, in Edit mode).
         int first = Array.IndexOf(lines, "round 1");
-        var before = (first < 0 ? lines : lines.Take(first)).Select(l => l.Split(' ')[0]).ToArray();
+        var before = (first < 0 ? lines : lines.Take(first)).Select(Token).ToArray();
         int reload = Array.LastIndexOf(before, "beforeAssemblyReload");
         Put("start.load", string.Join(",", before.Skip(Math.Max(0, reload >= 0 ? reload : Array.LastIndexOf(before, "initializeOnLoad")))));
         for (int round = 1; round <= s_Versions.Length; round++)
@@ -135,7 +148,8 @@ public static class CompileEventsProbe
             // The order of the round's events, an assembly's (compiled or not required) being
             // "assembly": their order among themselves is not Unity's to keep.
             var order = new List<string>();
-            foreach (var e in events)
+            Put(k + "playMode", string.Join(",", events.Where(IsPlayModeEvent).Select(Token)));
+            foreach (var e in events.Where(e => !IsPlayModeEvent(e)))
             {
                 string name = e.Split(' ')[0];
                 if ((name.StartsWith("assembly", StringComparison.Ordinal) && !name.EndsWith("Reload", StringComparison.Ordinal)) || name == "notRequired")
