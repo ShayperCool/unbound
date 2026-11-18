@@ -207,9 +207,11 @@ impl GraphicsDevice {
     /// level, read back as exactly `level / (2^bits - 1)`: the macOS Editor's Metal device
     /// stores the formats themselves (0.5 reads 16/31 in a 5-bit channel, 0.7 11/15 in a 4-bit
     /// one), where OpenGL Core and Vulkan keep the top bits of an 8-bit value and 4-4-4-4 targets
-    /// at 8 bits (tests/projects/samplerstates `metal.jsonl` Packed.*, an Apple M2 Pro). A blend
-    /// within one pass reads the unrounded value there: the probe's added 0.04 lands on 0.3, not on
-    /// its rounded 9/31.
+    /// at 8 bits (tests/projects/samplerstates `metal.jsonl` Packed.*, an Apple M2 Pro). A blended
+    /// Blit right after another reads that draw's unrounded value there (the probe's added 0.04
+    /// lands on 0.3, not on its rounded 9/31; presumably both Blits share one render pass, which
+    /// Unbound does not reproduce: residuals-metal.json). The managed device profile's `Packs4444Targets` is the same mechanism (it
+    /// sends 4-4-4-4 targets as packed): both are true on Metal only and change together.
     pub fn packed_writes_round(self) -> bool {
         matches!(self, Self::Metal)
     }

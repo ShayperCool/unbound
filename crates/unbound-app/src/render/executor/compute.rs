@@ -26,8 +26,9 @@ pub struct GpuBuffer {
     /// The hidden counter of an Append or Counter buffer: one `u32`, bound where a kernel's
     /// `<name>@count` block (glslang's counter of `<name>`) is.
     pub counter: Option<wgpu::Buffer>,
-    /// A dispatch has bound the counter: until then Unity's CopyCount writes nothing (while
-    /// SetCounterValue still sets where the first dispatch starts).
+    /// A dispatch has bound the counter: until then CopyCount writes nothing on the devices
+    /// whose Editor does so (`DeviceConventions::copies_unused_counters`: all but Metal), while
+    /// SetCounterValue still sets where the first dispatch starts.
     pub counter_used: bool,
 }
 

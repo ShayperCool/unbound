@@ -97,7 +97,7 @@ ways, which Unbound follows there: `CopyCount` and `CopyCounterValue` copy a cou
 bound yet (0 when the buffer is made, else the value `SetCounterValue` gave: `append.boundonly`,
 `append.plainbind`, `counter.created`, `counter.cbtype`, `indirect.copycount`, `cmddata.counter.*`),
 `SetData` sets the counter to 0 (`append.cb.setdata.count`) and a copy past the destination's end
-copies nothing without the assertion (`append.cb.copybeyond`). Unbound on Metal matches 382 to 384
+copies nothing without the assertion (`append.cb.copybeyond`). Unbound on Metal matches 382 to 385
 of 386 values. Open: an indirect dispatch at an offset that is not a multiple of 4
 (`indirect.unaligned`: undefined, the Metal Editor dispatches groups there, Unbound none), and the
 slots appended values take (`append.cb.reset.data`, `append.cb.start10.data`,

@@ -6094,15 +6094,17 @@ fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
 /// first, else as given (its packing then truncates it as a draw's: on the Vulkan Editor a
 /// clear of mip level 1 and a further color's clear at level 0 differ so, Unity 6000.0.71f1,
 /// tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`). Where the device's
-/// writes round too (Metal) the level is the nearest one's byte (`resources::packed_clear`); Metal
-/// clears are measured at the first level only.
+/// writes round too (Metal) a clear rounds at every level, to the nearest level's byte
+/// (`resources::packed_clear`; `metal.jsonl` `Packed.*.mip.clear`: 0.7 clears mip 1 of a 4-4-4-4
+/// target to 11/15).
 fn packed_clear(
     conventions: DeviceConventions,
     packed: u8,
     level: u32,
     color: [f32; 4],
 ) -> [f32; 4] {
-    if !conventions.packed_clears_round || level != 0 {
+    // Where writes round (Metal) every level's clear rounds; on Vulkan only the first level's.
+    if !conventions.packed_clears_round || (level != 0 && !conventions.packed_writes_round) {
         return color;
     }
     match resources::packed_bits(packed) {
@@ -6534,10 +6536,10 @@ mod tests {
         // Metal rounds each channel to its nearest level, 4-4-4-4 included (0.7 at half
         // precision is 11 of 15), kept as that level's nearest byte (`metal.jsonl` Packed.*.clear).
         let metal = DeviceConventions::of(GraphicsDevice::Metal);
-        assert_eq!(
-            packed_clear(metal, owned::PACKED_4444, 0, color),
-            [68.0 / 255.0, 136.0 / 255.0, 85.0 / 255.0, 187.0 / 255.0]
-        );
+        let rounded = [68.0 / 255.0, 136.0 / 255.0, 85.0 / 255.0, 187.0 / 255.0];
+        assert_eq!(packed_clear(metal, owned::PACKED_4444, 0, color), rounded);
+        // A further level rounds there too (`Packed.ARGB4444.mip.clear`), unlike Vulkan's.
+        assert_eq!(packed_clear(metal, owned::PACKED_4444, 1, color), rounded);
     }
 
     #[test]

@@ -114,7 +114,9 @@ namespace Unbound.Runtime
         internal bool CopyCountAssertsRange { get; init; } = true;
         /// <summary>A 4444 target keeps its channels' 4 bits too (Metal: 0.25 drawn reads 4/15,
         /// tests/projects/samplerstates metal.jsonl Packed.ARGB4444.*); OpenGL Core and Vulkan
-        /// keep 8-bit values there.</summary>
+        /// keep 8-bit values there. The same mechanism as the renderer's rounding
+        /// (`GraphicsDevice::packed_writes_round`): the device stores the packed formats
+        /// themselves; both are true on Metal only and change together.</summary>
         internal bool Packs4444Targets { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
