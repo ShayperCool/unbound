@@ -394,7 +394,8 @@ effects' values hand them over.
 
 `OpsEvent`'s spawn context has, in order: a block written as a script (`EventReadsFirst`,
 `Assets/Callbacks/EventReads*.cs`) whose inputs are its event attributes read with Get Attribute
-(Current): the lifetime (`f00`), the colour (`v00`), the seed (`u00`) and alive (`b00`); blocks
+(Current): the lifetime (`f00`), the spawn count (`f01`), the colour (`v00`), the seed (`u00`) and
+alive (`b00`); blocks
 setting the lifetime (the exposed `L`), the colour (from the lifetime as read there), the seed
 (`S`) and alive (`A`); and a second script block (`EventReadsSecond`) with the same inputs.
 `event reads/<block>-<play or update><n>/*` is what each read when the context played and in its
@@ -404,6 +405,15 @@ change; at frame 8 it stops and at frame 10 plays again, both without attributes
 what the blocks before it left, in this update or the last; an event's attributes replace the
 spawn context's (one sent without them gives the asset's initial values); when the context
 plays, the inputs hold what was last evaluated (nothing yet at the first play: every bit set).
+A second spawn context of the graph takes its loop duration from its own lifetime read with Get
+Attribute (Current); a block sets that lifetime to the exposed `L2` (0.25, 0.5 from frame 7) and a
+script block (`LoopReads`) writes down the loop's duration, index and time and the lifetime held,
+when the context plays and in its first twenty updates (`event reads/loop-*`). The duration is the
+lifetime the context holds when it plays: the event's (the asset's 1, the 11 of the attributes sent
+at frame 5), not what its block sets afterwards.
+The two contexts' reads of the lifetime are one expression of the graph: what the first context's
+blocks hold when it plays again is what either context evaluated last (`f00` at plays 2 and 3: the
+second context's lifetime).
 
 ## A built asset
 
