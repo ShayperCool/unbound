@@ -11,6 +11,7 @@ using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.U2D;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// Editor tooling APIs that 2D content relies on, recorded in Play mode:
@@ -95,6 +96,8 @@ public static class ToolApisProbe
         Guard("importer", ImporterIdentity);
         Guard("psd", Psd);
         Guard("material", MaterialProperties);
+        Guard("matx", MaterialSheets);
+        Guard("imported", ImportedFlags);
         Guard("uss", UssSetup);
         EditorApplication.update += WaitForStyles;
     }
@@ -104,6 +107,7 @@ public static class ToolApisProbe
         if (++s_Frames < 5) return;
         EditorApplication.update -= WaitForStyles;
         Guard("uss", UssRead);
+        Put("playRequest.seen", string.Join(" | ", ToolApisPlayRequest.Seen));
         Put("logs.end", TakeLogs());
         s_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable(Variable), "values.jsonl"), s_Out.ToString());
@@ -604,6 +608,298 @@ public static class ToolApisProbe
         Put("mat.after.has", $"_Added {material.HasFloat("_Added")} _Extra {material.HasFloat("_Extra")} _EnableExternalAlpha {material.HasFloat("_EnableExternalAlpha")} _Color {material.HasColor("_Color")}");
         Put("mat.after.renderQueue", material.renderQueue);
         Put("mat.logs", TakeLogs());
+    }
+
+    // ------------------------------------------------------------------ material sheets (matx)
+
+    /// <summary>A serialized property's value: numbers, strings, references by name, arrays and
+    /// structs with their parts (a string is one value, not its characters).</summary>
+    static string Describe(SerializedProperty p)
+    {
+        switch (p.propertyType)
+        {
+            case SerializedPropertyType.Integer: return p.longValue.ToString(CultureInfo.InvariantCulture);
+            case SerializedPropertyType.Boolean: return p.boolValue ? "true" : "false";
+            case SerializedPropertyType.Float: return F(p.floatValue);
+            case SerializedPropertyType.Enum: return "enum " + p.intValue.ToString(CultureInfo.InvariantCulture);
+            case SerializedPropertyType.String: return "'" + p.stringValue + "'";
+            case SerializedPropertyType.ObjectReference: return p.objectReferenceValue == null ? "null" : p.objectReferenceValue.name;
+            case SerializedPropertyType.Color: return C(p.colorValue);
+            case SerializedPropertyType.Vector2: return V2(p.vector2Value);
+            case SerializedPropertyType.Vector4: return V4(p.vector4Value);
+        }
+        if (p.isArray)
+        {
+            var items = new List<string>();
+            for (int i = 0; i < p.arraySize; i++) items.Add(Describe(p.GetArrayElementAtIndex(i)));
+            return "[" + p.arraySize + ": " + string.Join(";", items) + "]";
+        }
+        var parts = new List<string>();
+        var child = p.Copy();
+        var end = p.GetEndProperty();
+        if (child.Next(true))
+            while (!SerializedProperty.EqualContents(child, end))
+            {
+                parts.Add(child.name + "=" + Describe(child));
+                if (!child.Next(false)) break;
+            }
+        return p.type + "{" + string.Join(",", parts) + "}";
+    }
+
+    /// <summary>The top-level properties (name, type, SerializedPropertyType, array) in the
+    /// iterator's order, the visible ones, and each one's value but the sheet's.</summary>
+    static void Fields(string key, Material material)
+    {
+        var so = new SerializedObject(material);
+        var it = so.GetIterator();
+        var all = new List<string>();
+        if (it.Next(true))
+            do all.Add($"{it.name}:{it.type}:{(int)it.propertyType}{(it.isArray ? ":array" : "")}");
+            while (it.Next(false));
+        Put(key + ".fields", string.Join(" ", all));
+        var visible = new List<string>();
+        it = so.GetIterator();
+        if (it.NextVisible(true))
+            do visible.Add(it.name);
+            while (it.NextVisible(false));
+        Put(key + ".visible", string.Join(" ", visible));
+        it = so.GetIterator();
+        if (it.Next(true))
+            do
+            {
+                if (it.name == "m_SavedProperties") continue;
+                Put(key + ".field." + it.name, Describe(it));
+            }
+            while (it.Next(false));
+    }
+
+    /// <summary>The sheet's own tree: every property under m_SavedProperties (a string's characters
+    /// left out) with its type, SerializedPropertyType and depth.</summary>
+    static void SheetTree(string key, Material material)
+    {
+        var so = new SerializedObject(material);
+        var p = so.FindProperty("m_SavedProperties");
+        if (p == null) { Put(key, "null"); return; }
+        var rows = new List<string>();
+        var end = p.GetEndProperty();
+        bool enter = true;
+        do
+        {
+            rows.Add($"{p.propertyPath}:{p.type}:{(int)p.propertyType}:{p.depth}");
+            enter = p.propertyType != SerializedPropertyType.String;
+        }
+        while (p.Next(enter) && !SerializedProperty.EqualContents(p, end));
+        Put(key, string.Join(" ", rows));
+    }
+
+    static void Sheet(string key, Material material)
+    {
+        var so = new SerializedObject(material);
+        var saved = so.FindProperty("m_SavedProperties");
+        if (saved == null) { Put(key, "null"); return; }
+        foreach (var list in new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" })
+            Put(key + "." + list, Describe(saved.FindPropertyRelative(list)));
+    }
+
+    static void SetPairs(SerializedProperty array, params (string Name, Action<SerializedProperty> Write)[] entries)
+    {
+        array.arraySize = entries.Length;
+        for (int i = 0; i < entries.Length; i++)
+        {
+            var e = array.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("first").stringValue = entries[i].Name;
+            entries[i].Write(e.FindPropertyRelative("second"));
+        }
+    }
+
+    static string Getters(Material m) =>
+        $"_Zeta {F(m.GetFloat("_Zeta"))} _Alpha {F(m.GetFloat("_Alpha"))} _glossy {F(m.GetFloat("_glossy"))} _Legacy {m.GetInt("_Legacy")} "
+        + $"_Count {m.GetInteger("_Count")} _Steps {m.GetInteger("_Steps")} _Tint {C(m.GetColor("_Tint"))} _Dir {V4(m.GetVector("_Dir"))} "
+        + $"_BaseMap {(m.GetTexture("_BaseMap") ? m.GetTexture("_BaseMap").name : "null")} {V2(m.GetTextureScale("_BaseMap"))} {V2(m.GetTextureOffset("_BaseMap"))} "
+        + $"_Bump {(m.GetTexture("_Bump") ? m.GetTexture("_Bump").name : "null")}";
+
+    static string Hases(Material m) =>
+        $"_Zeta {m.HasFloat("_Zeta")} _Other {m.HasFloat("_Other")} _Extra {m.HasFloat("_Extra")} _StaleFloat {m.HasFloat("_StaleFloat")} "
+        + $"_Steps {m.HasInteger("_Steps")} _StaleInt {m.HasInteger("_StaleInt")} _Dir {m.HasVector("_Dir")} _StaleColor {m.HasColor("_StaleColor")} "
+        + $"_Bump {m.HasTexture("_Bump")} _StaleTex {m.HasTexture("_StaleTex")}";
+
+    static string MatSettings(Material m) =>
+        $"queue {m.renderQueue} raw {m.rawRenderQueue} gi {(int)m.globalIlluminationFlags} doubleSidedGI {m.doubleSidedGI} instancing {m.enableInstancing} "
+        + $"keywords {string.Join(",", m.shaderKeywords)} toggle {m.IsKeywordEnabled("_TOGGLE_ON")} modeA {m.IsKeywordEnabled("_MODE_A")} "
+        + $"tag {m.GetTag("RenderType", false, "none")} shadowPass {m.GetShaderPassEnabled("ShadowCaster")}";
+
+    /// <summary>A Material's whole SerializedObject: its fields, the saved property sheet of a new
+    /// material, of one whose script set properties and keywords, and of a loaded one whose file
+    /// lacks some of its shader's properties and has others; then edits through the SerializedObject
+    /// (each list replaced, keywords and settings) and what the material answers afterwards, and how
+    /// later script sets, a shader change and a copy carry the sheet on.</summary>
+    static void MaterialSheets()
+    {
+        TakeLogs();
+        var shader = Shader.Find("ToolApis/Props");
+        Put("matx.shader", shader == null ? "null" : shader.name);
+        var sprites = new Material(Shader.Find("Sprites/Default")) { name = "SpritesTree" };
+        SheetTree("matx.sprites.tree", sprites);
+        Fields("matx.sprites", sprites);
+
+        var fresh = new Material(shader) { name = "Fresh" };
+        Sheet("matx.fresh", fresh);
+        Fields("matx.fresh", fresh);
+        Put("matx.fresh.get", Getters(fresh));
+        Put("matx.fresh.settings", MatSettings(fresh));
+
+        var set = new Material(shader) { name = "Set" };
+        set.SetFloat("_Zeta", 1.5f);
+        set.SetFloat("_Extra", 2f);
+        set.SetInteger("_Steps", 5);
+        set.SetInteger("_ExtraInt", 6);
+        set.SetColor("_Tint", new Color(0.5f, 0.25f, 0.125f, 1f));
+        set.SetVector("_ExtraVector", new Vector4(1, 1, 1, 1));
+        set.SetTextureScale("_BaseMap", new Vector2(3, 4));
+        set.EnableKeyword("_ZED_UNDECLARED");
+        set.EnableKeyword("_ALPHA_UNDECLARED");
+        set.EnableKeyword("_MODE_B");
+        Sheet("matx.set", set);
+        Put("matx.set.keywords", Describe(new SerializedObject(set).FindProperty("m_ValidKeywords")) + " " + Describe(new SerializedObject(set).FindProperty("m_InvalidKeywords")));
+        Put("matx.set.has", Hases(set));
+        Put("matx.set.logs", TakeLogs());
+
+        var partial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Partial.mat");
+        Put("matx.partial", partial == null ? "null" : partial.name);
+        if (partial != null)
+        {
+            Sheet("matx.partial", partial);
+            Fields("matx.partial", partial);
+            Put("matx.partial.get", Getters(partial));
+            Put("matx.partial.has", Hases(partial));
+            Put("matx.partial.settings", MatSettings(partial));
+            Put("matx.partial.logs", TakeLogs());
+        }
+
+        // Each list replaced through the SerializedObject: entries the shader has, left out and new.
+        var edited = new Material(shader) { name = "Edited" };
+        var runtime = new Texture2D(2, 2) { name = "RuntimeTex" };
+        var so = new SerializedObject(edited);
+        var saved = so.FindProperty("m_SavedProperties");
+        SetPairs(saved.FindPropertyRelative("m_Floats"),
+            ("_Alpha", p => p.floatValue = 0.75f), ("_Glossiness", p => p.floatValue = 0.5f), ("_Other", p => p.floatValue = 9f));
+        SetPairs(saved.FindPropertyRelative("m_Ints"), ("_Count", p => p.intValue = 7));
+        SetPairs(saved.FindPropertyRelative("m_Colors"), ("_Tint", p => p.colorValue = new Color(0, 0, 1, 1)), ("_OtherColor", p => p.colorValue = Color.white));
+        SetPairs(saved.FindPropertyRelative("m_TexEnvs"), ("_BaseMap", p =>
+        {
+            p.FindPropertyRelative("m_Texture").objectReferenceValue = runtime;
+            p.FindPropertyRelative("m_Scale").vector2Value = new Vector2(2, 3);
+            p.FindPropertyRelative("m_Offset").vector2Value = new Vector2(0.5f, 0.25f);
+        }));
+        Put("matx.edit.apply", so.ApplyModifiedProperties());
+        Sheet("matx.edit", edited);
+        Put("matx.edit.get", Getters(edited));
+        Put("matx.edit.has", Hases(edited));
+        Put("matx.edit.logs", TakeLogs());
+
+        // Keywords and settings through the SerializedObject.
+        so = new SerializedObject(edited);
+        var valid = so.FindProperty("m_ValidKeywords");
+        valid.arraySize = 1;
+        valid.GetArrayElementAtIndex(0).stringValue = "_MODE_A";
+        var invalid = so.FindProperty("m_InvalidKeywords");
+        invalid.arraySize = 1;
+        invalid.GetArrayElementAtIndex(0).stringValue = "_NOPE";
+        so.FindProperty("m_CustomRenderQueue").intValue = 2450;
+        so.FindProperty("m_LightmapFlags").intValue = 1;
+        so.FindProperty("m_DoubleSidedGI").boolValue = true;
+        so.FindProperty("m_EnableInstancingVariants").boolValue = true;
+        Put("matx.settings.apply", so.ApplyModifiedProperties());
+        Put("matx.settings", MatSettings(edited));
+        Fields("matx.settings", edited);
+        Put("matx.settings.logs", TakeLogs());
+
+        // What later changes do to the replaced sheet.
+        edited.SetFloat("_Zeta", 4f);
+        edited.SetFloat("_Undeclared", 1f);
+        edited.SetInteger("_Steps", 2);
+        Sheet("matx.later", edited);
+        Put("matx.later.get", Getters(edited));
+        var copy = new Material(edited);
+        Sheet("matx.copy", copy);
+        edited.shader = Shader.Find("Sprites/Default");
+        Sheet("matx.reshaded", edited);
+        Put("matx.later.logs", TakeLogs());
+
+        // Which calls give an emptied sheet its shader's properties back: one call each.
+        var calls = new (string Name, Action<Material> Call)[]
+        {
+            ("none", m => { }),
+            ("getFloat", m => m.GetFloat("_Zeta")),
+            ("setFloatUndeclared", m => m.SetFloat("_Undeclared", 1f)),
+            ("setColor", m => m.SetColor("_Tint", Color.green)),
+            ("setTexture", m => m.SetTexture("_BaseMap", runtime)),
+            ("setTextureOffset", m => m.SetTextureOffset("_BaseMap", Vector2.one)),
+            ("setInteger", m => m.SetInteger("_Count", 2)),
+            ("enableKeyword", m => m.EnableKeyword("_MODE_A")),
+            ("renderQueue", m => m.renderQueue = 2100),
+            ("sameShader", m => m.shader = shader),
+            ("copyPropertiesFrom", m => m.CopyPropertiesFromMaterial(new Material(shader))),
+        };
+        foreach (var (name, call) in calls)
+        {
+            var m = new Material(shader) { name = "Emptied" };
+            var empty = new SerializedObject(m);
+            var lists = empty.FindProperty("m_SavedProperties");
+            foreach (var list in new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" })
+                lists.FindPropertyRelative(list).arraySize = 0;
+            empty.ApplyModifiedProperties();
+            call(m);
+            var after = new SerializedObject(m).FindProperty("m_SavedProperties");
+            Put("matx.fill." + name, string.Join(" ", new[] { "m_TexEnvs", "m_Ints", "m_Floats", "m_Colors" }.Select(l => after.FindPropertyRelative(l).arraySize)));
+        }
+        Put("matx.fill.logs", TakeLogs());
+    }
+
+    // ------------------------------------------------------------------ imported objects' flags
+
+    static string Flags(Object o) => o == null ? "null" : $"{o.GetType().Name} {o.name} {(int)o.hideFlags}";
+
+    /// <summary>The hideFlags of the objects a ScriptedImporter adds (as it adds them and as loaded
+    /// afterwards), of a GameObject's child and components, of an instance of it, and of a natively
+    /// imported text asset and material.</summary>
+    static void ImportedFlags()
+    {
+        TakeLogs();
+        const string path = "Assets/Objects.toolapisobjects";
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        Put("imported.during", string.Join(" | ", ToolApisObjectsImporter.During));
+        Put("imported.main", Flags(AssetDatabase.LoadMainAssetAtPath(path)));
+        var all = AssetDatabase.LoadAllAssetsAtPath(path);
+        Put("imported.all", string.Join(" | ", all.Select(Flags).OrderBy(n => n, StringComparer.Ordinal)));
+        var root = all.OfType<GameObject>().FirstOrDefault(g => g.transform.parent == null);
+        if (root != null)
+        {
+            Put("imported.root", string.Join(" | ", root.GetComponentsInChildren<Component>(true).Select(c => Flags(c.gameObject) + " " + Flags(c))));
+            var instance = Object.Instantiate(root);
+            Put("imported.instance", string.Join(" | ", instance.GetComponentsInChildren<Component>(true).Select(c => Flags(c.gameObject) + " " + Flags(c))));
+            Object.Destroy(instance);
+        }
+        var material = all.OfType<Material>().FirstOrDefault();
+        if (material != null)
+        {
+            var copy = new Material(material);
+            Put("imported.materialCopy", Flags(copy));
+            Put("imported.materialEditable", new SerializedObject(material).FindProperty("m_SavedProperties")?.editable ?? false);
+        }
+        // Control: an instance of an object made with flags, not imported.
+        var made = new GameObject("MadeWithFlags") { hideFlags = HideFlags.HideInHierarchy | HideFlags.NotEditable };
+        made.AddComponent<SpriteRenderer>().hideFlags = HideFlags.NotEditable;
+        var madeCopy = Object.Instantiate(made);
+        Put("imported.madeInstance", Flags(madeCopy) + " | " + Flags(madeCopy.GetComponent<SpriteRenderer>()) + " | " + Flags(madeCopy.transform));
+        Object.Destroy(madeCopy);
+        Object.Destroy(made);
+        var madeTexture = new Texture2D(2, 2) { name = "MadeTexture", hideFlags = HideFlags.NotEditable };
+        Put("imported.madeTextureCopy", Flags(Object.Instantiate(madeTexture)));
+        Put("imported.text", Flags(AssetDatabase.LoadMainAssetAtPath("Assets/Notes.txt")));
+        Put("imported.mat", Flags(AssetDatabase.LoadMainAssetAtPath("Assets/Materials/Partial.mat")));
+        Put("imported.psdAll", string.Join(" | ", AssetDatabase.LoadAllAssetsAtPath("Assets/Layers.psd").Select(Flags).OrderBy(n => n, StringComparer.Ordinal)));
+        Put("imported.logs", TakeLogs());
     }
 
     // ------------------------------------------------------------------ USS var() types

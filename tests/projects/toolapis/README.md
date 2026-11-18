@@ -45,6 +45,23 @@ and compared with Unbound:
   settings write their float list this way): the floats, ints, colours and textures of a
   `Sprites/Default` material, and the result of replacing the float list with two entries (one the
   shader does not have) and applying it.
+* A Material's whole `SerializedObject` (`matx.*`, with the probe shader `ToolApis/Props`, whose
+  property names sort differently by ordinal, ignoring case and as declared, and has every
+  property kind): the fields and visible fields, their values, the saved sheet's tree, the sheet of
+  a new material, of one whose script set declared and undeclared properties and keywords, of the
+  loaded `Assets/Materials/Partial.mat` (a file that lacks some of the shader's properties and has
+  others), after each list is replaced through the SerializedObject (entries the shader has, left
+  out and new; a runtime texture), after keywords and settings are written, after later script
+  sets, of a copy, after a shader change, and of emptied sheets after one call each (`matx.fill.*`:
+  property gets and sets, a keyword, the render queue, the same shader, `CopyPropertiesFromMaterial`).
+* The hideFlags of the objects a ScriptedImporter (`ToolApisObjectsImporter`, `Assets/Objects.toolapisobjects`)
+  adds, as it adds them and once imported (a hidden texture, a sprite, a ScriptableObject, a
+  GameObject with a child and components), of an instance of the GameObject and a copy of the
+  material, of a text asset and a `.mat`, of the PSD importer's objects, and as controls copies of
+  a GameObject and a texture made with flags (`imported.*`).
+* An enter-Play-mode request made while the Editor's domain loads for Play mode, and what
+  `isPlaying` and `isPlayingOrWillChangePlaymode` answer afterwards (`ToolApisPlayRequest`,
+  `playRequest.seen`): the request is ignored.
 * USS `var()` references whose value has the wrong type for the property (`VarTypes.uss`): a
   length in `border-color` and `color`, a colour in `border-left-width`, beside valid
   declarations, a parent's colour, a less specific rule that would otherwise give the colour, and
@@ -67,7 +84,10 @@ UNBOUND=/path/to/unbound python3 tests/projects/toolapis/run.py gate
 Values compare exactly (tolerance 0). `Packages/packages-lock.json` is the one the Editor wrote: it pins
 the indirect dependencies (Burst 1.8.28) the reference was captured with.
 
-Unbound on macOS, 2026-11-18: 3141/3166 values, 0 failures and 26 recorded residuals
-(`residuals.json`): the material sheet (not modelled, queued), the `Color` overload's mips (filtered
-from bytes; the Editor filters the float colours), and NotEditable on the PSD importer's texture.
-Before the engine changes, 612 of the first 2079 values matched.
+Unbound on macOS, 2026-11-18 (Q587): 3315/3317 values, 0 failures and 2 recorded residuals
+(`residuals.json`): a copy of a GameObject made in the scene keeps its hideFlags in the Editor and
+none in Unbound, and Unbound's single editor domain delivers ExitingEditMode to handlers the
+Play-mode domain registers and runs the first frame's `EditorApplication.update` before
+EnteredPlayMode (the request's answers match). Before Q587 the new rows matched 2 of 151 and the
+material sheet, the `Color` overload's mips and the PSD texture's NotEditable were residuals. Before
+the Q580 engine changes, 612 of the first 2079 values matched.

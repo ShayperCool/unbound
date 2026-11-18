@@ -3127,6 +3127,156 @@
 {"k":"mat.after.has","v":"_Added False _Extra False _EnableExternalAlpha True _Color True"}
 {"k":"mat.after.renderQueue","v":"3100"}
 {"k":"mat.logs","v":"Error: Material 'Probe' with Shader 'Sprites/Default' doesn't have a float or range property '_Added' | Error: Material 'Probe' with Shader 'Sprites/Default' doesn't have a float or range property '_Extra'"}
+{"k":"matx.shader","v":"ToolApis/Props"}
+{"k":"matx.sprites.tree","v":"m_SavedProperties:UnityPropertySheet:-1:0 m_SavedProperties.m_TexEnvs:map:-1:1 m_SavedProperties.m_TexEnvs.Array:Array:-1:1 m_SavedProperties.m_TexEnvs.Array.size:ArraySize:12:2 m_SavedProperties.m_TexEnvs.Array.data[0]:pair:-1:2 m_SavedProperties.m_TexEnvs.Array.data[0].first:string:3:3 m_SavedProperties.m_TexEnvs.Array.data[0].second:UnityTexEnv:-1:3 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Texture:PPtr<Texture>:5:4 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Texture.m_FileID:int:0:5 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Texture.m_PathID:long:0:5 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Scale:Vector2:8:4 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Scale.x:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Scale.y:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Offset:Vector2:8:4 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Offset.x:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[0].second.m_Offset.y:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[1]:pair:-1:2 m_SavedProperties.m_TexEnvs.Array.data[1].first:string:3:3 m_SavedProperties.m_TexEnvs.Array.data[1].second:UnityTexEnv:-1:3 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Texture:PPtr<Texture>:5:4 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Texture.m_FileID:int:0:5 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Texture.m_PathID:long:0:5 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Scale:Vector2:8:4 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Scale.x:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Scale.y:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Offset:Vector2:8:4 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Offset.x:float:2:5 m_SavedProperties.m_TexEnvs.Array.data[1].second.m_Offset.y:float:2:5 m_SavedProperties.m_Ints:map:-1:1 m_SavedProperties.m_Ints.Array:Array:-1:1 m_SavedProperties.m_Ints.Array.size:ArraySize:12:2 m_SavedProperties.m_Floats:map:-1:1 m_SavedProperties.m_Floats.Array:Array:-1:1 m_SavedProperties.m_Floats.Array.size:ArraySize:12:2 m_SavedProperties.m_Floats.Array.data[0]:pair:-1:2 m_SavedProperties.m_Floats.Array.data[0].first:string:3:3 m_SavedProperties.m_Floats.Array.data[0].second:float:2:3 m_SavedProperties.m_Floats.Array.data[1]:pair:-1:2 m_SavedProperties.m_Floats.Array.data[1].first:string:3:3 m_SavedProperties.m_Floats.Array.data[1].second:float:2:3 m_SavedProperties.m_Colors:map:-1:1 m_SavedProperties.m_Colors.Array:Array:-1:1 m_SavedProperties.m_Colors.Array.size:ArraySize:12:2 m_SavedProperties.m_Colors.Array.data[0]:pair:-1:2 m_SavedProperties.m_Colors.Array.data[0].first:string:3:3 m_SavedProperties.m_Colors.Array.data[0].second:Color:4:3 m_SavedProperties.m_Colors.Array.data[0].second.r:float:2:4 m_SavedProperties.m_Colors.Array.data[0].second.g:float:2:4 m_SavedProperties.m_Colors.Array.data[0].second.b:float:2:4 m_SavedProperties.m_Colors.Array.data[0].second.a:float:2:4 m_SavedProperties.m_Colors.Array.data[1]:pair:-1:2 m_SavedProperties.m_Colors.Array.data[1].first:string:3:3 m_SavedProperties.m_Colors.Array.data[1].second:Color:4:3 m_SavedProperties.m_Colors.Array.data[1].second.r:float:2:4 m_SavedProperties.m_Colors.Array.data[1].second.g:float:2:4 m_SavedProperties.m_Colors.Array.data[1].second.b:float:2:4 m_SavedProperties.m_Colors.Array.data[1].second.a:float:2:4 m_SavedProperties.m_Colors.Array.data[2]:pair:-1:2 m_SavedProperties.m_Colors.Array.data[2].first:string:3:3 m_SavedProperties.m_Colors.Array.data[2].second:Color:4:3 m_SavedProperties.m_Colors.Array.data[2].second.r:float:2:4 m_SavedProperties.m_Colors.Array.data[2].second.g:float:2:4 m_SavedProperties.m_Colors.Array.data[2].second.b:float:2:4 m_SavedProperties.m_Colors.Array.data[2].second.a:float:2:4"}
+{"k":"matx.sprites.fields","v":"m_ObjectHideFlags:uint:0 m_CorrespondingSourceObject:PPtr<EditorExtension>:5 m_PrefabInstance:PPtr<PrefabInstance>:5 m_PrefabAsset:PPtr<Prefab>:5 m_Name:string:3:array m_Shader:PPtr<Shader>:5 m_ValidKeywords:vector:-1:array m_InvalidKeywords:vector:-1:array m_LightmapFlags:Enum:7 m_EnableInstancingVariants:bool:1 m_DoubleSidedGI:bool:1 m_CustomRenderQueue:int:0 stringTagMap:map:-1:array disabledShaderPasses:vector:-1:array m_LockedProperties:string:3:array m_SavedProperties:UnityPropertySheet:-1 m_BuildTextureStacks:vector:-1:array m_AllowLocking:bool:1"}
+{"k":"matx.sprites.visible","v":"m_Shader m_ValidKeywords m_InvalidKeywords m_LightmapFlags m_EnableInstancingVariants m_DoubleSidedGI m_CustomRenderQueue stringTagMap disabledShaderPasses m_LockedProperties m_SavedProperties m_BuildTextureStacks"}
+{"k":"matx.sprites.field.m_ObjectHideFlags","v":"0"}
+{"k":"matx.sprites.field.m_CorrespondingSourceObject","v":"null"}
+{"k":"matx.sprites.field.m_PrefabInstance","v":"null"}
+{"k":"matx.sprites.field.m_PrefabAsset","v":"null"}
+{"k":"matx.sprites.field.m_Name","v":"'SpritesTree'"}
+{"k":"matx.sprites.field.m_Shader","v":"Sprites/Default"}
+{"k":"matx.sprites.field.m_ValidKeywords","v":"[0: ]"}
+{"k":"matx.sprites.field.m_InvalidKeywords","v":"[0: ]"}
+{"k":"matx.sprites.field.m_LightmapFlags","v":"enum 4"}
+{"k":"matx.sprites.field.m_EnableInstancingVariants","v":"false"}
+{"k":"matx.sprites.field.m_DoubleSidedGI","v":"false"}
+{"k":"matx.sprites.field.m_CustomRenderQueue","v":"-1"}
+{"k":"matx.sprites.field.stringTagMap","v":"[0: ]"}
+{"k":"matx.sprites.field.disabledShaderPasses","v":"[0: ]"}
+{"k":"matx.sprites.field.m_LockedProperties","v":"''"}
+{"k":"matx.sprites.field.m_BuildTextureStacks","v":"[0: ]"}
+{"k":"matx.sprites.field.m_AllowLocking","v":"true"}
+{"k":"matx.fresh.m_TexEnvs","v":"[4: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Bump',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Cube',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Vol',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}}]"}
+{"k":"matx.fresh.m_Ints","v":"[2: pair{first='_Count',second=4};pair{first='_Steps',second=0}]"}
+{"k":"matx.fresh.m_Floats","v":"[8: pair{first='Bare',second=6};pair{first='_Alpha',second=0.25};pair{first='_GlossMapScale',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Legacy',second=3};pair{first='_Toggle',second=1};pair{first='_Zeta',second=2.5};pair{first='_glossy',second=1}]"}
+{"k":"matx.fresh.m_Colors","v":"[2: pair{first='_Dir',second=(1,2,3,4)};pair{first='_Tint',second=(1,0,0,1)}]"}
+{"k":"matx.fresh.fields","v":"m_ObjectHideFlags:uint:0 m_CorrespondingSourceObject:PPtr<EditorExtension>:5 m_PrefabInstance:PPtr<PrefabInstance>:5 m_PrefabAsset:PPtr<Prefab>:5 m_Name:string:3:array m_Shader:PPtr<Shader>:5 m_ValidKeywords:vector:-1:array m_InvalidKeywords:vector:-1:array m_LightmapFlags:Enum:7 m_EnableInstancingVariants:bool:1 m_DoubleSidedGI:bool:1 m_CustomRenderQueue:int:0 stringTagMap:map:-1:array disabledShaderPasses:vector:-1:array m_LockedProperties:string:3:array m_SavedProperties:UnityPropertySheet:-1 m_BuildTextureStacks:vector:-1:array m_AllowLocking:bool:1"}
+{"k":"matx.fresh.visible","v":"m_Shader m_ValidKeywords m_InvalidKeywords m_LightmapFlags m_EnableInstancingVariants m_DoubleSidedGI m_CustomRenderQueue stringTagMap disabledShaderPasses m_LockedProperties m_SavedProperties m_BuildTextureStacks"}
+{"k":"matx.fresh.field.m_ObjectHideFlags","v":"0"}
+{"k":"matx.fresh.field.m_CorrespondingSourceObject","v":"null"}
+{"k":"matx.fresh.field.m_PrefabInstance","v":"null"}
+{"k":"matx.fresh.field.m_PrefabAsset","v":"null"}
+{"k":"matx.fresh.field.m_Name","v":"'Fresh'"}
+{"k":"matx.fresh.field.m_Shader","v":"ToolApis/Props"}
+{"k":"matx.fresh.field.m_ValidKeywords","v":"[1: '_TOGGLE_ON']"}
+{"k":"matx.fresh.field.m_InvalidKeywords","v":"[0: ]"}
+{"k":"matx.fresh.field.m_LightmapFlags","v":"enum 4"}
+{"k":"matx.fresh.field.m_EnableInstancingVariants","v":"false"}
+{"k":"matx.fresh.field.m_DoubleSidedGI","v":"false"}
+{"k":"matx.fresh.field.m_CustomRenderQueue","v":"-1"}
+{"k":"matx.fresh.field.stringTagMap","v":"[0: ]"}
+{"k":"matx.fresh.field.disabledShaderPasses","v":"[0: ]"}
+{"k":"matx.fresh.field.m_LockedProperties","v":"''"}
+{"k":"matx.fresh.field.m_BuildTextureStacks","v":"[0: ]"}
+{"k":"matx.fresh.field.m_AllowLocking","v":"true"}
+{"k":"matx.fresh.get","v":"_Zeta 2.5 _Alpha 0.25 _glossy 1 _Legacy 3 _Count 4 _Steps 0 _Tint (1,0,0,1) _Dir (1,2,3,4) _BaseMap null (1,1) (0,0) _Bump null"}
+{"k":"matx.fresh.settings","v":"queue 2000 raw -1 gi 4 doubleSidedGI False instancing False keywords _TOGGLE_ON toggle True modeA False tag none shadowPass True"}
+{"k":"matx.set.m_TexEnvs","v":"[4: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=null,m_Scale=(3,4),m_Offset=(0,0)}};pair{first='_Bump',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Cube',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Vol',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}}]"}
+{"k":"matx.set.m_Ints","v":"[2: pair{first='_Count',second=4};pair{first='_Steps',second=5}]"}
+{"k":"matx.set.m_Floats","v":"[8: pair{first='Bare',second=6};pair{first='_Alpha',second=0.25};pair{first='_GlossMapScale',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Legacy',second=3};pair{first='_Toggle',second=1};pair{first='_Zeta',second=1.5};pair{first='_glossy',second=1}]"}
+{"k":"matx.set.m_Colors","v":"[2: pair{first='_Dir',second=(1,2,3,4)};pair{first='_Tint',second=(0.5,0.25,0.125,1)}]"}
+{"k":"matx.set.keywords","v":"[2: '_MODE_B';'_TOGGLE_ON'] [2: '_ALPHA_UNDECLARED';'_ZED_UNDECLARED']"}
+{"k":"matx.set.has","v":"_Zeta True _Other False _Extra True _StaleFloat False _Steps True _StaleInt False _Dir True _StaleColor False _Bump True _StaleTex False"}
+{"k":"matx.set.logs","v":""}
+{"k":"matx.partial","v":"Partial"}
+{"k":"matx.partial.m_TexEnvs","v":"[2: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=null,m_Scale=(2,2),m_Offset=(0.25,0)}};pair{first='_StaleTex',second=UnityTexEnv{m_Texture=null,m_Scale=(3,1),m_Offset=(0,0.5)}}]"}
+{"k":"matx.partial.m_Ints","v":"[2: pair{first='_Count',second=12};pair{first='_StaleInt',second=9}]"}
+{"k":"matx.partial.m_Floats","v":"[3: pair{first='_Alpha',second=0.5};pair{first='_StaleFloat',second=3};pair{first='_Zeta',second=8}]"}
+{"k":"matx.partial.m_Colors","v":"[2: pair{first='_StaleColor',second=(0.5,0.5,0.5,0.5)};pair{first='_Tint',second=(0,1,0,1)}]"}
+{"k":"matx.partial.fields","v":"m_ObjectHideFlags:uint:0 m_CorrespondingSourceObject:PPtr<EditorExtension>:5 m_PrefabInstance:PPtr<PrefabInstance>:5 m_PrefabAsset:PPtr<Prefab>:5 m_Name:string:3:array m_Shader:PPtr<Shader>:5 m_ValidKeywords:vector:-1:array m_InvalidKeywords:vector:-1:array m_LightmapFlags:Enum:7 m_EnableInstancingVariants:bool:1 m_DoubleSidedGI:bool:1 m_CustomRenderQueue:int:0 stringTagMap:map:-1:array disabledShaderPasses:vector:-1:array m_LockedProperties:string:3:array m_SavedProperties:UnityPropertySheet:-1 m_BuildTextureStacks:vector:-1:array m_AllowLocking:bool:1"}
+{"k":"matx.partial.visible","v":"m_Shader m_ValidKeywords m_InvalidKeywords m_LightmapFlags m_EnableInstancingVariants m_DoubleSidedGI m_CustomRenderQueue stringTagMap disabledShaderPasses m_LockedProperties m_SavedProperties m_BuildTextureStacks"}
+{"k":"matx.partial.field.m_ObjectHideFlags","v":"0"}
+{"k":"matx.partial.field.m_CorrespondingSourceObject","v":"null"}
+{"k":"matx.partial.field.m_PrefabInstance","v":"null"}
+{"k":"matx.partial.field.m_PrefabAsset","v":"null"}
+{"k":"matx.partial.field.m_Name","v":"'Partial'"}
+{"k":"matx.partial.field.m_Shader","v":"ToolApis/Props"}
+{"k":"matx.partial.field.m_ValidKeywords","v":"[2: '_MODE_B';'_TOGGLE_ON']"}
+{"k":"matx.partial.field.m_InvalidKeywords","v":"[1: '_STALE_KEYWORD']"}
+{"k":"matx.partial.field.m_LightmapFlags","v":"enum 2"}
+{"k":"matx.partial.field.m_EnableInstancingVariants","v":"true"}
+{"k":"matx.partial.field.m_DoubleSidedGI","v":"true"}
+{"k":"matx.partial.field.m_CustomRenderQueue","v":"2600"}
+{"k":"matx.partial.field.stringTagMap","v":"[1: pair{first='RenderType',second='Opaque'}]"}
+{"k":"matx.partial.field.disabledShaderPasses","v":"[1: 'SHADOWCASTER']"}
+{"k":"matx.partial.field.m_LockedProperties","v":"''"}
+{"k":"matx.partial.field.m_BuildTextureStacks","v":"[0: ]"}
+{"k":"matx.partial.field.m_AllowLocking","v":"true"}
+{"k":"matx.partial.get","v":"_Zeta 8 _Alpha 0.5 _glossy 1 _Legacy 3 _Count 12 _Steps 0 _Tint (0,1,0,1) _Dir (1,2,3,4) _BaseMap null (2,2) (0.25,0) _Bump null"}
+{"k":"matx.partial.has","v":"_Zeta True _Other False _Extra False _StaleFloat False _Steps True _StaleInt False _Dir True _StaleColor False _Bump True _StaleTex False"}
+{"k":"matx.partial.settings","v":"queue 2600 raw 2600 gi 2 doubleSidedGI True instancing True keywords _MODE_B,_TOGGLE_ON,_STALE_KEYWORD toggle True modeA False tag Opaque shadowPass False"}
+{"k":"matx.partial.logs","v":""}
+{"k":"matx.edit.apply","v":"true"}
+{"k":"matx.edit.m_TexEnvs","v":"[1: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=RuntimeTex,m_Scale=(2,3),m_Offset=(0.5,0.25)}}]"}
+{"k":"matx.edit.m_Ints","v":"[1: pair{first='_Count',second=7}]"}
+{"k":"matx.edit.m_Floats","v":"[3: pair{first='_Alpha',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Other',second=9}]"}
+{"k":"matx.edit.m_Colors","v":"[2: pair{first='_OtherColor',second=(1,1,1,1)};pair{first='_Tint',second=(0,0,1,1)}]"}
+{"k":"matx.edit.get","v":"_Zeta 2.5 _Alpha 0.75 _glossy 1 _Legacy 3 _Count 7 _Steps 0 _Tint (0,0,1,1) _Dir (1,2,3,4) _BaseMap RuntimeTex (2,3) (0.5,0.25) _Bump null"}
+{"k":"matx.edit.has","v":"_Zeta True _Other False _Extra False _StaleFloat False _Steps True _StaleInt False _Dir True _StaleColor False _Bump True _StaleTex False"}
+{"k":"matx.edit.logs","v":""}
+{"k":"matx.settings.apply","v":"true"}
+{"k":"matx.settings","v":"queue 2450 raw 2450 gi 1 doubleSidedGI True instancing True keywords _MODE_A,_NOPE toggle False modeA True tag none shadowPass True"}
+{"k":"matx.settings.fields","v":"m_ObjectHideFlags:uint:0 m_CorrespondingSourceObject:PPtr<EditorExtension>:5 m_PrefabInstance:PPtr<PrefabInstance>:5 m_PrefabAsset:PPtr<Prefab>:5 m_Name:string:3:array m_Shader:PPtr<Shader>:5 m_ValidKeywords:vector:-1:array m_InvalidKeywords:vector:-1:array m_LightmapFlags:Enum:7 m_EnableInstancingVariants:bool:1 m_DoubleSidedGI:bool:1 m_CustomRenderQueue:int:0 stringTagMap:map:-1:array disabledShaderPasses:vector:-1:array m_LockedProperties:string:3:array m_SavedProperties:UnityPropertySheet:-1 m_BuildTextureStacks:vector:-1:array m_AllowLocking:bool:1"}
+{"k":"matx.settings.visible","v":"m_Shader m_ValidKeywords m_InvalidKeywords m_LightmapFlags m_EnableInstancingVariants m_DoubleSidedGI m_CustomRenderQueue stringTagMap disabledShaderPasses m_LockedProperties m_SavedProperties m_BuildTextureStacks"}
+{"k":"matx.settings.field.m_ObjectHideFlags","v":"0"}
+{"k":"matx.settings.field.m_CorrespondingSourceObject","v":"null"}
+{"k":"matx.settings.field.m_PrefabInstance","v":"null"}
+{"k":"matx.settings.field.m_PrefabAsset","v":"null"}
+{"k":"matx.settings.field.m_Name","v":"'Edited'"}
+{"k":"matx.settings.field.m_Shader","v":"ToolApis/Props"}
+{"k":"matx.settings.field.m_ValidKeywords","v":"[1: '_MODE_A']"}
+{"k":"matx.settings.field.m_InvalidKeywords","v":"[1: '_NOPE']"}
+{"k":"matx.settings.field.m_LightmapFlags","v":"enum 1"}
+{"k":"matx.settings.field.m_EnableInstancingVariants","v":"true"}
+{"k":"matx.settings.field.m_DoubleSidedGI","v":"true"}
+{"k":"matx.settings.field.m_CustomRenderQueue","v":"2450"}
+{"k":"matx.settings.field.stringTagMap","v":"[0: ]"}
+{"k":"matx.settings.field.disabledShaderPasses","v":"[0: ]"}
+{"k":"matx.settings.field.m_LockedProperties","v":"''"}
+{"k":"matx.settings.field.m_BuildTextureStacks","v":"[0: ]"}
+{"k":"matx.settings.field.m_AllowLocking","v":"true"}
+{"k":"matx.settings.logs","v":""}
+{"k":"matx.later.m_TexEnvs","v":"[4: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=RuntimeTex,m_Scale=(2,3),m_Offset=(0.5,0.25)}};pair{first='_Bump',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Cube',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Vol',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}}]"}
+{"k":"matx.later.m_Ints","v":"[2: pair{first='_Count',second=7};pair{first='_Steps',second=2}]"}
+{"k":"matx.later.m_Floats","v":"[9: pair{first='Bare',second=6};pair{first='_Alpha',second=0.75};pair{first='_GlossMapScale',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Legacy',second=3};pair{first='_Other',second=9};pair{first='_Toggle',second=1};pair{first='_Zeta',second=4};pair{first='_glossy',second=1}]"}
+{"k":"matx.later.m_Colors","v":"[3: pair{first='_Dir',second=(1,2,3,4)};pair{first='_OtherColor',second=(1,1,1,1)};pair{first='_Tint',second=(0,0,1,1)}]"}
+{"k":"matx.later.get","v":"_Zeta 4 _Alpha 0.75 _glossy 1 _Legacy 3 _Count 7 _Steps 2 _Tint (0,0,1,1) _Dir (1,2,3,4) _BaseMap RuntimeTex (2,3) (0.5,0.25) _Bump null"}
+{"k":"matx.copy.m_TexEnvs","v":"[4: pair{first='_BaseMap',second=UnityTexEnv{m_Texture=RuntimeTex,m_Scale=(2,3),m_Offset=(0.5,0.25)}};pair{first='_Bump',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Cube',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Vol',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}}]"}
+{"k":"matx.copy.m_Ints","v":"[2: pair{first='_Count',second=7};pair{first='_Steps',second=2}]"}
+{"k":"matx.copy.m_Floats","v":"[9: pair{first='Bare',second=6};pair{first='_Alpha',second=0.75};pair{first='_GlossMapScale',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Legacy',second=3};pair{first='_Other',second=9};pair{first='_Toggle',second=1};pair{first='_Zeta',second=4};pair{first='_glossy',second=1}]"}
+{"k":"matx.copy.m_Colors","v":"[3: pair{first='_Dir',second=(1,2,3,4)};pair{first='_OtherColor',second=(1,1,1,1)};pair{first='_Tint',second=(0,0,1,1)}]"}
+{"k":"matx.reshaded.m_TexEnvs","v":"[6: pair{first='_AlphaTex',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_BaseMap',second=UnityTexEnv{m_Texture=RuntimeTex,m_Scale=(2,3),m_Offset=(0.5,0.25)}};pair{first='_Bump',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Cube',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_MainTex',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}};pair{first='_Vol',second=UnityTexEnv{m_Texture=null,m_Scale=(1,1),m_Offset=(0,0)}}]"}
+{"k":"matx.reshaded.m_Ints","v":"[2: pair{first='_Count',second=7};pair{first='_Steps',second=2}]"}
+{"k":"matx.reshaded.m_Floats","v":"[11: pair{first='Bare',second=6};pair{first='PixelSnap',second=0};pair{first='_Alpha',second=0.75};pair{first='_EnableExternalAlpha',second=0};pair{first='_GlossMapScale',second=0.75};pair{first='_Glossiness',second=0.5};pair{first='_Legacy',second=3};pair{first='_Other',second=9};pair{first='_Toggle',second=1};pair{first='_Zeta',second=4};pair{first='_glossy',second=1}]"}
+{"k":"matx.reshaded.m_Colors","v":"[6: pair{first='_Color',second=(1,1,1,1)};pair{first='_Dir',second=(1,2,3,4)};pair{first='_Flip',second=(1,1,1,1)};pair{first='_OtherColor',second=(1,1,1,1)};pair{first='_RendererColor',second=(1,1,1,1)};pair{first='_Tint',second=(0,0,1,1)}]"}
+{"k":"matx.later.logs","v":""}
+{"k":"matx.fill.none","v":"0 0 0 0"}
+{"k":"matx.fill.getFloat","v":"4 2 8 2"}
+{"k":"matx.fill.setFloatUndeclared","v":"4 2 8 2"}
+{"k":"matx.fill.setColor","v":"4 2 8 2"}
+{"k":"matx.fill.setTexture","v":"4 2 8 2"}
+{"k":"matx.fill.setTextureOffset","v":"4 2 8 2"}
+{"k":"matx.fill.setInteger","v":"4 2 8 2"}
+{"k":"matx.fill.enableKeyword","v":"0 0 0 0"}
+{"k":"matx.fill.renderQueue","v":"0 0 0 0"}
+{"k":"matx.fill.sameShader","v":"4 2 8 2"}
+{"k":"matx.fill.copyPropertiesFrom","v":"4 2 8 2"}
+{"k":"matx.fill.logs","v":""}
+{"k":"imported.during","v":"material 0 | mesh 0 | texture 0 | hidden 1 | sprite 0 | data 0 | root 0 | child 0 transform 0 filter 0 | text 0 | main set 0"}
+{"k":"imported.main","v":"TextAsset Objects 8"}
+{"k":"imported.all","v":"GameObject ImportedChild 8 | GameObject ImportedRoot 8 | Material ImportedMaterial 8 | Mesh ImportedMesh 8 | MeshFilter ImportedRoot 9 | MeshRenderer ImportedRoot 9 | Sprite ImportedSprite 8 | SpriteRenderer ImportedChild 9 | TextAsset Objects 8 | Texture2D HiddenTexture 9 | Texture2D ImportedTexture 8 | ToolApisData ImportedData 8 | Transform ImportedChild 9 | Transform ImportedRoot 9"}
+{"k":"imported.root","v":"GameObject ImportedRoot 8 Transform ImportedRoot 9 | GameObject ImportedRoot 8 MeshFilter ImportedRoot 9 | GameObject ImportedRoot 8 MeshRenderer ImportedRoot 9 | GameObject ImportedChild 8 Transform ImportedChild 9 | GameObject ImportedChild 8 SpriteRenderer ImportedChild 9"}
+{"k":"imported.instance","v":"GameObject ImportedRoot(Clone) 0 Transform ImportedRoot(Clone) 0 | GameObject ImportedRoot(Clone) 0 MeshFilter ImportedRoot(Clone) 0 | GameObject ImportedRoot(Clone) 0 MeshRenderer ImportedRoot(Clone) 0 | GameObject ImportedChild 0 Transform ImportedChild 0 | GameObject ImportedChild 0 SpriteRenderer ImportedChild 0"}
+{"k":"imported.materialCopy","v":"Material ImportedMaterial 0"}
+{"k":"imported.materialEditable","v":"false"}
+{"k":"imported.madeInstance","v":"GameObject MadeWithFlags(Clone) 9 | SpriteRenderer MadeWithFlags(Clone) 8 | Transform MadeWithFlags(Clone) 9"}
+{"k":"imported.madeTextureCopy","v":"Texture2D MadeTexture(Clone) 0"}
+{"k":"imported.text","v":"TextAsset Notes 8"}
+{"k":"imported.mat","v":"Material Partial 0"}
+{"k":"imported.psdAll","v":"GameObject Box 8 | GameObject Disc 8 | GameObject Layers 8 | PSDImportData  9 | Sprite Box 8 | Sprite Disc 8 | SpriteRenderer Box 9 | SpriteRenderer Disc 9 | Texture2D Layers 8 | Transform Box 9 | Transform Disc 9 | Transform Layers 9"}
+{"k":"imported.logs","v":""}
 {"k":"uss.bad.borderColor","v":"(0,0,0,0) (0,0,0,0) (0,0,0,0) (0,0,0,0)"}
 {"k":"uss.bad.borderWidth","v":"2 2 2 2"}
 {"k":"uss.bad.borderRadius","v":"20 20"}
@@ -3163,5 +3313,6 @@
 {"k":"uss.fallback.height","v":"2"}
 {"k":"uss.fallback.color","v":"(0,0,0,1)"}
 {"k":"uss.logs","v":""}
+{"k":"playRequest.seen","v":"load before isPlaying False willChange True | load after isPlaying False willChange True | state EnteredPlayMode isPlaying True willChange True | update 1 isPlaying True willChange True | update 2 isPlaying True willChange True | update 3 isPlaying True willChange True | update 4 isPlaying True willChange True"}
 {"k":"logs.end","v":""}
 {"k":"complete","v":true}

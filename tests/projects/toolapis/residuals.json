@@ -1,34 +1,8 @@
 {
-  "A Material's saved property sheet (m_SavedProperties: floats, ints, colours, textures) is not modelled for SerializedObject: FindProperty returns null, so writing it (the Visual Effect Graph's material settings) throws. Queued with scope: a stored sheet per material that ApplyModifiedProperties replaces, seeded from the shader's properties.": [
-    "mat.after.colors",
-    "mat.after.floats",
-    "mat.after.floatsType",
-    "mat.after.get",
-    "mat.after.has",
-    "mat.after.ints",
-    "mat.after.renderQueue",
-    "mat.after.saved",
-    "mat.after.texEnvs",
-    "mat.apply",
-    "mat.initial.colors",
-    "mat.initial.floats",
-    "mat.initial.floatsType",
-    "mat.initial.ints",
-    "mat.initial.saved",
-    "mat.initial.texEnvs",
-    "mat.logs",
-    "material.threw"
+  "Object.Instantiate of a GameObject made in the scene keeps its hideFlags in the Editor (the GameObject's 9, its renderer's 8, its Transform 9) while an instance of an imported GameObject and a copy of a made Texture2D get none; Unbound's copies get none. Queued: which kinds and flags a copy keeps (the made GameObject's Transform's own flags were not recorded).": [
+    "imported.madeInstance"
   ],
-  "TextureGenerator's Color-buffer mips are filtered from the gamma-encoded bytes; the Editor filters the float colours and encodes each level (the first level and the sampled texels match). Queued with the importer's float path for explicit 8-bit formats.": [
-    "g.colorOverload.texture.mip1",
-    "g.colorOverload.texture.mip2",
-    "g.colorOverload.texture.mip3",
-    "g.colorOverload.texture.mip4",
-    "g.colorOverloadLinear.texture.mip1",
-    "g.colorOverloadLinear.texture.mip2",
-    "g.colorOverloadLinear.texture.mip3"
-  ],
-  "Objects a ScriptedImporter adds to its asset do not carry NotEditable as the Editor's imported objects do (here the PSD importer's texture). Queued: the flag on every scripted import's objects and their instances is unmeasured.": [
-    "psd.texture.hideFlags"
+  "Unbound loads the editor domain once: playModeStateChanged(ExitingEditMode), which the Editor sends in the Edit-mode domain before the reload, reaches handlers the Play-mode domain's [InitializeOnLoad] registered, and the first Play mode frame's EditorApplication.update runs before EnteredPlayMode (in the Editor after it). The willChange and isPlaying answers match. Queued: the first frame's update/EnteredPlayMode order.": [
+    "playRequest.seen"
   ]
 }
