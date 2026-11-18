@@ -116,19 +116,28 @@ class JanitorTests(unittest.TestCase):
         (self.cache/'validation').symlink_to(target)
         self.assertEqual(janitor.Janitor(self.repo).validation, target)
 
-    def test_without_the_queue_what_tasks_name_stays_and_other_runs_go(self):
-        # A Mac has no orchestrator queue: no task is known to have landed, any may be active.
+    def test_without_the_queue_checked_out_tasks_keep_their_runs(self):
+        # A Mac has no orchestrator queue: no task is known to have landed, and a task is active
+        # while a checkout is on a branch naming it (here a worktree on mac/q7-fix).
         (self.cache/'agents/QUEUE.md').unlink()
         task = self.volume/'q1/old'
         task.mkdir(parents=True)
         (task/'output').write_text('task output')
-        old, task_run, newest = self.instances('probe', ['gate-1', 'q7-check-1', 'gate-2'])
-        self.collect_applied()
+        old, active_run, finished_run, newest = self.instances('probe', ['gate-1', 'q7-check-1', 'q8-check-1', 'gate-2'])
+        branches = [(self.repo, '', 'main'), (self.root/'worktree', '', 'mac/q7-fix')]
+        with patch.object(janitor, 'worktrees', return_value=branches):
+            self.assertEqual(janitor.checkout_tasks(self.repo), {'q7'})
+        for age, path in enumerate(self.aged):
+            os.utime(path, (1_000_000+age, 1_000_000+age))
+        with self.guards(), patch.object(janitor, 'worktrees', return_value=branches):
+            self.j.apply = True
+            self.j.collect()
         self.assertTrue(task.is_dir())
-        self.assertTrue(task_run.is_dir())
+        self.assertTrue(active_run.is_dir())
+        self.assertFalse(finished_run.exists())
         self.assertFalse(old.exists())
         self.assertTrue(newest.is_dir())
-        self.assertEqual(len(self.rows('queue_missing')), 1)
+        self.assertEqual([row['active'] for row in self.rows('queue_missing')], [['q7']])
 
     def test_old_instances_of_a_probe_are_removed_except_the_newest(self):
         old, older, newest = self.instances('probe', ['gate-1', 'gate-2', 'gate-3'])
@@ -1087,7 +1096,8 @@ class JanitorTests(unittest.TestCase):
         self.assertEqual(arguments[-2:], ['--run-hours', '12'])
         self.assertEqual(agent['EnvironmentVariables']['UNBOUND_BUILD_ROOT'], str(self.builds))
         self.assertIn('/usr/sbin', agent['EnvironmentVariables']['PATH'])
-        self.assertEqual(agent['StandardOutPath'], str(self.cache/'agents/janitor/launchd.log'))
+        self.assertEqual(agent['StandardErrorPath'], str(self.cache/'agents/janitor/launchd.log'))
+        self.assertEqual(agent['StandardOutPath'], '/dev/null')
         # Without a retention the janitor's own default applies, on Linux as before.
         self.assertNotIn('--run-hours', plistlib.loads(install_janitor.launchd_agent(self.repo, {}))['ProgramArguments'])
         self.assertNotIn('--run-hours', install_janitor.units(self.repo, {})['unbound-janitor.service'])

@@ -77,13 +77,6 @@ RETAINED_NAMES = ('sheriff', 'baseline')
 RECHECK_ROUNDS = 3
 
 
-class AnyTask(frozenset):
-    """The active tasks without a queue: every task."""
-    def __contains__(self, task):
-        return True
-
-
-ANY_TASK = AnyTask()
 # The macOS launchd agent's label (install_janitor.py).
 LAUNCHD_LABEL = 'com.unbound.janitor'
 
@@ -103,6 +96,12 @@ def task_states(queue):
             states.setdefault(key, set()).add(cells[3].lower())
     return {key: next(iter(values)) if len(values) == 1 else 'unknown'
             for key, values in states.items()}
+
+
+def checkout_tasks(repo):
+    """The tasks the repository's checkouts are on: the `Q<n>` names in their branches."""
+    return frozenset(value.lower() for _, _, branch in worktrees(repo) if branch
+                     for value in re.findall(r'(?<![a-zA-Z0-9])q\d+(?!\d)', branch, re.I))
 
 
 def active_tasks(queue):
@@ -734,11 +733,13 @@ class Janitor:
             info = queue.stat()
         except FileNotFoundError:
             # A machine without the orchestrator's queue (a Mac whose queue is on the Linux
-            # machine): no task is known to have landed, so every task cache stays, and any task
-            # may be active, so what a task names stays too (ANY_TASK).
-            if self.queue_signature != 'missing':
-                self.emit('queue_missing', path=str(queue))
-            self.states, self.active, self.queue_signature = {}, ANY_TASK, 'missing'
+            # machine): no task is known to have landed, so every task cache stays; a task is
+            # active while a checkout of the repository (main or a worktree) is on a branch that
+            # names it, and what it names then stays as on Linux.
+            active = checkout_tasks(self.repo)
+            if self.queue_signature != ('missing', active):
+                self.emit('queue_missing', path=str(queue), active=sorted(active))
+            self.states, self.active, self.queue_signature = {}, active, ('missing', active)
             return
         signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
         if signature != self.queue_signature:

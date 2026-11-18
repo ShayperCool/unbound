@@ -3,7 +3,7 @@
 
 Linux reads /proc in those tools. macOS has no /proc: `lsof` lists each process's working
 directory, executable, mapped and open files, `sysctl(KERN_PROCARGS2)` its arguments and
-environment, and `ps` its start time. Both readers fail closed: a live process of the user that
+environment, and `sysctl(KERN_PROC_PID)` its start time. Both readers fail closed: a live process of the user that
 cannot be read is an error, while one that exits during the reading is skipped.
 """
 from dataclasses import dataclass, field
@@ -148,11 +148,13 @@ def start_time(pid):
     """The process's start time in microseconds since the epoch (as text, kinfo_proc's
     p_starttime: independent of locale and time zone), or None once it is gone; with the pid, its
     identity."""
-    try:
-        info = _sysctl([CTL_KERN, KERN_PROC, KERN_PROC_PID, int(pid)], KINFO_PROC_SIZE)
-    except (OSError, TypeError, ValueError):
+    if not isinstance(pid, int) or pid <= 0:
         return None
-    if len(info) < 12:
+    # A pid no process has gives an empty answer; any other failure is an error (fail closed).
+    info = _sysctl([CTL_KERN, KERN_PROC, KERN_PROC_PID, pid], KINFO_PROC_SIZE)
+    if not info:
         return None
+    if len(info) != KINFO_PROC_SIZE:
+        raise OSError(f'kinfo_proc of {len(info)} bytes, expected {KINFO_PROC_SIZE}')
     seconds, microseconds = struct.unpack_from('qi', info)
     return str(seconds*1_000_000+microseconds)

@@ -4,7 +4,7 @@
 Linux: a systemd user timer and service. macOS: a launchd user agent
 (~/Library/LaunchAgents/com.unbound.janitor.plist) run every hour, at low priority.
 `--run-hours H` keeps validation runs H hours after their last write instead of the janitor's
-default (tools/validation/README.md, "Disk janitor").
+default (tools/agents/WORKFLOW.md, the janitor paragraphs).
 """
 import argparse
 import os
@@ -68,8 +68,9 @@ WantedBy=timers.target
 
 
 def launchd_agent(repo, environment, run_hours=None):
-    """The macOS user agent: the janitor every hour at low priority, its output appended to the
-    janitor's log directory (it writes its own JSON log there too)."""
+    """The macOS user agent: the janitor every hour at low priority. It writes its own JSON log
+    under agents/janitor/ (what it prints too, so stdout is dropped); errors are appended to
+    launchd.log there."""
     cache = Path(environment.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
     log = cache/'agents/janitor/launchd.log'
     variables = {key: environment[key] for key in ENVIRONMENT_KEYS if key in environment}
@@ -83,7 +84,7 @@ def launchd_agent(repo, environment, run_hours=None):
         'ProcessType': 'Background',
         'Nice': 15,
         'LowPriorityIO': True,
-        'StandardOutPath': str(log),
+        'StandardOutPath': '/dev/null',
         'StandardErrorPath': str(log),
     })
 
