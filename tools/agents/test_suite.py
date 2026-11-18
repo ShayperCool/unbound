@@ -59,15 +59,20 @@ class MetalReferenceTests(unittest.TestCase):
     def test_a_reference_with_a_metal_one_is_replaced(self):
         self.assertEqual(self.metal(str(self.probe/'Reference/unity-R.png')), str(self.root/'metal.png'))
         self.assertEqual(self.metal(str(self.root/'sub/a.png')), str(self.root/'metal/sub/a.png'))
+        # A reference set compared as a whole directory.
+        self.assertEqual(self.metal(str(self.root)), str(self.root/'metal'))
 
     def test_everything_else_is_kept(self):
         # No Metal counterpart, the Metal reference itself, another release, the Reference
-        # directory, a residual list and a flag.
+        # directory, a residual list and a flag; the release's directory without a Metal one.
         for argument in (str(self.probe/'Reference/unity-R.jsonl'), str(self.root/'other.png'),
                          str(self.root/'metal.png'), str(self.root/'metal/sub/a.png'),
-                         str(self.probe/'Reference/unity-S.png'), str(self.root), str(self.probe/'Reference'),
+                         str(self.probe/'Reference/unity-S.png'), str(self.probe/'Reference'),
                          str(self.probe/'image-residuals.json'), '--gate', 3):
             self.assertEqual(self.metal(argument), argument)
+        other = self.probe.parent/'other'/'Reference'/'unity-R'
+        other.mkdir(parents=True)
+        self.assertEqual(suite.metal_reference(str(other), str(other.parents[1]), 'R'), str(other))
 
     def test_compare_steps_read_it_on_macos_arm64_only(self):
         step = suite.Step('compare', ['{probe}/Reference/unity-{release}.png', '{work}/out.png'])

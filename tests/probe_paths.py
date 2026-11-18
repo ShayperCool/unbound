@@ -31,13 +31,16 @@ MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
 
 def metal_counterpart(path, probe, release=None):
     """The Metal reference standing for `path`, one of `probe`'s references of `release`
-    (default: the probe release): Reference/unity-R.EXT is Reference/unity-R/metal.EXT and
-    Reference/unity-R/PATH is Reference/unity-R/metal/PATH. None for any other path, the Metal
-    reference itself included."""
+    (default: the probe release): Reference/unity-R.EXT is Reference/unity-R/metal.EXT,
+    Reference/unity-R itself (a probe whose whole directory is one reference set, compared as a
+    directory) is Reference/unity-R/metal, and Reference/unity-R/PATH is
+    Reference/unity-R/metal/PATH. None for any other path, the Metal reference itself included."""
     root = Path(probe)/'Reference'/f'unity-{release or unity_version()}'
     path = Path(path)
     if path.parent == root.parent and path.stem == root.name and path.suffix:
         return root/('metal'+path.suffix)
+    if path == root:
+        return root/'metal'
     if path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
         return root/'metal'/path.relative_to(root)
     return None
