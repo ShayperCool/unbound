@@ -639,13 +639,6 @@
   {
     "Release": "6000.0.71f1",
     "Category": "modifiers",
-    "Type": "UnityEditor.Build.Content.ObjectIdentifier",
-    "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
-    "Reason": "Q410-ObjectIdentifier-serialization: the selected flag yields empty root JSON and an empty nested object, but Instantiate leaves a field initializer (29) instead of copying the source identifier (17). The current composite cloner copies the value after enabling the flag. Adapt shared eligibility for empty composites and built-in structs before changing this flag."
-  },
-  {
-    "Release": "6000.0.71f1",
-    "Category": "modifiers",
     "Type": "UnityEditor.EditorBuildSettingsScene",
     "Message": "type readonly/ref-like/serializable is False/False/False, Unity's is False/False/True",
     "Reason": "Q410-Editor-serialized-payloads: the selected Serializable flag needs m_enabled, m_path and m_guid payload migration from current auto properties, with nested serialization and overwrite controls."

@@ -16,6 +16,7 @@ namespace UnityEditor.Build.Content
 
     /// <summary>An object of an asset as the build pipeline names it: the asset's GUID and the
     /// object's local file id.</summary>
+    [Serializable]
     public partial struct ObjectIdentifier : IEquatable<ObjectIdentifier>, IComparable<ObjectIdentifier>
     {
         internal GUID m_GUID;
