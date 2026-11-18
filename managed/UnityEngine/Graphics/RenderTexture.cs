@@ -114,7 +114,7 @@ namespace UnityEngine
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format)
-            : this(new RenderTextureDescriptor(width, height, format, depth, Texture.GenerateAllMips, RenderTextureReadWrite.Default)) { }
+            : this(Descriptor(width, height, format, depth, RenderTextureReadWrite.Default)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite readWrite)
             : this(Descriptor(width, height, format, depth, readWrite)) { }
@@ -135,7 +135,7 @@ namespace UnityEngine
             : this(new RenderTextureDescriptor(width, height, colorFormat, depthStencilFormat, -1)) { }
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format, int mipCount)
-            : this(new RenderTextureDescriptor(width, height, format, depth, mipCount, RenderTextureReadWrite.Default)) { }
+            : this(Descriptor(width, height, format, depth, RenderTextureReadWrite.Default, mipCount)) { }
 
         public RenderTexture(RenderTextureDescriptor desc)
         {
@@ -154,14 +154,32 @@ namespace UnityEngine
 
         public RenderTexture(RenderTexture textureToCopy) : this(textureToCopy.m_Descriptor) { }
 
-        static RenderTextureDescriptor Descriptor(int width, int height, RenderTextureFormat format, int depth, RenderTextureReadWrite readWrite)
+        static RenderTextureDescriptor Descriptor(int width, int height, RenderTextureFormat format, int depth, RenderTextureReadWrite readWrite) =>
+            Descriptor(width, height, format, depth, readWrite, Texture.GenerateAllMips);
+
+        static RenderTextureDescriptor Descriptor(int width, int height, RenderTextureFormat format, int depth, RenderTextureReadWrite readWrite, int mipCount)
         {
-            var d = new RenderTextureDescriptor(width, height, format, depth, Texture.GenerateAllMips, RenderTextureReadWrite.Default);
+            var d = new RenderTextureDescriptor(width, height, format, depth, mipCount, RenderTextureReadWrite.Default);
             if (readWrite == RenderTextureReadWrite.Linear) d.sRGB = false;
             // Native ignores this constructor's sRGB request in a Gamma project.
             // An explicitly supplied GraphicsFormat/descriptor is a separate API.
             else if (readWrite == RenderTextureReadWrite.sRGB) d.sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            d.graphicsFormat = SupportedOrFallback(d.graphicsFormat);
             return d;
+        }
+
+        /// <summary>A RenderTextureFormat the device cannot render becomes its compatible format,
+        /// with the Editor's warning, where a descriptor's GraphicsFormat throws: the Vulkan Editor
+        /// makes `new RenderTexture(2, 1, 0, RenderTextureFormat.ARGB4444)` an R8G8B8A8_UNorm
+        /// target and logs this (tests/projects/samplerstates Packed.ARGB4444 on Vulkan).</summary>
+        static GraphicsFormat SupportedOrFallback(GraphicsFormat requested)
+        {
+            if (!Compat.RenderingMeasured || requested == GraphicsFormat.None || SystemInfo.IsFormatSupported(requested, GraphicsFormatUsage.Render))
+                return requested;
+            var compatible = SystemInfo.GetCompatibleFormat(requested, GraphicsFormatUsage.Render);
+            if (compatible == GraphicsFormat.None || compatible == requested) return requested;
+            Debug.LogWarning($"'{requested}' is not supported. RenderTexture::GetTemporary fallbacks to {compatible} format on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.");
+            return compatible;
         }
 
         void Change()
