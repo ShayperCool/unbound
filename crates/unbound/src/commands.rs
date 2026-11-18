@@ -1341,6 +1341,10 @@ fn relaunch() -> Result<()> {
     if unbound_runtime::restart_in_debug() {
         command.env("UNBOUND_CODE_OPTIMIZATION", "debug");
     }
+    // Scripting defines scripts set stay set (the project's files are not written).
+    if let Some(defines) = unbound_runtime::scripting_define_overrides() {
+        command.env(unbound_runtime::DEFINES_VARIABLE, defines);
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;

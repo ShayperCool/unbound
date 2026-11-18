@@ -273,6 +273,8 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     }
     // Outside the literal above, which is at json!'s recursion limit.
     config["codeOptimization"] = json!(options.code_optimization.name());
+    // Every group's defines (PlayerSettings.GetScriptingDefineSymbols of any named target).
+    config["scriptingDefinesByGroup"] = json!(settings.scripting_defines);
     if let Some((width, height)) = options.screen {
         config["screenWidth"] = json!(width);
         config["screenHeight"] = json!(height);

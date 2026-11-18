@@ -252,8 +252,8 @@ namespace UnityEditor.Compilation
         /// compiled assembly's started and finished events (output path, its errors and warnings),
         /// assemblyCompilationNotRequired for each assembly that did not need compiling, then
         /// compilationFinished with the same context. Unbound raises it when its hot reload
-        /// recompiles; it patches the code in place, so no assembly reload follows (the Editor
-        /// reloads the domain after a successful one).
+        /// recompiles; an edit it patches in place reloads no assembly (the Editor reloads the
+        /// domain after a successful one); a requested compilation reloads them.
         /// </summary>
         internal static void RaiseCompilation(IReadOnlyList<CompiledAssembly> assemblies)
         {
@@ -307,10 +307,24 @@ namespace UnityEditor.Compilation
             };
         }
 
-        /// <summary>The game's code reloads on its own when sources change (hot reload); a forced
-        /// recompilation (with its domain reload and compilation events) is not started.</summary>
-        public static void RequestScriptCompilation() =>
-            Stubs.Ignored("CompilationPipeline.RequestScriptCompilation", "does not recompile (scripts reload when their sources change)");
+        /// <summary>Asks for a compilation of the scripts, run between frames: its compilation
+        /// events, every assembly not required when nothing changed, and then a reload of the
+        /// scripts whatever changed (Unbound restarts the session), as the Unity 6000.0.71f1 Editor
+        /// does (tests/projects/compileevents).</summary>
+        public static void RequestScriptCompilation() => RequestScriptCompilation(RequestScriptCompilationOptions.None);
+
+        /// <summary><see cref="RequestScriptCompilation()"/>; with CleanBuildCache the Editor reports
+        /// the same events (every assembly not required when nothing changed), and so does Unbound,
+        /// whose compile cache is keyed by its inputs.</summary>
+        public static void RequestScriptCompilation(RequestScriptCompilationOptions options) =>
+            Unbound.Runtime.Native.Call("request-script-compilation", "{}");
+    }
+
+    [global::System.Flags]
+    public enum RequestScriptCompilationOptions
+    {
+        None = 0,
+        CleanBuildCache = 1,
     }
 
     /// <summary>A compiler diagnostic of an assembly's compilation.</summary>

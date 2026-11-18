@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -257,19 +258,42 @@ namespace UnityEditor
 
         public static void SetPreloadedAssets(Object[] assets) => s_Preloaded = (Object[])(assets ?? Array.Empty<Object>()).Clone();
 
-        // Defines set in this session: answered back, but the scripts are not recompiled with them.
+        // Defines set in this session, by named target, as given.
         static readonly Dictionary<string, string> s_SetDefines = new Dictionary<string, string>();
 
-        public static string GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget) =>
-            s_SetDefines.TryGetValue(buildTarget.TargetName ?? "", out var set) ? set : string.Join(";", ProjectInfo.Defines);
+        /// <summary>A target's scripting defines: as set in this session, else the project's (with the
+        /// ones scripts set in an earlier session of this run).</summary>
+        public static string GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget)
+        {
+            string name = buildTarget.TargetName ?? "";
+            if (s_SetDefines.TryGetValue(name, out var set)) return set;
+            return ProjectInfo.DefinesByGroup.TryGetValue(name, out var defines) ? string.Join(";", defines) : "";
+        }
 
         [global::System.@ObsoleteAttribute("Use GetScriptingDefineSymbols(NamedBuildTarget buildTarget) instead")] public static string GetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup) =>
             GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup));
 
+        /// <summary>A target's scripting defines for this run (ProjectSettings is not written; a restarted
+        /// session keeps them). New defines for the active target compile the scripts with them and
+        /// reload them between frames; another target's, or the same defines again, compile nothing
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/compileevents).</summary>
         public static void SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget, string defines)
         {
-            Stubs.Ignored("PlayerSettings.SetScriptingDefineSymbols", "is kept for the session; scripts are not recompiled with the new defines");
-            s_SetDefines[buildTarget.TargetName ?? ""] = defines ?? "";
+            string name = buildTarget.TargetName ?? "";
+            string before = GetScriptingDefineSymbols(buildTarget);
+            s_SetDefines[name] = defines ?? "";
+            Native.Call("scripting-defines", System.Text.Json.JsonSerializer.Serialize(new { group = name, defines = defines ?? "" }));
+            bool active = name == UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettingsInfo.ActiveGroup).TargetName;
+            if (active && !SameDefines(before, defines)) Native.Call("request-script-compilation", "{}");
+        }
+
+        /// <summary>Whether two define lists hold the same defines in the same order (separated by
+        /// ';', trimmed, empty ones dropped, as compilations read them).</summary>
+        static bool SameDefines(string a, string b)
+        {
+            static IEnumerable<string> Defines(string s) =>
+                (s ?? "").Split(';').Select(d => d.Trim()).Where(d => d.Length != 0);
+            return Defines(a).SequenceEqual(Defines(b), StringComparer.Ordinal);
         }
 
         [global::System.@ObsoleteAttribute("Use SetScriptingDefineSymbols(NamedBuildTarget buildTarget, string defines) instead")] public static void SetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup, string defines) =>

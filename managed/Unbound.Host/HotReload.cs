@@ -12,6 +12,10 @@ namespace Unbound.Host;
 public sealed class HotReloadRequest
 {
     public CompileRequest Compile { get; set; } = new();
+    /// <summary>Scripts asked for the compilation (RequestScriptCompilation, new scripting defines of
+    /// the active target): it is reported even when nothing changed, and a successful one reloads
+    /// the scripts.</summary>
+    public bool Reload { get; set; }
 }
 
 public sealed class HotReloadResponse
@@ -55,13 +59,16 @@ internal static class HotReload
         var response = new HotReloadResponse();
         var compiled = compiler.Compile(request.Compile);
         response.Compile = compiled;
-        RaiseCompilationEvents(compiled);
+        RaiseCompilationEvents(compiled, request.Reload);
         if (compiled.Failed > 0)
         {
             response.Status = "compile-errors";
             response.Milliseconds = watch.ElapsedMilliseconds;
             return response;
         }
+        // The Editor reloads the scripts after a compilation scripts asked for, also when nothing
+        // compiled (tests/projects/compileevents).
+        if (request.Reload) return Restart(response, "the scripts asked for a compilation", watch);
         if (!MetadataUpdater.IsSupported)
             return Restart(response, "the runtime was started without modifiable assemblies", watch);
         var results = compiled.Assemblies.ToDictionary(a => a.Name);
@@ -158,11 +165,12 @@ internal static class HotReload
     /// (UnityEditor.Compilation.CompilationPipeline.RaiseCompilation): the compiled and failed
     /// assemblies, and those whose changed inputs matched an earlier output of the compile cache
     /// (an edit undone), with their errors, then warnings; every other assembly of the request
-    /// (unchanged, or skipped after a failed reference) as not required.</summary>
-    internal static void RaiseCompilationEvents(CompileResponse compiled)
+    /// (unchanged, or skipped after a failed reference) as not required. A compilation scripts
+    /// asked for (<paramref name="requested"/>) is reported when nothing compiled too.</summary>
+    internal static void RaiseCompilationEvents(CompileResponse compiled, bool requested = false)
     {
         static bool Compiled(AssemblyResult a) => a.Status == "compiled" || a.Status == "failed" || a.Status == "cached";
-        if (!compiled.Assemblies.Any(Compiled)) return;
+        if (!requested && !compiled.Assemblies.Any(Compiled)) return;
         static UnityEditor.Compilation.CompilerMessage Message(DiagnosticInfo d, bool error) =>
             UnityEditor.Compilation.CompilationPipeline.Message(error, d.Id, d.Message, d.File, d.Line, d.Column);
         var assemblies = compiled.Assemblies.Select(a => new UnityEditor.Compilation.CompilationPipeline.CompiledAssembly(a.Name, Compiled(a),

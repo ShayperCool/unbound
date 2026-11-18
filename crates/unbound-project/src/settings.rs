@@ -382,15 +382,8 @@ impl Settings {
                 }
             }
             if let Some(map) = body.get("scriptingDefineSymbols").and_then(Value::as_map) {
-                for (group, symbols) in map.iter() {
-                    let list = symbols
-                        .as_str()
-                        .unwrap_or_default()
-                        .split(';')
-                        .map(str::trim)
-                        .filter(|s| !s.is_empty())
-                        .map(String::from)
-                        .collect();
+                for (group, defines) in map.iter() {
+                    let list = parse_defines(defines.as_str().unwrap_or_default());
                     settings.scripting_defines.insert(group.into(), list);
                 }
             }
@@ -692,11 +685,16 @@ impl Settings {
 
     /// The defines of a build target group; PlayerSettings stores iOS as `iPhone`.
     pub fn defines_for(&self, group: &str) -> &[String] {
-        let key = if group == "iOS" { "iPhone" } else { group };
         self.scripting_defines
-            .get(key)
+            .get(defines_key(group))
             .map(Vec::as_slice)
             .unwrap_or_default()
+    }
+
+    /// Replaces a build target group's defines (`PlayerSettings.SetScriptingDefineSymbols`).
+    pub fn set_defines(&mut self, group: &str, defines: Vec<String>) {
+        self.scripting_defines
+            .insert(defines_key(group).to_string(), defines);
     }
 
     /// The application identifier of a build target group; PlayerSettings stores iOS as `iPhone`.
@@ -740,10 +738,45 @@ impl Settings {
     }
 }
 
+/// The key PlayerSettings stores a build target group's defines under (`iPhone` for iOS).
+pub fn defines_key(group: &str) -> &str {
+    if group == "iOS" { "iPhone" } else { group }
+}
+
+/// Scripting defines as PlayerSettings holds them: separated by `;`, trimmed, empty ones dropped.
+pub fn parse_defines(defines: &str) -> Vec<String> {
+    defines
+        .split(';')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{PlayModeAtlases, Settings, TierDefaults, TierSettings};
+    use super::{PlayModeAtlases, Settings, TierDefaults, TierSettings, parse_defines};
     use unbound_compat::GraphicsDevice::{Metal, OpenGLCore};
+
+    #[test]
+    fn set_defines_replace_a_groups_symbols_under_the_key_player_settings_uses() {
+        assert_eq!(
+            parse_defines(" A; ;B ;C;"),
+            vec!["A".to_string(), "B".into(), "C".into()]
+        );
+        assert!(parse_defines("").is_empty());
+        let mut settings = Settings::default();
+        settings.set_defines("iOS", parse_defines("ON"));
+        settings.set_defines("Standalone", parse_defines("X;Y"));
+        // iOS is stored as iPhone, as PlayerSettings does; both names read it back.
+        assert_eq!(settings.defines_for("iOS"), ["ON"]);
+        assert_eq!(settings.defines_for("iPhone"), ["ON"]);
+        assert!(settings.scripting_defines.contains_key("iPhone"));
+        assert_eq!(settings.defines_for("Standalone"), ["X", "Y"]);
+        assert!(settings.defines_for("Android").is_empty());
+        settings.set_defines("Standalone", Vec::new());
+        assert!(settings.defines_for("Standalone").is_empty());
+    }
 
     #[test]
     fn play_mode_atlases_follow_the_sprite_packer_mode() {

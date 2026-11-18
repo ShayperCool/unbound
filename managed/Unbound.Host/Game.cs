@@ -66,8 +66,10 @@ public sealed class GameConfig
     public int VSyncCount { get; set; } = 1;
     /// <summary>The scriptable render pipeline assets (GraphicsSettings, QualitySettings).</summary>
     public RenderPipelineConfig RenderPipeline { get; set; } = new();
-    /// <summary>The project's scripting define symbols for the active target group.</summary>
+    /// <summary>The project's scripting scripting defines for the active target group.</summary>
     public List<string> ScriptingDefines { get; set; } = new();
+    /// <summary>Every target group's scripting defines, by ProjectSettings' key.</summary>
+    public Dictionary<string, List<string>> ScriptingDefinesByGroup { get; set; } = new();
     /// <summary>The reference assemblies of the engine modules whose built-in package the project
     /// leaves out: scenes lose their components of those modules' classes.</summary>
     public List<string> DisabledModules { get; set; } = new();
@@ -352,6 +354,7 @@ public static unsafe class Game
         ProjectInfo.PersistentDataPath = c.PersistentDataPath;
         ProjectInfo.PlayerPrefsPath = c.PlayerPrefsPath;
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
+        ProjectInfo.DefinesByGroup = c.ScriptingDefinesByGroup.ToDictionary(p => p.Key, p => p.Value.ToArray(), StringComparer.Ordinal);
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         DisabledModules.Configure(c.DisabledModules);
         GameDomain.FrameworkDir = c.FrameworkDir;

@@ -17,7 +17,7 @@ for a refresh; then it calls `CompilationPipeline.RequestScriptCompilation()` an
 (`OTHER_DEFINE`) and for Standalone again with the same value, one round each (these rounds wait
 20 seconds for their compilation, which runs asynchronously). `Assets/Scripts/Defined.cs` tells
 whether the scripts were compiled with `PROBE_DEFINE`; each round's `state` row records it with
-both targets' define symbols. `Assets/Scripts/Warn.cs` has a warning; `Assets/Other` is an assembly of its own that
+both targets' scripting defines. `Assets/Scripts/Warn.cs` has a warning; `Assets/Other` is an assembly of its own that
 does not depend on the changed script. Per round: the order of the events, an assembly's (compiled
 or not required) being `assembly` because their order among themselves is Unity's own; each compiled
 assembly's started and finished events with its messages (type, file, line, column, text); the
@@ -36,12 +36,12 @@ the editor scripts' load, then `[DidReloadScripts]`, then afterAssemblyReload; e
 (Enter Play Mode Options on, None: the domain reloads) first sends beforeAssemblyReload. A request
 with nothing changed, with or without CleanBuildCache, raises compilationStarted,
 assemblyCompilationNotRequired for every assembly and compilationFinished, and then reloads the
-domain all the same. New define symbols for the active build target (Standalone) compile every
-assembly with them and reload; another target's symbols, or the active target's unchanged, start
+domain all the same. New scripting defines for the active build target (Standalone) compile every
+assembly with them and reload; another target's defines, or the active target's unchanged, start
 no compilation. The documented contracts: [RequestScriptCompilation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Compilation.CompilationPipeline.RequestScriptCompilation.html)
 ("Allows you to request that the Editor recompile scripts in the project") and
 [SetScriptingDefineSymbols](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/PlayerSettings.SetScriptingDefineSymbols.html)
-(the symbols of a named build target); the probe's Android round and unchanged round are the
+(the defines of a named build target); the probe's Android round and unchanged round are the
 controls where the call must not recompile.
 
 Unbound raises the compilation events from its hot reload's recompilation, an assembly whose
@@ -54,8 +54,13 @@ reports as the reload: beforeAssemblyReload before the restart, then the new ses
 a second one. The restarted session also enters Play mode again (its Play mode callbacks run and
 the scene starts over), which the Editor's reload does not.
 
-Recorded residuals (`residuals.json`): `round1.playMode` and `round3.playMode`, the restarted
-session's Play mode entry; `start.load`, because Unbound's editor scripts load before
+A compilation scripts ask for (RequestScriptCompilation, new scripting defines of the active target)
+runs between frames: Unbound raises its compilation events (every assembly not required when
+nothing changed) and then reloads the scripts by restarting the session, with the scripting defines
+set in the run kept for the restarted session.
+
+Recorded residuals (`residuals.json`): `round1.playMode`, `round3.playMode` and rounds 4 to 6's,
+the restarted session's Play mode entry; `start.load`, because Unbound's editor scripts load before
 Play mode entry's pre-reload events, which the Editor sends in its Edit-mode domain (their
 beforeAssemblyReload handlers run in the domain that then plays). Play mode entered from an
 Edit-mode session raises no reload events. Unmeasured: the order of several messages of one assembly (Unbound

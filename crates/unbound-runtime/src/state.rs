@@ -940,6 +940,23 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let paths: Vec<_> = Some(path).filter(|p| !p.is_empty()).into_iter().collect();
             Ok(json!({ "paths": paths }).to_string())
         }
+        "request-script-compilation" => {
+            // CompilationPipeline.RequestScriptCompilation: compiled and reloaded between frames.
+            crate::game::request_compilation();
+            Ok("{}".to_string())
+        }
+        "scripting-defines" => {
+            // PlayerSettings.SetScriptingDefineSymbols: the group's defines for the run's
+            // compilations (the caller asks for the compilation when the active group changed).
+            #[derive(Deserialize)]
+            struct Request {
+                group: String,
+                defines: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::game::set_scripting_defines(&r.group, &r.defines);
+            Ok("{}".to_string())
+        }
         "generated-texture-release" => {
             #[derive(Deserialize)]
             struct Request {

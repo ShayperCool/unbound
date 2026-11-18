@@ -30579,7 +30579,6 @@ namespace UnityEditor.Compilation
         [global::Unbound.Stub] internal static string GetAssemblyDefinitionFilePathFromAssemblyReference(global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation editorCompilation, string reference) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromAssemblyReference"); return default; }
         [global::Unbound.Stub] internal static string GetAssemblyRootNamespaceFromScriptPath(global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation editorCompilation, string projectRootNamespace, string sourceFilePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.GetAssemblyRootNamespaceFromScriptPath"); return default; }
         [global::Unbound.Stub] internal static string GetAssemblyDefinitionFilePathFromScriptPath(global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation editorCompilation, string sourceFilePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromScriptPath"); return default; }
-        [global::Unbound.Stub] public static void RequestScriptCompilation(global::UnityEditor.Compilation.RequestScriptCompilationOptions options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation"); }
         [global::Unbound.Stub] internal static void OnCodeOptimizationChanged(bool scriptDebugInfoEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.OnCodeOptimizationChanged"); }
         public static event global::System.Action<global::UnityEditor.Compilation.CodeOptimization> codeOptimizationChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.codeOptimizationChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Flags]
@@ -30612,12 +30611,6 @@ namespace UnityEditor.Compilation
     {
         None = 0,
         UseEngineModules = 1,
-    }
-    [global::System.Flags]
-    public enum RequestScriptCompilationOptions
-    {
-        None = 0,
-        CleanBuildCache = 1,
     }
     [global::Unbound.Stub]
     public unsafe partial class ResponseFileData

@@ -15,7 +15,7 @@ using UnityEngine;
 /// Assets/Other, does not depend on the changed script): the probe rewrites
 /// Assets/Scripts/Changing.cs three times (a new value, a compile error, the fix), asks for a refresh,
 /// then asks for a compilation (both RequestScriptCompilation overloads) and sets the scripting
-/// define symbols (the active target's, another target's, the active target's again unchanged),
+/// scripting defines (the active target's, another target's, the active target's again unchanged),
 /// and logs every compilation and assembly reload event to a file in $COMPILE_EVENTS_OUT (it
 /// survives a domain reload); values.jsonl summarizes each round.
 /// </summary>
@@ -112,7 +112,7 @@ public static class CompileEventsProbe
         AssetDatabase.Refresh();
     }
 
-    /// <summary>What the round left: the scripts' define and the targets' define symbols.</summary>
+    /// <summary>What the round left: the scripts' define and the targets' scripting defines.</summary>
     static void LogState() =>
         Log("state defined=" + Defined.On + " standalone=" + PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone)
             + " android=" + PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android));

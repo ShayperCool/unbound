@@ -10,8 +10,9 @@ use crate::{
 use anyhow::{Result, bail};
 use serde_json::Value as Json;
 use std::{
+    collections::BTreeMap,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
     time::Instant,
@@ -33,6 +34,57 @@ static RESTART_IN_DEBUG: AtomicBool = AtomicBool::new(false);
 /// Whether the restarted game should compile its scripts in Debug (see [`RESTART_IN_DEBUG`]).
 pub fn restart_in_debug() -> bool {
     RESTART_IN_DEBUG.load(Ordering::SeqCst)
+}
+
+/// Set when scripts ask for a compilation (`CompilationPipeline.RequestScriptCompilation`, new
+/// scripting defines for the active build target): the next change check compiles the scripts and
+/// reloads them whatever changed, as the Editor does (tests/projects/compileevents).
+static COMPILE_REQUESTED: AtomicBool = AtomicBool::new(false);
+
+/// The scripting defines scripts set in this run (`PlayerSettings.SetScriptingDefineSymbols`), by the
+/// key ProjectSettings stores them under. They replace the project's for the run's compilations
+/// and are handed to a relaunched session ([`DEFINES_VARIABLE`]); the project's files are not
+/// written.
+static DEFINE_OVERRIDES: Mutex<BTreeMap<String, Vec<String>>> = Mutex::new(BTreeMap::new());
+
+/// The environment variable a relaunched session reads the run's scripting defines from (JSON, by
+/// group key).
+pub const DEFINES_VARIABLE: &str = "UNBOUND_SCRIPTING_DEFINES";
+
+pub(crate) fn request_compilation() {
+    COMPILE_REQUESTED.store(true, Ordering::SeqCst);
+}
+
+pub(crate) fn set_scripting_defines(group: &str, defines: &str) {
+    let key = unbound_project::settings::defines_key(group).to_string();
+    let list = unbound_project::settings::parse_defines(defines);
+    DEFINE_OVERRIDES.lock().unwrap().insert(key, list);
+}
+
+/// The run's scripting defines for a relaunched session, as [`DEFINES_VARIABLE`] holds them; `None`
+/// when scripts set none.
+pub fn scripting_define_overrides() -> Option<String> {
+    let overrides = DEFINE_OVERRIDES.lock().unwrap();
+    (!overrides.is_empty()).then(|| serde_json::to_string(&*overrides).unwrap_or_default())
+}
+
+/// Applies the run's scripting defines (those of the session this one relaunched included) to the
+/// project's settings.
+fn apply_define_overrides(settings: &mut unbound_project::Settings) {
+    let mut overrides = DEFINE_OVERRIDES.lock().unwrap();
+    if let Ok(inherited) = std::env::var(DEFINES_VARIABLE) {
+        match serde_json::from_str::<BTreeMap<String, Vec<String>>>(&inherited) {
+            Ok(inherited) => {
+                for (key, list) in inherited {
+                    overrides.entry(key).or_insert(list);
+                }
+            }
+            Err(error) => tracing::warn!("{DEFINES_VARIABLE}: {error}"),
+        }
+    }
+    for (key, list) in overrides.iter() {
+        settings.set_defines(key, list.clone());
+    }
 }
 use unbound_host::ManagedRuntime;
 use unbound_project::Project;
@@ -176,7 +228,8 @@ impl Game {
         options: &GameOptions,
         backend: Option<Arc<dyn RenderBackend>>,
     ) -> Result<Self> {
-        let project = Project::open(&project.root)?;
+        let mut project = Project::open(&project.root)?;
+        apply_define_overrides(&mut project.settings);
         let runtime = ManagedRuntime::start()?;
         let runtime_state = state::initialize(&project)?;
         // Play-mode sessions pack the atlases (sprite_atlases); an Edit-mode session can enter
@@ -262,22 +315,26 @@ impl Game {
 
     /// Applies the edits made since the last call: scripts are recompiled and patched in.
     /// Call between frames.
+    /// Also runs a compilation scripts asked for (without watching too).
     pub fn apply_changes(&mut self) {
-        let Some(watcher) = self.watcher.as_mut() else {
-            return;
+        let requested = COMPILE_REQUESTED.swap(false, Ordering::SeqCst);
+        let changes = match self.watcher.as_mut() {
+            Some(watcher) => watcher.poll(),
+            None => Changes::default(),
         };
-        let changes = watcher.poll();
-        if changes.is_empty() {
+        if changes.is_empty() && !requested {
             return;
         }
-        if let Err(error) = self.apply(&changes) {
+        if let Err(error) = self.apply(&changes, requested) {
             tracing::error!("applying changes: {error:#}");
         }
     }
 
-    fn apply(&mut self, changes: &Changes) -> Result<()> {
-        if !changes.scripts.is_empty() || changes.graph {
+    /// `requested`: scripts asked for a compilation, which reloads them even when nothing changed.
+    fn apply(&mut self, changes: &Changes, requested: bool) -> Result<()> {
+        if !changes.scripts.is_empty() || changes.graph || requested {
             let started = Instant::now();
+            apply_define_overrides(&mut self.project.settings);
             let graph = self
                 .project
                 .script_graph(self.options.mode, &self.options.target)?;
@@ -289,9 +346,10 @@ impl Game {
                 editor,
                 self.options.code_optimization,
             );
-            let response: Json = self
-                .runtime
-                .call("hot-reload", &serde_json::json!({ "compile": request }))?;
+            let response: Json = self.runtime.call(
+                "hot-reload",
+                &serde_json::json!({ "compile": request, "reload": requested }),
+            )?;
             let status = response["status"].as_str().unwrap_or("");
             match status {
                 "applied" => {

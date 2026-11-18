@@ -307,6 +307,9 @@ namespace UnityEngine
         /// <summary>A PlayerPrefs file the run was given instead of the Editor's (null: none).</summary>
         internal static string PlayerPrefsPath;
         internal static string[] Defines = Array.Empty<string>();
+        /// <summary>Every build target group's scripting defines, by the key ProjectSettings stores them
+        /// under (a named target's name), with those scripts set earlier in the run.</summary>
+        internal static Dictionary<string, string[]> DefinesByGroup = new Dictionary<string, string[]>(StringComparer.Ordinal);
         internal static readonly List<(string Path, string Guid)> BuildScenes = new List<(string, string)>();
     }
 

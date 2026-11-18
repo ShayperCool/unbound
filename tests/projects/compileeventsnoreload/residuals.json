@@ -1,6 +1,9 @@
 {
-  "An edit Unbound cannot patch restarts the session, which enters Play mode again ([InitializeOnEnterPlayMode], ExitingEditMode, EnteredPlayMode); the Editor's reload for a script change keeps Play mode": [
+  "Unbound reloads scripts by restarting the session (an edit it cannot patch, a compilation scripts asked for, new scripting defines of the active target), which enters Play mode again ([InitializeOnEnterPlayMode], ExitingEditMode, EnteredPlayMode); the Editor's reload keeps Play mode": [
     "round1.playMode",
-    "round3.playMode"
+    "round3.playMode",
+    "round4.playMode",
+    "round5.playMode",
+    "round6.playMode"
   ]
 }

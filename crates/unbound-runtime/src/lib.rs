@@ -11,8 +11,8 @@ pub mod fonts;
 pub mod game;
 pub mod gamepads;
 pub mod graphics_device;
-pub mod imported_prefabs;
 pub mod ime;
+pub mod imported_prefabs;
 pub mod lighting;
 mod models;
 pub mod native_api;
@@ -30,5 +30,8 @@ pub mod view;
 pub mod watch;
 
 pub use config::GameOptions;
-pub use game::{FrameInput, Game, KeyEvent, restart_in_debug, restart_requested};
+pub use game::{
+    DEFINES_VARIABLE, FrameInput, Game, KeyEvent, restart_in_debug, restart_requested,
+    scripting_define_overrides,
+};
 pub use scripted::ScriptedInput;
