@@ -188,10 +188,12 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
 
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro), and two more identical to them, recorded with
-`tests/flat_reference.py record builtinfx --variable BUILTINFX_PROBE_OUT` and `publish`. A lens
+`tests/flat_reference.py record builtinfx --variable BUILTINFX_PROBE_OUT` and `publish`; recorded
+again with the `deferredStencil.*` rows by a further identical pair, which read other
+`material.crc.values` checksums (every other earlier row and image the same). A lens
 flare fades in over real time, and three of four Metal captures drew `flare_LensFlareObject`
 differently, so on Metal the probe records `flare_LensFlareObject.skipped` instead (the Linux path
-is unchanged). Unbound on Metal matches 302 of 305 values and 112 of 115 images within a mean of 2
-(299 values and all 115 images of the Linux reference). Open: `raster.sRGBWrite_False` (Unbound
+is unchanged). Unbound on Metal matches 413 of 416 values and 114 of 117 images within a mean of 2
+(410 values and all 117 images of the Linux reference). Open: `raster.sRGBWrite_False` (Unbound
 reads the linear colour where the Metal Editor reads the sRGB-encoded one) and
 `probe_own_target_0/4/5`.
