@@ -340,9 +340,9 @@ namespace Unbound.Runtime
         /// scalar uniforms take from the draw's property arrays (render protocol 12). Under an
         /// instance multiplier the renderer adds the call's further instances after its last one
         /// (NativeApi 65).</summary>
-        internal static void MeshInstance(uint index, uint count)
+        internal static void MeshInstance(uint index, uint count, uint call)
         {
-            Unbound.Runtime.Profiling.RenderStats.MeshInstance(index, count);
+            Unbound.Runtime.Profiling.RenderStats.MeshInstance(index, call);
             U8(MeshInstanceOp);
             U32(index);
             U32(count);
@@ -444,7 +444,7 @@ namespace Unbound.Runtime
         /// (DrawIndices: buffer, index size, first index, index count).</summary>
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
-            if (setup.MeshInstance is uint index) MeshInstance(index, setup.MeshInstanceCount);
+            if (setup.MeshInstance is uint index) MeshInstance(index, setup.MeshInstanceCount, setup.MeshInstanceCall);
             s_PendingCommand = setup.Command ?? -1;
             U8(DrawSetupOp);
             U32(setup.Instances);

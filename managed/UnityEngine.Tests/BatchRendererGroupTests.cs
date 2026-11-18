@@ -449,6 +449,36 @@ namespace UnityEngine.Tests
             Assert.Empty(Collect(data, all));
         }
 
+        /// <summary>The render counters: a draw item's pass count holds for each of its draws, a
+        /// command of more instances than one draw takes counting once per chunk and pass.</summary>
+        [Fact]
+        public void EachChunkOfAnItemCountsItsPasses()
+        {
+            BatchID batch = default;
+            BatchMeshID mesh = default;
+            BatchMaterialID material = default;
+            const int instances = BatchCulling.MaxInstancesPerDraw + 44;
+            var filter = new BatchFilterSettings { renderingLayerMask = 1 };
+            var group = Group((g, c, o, u) => Emit(filter, instances,
+                new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 0, visibleCount = instances })(g, c, o, u));
+            mesh = group.RegisterMesh(m_Mesh);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group);
+            var item = Assert.Single(Collect(Cull(), new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue }));
+            using var draws = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Render, "Draw Calls Count");
+            GfxStream.Flush();
+            Unbound.Runtime.Profiling.ProfilerCore.EndFrame();
+            // Two chunks of a command for two passes: four draws; one pass: two.
+            BatchCulling.Draw(item, item.Dots.Value, 1, GfxStream.TaggedPasses, null, passes: 2);
+            GfxStream.Flush();
+            Unbound.Runtime.Profiling.ProfilerCore.EndFrame();
+            Assert.Equal(4, draws.LastValue);
+            BatchCulling.Draw(item, item.Dots.Value, 1, 0, null);
+            GfxStream.Flush();
+            Unbound.Runtime.Profiling.ProfilerCore.EndFrame();
+            Assert.Equal(2, draws.LastValue);
+        }
+
         /// <summary>A command of an unregistered mesh is not drawn and logs the Editor's error,
         /// each distinct message once (tests/projects/brg errors, the Editor's log).</summary>
         [Fact]

@@ -144,8 +144,9 @@ namespace UnityEngine
             }
             int queued = Immediate.Queued.Count;
             var values = MeshInstanceProperties(properties);
+            uint call = Unbound.Runtime.Profiling.RenderStats.NewInstancingCall();
             for (int i = 0; i < count; i++)
-                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)count }, lighting);
+                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)count, MeshInstanceCall = call }, lighting);
             // The group's sort key is the box's centre, ties within the call kept in call order
             // (Unbound's choice, unmeasured).
             WithWorldBounds(queued, bounds);
@@ -270,10 +271,11 @@ namespace UnityEngine
             var bounds = default(Bounds);
             int queued = Immediate.Queued.Count;
             var values = MeshInstanceProperties(rparams.matProps);
+            uint call = Unbound.Runtime.Profiling.RenderStats.NewInstancingCall();
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
-                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)instanceCount }, lighting);
+                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, values, new DrawSetup { Instances = 1, MeshInstance = (uint)i, MeshInstanceCount = (uint)instanceCount, MeshInstanceCall = call }, lighting);
                 if (!automatic) continue;
                 if (i == 0) bounds = Transformed(mesh.bounds, matrix);
                 else bounds.Encapsulate(Transformed(mesh.bounds, matrix));

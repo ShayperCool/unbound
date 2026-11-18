@@ -38,14 +38,15 @@ namespace UnityEngine.Tests
             // after its DrawSetup) is one draw call; its forward-add draws for a light, one per
             // instance likewise, another.
             GfxStream.Flush();
+            uint call = RenderStats.NewInstancingCall();
             for (uint i = 0; i < 3; i++)
             {
-                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3 });
+                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3, MeshInstanceCall = call });
                 GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
             }
             for (uint i = 0; i < 3; i++)
             {
-                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3 });
+                GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = i, MeshInstanceCount = 3, MeshInstanceCall = call });
                 GfxStream.Draw(1, 0, 9, 1, Matrix4x4.identity, Color.white);
             }
             GfxStream.Flush();
@@ -70,42 +71,67 @@ namespace UnityEngine.Tests
             Assert.Equal(0, draws.LastValue);
         }
 
-        static void Instance(uint index, uint count, int pass)
+        static void Instance(uint call, uint index, int pass, Light light = null)
         {
-            GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = index, MeshInstanceCount = count });
+            if (light != null) RenderStats.NextDrawLight(light);
+            GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = index, MeshInstanceCount = 6, MeshInstanceCall = call });
             GfxStream.Draw(1, 0, 9, pass, Matrix4x4.identity, Color.white);
         }
 
-        /// <summary>A run of one instancing call's instances counts once wherever it starts: a
-        /// light's forward-add draws reaching only its later instances, a run after another draw,
-        /// and a second call of as many instances after the first.</summary>
+        /// <summary>A run of one instancing call's instances with one material, pass and light
+        /// counts once, in the order the forward renderer draws them (each instance's base draw,
+        /// then its forward-add draw for each light reaching it), across other draws; a camera
+        /// rendering the call again (its instances from the first) counts it again, and an
+        /// instance without a call counts on its own.</summary>
         [Fact]
-        public void AnInstancingCallsRunCountsOnceWhereverItStarts()
+        public void AnInstancingCallsRunCountsOncePerPassAndLight()
         {
-            using var draws = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
-            GfxStream.Flush();
-            ProfilerCore.EndFrame();
-            // Base pass of instances 0-5, forward-add of instances 3-5 only: two draws.
-            for (uint i = 0; i < 6; i++) Instance(i, 6, 0);
-            for (uint i = 3; i < 6; i++) Instance(i, 6, 1);
-            GfxStream.Flush();
-            ProfilerCore.EndFrame();
-            Assert.Equal(2, draws.LastValue);
-            // Instances 0-1, another draw, instances 2-3 of the same call: three draws.
-            Instance(0, 4, 0);
-            Instance(1, 4, 0);
-            GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
-            Instance(2, 4, 0);
-            Instance(3, 4, 0);
-            GfxStream.Flush();
-            ProfilerCore.EndFrame();
-            Assert.Equal(3, draws.LastValue);
-            // Two calls of two instances one after the other: two draws.
-            for (int call = 0; call < 2; call++)
-                for (uint i = 0; i < 2; i++) Instance(i, 2, 0);
-            GfxStream.Flush();
-            ProfilerCore.EndFrame();
-            Assert.Equal(2, draws.LastValue);
+            var lightA = new GameObject("light a").AddComponent<Light>();
+            var lightB = new GameObject("light b").AddComponent<Light>();
+            try
+            {
+                using var draws = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
+                GfxStream.Flush();
+                ProfilerCore.EndFrame();
+                // Six instances, light A reaching instances 2-5 and light B instances 4-5, drawn
+                // instance by instance: a base run and one run per light, three draws.
+                uint call = RenderStats.NewInstancingCall();
+                for (uint i = 0; i < 6; i++)
+                {
+                    Instance(call, i, 0);
+                    if (i >= 2) Instance(call, i, 1, lightA);
+                    if (i >= 4) Instance(call, i, 1, lightB);
+                }
+                GfxStream.Flush();
+                ProfilerCore.EndFrame();
+                Assert.Equal(3, draws.LastValue);
+                // Another draw between its instances, then a second camera's render of the call:
+                // the other draw and the call's base run again, three.
+                call = RenderStats.NewInstancingCall();
+                Instance(call, 0, 0);
+                GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
+                Instance(call, 1, 0);
+                Instance(call, 0, 0);
+                Instance(call, 1, 0);
+                GfxStream.Flush();
+                ProfilerCore.EndFrame();
+                Assert.Equal(3, draws.LastValue);
+                // Two calls one after the other, and instances without a call: two and two.
+                for (int c = 0; c < 2; c++)
+                {
+                    call = RenderStats.NewInstancingCall();
+                    for (uint i = 0; i < 2; i++) Instance(call, i, 0);
+                }
+                for (uint i = 0; i < 2; i++) Instance(0, i, 0);
+                GfxStream.Flush();
+                ProfilerCore.EndFrame();
+                Assert.Equal(4, draws.LastValue);
+            }
+            finally
+            {
+                Object.DestroyImmediate(lightA.gameObject);
+                Object.DestroyImmediate(lightB.gameObject);
+            }
         }
 
         sealed class Collect : ILogHandler

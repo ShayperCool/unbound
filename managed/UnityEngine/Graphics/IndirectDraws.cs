@@ -24,6 +24,8 @@ namespace Unbound.Runtime
         internal uint? MeshInstance;
         /// <summary>The instance count of that mesh-instancing call.</summary>
         internal uint MeshInstanceCount;
+        /// <summary>That call's id for the render counters (RenderStats.NewInstancingCall).</summary>
+        internal uint MeshInstanceCall;
         /// <summary>The indirect command an indirect draw runs (its <c>unity_BaseCommandID</c>,
         /// what UnityIndirect.cginc's GetCommandID reads); null: none.</summary>
         internal int? Command;
@@ -249,9 +251,10 @@ namespace UnityEngine.Rendering
                 }
                 ulong meshHandle = mesh.Sync(), materialHandle = material.Sync();
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
+                uint call = Unbound.Runtime.Profiling.RenderStats.NewInstancingCall();
                 for (int i = 0; i < count; i++)
                 {
-                    GfxStream.MeshInstance((uint)i, (uint)count);
+                    GfxStream.MeshInstance((uint)i, (uint)count, call);
                     if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values);
                 }

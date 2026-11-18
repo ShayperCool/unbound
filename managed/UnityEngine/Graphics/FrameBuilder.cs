@@ -2388,6 +2388,7 @@ namespace Unbound.Runtime
                     var properties = new Dictionary<int, object>();
                     string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
                     AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawLight(light);
                     EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
                 }
             }
