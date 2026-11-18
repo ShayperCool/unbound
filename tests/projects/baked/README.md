@@ -35,3 +35,9 @@ cubemaps first and the skybox's last.
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): the image differs in 857 pixels by up to 19/255 (the silhouette shift above);
 `urp/compare.py --gate image-residuals.json` holds it to that, so any other difference fails.
+
+On macOS arm64 the suite compares with `Reference/unity-6000.0.71f1/metal.png` (and `metal.jsonl`,
+the same values as the Linux capture), two identical captures of the macOS Editor in batch mode
+(Metal) on an Apple M2 Pro: Metal's image differs from the Linux one by the device's rounding (mean
+0.58, 4 pixels over 8). Unbound on Metal: mean 0.06, 862 pixels differ by up to 19, the same
+silhouette shift (`image-residuals.json`, two identical runs).

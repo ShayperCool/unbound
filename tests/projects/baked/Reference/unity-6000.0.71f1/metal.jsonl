@@ -1,0 +1,14 @@
+{"key":"lightmaps","value":1}
+{"key":"lightmapsMode","value":"NonDirectional"}
+{"key":"lightmap","value":"Lightmap-0_comp_light 128x128 RGBAHalf R16G16B16A16_SFloat dir False mask False"}
+{"key":"renderer Cube","value":[0,0.1888974,0.1888974,0.6398589,0.124233879]}
+{"key":"renderer Cube","value":[0,0.1574145,0.1574145,0.6399866,-0.0006384364]}
+{"key":"renderer Dynamic Sphere","value":[-1,1,1,0,0]}
+{"key":"renderer Mirror Sphere","value":[-1,1,1,0,0]}
+{"key":"renderer Plane","value":[0,0.625,0.625,0,0]}
+{"key":"probe at sphere","value":[1.77421594,0.293415874,-0.61168015,-0.0150367506,0.06215352,-0.179386988,0.00566794164,0.00927766,-0.0947071537,0.748834431,0.2112517,-0.295284927,0.189982086,0.120164633,-0.152408049,-0.00385822123,-0.09312312,-0.0384504162,0.6809094,0.211202979,-0.273797572,0.205049083,0.125409111,-0.151730463,-0.005782037,-0.09960801,-0.0350197032]}
+{"key":"probes","value":18}
+{"key":"reflection probe Reflection Probe","value":"Baked Cubemap 64x64 Cube (1.00, 1.00, 0.00, 0.00)"}
+{"key":"mirror probes","value":"Reflection Probe:1"}
+{"key":"bakingOutput Directional Light","value":"1 -1 Baked IndirectOnly True"}
+{"key":"bakingOutput Point Light","value":"0 -1 Baked IndirectOnly True"}

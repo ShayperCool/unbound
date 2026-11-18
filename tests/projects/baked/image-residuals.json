@@ -3,5 +3,10 @@
   "pixels": 857,
   "worst": 19,
   "reason": "a one-pixel shift of the column's silhouette (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+ },
+ "Reference/unity-6000.0.71f1/metal.png": {
+  "pixels": 862,
+  "worst": 19,
+  "reason": "the same one-pixel shift of the column's silhouette on Metal (README); 6000.0.71f1, macOS arm64 (Apple M2 Pro), two identical runs of 2026-11-18"
  }
 }
