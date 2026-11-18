@@ -175,7 +175,9 @@ namespace UnityEngine
         /// metal/values.jsonl; Linux reads ProgressiveCPU, values.jsonl). Other values read as stored.</summary>
         static Lightmapper Effective(Lightmapper stored) =>
             (int)stored is 0 or (int)Lightmapper.ProgressiveCPU
-                ? (Application.platform == RuntimePlatform.OSXEditor ? Lightmapper.ProgressiveGPU : Lightmapper.ProgressiveCPU)
+                ? (Application.platform == RuntimePlatform.OSXEditor
+                   && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+                    ? Lightmapper.ProgressiveGPU : Lightmapper.ProgressiveCPU)
                 : stored;
 
         public Lightmapper lightmapper

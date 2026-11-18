@@ -504,7 +504,8 @@ namespace UnityEngine
             float.IsNaN(value) ? 0u : (uint)Math.Clamp(Math.Round(value * 510.0 + 384.0, MidpointRounding.ToEven), 0.0, 1023.0);
 
         /// <summary>Float texels read from a render texture of <paramref name="format"/> as a device
-        /// that draws into that format reads them. A packed 4-bit or 5-6-5 target keeps its channel
+        /// that draws into that format reads them, where that is measured
+        /// (TargetReadbackRule.ReadsStoredChannelBits; elsewhere the stored values are read). A packed 4-bit or 5-6-5 target keeps its channel
         /// bits (StoredChannelBits): its values round to k / (2^bits - 1) from Unbound's 8-bit store.
         /// An R10G10B10_XR target reads each color channel's code over 1023, at 8-bit precision, not
         /// the value it encodes. The macOS Editor's Metal device reads targets cleared to
@@ -517,7 +518,9 @@ namespace UnityEngine
         {
             var bits = StoredChannelBits(format);
             bool extended = format == GraphicsFormat.R10G10B10_XRUNormPack32;
-            if ((bits == null && !extended) || floatTexels == null || !SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return;
+            if ((bits == null && !extended) || floatTexels == null
+                || GraphicsDeviceProfile.Current.TargetReadback?.ReadsStoredChannelBits != true
+                || !SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return;
             fixed (byte* p = floatTexels)
             {
                 var values = (float*)p;

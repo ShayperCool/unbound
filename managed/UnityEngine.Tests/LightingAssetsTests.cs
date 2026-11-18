@@ -122,7 +122,8 @@ namespace Unbound.Tests
         /// with: ProgressiveGPU on macOS, ProgressiveCPU on Linux (tests/projects/lightingassets
         /// metal/values.jsonl, values.jsonl).</summary>
         static LightingSettings.Lightmapper EditorsLightmapper =>
-            OperatingSystem.IsMacOS() ? LightingSettings.Lightmapper.ProgressiveGPU : LightingSettings.Lightmapper.ProgressiveCPU;
+            OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+                ? LightingSettings.Lightmapper.ProgressiveGPU : LightingSettings.Lightmapper.ProgressiveCPU;
 
         [Fact]
         public void ANewObjectHasTheEditorsDefaults()

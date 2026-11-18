@@ -131,14 +131,18 @@ namespace Unbound.Tests
                 var plain = Floats(stored);
                 RenderTexture.QuantizeReadTexels(GraphicsFormat.R8G8B8A8_UNorm, plain);
                 Assert.Equal(stored, Values(plain));
-                // A device that does not draw into the format keeps the texels as read.
+                // The other devices' reads are unmeasured: the stored values are read, whether
+                // their caps say they draw into the format or not.
                 foreach (var device in new[] { "OpenGLCore", "Vulkan" })
                 {
                     GraphicsDeviceProfile.Select(device);
-                    var texels = Floats(stored);
-                    RenderTexture.QuantizeReadTexels(GraphicsFormat.R5G6B5_UNormPack16, texels);
-                    bool renders = SystemInfo.IsFormatSupported(GraphicsFormat.R5G6B5_UNormPack16, GraphicsFormatUsage.Render);
-                    Assert.Equal(renders ? 8 / 31f : 64 / 255f, Values(texels)[0]);
+                    foreach (var format in new[] { GraphicsFormat.R5G6B5_UNormPack16, GraphicsFormat.R4G4B4A4_UNormPack16,
+                                                   GraphicsFormat.R10G10B10_XRUNormPack32 })
+                    {
+                        var texels = Floats(stored);
+                        RenderTexture.QuantizeReadTexels(format, texels);
+                        Assert.Equal(stored, Values(texels));
+                    }
                 }
             }
             finally

@@ -131,8 +131,13 @@ namespace Unbound.Runtime
             /// request fails (unmeasured).</summary>
             internal System.Collections.Generic.HashSet<GraphicsFormat> PackedWords { get; init; }
             /// <summary>ReadPixels of a signed normalized target into 8-bit texels truncates its
-            /// values to bytes (Texture2D.ReadPixels); false: unmeasured, they round.</summary>
+            /// values to bytes (Texture2D.ReadPixels; measured for B8G8R8A8_SNorm, taken alike for
+            /// the other signed formats); false: unmeasured, they round.</summary>
             internal bool SignedToBytesTruncates { get; init; }
+            /// <summary>Reads of a 4444 or 5-6-5 target keep the format's channel bits and reads of
+            /// an R10G10B10_XR target give its codes (RenderTexture.QuantizeReadTexels); false:
+            /// unmeasured, Unbound's stored values are read.</summary>
+            internal bool ReadsStoredChannelBits { get; init; }
         }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
@@ -263,8 +268,10 @@ namespace Unbound.Runtime
                     GraphicsFormat.A2B10G10R10_UNormPack32, GraphicsFormat.B10G11R11_UFloatPack32, GraphicsFormat.E5B9G9R9_UFloatPack32,
                     GraphicsFormat.R10G10B10_XRUNormPack32,
                 },
-                // tests/projects/textureformats metal.jsonl readback.B8G8R8A8_SNorm.read.RGBA32.
+                // tests/projects/textureformats metal.jsonl readback.B8G8R8A8_SNorm.read.RGBA32 and
+                // readback.{R4G4B4A4,B4G4R4A4,R5G6B5,B5G6R5,R10G10B10_XR}*.read.*, .asyncfloat.
                 SignedToBytesTruncates = true,
+                ReadsStoredChannelBits = true,
                 RefusedSourceNames = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
                 {
                     [GraphicsFormat.A1R5G5B5_UNormPack16] = "A1RGB5 UNorm",
