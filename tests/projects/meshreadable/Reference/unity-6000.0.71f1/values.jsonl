@@ -243,6 +243,22 @@
 {"k":"scripted.GetIndicesList","v":[3,0,2]}
 {"k":"scripted.colliderHit","v":[[0.25,0.25,0],1]}
 {"k":"scripted.meshData","v":[3,1,1,[0,0,0]]}
+{"k":"write.readableScripted.normals","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Normal:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.tangents","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.uv","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.uv3","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord2:Float32x2 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.colors32","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.colors","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:Float32x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.SetVertices","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.SetUVs4","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.triangles","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.SetTriangles","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,1]]}
+{"k":"write.readableScripted.SetIndices","v":[true,3,1,2,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[0]]}
+{"k":"write.readableScripted.SetIndices.log","v":["Error: Failed getting triangles. Submesh topology is lines or points."]}
+{"k":"write.readableScripted.RecalculateNormals","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Normal:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.RecalculateBounds","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.RecalculateTangents","v":[true,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.readableScripted.Clear","v":[true,0,1,0,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[0]]}
 {"k":"scriptedLocked.readable","v":false}
 {"k":"scriptedLocked.vertexCount","v":3}
 {"k":"scriptedLocked.subMeshCount","v":1}
@@ -319,6 +335,72 @@
 {"k":"bake.locked","v":[9,true,[9,[-0.01,0,0],[0,0.02,0]]]}
 {"k":"set.lockedVertices","v":[3,false]}
 {"k":"set.lockedVertices.log","v":["Error: Not allowed to access vertices on mesh 'SetTarget' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.normals","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.normals.log","v":["Error: Not allowed to access normals on mesh 'lockedScripted normals' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.tangents","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.tangents.log","v":["Error: Not allowed to access tangents on mesh 'lockedScripted tangents' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.uv","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.uv.log","v":["Error: Not allowed to access uv on mesh 'lockedScripted uv' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.uv3","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.uv3.log","v":["Error: Not allowed to access uv3 on mesh 'lockedScripted uv3' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.colors32","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.colors32.log","v":["Error: Not allowed to access colors on mesh 'lockedScripted colors32' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.colors","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.colors.log","v":["Error: Not allowed to access colors on mesh 'lockedScripted colors' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.SetVertices","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.SetVertices.log","v":["Error: Not allowed to access vertices on mesh 'lockedScripted SetVertices' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.SetUVs4","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.SetUVs4.log","v":["Error: Not allowed to access uv5 on mesh 'lockedScripted SetUVs4' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.triangles","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.triangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedScripted triangles' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.SetTriangles","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.SetTriangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedScripted SetTriangles' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.SetIndices","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.SetIndices.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedScripted SetIndices' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedScripted.RecalculateNormals","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.RecalculateNormals.log","v":["Error: Not allowed to call RecalculateNormals() on mesh 'lockedScripted RecalculateNormals'"]}
+{"k":"write.lockedScripted.RecalculateBounds","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.RecalculateBounds.log","v":["Error: Not allowed to call RecalculateBounds() on mesh 'lockedScripted RecalculateBounds'"]}
+{"k":"write.lockedScripted.RecalculateTangents","v":[false,3,1,3,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[3,0,2]]}
+{"k":"write.lockedScripted.RecalculateTangents.log","v":["Error: Not allowed to call RecalculateTangents() on mesh 'lockedScripted RecalculateTangents'"]}
+{"k":"write.lockedScripted.Clear","v":[false,0,1,0,[0.5,0.5,0],[1,1,0],"Position:Float32x3 Color:UNorm8x4 TexCoord4:Float32x2",[0]]}
+{"k":"write.lockedImported.normals","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.normals.log","v":["Error: Not allowed to access normals on mesh 'lockedImported normals' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.tangents","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.tangents.log","v":["Error: Not allowed to access tangents on mesh 'lockedImported tangents' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.uv","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.uv.log","v":["Error: Not allowed to access uv on mesh 'lockedImported uv' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.uv3","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.uv3.log","v":["Error: Not allowed to access uv3 on mesh 'lockedImported uv3' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.colors32","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.colors32.log","v":["Error: Not allowed to access colors on mesh 'lockedImported colors32' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.colors","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.colors.log","v":["Error: Not allowed to access colors on mesh 'lockedImported colors' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.SetVertices","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.SetVertices.log","v":["Error: Not allowed to access vertices on mesh 'lockedImported SetVertices' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.SetUVs4","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.SetUVs4.log","v":["Error: Not allowed to access uv5 on mesh 'lockedImported SetUVs4' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.triangles","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.triangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedImported triangles' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.SetTriangles","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.SetTriangles.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedImported SetTriangles' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.SetIndices","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.SetIndices.log","v":["Error: Not allowed to access triangles/indices on mesh 'lockedImported SetIndices' (isReadable is false; Read/Write must be enabled in import settings)"]}
+{"k":"write.lockedImported.RecalculateNormals","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.RecalculateNormals.log","v":["Error: Not allowed to call RecalculateNormals() on mesh 'lockedImported RecalculateNormals'"]}
+{"k":"write.lockedImported.RecalculateBounds","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.RecalculateBounds.log","v":["Error: Not allowed to call RecalculateBounds() on mesh 'lockedImported RecalculateBounds'"]}
+{"k":"write.lockedImported.RecalculateTangents","v":[false,9,1,24,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[24,0,7]]}
+{"k":"write.lockedImported.RecalculateTangents.log","v":["Error: Not allowed to call RecalculateTangents() on mesh 'lockedImported RecalculateTangents'"]}
+{"k":"write.lockedImported.Clear","v":[false,0,1,0,[-0.01,0.01,0],[0.02,0.02,0],"Position:Float32x3 Normal:Float32x3 Tangent:Float32x4 Color:UNorm8x4 TexCoord0:Float32x2 TexCoord1:Float32x2 TexCoord2:Float32x2 TexCoord3:Float32x2 TexCoord4:Float32x2 TexCoord5:Float32x2 TexCoord6:Float32x2 TexCoord7:Float32x2",[0]]}
 {"k":"canvasRenderer.setMesh","v":true}
 {"k":"canvasRenderer.setMesh.log","v":["Error: Mesh 'Layers' is not readable and can not be used. The CanvasRenderer requires read access to the mesh."]}
+{"k":"editMode.isPlaying","v":false}
+{"k":"editMode.found","v":true}
+{"k":"editMode.readable","v":false}
+{"k":"editMode.vertices","v":9}
+{"k":"editMode.triangles","v":24}
+{"k":"editMode.GetUVs4","v":9}
+{"k":"editMode.colors32","v":9}
+{"k":"editMode.combine","v":[18,48]}
 {"k":"complete","v":true}

@@ -110,6 +110,16 @@ namespace UnityEngine.Tests
                     skin.BakeMesh(baked, false);
                     Assert.True(skin.SkinnedPose(out positions, out _));
                 }));
+                // Drawing it deforms a copy that keeps the source's readability, logging nothing.
+                var camera = new GameObject("camera").AddComponent<Camera>();
+                camera.transform.position = new Vector3(0f, 10f, -10f);
+                var context = new Unbound.Runtime.FrameBuilder.CameraContext
+                {
+                    Camera = camera, Position = camera.transform.position, Forward = Vector3.forward, View = camera.worldToCameraMatrix,
+                };
+                var draws = new List<Unbound.Runtime.FrameBuilder.DrawItem>();
+                Assert.Empty(Logs(() => skin.CollectDraws(context, draws)));
+                Object.DestroyImmediate(camera.gameObject);
                 Assert.Equal(4, baked.vertexCount);
                 Assert.Equal(new Vector3(-5f, 0f, -5f), baked.vertices[0]);
                 Assert.Equal(new Vector3(-5f, 2f, -5f), positions[0]);

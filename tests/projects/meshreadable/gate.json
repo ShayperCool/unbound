@@ -13,6 +13,10 @@
     "managed/UnityEngine/Graphics/MeshSerialized.cs",
     "managed/UnityEngine/UI/Canvas.cs",
     "managed/UnityEngine/Cloth/Cloth.cs",
-    "managed/UnityEngine/Graphics/SkinnedMeshRenderer.cs"
+    "managed/UnityEngine/Graphics/SkinnedMeshRenderer.cs",
+    "managed/UnityEngine/AI/NavMeshBuilder.cs",
+    "managed/UnityEngine/Graphics/RealtimeGI.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Terrain/TerrainDetailRenderer.cs"
   ]
 }

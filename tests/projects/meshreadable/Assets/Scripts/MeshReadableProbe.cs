@@ -15,6 +15,10 @@ public class MeshReadableProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("MeshReadableProbe").AddComponent<MeshReadableProbe>();
 
+    /// <summary>Values the editor class <c>MeshReadableEditMode</c> records outside Play mode,
+    /// as the editor domain loads (JSON lines, written out with the rest).</summary>
+    public static string EditModeValues = "";
+
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<string> m_Logs = new List<string>();
 
@@ -155,6 +159,10 @@ public class MeshReadableProbe : MonoBehaviour
             target.vertices = new[] { Vector3.one, Vector3.one, Vector3.one };
             return "[" + target.vertexCount + "," + target.isReadable.ToString().ToLowerInvariant() + "]";
         });
+        // Writes to a mesh scripts cannot read: each on a fresh copy, then what is left of it
+        // (counts, bounds, channels and the indices, read through the list getter, which reads them).
+        Write("lockedScripted", lockedScripted);
+        Write("lockedImported", locked);
         Read("canvasRenderer.setMesh", () =>
         {
             var go = new GameObject("canvas renderer", typeof(RectTransform));
@@ -163,6 +171,43 @@ public class MeshReadableProbe : MonoBehaviour
             Destroy(go);
             return "true";
         });
+    }
+
+    /// <summary>One write to a fresh copy of <paramref name="source"/>: what it logs or throws,
+    /// and the copy's state after it.</summary>
+    void Write(string name, Mesh source)
+    {
+        void One(string what, Action<Mesh> write) => Read("write." + name + "." + what, () =>
+        {
+            var m = Instantiate(source);
+            m.name = name + " " + what;
+            write(m);
+            var indices = new List<int>();
+            m.GetTriangles(indices, 0);
+            var state = "[" + m.isReadable.ToString().ToLowerInvariant() + "," + m.vertexCount + "," + m.subMeshCount + "," + m.GetIndexCount(0) + ","
+                + Vec(m.bounds.center) + "," + Vec(m.bounds.size) + ","
+                + J(string.Join(" ", m.GetVertexAttributes().Select(a => a.attribute + ":" + a.format + "x" + a.dimension))) + ","
+                + Count(indices, i => i.ToString()) + "]";
+            Destroy(m);
+            return state;
+        });
+        int n = source.vertexCount;
+        Vector3[] V3(Vector3 v) => Enumerable.Repeat(v, n).ToArray();
+        One("normals", m => m.normals = V3(Vector3.up));
+        One("tangents", m => m.tangents = Enumerable.Repeat(new Vector4(1f, 0f, 0f, 1f), n).ToArray());
+        One("uv", m => m.uv = Enumerable.Repeat(Vector2.one, n).ToArray());
+        One("uv3", m => m.uv3 = Enumerable.Repeat(Vector2.one, n).ToArray());
+        One("colors32", m => m.colors32 = Enumerable.Repeat(new Color32(1, 2, 3, 4), n).ToArray());
+        One("colors", m => m.colors = Enumerable.Repeat(Color.red, n).ToArray());
+        One("SetVertices", m => m.SetVertices(V3(Vector3.one).ToList()));
+        One("SetUVs4", m => m.SetUVs(4, Enumerable.Repeat(Vector2.one, n).ToList()));
+        One("triangles", m => m.triangles = new[] { 0, 1, 2 });
+        One("SetTriangles", m => m.SetTriangles(new[] { 0, 2, 1 }, 0));
+        One("SetIndices", m => m.SetIndices(new[] { 0, 1 }, MeshTopology.Lines, 0));
+        One("RecalculateNormals", m => m.RecalculateNormals());
+        One("RecalculateBounds", m => m.RecalculateBounds());
+        One("RecalculateTangents", m => m.RecalculateTangents());
+        One("Clear", m => m.Clear());
     }
 
     void Start()
@@ -179,11 +224,14 @@ public class MeshReadableProbe : MonoBehaviour
         scripted.SetUVs(4, new[] { Vector2.one, Vector2.zero, Vector2.up });
         scripted.triangles = new[] { 0, 1, 2 };
         Probe("scripted", scripted);
+        // The same writes to the readable mesh: the control for what a refused write leaves.
+        Write("readableScripted", scripted);
         scripted.UploadMeshData(true);
         Probe("scriptedLocked", scripted);
         Uses(Resources.Load<Mesh>("LayersLocked"), Resources.Load<Mesh>("Layers"), scripted);
         Application.logMessageReceived -= OnLog;
 
+        m_Out.Append(EditModeValues);
         Value("complete", "true");
         var dir = Environment.GetEnvironmentVariable("MESH_READABLE_OUT");
         int code = 0;

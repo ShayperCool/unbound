@@ -18,7 +18,11 @@ read (arrays, `Get*` list readers of every UV channel, indices, `AcquireReadOnly
 the count and first and last element it returns, what it throws and what it logs, and whether a
 MeshCollider made of the mesh is hit by a ray. Then the engine's other uses of meshes that are not
 readable: `CombineMeshes` from one and into one, `SkinnedMeshRenderer.BakeMesh` of one, setting
-`vertices` on one and `CanvasRenderer.SetMesh` with one.
+`vertices` on one and `CanvasRenderer.SetMesh` with one; then each write (every channel setter,
+the index setters, the Recalculate methods, `Clear`) on a fresh copy of a scripted and an imported
+mesh scripts cannot read, and, as the control, of the scripted mesh while it is readable, with the
+copy's state after it (`write.*`). `MeshReadableEditMode` reads the imported mesh outside Play
+mode, as the editor domain loads (`editMode.*`).
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
 
@@ -32,17 +36,24 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
   `GetIndices(List<int>, …)` return the indices without an error; `AcquireReadOnlyMeshData`
   throws InvalidOperationException; a MeshCollider of it collides. `UploadMeshData(true)` does the
   same to a scripted mesh.
+- Every channel and index setter logs the read error of its channel (`SetUVs(4, …)`: `uv5`) and
+  leaves the mesh as it was; the Recalculate methods log "Not allowed to call
+  RecalculateNormals() on mesh '<name>'" (and the same for the others); `Clear` empties it,
+  keeping its bounds and layout, as for a readable mesh.
+- Outside Play mode the same reads and `CombineMeshes` work without an error (Mesh.isReadable:
+  "Access is always allowed in the Unity Editor outside of the game and rendering loop").
 - `CombineMeshes` leaves such a mesh out with the warning "Cannot combine mesh that does not allow
   access: <name>" and refuses to combine into one ("Cannot combine into mesh that does not allow
   access: <name>", an error); `BakeMesh` bakes it into a readable mesh; setting its `vertices`
   logs the read error; `CanvasRenderer.SetMesh` refuses it ("Mesh '<name>' is not readable and can
   not be used. The CanvasRenderer requires read access to the mesh.").
 
-Unbound matches every value. Outside Play mode Unbound lets scripts read such meshes, as the
-Mesh.isReadable page says of the Editor ("Access is always allowed in the Unity Editor outside of
-the game and rendering loop"). Unmeasured: Edit mode's [ExecuteAlways] updates (allowed); other model formats than FBX; colors that are not whole
+Unbound matches every value but two (`residuals.json`): `SetVertices` keeps a readable mesh's
+bounds in the Editor, and RecalculateTangents of a mesh without normals and uvs adds a tangent
+channel there. Unmeasured: Edit mode's [ExecuteAlways] updates (allowed); other model formats than FBX; colors that are not whole
 bytes (rounded to the nearest byte); bone weights, bind poses and blend shapes of meshes that are
-not readable and setters other than `vertices` on them (Unbound does not refuse those); serialized
+not readable, `SetVertexBufferData`/`SetIndexBufferData` and Optimize on them (Unbound does not
+refuse those); serialized
 mesh assets (Unbound refuses them alike).
 
     blender -b --factory-startup --python tests/projects/meshreadable/make_models.py   # once

@@ -1,0 +1,8 @@
+{
+  "SetVertices on a readable mesh keeps its bounds in the Editor; Unbound makes them again from the new vertices (an earlier behaviour of every vertices write, not of readability; q557 follow-up)": [
+    "write.readableScripted.SetVertices"
+  ],
+  "RecalculateTangents of a mesh without normals and uvs adds a tangent channel in the Editor; Unbound leaves the mesh without one (the tangents' values there are unmeasured; q557 follow-up)": [
+    "write.readableScripted.RecalculateTangents"
+  ]
+}
