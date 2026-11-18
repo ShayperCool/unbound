@@ -40,4 +40,7 @@ camera planes within 4/255, and `compare_images.py --gate` fails any other diffe
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record video --variable
 VIDEO_PROBE_OUT` and `publish`. Unbound on Metal: 11/11 records and 45/45 pixels within 4 (worst 0;
-worst 1 against the Linux reference on the Mac).
+worst 1 against the Linux reference on the Mac). The suite's image gate still applies
+`image-residuals.json`, the Linux list: against the Metal reference `cam_far_sky` (3141 pixels up
+to 4, 3109 recorded) and `cam_near_stretch` (2289 pixels up to 3, recorded up to 2) fail it; not
+declared.

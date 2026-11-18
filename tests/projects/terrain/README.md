@@ -48,4 +48,6 @@ is not listed, or goes beyond its bounds, fails, and a listed key that matches a
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record terrain --variable
 TERRAIN_PROBE_OUT` and `publish`. Unbound on Metal: 214/216 records, images within a mean of 0.61
-(1.15 against the Linux reference on the Mac).
+(1.15 against the Linux reference on the Mac). The suite's image gate still applies
+`image-residuals.json`, the Linux list, and fails all six images against the Metal reference (for
+example `trees` 14841 pixels up to 28, 289 recorded); not declared, unresolved.

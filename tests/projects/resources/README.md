@@ -129,6 +129,5 @@ only the bundle fixture from that directory.
 
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record resources
---variable RESOURCES_PROBE_OUT` and `publish`. Unbound on Metal: 513 of 539 values and 62/62 images
-within a mean of 2 (469 values against the Linux reference on the Mac); the 26 differing values are
-unresolved.
+--variable RESOURCES_PROBE_OUT` and `publish`. Unbound on Metal: all 539 values and 62/62 images
+within a mean of 2 (495 values against the Linux reference on the Mac).
