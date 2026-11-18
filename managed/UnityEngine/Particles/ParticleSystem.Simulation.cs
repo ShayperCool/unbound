@@ -2704,13 +2704,18 @@ namespace UnityEngine
             return c;
         }
 
-        internal int MeshIndexOf(ref Particle p)
+        internal int MeshIndexOf(ref Particle p) => MeshIndexOf(ref p, RendererMeshCount);
+
+        /// <summary>The meshes the system's renderer picks from (1 without a renderer).</summary>
+        internal int RendererMeshCount => CullingRenderer is ParticleSystemRenderer renderer ? renderer.meshCount : 1;
+
+        /// <summary>A particle's mesh index among <paramref name="meshCount"/> meshes: the one set on
+        /// it, else one its random seed picks.</summary>
+        internal static int MeshIndexOf(ref Particle p, int meshCount)
         {
             if ((p.m_Flags & Particle.FlagMeshIndexSet) != 0) return p.m_MeshIndex;
-            var renderer = m_GameObject != null ? m_GameObject.GetComponent<ParticleSystemRenderer>() : null;
-            int count = renderer != null ? renderer.meshCount : 1;
-            if (count <= 1) return 0;
-            return (int)(ModuleWord(p.m_RandomSeed, 3159510623u) % (uint)count);
+            if (meshCount <= 1) return 0;
+            return (int)(ModuleWord(p.m_RandomSeed, 3159510623u) % (uint)meshCount);
         }
     }
 }

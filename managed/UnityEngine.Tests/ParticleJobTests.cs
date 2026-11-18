@@ -266,6 +266,45 @@ namespace UnityEngine.Tests
             Assert.Equal(new Vector3(5f, 5f, 5f), particles[0].position);
         }
 
+        struct ReadMeshIndexJob : IJobParticleSystem
+        {
+            public NativeArray<int> Indices;
+
+            public void Execute(ParticleSystemJobData d)
+            {
+                for (int i = 0; i < d.count; i++) Indices[i] = d.meshIndices[i];
+            }
+        }
+
+        [Fact]
+        public void AMeshModeJobSeesTheMeshEachParticleDrawsWith()
+        {
+            // Unmeasured in the Editor (README): Mesh mode's indices are the ones the renderer picks,
+            // and an unchanged index is not pinned on the particle when the copy goes back.
+            var (ps, _) = Make(16);
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            var meshes = new[] { new Mesh(), new Mesh(), new Mesh() };
+            m_Objects.AddRange(meshes);
+            renderer.SetMeshes(meshes);
+            using var indices = new NativeArray<int>(16, Allocator.Persistent);
+            JobScript.OnMessage = s => new ReadMeshIndexJob { Indices = indices }.Schedule(ps);
+            Frame();
+            var particles = ParticlesOf(ps);
+            var seen = new HashSet<int>();
+            for (int i = 0; i < particles.Length; i++)
+            {
+                Assert.Equal(ps.MeshIndexOf(ref particles[i]), indices[i]);
+                Assert.Equal(0u, particles[i].m_Flags & ParticleSystem.Particle.FlagMeshIndexSet);
+                seen.Add(indices[i]);
+            }
+            Assert.True(seen.Count > 1);
+            // The renderer's mesh count is looked up again when it changes.
+            renderer.SetMeshes(new[] { meshes[0] });
+            Frame();
+            for (int i = 0; i < particles.Length; i++) Assert.Equal(0, indices[i]);
+        }
+
         [Fact]
         public void AllocatedMeshIndicesReachAJobOfABillboardSystem()
         {

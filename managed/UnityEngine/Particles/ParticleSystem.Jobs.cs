@@ -202,10 +202,16 @@ namespace Unbound.Runtime
         static bool IsMeshMode(ParticleSystem ps) =>
             ps.CullingRenderer is ParticleSystemRenderer renderer && renderer.renderMode == ParticleSystemRenderMode.Mesh;
 
+        /// <summary>What a particle without a mesh index of its own gets in a job: in Mesh mode the
+        /// renderer's mesh count it picks from, otherwise none (looked up once per copy).</summary>
+        const int NoMeshes = -1;
+
+        static int JobMeshCount(ParticleSystem ps) => IsMeshMode(ps) ? ps.RendererMeshCount : NoMeshes;
+
         /// <summary>The mesh index a job sees: one set on the particle, in Mesh mode the one it draws
         /// with, and -1 for a particle given none (billboards, measured).</summary>
-        static int MeshIndexOf(ParticleSystem ps, ref ParticleSystem.Particle p, bool meshMode) =>
-            (p.m_Flags & ParticleSystem.Particle.FlagMeshIndexSet) != 0 ? p.m_MeshIndex : meshMode ? ps.MeshIndexOf(ref p) : -1;
+        static int MeshIndexOf(ref ParticleSystem.Particle p, int meshCount) =>
+            (p.m_Flags & ParticleSystem.Particle.FlagMeshIndexSet) != 0 ? p.m_MeshIndex : meshCount != NoMeshes ? ParticleSystem.MeshIndexOf(ref p, meshCount) : -1;
 
         static void Put(ref NativeParticleData.Array3 a, int i, Vector3 v)
         {
@@ -233,7 +239,7 @@ namespace Unbound.Runtime
             // The axes exist once the system has the attribute (a null array before: measured).
             bool axes = ps.m_AxisOfRotationAllocated;
             m_Data->axisOfRotations = axes ? m_Axes : default;
-            bool meshMode = IsMeshMode(ps);
+            int meshCount = meshIndices ? JobMeshCount(ps) : NoMeshes;
             m_Data->customData1 = custom1 ? m_Custom1 : default;
             m_Data->customData2 = custom2 ? m_Custom2 : default;
             m_Data->meshIndices = meshIndices ? m_MeshIndices : null;
@@ -252,7 +258,7 @@ namespace Unbound.Runtime
                 alive[i] = p.m_AgePercent;
                 inverse[i] = p.m_InvStartLifetime;
                 seeds[i] = p.m_RandomSeed;
-                if (meshIndices) meshes[i] = MeshIndexOf(ps, ref p, meshMode);
+                if (meshIndices) meshes[i] = MeshIndexOf(ref p, meshCount);
             }
             if (custom1) FillCustom(ps, 0, ref m_Custom1, count);
             if (custom2) FillCustom(ps, 1, ref m_Custom2, count);
@@ -281,7 +287,7 @@ namespace Unbound.Runtime
             var inverse = (float*)m_Data->inverseStartLifetimes;
             var seeds = (uint*)m_Data->randomSeeds;
             var meshes = (int*)m_Data->meshIndices;
-            bool meshMode = IsMeshMode(ps);
+            int meshCount = meshes != null ? JobMeshCount(ps) : NoMeshes;
             for (int i = 0; i < count; i++)
             {
                 ref var p = ref particles[i];
@@ -299,7 +305,7 @@ namespace Unbound.Runtime
                     p.ExportLifetime();
                 }
                 p.m_RandomSeed = seeds[i];
-                if (meshes != null && meshes[i] != MeshIndexOf(ps, ref p, meshMode))
+                if (meshes != null && meshes[i] != MeshIndexOf(ref p, meshCount))
                 {
                     p.m_MeshIndex = meshes[i];
                     p.m_Flags |= ParticleSystem.Particle.FlagMeshIndexSet;
