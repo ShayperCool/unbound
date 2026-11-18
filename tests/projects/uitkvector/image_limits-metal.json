@@ -105,7 +105,7 @@
     "mean": 0.026,
     "worst": 233,
     "over8": 38,
-    "reason": "36 pixels in three single-pixel columns, 12 rows each, at the wrap and mirror seams of the gradients' rows (worst 233, 225 and 9): both Editors (Metal and Linux OpenGL Core) draw the gradient there as at its neighbours and the engine another colour, likely because the engine samples the next row of the image's own atlas where the Editor samples its dynamic-atlas copy (see image_limits.json; not isolated by a capture). Two more pixels, (417,190) and (417,261), on the top row of a white region the engine tints by at most 9 steps and neither Editor does."
+    "reason": "36 pixels in three single-pixel columns, 12 rows each, at the wrap and mirror seams of the gradients' rows (worst 233 and 225, where the engine draws another colour, and 9, the same colour 9 steps off): both Editors (Metal and Linux OpenGL Core) draw the gradient there as at its neighbours, likely because the engine samples the next row of the image's own atlas where the Editor samples its dynamic-atlas copy (see image_limits.json; not isolated by a capture). Two more pixels, (417,190) and (417,261): the top rows of two white regions, which the engine tints by up to 9 steps (above 8 only at x=417) and neither Editor does."
   },
   "vector-1.png": {
     "mean": 0.011,

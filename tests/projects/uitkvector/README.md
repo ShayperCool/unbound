@@ -129,6 +129,6 @@ differ. Against them Unbound on Metal is within 8 channel steps everywhere excep
 `vector-1.25.png`, three single-pixel columns at the gradients' wrap and mirror seams, where both
 Editors draw the gradient as at its neighbours (likely the engine samples the next row of the
 image's own atlas, the Editor its dynamic-atlas copy, as on Linux; not isolated), and two pixels of
-a white region's top row the engine tints by 9 steps. Measured: the Metal Editor draws the
+the top rows of two white regions the engine tints by up to 9 steps. Measured: the Metal Editor draws the
 gradient-stroked line with NaN gradient coordinates, most of the Linux limits of `vector-1.png` and
 `vector-1.25.png`, as the engine does, where the Linux Editor (OpenGL Core, NVIDIA) does not.
