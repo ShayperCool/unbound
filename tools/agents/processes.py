@@ -21,6 +21,11 @@ MACOS = sys.platform == 'darwin'
 CTL_KERN = 1
 KERN_ARGMAX = 8
 KERN_PROCARGS2 = 49
+KERN_PROC = 14
+KERN_PROC_PID = 1
+# sizeof(struct kinfo_proc) on 64-bit macOS; its first member, extern_proc, starts with the
+# process's start time (struct timeval: 64-bit seconds, 32-bit microseconds).
+KINFO_PROC_SIZE = 648
 # Seconds for one `lsof` or `ps` call (a full listing takes well under a second on the Mac).
 COMMAND_SECONDS = 60
 
@@ -50,12 +55,18 @@ def alive(pid):
 
 
 def user_pids(uid):
-    result = subprocess.run(['ps', '-U', str(uid), '-o', 'pid='], capture_output=True, text=True,
+    """The processes running as `uid` (their effective user, as /proc's owner on Linux: a setuid
+    program the user started runs as another and is not the user's to read)."""
+    result = subprocess.run(['ps', '-ax', '-o', 'pid=,uid='], capture_output=True, text=True,
                             timeout=COMMAND_SECONDS)
-    # ps exits 1 when the user has no process; an empty listing is then right.
-    if result.returncode not in (0, 1):
+    if result.returncode:
         raise OSError(f'ps failed: {result.stderr.strip()}')
-    return [int(value) for value in result.stdout.split()]
+    pids = []
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) == 2 and int(fields[1]) == uid:
+            pids.append(int(fields[0]))
+    return pids
 
 
 def parse_lsof(output):
@@ -134,7 +145,14 @@ def darwin_processes(uid, exclude=()):
 
 
 def start_time(pid):
-    """The process's start (`ps` lstart) or None once it is gone: with the pid, its identity."""
-    result = subprocess.run(['ps', '-o', 'lstart=', '-p', str(pid)], capture_output=True, text=True,
-                            timeout=COMMAND_SECONDS)
-    return result.stdout.strip() or None
+    """The process's start time in microseconds since the epoch (as text, kinfo_proc's
+    p_starttime: independent of locale and time zone), or None once it is gone; with the pid, its
+    identity."""
+    try:
+        info = _sysctl([CTL_KERN, KERN_PROC, KERN_PROC_PID, int(pid)], KINFO_PROC_SIZE)
+    except (OSError, TypeError, ValueError):
+        return None
+    if len(info) < 12:
+        return None
+    seconds, microseconds = struct.unpack_from('qi', info)
+    return str(seconds*1_000_000+microseconds)

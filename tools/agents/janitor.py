@@ -77,6 +77,17 @@ RETAINED_NAMES = ('sheriff', 'baseline')
 RECHECK_ROUNDS = 3
 
 
+class AnyTask(frozenset):
+    """The active tasks without a queue: every task."""
+    def __contains__(self, task):
+        return True
+
+
+ANY_TASK = AnyTask()
+# The macOS launchd agent's label (install_janitor.py).
+LAUNCHD_LABEL = 'com.unbound.janitor'
+
+
 def inside(path, root):
     value, prefix = str(path), str(root)
     return value == prefix or value.startswith(prefix.rstrip(os.sep)+os.sep)
@@ -723,11 +734,11 @@ class Janitor:
             info = queue.stat()
         except FileNotFoundError:
             # A machine without the orchestrator's queue (a Mac whose queue is on the Linux
-            # machine): no task is known to have landed, so every task cache stays; runs keep
-            # their age, link and live-process guards.
+            # machine): no task is known to have landed, so every task cache stays, and any task
+            # may be active, so what a task names stays too (ANY_TASK).
             if self.queue_signature != 'missing':
                 self.emit('queue_missing', path=str(queue))
-            self.states, self.active, self.queue_signature = {}, set(), 'missing'
+            self.states, self.active, self.queue_signature = {}, ANY_TASK, 'missing'
             return
         signature = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns, info.st_size)
         if signature != self.queue_signature:
@@ -1025,8 +1036,10 @@ def before_gate(repo):
             return
         if any(value < HARD_STOP_FREE_GIB*GIB for value in available.values()):
             print('land: disk below 10 GiB hard reserve; requesting urgent asynchronous cleanup', flush=True)
-        result = subprocess.run(['systemctl', '--user', 'start', '--no-block', 'unbound-janitor.service'],
-                                capture_output=True, text=True, timeout=GATE_HANDOFF_SECONDS)
+        # macOS: start the launchd agent (install_janitor.py) now, without waiting for it.
+        command = (['launchctl', 'kickstart', f'gui/{os.getuid()}/{LAUNCHD_LABEL}'] if processes.MACOS
+                   else ['systemctl', '--user', 'start', '--no-block', 'unbound-janitor.service'])
+        result = subprocess.run(command, capture_output=True, text=True, timeout=GATE_HANDOFF_SECONDS)
         if result.returncode:
             print(f'land: disk janitor handoff failed: {result.stderr.strip()}', flush=True)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:

@@ -116,15 +116,16 @@ class JanitorTests(unittest.TestCase):
         (self.cache/'validation').symlink_to(target)
         self.assertEqual(janitor.Janitor(self.repo).validation, target)
 
-    def test_without_the_queue_task_caches_stay_and_runs_go(self):
-        # A Mac has no orchestrator queue: no task is known to have landed.
+    def test_without_the_queue_what_tasks_name_stays_and_other_runs_go(self):
+        # A Mac has no orchestrator queue: no task is known to have landed, any may be active.
         (self.cache/'agents/QUEUE.md').unlink()
         task = self.volume/'q1/old'
         task.mkdir(parents=True)
         (task/'output').write_text('task output')
-        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        old, task_run, newest = self.instances('probe', ['gate-1', 'q7-check-1', 'gate-2'])
         self.collect_applied()
         self.assertTrue(task.is_dir())
+        self.assertTrue(task_run.is_dir())
         self.assertFalse(old.exists())
         self.assertTrue(newest.is_dir())
         self.assertEqual(len(self.rows('queue_missing')), 1)

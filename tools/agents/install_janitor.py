@@ -19,7 +19,7 @@ import processes
 
 # The variables the janitor's paths come from, passed on to the service.
 ENVIRONMENT_KEYS = ('UNBOUND_BUILD_ROOT', 'UNBOUND_SLOT_ROOT', 'UNBOUND_RUNTIME_CACHE', 'XDG_CACHE_HOME')
-LAUNCHD_LABEL = 'com.unbound.janitor'
+LAUNCHD_LABEL = janitor.LAUNCHD_LABEL
 # Hourly, as the Linux timer's OnCalendar=hourly.
 LAUNCHD_INTERVAL_SECONDS = 3600
 # lsof and ps (processes.py) live in /usr/sbin and /bin.

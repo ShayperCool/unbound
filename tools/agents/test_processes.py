@@ -51,8 +51,10 @@ class ParsingTests(unittest.TestCase):
 class FailClosedTests(unittest.TestCase):
     def listing(self, pids, lsof):
         def run(command, *args, **kwargs):
-            if command[0] == 'ps' and '-U' in command:
-                return subprocess.CompletedProcess(command, 0, ''.join(f'{p}\n' for p in pids), '')
+            if command[0] == 'ps' and '-ax' in command:
+                # Another user's process (a setuid one) is not listed as the user's.
+                listing = ''.join(f'{p} 501\n' for p in pids) + '99 0\n'
+                return subprocess.CompletedProcess(command, 0, listing, '')
             if command[0] == 'lsof':
                 return subprocess.CompletedProcess(command, 1, lsof, '')
             raise AssertionError(command)
