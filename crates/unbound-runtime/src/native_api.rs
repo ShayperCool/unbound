@@ -99,7 +99,8 @@ use std::ffi::c_void;
 ///
 /// [`DrawTint`]: crate::render_commands::DrawTint
 /// 89: `generate_texture` imports a script's texels (TextureGenerator.GenerateTexture).
-/// 90: a state override's mask bit `ENGINE_STENCIL` adds the engine's stencil bits to a pass's.
+/// 90: a state override's mask bit `ENGINE_STENCIL` writes the engine's stencil bits (its
+/// reference) beside the pass's own reference bits its read mask keeps.
 pub const NATIVE_API_VERSION: u32 = 90;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.

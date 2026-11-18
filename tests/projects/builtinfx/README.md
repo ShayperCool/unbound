@@ -141,8 +141,9 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   whatever its test, operation and write mask (against the cleared stencil: Ref 2 Always Replace
   reads 0xC2, Ref 1 Equal Keep and Ref 1 IncrSat 0xC1, Ref 4 Equal Replace 0xC4, Ref 8 Always Keep
   and Ref 8 WriteMask 0 0xC8, Ref 16 and Ref 32 0xC0), none over the background (the Manual: the
-  base pass's stencil test is ignored; what the pass leaves of bits a pixel held before it is
-  unmeasured: Unbound writes every bit). A sphere moved between two
+  base pass's stencil test is ignored; unmeasured: the operations Zero, Invert, DecrSat, IncrWrap
+  and DecrWrap, taken alike, and what the pass leaves of bits a pixel held before it, Unbound
+  writes every bit). A sphere moved between two
   `Camera.Render` calls of the frame it is first drawn in has no object motion in the second
   (`settings_motionVectors_custom`). Unbound draws them alike
   (`GraphicsSettings.RendererShader`), with these differences: `settings_deferred_builtin` and
