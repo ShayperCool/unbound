@@ -716,6 +716,9 @@ pub struct UnityRenderer {
     /// Whether the dispatch being planned samples the depth target's depth copy (a depth-only
     /// render texture read through a float slot), which must be brought up to date before it.
     dispatch_reads_depth_target: bool,
+    /// Depth copies the dispatch being planned made four-channel (`fill_depth_copy`): copied
+    /// right before it.
+    dispatch_fills: Vec<u64>,
     /// [`Self::repack_texture`]'s textures, oldest first.
     repack_textures: Vec<wgpu::Texture>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
@@ -862,6 +865,7 @@ impl UnityRenderer {
             depth_target: None,
             encoded_ops: 0,
             dispatch_reads_depth_target: false,
+            dispatch_fills: Vec::new(),
             repack_textures: Vec::new(),
             depth_copy_pipelines: std::array::from_fn(|_| None),
             depth_blit_pipelines: HashMap::default(),
@@ -1863,6 +1867,18 @@ impl UnityRenderer {
         // Integer slots read a float texture's values as their bits, within its size, and zeros
         // where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
         // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
+        // A depth-only texture a slot reads outside a comparison (as floats, or their bits) reads
+        // its filled copy.
+        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
+            if is_2d(*dim)
+                && !slot.comparison
+                && !slot.depth()
+                && !slot.multisampled
+                && !handle::split(raw[k]).1
+            {
+                self.fill_depth_copy(*h);
+            }
+        }
         let mut integer_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
         for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
             if !slot.integer() || slot.multisampled {
@@ -1965,18 +1981,6 @@ impl UnityRenderer {
                 },
             });
             integer_views.push(Some(target));
-        }
-        // A depth-only texture a float slot samples outside a comparison reads its filled copy.
-        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
-            if is_2d(*dim)
-                && !slot.comparison
-                && !slot.depth()
-                && !slot.integer()
-                && !slot.multisampled
-                && !handle::split(raw[k]).1
-            {
-                self.fill_depth_copy(*h);
-            }
         }
         let generations: Vec<(u64, u64)> = slots
             .iter()
@@ -2246,21 +2250,23 @@ impl UnityRenderer {
     /// depth-only texture `handle`, which a draw samples outside a comparison: made the first time
     /// (then brought up to date before that draw, as a new depth element is). A target sampled only
     /// through comparisons (a shadow map) keeps its one-channel copy.
-    fn fill_depth_copy(&mut self, handle: u64) {
+    /// Returns whether it made the copy now (a draw brings it up to date before itself through
+    /// `depth_reads`; a dispatch through `dispatch_fills`).
+    fn fill_depth_copy(&mut self, handle: u64) -> bool {
         if !resources::depth_copy_fills_color() {
-            return;
+            return false;
         }
         let Some(t) = self.textures.get(&handle) else {
-            return;
+            return false;
         };
         let Some(copy) = t.depth_copy.as_ref().filter(|_| t.format == 5) else {
-            return;
+            return false;
         };
         if resources::filled_depth_copy(copy.texture().format()) {
-            return;
+            return false;
         }
         let Some(depth_format) = t.depth_format() else {
-            return;
+            return false;
         };
         let view = resources::depth_copy_view(&self.device, t.width, t.height, depth_format, true);
         self.generation += 1;
@@ -2270,6 +2276,7 @@ impl UnityRenderer {
         t.generation = generation;
         t.bind_groups = [None, None];
         self.depth_reads.insert(handle, true);
+        true
     }
 
     /// A render target's depth element for a float slot: its depth copy, made the first time
@@ -3960,7 +3967,13 @@ impl UnityRenderer {
                 Command::Dispatch(d) => {
                     open = false;
                     self.dispatch_reads_depth_target = false;
-                    if let Some(op) = self.plan_dispatch(&d) {
+                    let planned = self.plan_dispatch(&d);
+                    for texture in std::mem::take(&mut self.dispatch_fills) {
+                        if let Some(copy) = self.depth_copy_op(texture) {
+                            passes.push(Op::DepthCopy(copy));
+                        }
+                    }
+                    if let Some(op) = planned {
                         // A kernel sampling the depth being drawn reads what was drawn before it.
                         if self.dispatch_reads_depth_target {
                             self.copy_depth(&mut passes, depth_mark);

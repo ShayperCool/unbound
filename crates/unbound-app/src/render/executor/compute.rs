@@ -1257,6 +1257,15 @@ fn main() {
                                     wgpu::TextureSampleType::Sint | wgpu::TextureSampleType::Uint
                                 )
                             });
+                        // A depth-only target read as floats reads its filled copy, made now and
+                        // copied before the dispatch.
+                        if wanted.is_none()
+                            && *dim == TextureDim::D2
+                            && self.fill_depth_copy(handle)
+                        {
+                            self.depth_reads.remove(&handle);
+                            self.dispatch_fills.push(handle);
+                        }
                         let actual = self
                             .textures
                             .get(&handle)
