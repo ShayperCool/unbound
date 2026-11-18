@@ -26,6 +26,10 @@ A probe runner describes each Editor as an `EditorJob` and calls `run(job)` (or
 * writes `editor-run.json` into `job.out`: exit status, forced-exit reason, renderer,
   timings, log path, every signalled process.
 
+On macOS arm64 `run` starts the Editor directly instead (tests/macos_editor.py: no launcher,
+display or process sweeps, which need Linux), one job at a time, with its one graphics device,
+Metal; its `editor-run.json` names the device the log initialized (`Metal: <GPU>`).
+
 `publish(...)` refuses unless every repeat has an Editor result without a forced stop
 (except the shutdown guard after a logged shutdown), the expected renderer, a terminal
 completion marker, and byte-identical outputs across repeats; it never overwrites a target.
@@ -45,7 +49,7 @@ import time
 import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from probe_paths import editor_path  # noqa: E402
+from probe_paths import MACOS_ARM64, editor_path  # noqa: E402
 from private_display import Display  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
@@ -587,16 +591,56 @@ def write_launch_inputs(spec, env):
         os.fsync(stream.fileno())
 
 
+# The macOS Editor's log line naming the Metal device it draws with.
+METAL_DEVICE_LINE = 'Initializing Metal device caps: '
+# `timeout -s KILL` ended the Editor (128 + SIGKILL).
+KILLED_BY_TIMEOUT = 128+signal.SIGKILL
+
+
+def metal_renderer(log):
+    """`Metal: <GPU>` from a macOS Editor log, None when it initialized no Metal device."""
+    for line in log.splitlines():
+        if line.startswith(METAL_DEVICE_LINE):
+            return 'Metal: '+line[len(METAL_DEVICE_LINE):].strip()
+    return None
+
+
+def run_macos(job):
+    """`run` on macOS arm64: the Editor started directly, logging to `job.log`, stopped at
+    `job.timeout`; the result has the fields `run` writes that apply there."""
+    import macos_editor
+    if job.vulkan:
+        raise SystemExit(f'{job.label}: the Vulkan Editor runs on Linux; on macOS the Editor draws with Metal')
+    started = time.time()
+    code = macos_editor.capture(job.project, job.out, job.args, {**job.env, 'PWD': str(job.project)},
+                                timeout=job.timeout, windowed=not job.batch, log=job.log,
+                                editor_binary=job.editor, nographics=not job.graphics, cwd=job.cwd)
+    log = job.log.read_text(errors='replace') if job.log.exists() else ''
+    renderer = metal_renderer(log)
+    forced = code == KILLED_BY_TIMEOUT
+    result = {'format': 1, 'label': job.label, 'kind': job.kind, 'device': 'metal',
+              'command': [str(job.editor), *job.args], 'project': str(job.project), 'log': str(job.log),
+              'exit_code': code, 'forced_exit': 'watchdog' if forced else None,
+              'forced_detail': f'killed after {job.timeout} s' if forced else None,
+              'renderer': renderer, 'renderer_ok': None if renderer is None else True,
+              'require_gpu': job.graphics, 'shutdown_logged': any(m.decode() in log for m in SHUTDOWN_MARKERS),
+              'times': {'started': round(started, 3), 'total_s': round(time.time()-started, 2)}}
+    write_json(job.out/RESULT, result)
+    return result
+
+
 def run(job):
-    """Runs `job` through the heavy-job launcher and returns the supervisor's result.
-    Refuses under $UNBOUND_SUITE_NO_EDITOR: suite and gate runs compare the engine with the
-    committed Reference/ and never start an Editor."""
+    """Runs `job` through the heavy-job launcher and returns the supervisor's result (on macOS
+    arm64 directly, see run_macos). Refuses under $UNBOUND_SUITE_NO_EDITOR: suite and gate runs
+    compare the engine with the committed Reference/ and never start an Editor."""
     if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
         raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}) in a suite run '
                          '(UNBOUND_SUITE_NO_EDITOR is set): compare the engine with the committed Reference/')
     job.out.mkdir(parents=True, exist_ok=True)
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')
+    if MACOS_ARM64:
+        return run_macos(job)
     queued = time.time()
     # A job env built from os.environ carries its own PWD: the project still wins.
     env = {**os.environ, **job.env, 'PWD': str(job.project)}
@@ -646,7 +690,10 @@ def run(job):
 
 
 def run_parallel(jobs):
-    """Runs independent jobs at the same time (each waits for its own lease)."""
+    """Runs independent jobs at the same time (each waits for its own lease); on macOS arm64,
+    which has no job pool, one after another."""
+    if MACOS_ARM64:
+        return [run(job) for job in jobs]
     results = [None]*len(jobs)
     errors = []
 
@@ -692,6 +739,12 @@ def load_result(directory):
             'shutdown_logged': forced or 'Cleanup mono' in log, 'require_gpu': True}
 
 
+def gpu_renderer(result):
+    """Whether the capture drew on the GPU: the NVIDIA one on Linux, the Metal device on macOS."""
+    renderer = result.get('renderer') or ''
+    return renderer.startswith('Metal: ') if result.get('device') == 'metal' else 'NVIDIA' in renderer
+
+
 def result_problem(directory, gpu=None):
     """Why this capture's Editor run cannot back a reference (None if it can)."""
     result = load_result(directory)
@@ -702,8 +755,9 @@ def result_problem(directory, gpu=None):
         return f"the Editor was stopped ({forced}: {result.get('forced_detail')})"
     if not forced and result.get('exit_code') != 0:
         return 'the Editor did not exit with 0'
-    if (result.get('require_gpu') if gpu is None else gpu) and 'NVIDIA' not in (result.get('renderer') or ''):
-        return 'NVIDIA GPU renderer was not verified'
+    if (result.get('require_gpu') if gpu is None else gpu) and not gpu_renderer(result):
+        return ('Metal device was not verified' if result.get('device') == 'metal'
+                else 'NVIDIA GPU renderer was not verified')
     return None
 
 

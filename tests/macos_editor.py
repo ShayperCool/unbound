@@ -15,33 +15,34 @@ import subprocess
 from pathlib import Path
 
 from editor_runner import jsonl_complete
-from probe_paths import unity_version
+from probe_paths import editor_path
 
 EXIT = 'editor-exit'
 
 
 def editor():
     """The Hub's Editor of the probe's release ($UNBOUND_PROBE_UNITY overrides)."""
-    override = os.environ.get('UNBOUND_PROBE_UNITY')
-    if override:
-        return Path(override)
-    return Path(f'/Applications/Unity/Hub/Editor/{unity_version()}/Unity.app/Contents/MacOS/Unity')
+    return editor_path()
 
 
-def capture(project, out, args, env, timeout=900, windowed=False):
-    """Runs the Editor on `project` with `args` (in batchmode; `windowed`: with its windows, so
-    Play mode has a Game view); returns its exit code."""
+def capture(project, out, args, env, timeout=900, windowed=False, log=None, editor_binary=None,
+            nographics=False, cwd=None):
+    """Runs the Editor (`editor_binary`, default the release's) on `project` with `args` (in
+    batchmode; `windowed`: with its windows, so Play mode has a Game view; `nographics`: without
+    a graphics device), logging to `log` (default out/editor.log), from `cwd`; returns its exit
+    code."""
     if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
         raise SystemExit('macos_editor: refusing to start the Unity Editor in a suite run (UNBOUND_SUITE_NO_EDITOR)')
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     if (out/EXIT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {out/EXIT}')
-    mode = [] if windowed else ['-batchmode']
-    command = ['timeout', '-s', 'KILL', str(timeout), str(editor()), *mode, '-projectPath', str(project),
-               *args, '-logFile', str(out/'editor.log')]
-    with (out/'editor.out').open('w') as log:
-        code = subprocess.run(command, env={**os.environ, **env}, stdout=log, stderr=subprocess.STDOUT).returncode
+    mode = ([] if windowed else ['-batchmode'])+(['-nographics'] if nographics else [])
+    command = ['timeout', '-s', 'KILL', str(timeout), str(editor_binary or editor()), *mode, '-projectPath',
+               str(project), *args, '-logFile', str(log or out/'editor.log')]
+    with (out/'editor.out').open('w') as stream:
+        code = subprocess.run(command, env={**os.environ, **env}, stdout=stream, stderr=subprocess.STDOUT,
+                              cwd=cwd).returncode
     (out/EXIT).write_text(f'{code}\n')
     return code
 

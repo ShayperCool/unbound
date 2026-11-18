@@ -117,6 +117,8 @@ MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
                            stop_tree, require_process_watch, default_release, probe_release,
                            python_with_pil, probe_path)
+sys.path.insert(0, str(REPO/'tests'))
+from probe_paths import metal_counterpart  # noqa: E402
 from runtime_snapshot import (snapshot_runtime, managed_for as snapshot_managed_for,
                               retain, release_reference, cleanup, task_owner, atomic_json)
 
@@ -1066,21 +1068,13 @@ def private_project(argv, work):
 
 def metal_reference(argument, probe, release):
     """On macOS arm64 the probe's Metal reference in place of `argument` where it names one of the
-    probe's references of `release` and the Metal one exists: Reference/unity-R.EXT is
-    Reference/unity-R/metal.EXT, Reference/unity-R/PATH is Reference/unity-R/metal/PATH. The
-    graphics device's answers and rounding follow the macOS Editor there (AGENTS.md Platforms);
-    a probe without a Metal reference compares with the Linux one, as before."""
+    probe's references of `release` and the Metal one exists (tests/probe_paths.py
+    metal_counterpart). The graphics device's answers and rounding follow the macOS Editor there
+    (AGENTS.md Platforms); a probe without a Metal reference compares with the Linux one, as before."""
     if not isinstance(argument, str):
         return argument
-    root = Path(probe)/'Reference'/f'unity-{release}'
-    path = Path(argument)
-    if path.parent == root.parent and path.stem == root.name and path.suffix:
-        metal = root/('metal'+path.suffix)
-    elif path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
-        metal = root/'metal'/path.relative_to(root)
-    else:
-        return argument
-    return str(metal) if metal.exists() else argument
+    metal = metal_counterpart(argument, probe, release)
+    return str(metal) if metal is not None and metal.exists() else argument
 
 
 def step_argv(step, values):

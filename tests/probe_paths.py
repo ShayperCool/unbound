@@ -1,6 +1,7 @@
 """Portable locations for Unity references and disposable probe run artifacts."""
 import os
 from pathlib import Path
+import platform
 import sys
 
 DEFAULT_UNITY_VERSION = '6000.0.71f1'
@@ -20,6 +21,34 @@ def reference_root(probe):
 def reference_file(probe, suffix='json'):
     """Single-file reference following the original probe convention."""
     return Path(probe)/'Reference'/('unity-'+unity_version()+'.'+suffix)
+
+
+# macOS arm64, where the Editor and Unbound draw with Metal: the graphics device's answers and
+# rounding follow the macOS Editor there (AGENTS.md Platforms), so a probe whose values the device
+# decides records and checks a Metal reference next to its Linux ones.
+MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
+
+
+def metal_counterpart(path, probe, release=None):
+    """The Metal reference standing for `path`, one of `probe`'s references of `release`
+    (default: the probe release): Reference/unity-R.EXT is Reference/unity-R/metal.EXT and
+    Reference/unity-R/PATH is Reference/unity-R/metal/PATH. None for any other path, the Metal
+    reference itself included."""
+    root = Path(probe)/'Reference'/f'unity-{release or unity_version()}'
+    path = Path(path)
+    if path.parent == root.parent and path.stem == root.name and path.suffix:
+        return root/('metal'+path.suffix)
+    if path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
+        return root/'metal'/path.relative_to(root)
+    return None
+
+
+def device_reference(path, probe, publishing=False):
+    """The reference a probe reads or (`publishing`) writes for `path` on this machine: on macOS
+    arm64 its Metal counterpart (to read: where it exists, else `path` as before); elsewhere,
+    and for paths without a counterpart, `path`."""
+    metal = metal_counterpart(path, probe) if MACOS_ARM64 else None
+    return Path(metal) if metal is not None and (publishing or metal.exists()) else Path(path)
 
 
 def validation_cache():
@@ -46,8 +75,13 @@ def archived_root(probe, relative=''):
 
 
 def editor_path():
-    return Path(os.environ.get('UNBOUND_PROBE_UNITY', str(
-        Path.home()/'Unity/Hub/Editor'/unity_version()/'Editor/Unity')))
+    """The Hub's Editor of the probe release ($UNBOUND_PROBE_UNITY overrides)."""
+    override = os.environ.get('UNBOUND_PROBE_UNITY')
+    if override:
+        return Path(override)
+    if sys.platform == 'darwin':
+        return Path('/Applications/Unity/Hub/Editor')/unity_version()/'Unity.app/Contents/MacOS/Unity'
+    return Path.home()/'Unity/Hub/Editor'/unity_version()/'Editor/Unity'
 
 
 def shared_runtime(cli, destination, managed=None, manifest=None):

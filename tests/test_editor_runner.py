@@ -364,5 +364,74 @@ class PublishTest(unittest.TestCase):
         self.assertIn('exit with 0', er.result_problem(d))
 
 
+class MacosRunTest(unittest.TestCase):
+    """On macOS arm64 a job runs the Editor directly; its result names the Metal device."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.editor = self.root/'Unity'
+        # A fake Editor: logs a device line (FAKE_DEVICE) and the shutdown line, records its
+        # arguments, exits with FAKE_EXIT.
+        self.editor.write_text('#!' + sys.executable + '\n' + (
+            'import json, os, sys\n'
+            'args = sys.argv[1:]\n'
+            'log = open(args[args.index("-logFile")+1], "w")\n'
+            'device = os.environ.get("FAKE_DEVICE")\n'
+            'log.write(("Initializing Metal device caps: " + device + "\\n") if device else "")\n'
+            'log.write("Cleanup mono\\n")\n'
+            'json.dump({"args": args, "cwd": os.getcwd()}, open(os.environ["FAKE_ARGS"], "w"))\n'
+            'sys.exit(int(os.environ.get("FAKE_EXIT", "0")))\n'))
+        self.editor.chmod(0o755)
+        (self.root/'project').mkdir()
+
+    def job(self, name, **options):
+        out = self.root/name
+        env = {'FAKE_ARGS': str(self.root/(name+'.args')), **options.pop('env', {})}
+        return er.EditorJob(self.root/'project', out/'editor.log', out, ['-executeMethod', 'P.Record'],
+                            editor=self.editor, env=env, label=name, **options)
+
+    def run_job(self, job):
+        with patch.object(er, 'MACOS_ARM64', True):
+            return er.run(job)
+
+    def test_a_batch_capture_on_the_metal_device_is_publishable(self):
+        result = self.run_job(self.job('a', batch=True, env={'FAKE_DEVICE': 'Apple M2 Pro'}))
+        self.assertEqual((result['device'], result['renderer'], result['exit_code']), ('metal', 'Metal: Apple M2 Pro', 0))
+        self.assertTrue(result['shutdown_logged'])
+        args = json.loads((self.root/'a.args').read_text())
+        self.assertEqual(args['args'][:1], ['-batchmode'])
+        self.assertIn('-executeMethod', args['args'])
+        self.assertEqual(Path(args['cwd']).resolve(), (self.root/'project').resolve())
+        self.assertIsNone(er.result_problem(self.root/'a'))
+
+    def test_windowed_nographics_and_refusals(self):
+        self.run_job(self.job('w', env={'FAKE_DEVICE': 'Apple M2 Pro'}))
+        self.assertNotIn('-batchmode', json.loads((self.root/'w.args').read_text())['args'])
+        self.run_job(self.job('n', graphics=False))
+        self.assertEqual(json.loads((self.root/'n.args').read_text())['args'][:2], ['-batchmode', '-nographics'])
+        self.assertIsNone(er.result_problem(self.root/'n'))
+        self.run_job(self.job('g', batch=True))
+        self.assertIn('Metal device was not verified', er.result_problem(self.root/'g'))
+        self.run_job(self.job('e', batch=True, env={'FAKE_DEVICE': 'Apple M2 Pro', 'FAKE_EXIT': '1'}))
+        self.assertIn('exit with 0', er.result_problem(self.root/'e'))
+        with self.assertRaises(SystemExit):
+            self.run_job(self.job('e', batch=True))
+        with self.assertRaises(SystemExit):
+            self.run_job(self.job('v', vulkan=True))
+
+    def test_parallel_jobs_run_one_after_another(self):
+        jobs = [self.job(f'p{i}', batch=True, env={'FAKE_DEVICE': 'Apple M2 Pro'}) for i in range(2)]
+        with patch.object(er, 'MACOS_ARM64', True):
+            results = er.run_parallel(jobs)
+        self.assertEqual([r['label'] for r in results], ['p0', 'p1'])
+
+    def test_a_linux_capture_still_needs_the_nvidia_renderer(self):
+        self.assertTrue(er.gpu_renderer({'renderer': 'NVIDIA GeForce RTX 4060/PCIe/SSE2'}))
+        self.assertFalse(er.gpu_renderer({'renderer': 'Metal: Apple M2 Pro'}))
+        self.assertFalse(er.gpu_renderer({'device': 'metal', 'renderer': 'NVIDIA GeForce RTX 4060/PCIe/SSE2'}))
+
+
 if __name__ == '__main__':
     unittest.main()
