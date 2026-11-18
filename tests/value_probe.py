@@ -28,6 +28,11 @@ mean and worst max-channel difference and the pixels over 8; without a limit tha
 `{image: {"mean": m, "worst": w, "over8": n, "reason": "..."}}`, the recorded residuals with their
 cause; an image over any of them fails.
 
+A probe that declares `color_spaces` records and gates each of them: the project as committed,
+with its color-space setting replaced (`set_color_space`), and a reference of each in
+Reference/unity-<release>/<space>/. `record` and `publish` then take `--space`; `gate` runs
+every space, or the one `--space` names.
+
 A probe may list known residuals in `residuals.json` next to its run.py: `{reason: [key, ...]}`,
 open differences with a named cause and follow-up. Such a key that differs is printed with its
 reason and does not fail the gate; one that matches again is printed as resolved (remove it).
@@ -37,6 +42,7 @@ import argparse
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import struct
@@ -59,9 +65,22 @@ COMPLETE = {'k': 'complete', 'v': True}
 METAL = False
 
 
-def reference_dir(probe):
-    """The reference the probe records and gates against here (its Metal one on macOS, see METAL)."""
-    return reference_root(probe)/'metal' if METAL else reference_root(probe)
+def reference_dir(probe, space=None):
+    """The reference the probe records and gates against here (its Metal one on macOS, see METAL),
+    that of a color space for a probe recorded in several."""
+    root = reference_root(probe)/'metal' if METAL else reference_root(probe)
+    return root/space if space else root
+
+
+def set_color_space(project, space):
+    """The project's color-space setting (ProjectSettings' m_ActiveColorSpace) set to `space`,
+    'Gamma' or 'Linear'."""
+    settings = Path(project)/'ProjectSettings/ProjectSettings.asset'
+    text, count = re.subn(r'(?m)^(\s*m_ActiveColorSpace:) [01]$',
+                          r'\g<1> '+str({'Gamma': 0, 'Linear': 1}[space]), settings.read_text())
+    if count != 1:
+        raise ValueError(f'expected one color-space setting, got {count}')
+    settings.write_text(text)
 
 
 def device_file(probe, name):
@@ -239,11 +258,13 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
-def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False):
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None):
     if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
     project = assemble(probe, out, base)
+    if space:
+        set_color_space(project, space)
     capture = out/'capture'
     capture.mkdir(parents=True)
     # On macOS arm64 editor_runner runs the macOS Editor, which draws with Metal.
@@ -256,7 +277,7 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     print('captured', capture)
 
 
-def publish(probe, labels):
+def publish(probe, labels, space=None):
     roots = [run_root(probe, label) for label in labels]
     for root in roots:
         problem = editor_runner.result_problem(root, gpu=True)
@@ -275,11 +296,11 @@ def publish(probe, labels):
     # Editor results live one level above the captures; publish() checks the capture files.
     for capture, root in zip(captures, roots):
         shutil.copyfile(root/editor_runner.RESULT, capture/editor_runner.RESULT)
-    return editor_runner.publish(captures, reference_dir(probe), names, write,
+    return editor_runner.publish(captures, reference_dir(probe, space), names, write,
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
-def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None):
+def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None):
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
     residuals(probe), image_limits(probe)
     out = run_root(probe, label)
@@ -288,6 +309,8 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
         authored_project.assemble(probe.name, unity_version(), authored, project)
     else:
         project = assemble(probe, out, base)
+    if space:
+        set_color_space(project, space)
     capture = out/'engine'
     capture.mkdir(parents=True)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
@@ -295,7 +318,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                '--no-watch', *engine_args], env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-    reference = reference_dir(probe)
+    reference = reference_dir(probe, space)
     expected = read_values(reference/VALUES)
     try:
         actual = read_values(capture/VALUES)
@@ -329,12 +352,13 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
             if limit and (measured[0] > limit[0] or measured[1] > limit[1] or measured[2] > limit[2]):
                 print(f'{name}: over its recorded limit (mean {limit[0]}, worst {limit[1]}, over 8: {limit[2]}; {limit[3]})')
                 failures.append({'image': name})
-    print(f'{probe.name}: {matched}/{len(expected)} values match, {len(failures)} failures, {len(residual)} known residuals; engine exit {code}; logs {out}')
+    name = f'{probe.name} {space}' if space else probe.name
+    print(f'{name}: {matched}/{len(expected)} values match, {len(failures)} failures, {len(residual)} known residuals; engine exit {code}; logs {out}')
     return 1 if failures or code else 0
 
 
 def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None,
-         macos_batch=False, metal=False):
+         macos_batch=False, metal=False, color_spaces=None):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
@@ -345,21 +369,30 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     probe's values depend on neither the OS nor the graphics device, so it may be recorded with
     the macOS Editor in batch mode. metal: the graphics device decides the probe's values, so on
     macOS arm64 it records, publishes and gates against a Metal reference (see the module's
-    docstring)."""
+    docstring). color_spaces: the color spaces the probe is recorded and gated in (see the
+    module's docstring)."""
     global METAL
     METAL = metal and MACOS_ARM64
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
+    if color_spaces:
+        parser.add_argument('--space', choices=color_spaces)
     args = parser.parse_args()
+    space = getattr(args, 'space', None)
+    if color_spaces and args.mode != 'gate' and not space:
+        parser.error(f'{args.mode} needs --space ({", ".join(color_spaces)})')
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
-        return record(probe, method, variable, label, batch, record_timeout, base, macos_batch)
+        return record(probe, method, variable, label, batch, record_timeout, base, macos_batch, space)
     if args.mode == 'publish':
-        code = publish(probe, args.labels)
+        code = publish(probe, args.labels, space)
         if authored and not code:
             authored_project.record(probe.name, unity_version(), authored, run_root(probe, args.labels[0])/'project',
                                     f'python3 tests/projects/{probe.name}/run.py record')
         return code
+    if color_spaces:
+        spaces = [space] if space else color_spaces
+        return max(gate(probe, variable, f'{label}-{s}', tolerance, engine_args, authored, base, s) for s in spaces)
     return gate(probe, variable, label, tolerance, engine_args, authored, base)
