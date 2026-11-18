@@ -193,9 +193,11 @@ pub fn resolve(
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
     while let Some((name, (mut version, source, _hash), indirect)) = queue.pop() {
         // Without a lock, a package asking for a registry package below the Editor's minimum gets
-        // the minimum; the project's own dependencies keep the version they name.
+        // the minimum; the project's own dependencies keep the version they name (also when a
+        // package asks for them too: unmeasured).
         if indirect
             && source == "registry"
+            && !manifest.dependencies.contains_key(&name)
             && let Some(minimum) = minimums.get(&name)
             && newer(minimum, &version)
         {
@@ -706,8 +708,8 @@ mod tests {
         );
     }
 
-    /// A lock-less project: an embedded package asks for `com.example.dep` 1.0.0 and `com.example.free`
-    /// 1.0.0, the project for `com.example.direct` 1.0.0; the installation's manifest names 2.0.0 as
+    /// A lock-less project: an embedded package asks for `com.example.dep`, `com.example.free` and
+    /// `com.example.direct` 1.0.0, the project for `com.example.direct` 1.0.0 too; the installation's manifest names 2.0.0 as
     /// each one's minimum but `com.example.free`'s (which has a version only).
     fn minimum_project(root: &Path) -> (PathBuf, UnityInstall) {
         let _ = std::fs::remove_dir_all(root);
@@ -720,7 +722,7 @@ mod tests {
             &project.join("Packages/com.example.embedded"),
             "com.example.embedded",
             "1.0.0",
-            r#""com.example.dep": "1.0.0", "com.example.free": "1.0.0""#,
+            r#""com.example.dep": "1.0.0", "com.example.free": "1.0.0", "com.example.direct": "1.0.0""#,
         );
         let cache = project.join("Library/PackageCache");
         for name in ["com.example.dep", "com.example.direct", "com.example.free"] {
@@ -758,7 +760,7 @@ mod tests {
         };
         let raised = versions(&resolve(&project, &install, measured).unwrap());
         assert_eq!(raised["com.example.dep"], "2.0.0");
-        // The project's own dependency keeps the version it names.
+        // The project's own dependency keeps the version it names, also when a package asks for it.
         assert_eq!(raised["com.example.direct"], "1.0.0");
         // A package with a version but no minimum keeps the version asked for.
         assert_eq!(raised["com.example.free"], "1.0.0");

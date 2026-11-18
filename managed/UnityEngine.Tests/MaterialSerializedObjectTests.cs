@@ -165,6 +165,46 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AVariantKeepsItsParentsValuesForWhatItsAppliedSheetLeavesOut()
+        {
+            // Unmeasured in the Editor (Unbound's choice, reported): the applied sheet becomes the
+            // variant's overrides and the rest is the parent's again.
+            var shader = Make();
+            var parent = Own(new Material(shader));
+            var variant = Own(new Material(shader) { parent = parent });
+            // Set on the parent after the variant was made: the variant takes them.
+            parent.SetFloat("_glossy", 0.125f);
+            parent.SetColor("_Tint", Color.green);
+            variant.SetFloat("_Zeta", 4f);
+            Assert.Equal(Color.green, variant.GetColor("_Tint"));
+            var so = new SerializedObject(variant);
+            SetFloats(so, ("_Zeta", 5f));
+            so.FindProperty("m_CustomRenderQueue").intValue = 2450;
+            Assert.True(so.ApplyModifiedProperties());
+            Assert.Same(parent, variant.parent);
+            Assert.Equal(5f, variant.GetFloat("_Zeta"));
+            Assert.Equal(0.125f, variant.GetFloat("_glossy"));
+            Assert.Equal(Color.green, variant.GetColor("_Tint"));
+            Assert.True(variant.IsPropertyOverriden("_Zeta"));
+            Assert.False(variant.IsPropertyOverriden("_glossy"));
+            Assert.Equal(2450, variant.renderQueue);
+        }
+
+        [Fact]
+        public void CopiesShareTheSheetUntilOneChangesIt()
+        {
+            var m = Own(new Material(Make()));
+            var so = new SerializedObject(m);
+            SetFloats(so, ("_Other", 7f));
+            so.ApplyModifiedProperties();
+            var copy = Own(new Material(m));
+            // The copy's use of a property lists its shader's properties; the source's sheet stays.
+            copy.GetFloat("_Zeta");
+            Assert.Equal("Bare _Glossiness _Legacy _Other _Zeta _glossy", Names(copy, "m_Floats"));
+            Assert.Equal("_Other", Names(m, "m_Floats"));
+        }
+
+        [Fact]
         public void ACopyKeepsTheSheetAndAShaderChangeAddsTheNewShadersProperties()
         {
             var first = Make();

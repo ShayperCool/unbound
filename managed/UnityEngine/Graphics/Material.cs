@@ -39,18 +39,17 @@ namespace UnityEngine
             readonly HashSet<int>[] m_Lists = { null, new HashSet<int>(), new HashSet<int>(), new HashSet<int>(), new HashSet<int>() };
             /// <summary>The shader every property of which is listed (null: none since the sheet was written).</summary>
             internal Shader FilledFor;
+            /// <summary>Held by more than one material (copies): changed only through a copy of it.</summary>
+            internal bool Shared;
 
             /// <summary>The names listed of a kind (none for <see cref="SheetKind.None"/>).</summary>
             internal HashSet<int> List(SheetKind kind) => m_Lists[(int)kind];
 
-            internal void CopyFrom(SavedSheet other)
+            internal SavedSheet Clone()
             {
-                for (int k = 1; k < m_Lists.Length; k++)
-                {
-                    m_Lists[k].Clear();
-                    AddAll(m_Lists[k], other.m_Lists[k]);
-                }
-                FilledFor = other.FilledFor;
+                var copy = new SavedSheet { FilledFor = FilledFor };
+                for (int k = 1; k < m_Lists.Length; k++) AddAll(copy.m_Lists[k], m_Lists[k]);
+                return copy;
             }
 
             /// <summary>Lists every property of <paramref name="shader"/>.</summary>
@@ -84,11 +83,13 @@ namespace UnityEngine
         void TouchSheet()
         {
             var sheet = m_State.m_Sheet;
-            if (sheet != null && sheet.FilledFor != m_Shader) sheet.Fill(m_Shader);
+            if (sheet == null || sheet.FilledFor == m_Shader) return;
+            if (sheet.Shared) m_Sheet = sheet = sheet.Clone();
+            sheet.Fill(m_Shader);
         }
 
         /// <summary>The names the sheet lists of one kind (a new list, sorted by name as the Editor
-        /// writes them: ordinal).</summary>
+        /// writes them: ordinal); of a variant, those it overrides (unmeasured).</summary>
         internal List<int> SheetNames(SheetKind kind)
         {
             var names = new List<int>();
@@ -100,6 +101,8 @@ namespace UnityEngine
                     int id = Shader.PropertyToID(p.Name);
                     if (KindOf(p.Type) == kind && !names.Contains(id)) names.Add(id);
                 }
+            // A variant's sheet holds its overrides (as a loaded variant's file does).
+            if (m_Parent != null && m_Own != null) names.RemoveAll(id => !m_Own.Contains(id));
             names.Sort((a, b) => string.CompareOrdinal(Shader.IdToName(a), Shader.IdToName(b)));
             return names;
         }
@@ -290,8 +293,9 @@ namespace UnityEngine
         void CopyFrom(Material source)
         {
             m_Shader = source.m_Shader;
-            if (source.m_Sheet == null) m_Sheet = null;
-            else (m_Sheet ??= new SavedSheet()).CopyFrom(source.m_Sheet);
+            // Copies share the sheet until one of them changes it.
+            m_Sheet = source.m_Sheet;
+            if (m_Sheet != null) m_Sheet.Shared = true;
             m_CustomRenderQueue = source.m_CustomRenderQueue;
             foreach (var p in source.m_Floats) m_Floats[p.Key] = p.Value;
             foreach (var p in source.m_Ints) m_Ints[p.Key] = p.Value;
@@ -1044,8 +1048,8 @@ namespace UnityEngine
 
         public void SetFloat(int nameID, float value)
         {
-            TouchSheet();
             MainThreadCheck.Check("SetFloatImpl");
+            TouchSheet();
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             ScriptSet(nameID);
@@ -1056,8 +1060,8 @@ namespace UnityEngine
 
         public float GetFloat(int nameID)
         {
-            TouchSheet();
             MainThreadCheck.Check("GetFloatImpl");
+            TouchSheet();
             Inherit();
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
             if (m_Floats.TryGetValue(nameID, out var f)) return ConvertsProperty(nameID) ? Mathf.LinearToGammaSpace(Mathf.GammaToLinearSpace(f)) : f;
@@ -1672,6 +1676,10 @@ namespace UnityEngine
         internal void ApplySerialized(YNode body, IReferenceResolver resolver)
         {
             Inherit();
+            var parent = m_Parent;
+            if (parent != null)
+                Unbound.Runtime.Stubs.Ignored("SerializedObject.ApplyModifiedProperties on a material variant",
+                    "is not measured: the applied sheet becomes the variant's overrides, the rest is taken from the parent again");
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
             m_Keywords.Clear(); m_KeywordExtras.Clear(); m_Tags.Clear(); m_TextureNames.Clear();
             m_DisabledPasses = null;
@@ -1686,6 +1694,16 @@ namespace UnityEngine
             m_Name = body.Str("m_Name");
             hideFlags = (HideFlags)body.Int("m_ObjectHideFlags");
             ReadSerialized(body, resolver);
+            if (parent != null)
+            {
+                // The data has no parent field: the variant keeps its parent, overrides what the
+                // sheet lists and takes the rest from the parent again.
+                m_Own = new HashSet<int>();
+                foreach (var kind in new[] { SheetKind.Textures, SheetKind.Ints, SheetKind.Floats, SheetKind.Colors })
+                    AddAll(m_Own, m_Sheet.List(kind));
+                m_InheritedVersion = -1;
+                Inherit();
+            }
         }
 
         /// <summary>A built-in Material's stored state from its record (the install's object as

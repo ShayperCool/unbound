@@ -356,11 +356,22 @@ namespace Unbound.Runtime
                 obj.hideFlags |= HideFlags.NotEditable;
                 return;
             }
+            var components = new List<Component>();
+            var flags = new List<HideFlags>();
             foreach (var t in go.GetComponentsInChildren<Transform>(true))
             {
-                t.gameObject.hideFlags |= HideFlags.NotEditable;
+                // A GameObject's flags pass to its components: the components' own are put back.
+                components.Clear();
+                flags.Clear();
                 foreach (var component in t.gameObject.GetComponents<Component>())
-                    if (component != null) component.hideFlags |= HideFlags.HideInHierarchy | HideFlags.NotEditable;
+                    if (component != null)
+                    {
+                        components.Add(component);
+                        flags.Add(component.hideFlags);
+                    }
+                t.gameObject.hideFlags |= HideFlags.NotEditable;
+                for (int i = 0; i < components.Count; i++)
+                    components[i].hideFlags = flags[i] | HideFlags.HideInHierarchy | HideFlags.NotEditable;
             }
         }
 
