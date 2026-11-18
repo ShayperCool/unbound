@@ -66,7 +66,7 @@ public sealed class GameConfig
     public int VSyncCount { get; set; } = 1;
     /// <summary>The scriptable render pipeline assets (GraphicsSettings, QualitySettings).</summary>
     public RenderPipelineConfig RenderPipeline { get; set; } = new();
-    /// <summary>The project's scripting scripting defines for the active target group.</summary>
+    /// <summary>The project's scripting defines for the active target group.</summary>
     public List<string> ScriptingDefines { get; set; } = new();
     /// <summary>Every target group's scripting defines, by ProjectSettings' key.</summary>
     public Dictionary<string, List<string>> ScriptingDefinesByGroup { get; set; } = new();

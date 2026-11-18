@@ -1312,6 +1312,11 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
     game.run_headless(u32::MAX, width, height);
     let code = game.exit_code().unwrap_or(3);
     drop(game);
+    // A compilation the scripts asked for (or new scripting defines) reloads them: the tests run
+    // again in a relaunched session, as `run` does.
+    if unbound_runtime::restart_requested() {
+        return relaunch();
+    }
     println!("test results: {}", results.display());
     std::process::exit(code);
 }

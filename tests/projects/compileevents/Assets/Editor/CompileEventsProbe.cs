@@ -15,7 +15,7 @@ using UnityEngine;
 /// Assets/Other, does not depend on the changed script): the probe rewrites
 /// Assets/Scripts/Changing.cs three times (a new value, a compile error, the fix), asks for a refresh,
 /// then asks for a compilation (both RequestScriptCompilation overloads) and sets the scripting
-/// scripting defines (the active target's, another target's, the active target's again unchanged),
+/// defines (the active target's, another target's, the active target's again unchanged),
 /// and logs every compilation and assembly reload event to a file in $COMPILE_EVENTS_OUT (it
 /// survives a domain reload); values.jsonl summarizes each round.
 /// </summary>

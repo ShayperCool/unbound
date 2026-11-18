@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/compileevents/run.py gate"],
+  "commands": [
+    "python3 tests/projects/compileevents/run.py gate"
+  ],
   "summary": "compileevents: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/AssetDatabase.cs",
@@ -11,6 +13,11 @@
     "managed/Unbound.Compiler/Protocol.cs",
     "crates/unbound/src/commands.rs",
     "crates/unbound-runtime/src/game.rs",
-    "crates/unbound-runtime/src/watch.rs"
+    "crates/unbound-runtime/src/watch.rs",
+    "managed/UnityEngine/Editor/EditorApplication.cs",
+    "managed/Unbound.Host/Game.cs",
+    "crates/unbound-project/src/settings.rs",
+    "crates/unbound-runtime/src/config.rs",
+    "crates/unbound-runtime/src/state.rs"
   ]
 }
