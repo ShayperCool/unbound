@@ -1732,12 +1732,15 @@ namespace Unbound.Runtime
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
                 int forwardOpaque = 0;
-                // An LDR deferred camera's G-buffer depth is its target's (when that has one): it
-                // starts from it when the camera clears nothing and goes back to it at the end.
+                // An LDR deferred camera's G-buffer depth stands for its target's (when that has
+                // one): it starts from it when the camera clears nothing and goes back to it at
+                // the end (TargetGBufferDepth).
                 RenderTexture deferredDepth = null;
                 if (deferred)
                 {
-                    var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+                    bool ownTargetDepth = !camera.allowHDR && !onScreen && cameraTarget != null && cameraTarget.depth > 0;
+                    var gbufferDepth = ownTargetDepth ? TargetGBufferDepth(cameraTarget, width, height)
+                        : Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
                     // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above),
                     // over a cleared stencil (a pooled buffer may hold another camera's G-buffer
                     // marks, which the lights test).
@@ -1749,14 +1752,13 @@ namespace Unbound.Runtime
                         GfxStream.CopyDepth(depthSource, TextureHandles.Of(gbufferDepth));
                     }
                     // Don't Clear off the screen: an LDR camera renders into its target's own depth,
-                    // whose stencil keeps the marks of the target's last deferred render; an HDR
-                    // camera's intermediate starts without any (measured: tests/projects/builtinfx
-                    // deferredDontClear.*). Without a depth buffer of the target, cleared as well.
-                    else if (!onScreen && camera.clearFlags == CameraClearFlags.Nothing && !camera.allowHDR
-                        && cameraTarget != null && cameraTarget.depth > 0)
-                    {
+                    // whose stencil keeps the marks of the target's last deferred render whatever
+                    // other cameras render between; an HDR camera's intermediate starts without any
+                    // (measured: tests/projects/builtinfx deferredDontClear.*). The target's depth
+                    // comes in (other cameras may have drawn into it), the stencil is the target's
+                    // G-buffer depth's own. Without a depth buffer of the target, cleared as well.
+                    else if (ownTargetDepth && camera.clearFlags == CameraClearFlags.Nothing)
                         GfxStream.CopyDepth(TextureHandles.Of(cameraTarget), TextureHandles.Of(gbufferDepth));
-                    }
                     else if (camera.clearFlags == CameraClearFlags.Nothing)
                     {
                         GfxStream.SetTarget(TextureHandles.Of(gbufferDepth));

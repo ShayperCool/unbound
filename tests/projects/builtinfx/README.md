@@ -54,7 +54,10 @@ render 200x150 textures with `Camera.Render`, a few cases wait for the player lo
 * **Deferred cameras that clear nothing** (`deferred_dontclear_*`, `deferredDontClear.*`, recorded
   last): a sphere drawn by a render that clears to a solid colour, moved and drawn again with the
   camera's clear flags into the same target, a quad over the view showing where stencil bit 7 is
-  set; HDR and LDR cameras that clear nothing, and that clear to a solid colour.
+  set; HDR and LDR cameras that clear nothing, and that clear to a solid colour; an LDR camera that
+  clears nothing with another LDR deferred camera of the same size rendering between
+  (`ldrOther`). Command buffers drawing into CameraTarget at BeforeLighting, AfterLighting,
+  BeforeFinalPass and AfterFinalPass of an LDR and an HDR camera (`deferredEvents.*`).
 
 `ProbeRunner.Create` made the scene (a camera with a Skybox and a FlareLayer, a projector, lights
 with a halo and a flare, a lens flare, a halo, occlusion components, a proxy volume) and the assets
@@ -120,8 +123,11 @@ Run Unbound and compare:
   second pass over the whole view).
 * A deferred camera that clears nothing (`deferredDontClear.*`): an LDR one draws into its target's
   depth, whose stencil keeps the G-buffer marks of the target's last render (the sphere's first place
-  reads marked); an HDR one starts from no marks. A new target's depth and stencil are undefined
-  (RenderTexture.Create), so the part starts from a render that clears.
+  reads marked), whatever another camera renders between; an HDR one starts from no marks. A new
+  target's depth and stencil are undefined (RenderTexture.Create), so the part starts from a render
+  that clears. An LDR camera's final pass clears its target before BeforeFinalPass: what command
+  buffers drew into CameraTarget at the lighting events is gone, what they draw from
+  BeforeFinalPass on stays (an HDR camera keeps all of it).
 * Material variants keep only their overrides; the rest, queue, keywords, instancing and GI flags
   come from the parent, also when it changes at run time. `parent` set from script keeps the
   material's own values. `Lerp` interpolates colors and `[Gamma]` floats in linear space and texture

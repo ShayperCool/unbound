@@ -29,6 +29,7 @@ namespace Unbound.Runtime
         const byte LightMarkBit = 0x80, NonLightmappedBit = 0x40, VolumeMarkBit = 0x10;
 
         static Mesh s_Icosahedron, s_Icosphere, s_Pyramid;
+        static bool s_VolumeMeshMissingReported;
 
         enum VolumeKind { View, Marked, Back, Front }
 
@@ -81,6 +82,9 @@ namespace Unbound.Runtime
             }
             if (mesh == null) return VolumeKind.View;
             if (crossesNear) return VolumeKind.Back;
+            // Unmeasured: a light in the lightmaps (baked, or mixed of a Subtractive bake) draws its
+            // front faces without the volume mark, testing bit 6 too, which Unbound's G-buffer
+            // sets on every object.
             if (crossesFar || LightmapModeForRender(light) != 0) return VolumeKind.Front;
             return VolumeKind.Marked;
         }
@@ -90,8 +94,11 @@ namespace Unbound.Runtime
             if (mesh == null)
             {
                 mesh = BuiltinResources.Get(typeof(Mesh), name) as Mesh;
-                if (mesh == null)
+                if (mesh == null && !s_VolumeMeshMissingReported)
+                {
+                    s_VolumeMeshMissingReported = true;
                     Debug.LogWarning($"Unbound: the built-in light volume mesh {name} is missing; deferred lights that need it draw over the whole view");
+                }
             }
             return mesh;
         }
