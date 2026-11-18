@@ -171,7 +171,7 @@ pub fn flatten(
                         .and_then(|m| m.get("value"))
                         .and_then(Value::as_str)
                         .map(String::from)
-                        .unwrap_or_else(|| format!("Missing Prefab with guid: {source_guid}"))
+                        .unwrap_or_else(|| format!("Unloaded Prefab with guid: {source_guid}"))
                 };
                 let placeholders = missing_prefab_placeholder(instance, index, source_guid, &name);
                 if missing
@@ -287,17 +287,6 @@ fn source_file_id(doc: &Document) -> i64 {
     file_id(doc.body.get("m_CorrespondingSourceObject"))
 }
 
-/// The objects standing for an instance whose prefab is missing, as the Unity 6000.0 Editor makes
-/// them (tests/projects/missingprefab): a root GameObject named by [`missing_instance_name`] under
-/// the instance's parent, whose Transform takes the instance's modifications of the root
-/// Transform, and for every other stripped object of the instance (what the file references),
-/// in class id then file id order, a child of the root named "Placeholder for referenced
-/// <class> in Prefab instance (<n>)", n counting the root's children: a stripped GameObject gets a
-/// Transform, a stripped Transform a GameObject, a stripped component a GameObject and a
-/// Transform. The root is the stripped GameObject the instance's first `m_Name` modification
-/// targets, its Transform the stripped Transform the first position, rotation or Euler hint
-/// modification targets; without both modifications the root is new and unmodified. Objects the
-/// instance adds keep their parents and owners among these (added children of the root come first).
 /// A file's documents as the placeholders of its instances look them up.
 struct PlaceholderIndex<'a> {
     /// Stripped documents by their PrefabInstance, in class id then file id order.
@@ -346,6 +335,17 @@ impl<'a> PlaceholderIndex<'a> {
     }
 }
 
+/// The objects standing for an instance whose prefab is missing, as the Unity 6000.0 Editor makes
+/// them (tests/projects/missingprefab): a root GameObject named `name` (see [`missing_instance_name`])
+/// under the instance's parent, whose Transform takes the instance's modifications of the root
+/// Transform, and for every other stripped object of the instance (what the file references),
+/// in class id then file id order, a child of the root named "Placeholder for referenced
+/// <class> in Prefab instance (<n>)", n counting the root's children: a stripped GameObject gets a
+/// Transform, a stripped Transform a GameObject, a stripped component a GameObject and a
+/// Transform. The root is the stripped GameObject the instance's first `m_Name` modification
+/// targets, its Transform the stripped Transform the first position, rotation or Euler hint
+/// modification targets; without both modifications the root is new and unmodified. Objects the
+/// instance adds keep their parents and owners among these (added children of the root come first).
 fn missing_prefab_placeholder(
     instance: &Document,
     index: &PlaceholderIndex,
