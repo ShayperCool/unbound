@@ -451,7 +451,7 @@ impl EffectSpec {
             );
             anyhow::ensure!(
                 !policy.static_only || self.slot_wet_measured,
-                "AudioMixer static wet mixing is measured only for Unity 6000.0.71f1"
+                "AudioMixer static wet mixing is measured only for the Unity 6000.0 release family (measured on 6000.0.71f1)"
             );
             anyhow::ensure!(
                 level.is_finite() && (0.0..=policy.maximum).contains(&level),
