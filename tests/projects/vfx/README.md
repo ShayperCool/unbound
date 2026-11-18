@@ -440,7 +440,8 @@ Outputs that are sorted or culled per camera (alpha blended ones are, by default
 of the simulation controls), drawn through an indirect buffer, and triangles and octagons are
 controlled by `tests/projects/vfxoutputs`; lit outputs, outputs that draw meshes and their
 shadows by `tests/projects/vfxlit`; strips by `tests/projects/vfxstrips`; GPU events by
-`tests/projects/vfxevents`. Motion vectors, Shader Graph outputs, bounds computed on the GPU. Expression operations without a control: a matrix's axis
+`tests/projects/vfxevents`; Shader Graph outputs and the 2D renderer by `tests/projects/vfxlit`.
+Motion vectors, bounds computed on the GPU. Expression operations without a control: a matrix's axis
 (made only by blocks of initialize and update contexts: collision shapes, a position on a mesh), a
 texture's format (no operator makes it), and the ones the runtime does not do yet:
 noise, and a skinned mesh renderer's mesh, vertices and root bone. Not measured of meshes: no mesh, and a mesh without the
