@@ -9,15 +9,14 @@ impl PrefabSource for Fixture {
         let docs = self
             .0
             .get(&guid)
-            .ok_or_else(|| anyhow::anyhow!("no asset has guid {guid}"))?;
+            .ok_or_else(|| MissingPrefab(format!("no asset has guid {guid}")))?;
         stack.push(guid);
         let out = flatten(docs, self, stack)?;
         stack.pop();
         // As DocumentLoader: a prefab whose root is a missing prefab's instance does not load.
-        anyhow::ensure!(
-            !root_is_missing_prefab(&out),
-            "the root of {guid} is missing"
-        );
+        if root_is_missing_prefab(&out) {
+            return Err(MissingPrefab(format!("the root of {guid} is missing")).into());
+        }
         Ok(Arc::new(out))
     }
 }
@@ -556,6 +555,14 @@ fn a_missing_prefabs_stripped_objects_become_the_editors_placeholders() {
         instance.body.get(MISSING_PREFAB_NAME).unwrap().as_str(),
         root.body.get("m_Name").unwrap().as_str()
     );
+    assert_eq!(
+        instance
+            .body
+            .path(&format!("{MISSING_PREFAB_ROOT}.fileID"))
+            .unwrap()
+            .as_i64(),
+        Some(600)
+    );
     let unique: HashSet<i64> = docs.iter().map(|d| d.file_id).collect();
     assert_eq!(unique.len(), docs.len());
 }
@@ -652,4 +659,61 @@ PrefabInstance:
         instance.body.get(MISSING_PREFAB_NAME).unwrap().as_str(),
         Some(format!("V (Missing Prefab with guid: {variant_guid})").as_str())
     );
+}
+
+/// A source that exists but does not load (an import Unbound cannot make).
+struct Broken;
+
+impl PrefabSource for Broken {
+    fn prefab(&self, guid: Guid, _: &mut Vec<Guid>) -> anyhow::Result<Arc<Vec<Document>>> {
+        anyhow::bail!("importing {guid}: unsupported")
+    }
+}
+
+#[test]
+fn a_source_that_fails_to_load_keeps_placeholders_but_is_no_missing_prefab() {
+    let scene = parse_documents(&missing_scene(true)).unwrap();
+    let docs = flatten(&scene, &Broken, &mut Vec::new()).unwrap();
+    let by_id = |id: i64| docs.iter().find(|d| d.file_id == id).unwrap();
+    // References still resolve, but the instance is not marked: no missing-prefab error, no
+    // MissingAsset status, and a variant of it would still load.
+    assert!(!by_id(650).stripped && !by_id(630).stripped);
+    assert_eq!(by_id(600).body.get("m_Name").unwrap().as_str(), Some("Car"));
+    assert!(by_id(60).body.get(MISSING_PREFAB_NAME).is_none());
+    assert!(!root_is_missing_prefab(&docs));
+}
+
+#[test]
+fn the_first_name_modification_names_and_picks_the_root_even_of_a_child() {
+    // A child's rename listed before the root's (the Editor lists modifications by target): that
+    // child's stripped GameObject becomes the root, as in the Editor
+    // (tests/projects/missingprefab `W2`); the real root GameObject becomes a placeholder.
+    let scene = missing_scene(true).replacen(
+        "    m_Modifications:\n",
+        &format!(
+            "    m_Modifications:\n    - target: {{fileID: 20, guid: {MISSING}, type: 3}}\n      propertyPath: m_Name\n      value: Wheel\n      objectReference: {{fileID: 0}}\n"
+        ),
+        1,
+    );
+    let docs = flatten(
+        &parse_documents(&scene).unwrap(),
+        &Fixture(HashMap::new()),
+        &mut Vec::new(),
+    )
+    .unwrap();
+    let by_id = |id: i64| docs.iter().find(|d| d.file_id == id).unwrap();
+    assert_eq!(
+        by_id(650).body.get("m_Name").unwrap().as_str(),
+        Some(format!("Wheel (Missing Prefab with guid: {MISSING})").as_str())
+    );
+    assert_eq!(
+        ids(by_id(650), "m_Component", Some("component")),
+        [601, 710]
+    );
+    assert_eq!(
+        by_id(600).body.get("m_Name").unwrap().as_str(),
+        Some("Placeholder for referenced GameObject in Prefab instance (2)")
+    );
+    // The component added to the real root stays on it.
+    assert_eq!(ids(by_id(600), "m_Component", Some("component"))[1], 700);
 }

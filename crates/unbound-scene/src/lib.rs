@@ -6,7 +6,8 @@ pub mod path;
 
 pub use encode::{encode_documents, encode_value};
 pub use flatten::{
-    MISSING_PREFAB_NAME, PrefabSource, flatten, read_prefab_inputs, root_is_missing_prefab,
+    MISSING_PREFAB_NAME, MISSING_PREFAB_ROOT, MissingPrefab, PrefabSource, flatten,
+    read_prefab_inputs, root_is_missing_prefab,
 };
 
 use anyhow::{Context, Result};
@@ -36,6 +37,8 @@ pub struct DocumentLoader<F> {
 #[derive(Default)]
 struct PrefabCache {
     entries: HashMap<Guid, (Arc<Vec<Document>>, usize, u64)>,
+    /// Variants found to have a missing parent: they do not load (until the content changes).
+    missing: std::collections::HashSet<Guid>,
     bytes: usize,
     clock: u64,
 }
@@ -75,6 +78,7 @@ impl PrefabCache {
 
     fn clear(&mut self) {
         self.entries.clear();
+        self.missing.clear();
         self.bytes = 0;
     }
 }
@@ -144,10 +148,18 @@ where
     F: Fn(Guid) -> Option<PathBuf> + Send + Sync,
 {
     fn prefab(&self, guid: Guid, stack: &mut Vec<Guid>) -> Result<Arc<Vec<Document>>> {
-        if let Some(cached) = self.prefabs.lock().unwrap().get(&guid) {
-            return Ok(cached);
+        {
+            let mut prefabs = self.prefabs.lock().unwrap();
+            if let Some(cached) = prefabs.get(&guid) {
+                return Ok(cached);
+            }
+            if prefabs.missing.contains(&guid) {
+                return Err(MissingPrefab(format!("prefab {guid} is missing")).into());
+            }
         }
-        let file = (self.locate)(guid).with_context(|| format!("no asset has guid {guid}"))?;
+        let Some(file) = (self.locate)(guid) else {
+            return Err(MissingPrefab(format!("no asset has guid {guid}")).into());
+        };
         let synthesized = self.synthesize.as_ref().and_then(|s| s(guid, &file));
         let docs = match synthesized {
             Some(docs) => docs.with_context(|| format!("importing {}", file.display()))?,
@@ -158,10 +170,12 @@ where
         stack.pop();
         let expanded = expanded.with_context(|| format!("expanding {}", file.display()))?;
         if root_is_missing_prefab(&expanded) {
-            anyhow::bail!(
+            self.prefabs.lock().unwrap().missing.insert(guid);
+            return Err(MissingPrefab(format!(
                 "{}: the prefab's root is an instance of a missing prefab",
                 file.display()
-            );
+            ))
+            .into());
         }
         let expanded = Arc::new(expanded);
         self.prefabs.lock().unwrap().insert(guid, expanded.clone());

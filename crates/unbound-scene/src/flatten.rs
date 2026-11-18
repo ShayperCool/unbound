@@ -19,6 +19,21 @@ const RECT_TRANSFORM: i32 = 224;
 /// File ids of a prefab instance's objects: `(instance id ^ source id) & ID_MASK`.
 const ID_MASK: i64 = 0x7fff_ffff_ffff_ffff;
 
+/// The error of a prefab the project does not have (no asset has its GUID), or of a variant whose
+/// parent is such a prefab: its instances are the Editor's missing-prefab instances. Any other
+/// error of a source (an import Unbound cannot make) keeps the placeholders but is no missing
+/// prefab for the game.
+#[derive(Debug)]
+pub struct MissingPrefab(pub String);
+
+impl std::fmt::Display for MissingPrefab {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for MissingPrefab {}
+
 /// Supplies the expanded documents of the prefab a GUID names.
 pub trait PrefabSource {
     fn prefab(&self, guid: Guid, stack: &mut Vec<Guid>) -> Result<Arc<Vec<Document>>>;
@@ -125,6 +140,8 @@ pub fn flatten(
         }
     }
 
+    // Built at the first instance whose source does not load.
+    let mut index: Option<PlaceholderIndex> = None;
     for instance in docs
         .iter()
         .filter(|d| d.class_id == PREFAB_INSTANCE && !d.stripped)
@@ -140,15 +157,31 @@ pub fn flatten(
         let source = match prefabs.prefab(source_guid, stack) {
             Ok(source) => source,
             Err(error) => {
-                tracing::warn!("prefab instance {p}: {error:#}");
-                let placeholders = missing_prefab_placeholder(instance, docs, source_guid);
-                if let Some(map) = out
-                    .iter_mut()
-                    .find(|d| d.class_id == PREFAB_INSTANCE && d.file_id == p)
-                    .and_then(|d| d.body.as_map_mut())
+                let missing = error.downcast_ref::<MissingPrefab>().is_some();
+                let index = index.get_or_insert_with(|| PlaceholderIndex::new(docs));
+                let name = if missing {
+                    tracing::warn!("prefab instance {p}: {error:#}");
+                    missing_instance_name(&instance.body, source_guid)
+                } else {
+                    // Not the Editor's missing prefab: the source exists, Unbound could not load it.
+                    tracing::error!(
+                        "prefab instance {p}: {error:#}; its objects are placeholders (unsupported content)"
+                    );
+                    first_target(&instance.body, |path| path == "m_Name")
+                        .and_then(|m| m.get("value"))
+                        .and_then(Value::as_str)
+                        .map(String::from)
+                        .unwrap_or_else(|| format!("Missing Prefab with guid: {source_guid}"))
+                };
+                let placeholders = missing_prefab_placeholder(instance, index, source_guid, &name);
+                if missing
+                    && let Some(map) = index
+                        .instances
+                        .get(&p)
+                        .and_then(|&i| out[i].body.as_map_mut())
                 {
-                    let name = missing_instance_name(&instance.body, source_guid);
                     map.insert(MISSING_PREFAB_NAME, Value::Scalar(name));
+                    map.insert(MISSING_PREFAB_ROOT, object_ref(placeholders[0].file_id));
                 }
                 out.extend(placeholders);
                 continue;
@@ -209,6 +242,10 @@ const PLACEHOLDER_ID_SALT: i64 = 0x4d50_0000_0000_0000;
 /// The Unbound-only field a missing instance's PrefabInstance document gets: the name its root
 /// shows (read by the managed scene load, which logs the Editor's error for it).
 pub const MISSING_PREFAB_NAME: &str = "m_UnboundMissingPrefabName";
+/// The Unbound-only field naming a missing instance's root GameObject (beside
+/// [`MISSING_PREFAB_NAME`]): the scene load names a missing prefab after its first instance in
+/// hierarchy order.
+pub const MISSING_PREFAB_ROOT: &str = "m_UnboundMissingPrefabRoot";
 /// Property paths whose first modification names the instance's root Transform.
 const ROOT_TRANSFORM_PROPERTIES: [&str; 3] = [
     "m_LocalPosition",
@@ -261,10 +298,59 @@ fn source_file_id(doc: &Document) -> i64 {
 /// targets, its Transform the stripped Transform the first position, rotation or Euler hint
 /// modification targets; without both modifications the root is new and unmodified. Objects the
 /// instance adds keep their parents and owners among these (added children of the root come first).
+/// A file's documents as the placeholders of its instances look them up.
+struct PlaceholderIndex<'a> {
+    /// Stripped documents by their PrefabInstance, in class id then file id order.
+    stripped: HashMap<i64, Vec<&'a Document>>,
+    /// Transforms of the file's own objects by their parent, in file order.
+    children: HashMap<i64, Vec<i64>>,
+    /// The GameObject of each of the file's own components.
+    owners: HashMap<i64, i64>,
+    /// The position of each PrefabInstance document among the file's own documents.
+    instances: HashMap<i64, usize>,
+}
+
+impl<'a> PlaceholderIndex<'a> {
+    fn new(docs: &'a [Document]) -> Self {
+        let mut index = Self {
+            stripped: HashMap::new(),
+            children: HashMap::new(),
+            owners: HashMap::new(),
+            instances: HashMap::new(),
+        };
+        for d in docs {
+            if d.stripped {
+                let instance = file_id(d.body.get("m_PrefabInstance"));
+                index.stripped.entry(instance).or_default().push(d);
+                continue;
+            }
+            if is_transform(d.class_id) {
+                let father = file_id(d.body.get("m_Father"));
+                index.children.entry(father).or_default().push(d.file_id);
+            }
+            let owner = file_id(d.body.get("m_GameObject"));
+            if owner != 0 {
+                index.owners.insert(d.file_id, owner);
+            }
+        }
+        // The positions of the PrefabInstance documents among the non-stripped ones (`out`).
+        for (i, d) in docs.iter().filter(|d| !d.stripped).enumerate() {
+            if d.class_id == PREFAB_INSTANCE {
+                index.instances.insert(d.file_id, i);
+            }
+        }
+        for list in index.stripped.values_mut() {
+            list.sort_by_key(|d| (d.class_id, d.file_id));
+        }
+        index
+    }
+}
+
 fn missing_prefab_placeholder(
     instance: &Document,
-    docs: &[Document],
+    index: &PlaceholderIndex,
     source: Guid,
+    name: &str,
 ) -> Vec<Document> {
     let p = instance.file_id;
     let body = &instance.body;
@@ -278,11 +364,7 @@ fn missing_prefab_placeholder(
     })
     .map(|m| file_id(m.get("target")));
     let known = root_go_source.is_some_and(|s| s != 0) && root_t_source.is_some_and(|s| s != 0);
-    let mut stripped: Vec<&Document> = docs
-        .iter()
-        .filter(|d| d.stripped && file_id(d.body.get("m_PrefabInstance")) == p)
-        .collect();
-    stripped.sort_by_key(|d| (d.class_id, d.file_id));
+    let stripped: &[&Document] = index.stripped.get(&p).map_or(&[], Vec::as_slice);
     let find = |source: Option<i64>, class: &dyn Fn(i32) -> bool| {
         source
             .filter(|_| known)
@@ -332,7 +414,6 @@ fn missing_prefab_placeholder(
         )),
     };
 
-    let name = missing_instance_name(body, source);
     let mut root = transform(
         transform_id,
         go_id,
@@ -348,15 +429,14 @@ fn missing_prefab_placeholder(
             apply_modification(&mut root.body, m);
         }
     }
-    let mut out = vec![game_object(go_id, &name, transform_id, root_go)];
+    let mut out = vec![game_object(go_id, name, transform_id, root_go)];
     // The instance's added children of the root, then the placeholders.
-    let mut children: Vec<i64> = docs
-        .iter()
-        .filter(|d| !d.stripped && is_transform(d.class_id))
-        .filter(|d| file_id(d.body.get("m_Father")) == transform_id)
-        .map(|d| d.file_id)
-        .collect();
-    for d in stripped {
+    let mut children: Vec<i64> = index
+        .children
+        .get(&transform_id)
+        .cloned()
+        .unwrap_or_default();
+    for &d in stripped {
         if root_go.is_some_and(|r| r.file_id == d.file_id)
             || root_t.is_some_and(|r| r.file_id == d.file_id)
         {
@@ -414,11 +494,7 @@ fn missing_prefab_placeholder(
         .unwrap_or_default()
     {
         let id = file_id(added.get("addedObject"));
-        let Some(owner) = docs
-            .iter()
-            .find(|d| !d.stripped && d.file_id == id)
-            .map(|d| file_id(d.body.get("m_GameObject")))
-        else {
+        let Some(&owner) = index.owners.get(&id) else {
             continue;
         };
         if let Some(go) = out
