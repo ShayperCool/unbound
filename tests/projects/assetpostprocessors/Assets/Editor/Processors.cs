@@ -69,8 +69,9 @@ static class PPLog
         }
     }
 
+    // The context's build target is the Editor's platform (StandaloneOSX on macOS), not compared.
     internal static string Context(AssetImportContext context) =>
-        context == null ? "context=null" : "context=" + context.assetPath + " target=" + N(context.selectedBuildTarget);
+        context == null ? "context=null" : "context=" + context.assetPath;
 
     internal static string Texture(Texture2D t) =>
         t.name + " " + t.width + "x" + t.height + " format=" + N(t.format) + " mips=" + t.mipmapCount

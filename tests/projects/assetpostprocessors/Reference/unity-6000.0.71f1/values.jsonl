@@ -47,45 +47,45 @@
 {"k":"importer.Assets/Audio/Tone.wav","v":"AudioImporter missing=0 mono=1 background=0 ambisonic=0 load=0 format=0 quality=1 rate=0 rateOverride=44100 preload=0"}
 {"k":"meta.Assets/Audio/Tone.wav","v":"c24d40560d2d5470"}
 {"k":"events.Assets/Audio.count","v":"4"}
-{"k":"events.Assets/Audio.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Audio.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Audio.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Audio.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Audio.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio target=2"}
+{"k":"events.Assets/Audio.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio"}
 {"k":"events.Assets/Audio/Tone.wav.count","v":"8"}
 {"k":"events.Assets/Audio/Tone.wav.00","v":"PPEarly.OnPreprocessAsset AudioImporter missing=0 mono=0 background=0 ambisonic=0 load=0 format=1 quality=1 rate=0 rateOverride=44100 preload=0"}
 {"k":"events.Assets/Audio/Tone.wav.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Audio/Tone.wav.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Audio/Tone.wav.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio/Tone.wav target=2"}
-{"k":"events.Assets/Audio/Tone.wav.04","v":"PPEarly.OnPreprocessAudio context=Assets/Audio/Tone.wav target=2"}
+{"k":"events.Assets/Audio/Tone.wav.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio/Tone.wav"}
+{"k":"events.Assets/Audio/Tone.wav.04","v":"PPEarly.OnPreprocessAudio context=Assets/Audio/Tone.wav"}
 {"k":"events.Assets/Audio/Tone.wav.05","v":"PPLate.OnPreprocessAudio AudioImporter missing=0 mono=1 background=0 ambisonic=0 load=0 format=1 quality=1 rate=0 rateOverride=44100 preload=0"}
 {"k":"events.Assets/Audio/Tone.wav.06","v":"PPEarly.OnPostprocessAudio  channels=1 frequency=22050 samples=2205 load=0 ambisonic=0 preload=0 background=0"}
 {"k":"events.Assets/Audio/Tone.wav.07","v":"PPLate.OnPostprocessAudio  channels=1 frequency=22050 samples=2205 load=0 ambisonic=0 preload=0 background=0"}
 {"k":"events.Assets/Editor.count","v":"4"}
-{"k":"events.Assets/Editor.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Editor.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Editor.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Editor.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Editor.03","v":"PPLate.OnPreprocessAsset context=Assets/Editor target=2"}
+{"k":"events.Assets/Editor.03","v":"PPLate.OnPreprocessAsset context=Assets/Editor"}
 {"k":"events.Assets/Materials.count","v":"4"}
-{"k":"events.Assets/Materials.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Materials.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Materials.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Materials.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Materials.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials target=2"}
+{"k":"events.Assets/Materials.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials"}
 {"k":"events.Assets/Materials/Override.mat.count","v":"4"}
 {"k":"events.Assets/Materials/Override.mat.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Materials/Override.mat.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Materials/Override.mat.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Materials/Override.mat.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials/Override.mat target=2"}
+{"k":"events.Assets/Materials/Override.mat.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials/Override.mat"}
 {"k":"events.Assets/Models.count","v":"4"}
-{"k":"events.Assets/Models.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Models.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Models.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Models.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Models.03","v":"PPLate.OnPreprocessAsset context=Assets/Models target=2"}
+{"k":"events.Assets/Models.03","v":"PPLate.OnPreprocessAsset context=Assets/Models"}
 {"k":"events.Assets/Models/Animated.fbx.count","v":"14"}
 {"k":"events.Assets/Models/Animated.fbx.00","v":"PPEarly.OnPreprocessAsset ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
 {"k":"events.Assets/Models/Animated.fbx.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Models/Animated.fbx.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Models/Animated.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Animated.fbx target=2"}
-{"k":"events.Assets/Models/Animated.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Animated.fbx target=2"}
+{"k":"events.Assets/Models/Animated.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Animated.fbx"}
+{"k":"events.Assets/Models/Animated.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Animated.fbx"}
 {"k":"events.Assets/Models/Animated.fbx.05","v":"PPLate.OnPreprocessModel ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
 {"k":"events.Assets/Models/Animated.fbx.06","v":"PPParts.OnPreprocessMaterialDescription M_Move clips=0"}
 {"k":"events.Assets/Models/Animated.fbx.07","v":"PPParts.OnAssignMaterialModel M_Move Moving"}
@@ -99,8 +99,8 @@
 {"k":"events.Assets/Models/Materials.fbx.00","v":"PPEarly.OnPreprocessAsset ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=1 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
 {"k":"events.Assets/Models/Materials.fbx.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Models/Materials.fbx.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Models/Materials.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Materials.fbx target=2"}
-{"k":"events.Assets/Models/Materials.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Materials.fbx target=2"}
+{"k":"events.Assets/Models/Materials.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Materials.fbx"}
+{"k":"events.Assets/Models/Materials.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Materials.fbx"}
 {"k":"events.Assets/Models/Materials.fbx.05","v":"PPLate.OnPreprocessModel ModelImporter missing=0 scale=2 fileScale=1 anim=1 materials=1 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
 {"k":"events.Assets/Models/Materials.fbx.06","v":"PPParts.OnPostprocessMaterial M_Alpha shader=Standard color=RGBA(0.200, 0.400, 0.900, 0.400)"}
 {"k":"events.Assets/Models/Materials.fbx.07","v":"PPParts.OnAssignMaterialModel M_Alpha Cube_Alpha"}
@@ -142,26 +142,26 @@
 {"k":"events.Assets/Models/Materials.fbx.43","v":"PPEarly.OnPostprocessModel Materials[Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex] components=Transform"}
 {"k":"events.Assets/Models/Materials.fbx.44","v":"PPLate.OnPostprocessModel Materials[Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex] components=Transform"}
 {"k":"events.Assets/Scenes.count","v":"4"}
-{"k":"events.Assets/Scenes.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Scenes.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Scenes.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Scenes.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Scenes.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes target=2"}
+{"k":"events.Assets/Scenes.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes"}
 {"k":"events.Assets/Scenes/Probe.unity.count","v":"4"}
 {"k":"events.Assets/Scenes/Probe.unity.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Scenes/Probe.unity.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Scenes/Probe.unity.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Scenes/Probe.unity.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes/Probe.unity target=2"}
+{"k":"events.Assets/Scenes/Probe.unity.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes/Probe.unity"}
 {"k":"events.Assets/Tex.count","v":"4"}
-{"k":"events.Assets/Tex.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Tex.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
 {"k":"events.Assets/Tex.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Tex.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Tex.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex target=2"}
+{"k":"events.Assets/Tex.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex"}
 {"k":"events.Assets/Tex/Invert.png.count","v":"11"}
 {"k":"events.Assets/Tex/Invert.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
 {"k":"events.Assets/Tex/Invert.png.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Tex/Invert.png.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Tex/Invert.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Invert.png target=2"}
-{"k":"events.Assets/Tex/Invert.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Invert.png target=2 same=1"}
+{"k":"events.Assets/Tex/Invert.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Invert.png"}
+{"k":"events.Assets/Tex/Invert.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Invert.png same=1"}
 {"k":"events.Assets/Tex/Invert.png.05","v":"PPTieA.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Invert.png.06","v":"PPTieB.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Invert.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
@@ -172,8 +172,8 @@
 {"k":"events.Assets/Tex/Plain.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
 {"k":"events.Assets/Tex/Plain.png.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Tex/Plain.png.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Tex/Plain.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Plain.png target=2"}
-{"k":"events.Assets/Tex/Plain.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Plain.png target=2 same=1"}
+{"k":"events.Assets/Tex/Plain.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Plain.png"}
+{"k":"events.Assets/Tex/Plain.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Plain.png same=1"}
 {"k":"events.Assets/Tex/Plain.png.05","v":"PPTieA.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Plain.png.06","v":"PPTieB.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Plain.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
@@ -184,8 +184,8 @@
 {"k":"events.Assets/Tex/Shrink.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
 {"k":"events.Assets/Tex/Shrink.png.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Tex/Shrink.png.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Tex/Shrink.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Shrink.png target=2"}
-{"k":"events.Assets/Tex/Shrink.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Shrink.png target=2 same=1"}
+{"k":"events.Assets/Tex/Shrink.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Shrink.png"}
+{"k":"events.Assets/Tex/Shrink.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Shrink.png same=1"}
 {"k":"events.Assets/Tex/Shrink.png.05","v":"PPTieA.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Shrink.png.06","v":"PPTieB.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Shrink.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
@@ -196,8 +196,8 @@
 {"k":"events.Assets/Tex/Sprite.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
 {"k":"events.Assets/Tex/Sprite.png.01","v":"PPTieA.OnPreprocessAsset"}
 {"k":"events.Assets/Tex/Sprite.png.02","v":"PPTieB.OnPreprocessAsset"}
-{"k":"events.Assets/Tex/Sprite.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Sprite.png target=2"}
-{"k":"events.Assets/Tex/Sprite.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Sprite.png target=2 same=1"}
+{"k":"events.Assets/Tex/Sprite.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Sprite.png"}
+{"k":"events.Assets/Tex/Sprite.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Sprite.png same=1"}
 {"k":"events.Assets/Tex/Sprite.png.05","v":"PPTieA.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Sprite.png.06","v":"PPTieB.OnPreprocessTexture"}
 {"k":"events.Assets/Tex/Sprite.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
