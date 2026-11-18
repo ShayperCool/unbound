@@ -33,6 +33,8 @@ import subprocess
 import sys
 
 PROBE = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROBE.parents[1]))
+import guarded_editor  # noqa: E402
 SOURCES = {'Assembly-CSharp': ['Assets/Scripts/ShaderKeywordsProbe.cs'],
            'Assembly-CSharp-Editor': ['Assets/Editor/ProbeRunner.cs']}
 
@@ -179,7 +181,7 @@ def main():
         corrects = {'path': str(args.corrects.resolve()), 'sha256': sha(args.corrects.read_bytes()),
                     'errors': {a: r['errors'] for a, r in failed['results'].items()}}
     copy = rsp_dir.parents[3]
-    data_root = Path.home()/'Unity/Hub/Editor'/args.release/'Editor/Data'
+    data_root = guarded_editor.editor_data(args.release)
     record = {'release': args.release, 'rsp_dir': str(rsp_dir), 'copy': str(copy),
               'out': str(args.out.resolve()), 'not_used': ['/shared (compiler server)'],
               'corrects': corrects,

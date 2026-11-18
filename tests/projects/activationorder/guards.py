@@ -24,6 +24,9 @@ from pathlib import Path
 import re
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import guarded_editor  # noqa: E402
+
 MARKER = {'k': 'complete', 'v': True}
 OUTPUT_VARIABLE = 'UNBOUND_PROBE_ACTIVATIONORDER_OUT'
 
@@ -324,8 +327,8 @@ def tree(root):
 
 
 def editor_result_problems(directory, release):
-    """Strict exit 0: no forced stop of any kind (not even the shutdown guard), NVIDIA, logged
-    shutdown, the planned windowed GPU command."""
+    """Strict exit 0: no forced stop of any kind (not even the shutdown guard), the device's GPU
+    (tests/guarded_editor.py), logged shutdown, the planned windowed GPU command."""
     path = Path(directory)/'editor-run.json'
     if not path.exists():
         return ['no Editor result (editor-run.json)']
@@ -335,37 +338,15 @@ def editor_result_problems(directory, release):
         problems.append(f"forced exit {result['forced_exit']}: {result.get('forced_detail')}")
     if result.get('exit_code') != 0:
         problems.append(f"Editor exit {result.get('exit_code')} (signal {result.get('signal')})")
-    if 'NVIDIA' not in (result.get('renderer') or '') or result.get('renderer_ok') is not True:
-        problems.append(f"renderer {result.get('renderer')!r} is not the NVIDIA GPU")
     if not result.get('shutdown_logged'):
         problems.append('the Editor log has no shutdown line')
-    if result.get('kind') != 'editor-gpu' or result.get('require_gpu') is not True:
-        problems.append(f"kind {result.get('kind')} / require_gpu {result.get('require_gpu')}")
-    launcher = result.get('launcher') or {}
-    if launcher.get('exit') != 0:
-        problems.append(f"launcher exit {launcher.get('exit')}")
+    problems += guarded_editor.result_problems(result)
     problems += command_problems(result.get('command') or [], release)
     return problems
 
 
 def command_problems(command, release):
-    problems = []
-    if command[:3] != ['vglrun', '-d', 'egl']:
-        problems.append(f'not a vglrun EGL command: {command[:3]}')
-    editor = command[3] if len(command) > 3 else ''
-    if not editor.endswith('/Editor/Unity') or f'/{release}/' not in editor:
-        problems.append(f'Editor {editor!r} is not release {release}')
-    if '-batchmode' in command:
-        problems.append('-batchmode must not be passed')
-    for flag in ('-nographics', '-quit'):
-        if flag in command:
-            problems.append(f'{flag} must not be passed')
-    pairs = list(zip(command, command[1:]))
-    if ('-executeMethod', 'ProbeRunner.Record') not in pairs:
-        problems.append('-executeMethod ProbeRunner.Record is missing')
-    if command.count('-executeMethod') != 1:
-        problems.append('more than one -executeMethod')
-    return problems
+    return guarded_editor.command_problems(command, release)
 
 
 def input_problems(directory, release):
@@ -429,7 +410,7 @@ def log_problems(path):
     for number, line in enumerate(lines, 1):
         if any(re.search(pattern, line) for pattern in EDITOR_LOG_FATAL):
             found.append(f'Editor log {number}: {line.strip()[:160]}')
-    if not any(line.startswith('Renderer:') for line in lines):
+    if not guarded_editor.renderer_logged(lines):
         found.append('the Editor log names no renderer')
     return found
 

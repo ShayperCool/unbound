@@ -33,8 +33,9 @@ import sys
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
-from probe_paths import reference_file, run_root  # noqa: E402
-from editor_runner import vulkan_display_env, EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
+import guarded_editor  # noqa: E402
+from probe_paths import device_reference, reference_file, run_root  # noqa: E402
+from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
 
 sys.path.insert(0, str(PROBE))
 import guards  # noqa: E402
@@ -43,7 +44,9 @@ LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
 # The graphics device of the Linux GPU Editor (OpenGL Core). Platform-conditional declarations
 # (the SHADER_API_D3D11 block) are measured for this device only.
-DEVICE = 'OpenGLCore'
+# The graphics device of the windowed GPU Editor: OpenGL Core on Linux, Metal on macOS arm64
+# (tests/guarded_editor.py).
+DEVICE = guarded_editor.DEVICE
 # The external progress deadline also covers cold import and an unresponsive Editor.
 # Only probe transitions and the completed record count as progress, never Editor log noise.
 # ProbeRunner's 600 s watchdog is an additional check when Editor updates still run.
@@ -90,8 +93,8 @@ def paths(work, repeat):
 def job(work, repeat, release):
     project, out, capture = paths(work, repeat)
     return EditorJob(project.resolve() if project.exists() else project, out/'editor.log', out,
-                     args=['-force-glcore', '-executeMethod', 'ProbeRunner.Record'], batch=False, graphics=True, private_display=False,
-                     env={**vulkan_display_env(), VARIABLE: str(capture.resolve() if capture.exists() else capture),
+                     args=[*guarded_editor.DEVICE_ARGS, '-executeMethod', 'ProbeRunner.Record'], batch=False, graphics=True, private_display=False,
+                     env={**guarded_editor.display_env(), VARIABLE: str(capture.resolve() if capture.exists() else capture),
                           'UNBOUND_PROBE_UNITY_VERSION': release},
                      timeout=HARD_TIMEOUT, shutdown_grace=SHUTDOWN_GRACE, kill_grace=KILL_GRACE,
                      progress_files=(capture/'runner-events.jsonl', capture/'values.jsonl'),
@@ -199,7 +202,7 @@ def publish(work, release):
         with target.open('xb') as stream:
             stream.write((first/'capture/values.jsonl').read_bytes())
         print('published', target)
-    return publish_reference([work/r for r in REPEATS], reference_file(PROBE, 'jsonl'),
+    return publish_reference([work/r for r in REPEATS], device_reference(reference_file(PROBE, 'jsonl'), PROBE, publishing=True),
                              lambda directory: ['capture/values.jsonl'], write,
                              complete=[jsonl_complete('capture/values.jsonl', guards.MARKER)], gpu=True)
 

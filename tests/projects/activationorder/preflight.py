@@ -11,7 +11,8 @@ for byte (read only; no setup Editor). LAUNCH_DIR is that capture's output direc
 prelaunch-inputs.json, inputs.json and editor-run.json). The copy must prove it is that fixture:
   * the launch receipt (prelaunch-inputs.json, written inside the admitted lease before the Editor
     started) lists exactly this probe's Packages/ and ProjectSettings/ files with these bytes, for
-    this copy, release and a strict exit-0 NVIDIA batchmode GPU Editor result;
+    this copy, release and a strict exit-0 batchmode GPU Editor result (NVIDIA on Linux,
+    Metal on macOS arm64: tests/guarded_editor.py);
   * the copy's Packages/ are still these bytes; its ProjectSettings/ too, except the setting that
     capture's runner changes in Edit mode after the compile (EditorSettings.asset, only
     m_AsyncShaderCompilation 1 -> 0, saved at shutdown), listed with its exact line change;
@@ -53,6 +54,8 @@ import subprocess
 import sys
 
 PROBE = Path(__file__).resolve().parent
+sys.path.insert(0, str(PROBE.parents[1]))
+import guarded_editor  # noqa: E402
 SOURCES = {'Assembly-CSharp': ['Assets/Scripts/ActivationOrderProbe.cs'],
            'Assembly-CSharp-Editor': ['Assets/Editor/ProbeRunner.cs']}
 FOLDERS = {'Assembly-CSharp': 'Assets/Scripts/', 'Assembly-CSharp-Editor': 'Assets/Editor/'}
@@ -113,10 +116,9 @@ def identity(copy, launch, release, written, proof):
                        'kind': result.get('kind'), 'command': result.get('command')}
     if receipt.get('selected_release') != release:
         problems.append(f"the launch selected {receipt.get('selected_release')}, not {release}")
-    if result.get('exit_code') != 0 or result.get('forced_exit') or result.get('kind') != 'editor-gpu' \
-            or 'NVIDIA' not in (result.get('renderer') or '') or '-batchmode' not in (result.get('command') or []) \
-            or Path((result.get('command') or ['', '', '', '', '', '', ''])[6]).resolve() != copy.resolve():
-        problems.append('the launch is not a strict exit-0 NVIDIA batchmode GPU Editor run of this copy')
+    launch_problems = guarded_editor.batch_fixture_problems(result, copy)
+    if launch_problems:
+        problems.append('the launch is not a strict exit-0 batchmode GPU Editor run of this copy: '+'; '.join(launch_problems))
     launched = {}
     for key, entry in receipt.get('files', {}).items():
         label, _, rel = key.partition('/')    # runner/tool inputs have plain names
@@ -300,7 +302,7 @@ def main():
         corrects = {'path': str(args.corrects.resolve()), 'sha256': sha(args.corrects.read_bytes()),
                     'errors': {a: r['errors'] for a, r in failed['results'].items()}}
     copy = rsp_dir.parents[3]
-    data_root = Path.home()/'Unity/Hub/Editor'/args.release/'Editor/Data'
+    data_root = guarded_editor.editor_data(args.release)
     launch = args.launch.resolve(strict=True)
     record = {'release': args.release, 'rsp_dir': str(rsp_dir), 'copy': str(copy), 'launch': str(launch),
               'out': str(args.out.resolve()), 'not_used': ['/shared (compiler server)'],
