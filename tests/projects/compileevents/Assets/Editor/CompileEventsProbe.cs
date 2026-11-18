@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Compilation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -13,6 +14,8 @@ using UnityEngine;
 /// What the compilation pipeline raises when a script changes in Play mode (an assembly of its own,
 /// Assets/Other, does not depend on the changed script): the probe rewrites
 /// Assets/Scripts/Changing.cs three times (a new value, a compile error, the fix), asks for a refresh,
+/// then asks for a compilation (both RequestScriptCompilation overloads) and sets the scripting
+/// define symbols (the active target's, another target's, the active target's again unchanged),
 /// and logs every compilation and assembly reload event to a file in $COMPILE_EVENTS_OUT (it
 /// survives a domain reload); values.jsonl summarizes each round.
 /// </summary>
@@ -21,11 +24,14 @@ public static class CompileEventsProbe
 {
     const string Variable = "COMPILE_EVENTS_OUT";
     const int Settle = 30, Timeout = 3000;
+    /// <summary>How long a request round waits for its compilation (they run asynchronously).</summary>
+    const double RequestSeconds = 20;
     static string Out => Environment.GetEnvironmentVariable(Variable);
     static string EventLog => Path.Combine(Out, "events.log");
     static string StepFile => Path.Combine(Out, "step.txt");
     static readonly Dictionary<object, int> s_Contexts = new Dictionary<object, int>();
     static int s_Wait, s_Waited;
+    static double s_RoundStart;
 
     static CompileEventsProbe()
     {
@@ -89,11 +95,33 @@ public static class CompileEventsProbe
         "public static class Changing { public const int Version = 2; }\n",
     };
 
+    /// <summary>Each round's change: the three rewrites, then the requests.</summary>
+    static readonly Action[] s_Rounds =
+    {
+        () => Rewrite(0), () => Rewrite(1), () => Rewrite(2),
+        () => CompilationPipeline.RequestScriptCompilation(),
+        () => CompilationPipeline.RequestScriptCompilation(RequestScriptCompilationOptions.CleanBuildCache),
+        () => PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "PROBE_DEFINE"),
+        () => PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Android, "OTHER_DEFINE"),
+        () => PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "PROBE_DEFINE"),
+    };
+
+    static void Rewrite(int version)
+    {
+        File.WriteAllText("Assets/Scripts/Changing.cs", s_Versions[version]);
+        AssetDatabase.Refresh();
+    }
+
+    /// <summary>What the round left: the scripts' define and the targets' define symbols.</summary>
+    static void LogState() =>
+        Log("state defined=" + Defined.On + " standalone=" + PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone)
+            + " android=" + PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android));
+
     static void Tick()
     {
         if (!EditorApplication.isPlaying) return;
         int step = Step;
-        if (step >= s_Versions.Length + 1) return;
+        if (step >= s_Rounds.Length + 1) return;
         s_Waited++;
         if (step > 0)
         {
@@ -101,13 +129,15 @@ public static class CompileEventsProbe
             var lines = File.ReadAllLines(EventLog);
             int begin = Array.LastIndexOf(lines, "round " + step);
             bool finished = begin >= 0 && lines.Skip(begin).Any(l => l.StartsWith("compilationFinished", StringComparison.Ordinal));
-            if (!finished && s_Waited < Timeout) return;
+            bool request = step > s_Versions.Length;
+            if (!finished && (request ? EditorApplication.timeSinceStartup - s_RoundStart < RequestSeconds || EditorApplication.isCompiling : s_Waited < Timeout)) return;
             if (++s_Wait < Settle) return;
         }
         else if (++s_Wait < Settle) return;
         s_Wait = 0;
         s_Waited = 0;
-        if (step == s_Versions.Length)
+        if (step > 0) LogState();
+        if (step == s_Rounds.Length)
         {
             Step = step + 1;
             Finish();
@@ -115,8 +145,8 @@ public static class CompileEventsProbe
         }
         Step = step + 1;
         Log("round " + (step + 1));
-        File.WriteAllText("Assets/Scripts/Changing.cs", s_Versions[step]);
-        AssetDatabase.Refresh();
+        s_RoundStart = EditorApplication.timeSinceStartup;
+        s_Rounds[step]();
     }
 
     /// <summary>Play mode's own events: its state changes and [InitializeOnEnterPlayMode].</summary>
@@ -137,7 +167,7 @@ public static class CompileEventsProbe
         var before = (first < 0 ? lines : lines.Take(first)).Select(Token).ToArray();
         int reload = Array.LastIndexOf(before, "beforeAssemblyReload");
         Put("start.load", string.Join(",", before.Skip(Math.Max(0, reload >= 0 ? reload : Array.LastIndexOf(before, "initializeOnLoad")))));
-        for (int round = 1; round <= s_Versions.Length; round++)
+        for (int round = 1; round <= s_Rounds.Length; round++)
         {
             int begin = Array.IndexOf(lines, "round " + round);
             int end = Array.IndexOf(lines, "round " + (round + 1));
@@ -147,6 +177,8 @@ public static class CompileEventsProbe
             // The order of the round's events, an assembly's (compiled or not required) being
             // "assembly": their order among themselves is not Unity's to keep.
             var order = new List<string>();
+            Put(k + "state", events.LastOrDefault(e => e.StartsWith("state ", StringComparison.Ordinal)) ?? "none");
+            events = events.Where(e => !e.StartsWith("state ", StringComparison.Ordinal)).ToArray();
             Put(k + "playMode", string.Join(",", events.Where(IsPlayModeEvent).Select(Token)));
             foreach (var e in events.Where(e => !IsPlayModeEvent(e)))
             {

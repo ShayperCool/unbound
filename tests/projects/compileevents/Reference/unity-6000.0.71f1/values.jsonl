@@ -1,20 +1,58 @@
 {"k":"start.load","v":"beforeAssemblyReload,initializeOnLoad,enterPlayMode:None,didReloadScripts,afterAssemblyReload,playMode:EnteredPlayMode"}
+{"k":"round1.state","v":"state defined=False standalone= android="}
 {"k":"round1.playMode","v":""}
 {"k":"round1.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
 {"k":"round1.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp-Editor.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp-Editor.dll || assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Warning Assets/Scripts/Warn.cs(1,50) Assets/Scripts/Warn.cs(1,50): warning CS0219: The variable 'unused' is assigned but its value is never used] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
 {"k":"round1.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
 {"k":"round1.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round1.contextShared","v":"True"}
+{"k":"round2.state","v":"state defined=False standalone= android="}
 {"k":"round2.playMode","v":""}
 {"k":"round2.order","v":"compilationStarted,assembly,compilationFinished"}
 {"k":"round2.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Error Assets/Scripts/Changing.cs(1,59) Assets/Scripts/Changing.cs(1,59): error CS1525: Invalid expression term ';'] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
 {"k":"round2.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Other.dll"}
 {"k":"round2.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round2.contextShared","v":"True"}
+{"k":"round3.state","v":"state defined=False standalone= android="}
 {"k":"round3.playMode","v":""}
 {"k":"round3.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
 {"k":"round3.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp-Editor.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp-Editor.dll || assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Warning Assets/Scripts/Warn.cs(1,50) Assets/Scripts/Warn.cs(1,50): warning CS0219: The variable 'unused' is assigned but its value is never used] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
 {"k":"round3.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
 {"k":"round3.contexts","v":"Bee.BeeDriver.ActiveBuild"}
 {"k":"round3.contextShared","v":"True"}
+{"k":"round4.state","v":"state defined=False standalone= android="}
+{"k":"round4.playMode","v":""}
+{"k":"round4.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
+{"k":"round4.assemblies","v":""}
+{"k":"round4.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Assembly-CSharp.dll,Library/ScriptAssemblies/Other.dll"}
+{"k":"round4.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round4.contextShared","v":"True"}
+{"k":"round5.state","v":"state defined=False standalone= android="}
+{"k":"round5.playMode","v":""}
+{"k":"round5.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
+{"k":"round5.assemblies","v":""}
+{"k":"round5.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Assembly-CSharp.dll,Library/ScriptAssemblies/Other.dll"}
+{"k":"round5.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round5.contextShared","v":"True"}
+{"k":"round6.state","v":"state defined=True standalone=PROBE_DEFINE android="}
+{"k":"round6.playMode","v":""}
+{"k":"round6.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}
+{"k":"round6.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp-Editor.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp-Editor.dll || assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Warning Assets/Scripts/Warn.cs(1,50) Assets/Scripts/Warn.cs(1,50): warning CS0219: The variable 'unused' is assigned but its value is never used] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll || assemblyCompilationFinished Library/ScriptAssemblies/Other.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Other.dll"}
+{"k":"round6.notRequired","v":""}
+{"k":"round6.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round6.contextShared","v":"True"}
+{"k":"round7.state","v":"state defined=True standalone=PROBE_DEFINE android=OTHER_DEFINE"}
+{"k":"round7.playMode","v":""}
+{"k":"round7.order","v":""}
+{"k":"round7.assemblies","v":""}
+{"k":"round7.notRequired","v":""}
+{"k":"round7.contexts","v":""}
+{"k":"round7.contextShared","v":"False"}
+{"k":"round8.state","v":"state defined=True standalone=PROBE_DEFINE android=OTHER_DEFINE"}
+{"k":"round8.playMode","v":""}
+{"k":"round8.order","v":""}
+{"k":"round8.assemblies","v":""}
+{"k":"round8.notRequired","v":""}
+{"k":"round8.contexts","v":""}
+{"k":"round8.contextShared","v":"False"}
 {"k":"complete","v":true}

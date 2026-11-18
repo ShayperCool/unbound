@@ -11,4 +11,4 @@ BASE = (HERE.parent/'compileevents', ['Assets', 'Packages', 'ProjectSettings'])
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(HERE, 'CompileEventsProbe.Record', 'COMPILE_EVENTS_OUT',
-                              tolerance=0, engine_args=['--headless', '6000', '--watch'], macos_batch=True, base=BASE))
+                              tolerance=0, engine_args=['--headless', '200000', '--watch'], macos_batch=True, base=BASE))

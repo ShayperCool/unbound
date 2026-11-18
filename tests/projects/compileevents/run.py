@@ -8,4 +8,4 @@ import value_probe  # noqa: E402
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(Path(__file__).resolve().parent, 'CompileEventsProbe.Record', 'COMPILE_EVENTS_OUT',
-                              tolerance=0, engine_args=['--headless', '6000', '--watch'], macos_batch=True))
+                              tolerance=0, engine_args=['--headless', '200000', '--watch'], macos_batch=True))

@@ -11,7 +11,13 @@ CompilationPipeline's compilationStarted, compilationFinished, assemblyCompilati
 assemblyCompilationFinished and assemblyCompilationNotRequired and to AssemblyReloadEvents, and logs
 each event to a file in its output folder (it survives a domain reload). In Play mode it rewrites
 `Assets/Scripts/Changing.cs` three times (a new constant, a compile error, a fixed constant) and asks
-for a refresh. `Assets/Scripts/Warn.cs` has a warning; `Assets/Other` is an assembly of its own that
+for a refresh; then it calls `CompilationPipeline.RequestScriptCompilation()` and
+`RequestScriptCompilation(RequestScriptCompilationOptions.CleanBuildCache)` and
+`PlayerSettings.SetScriptingDefineSymbols` for Standalone (`PROBE_DEFINE`), for Android
+(`OTHER_DEFINE`) and for Standalone again with the same value, one round each (these rounds wait
+20 seconds for their compilation, which runs asynchronously). `Assets/Scripts/Defined.cs` tells
+whether the scripts were compiled with `PROBE_DEFINE`; each round's `state` row records it with
+both targets' define symbols. `Assets/Scripts/Warn.cs` has a warning; `Assets/Other` is an assembly of its own that
 does not depend on the changed script. Per round: the order of the events, an assembly's (compiled
 or not required) being `assembly` because their order among themselves is Unity's own; each compiled
 assembly's started and finished events with its messages (type, file, line, column, text); the
@@ -27,7 +33,16 @@ for each assembly that did not need compiling, then compilationFinished with the
 scripts' load and afterAssemblyReload; a failed one compiles only the failing assembly (its error in
 the messages), reports its dependents as not required and reloads nothing. Every domain load runs
 the editor scripts' load, then `[DidReloadScripts]`, then afterAssemblyReload; entering Play mode
-(Enter Play Mode Options on, None: the domain reloads) first sends beforeAssemblyReload.
+(Enter Play Mode Options on, None: the domain reloads) first sends beforeAssemblyReload. A request
+with nothing changed, with or without CleanBuildCache, raises compilationStarted,
+assemblyCompilationNotRequired for every assembly and compilationFinished, and then reloads the
+domain all the same. New define symbols for the active build target (Standalone) compile every
+assembly with them and reload; another target's symbols, or the active target's unchanged, start
+no compilation. The documented contracts: [RequestScriptCompilation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Compilation.CompilationPipeline.RequestScriptCompilation.html)
+("Allows you to request that the Editor recompile scripts in the project") and
+[SetScriptingDefineSymbols](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/PlayerSettings.SetScriptingDefineSymbols.html)
+(the symbols of a named build target); the probe's Android round and unchanged round are the
+controls where the call must not recompile.
 
 Unbound raises the compilation events from its hot reload's recompilation, an assembly whose
 changed inputs matched an earlier output of its compile cache (an edit undone) counting as compiled
@@ -44,5 +59,5 @@ session's Play mode entry; `start.load`, because Unbound's editor scripts load b
 Play mode entry's pre-reload events, which the Editor sends in its Edit-mode domain (their
 beforeAssemblyReload handlers run in the domain that then plays). Play mode entered from an
 Edit-mode session raises no reload events. Unmeasured: the order of several messages of one assembly (Unbound
-lists errors, then warnings), RequestScriptCompilation, "Recompile After Finished Playing" and
-"Stop Playing And Recompile", other releases.
+lists errors, then warnings), "Recompile After Finished Playing" and "Stop Playing And Recompile",
+other releases.
