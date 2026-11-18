@@ -102,12 +102,12 @@ PARTS = ('Assets', 'Packages', 'ProjectSettings')
 
 def assemble(probe, out, base=None):
     """The probe's project in out/project. `base` is (another probe's directory, the paths of
-    its project to take): those first, then the probe's own parts over them (where it has them)."""
+    its project to take), or a list of them: those first, then the probe's own parts over them
+    (where it has them)."""
     target = out/'project'
     if target.exists():
         raise SystemExit(f'refusing to overwrite {target}')
-    if base:
-        directory, paths = base
+    for directory, paths in ([base] if isinstance(base, tuple) else base or []):
         for path in paths:
             source = directory/path
             if source.is_dir():
@@ -364,7 +364,7 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     authors inputs the engine needs: publish keeps the first capture's project as that set and
     the gate assembles it instead of the bare fixture. record_timeout is how many seconds an
     Editor capture may take before it is stopped (a probe whose capture authors and builds much
-    gives itself more). base is (another probe's directory, paths in it): parts of that probe's
+    gives itself more). base is (another probe's directory, paths in it), or a list of them: parts of those probes'
     project (scenes, bakes, settings) this probe's own files are laid over. macos_batch: the
     probe's values depend on neither the OS nor the graphics device, so it may be recorded with
     the macOS Editor in batch mode. metal: the graphics device decides the probe's values, so on
