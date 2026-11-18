@@ -172,7 +172,8 @@ namespace UnityEngine
         /// and the macOS Editor, which has no CPU lightmapper on Apple silicon, bakes that with the GPU
         /// one: a new object, Enlighten and a stored ProgressiveCPU all read ProgressiveGPU there (the
         /// Unity 6000.0.71f1 macOS Editor, Apple M2 Pro: tests/projects/lightingassets
-        /// metal/values.jsonl; Linux reads ProgressiveCPU, values.jsonl). Other values read as stored.</summary>
+        /// metal/values.jsonl; Linux reads ProgressiveCPU, values.jsonl). Other values read as stored.
+        /// Measured on 6000.0.71f1 only; other releases are taken alike (unmeasured).</summary>
         static Lightmapper Effective(Lightmapper stored) =>
             (int)stored is 0 or (int)Lightmapper.ProgressiveCPU
                 ? (Application.platform == RuntimePlatform.OSXEditor
