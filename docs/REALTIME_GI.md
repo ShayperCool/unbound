@@ -787,8 +787,8 @@ is how the Editor's products are made in the measured release, as follows.
   its centre (in voxels), its normal (a unit apart counting as 4 voxels) and what it sees
   through the scene's surfaces in 32 directions spread over the sphere (per direction its
   cosine times the distance to the nearest surface up to 8 voxels, over 8, counting as 2
-  voxels). The Editor's trees group clusters by what they see as well (its `Room` tree: 312
-  leaves, at most 5 children per parent, depth 7); its own grouping is not reproduced. With a
+  voxels). The Editor's own grouping is not reproduced (its `Room` tree: 312 leaves, at most 5
+  children per parent, every leaf at depth 7). With a
   tree over positions alone (runs of neighbours along a Morton curve) the probe budget below
   put 118 of the Room's 243 probe coefficients off in `room-base`; with this one 17.
 - Compared with the Editor's clusters: `Room` 336 clusters (312) and 10124 points (10192),
