@@ -12,6 +12,8 @@ local space) and emits particles with known values into them:
   `ParticleSystemJobData` parameter (as UniTask's trigger does);
 - `NoAxis` (plain particles), `MeshAlloc` (AllocateMeshIndexAttribute, billboards), `Pending` (a job
   writing velocities, then SetParticles of new positions in LateUpdate);
+- eleven parent/child pairs (`pair.*`), one particle in the parent and two in its child; seven
+  schedule the job on the child, four (`self*`) on the parent;
 - `Other` (one particle), `Empty` (playing, no particles), `Stopped` (stopped with clearing when it
   is made, after Play On Awake played it), `Paused` (one particle, paused), `Simulated` (one particle,
   never played, later Simulate), `StopClearLater`/`StopLater` (playing, empty, stopped with and
@@ -52,8 +54,13 @@ Measured:
   system with a pending job just before (each version repeatable). It is not recorded; whether that
   comes from timing or from a read of one system waiting for the whole job batch is unmeasured. SetParticles in LateUpdate keeps the job's velocities
   with the script's positions.
+- In the message, a script's call after scheduling a job (one that waits 100 ms, then notes the
+  count it saw) neither runs the job nor waits for it, and the job, run after the messages, sees the
+  system as the call left it: Clear (count 0), Emit (count 2), a parent's Clear(true) or Stop with
+  clearing on its child (0); a parent's Clear(false), Stop, Pause or Play(true) leave the child's 2, and
+  a read changes nothing.
 
-Unmeasured: Mesh-mode mesh indices, a script's write in the message while its job has not run, jobs
+Unmeasured: Mesh-mode mesh indices, a script's write in the message after its job has started, jobs
 scheduled from a Simulate call's message (Unbound completes them before the call returns),
 sub-emitters, world simulation space, other releases. Unbound finishes the messages' jobs right after
 the messages, so its scripts always see a job's writes after the update.

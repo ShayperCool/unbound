@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEditor;
@@ -185,6 +186,28 @@ namespace ParticleJobsProbe
         public void Execute(ParticleSystemJobData d) => Count[0] = d.count;
     }
 
+    /// <summary>Waits, then notes that it ran (count + 1) in the probe's slot for its pair: a read
+    /// right after a script's call shows whether the call waited for the job.</summary>
+    struct SlowJob : IJobParticleSystem
+    {
+        public const int Milliseconds = 100;
+        public int Slot;
+
+        public void Execute(ParticleSystemJobData d)
+        {
+            Thread.Sleep(Milliseconds);
+            Interlocked.Exchange(ref ParticleJobsBehaviour.s_PairDone[Slot], d.count + 1);
+        }
+    }
+
+    /// <summary>The message on a pair's parent system.</summary>
+    public class PairCallback : MonoBehaviour
+    {
+        public int slot;
+
+        void OnParticleUpdateJobScheduled() => ParticleJobsBehaviour.PairScheduled(this);
+    }
+
     /// <summary>Receives the message on a probe system's object and hands it to the probe.</summary>
     public class JobCallback : MonoBehaviour
     {
@@ -234,6 +257,12 @@ namespace ParticleJobsProbe
         int m_ParameterCalls;
         int m_ParameterCount = -1;
 
+        /// <summary>Parent and child systems: in the parent's message a slow job is scheduled on the
+        /// child (on the parent for the "self" calls), then the parent gets the pair's call.</summary>
+        static readonly string[] s_PairCalls = { "none", "clearWithChildren", "clearAlone", "stopClearWithChildren", "stopWithChildren", "pauseWithChildren", "playWithChildren", "selfNone", "selfClear", "selfEmit", "selfRead" };
+        internal static readonly int[] s_PairDone = new int[s_PairCalls.Length];
+        ParticleSystem[] m_PairParents, m_PairChildren;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Create()
         {
@@ -278,7 +307,7 @@ namespace ParticleJobsProbe
             catch (Exception e) { return e.GetType().Name + ": " + e.Message; }
         }
 
-        ParticleSystem MakeSystem(string name, bool customData, Vector3 at, bool neverPlay = false)
+        ParticleSystem MakeSystem(string name, bool customData, Vector3 at, bool neverPlay = false, bool callback = true)
         {
             var go = new GameObject(name);
             go.transform.position = at;
@@ -307,9 +336,11 @@ namespace ParticleJobsProbe
                 custom.SetVectorComponentCount(ParticleSystemCustomData.Custom1, 4);
                 for (int i = 0; i < 4; i++) custom.SetVector(ParticleSystemCustomData.Custom1, i, i + 1f);
             }
-            var callback = go.AddComponent<JobCallback>();
-            callback.label = name;
-            m_Calls[name] = 0;
+            if (callback)
+            {
+                go.AddComponent<JobCallback>().label = name;
+                m_Calls[name] = 0;
+            }
             if (neverPlay) go.SetActive(true);
             return ps;
         }
@@ -379,6 +410,18 @@ namespace ParticleJobsProbe
             m_MeshAlloc = MakeSystem("MeshAlloc", false, new Vector3(100f, 0f, 0f));
             m_MeshAlloc.AllocateMeshIndexAttribute();
             m_Pending = MakeSystem("Pending", false, new Vector3(110f, 0f, 0f));
+            m_PairParents = new ParticleSystem[s_PairCalls.Length];
+            m_PairChildren = new ParticleSystem[s_PairCalls.Length];
+            for (int i = 0; i < s_PairCalls.Length; i++)
+            {
+                var parent = MakeSystem("PairParent" + i, false, new Vector3(200f + 10f * i, 0f, 0f), callback: false);
+                parent.gameObject.AddComponent<PairCallback>().slot = i;
+                var child = MakeSystem("PairChild" + i, false, Vector3.zero, callback: false);
+                child.transform.SetParent(parent.transform, false);
+                m_PairParents[i] = parent;
+                m_PairChildren[i] = child;
+                parent.Play(true);
+            }
             m_NoAxis.Play();
             m_MeshAlloc.Play();
             m_Pending.Play();
@@ -394,6 +437,29 @@ namespace ParticleJobsProbe
         {
             s_Probe.m_ParameterCalls++;
             s_Probe.m_ParameterCount = data.count;
+        }
+
+        internal static void PairScheduled(PairCallback callback) => s_Probe.OnPairScheduled(callback.slot);
+
+        void OnPairScheduled(int slot)
+        {
+            if (m_Phase != 2) return;
+            var parent = m_PairParents[slot];
+            string call = s_PairCalls[slot];
+            new SlowJob { Slot = slot }.Schedule(call.StartsWith("self", StringComparison.Ordinal) ? parent : m_PairChildren[slot]);
+            switch (call)
+            {
+                case "selfClear": parent.Clear(false); break;
+                case "selfEmit": parent.Emit(1); break;
+                case "selfRead": Put("pair.selfRead.countRead", parent.particleCount); break;
+                case "clearWithChildren": parent.Clear(true); break;
+                case "clearAlone": parent.Clear(false); break;
+                case "stopClearWithChildren": parent.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear); break;
+                case "stopWithChildren": parent.Stop(true, ParticleSystemStopBehavior.StopEmitting); break;
+                case "pauseWithChildren": parent.Pause(true); break;
+                case "playWithChildren": parent.Play(true); break;
+            }
+            Put("pair." + s_PairCalls[slot] + ".jobDoneAfterCall", Interlocked.CompareExchange(ref s_PairDone[slot], 0, 0));
         }
 
         void OnScheduled(JobCallback callback)
@@ -461,6 +527,11 @@ namespace ParticleJobsProbe
                     m_NoAxis.Emit(2);
                     m_MeshAlloc.Emit(2);
                     m_Pending.Emit(2);
+                    for (int i = 0; i < s_PairCalls.Length; i++)
+                    {
+                        m_PairParents[i].Emit(1);
+                        m_PairChildren[i].Emit(2);
+                    }
                     Emit(m_Other, Vector3.zero, Vector3.zero, Vector3.one, Vector3.zero, Vector3.zero, new Color32(1, 1, 1, 1), 4f, 1u);
                     Emit(m_Paused, Vector3.zero, Vector3.zero, Vector3.one, Vector3.zero, Vector3.zero, new Color32(1, 1, 1, 1), 4f, 1u);
                     m_Paused.Pause();
@@ -479,6 +550,12 @@ namespace ParticleJobsProbe
                 {
                     m_AttributeHandles.Complete();
                     Put("meshAlloc.meshIndex0.nextFrame", m_MeshAllocNext[5]);
+                    for (int i = 0; i < s_PairCalls.Length; i++)
+                    {
+                        string k = "pair." + s_PairCalls[i] + ".";
+                        Put(k + "jobDoneLater", Interlocked.CompareExchange(ref s_PairDone[i], 0, 0));
+                        Put(k + "counts", m_PairParents[i].particleCount + " " + m_PairChildren[i].particleCount);
+                    }
                     var pending = Particles(m_Pending);
                     Put("pending.p0.position", pending[0].position);
                     Put("pending.p0.velocity", pending[0].velocity);

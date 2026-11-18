@@ -63,9 +63,43 @@
 {"k":"read.p2.randomSeed","v":"77"}
 {"k":"read.p2.meshIndex","v":"-1"}
 {"k":"sync.inMessage.position0","v":"1 2 3"}
+{"k":"pair.selfRead.countRead","v":"1"}
+{"k":"pair.selfRead.jobDoneAfterCall","v":"0"}
+{"k":"pair.none.jobDoneAfterCall","v":"0"}
+{"k":"pair.clearWithChildren.jobDoneAfterCall","v":"0"}
+{"k":"pair.clearAlone.jobDoneAfterCall","v":"0"}
+{"k":"pair.stopClearWithChildren.jobDoneAfterCall","v":"0"}
+{"k":"pair.stopWithChildren.jobDoneAfterCall","v":"0"}
+{"k":"pair.pauseWithChildren.jobDoneAfterCall","v":"0"}
+{"k":"pair.playWithChildren.jobDoneAfterCall","v":"0"}
+{"k":"pair.selfNone.jobDoneAfterCall","v":"0"}
+{"k":"pair.selfClear.jobDoneAfterCall","v":"0"}
+{"k":"pair.selfEmit.jobDoneAfterCall","v":"0"}
 {"k":"sync.lateUpdate.jobDone","v":true}
 {"k":"sync.lateUpdate.jobDone.position0","v":"10 20 30"}
 {"k":"meshAlloc.meshIndex0.nextFrame","v":"3"}
+{"k":"pair.none.jobDoneLater","v":"3"}
+{"k":"pair.none.counts","v":"1 2"}
+{"k":"pair.clearWithChildren.jobDoneLater","v":"1"}
+{"k":"pair.clearWithChildren.counts","v":"0 0"}
+{"k":"pair.clearAlone.jobDoneLater","v":"3"}
+{"k":"pair.clearAlone.counts","v":"0 2"}
+{"k":"pair.stopClearWithChildren.jobDoneLater","v":"1"}
+{"k":"pair.stopClearWithChildren.counts","v":"0 0"}
+{"k":"pair.stopWithChildren.jobDoneLater","v":"3"}
+{"k":"pair.stopWithChildren.counts","v":"1 2"}
+{"k":"pair.pauseWithChildren.jobDoneLater","v":"3"}
+{"k":"pair.pauseWithChildren.counts","v":"1 2"}
+{"k":"pair.playWithChildren.jobDoneLater","v":"3"}
+{"k":"pair.playWithChildren.counts","v":"1 2"}
+{"k":"pair.selfNone.jobDoneLater","v":"2"}
+{"k":"pair.selfNone.counts","v":"1 2"}
+{"k":"pair.selfClear.jobDoneLater","v":"1"}
+{"k":"pair.selfClear.counts","v":"0 2"}
+{"k":"pair.selfEmit.jobDoneLater","v":"3"}
+{"k":"pair.selfEmit.counts","v":"2 2"}
+{"k":"pair.selfRead.jobDoneLater","v":"2"}
+{"k":"pair.selfRead.counts","v":"1 2"}
 {"k":"pending.p0.position","v":"5 5 5"}
 {"k":"pending.p0.velocity","v":"0 0 7"}
 {"k":"pending.p1.position","v":"6 6 6"}
