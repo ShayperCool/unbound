@@ -68,6 +68,14 @@ namespace Unbound.Tests
                 Assert.Equal(new[] { "Warning: 'B4G4R4A4_UNormPack16' is not supported. RenderTexture::GetTemporary fallbacks to R8G8B8A8_UNorm format on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support." },
                     collect.Lines);
                 On("Vulkan", () => Assert.Throws<ArgumentException>(() => new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.B4G4R4A4_UNormPack16, 0))));
+                // A descriptor of the RenderTextureFormat falls back alike, warned once
+                // (tests/projects/samplerstates Packed.ARGB4444.mip.* on Vulkan).
+                collect.Lines.Clear();
+                var described = On("Vulkan", () => new RenderTextureDescriptor(2, 2, RenderTextureFormat.ARGB4444, 0).graphicsFormat);
+                Assert.Equal(GraphicsFormat.R8G8B8A8_UNorm, described);
+                Assert.Single(collect.Lines);
+                Assert.Equal(GraphicsFormat.B4G4R4A4_UNormPack16,
+                    On("OpenGLCore", () => new RenderTextureDescriptor(2, 2, RenderTextureFormat.ARGB4444, 0).graphicsFormat));
             }
             finally
             {

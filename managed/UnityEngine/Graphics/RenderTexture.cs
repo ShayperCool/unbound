@@ -170,8 +170,9 @@ namespace UnityEngine
 
         /// <summary>A RenderTextureFormat the device cannot render becomes its compatible format,
         /// with the Editor's warning, where a descriptor's GraphicsFormat throws: the Vulkan Editor
-        /// makes `new RenderTexture(2, 1, 0, RenderTextureFormat.ARGB4444)` an R8G8B8A8_UNorm
-        /// target and logs this (tests/projects/samplerstates Packed.ARGB4444 on Vulkan).</summary>
+        /// makes `new RenderTexture(2, 1, 0, RenderTextureFormat.ARGB4444)` and an ARGB4444
+        /// RenderTextureDescriptor R8G8B8A8_UNorm targets and logs this once for each
+        /// (tests/projects/samplerstates Packed.ARGB4444 on Vulkan).</summary>
         internal static GraphicsFormat SupportedOrFallback(GraphicsFormat requested)
         {
             if (!Compat.RenderingMeasured || requested == GraphicsFormat.None || SystemInfo.IsFormatSupported(requested, GraphicsFormatUsage.Render))
@@ -838,8 +839,12 @@ namespace UnityEngine
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount)
             : this(width, height, colorFormat, depthBufferBits, mipCount, RenderTextureReadWrite.Linear) { }
 
+        /// <summary>A RenderTextureFormat the device cannot render becomes its compatible format,
+        /// with the Editor's warning, as RenderTexture's constructors of one do (the Vulkan
+        /// Editor's ARGB4444 descriptor makes an R8G8B8A8_UNorm target: tests/projects/samplerstates
+        /// Packed.ARGB4444.mip.*); a descriptor of a GraphicsFormat keeps it.</summary>
         public RenderTextureDescriptor(int width, int height, RenderTextureFormat colorFormat, int depthBufferBits, int mipCount, RenderTextureReadWrite readWrite)
-            : this(width, height, GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite),
+            : this(width, height, RenderTexture.SupportedOrFallback(GraphicsFormatUtility.GetGraphicsFormat(colorFormat, readWrite)),
                 colorFormat == RenderTextureFormat.Shadowmap ? GraphicsFormatUtility.ShadowmapDepthFormatForBits(depthBufferBits) : GraphicsFormatUtility.DepthStencilFormatForBits(depthBufferBits), mipCount)
         {
             if (colorFormat == RenderTextureFormat.Shadowmap) shadowSamplingMode = ShadowSamplingMode.CompareDepths;

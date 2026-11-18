@@ -765,6 +765,7 @@ public class UitkProbe : MonoBehaviour
             Fill(2, UnityEngine.Rendering.BlendMode.One, UnityEngine.Rendering.BlendMode.One);
             Sample("blend", FilterMode.Point, 0.25f);
             DestroyImmediate(packed);
+            PackedLevelsAndColors(rows, key, format, fill, target, readback);
         }
         DestroyImmediate(fill); DestroyImmediate(read); DestroyImmediate(readback); DestroyImmediate(target);
     }
@@ -825,6 +826,77 @@ public class UitkProbe : MonoBehaviour
         DestroyImmediate(only); DestroyImmediate(readback);
         target.Release(); DestroyImmediate(target);
         depth.Release(); DestroyImmediate(depth);
+    }
+
+    /// <summary>Recorded after the other packed rows: a packed target's mip level 1 (of a 2x2
+    /// target with mips) cleared to (0.25, 0.5, 0.3, 0.7), drawn with that color, and made by
+    /// GenerateMips from level 0 drawn so (`.mip.*`); and the packed target as the second color
+    /// of a two-target binding (a float first color, a separate depth target) cleared with a
+    /// command buffer to that color (`.mrt.clear`), point sampled.</summary>
+    static void PackedLevelsAndColors(StringBuilder rows, string key, RenderTextureFormat format, Material fill,
+        RenderTexture target, Texture2D readback)
+    {
+        var read = new Material(Shader.Find("Probe/SamplerStates/PackedReadLod"));
+        var color = new Color(0.25f, 0.5f, 0.3f, 0.7f);
+        var mipped = new RenderTexture(new RenderTextureDescriptor(2, 2, format, 0)
+            { useMipMap = true, autoGenerateMips = false, sRGB = false });
+        mipped.filterMode = FilterMode.Point;
+        mipped.Create();
+        void Sample(RenderTexture source, string name, int lod)
+        {
+            read.SetTexture("_P", source);
+            read.SetFloat("_U", 0.25f);
+            read.SetFloat("_Lod", lod);
+            Graphics.Blit(null, target, read);
+            Row(rows, key + "." + name, Read(target, readback));
+        }
+        void DrawLevel(int level)
+        {
+            fill.SetFloat("_Mode", 0f);
+            fill.SetFloat("_Src", (float)UnityEngine.Rendering.BlendMode.One);
+            fill.SetFloat("_Dst", (float)UnityEngine.Rendering.BlendMode.Zero);
+            var previous = RenderTexture.active;
+            Graphics.SetRenderTarget(mipped, level);
+            GL.PushMatrix();
+            GL.LoadOrtho();
+            fill.SetPass(0);
+            GL.Begin(GL.QUADS);
+            GL.TexCoord2(0, 0); GL.Vertex3(0, 0, 0);
+            GL.TexCoord2(0, 1); GL.Vertex3(0, 1, 0);
+            GL.TexCoord2(1, 1); GL.Vertex3(1, 1, 0);
+            GL.TexCoord2(1, 0); GL.Vertex3(1, 0, 0);
+            GL.End();
+            GL.PopMatrix();
+            RenderTexture.active = previous;
+        }
+        using (var clear = new UnityEngine.Rendering.CommandBuffer())
+        {
+            clear.SetRenderTarget(mipped, 1);
+            clear.ClearRenderTarget(false, true, color);
+            Graphics.ExecuteCommandBuffer(clear);
+        }
+        Sample(mipped, "mip.clear", 1);
+        DrawLevel(1);
+        Sample(mipped, "mip.draw", 1);
+        DrawLevel(0);
+        mipped.GenerateMips();
+        Sample(mipped, "mip.generated", 1);
+        DestroyImmediate(mipped);
+
+        var first = new RenderTexture(2, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        var second = new RenderTexture(2, 1, 0, format, RenderTextureReadWrite.Linear) { filterMode = FilterMode.Point };
+        var depth = new RenderTexture(2, 1, 24, RenderTextureFormat.Depth);
+        first.Create(); second.Create(); depth.Create();
+        using (var clear = new UnityEngine.Rendering.CommandBuffer())
+        {
+            clear.SetRenderTarget(new UnityEngine.Rendering.RenderTargetIdentifier[] { first, second }, depth);
+            clear.ClearRenderTarget(false, true, color);
+            Graphics.ExecuteCommandBuffer(clear);
+        }
+        Sample(second, "mrt.clear", 0);
+        Sample(first, "mrt.clear.first", 0);
+        DestroyImmediate(first); DestroyImmediate(second); DestroyImmediate(depth);
+        DestroyImmediate(read);
     }
 
     static Color Read(RenderTexture texture, Texture2D readback)

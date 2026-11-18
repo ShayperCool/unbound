@@ -3717,15 +3717,6 @@ impl UnityRenderer {
                         self.mark_msaa_written(&target);
                     }
                     let color = resources::unorm8_clear(target.format, color);
-                    let color = match target.packed {
-                        owned::PACKED_565 if self.conventions.packed_clears_round => {
-                            resources::packed_clear(color, [5, 6, 5, 0])
-                        }
-                        owned::PACKED_5551 if self.conventions.packed_clears_round => {
-                            resources::packed_clear(color, [5, 5, 5, 1])
-                        }
-                        _ => color,
-                    };
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -3744,8 +3735,10 @@ impl UnityRenderer {
                         let pass = self.new_pass(target.clone());
                         passes.push(Op::Pass(pass));
                     }
+                    let conventions = self.conventions;
                     let pass = last_pass(&mut passes);
                     if full && pass.items.is_empty() {
+                        // Each color's own packing rounds this when the pass begins.
                         if clear_color {
                             pass.color_load = wgpu::LoadOp::Clear(wgpu::Color {
                                 r: color[0] as f64,
@@ -3769,7 +3762,13 @@ impl UnityRenderer {
                                 clear_depth,
                             },
                         );
-                        let mut color = color;
+                        // The clear program writes one color: the first color's packing.
+                        let mut color = packed_clear(
+                            conventions,
+                            target.packed,
+                            level_of(&target.texture),
+                            color,
+                        );
                         if target.alpha_one {
                             color[3] = 1.0;
                         }
@@ -5574,16 +5573,31 @@ impl UnityRenderer {
                 );
             }
             // The first color, then the further ones (cleared or loaded alike; integer ones
-            // store the clear color's bits).
-            let load = |format, alpha_one| match pass.color_load {
+            // store the clear color's bits, packed ones round it as their device does).
+            let conventions = self.conventions;
+            let load = |format, alpha_one, packed, level| match pass.color_load {
                 wgpu::LoadOp::Clear(mut c) => {
                     if alpha_one {
                         c.a = 1.0;
                     }
-                    wgpu::LoadOp::Clear(resources::integer_clear(
-                        format,
-                        resources::unorm8_clear_color(format, c),
-                    ))
+                    let c = resources::unorm8_clear_color(format, c);
+                    let [r, g, b, a] = packed_clear(
+                        conventions,
+                        packed,
+                        level,
+                        [c.r as f32, c.g as f32, c.b as f32, c.a as f32],
+                    );
+                    let c = if packed == 0 {
+                        c
+                    } else {
+                        wgpu::Color {
+                            r: r as f64,
+                            g: g as f64,
+                            b: b as f64,
+                            a: a as f64,
+                        }
+                    };
+                    wgpu::LoadOp::Clear(resources::integer_clear(format, c))
                 }
                 load => load,
             };
@@ -5592,7 +5606,12 @@ impl UnityRenderer {
                 depth_slice: pass.target.depth_slice,
                 resolve_target: pass.target.resolve.as_ref(),
                 ops: wgpu::Operations {
-                    load: load(pass.target.format, pass.target.alpha_one),
+                    load: load(
+                        pass.target.format,
+                        pass.target.alpha_one,
+                        pass.target.packed,
+                        level_of(&pass.target.texture),
+                    ),
                     store: wgpu::StoreOp::Store,
                 },
             }))
@@ -5602,7 +5621,7 @@ impl UnityRenderer {
                     depth_slice: e.depth_slice,
                     resolve_target: e.resolve.as_ref(),
                     ops: wgpu::Operations {
-                        load: load(e.format, e.alpha_one),
+                        load: load(e.format, e.alpha_one, e.packed, level_of(&e.texture)),
                         store: wgpu::StoreOp::Store,
                     },
                 })
@@ -6041,6 +6060,32 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
 
 /// A packed target's texels (`CopyKind::Packed565`): each 8-bit channel keeps its top `BITS` bits,
 /// repeated below them to fill the byte (0 bits: no channel, read as 1).
+/// The mip level of a target's single-sample texture (texture, layer, level); 0 without one.
+fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
+    texture.as_ref().map_or(0, |(_, _, level)| *level)
+}
+
+/// A clear color as a packed color keeps it: rounded to its channels' bits where the device's
+/// clears round (`DeviceConventions::packed_clears_round`) and the cleared level is a texture's
+/// first, else as given (its packing then truncates it as a draw's: on the Vulkan Editor a
+/// clear of mip level 1 and a further color's clear at level 0 differ so, Unity 6000.0.71f1,
+/// tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`).
+fn packed_clear(
+    conventions: DeviceConventions,
+    packed: u8,
+    level: u32,
+    color: [f32; 4],
+) -> [f32; 4] {
+    if !conventions.packed_clears_round || level != 0 {
+        return color;
+    }
+    match packed {
+        owned::PACKED_565 => resources::packed_clear(color, [5, 6, 5, 0]),
+        owned::PACKED_5551 => resources::packed_clear(color, [5, 5, 5, 1]),
+        _ => color,
+    }
+}
+
 const PACKED_TEXELS_WGSL: &str = r#"
 @group(0) @binding(0) var source: texture_2d<f32>;
 
@@ -6355,6 +6400,30 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A packed clear rounds to the channels' bits on a device whose clears round, at a
+    /// texture's first level only (each color by its own packing); elsewhere it stays for the
+    /// packing to truncate (tests/projects/samplerstates `Packed.*.clear`, `.mip.clear`,
+    /// `.mrt.clear`, Vulkan and OpenGL Core Editors).
+    #[test]
+    fn packed_clears_round_at_the_first_level_where_the_device_rounds() {
+        use unbound_compat::GraphicsDevice;
+        let vulkan = DeviceConventions::of(GraphicsDevice::Vulkan);
+        let gl = DeviceConventions::of(GraphicsDevice::OpenGLCore);
+        let color = [0.25, 0.5, 0.3, 0.7];
+        // 0.5 of 31 rounds to 16 (132/255), of 63 to 32 (130/255); alpha 1 of 1555 rounds to 1.
+        assert_eq!(
+            packed_clear(vulkan, owned::PACKED_5551, 0, color),
+            [66.0 / 255.0, 132.0 / 255.0, 74.0 / 255.0, 1.0]
+        );
+        assert_eq!(
+            packed_clear(vulkan, owned::PACKED_565, 0, color)[1],
+            130.0 / 255.0
+        );
+        assert_eq!(packed_clear(vulkan, owned::PACKED_565, 1, color), color);
+        assert_eq!(packed_clear(gl, owned::PACKED_565, 0, color), color);
+        assert_eq!(packed_clear(vulkan, 0, 0, color), color);
+    }
 
     #[test]
     fn a_renderers_color_of_the_vertices_multiplies_them_as_bytes() {

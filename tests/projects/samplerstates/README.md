@@ -31,7 +31,7 @@ every sample lies between two texels, so its value tells the state it was sample
 | InlineWords | whole-sampler words together: `MirrorOnceRepeat`, and `Mirror_RepeatU` |
 | BadFilters, BadClampRepeat, BadClampMirror, BadAniso, BadAnisoTail, BadBare | wrongly spelt inline samplers: two filters, `Clamp` with `Repeat` or with `Mirror`, the levels `Aniso3` and `Aniso8_2`, and one whose name does not start with `sampler` |
 | Lenient* (`.pointRepeat`, `.bilinearClamp`, `.pointMirror`) | recorded last: a texture of two texels (0.25, 0.75) of three own states through wrongly spelt inline names (`sampler_PointLinearClamp`, `sampler_LinearPointClamp`, `sampler_TrilinearPointClamp`, `sampler_PointClampRepeat`, `sampler_PointClampMirror`, `sampler_PointMirrorClamp`, `sampler_PointClampAniso3`, `my_point_clamp_aniso3_sampler`) at u 0.4, 1.4, -0.4 and 1.9, where the texture's state and the state a name spells differ |
-| Packed.&lt;format&gt;.* | recorded last: 4444, 5-6-5 and 1-5-5-5 targets (a float target as the control) of two texels: (0.25, 0.5, 0.3, 0.7) drawn and cleared, point sampled; 0.2 and 0.6 side by side sampled between them through a bilinear state; 0.25 then 0.04 added by a blended draw |
+| Packed.&lt;format&gt;.* | recorded last: 4444, 5-6-5 and 1-5-5-5 targets (a float target as the control) of two texels: (0.25, 0.5, 0.3, 0.7) drawn and cleared, point sampled; 0.2 and 0.6 side by side sampled between them through a bilinear state; 0.25 then 0.04 added by a blended draw; mip level 1 of a 2x2 target with mips cleared, drawn, and generated from level 0 (`.mip.*`); the target as the second color of a two-color binding cleared by a command buffer (`.mrt.clear`, the float first color `.mrt.clear.first`) |
 
 `_Shadow` is a point filtered `RenderTextureFormat.Depth` target cleared to the far plane. The
 cases that sample it are drawn again with four depth targets of two texels, 0.25 and 0.75
@@ -79,7 +79,11 @@ and makes an RGBA8 target); a 5-6-5 or 1-5-5-5 target keeps each drawn 8-bit val
 repeated below them when sampled (0.5, stored as 127, reads 125/255 in a 6-bit channel; 0.2, 51,
 reads 48/255), its missing alpha reads 1 and a one-bit alpha 0 or 1; bilinear filtering and
 blending read those values. A clear keeps the top bits on OpenGL Core and rounds on Vulkan (0.5
-clears to 130/255 in 6 bits, 132/255 in 5).
+clears to 130/255 in 6 bits, 132/255 in 5), a further color's too (`.mrt.clear`, the packed target
+as the second of two colors), but not at mip level 1 (`.mip.clear`, a command buffer's clear of
+that level, keeps the top bits as a draw does); mips GenerateMips makes from a packed level read
+its packed values (`.mip.generated`). A RenderTextureDescriptor of ARGB4444 falls back on Vulkan
+as the RenderTexture constructor does, with the same warning.
 
 Unbound: `run.py check` compares an Unbound capture (`--force-glcore`, or `--force-vulkan` with
 `--device vulkan`) with the device's reference. `residuals.json`, `residuals-vulkan.json` and
