@@ -211,7 +211,18 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
   `InlineMirrorOnce`; Metal has no mirror-once mode), `Cmp*` and `Compute.Compare*`, and the
   16-bit depth with stencil made as `D32_SFloat_S8_UInt`.
 
-Unbound on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
+`DepthReads.*` (recorded last) reads a depth-only target no draw has sampled yet: a kernel loads
+both texels as four floats, a draw reads the first through an integer slot (`Texture2D<uint4>`,
+the 16-bit halves of its four words in `.high` and `.low`), a draw samples it as floats, then the
+kernel and the integer read again. The Metal Editor gives (d, d, d, 1) to the kernel and the
+float draw, and the bits of (d, d, d, 1.0) to the integer slot, before and after the draw; OpenGL
+Core and Vulkan give (d, 0, 0, 1) and the bits of (d, 0, 0, 1.0) (OpenGL Core reads 0.25 as
+0x3E800001, 0.25000003). So what a kernel or an integer slot reads does not depend on whether a
+draw sampled the target first.
+
+Unbound on Metal: 632/645; the 13 `Packed.*` rows of the 16-bit targets (ARGB4444, RGB565,
+ARGB1555) differ because Unbound stores them with 8 bits per channel there (unresolved). Before the
+`Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
 the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
 the pipeline failure the program's (`GraphicsDevice::draws_depth_output_without_depth_buffer`: the pass
 is not drawn, with a warning).
