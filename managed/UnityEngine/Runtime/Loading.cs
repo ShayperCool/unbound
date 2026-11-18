@@ -800,10 +800,10 @@ namespace Unbound.Runtime
             var file = LoadFile(guid);
             if (file == null) return Array.Empty<Object>();
             var list = new List<Object>();
-            if (file.MainObject != null) list.Add(file.MainObject);
+            if (file.MainObject != null) list.Add(Reloaded(file.MainObject));
             foreach (var o in file.Objects.Values)
                 if (o != file.MainObject && (hierarchy || !(o is Component) && !(o is GameObject))
-                    && (file.SourceObjects == null || !file.SourceObjects.Contains(o))) list.Add(o);
+                    && (file.SourceObjects == null || !file.SourceObjects.Contains(o))) list.Add(Reloaded(o));
             return list;
         }
 
@@ -1112,7 +1112,7 @@ namespace Unbound.Runtime
 
         /// <summary>An asset obtained again is loaded again (an unused-unloaded text asset is listed
         /// once more).</summary>
-        static Object Reloaded(Object asset)
+        internal static Object Reloaded(Object asset)
         {
             if (asset is TextAsset text) text.Unloaded = false;
             return asset;

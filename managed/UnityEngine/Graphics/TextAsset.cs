@@ -62,10 +62,13 @@ namespace UnityEngine
         internal bool Unloaded;
 
         /// <summary>UnloadUnusedAssets of an imported text asset: its bytes are freed and it counts
-        /// as unloaded. False for a text asset no file made, or one already unloaded.</summary>
+        /// as unloaded. False for a text asset no file made, one already unloaded, and one whose
+        /// GetData views are still out: the engine does not see every reference (statics of classes
+        /// with class initialization, the stack), so a view's holder may still be in use.</summary>
         internal bool UnloadUnused()
         {
             if (m_SourceFile == null || Unloaded) return false;
+            if (m_Safety.versionNode != IntPtr.Zero || m_Pinned.IsAllocated) return false;
             if (DataLoaded) UnloadData();
             Unloaded = true;
             return true;

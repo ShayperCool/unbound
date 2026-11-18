@@ -204,7 +204,7 @@ namespace UnityEngine
             return kept ?? all;
         }
 
-        public static Object InstanceIDToObject(int instanceID) => ObjectRegistry.FindById(instanceID);
+        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.Reloaded(ObjectRegistry.FindById(instanceID));
 
         public static bool InstanceIDIsValid(int instanceId) => ObjectRegistry.FindById(instanceId) != null;
 
@@ -244,7 +244,7 @@ namespace Unbound.Runtime
 
         /// <summary>A Resources or AssetBundle asynchronous load: it waits behind queued scene
         /// operations (<see cref="UnityEngine.SceneManagement.SceneManagerInternal.QueueAssetLoad"/>),
-        /// else finishes on the next frame.</summary>
+        /// reporting progress 0 there (unmeasured), else finishes on the next frame.</summary>
         internal static void CompleteAsAssetLoad(UnityEngine.AsyncOperation op)
         {
             if (!op.HasOperation) UnityEngine.AsyncOperation.Bind(op);

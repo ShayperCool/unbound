@@ -36,5 +36,33 @@ namespace Unbound.Tests
                 File.Delete(file);
             }
         }
+
+        static class Holder
+        {
+            // A class with class initialization: the unused-asset walk does not read its statics.
+            internal static readonly System.Collections.Generic.List<TextAsset> Held = new System.Collections.Generic.List<TextAsset>();
+        }
+
+        [Fact]
+        public void ATextAssetWithAViewOutIsNotUnloaded()
+        {
+            var file = Path.GetTempFileName();
+            File.WriteAllText(file, "text");
+            var asset = new TextAsset(file, "viewed", 4);
+            try
+            {
+                Holder.Held.Add(asset);
+                var view = asset.GetData<byte>();
+                Assert.False(asset.UnloadUnused());
+                Assert.Contains(asset, Resources.FindObjectsOfTypeAll<TextAsset>());
+                Assert.Equal((byte)'t', view[0]);
+            }
+            finally
+            {
+                Holder.Held.Remove(asset);
+                Object.DestroyImmediate(asset);
+                File.Delete(file);
+            }
+        }
     }
 }

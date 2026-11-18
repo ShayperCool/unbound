@@ -6,7 +6,8 @@ using Unbound.Runtime;
 namespace UnityEngine.SceneManagement
 {
     /// <summary>
-    /// Scene loads, scene unloads and unused-asset unloads share one queue, as the background
+    /// Scene loads, scene unloads, unused-asset unloads and Resources/AssetBundle asynchronous
+    /// loads share one queue, as the background
     /// loader and the main-thread integration of Unity 6000.0 do (Scripting API:
     /// Application.backgroundLoadingPriority, AsyncOperation.priority, allowSceneActivation;
     /// measured: tests/projects/editorcallbacks --queue-budget):
