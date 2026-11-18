@@ -52,8 +52,11 @@ static DEFINE_OVERRIDES: Mutex<BTreeMap<String, Vec<String>>> = Mutex::new(BTree
 pub const DEFINES_VARIABLE: &str = "UNBOUND_SCRIPTING_DEFINES";
 
 /// A reload a locked session deferred (`EditorApplication.UnlockReloadAssemblies`): the session
-/// stops for its restart.
-pub(crate) fn request_restart() {
+/// stops for its restart (in Debug when the deferred edit was refused for optimized code).
+pub(crate) fn request_restart(optimized: bool) {
+    if optimized && std::env::var("UNBOUND_CODE_OPTIMIZATION").as_deref() != Ok("release") {
+        RESTART_IN_DEBUG.store(true, Ordering::SeqCst);
+    }
     RESTART.store(true, Ordering::SeqCst);
 }
 

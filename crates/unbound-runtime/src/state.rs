@@ -947,7 +947,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         }
         "script-reload" => {
             // The reload a locked session deferred (EditorApplication.UnlockReloadAssemblies).
-            crate::game::request_restart();
+            #[derive(Deserialize)]
+            struct Request {
+                #[serde(default)]
+                optimized: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::game::request_restart(r.optimized);
             Ok("{}".to_string())
         }
         "scripting-defines" => {

@@ -167,45 +167,54 @@ namespace UnityEditor
         }
 
         static int s_ReloadLocks;
-        static bool s_ReloadPending;
+        static bool s_ReloadPending, s_ReloadPendingOptimized;
 
         /// <summary>The session is an Edit-mode one (<c>unbound test</c>): the Test Framework holds the
         /// reload lock for its whole run and expects a reload to resume it, which a restarted session
         /// cannot.</summary>
         internal static bool s_EditModeSession;
 
-        /// <summary>The reload a locked session deferred: beforeAssemblyReload, then the session
-        /// restarts (Unbound's reload of the scripts). An Edit-mode session goes on with the loaded
-        /// scripts instead (the Editor's <c>-runTests</c> exits before its reload). Tests replace it.</summary>
-        internal static Action s_DeferredReload = () =>
+        /// <summary>The reload a locked session deferred (<paramref name="optimized"/>: an edit it
+        /// could not patch because the code was compiled with optimizations): beforeAssemblyReload,
+        /// then the session restarts (Unbound's reload of the scripts). Unbound's choices
+        /// (unmeasured in the Editor): an Edit-mode session goes on with the loaded scripts, so a
+        /// test run ends with its results; a session that is quitting does not restart. Tests
+        /// replace it.</summary>
+        internal static Action<bool> s_DeferredReload = optimized =>
         {
             if (s_EditModeSession)
             {
                 Debug.LogWarning("Unbound: the scripts asked for a reload during an Edit-mode session (unbound test), which does not reload them; the run goes on with the loaded scripts");
                 return;
             }
+            if (PlayerLoopDriver.QuitRequested) return;
             AssemblyReloadEvents.RaiseBefore();
-            Native.Call("script-reload", "{}");
+            Native.Call("script-reload", optimized ? "{\"optimized\":true}" : "{}");
         };
 
         /// <summary>No assembly reloads until as many unlocks: a compilation still compiles and
         /// raises its events, its reload waits for the last unlock (the Test Framework holds the lock
-        /// during a run).</summary>
+        /// during an Edit-mode run).</summary>
         public static void LockReloadAssemblies() => s_ReloadLocks++;
 
         public static void UnlockReloadAssemblies()
         {
             if (s_ReloadLocks > 0) s_ReloadLocks--;
             if (s_ReloadLocks != 0 || !s_ReloadPending) return;
-            s_ReloadPending = false;
-            s_DeferredReload();
+            bool optimized = s_ReloadPendingOptimized;
+            s_ReloadPending = s_ReloadPendingOptimized = false;
+            s_DeferredReload(optimized);
         }
 
-        /// <summary>Whether a reload now must wait (<see cref="DeferReload"/>).</summary>
-        internal static bool ReloadLocked => s_ReloadLocks > 0;
-
-        /// <summary>Remembers a reload asked for while locked, for the last unlock.</summary>
-        internal static void DeferReload() => s_ReloadPending = true;
+        /// <summary>While the reload is locked, remembers a reload asked for, for the last unlock,
+        /// and answers true; else false (the caller reloads now).</summary>
+        internal static bool TryDeferReload(bool optimized)
+        {
+            if (s_ReloadLocks == 0) return false;
+            s_ReloadPending = true;
+            s_ReloadPendingOptimized |= optimized;
+            return true;
+        }
         public static void OpenProject(string projectPath, params string[] args) =>
             Stubs.Ignored("EditorApplication.OpenProject", "does not open another project");
         /// <summary>The Editor exits with the code (the Test Framework's run result).</summary>

@@ -1313,11 +1313,11 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
     let exit = game.exit_code();
     let code = exit.unwrap_or(3);
     drop(game);
-    // A reload of the scripts outside the Test Framework's lock (at their load: a compilation they
-    // asked for, new scripting defines) runs the tests again in a relaunched session, as `run`
-    // does; a run that keeps asking stops with an error instead of relaunching without end. A
-    // reload the lock deferred to the end of the run does not: the run exits with its results, as
-    // the Editor's `-runTests` does.
+    // A reload of the scripts outside the Test Framework's lock (at their load, or in a Play Mode
+    // run, which holds no lock: a compilation they asked for, new scripting defines) runs the tests
+    // again from the start in a relaunched session, as `run` does; a run that keeps asking stops
+    // with an error instead of relaunching without end. A reload the lock deferred is not done in
+    // an Edit-mode session, whose run exits with its results (Unbound's choice; unmeasured).
     if unbound_runtime::restart_requested() && exit.is_none() {
         let relaunches: u32 = std::env::var(TEST_RELAUNCHES_VARIABLE)
             .ok()

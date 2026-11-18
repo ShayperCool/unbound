@@ -185,9 +185,8 @@ internal static class HotReload
     static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch, bool optimized = false)
     {
         // Locked reloads (EditorApplication.LockReloadAssemblies) wait for the last unlock.
-        if (UnityEditor.EditorApplication.ReloadLocked)
+        if (UnityEditor.EditorApplication.TryDeferReload(optimized))
         {
-            UnityEditor.EditorApplication.DeferReload();
             response.Status = "reload-deferred";
             response.Reason = reason;
             response.Milliseconds = watch.ElapsedMilliseconds;
