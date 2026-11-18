@@ -61,6 +61,19 @@ public static class MissingPrefabAuthor
         holder.marker = nested.GetComponent<Marker>();
         holder.box = nestedWheel.GetComponent<BoxCollider>();
         holder.sphere = nested.GetComponent<SphereCollider>();
+        // A second nested instance, deactivated, referenced at its root and child.
+        var hidden = (GameObject)PrefabUtility.InstantiatePrefab(innerAsset);
+        hidden.name = "InnerB";
+        hidden.transform.SetParent(outer.transform, false);
+        hidden.SetActive(false);
+        holder.objects = new System.Collections.Generic.List<GameObject>(holder.objects) { hidden, hidden.transform.Find("Wheel").gameObject }.ToArray();
+        // Children renamed and moved in the instance: their overrides may sort before the root's.
+        for (int i = 1; i <= 3; i++)
+        {
+            var extra = nested.transform.Find("Wheel" + i);
+            extra.name = "W" + i;
+            extra.localPosition = new Vector3(i, 2 * i, 0);
+        }
         var outerAsset = PrefabUtility.SaveAsPrefabAsset(outer, "Assets/Probe/Outer.prefab");
         Object.DestroyImmediate(outer);
 

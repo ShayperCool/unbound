@@ -100,6 +100,13 @@ public static class MissingPrefabRunner
         ProbeLog.Refs("play-instantiate/Holder", clone == null ? null : clone.GetComponent<Holder>());
         var variant = AssetDatabase.LoadAssetAtPath<GameObject>(Variant);
         ProbeLog.Tree("play-variant", variant == null ? null : Object.Instantiate(variant));
-        EditorApplication.ExitPlaymode();
+        // A runtime load of the scene, additively.
+        phase = "play-load";
+        var load = SceneManager.LoadSceneAsync("Probe", LoadSceneMode.Additive);
+        load.completed += _ =>
+        {
+            phase = "play";
+            EditorApplication.ExitPlaymode();
+        };
     }
 }

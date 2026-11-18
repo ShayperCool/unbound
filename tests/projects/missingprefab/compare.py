@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Compare one variant's records with the Editor's, exactly.
 
-Every missing, extra and differing key is printed. `residuals.json` (next to this file) lists the
+Every missing, extra and differing key is printed. The records keep the order the Editor logged
+and woke objects in: for each log record, the number of Awake records before it must match too
+(which objects wake first is not compared: the Editor does not specify it). `residuals.json` (next to this file) lists the
 known differences as {reason: ["<variant>:<key>", ...]}: such a key that differs is printed with
 its reason and does not fail; one that matches again is printed as resolved (remove it).
 """
@@ -18,6 +20,17 @@ def load(path):
     if not rows or len(rows) != len(result):
         raise SystemExit(f'{path}: empty or duplicate record')
     return result
+
+
+def awakes_before_logs(records):
+    """For each log record, how many Awake records the file has before it."""
+    out, awakes = {}, 0
+    for key in records:
+        if key.startswith(('awake/', 'marker-awake/')):
+            awakes += 1
+        elif key.startswith('log/'):
+            out[key] = awakes
+    return out
 
 
 def main():
@@ -46,6 +59,11 @@ def main():
         else:
             failed += 1
             print(line)
+    ref_order, got_order = awakes_before_logs(ref), awakes_before_logs(got)
+    for key in sorted(ref_order.keys() & got_order.keys()):
+        if ref_order[key] != got_order[key]:
+            failed += 1
+            print(f'order {key}: Unity logs it after {ref_order[key]} Awake records, Unbound after {got_order[key]}')
     stale = sorted(k for k in reasons if k not in ref)
     for key in stale:
         print(f'FAIL {key}: a recorded residual for a key the reference does not have')

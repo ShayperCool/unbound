@@ -37,6 +37,9 @@ MANIFEST = '{"dependencies":{"com.unity.modules.physics":"1.0.0"}}'
 
 def prepare(project, release, variant):
     shared.prepare(project, release)
+    settings = project / 'ProjectSettings/EditorBuildSettings.asset'
+    guid = (PROBE / 'Assets/Probe/Probe.unity.meta').read_text().split('guid: ')[1].splitlines()[0]
+    settings.write_text(settings.read_text().replace('  m_configObjects: {}', '  - enabled: 1\n    path: Assets/Probe/Probe.unity\n    guid: GUID\n  m_configObjects: {}'.replace('GUID', guid)))
     (project / 'Packages/manifest.json').write_text(MANIFEST)
     if variant == 'missing':
         for name in ('Inner.prefab', 'Inner.prefab.meta'):
