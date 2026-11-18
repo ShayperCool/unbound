@@ -1230,13 +1230,6 @@ namespace UnityEditor
         Quality16Bit = 1,
         Quality32BitDownscaled = 2,
     }
-    public enum AndroidETC2FallbackOverride
-    {
-        UseBuildSettings = 0,
-        Quality32Bit = 1,
-        Quality16Bit = 2,
-        Quality32BitDownscaled = 3,
-    }
     public enum AndroidGamepadSupportLevel
     {
         SupportsDPad = 0,
@@ -24367,13 +24360,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public void OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SplitterState.OnBeforeSerialize"); }
         [global::Unbound.Stub] public void OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SplitterState.OnAfterDeserialize"); }
     }
-    public enum SpriteImportMode
-    {
-        None = 0,
-        Single = 1,
-        Multiple = 2,
-        Polygon = 3,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class SpriteInspector : global::UnityEditor.Editor
     {
@@ -25199,128 +25185,11 @@ namespace UnityEditor
         internal bool removeMatte { [global::Unbound.Stub] get { this.CheckImporterState("get_removeMatte"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporter.removeMatte"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_removeMatte"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporter.removeMatte"); } }
         public bool ignorePngGamma { [global::Unbound.Stub] get { this.CheckImporterState("get_ignorePngGamma"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporter.ignorePngGamma"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_ignorePngGamma"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporter.ignorePngGamma"); } }
     }
-    public enum TextureImporterAlphaSource
-    {
-        None = 0,
-        FromInput = 1,
-        FromGrayScale = 2,
-    }
-    public enum TextureImporterCompression
-    {
-        Uncompressed = 0,
-        Compressed = 1,
-        CompressedHQ = 2,
-        CompressedLQ = 3,
-    }
     internal enum TextureImporterCookieLightType
     {
         Spot = 0,
         Directional = 1,
         Point = 2,
-    }
-    public enum TextureImporterCubemapConvolution
-    {
-        None = 0,
-        Specular = 1,
-        Diffuse = 2,
-    }
-    public enum TextureImporterFormat
-    {
-        Automatic = -1,
-        [global::System.Obsolete("Enum member TextureImporterFormat.AutomaticCompressed is obsolete. Use the TextureImporter.textureCompression property instead.")] AutomaticCompressed = -1,
-        [global::System.Obsolete("Enum member TextureImporterFormat.Automatic16bit is obsolete. Use TextureImporter.textureCompression property instead.")] Automatic16bit = -2,
-        [global::System.Obsolete("Enum member TextureImporterFormat.AutomaticTruecolor is obsolete. Use the TextureImporter.textureCompression property instead.")] AutomaticTruecolor = -3,
-        [global::System.Obsolete("Enum member TextureImporterFormat.AutomaticCrunched is obsolete. Use the TextureImporter.crunchedCompression property instead.")] AutomaticCrunched = -5,
-        [global::System.Obsolete("Enum member TextureImporterFormat.AutomaticHDR is obsolete. HDR is handled automatically now.")] AutomaticHDR = -6,
-        [global::System.Obsolete("Enum member TextureImporterFormat.AutomaticCompressedHDR is obsolete. HDR is handled automatically now.")] AutomaticCompressedHDR = -7,
-        DXT1 = 10,
-        DXT5 = 12,
-        RGB16 = 7,
-        RGB24 = 3,
-        Alpha8 = 1,
-        R16 = 9,
-        R8 = 63,
-        RG16 = 62,
-        ARGB16 = 2,
-        RGBA32 = 4,
-        ARGB32 = 5,
-        RGBA16 = 13,
-        RHalf = 15,
-        RGHalf = 16,
-        RGBAHalf = 17,
-        RFloat = 18,
-        RGFloat = 19,
-        RGBAFloat = 20,
-        RGB9E5 = 22,
-        BC4 = 26,
-        BC5 = 27,
-        BC6H = 24,
-        BC7 = 25,
-        DXT1Crunched = 28,
-        DXT5Crunched = 29,
-        PVRTC_RGB2 = 30,
-        PVRTC_RGBA2 = 31,
-        PVRTC_RGB4 = 32,
-        PVRTC_RGBA4 = 33,
-        ETC_RGB4 = 34,
-        [global::System.Obsolete("Enum member ATC_RGB4 is obsolete. Use ETC_RGB4 (UnityUpgradable) -> ETC_RGB4")] ATC_RGB4 = 35,
-        [global::System.Obsolete("Enum member ATC_RGBA8 is obsolete. Use ETC2_RGBA8 (UnityUpgradable) -> ETC2_RGBA8")] ATC_RGBA8 = 36,
-        EAC_R = 41,
-        EAC_R_SIGNED = 42,
-        EAC_RG = 43,
-        EAC_RG_SIGNED = 44,
-        ETC2_RGB4 = 45,
-        ETC2_RGB4_PUNCHTHROUGH_ALPHA = 46,
-        ETC2_RGBA8 = 47,
-        ASTC_4x4 = 48,
-        ASTC_5x5 = 49,
-        ASTC_6x6 = 50,
-        ASTC_8x8 = 51,
-        ASTC_10x10 = 52,
-        ASTC_12x12 = 53,
-        [global::System.Obsolete("Enum member ASTC_RGB_4x4 is obsolete. Use ASTC_4x4 (UnityUpgradable) -> ASTC_4x4")] ASTC_RGB_4x4 = -48,
-        [global::System.Obsolete("Enum member ASTC_RGB_5x5 is obsolete. Use ASTC_5x5 (UnityUpgradable) -> ASTC_5x5")] ASTC_RGB_5x5 = -49,
-        [global::System.Obsolete("Enum member ASTC_RGB_6x6 is obsolete. Use ASTC_6x6 (UnityUpgradable) -> ASTC_6x6")] ASTC_RGB_6x6 = -50,
-        [global::System.Obsolete("Enum member ASTC_RGB_8x8 is obsolete. Use ASTC_8x8 (UnityUpgradable) -> ASTC_8x8")] ASTC_RGB_8x8 = -51,
-        [global::System.Obsolete("Enum member ASTC_RGB_10x10 is obsolete. Use ASTC_10x10 (UnityUpgradable) -> ASTC_10x10")] ASTC_RGB_10x10 = -52,
-        [global::System.Obsolete("Enum member ASTC_RGB_12x12 is obsolete. Use ASTC_12x12 (UnityUpgradable) -> ASTC_12x12")] ASTC_RGB_12x12 = -53,
-        [global::System.Obsolete("Enum member ASTC_RGBA_4x4 is obsolete. Use ASTC_4x4 (UnityUpgradable) -> ASTC_4x4")] ASTC_RGBA_4x4 = -54,
-        [global::System.Obsolete("Enum member ASTC_RGBA_5x5 is obsolete. Use ASTC_5x5 (UnityUpgradable) -> ASTC_5x5")] ASTC_RGBA_5x5 = -55,
-        [global::System.Obsolete("Enum member ASTC_RGBA_6x6 is obsolete. Use ASTC_6x6 (UnityUpgradable) -> ASTC_6x6")] ASTC_RGBA_6x6 = -56,
-        [global::System.Obsolete("Enum member ASTC_RGBA_8x8 is obsolete. Use ASTC_8x8 (UnityUpgradable) -> ASTC_8x8")] ASTC_RGBA_8x8 = -57,
-        [global::System.Obsolete("Enum member ASTC_RGBA_10x10 is obsolete. Use ASTC_10x10 (UnityUpgradable) -> ASTC_10x10")] ASTC_RGBA_10x10 = -58,
-        [global::System.Obsolete("Enum member ASTC_RGBA_12x12 is obsolete. Use ASTC_12x12 (UnityUpgradable) -> ASTC_12x12")] ASTC_RGBA_12x12 = -59,
-        [global::System.Obsolete("Enum member ETC_RGB4_3DS is obsolete. Nintendo 3DS is no longer supported.")] ETC_RGB4_3DS = -60,
-        [global::System.Obsolete("Enum member ETC_RGBA8_3DS is obsolete. Nintendo 3DS is no longer supported.")] ETC_RGBA8_3DS = -61,
-        ETC_RGB4Crunched = 64,
-        ETC2_RGBA8Crunched = 65,
-        ASTC_HDR_4x4 = 66,
-        ASTC_HDR_5x5 = 67,
-        ASTC_HDR_6x6 = 68,
-        ASTC_HDR_8x8 = 69,
-        ASTC_HDR_10x10 = 70,
-        ASTC_HDR_12x12 = 71,
-        RG32 = 72,
-        RGB48 = 73,
-        RGBA64 = 74,
-        R8_SIGNED = 75,
-        RG16_SIGNED = 76,
-        RGB24_SIGNED = 77,
-        RGBA32_SIGNED = 78,
-        R16_SIGNED = 79,
-        RG32_SIGNED = 80,
-        RGB48_SIGNED = 81,
-        RGBA64_SIGNED = 82,
-    }
-    public enum TextureImporterGenerateCubemap
-    {
-        [global::System.Obsolete("This value is deprecated (use TextureImporter.textureShape instead).")] None = 0,
-        Spheremap = 1,
-        Cylindrical = 2,
-        [global::System.Obsolete("Obscure shperemap modes are not supported any longer (use TextureImporterGenerateCubemap.Spheremap instead).")] SimpleSpheremap = 3,
-        [global::System.Obsolete("Obscure shperemap modes are not supported any longer (use TextureImporterGenerateCubemap.Spheremap instead).")] NiceSpheremap = 4,
-        FullCubemap = 5,
-        AutoCubemap = 6,
     }
     [global::Unbound.Stub]
     internal unsafe partial class TextureImporterInspector : global::UnityEditor.AssetImporters.AssetImporterEditor
@@ -25429,168 +25298,6 @@ namespace UnityEditor
             [global::Unbound.Stub] public Styles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterInspector.Styles.ctor"); }
         }
     }
-    public enum TextureImporterMipFilter
-    {
-        BoxFilter = 0,
-        KaiserFilter = 1,
-    }
-    public enum TextureImporterNPOTScale
-    {
-        None = 0,
-        ToNearest = 1,
-        ToLarger = 2,
-        ToSmaller = 3,
-    }
-    public enum TextureImporterNormalFilter
-    {
-        Standard = 0,
-        Sobel = 1,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TextureImporterPlatformSettings
-    {
-        [global::Unbound.Stub] internal int m_ForceMaximumCompressionQuality_BC6H_BC7;
-        [global::Unbound.Stub] public void CopyTo(global::UnityEditor.TextureImporterPlatformSettings target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.CopyTo"); }
-        [global::Unbound.Stub] public TextureImporterPlatformSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.ctor"); }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.name"); } }
-        public bool overridden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.overridden"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.overridden"); } }
-        public bool ignorePlatformSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.ignorePlatformSupport"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.ignorePlatformSupport"); } }
-        public int maxTextureSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.maxTextureSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.maxTextureSize"); } }
-        public global::UnityEditor.TextureResizeAlgorithm resizeAlgorithm { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.resizeAlgorithm"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.resizeAlgorithm"); } }
-        public global::UnityEditor.TextureImporterFormat format { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.format"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.format"); } }
-        public global::UnityEditor.TextureImporterCompression textureCompression { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.textureCompression"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.textureCompression"); } }
-        public int compressionQuality { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.compressionQuality"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.compressionQuality"); } }
-        internal int forceMaximumCompressionQuality_BC6H_BC7 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.forceMaximumCompressionQuality_BC6H_BC7"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.forceMaximumCompressionQuality_BC6H_BC7"); } }
-        public bool crunchedCompression { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.crunchedCompression"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.crunchedCompression"); } }
-        public bool allowsAlphaSplitting { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.allowsAlphaSplitting"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.allowsAlphaSplitting"); } }
-        public global::UnityEditor.AndroidETC2FallbackOverride androidETC2FallbackOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.androidETC2FallbackOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterPlatformSettings.androidETC2FallbackOverride"); } }
-    }
-    public enum TextureImporterRGBMMode
-    {
-        Auto = 0,
-        On = 1,
-        Off = 2,
-        Encoded = 3,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TextureImporterSettings
-    {
-        [global::Unbound.Stub] public static bool Equal(global::UnityEditor.TextureImporterSettings a, global::UnityEditor.TextureImporterSettings b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.Equal"); return default; }
-        [global::Unbound.Stub] public void CopyTo(global::UnityEditor.TextureImporterSettings target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.CopyTo"); }
-        [global::System.Obsolete("ApplyTextureType(TextureImporterType, bool) is deprecated, use ApplyTextureType(TextureImporterType)")] [global::Unbound.Stub] public void ApplyTextureType(global::UnityEditor.TextureImporterType type, bool applyAll) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ApplyTextureType"); }
-        [global::Unbound.Stub] public void ApplyTextureType(global::UnityEditor.TextureImporterType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ApplyTextureType"); }
-        [global::Unbound.Stub] public TextureImporterSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ctor"); }
-        public global::UnityEditor.TextureImporterType textureType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureType"); } }
-        public global::UnityEditor.TextureImporterShape textureShape { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureShape"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureShape"); } }
-        public global::UnityEditor.TextureImporterMipFilter mipmapFilter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFilter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFilter"); } }
-        public bool mipmapEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapEnabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapEnabled"); } }
-        [global::System.Obsolete("Texture mips are now always generated in linear space")] public bool generateMipsInLinearSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.generateMipsInLinearSpace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.generateMipsInLinearSpace"); } }
-        public bool sRGBTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.sRGBTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.sRGBTexture"); } }
-        public bool fadeOut { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.fadeOut"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.fadeOut"); } }
-        public bool borderMipmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.borderMipmap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.borderMipmap"); } }
-        public bool mipMapsPreserveCoverage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipMapsPreserveCoverage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipMapsPreserveCoverage"); } }
-        public float alphaTestReferenceValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaTestReferenceValue"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaTestReferenceValue"); } }
-        public int mipmapFadeDistanceStart { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFadeDistanceStart"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFadeDistanceStart"); } }
-        public int mipmapFadeDistanceEnd { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFadeDistanceEnd"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapFadeDistanceEnd"); } }
-        public bool convertToNormalMap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.convertToNormalMap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.convertToNormalMap"); } }
-        public float heightmapScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.heightmapScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.heightmapScale"); } }
-        public global::UnityEditor.TextureImporterNormalFilter normalMapFilter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.normalMapFilter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.normalMapFilter"); } }
-        public bool flipGreenChannel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipGreenChannel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipGreenChannel"); } }
-        public global::UnityEditor.TextureImporterSwizzle swizzleR { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleR"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleR"); } }
-        public global::UnityEditor.TextureImporterSwizzle swizzleG { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleG"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleG"); } }
-        public global::UnityEditor.TextureImporterSwizzle swizzleB { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleB"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleB"); } }
-        public global::UnityEditor.TextureImporterSwizzle swizzleA { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleA"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleA"); } }
-        internal uint swizzleRaw { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleRaw"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.swizzleRaw"); } }
-        public global::UnityEditor.TextureImporterAlphaSource alphaSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaSource"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaSource"); } }
-        public global::UnityEditor.TextureImporterSingleChannelComponent singleChannelComponent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.singleChannelComponent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.singleChannelComponent"); } }
-        public int flipbookRows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipbookRows"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipbookRows"); } }
-        public int flipbookColumns { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipbookColumns"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.flipbookColumns"); } }
-        public bool readable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.readable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.readable"); } }
-        public bool streamingMipmaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.streamingMipmaps"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.streamingMipmaps"); } }
-        public int streamingMipmapsPriority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.streamingMipmapsPriority"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.streamingMipmapsPriority"); } }
-        public bool vtOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.vtOnly"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.vtOnly"); } }
-        public bool ignoreMipmapLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ignoreMipmapLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ignoreMipmapLimit"); } }
-        public global::UnityEditor.TextureImporterNPOTScale npotScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.npotScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.npotScale"); } }
-        public global::UnityEditor.TextureImporterGenerateCubemap generateCubemap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.generateCubemap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.generateCubemap"); } }
-        public global::UnityEditor.TextureImporterCubemapConvolution cubemapConvolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolution"); } }
-        public bool seamlessCubemap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.seamlessCubemap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.seamlessCubemap"); } }
-        public global::UnityEngine.FilterMode filterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.filterMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.filterMode"); } }
-        public int aniso { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.aniso"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.aniso"); } }
-        public float mipmapBias { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapBias"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.mipmapBias"); } }
-        public global::UnityEngine.TextureWrapMode wrapMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapMode"); } }
-        public global::UnityEngine.TextureWrapMode wrapModeU { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeU"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeU"); } }
-        public global::UnityEngine.TextureWrapMode wrapModeV { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeV"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeV"); } }
-        public global::UnityEngine.TextureWrapMode wrapModeW { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeW"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.wrapModeW"); } }
-        public bool alphaIsTransparency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaIsTransparency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.alphaIsTransparency"); } }
-        public bool ignorePngGamma { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ignorePngGamma"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.ignorePngGamma"); } }
-        public int spriteMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteMode"); } }
-        public float spritePixelsPerUnit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePixelsPerUnit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePixelsPerUnit"); } }
-        [global::System.Obsolete("Use spritePixelsPerUnit property instead.")] public float spritePixelsToUnits { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePixelsToUnits"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePixelsToUnits"); } }
-        public float spriteTessellationDetail { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteTessellationDetail"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteTessellationDetail"); } }
-        public uint spriteExtrude { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteExtrude"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteExtrude"); } }
-        public global::UnityEngine.SpriteMeshType spriteMeshType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteMeshType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteMeshType"); } }
-        public int spriteAlignment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteAlignment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteAlignment"); } }
-        public global::UnityEngine.Vector2 spritePivot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePivot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spritePivot"); } }
-        public global::UnityEngine.Vector4 spriteBorder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteBorder"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteBorder"); } }
-        public bool spriteGenerateFallbackPhysicsShape { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteGenerateFallbackPhysicsShape"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.spriteGenerateFallbackPhysicsShape"); } }
-        [global::System.Obsolete("Use sRGBTexture instead")] public bool linearTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.linearTexture"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.linearTexture"); } }
-        [global::System.Obsolete("Check importer.textureType against TextureImporterType.NormalMap instead. Getter will work as expected. Setter will set textureType to NormalMap if true, nothing otherwise")] public bool normalMap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.normalMap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.normalMap"); } }
-        [global::System.Obsolete("Texture format can only be overridden on a per platform basis. See [[TextureImporterPlatformSettings]]")] public global::UnityEditor.TextureImporterFormat textureFormat { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureFormat"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.textureFormat"); } }
-        [global::System.Obsolete("Texture max size can only be overridden on a per platform basis. See [[TextureImporter.maxTextureSize]] for Default platform or [[TextureImporterPlatformSettings]]")] public int maxTextureSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.maxTextureSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.maxTextureSize"); } }
-        [global::System.Obsolete("Check importer.textureType against TextureImporterType.Lightmap instead. Getter will work as expected. Setter will set textureType to Lightmap if true, nothing otherwise.")] public bool lightmap { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.lightmap"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.lightmap"); } }
-        [global::System.Obsolete("RGBM is no longer a user's choice but has become an implementation detail hidden to the user.")] public global::UnityEditor.TextureImporterRGBMMode rgbm { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.rgbm"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.rgbm"); } }
-        [global::System.Obsolete("Use UnityEditor.TextureImporter.alphaSource instead")] public bool grayscaleToAlpha { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.grayscaleToAlpha"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.grayscaleToAlpha"); } }
-        [global::System.Obsolete("Not used anymore. The right values are automatically picked by the importer.")] public int cubemapConvolutionSteps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolutionSteps"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolutionSteps"); } }
-        [global::System.Obsolete("Not used anymore. The right values are automatically picked by the importer.")] public float cubemapConvolutionExponent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolutionExponent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.cubemapConvolutionExponent"); } }
-        [global::System.Obsolete("Texture compression can only be overridden on a per platform basis. See [[TextureImporter.compressionQuality]] for Default platform or [[TextureImporterPlatformSettings]]")] public int compressionQuality { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.compressionQuality"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureImporterSettings.compressionQuality"); } }
-    }
-    [global::System.Flags]
-    public enum TextureImporterShape
-    {
-        Texture2D = 1,
-        TextureCube = 2,
-        Texture2DArray = 4,
-        Texture3D = 8,
-    }
-    public enum TextureImporterSingleChannelComponent
-    {
-        Alpha = 0,
-        Red = 1,
-    }
-    public enum TextureImporterSwizzle
-    {
-        R = 0,
-        G = 1,
-        B = 2,
-        A = 3,
-        OneMinusR = 4,
-        OneMinusG = 5,
-        OneMinusB = 6,
-        OneMinusA = 7,
-        Zero = 8,
-        One = 9,
-    }
-    public enum TextureImporterType
-    {
-        Default = 0,
-        NormalMap = 1,
-        GUI = 2,
-        Sprite = 8,
-        Cursor = 7,
-        Cookie = 4,
-        Lightmap = 6,
-        SingleChannel = 10,
-        Shadowmask = 11,
-        DirectionalLightmap = 12,
-        [global::System.Obsolete("Use Default (UnityUpgradable) -> Default")] Image = -2147483648,
-        [global::System.Obsolete("Use NormalMap (UnityUpgradable) -> NormalMap")] Bump = -1,
-        [global::System.Obsolete("Use importer.textureShape = TextureImporterShape.TextureCube")] Cubemap = -3,
-        [global::System.Obsolete("Use a texture setup as a cubemap with glossy reflection instead")] Reflection = -3,
-        [global::System.Obsolete("Use Default instead. All texture types now have an Advanced foldout (UnityUpgradable) -> Default")] Advanced = -5,
-        [global::System.Obsolete("HDRI is not supported anymore")] HDRI = -9,
-    }
     [global::Unbound.Stub]
     internal unsafe partial class TextureInspector : global::UnityEditor.Editor
     {
@@ -25650,11 +25357,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public bool loadAllMips;
         [global::Unbound.Stub] public TextureMipLevels(global::UnityEngine.Texture2D _texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureMipLevels.ctor"); }
         public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureMipLevels.texture"); return default; } }
-    }
-    public enum TextureResizeAlgorithm
-    {
-        Mitchell = 0,
-        Bilinear = 1,
     }
     internal enum TextureUsageMode
     {
@@ -28531,62 +28233,10 @@ namespace UnityEditor.AssetImporters
         [global::Unbound.Stub] public SketchupMaterialDescriptionPreprocessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SketchupMaterialDescriptionPreprocessor.ctor"); }
     }
     [global::Unbound.Stub]
-    public unsafe partial class SourceTextureInformation
-    {
-        [global::Unbound.Stub] public SourceTextureInformation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.ctor"); }
-        public int width { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.width"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.width"); } }
-        public int height { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.height"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.height"); } }
-        public bool containsAlpha { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.containsAlpha"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.containsAlpha"); } }
-        public bool hdr { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.hdr"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SourceTextureInformation.hdr"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteImportData
-    {
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.name"); } }
-        public global::UnityEngine.Rect rect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.rect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.rect"); } }
-        public global::UnityEngine.SpriteAlignment alignment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.alignment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.alignment"); } }
-        public global::UnityEngine.Vector2 pivot { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.pivot"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.pivot"); } }
-        public global::UnityEngine.Vector4 border { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.border"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.border"); } }
-        internal string customData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.customData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.customData"); } }
-        public global::System.Collections.Generic.List<global::UnityEngine.Vector2[]> outline { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.outline"); return new global::System.Collections.Generic.List<global::UnityEngine.Vector2[]>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.outline"); } }
-        public float tessellationDetail { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.tessellationDetail"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.tessellationDetail"); } }
-        public string spriteID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.spriteID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.SpriteImportData.spriteID"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class StaticFieldCollector
     {
         [global::Unbound.Stub] internal static global::UnityEditor.ImportActivityWindow.PostProcessorStaticFieldWarningMessage[] FindStaticVariablesInPostProcessorsAndScriptedImporters(global::System.Collections.Generic.IList<global::System.Type> specificAssetPostProcessors = null, global::System.Collections.Generic.IList<global::System.Type> specificScriptedImporters = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.StaticFieldCollector.FindStaticVariablesInPostProcessorsAndScriptedImporters"); return global::System.Array.Empty<global::UnityEditor.ImportActivityWindow.PostProcessorStaticFieldWarningMessage>(); }
         [global::Unbound.Stub] public StaticFieldCollector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.StaticFieldCollector.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TextureGenerationOutput
-    {
-        public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.texture"); return default; } }
-        public global::UnityEngine.Texture output { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.output"); return default; } }
-        public string importInspectorWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.importInspectorWarnings"); return default; } }
-        public string[] importWarnings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.importWarnings"); return global::System.Array.Empty<string>(); } }
-        public global::UnityEngine.Texture2D thumbNail { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.thumbNail"); return default; } }
-        public global::UnityEngine.Sprite[] sprites { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationOutput.sprites"); return global::System.Array.Empty<global::UnityEngine.Sprite>(); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TextureGenerationSettings
-    {
-        [global::Unbound.Stub] public TextureGenerationSettings(global::UnityEditor.TextureImporterType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.ctor"); }
-        public string assetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.assetPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.assetPath"); } }
-        public bool qualifyForSpritePacking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.qualifyForSpritePacking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.qualifyForSpritePacking"); } }
-        public bool enablePostProcessor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.enablePostProcessor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.enablePostProcessor"); } }
-        public global::UnityEditor.TextureImporterSettings textureImporterSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.textureImporterSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.textureImporterSettings"); } }
-        public global::UnityEditor.TextureImporterPlatformSettings platformSettings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.platformSettings"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.platformSettings"); } }
-        public global::UnityEditor.AssetImporters.SourceTextureInformation sourceTextureInformation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.sourceTextureInformation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.sourceTextureInformation"); } }
-        public global::UnityEditor.AssetImporters.SpriteImportData[] spriteImportData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.spriteImportData"); return global::System.Array.Empty<global::UnityEditor.AssetImporters.SpriteImportData>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.spriteImportData"); } }
-        public string spritePackingTag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.spritePackingTag"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.spritePackingTag"); } }
-        public global::UnityEngine.SecondarySpriteTexture[] secondarySpriteTextures { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.secondarySpriteTextures"); return global::System.Array.Empty<global::UnityEngine.SecondarySpriteTexture>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerationSettings.secondarySpriteTextures"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class TextureGenerator
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.AssetImporters.TextureGenerationOutput GenerateTexture(global::UnityEditor.AssetImporters.TextureGenerationSettings settings, global::Unity.Collections.NativeArray<global::UnityEngine.Color32> colorBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerator.GenerateTexture"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.AssetImporters.TextureGenerationOutput GenerateTexture(global::UnityEditor.AssetImporters.TextureGenerationSettings settings, global::Unity.Collections.NativeArray<global::UnityEngine.Color> colorBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerator.GenerateTexture"); return default; }
     }
     [global::Unbound.Stub]
     public unsafe partial class ThreeDSMaterialDescriptionPreprocessor : global::UnityEditor.AssetPostprocessor
@@ -29088,40 +28738,15 @@ namespace UnityEditor.Build
             ComputeShaderProcessors = 256,
         }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class BuildPlatform : global::System.ICloneable
+    unsafe partial class BuildPlatform
     {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public global::UnityEditor.Build.NamedBuildTarget namedBuildTarget;
-        [global::Unbound.Stub] public bool installed;
-        [global::Unbound.Stub] public bool hideInUi;
-        [global::Unbound.Stub] public string tooltip;
-        [global::Unbound.Stub] public global::UnityEditor.BuildTarget defaultTarget;
-        [global::Unbound.Stub] public BuildPlatform(string locTitle, string iconId, global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget defaultTarget, bool hideInUi, bool installed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.ctor"); }
-        [global::Unbound.Stub] public BuildPlatform(string locTitle, string tooltip, string iconId, global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget defaultTarget, bool hideInUi, bool installed) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.ctor"); }
-        [global::Unbound.Stub] public object Clone() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.Clone"); return default; }
-        public global::UnityEditor.BuildTargetGroup targetGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.targetGroup"); return default; } }
-        public global::UnityEngine.GUIContent title { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.title"); return default; } }
         public global::UnityEngine.Texture2D smallIcon { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatform.smallIcon"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class BuildPlatformWithSubtarget : global::UnityEditor.Build.BuildPlatform
+    unsafe partial class BuildPlatforms
     {
-        [global::Unbound.Stub] public int subtarget;
-        [global::Unbound.Stub] public BuildPlatformWithSubtarget(string locTitle, string tooltip, string iconId, global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget defaultTarget, int subtarget, bool hideInUi, bool installed) : base(default(string), default(string), default(global::UnityEditor.Build.NamedBuildTarget), default(global::UnityEditor.BuildTarget), default(bool), default(bool)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatformWithSubtarget.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class BuildPlatforms
-    {
-        [global::Unbound.Stub] public global::UnityEditor.Build.BuildPlatform[] buildPlatforms;
-        [global::Unbound.Stub] internal BuildPlatforms() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.ctor"); }
         [global::Unbound.Stub] public string GetBuildTargetDisplayName(global::UnityEditor.BuildTargetGroup buildTargetGroup, global::UnityEditor.BuildTarget target, int subtarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.GetBuildTargetDisplayName"); return default; }
         [global::Unbound.Stub] public string GetBuildTargetDisplayName(global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.GetBuildTargetDisplayName"); return default; }
         [global::Unbound.Stub] public string GetModuleDisplayName(global::UnityEditor.Build.NamedBuildTarget namedBuildTarget, global::UnityEditor.BuildTarget buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.GetModuleDisplayName"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Build.BuildPlatform BuildPlatformFromNamedBuildTarget(global::UnityEditor.Build.NamedBuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.BuildPlatformFromNamedBuildTarget"); return default; }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEditor.Build.BuildPlatform> GetValidPlatforms(bool includeMetaPlatforms) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.GetValidPlatforms"); return new global::System.Collections.Generic.List<global::UnityEditor.Build.BuildPlatform>(); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEditor.Build.BuildPlatform> GetValidPlatforms() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.GetValidPlatforms"); return new global::System.Collections.Generic.List<global::UnityEditor.Build.BuildPlatform>(); }
-        public static global::UnityEditor.Build.BuildPlatforms instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.BuildPlatforms.instance"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class BuildPlayerContext

@@ -95,63 +95,15 @@ namespace Unbound.Runtime
         /// <summary>The loaded postprocessors with <c>OnPreprocessMaterialDescription</c>, in order
         /// (ties by type name). Unbound's stand-ins for Editor classes it does not implement are
         /// left out.</summary>
-        static List<(int, Type, MethodInfo)> Preprocessors()
-        {
-            if (s_Preprocessors != null) return s_Preprocessors;
-            var found = new List<(int, Type, MethodInfo)>();
-            var parameters = new[] { typeof(MaterialDescription), typeof(Material), typeof(AnimationClip[]) };
-            void Consider(Type type)
-            {
-                if (type.IsAbstract || !typeof(AssetPostprocessor).IsAssignableFrom(type)) return;
-                if (type.IsDefined(typeof(StubAttribute), false)) return;
-                var method = type.GetMethod("OnPreprocessMaterialDescription",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parameters, null);
-                if (method == null) return;
-                try
-                {
-                    var instance = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
-                    found.Add((instance.GetPostprocessOrder(), type, method));
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
-                }
-            }
-            Consider(typeof(FBXMaterialDescriptionPreprocessor));
-            foreach (var assembly in GameDomain.Assemblies())
-            {
-                Type[] types;
-                try { types = assembly.GetTypes(); }
-                catch (ReflectionTypeLoadException e) { types = Array.FindAll(e.Types, t => t != null); }
-                foreach (var type in types)
-                    if (type != typeof(FBXMaterialDescriptionPreprocessor)) Consider(type);
-            }
-            found.Sort((a, b) => a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1)
-                : string.CompareOrdinal(a.Item2.FullName, b.Item2.FullName));
-            return s_Preprocessors = found;
-        }
+        static List<(int, Type, MethodInfo)> Preprocessors() =>
+            s_Preprocessors ??= AssetPostprocessorHooks.Find("OnPreprocessMaterialDescription",
+                new[] { typeof(MaterialDescription), typeof(Material), typeof(AnimationClip[]) },
+                typeof(FBXMaterialDescriptionPreprocessor));
 
         static void Preprocess(string assetPath, MaterialDescription description, Material material)
         {
-            var context = new AssetImportContext(assetPath);
-            foreach (var (_, type, method) in Preprocessors())
-            {
-                try
-                {
-                    var postprocessor = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
-                    postprocessor.assetPath = assetPath;
-                    postprocessor.context = context;
-                    method.Invoke(postprocessor, new object[] { description, material, Array.Empty<AnimationClip>() });
-                }
-                catch (TargetInvocationException e)
-                {
-                    Debug.LogException(e.InnerException ?? e);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
-                }
-            }
+            AssetPostprocessorHooks.Run(Preprocessors(), assetPath, new AssetImportContext(assetPath),
+                new object[] { description, material, Array.Empty<AnimationClip>() });
             // As the model imports: render pipelines' and projects' editors (MaterialValidation).
             MaterialValidation.Validate(material, editorsOfTheEditor: false);
         }

@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 88;
+        internal const uint CurrentVersion = 89;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -218,5 +218,13 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<delegate* unmanaged<byte*, int, void*, int>, void> SetDocumentSource;
         /// <summary>(sink, bytes, length): appends to the sink a document source was called with.</summary>
         internal delegate* unmanaged<void*, byte*, int, void> DocumentSourceWrite;
+        /// <summary>
+        /// (handle, request JSON, length, RGBA8 texels with rows bottom-up, their length, out info,
+        /// out error):
+        /// imports the texels with the request's `.meta`-shaped settings under the request's
+        /// `generated:` key and uploads them to the handle; 0 on success, else 1 with the reason
+        /// in the out buffer.
+        /// </summary>
+        internal delegate* unmanaged<ulong, byte*, int, byte*, long, ImportedTextureInfo*, NativeBuffer*, int> GenerateTexture;
     }
 }

@@ -53,6 +53,17 @@ pub struct RuntimeState {
     /// The texels of the imported texture traced last (Sprite.Create often cuts many sprites
     /// from one texture).
     traced_texels: std::sync::Mutex<Option<(String, Arc<Texels>)>>,
+    /// Textures scripts generated (TextureGenerator.GenerateTexture) by their `generated:` key:
+    /// they have no file to import again, so their texels stay until the texture is destroyed.
+    generated: RwLock<HashMap<String, Arc<unbound_assets::texture::ImportedTexture>>>,
+}
+
+/// The key prefix of a texture a script generated: `generated:` and a GUID's 32 hex digits.
+pub const GENERATED_KEY_PREFIX: &str = "generated:";
+
+/// The GUID a texture key stands for: an asset's GUID, or a generated texture's own.
+fn texture_guid(key: &str) -> Result<Guid> {
+    Guid::parse(key.strip_prefix(GENERATED_KEY_PREFIX).unwrap_or(key)).context("bad guid")
 }
 
 /// What stays of an imported texture after its upload.
@@ -145,6 +156,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         }),
         model_importer: unbound_assets::ModelImporter::for_release(&project.version),
         textures: RwLock::new(HashMap::new()),
+        generated: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
         builtin_shader_roots: builtin_shader_roots(
             project.builtin_shaders().map(|b| b.shader_roots()),
@@ -928,13 +940,22 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let paths: Vec<_> = Some(path).filter(|p| !p.is_empty()).into_iter().collect();
             Ok(json!({ "paths": paths }).to_string())
         }
+        "generated-texture-release" => {
+            #[derive(Deserialize)]
+            struct Request {
+                key: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            release_generated_texture(&r.key);
+            Ok("{}".to_string())
+        }
         "texture-sprites" => {
             #[derive(Deserialize)]
             struct Request {
                 guid: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let guid = texture_guid(&r.guid)?;
             let textures = s.textures.read().unwrap();
             let texture = textures.get(&guid).context("the texture is not imported")?;
             let polygon = texture.polygon;
@@ -1612,6 +1633,17 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         let texture = crate::sprite_atlases::page(page_set(s), page)?;
         return upload_imported(s, handle, texture, None, 0);
     }
+    if guid.starts_with(GENERATED_KEY_PREFIX) {
+        let texture = s.generated.read().unwrap().get(guid).cloned();
+        let texture = texture.context("the generated texture was destroyed")?;
+        let sprites = s
+            .textures
+            .read()
+            .unwrap()
+            .get(&texture_guid(guid)?)
+            .map_or(0, |t| t.sprites.len());
+        return upload_imported(s, handle, (*texture).clone(), None, sprites);
+    }
     // A (re)import replaces the texels a trace may have kept.
     {
         let mut recent = s.traced_texels.lock().unwrap_or_else(|e| e.into_inner());
@@ -1639,6 +1671,65 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     );
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
     upload_imported(s, handle, texture, Some((&asset.file, &meta)), sprite_count)
+}
+
+/// Imports a script's RGBA8 texels (rows bottom-up) with a `.meta`-shaped settings document
+/// under a new `generated:` key and uploads them to `handle` (TextureGenerator.GenerateTexture).
+pub fn generate_texture(handle: u64, request: &str, texels: &[u8]) -> Result<ImportedTextureInfo> {
+    #[derive(Deserialize)]
+    struct Request {
+        key: String,
+        name: String,
+        width: u32,
+        height: u32,
+        meta: String,
+    }
+    let s = state();
+    let r: Request = serde_json::from_str(request)?;
+    let guid = texture_guid(&r.key)?;
+    anyhow::ensure!(
+        r.key.starts_with(GENERATED_KEY_PREFIX),
+        "not a generated texture key: {}",
+        r.key
+    );
+    let meta = unbound_yaml::parse_value(&r.meta).context("the generation settings")?;
+    let importer = texture_importer(s);
+    let settings = importer.settings(&meta);
+    let polygon = settings.sprite.mode == unbound_assets::sprite::SpriteMode::Polygon;
+    let mut texture = unbound_assets::texture::import_generated(
+        &r.name,
+        r.width,
+        r.height,
+        texels.to_vec(),
+        &meta,
+        settings,
+    )?;
+    importer.store(&mut texture)?;
+    let sprites = std::mem::take(&mut texture.sprites);
+    let sprite_count = sprites.len();
+    s.textures.write().unwrap().insert(
+        guid,
+        TextureSprites {
+            name: texture.name.clone(),
+            sprites,
+            polygon,
+        },
+    );
+    s.generated
+        .write()
+        .unwrap()
+        .insert(r.key, Arc::new(texture.clone()));
+    upload_imported(s, handle, texture, None, sprite_count)
+}
+
+/// Forgets a generated texture's texels and sprites (its texture was destroyed).
+pub fn release_generated_texture(key: &str) {
+    let s = state();
+    if s.generated.write().unwrap().remove(key).is_some()
+        && let Ok(guid) = texture_guid(key)
+    {
+        s.textures.write().unwrap().remove(&guid);
+    }
 }
 
 /// Where a request's texels come from: an imported texture (its GUID), or the caller's RGBA8
@@ -1735,6 +1826,10 @@ fn imported_texture(
 ) -> Result<Arc<unbound_assets::texture::ImportedTexture>> {
     if let Some(page) = key.strip_prefix(crate::sprite_atlases::PAGE_KEY_PREFIX) {
         return Ok(Arc::new(crate::sprite_atlases::page(page_set(s), page)?));
+    }
+    if key.starts_with(GENERATED_KEY_PREFIX) {
+        let texture = s.generated.read().unwrap().get(key).cloned();
+        return texture.context("the generated texture was destroyed");
     }
     let guid = Guid::parse(key).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;

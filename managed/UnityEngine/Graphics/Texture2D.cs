@@ -1008,6 +1008,9 @@ namespace UnityEngine
             ReleaseStore();
             Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
+            // A generated texture's texels exist nowhere else.
+            if (m_ImportedFrom != null && m_ImportedFrom.StartsWith(UnityEditor.AssetImporters.TextureGenerator.KeyPrefix, StringComparison.Ordinal))
+                UnityEditor.AssetImporters.TextureGenerator.Release(m_ImportedFrom);
         }
     }
 }

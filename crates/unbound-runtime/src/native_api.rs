@@ -98,7 +98,8 @@ use std::ffi::c_void;
 /// 88: Draw render command flags 8/16 mark the draw's color as a renderer's color ([`DrawTint`]).
 ///
 /// [`DrawTint`]: crate::render_commands::DrawTint
-pub const NATIVE_API_VERSION: u32 = 88;
+/// 89: `generate_texture` imports a script's texels (TextureGenerator.GenerateTexture).
+pub const NATIVE_API_VERSION: u32 = 89;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -366,6 +367,21 @@ pub struct NativeApi {
         extern "C" fn(Option<extern "C" fn(*const u8, i32, *mut c_void) -> i32>),
     /// (sink, bytes, length): appends to the sink a document source was called with.
     pub document_source_write: extern "C" fn(*mut c_void, *const u8, i32),
+    // Version 89: textures that scripts generate (TextureGenerator.GenerateTexture).
+    /// (handle, request JSON, length, RGBA8 texels with rows bottom-up, their length, out info,
+    /// out error):
+    /// imports the texels with the request's `.meta`-shaped settings under the request's
+    /// `generated:` key and uploads them to the handle; 0 on success, else 1 with the reason
+    /// in the out buffer.
+    pub generate_texture: extern "C" fn(
+        u64,
+        *const u8,
+        i32,
+        *const u8,
+        i64,
+        *mut ImportedTextureInfo,
+        *mut NativeBuffer,
+    ) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -430,6 +446,7 @@ pub fn api() -> NativeApi {
         decode_block_texel,
         set_document_source,
         document_source_write,
+        generate_texture,
     }
 }
 
@@ -1087,6 +1104,39 @@ extern "C" fn import_texture(
             1
         }
         Err(_) => 1,
+    }
+}
+
+extern "C" fn generate_texture(
+    handle: u64,
+    request: *const u8,
+    length: i32,
+    texels: *const u8,
+    texel_length: i64,
+    info: *mut ImportedTextureInfo,
+    error: *mut NativeBuffer,
+) -> i32 {
+    let fail = |message: String| {
+        if !error.is_null() {
+            unsafe { *error = NativeBuffer::from_vec(message.into_bytes()) };
+        }
+        1
+    };
+    if plain_texture(handle, "generate_texture").is_none() {
+        return fail("no texture handle".into());
+    }
+    if texels.is_null() || texel_length < 0 || info.is_null() {
+        return fail("no texels".into());
+    }
+    let request = unsafe { text(request, length) };
+    let texels = unsafe { std::slice::from_raw_parts(texels, texel_length as usize) };
+    match std::panic::catch_unwind(|| state::generate_texture(handle, request, texels)) {
+        Ok(Ok(imported)) => {
+            unsafe { *info = imported };
+            0
+        }
+        Ok(Err(e)) => fail(format!("{e:#}")),
+        Err(_) => fail("the texture generation panicked".into()),
     }
 }
 

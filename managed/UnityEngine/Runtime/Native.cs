@@ -298,6 +298,29 @@ namespace Unbound.Runtime
                 return s_Api.ImportTexture(handle, p, bytes.Length, i) == 0;
         }
 
+        /// <summary>Imports a script's RGBA8 texels (rows bottom-up) with the request's settings
+        /// under its <c>generated:</c> key and uploads them to the handle; throws with the native
+        /// reason when the import fails.</summary>
+        internal static ImportedTextureInfo GenerateTexture(ulong handle, string request, ReadOnlySpan<byte> texels)
+        {
+            if (!s_Ready) throw new InvalidOperationException("the native side is not connected");
+            GfxStream.Flush();
+            var bytes = Encoding.UTF8.GetBytes(request);
+            ImportedTextureInfo info;
+            NativeBuffer error = default;
+            int status;
+            fixed (byte* r = bytes)
+            fixed (byte* t = texels)
+                status = s_Api.GenerateTexture(handle, r, bytes.Length, t, texels.Length, &info, &error);
+            try
+            {
+                if (status != 0)
+                    throw new InvalidOperationException(error.Length == 0 ? "the texture could not be generated" : Encoding.UTF8.GetString(error.Data, (int)error.Length));
+                return info;
+            }
+            finally { Free(error); }
+        }
+
         internal static void ReleaseTexture(ulong handle)
         {
             if (!s_Ready || handle == 0) return;

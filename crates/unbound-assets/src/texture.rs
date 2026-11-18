@@ -1641,9 +1641,47 @@ pub fn import_texture(
     source: &Path,
     bytes: &[u8],
     meta: &Value,
+    settings: TextureSettings,
+) -> Result<ImportedTexture> {
+    let image = decode(source, bytes, settings.remove_matte).context("decoding")?;
+    import_image(source, image, meta, settings)
+}
+
+/// A texture made from the caller's RGBA8 texels (`width` x `height`, rows bottom-up as Unity's
+/// colour buffers are) instead of a file, imported as a file with the `.meta`-shaped `meta` and
+/// its `settings` would be: TextureGenerator.GenerateTexture (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/toolapis). `name` names the texture and its messages.
+pub fn import_generated(
+    name: &str,
+    width: u32,
+    height: u32,
+    texels: Vec<u8>,
+    meta: &Value,
+    settings: TextureSettings,
+) -> Result<ImportedTexture> {
+    anyhow::ensure!(
+        texels.len() == width as usize * height as usize * 4,
+        "{} texel bytes for a {width}x{height} RGBA8 image",
+        texels.len()
+    );
+    let mut image = Image {
+        width,
+        height,
+        format: TextureFormat::Rgba8,
+        data: texels,
+    };
+    // The import works on rows top-down, as files decode.
+    image.flip_rows();
+    import_image(Path::new(name), image, meta, settings)
+}
+
+/// Imports a decoded image (rows top-down) of `source`.
+fn import_image(
+    source: &Path,
+    mut image: Image,
+    meta: &Value,
     mut settings: TextureSettings,
 ) -> Result<ImportedTexture> {
-    let mut image = decode(source, bytes, settings.remove_matte).context("decoding")?;
     settings.rgbm_encoding &= image.format == TextureFormat::Rgba32F;
     // An 8-bit lightmap is encoded as well (encode_lighting); other 8-bit textures keep their
     // bytes.

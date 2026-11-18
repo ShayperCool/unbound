@@ -222,29 +222,39 @@ namespace Unbound.Runtime
             var file = new LoadedFile { MainObject = texture };
             file.Objects[Texture2DFileId] = texture;
             if (imported.SpriteCount > 0)
-            {
-                var json = Native.Call("texture-sprites", JsonSerializer.Serialize(new { guid = info.Guid }));
-                var sprites = JsonSerializer.Deserialize<SpritesJson>(json, s_Json);
-                foreach (var s in sprites.Sprites)
+                foreach (var (fileId, sprite) in ImportedSprites(texture, info.Guid, name))
                 {
-                    var sprite = Sprite.FromImport(texture, string.IsNullOrEmpty(s.Name) ? name : s.Name,
-                        new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
-                        new Vector2(s.Pivot[0], s.Pivot[1]),
-                        new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
-                        s.PixelsPerUnit, s.MeshType, Points(s.Mesh?.Vertices), Points(s.Mesh?.Uv),
-                        s.Mesh?.Triangles == null ? null : Array.ConvertAll(s.Mesh.Triangles, i => (ushort)i),
-                        s.TextureRectBounds is { Length: 4 } t ? new Rect(t[0], t[1], t[2], t[3]) : (Rect?)null,
-                        Paths(s.Physics));
-                    ImportSkin(sprite, s);
-                    if (!string.IsNullOrEmpty(s.SpriteId)) sprite.m_SpriteID = new UnityEditor.GUID(s.SpriteId);
-                    sprite.m_IsPolygon = s.Polygon;
-                    if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
-                        sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
-                    file.Objects[s.FileId] = sprite;
-                    UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, s.FileId);
+                    file.Objects[fileId] = sprite;
+                    UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, fileId);
                 }
-            }
             return file;
+        }
+
+        /// <summary>The sprites the native import made for a texture (its asset GUID, or another
+        /// texture key), by file id; unnamed ones take <paramref name="name"/>.</summary>
+        internal static List<(long FileId, Sprite Sprite)> ImportedSprites(Texture2D texture, string key, string name)
+        {
+            var json = Native.Call("texture-sprites", JsonSerializer.Serialize(new { guid = key }));
+            var sprites = JsonSerializer.Deserialize<SpritesJson>(json, s_Json);
+            var result = new List<(long, Sprite)>(sprites.Sprites.Count);
+            foreach (var s in sprites.Sprites)
+            {
+                var sprite = Sprite.FromImport(texture, string.IsNullOrEmpty(s.Name) ? name : s.Name,
+                    new Rect(s.Rect[0], s.Rect[1], s.Rect[2], s.Rect[3]),
+                    new Vector2(s.Pivot[0], s.Pivot[1]),
+                    new Vector4(s.Border[0], s.Border[1], s.Border[2], s.Border[3]),
+                    s.PixelsPerUnit, s.MeshType, Points(s.Mesh?.Vertices), Points(s.Mesh?.Uv),
+                    s.Mesh?.Triangles == null ? null : Array.ConvertAll(s.Mesh.Triangles, i => (ushort)i),
+                    s.TextureRectBounds is { Length: 4 } t ? new Rect(t[0], t[1], t[2], t[3]) : (Rect?)null,
+                    Paths(s.Physics));
+                ImportSkin(sprite, s);
+                if (!string.IsNullOrEmpty(s.SpriteId)) sprite.m_SpriteID = new UnityEditor.GUID(s.SpriteId);
+                sprite.m_IsPolygon = s.Polygon;
+                if (s.SecondaryTextures != null && s.SecondaryTextures.Count > 0)
+                    sprite.SetImportedSecondaryTextures(s.SecondaryTextures.ConvertAll(t => (t.Name, t.Guid)).ToArray());
+                result.Add((s.FileId, sprite));
+            }
+            return result;
         }
 
         static Vector2[] Points(float[][] points) => points == null ? null : Array.ConvertAll(points, p => new Vector2(p[0], p[1]));
