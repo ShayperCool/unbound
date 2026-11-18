@@ -99,10 +99,25 @@ namespace UnityEngine.Tests
                     new UIVertex { position = new Vector3(0f, -4f), color = Color.white },
                 }, texture, Color.white);
             });
-            var items = f.Collect();
+            // Collecting reads no property the IMGUI shaders do not declare (nothing is logged).
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new Capture(logged);
+            List<FrameBuilder.DrawItem> items;
+            try { items = f.Collect(); f.Collect(); }
+            finally { Debug.unityLogger.logHandler = previous; }
+            Assert.Empty(logged);
             Assert.Equal(2, items.Count);
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             Assert.All(items, i => Assert.Equal(linear, i.GammaImgui));
+        }
+
+        sealed class Capture : ILogHandler
+        {
+            readonly List<string> m_Into;
+            internal Capture(List<string> into) => m_Into = into;
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => m_Into.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => m_Into.Add(exception.Message);
         }
 
         /// <summary>Unbound's choice (unmeasured): consecutive opaque draws of one texture and clip

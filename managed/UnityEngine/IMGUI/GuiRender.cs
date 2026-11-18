@@ -517,6 +517,8 @@ namespace Unbound.Runtime
 
         static Material s_TextureMaterial, s_TextMaterial;
         static readonly int s_ManualTex2SRGB = Shader.PropertyToID("_ManualTex2SRGB");
+        /// <summary>The _ManualTex2SRGB each material was given last (-1: none yet).</summary>
+        static float s_TextureToGamma = -1f, s_TextToGamma = -1f;
 
         /// <summary>Unity's own IMGUI shaders: Hidden/Internal-GUITextureClip (a texture tinted by
         /// the vertex colours) and Hidden/Internal-GUITextureClipText (glyphs: the font's alpha).
@@ -537,10 +539,17 @@ namespace Unbound.Runtime
                 material.SetTexture("_GUIClipTexture", Texture2D.whiteTexture);
                 material.SetMatrix("unity_GUIClipTextureMatrix", Matrix4x4.zero);
                 material.SetColor("_Color", Color.white);
+                (text ? ref s_TextToGamma : ref s_TextureToGamma) = -1f;
             }
-            // Set only when it changes: a set sends the material to the renderer again.
+            // Set only when it changes (a set sends the material to the renderer again; the
+            // shaders declare no such property, so it is not read back).
             float toGamma = QualitySettings.activeColorSpace == ColorSpace.Linear ? 1f : 0f;
-            if (material.GetFloat(s_ManualTex2SRGB) != toGamma) material.SetFloat(s_ManualTex2SRGB, toGamma);
+            ref float set = ref text ? ref s_TextToGamma : ref s_TextureToGamma;
+            if (set != toGamma)
+            {
+                material.SetFloat(s_ManualTex2SRGB, toGamma);
+                set = toGamma;
+            }
             return material;
         }
 

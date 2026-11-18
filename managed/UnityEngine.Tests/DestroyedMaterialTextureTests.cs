@@ -26,7 +26,7 @@ namespace UnityEngine.Tests
         /// <summary>A material already sent with a texture is sent again when the texture is
         /// destroyed (the common case: a draw before the destruction).</summary>
         [Fact]
-        public void AMaterialSentWithATextureIsSentAgainOnceWhenItIsDestroyed()
+        public void AMaterialSentWithATextureIsSentAgainWhenItIsDestroyed()
         {
             var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false);
             m_Material.SetTexture("_T", texture);
