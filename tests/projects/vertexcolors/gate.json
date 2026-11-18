@@ -1,0 +1,17 @@
+{
+  "commands": [
+    "python3 tests/projects/vertexcolors/run.py gate"
+  ],
+  "summary": "vertexcolors (Gamma|Linear): .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/VertexColors.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/CommandStream.cs",
+    "managed/UnityEngine/Graphics/AssetImporters.cs",
+    "managed/UnityEngine/Tilemap/TilemapRenderer.cs",
+    "managed/UnityEngine/U2D/SpriteShapeRenderer.cs",
+    "crates/unbound-app/src/render/executor.rs",
+    "crates/unbound-app/src/render/compiled.rs"
+  ]
+}

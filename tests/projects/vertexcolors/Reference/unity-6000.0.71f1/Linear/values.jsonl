@@ -1,4 +1,6 @@
 {"k":"colorspace","v":"Linear"}
+{"k":"builtin.sprite.defaultmaterials","v":"Sprites-Default"}
+{"k":"builtin.tilemap.defaultmaterials","v":"Sprites-Default"}
 {"k":"builtin.spriteshape.defaultmaterials","v":"Sprites-Default,Sprites-Default"}
 {"k":"builtin.sprite.stock.0.r","v":0.317647}
 {"k":"builtin.sprite.stock.0.g","v":0.317647}
@@ -648,6 +650,8 @@
 {"k":"builtin.ui.image.8.g","v":0.531765}
 {"k":"builtin.ui.image.8.b","v":0.011765}
 {"k":"builtin.ui.image.8.a","v":0.600000}
+{"k":"universal.sprite.defaultmaterials","v":"Sprite-Unlit-Default"}
+{"k":"universal.tilemap.defaultmaterials","v":"Sprite-Unlit-Default"}
 {"k":"universal.spriteshape.defaultmaterials","v":"Sprite-Unlit-Default,Sprite-Unlit-Default"}
 {"k":"universal.sprite.stock.0.r","v":0.318547}
 {"k":"universal.sprite.stock.0.g","v":0.318547}
@@ -1297,6 +1301,8 @@
 {"k":"universal.ui.image.8.g","v":0.531765}
 {"k":"universal.ui.image.8.b","v":0.011765}
 {"k":"universal.ui.image.8.a","v":0.600000}
+{"k":"2d.sprite.defaultmaterials","v":"Sprite-Unlit-Default"}
+{"k":"2d.tilemap.defaultmaterials","v":"Sprite-Unlit-Default"}
 {"k":"2d.spriteshape.defaultmaterials","v":"Sprite-Unlit-Default,Sprite-Unlit-Default"}
 {"k":"2d.sprite.stock.0.r","v":0.318547}
 {"k":"2d.sprite.stock.0.g","v":0.318547}
@@ -1946,6 +1952,8 @@
 {"k":"2d.ui.image.8.g","v":0.531765}
 {"k":"2d.ui.image.8.b","v":0.011765}
 {"k":"2d.ui.image.8.a","v":0.600000}
+{"k":"nobatcher.sprite.defaultmaterials","v":"Sprite-Unlit-Default"}
+{"k":"nobatcher.tilemap.defaultmaterials","v":"Sprite-Unlit-Default"}
 {"k":"nobatcher.spriteshape.defaultmaterials","v":"Sprite-Unlit-Default,Sprite-Unlit-Default"}
 {"k":"nobatcher.sprite.stock.0.r","v":0.318547}
 {"k":"nobatcher.sprite.stock.0.g","v":0.318547}

@@ -218,6 +218,8 @@ public sealed class VertexColorProbe : MonoBehaviour
             var go = Child(root, "sprite", i);
             go.transform.localScale = Vector3.one * Quad;
             var r = go.AddComponent<SpriteRenderer>();
+            if (i == 0 && material.name == "stock" && material.color == Color.white)
+                Rec(m_Pipeline + ".sprite.defaultmaterials", "\"" + Names(r.sharedMaterials) + "\"");
             r.sprite = m_Sprite;
             r.sharedMaterial = material;
             r.color = Tints[i];
@@ -236,6 +238,8 @@ public sealed class VertexColorProbe : MonoBehaviour
         holder.transform.SetParent(grid.transform, false);
         var tilemap = holder.AddComponent<Tilemap>();
         var renderer = holder.AddComponent<TilemapRenderer>();
+        if (mode == TilemapRenderer.Mode.Chunk && material != m_Raw && tilemapColor == Color.white)
+            Rec(m_Pipeline + ".tilemap.defaultmaterials", "\"" + Names(renderer.sharedMaterials) + "\"");
         renderer.mode = mode;
         renderer.sharedMaterial = material;
         tilemap.color = tilemapColor;
