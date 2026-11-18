@@ -359,7 +359,8 @@ namespace UnityEngine
         }
 
         /// <summary>What a member needs the playing controller for: a parameter's value, the
-        /// controller's definition (its counts), a layer's state, or playing a state.</summary>
+        /// controller's parameter definitions, a layer (its count, name or state), or playing a
+        /// state.</summary>
         enum Use { Parameter, Definition, State, Play }
 
         /// <summary>The playing controller, or null after the warning the member gives without one
@@ -367,8 +368,8 @@ namespace UnityEngine
         /// `animator.*`): without a controller every member warns that none is playing, and playing
         /// a state that there is none; an invalid controller (an override controller with nothing
         /// to override) leaves the Animator uninitialized, which only the parameters report; on an
-        /// inactive object the definition is still read, and playing a state names the inactive
-        /// object.</summary>
+        /// inactive object the parameter definitions are still read (the layers are not), and
+        /// playing a state names the inactive object.</summary>
         AnimatorPlayer PlayerOrWarn(Use use)
         {
             var player = EnsurePlayer();
@@ -864,7 +865,7 @@ namespace UnityEngine
         // ------------------------------------------------------------------ layers
 
         public int layerCount
-        { get { MainThreadCheck.Check("get_layerCount"); return PlayerOrWarn(Use.Definition)?.Layers.Length ?? 0; } }
+        { get { MainThreadCheck.Check("get_layerCount"); return PlayerOrWarn(Use.State)?.Layers.Length ?? 0; } }
 
         /// <summary>The layer members' checks: a controller playing, then the layer's index (the
         /// Unity 6000.0.71f1 Editor warns for each, tests/projects/apierrors `animator.*`).</summary>
