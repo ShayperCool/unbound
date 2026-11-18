@@ -54,7 +54,7 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void ALoadedRendererDoesNotAskThePipeline()
+        public void ALoadedRenderersMaterialsComeFromItsDocument()
         {
             var pipeline = ScriptableObject.CreateInstance<Pipeline>();
             pipeline.Material = Named("PipelineDefault2D");
