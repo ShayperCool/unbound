@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Unbound.Runtime.Profiling
 {
@@ -24,13 +25,15 @@ namespace Unbound.Runtime.Profiling
         static bool s_NextIsInstance;
         static uint s_NextInstance, s_NextCall;
         static int s_NextLight;
-        /// <summary>The runs of instancing calls' instances counted lately: the call, material,
-        /// pass and light of each and the highest instance drawn in it (a lower one begins a new
-        /// run, as another camera's render does). A fixed table, the oldest run replaced.</summary>
-        const int RunSlots = 16;
-        static readonly (uint Call, ulong Material, int Pass, int Light, uint Instance)[] s_Runs = new (uint, ulong, int, int, uint)[RunSlots];
-        static int s_RunCount, s_NextRunSlot;
+        /// <summary>The frame's runs of instancing calls' instances: by camera render, call,
+        /// material, pass and light, the highest instance drawn in each (a lower one begins a new
+        /// run). Every run is kept until the frame ends, however many lights reach a call; the
+        /// table keeps its capacity from frame to frame.</summary>
+        static readonly Dictionary<(int Render, uint Call, ulong Material, int Pass, int Light), uint> s_Runs =
+            new Dictionary<(int, uint, ulong, int, int), uint>();
         static uint s_Calls;
+        /// <summary>The camera render the draws belong to (<see cref="BeginRender"/>).</summary>
+        static int s_Render;
         /// <summary>How many passes the next draw command draws.</summary>
         static int s_NextPasses = 1;
         /// <summary>The "pass" after a command for several passes: the next draw is a pass change.</summary>
@@ -93,21 +96,16 @@ namespace Unbound.Runtime.Profiling
         /// draw): instances of a call lit by different lights are different runs.</summary>
         internal static void NextDrawLight(UnityEngine.Light light) => s_NextLight = light != null ? light.GetInstanceID() : 0;
 
+        /// <summary>A camera render begins: an instancing call it draws again starts new runs.</summary>
+        internal static void BeginRender() => s_Render++;
+
         /// <summary>Whether the next instance continues a run counted before, which it extends.</summary>
         static bool FurtherInstance(ulong material, int pass, int light)
         {
-            for (int i = 0; i < s_RunCount; i++)
-            {
-                ref var run = ref s_Runs[i];
-                if (run.Call != s_NextCall || run.Material != material || run.Pass != pass || run.Light != light) continue;
-                bool further = s_NextInstance > run.Instance;
-                run.Instance = s_NextInstance;
-                return further;
-            }
-            s_Runs[s_NextRunSlot] = (s_NextCall, material, pass, light, s_NextInstance);
-            s_NextRunSlot = (s_NextRunSlot + 1) % RunSlots;
-            if (s_RunCount < RunSlots) s_RunCount++;
-            return false;
+            var key = (s_Render, s_NextCall, material, pass, light);
+            bool further = s_Runs.TryGetValue(key, out uint highest) && s_NextInstance > highest;
+            s_Runs[key] = s_NextInstance;
+            return further;
         }
 
         /// <summary>The frame ended: its counts become the last frame's.</summary>
@@ -120,7 +118,7 @@ namespace Unbound.Runtime.Profiling
             s_LastPass = int.MinValue;
             s_NextIsInstance = false;
             s_NextLight = 0;
-            s_RunCount = s_NextRunSlot = 0;
+            s_Runs.Clear();
             s_NextPasses = 1;
         }
     }

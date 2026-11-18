@@ -1472,6 +1472,7 @@ namespace Unbound.Runtime
 
         static void RenderCameraCore(Camera camera, bool automatic, bool restoreActive)
         {
+            Unbound.Runtime.Profiling.RenderStats.BeginRender();
             using var temporaries = new CameraTemporaries();
             var previousCamera = Camera.current;
             var previousActive = RenderTexture.ActiveTarget;
