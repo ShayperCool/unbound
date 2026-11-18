@@ -15,13 +15,13 @@ namespace UnityEditor
         /// <summary>The importers importing their assets now, by path.</summary>
         static readonly Dictionary<string, AssetImporter> s_Importing = new Dictionary<string, AssetImporter>(StringComparer.Ordinal);
 
+        /// <summary>True while any importer imports its asset.</summary>
+        internal static bool AnyImporting => s_Importing.Count > 0;
+
         /// <summary>While the scope lasts, <see cref="GetAtPath"/> gives this importer for its asset:
         /// during an import the Editor gives the importing instance, afterwards another one with
         /// the .meta's settings (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis
         /// importer.during and importer.after).</summary>
-        /// <summary>True while any importer imports its asset.</summary>
-        internal static bool AnyImporting => s_Importing.Count > 0;
-
         internal static ImportingScope Importing(string path, AssetImporter importer)
         {
             path = path.Replace('\\', '/');

@@ -405,11 +405,11 @@ namespace Unbound.Runtime
                 if (type == null)
                 {
                     MissingScripts.Report(script, doc);
-                    // As in Unity, the asset still exists: an object of the base class, so lists
-                    // of assets and references keep their entries (its data cannot be read). It
-                    // compares equal to null, as a timeline's markers of a missing class are no
-                    // markers and raise no "empty marker" warning (Unity 6000.0.71f1,
-                    // tests/projects/gameinterop timeline.CutsceneMissing).
+                    // As in Unity, the asset still exists: an object of the base class that
+                    // serialized references keep (its data cannot be read). It compares equal to
+                    // null, as a timeline's markers of a missing class are no markers and raise no
+                    // "empty marker" warning (Unity 6000.0.71f1, tests/projects/gameinterop
+                    // timeline.CutsceneMissing); listings that skip null objects skip it.
                     var placeholder = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
                     if (placeholder != null)
                     {

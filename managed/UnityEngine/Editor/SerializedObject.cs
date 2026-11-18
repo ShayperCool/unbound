@@ -124,15 +124,7 @@ namespace UnityEditor
             return true;
         }
 
-        static void CallOnValidate(Object target)
-        {
-            var method = ScriptMessages.Find(target.GetType(), "OnValidate", Type.EmptyTypes);
-            if (method == null) return;
-            Destruction.ImmediateForbiddenDepth++;
-            try { method.Invoke(target, null); }
-            catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); }
-            finally { Destruction.ImmediateForbiddenDepth--; }
-        }
+        static void CallOnValidate(Object target) => ScriptMessages.Validate(target);
 
         public void SetIsDifferentCacheDirty() => m_OtherRoots = null;
 

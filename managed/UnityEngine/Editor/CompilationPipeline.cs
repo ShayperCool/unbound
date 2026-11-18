@@ -106,9 +106,6 @@ namespace UnityEditor.Compilation
     /// 6000.0.71f1 (tests/projects/gameinterop compilation.options_new).</summary>
     public partial class ScriptCompilerOptions
     {
-        /// <summary>The C# version of a new instance (the release's compiler language version).</summary>
-        const string DefaultLanguageVersion = "9.0";
-
         string[] m_ResponseFiles = Array.Empty<string>();
 
         public ScriptCompilerOptions()
@@ -118,7 +115,8 @@ namespace UnityEditor.Compilation
             EditorAssembliesCompatibilityLevel = EditorAssembliesCompatibilityLevel.Default;
             RoslynAnalyzerDllPaths = Array.Empty<string>();
             RoslynAdditionalFilePaths = Array.Empty<string>();
-            LanguageVersion = DefaultLanguageVersion;
+            // The release's compiler language version (the compatibility profile's).
+            LanguageVersion = CompilationPipeline.s_Compiler.LanguageVersion;
             UseDeterministicCompilation = true;
         }
 
