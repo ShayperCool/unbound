@@ -24,7 +24,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import MACOS_ARM64, device_reference, editor_path, reference_file, run_root
+import editor_runner  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -77,6 +78,15 @@ def stop_compilers(project):
 
 
 def editor(work):
+    if MACOS_ARM64:
+        codes = []
+        for repeat in ('native1', 'native2'):
+            project = copy_project(work/'projects'/repeat)
+            out = fresh_output(work/repeat)
+            codes.append(editor_runner.windowed_capture_macos(project, out, {'SCREENREAD_PROBE_OUT': str(out)}, 1800,
+                                                              'screenread-'+repeat))
+        print('editor exits', codes)
+        return int(any(codes))
     started = []
     try:
         for repeat in ('native1', 'native2'):
@@ -107,8 +117,9 @@ def incomplete(repeat, editor=True):
     """Why a capture cannot be published (None when it is complete)."""
     if editor:
         log = (repeat/'editor.log').read_text(errors='replace') if (repeat/'editor.log').exists() else ''
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
-            return 'NVIDIA GPU renderer was not verified'
+        problem = editor_runner.log_gpu_problem(log)
+        if problem:
+            return problem
         exit_file = repeat/'exit.txt'
         if not exit_file.exists() or exit_file.read_text().strip() != '0':
             return 'the Editor did not exit with 0'
@@ -142,7 +153,7 @@ def publish(work):
             sys.exit(f'{repeat.name}: {reason}; not publishing')
     if (a/'values.jsonl').read_bytes() != (b/'values.jsonl').read_bytes():
         sys.exit('the two Editor captures differ; not publishing')
-    target = reference()
+    target = reference(publishing=True)
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -151,8 +162,9 @@ def publish(work):
     return 0
 
 
-def reference():
-    return reference_file(PROBE, 'jsonl')
+def reference(publishing=False):
+    """The reference (on macOS arm64 the Metal one: tests/probe_paths.py device_reference)."""
+    return device_reference(reference_file(PROBE, 'jsonl'), PROBE, publishing)
 
 
 def unbound(work):

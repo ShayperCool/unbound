@@ -13,7 +13,10 @@ reference is Reference/unity-R/controls.
 --device selects the graphics device of both sides: opengl (the default; the Linux Editor's own
 device, on a private Xvfb through VirtualGL; Unbound with --force-glcore) or vulkan (the Editor
 with -force-vulkan on the GPU-backed display :0, one capture after the other; Unbound with
---force-vulkan). Vulkan references are Reference/unity-R/vulkan (and vulkan/controls).
+--force-vulkan). Vulkan references are Reference/unity-R/vulkan (and vulkan/controls). On macOS
+arm64 the device is metal (the default there): the macOS Editor windowed, one capture after the
+other, Unbound on its Metal device; the references are Reference/unity-R/metal (and
+metal/controls).
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/rtdepth/<label>; nothing is written here except by
@@ -33,7 +36,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_root, run_root
+from probe_paths import MACOS_ARM64, editor_path, reference_root, run_root
+import editor_runner  # noqa: E402
 from editor_runner import vulkan_display_env
 
 PROBE = Path(__file__).resolve().parent
@@ -124,6 +128,15 @@ def editor_vulkan(work):
 def editor(work):
     if DEVICE == 'vulkan':
         return editor_vulkan(work)
+    if DEVICE == 'metal':
+        codes = []
+        for repeat in ('native1', 'native2'):
+            project = copy_project(work/'projects'/repeat)
+            out = fresh_output(work/repeat)
+            codes.append(editor_runner.windowed_capture_macos(project, out, {'RTDEPTH_PROBE_OUT': str(out), 'RTDEPTH_PROBE_MODE': MODE},
+                                                              1800, 'rtdepth-'+repeat))
+        print('editor exits', codes)
+        return int(any(codes))
     started = []
     try:
         for repeat in ('native1', 'native2'):
@@ -158,9 +171,13 @@ def incomplete(repeat, editor=True):
     """Why a capture cannot be published (None when it is complete)."""
     if editor:
         log = (repeat/'editor.log').read_text(errors='replace') if (repeat/'editor.log').exists() else ''
-        device = '[Vulkan init] Physical Device' if DEVICE == 'vulkan' else 'Renderer:'
-        if 'NVIDIA' not in next((line for line in log.splitlines() if device in line), ''):
-            return 'NVIDIA GPU renderer was not verified'
+        if DEVICE == 'vulkan':
+            if 'NVIDIA' not in next((line for line in log.splitlines() if '[Vulkan init] Physical Device' in line), ''):
+                return 'NVIDIA GPU renderer was not verified'
+        else:
+            problem = editor_runner.log_gpu_problem(log)
+            if problem:
+                return problem
         exit_file = repeat/'exit.txt'
         if not exit_file.exists() or exit_file.read_text().strip() != '0':
             return 'the Editor did not exit with 0'
@@ -203,7 +220,7 @@ def publish(work):
         sys.exit('the two Editor captures differ in values; not publishing')
     if images(a) != images(b) or any((a/n).read_bytes() != (b/n).read_bytes() for n in images(a)):
         sys.exit('the two Editor captures differ in images; not publishing')
-    target = reference_root(PROBE)/'vulkan' if DEVICE == 'vulkan' else reference_root(PROBE)
+    target = reference_root(PROBE)/DEVICE if DEVICE in ('vulkan', 'metal') else reference_root(PROBE)
     target = target/'controls' if MODE == 'controls' else target
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
@@ -224,7 +241,7 @@ def unbound(work):
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '600', '--size', '64x32',
-                                 '--force-vulkan' if DEVICE == 'vulkan' else '--force-glcore'],
+                                 *{'vulkan': ['--force-vulkan'], 'opengl': ['--force-glcore']}.get(DEVICE, [])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     return result.returncode
@@ -236,7 +253,7 @@ def main():
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--mode', dest='probe_mode', choices=('probe', 'controls'), default='probe')
-    parser.add_argument('--device', choices=('opengl', 'vulkan'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='metal' if MACOS_ARM64 else 'opengl')
     args = parser.parse_args()
     global MODE, DEVICE
     MODE = args.probe_mode

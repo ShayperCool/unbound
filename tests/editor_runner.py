@@ -634,6 +634,26 @@ def run_macos(job):
     return result
 
 
+def windowed_capture_macos(project, out, env, timeout, label):
+    """On macOS arm64, one windowed Editor on `project` for a probe that enters Play mode from
+    its own InitializeOnLoad runner (on Linux those runners start the Editor on a private Xvfb
+    through VirtualGL; macOS needs neither): started directly with `env`, its exit code, also
+    written to out/exit.txt as those runners record it."""
+    result = run(EditorJob(project, Path(out)/'editor.log', out, batch=False, env=env, timeout=timeout, label=label))
+    code = result['exit_code']
+    (Path(out)/'exit.txt').write_text(f'{code}\n')
+    return code
+
+
+def log_gpu_problem(log):
+    """Why an Editor log does not show the GPU a reference needs (None when it does): on Linux
+    the NVIDIA renderer, on macOS arm64 the Metal device."""
+    if MACOS_ARM64:
+        return None if metal_renderer(log) else 'Metal device was not verified'
+    renderer = next((line for line in log.splitlines() if 'Renderer:' in line), '')
+    return None if 'NVIDIA' in renderer else 'NVIDIA GPU renderer was not verified'
+
+
 def run(job):
     """Runs `job` through the heavy-job launcher and returns the supervisor's result (on macOS
     arm64 directly, see run_macos). Refuses under $UNBOUND_SUITE_NO_EDITOR: suite and gate runs
