@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/assetpostprocessors/run.py gate"
+  ],
+  "summary": "assetpostprocessors: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessorHooks.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/ModelMaterialImport.cs",
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-assets/src/audio.rs",
+    "crates/unbound-assets/src/model.rs",
+    "crates/unbound-runtime/src/state.rs"
+  ]
+}

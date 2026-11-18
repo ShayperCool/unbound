@@ -1,0 +1,212 @@
+{"k":"assets.Assets/Tex/Plain.png","v":"Texture2D:Plain"}
+{"k":"assets.Assets/Tex/Shrink.png","v":"Texture2D:Shrink"}
+{"k":"assets.Assets/Tex/Invert.png","v":"Texture2D:Invert"}
+{"k":"assets.Assets/Tex/Sprite.png","v":"Sprite:Sprite,Texture2D:Sprite"}
+{"k":"assets.Assets/Models/Materials.fbx","v":"BoxCollider:Added,GameObject:Added,GameObject:Cube_Alpha,GameObject:Cube_Emit,GameObject:Cube_EmitTex,GameObject:Cube_Metal,GameObject:Cube_Multi,GameObject:Cube_NoMat,GameObject:Cube_Red,GameObject:Cube_Shared,GameObject:Cube_Tex,GameObject:Materials,Material:M_Alpha,Material:M_Emit,Material:M_EmitTex,Material:M_Metal,Material:M_Red,Material:M_Tex,Material:No Name,Mesh:Cube_Alpha,Mesh:Cube_Emit,Mesh:Cube_EmitTex,Mesh:Cube_Metal,Mesh:Cube_Multi,Mesh:Cube_NoMat,Mesh:Cube_Red,Mesh:Cube_Shared,Mesh:Cube_Tex,MeshCollider:Cube_Alpha,MeshCollider:Cube_Emit,MeshCollider:Cube_EmitTex,MeshCollider:Cube_Metal,MeshCollider:Cube_Multi,MeshCollider:Cube_NoMat,MeshCollider:Cube_Red,MeshCollider:Cube_Shared,MeshCollider:Cube_Tex,MeshFilter:Cube_Alpha,MeshFilter:Cube_Emit,MeshFilter:Cube_EmitTex,MeshFilter:Cube_Metal,MeshFilter:Cube_Multi,MeshFilter:Cube_NoMat,MeshFilter:Cube_Red,MeshFilter:Cube_Shared,MeshFilter:Cube_Tex,MeshRenderer:Cube_Alpha,MeshRenderer:Cube_Emit,MeshRenderer:Cube_EmitTex,MeshRenderer:Cube_Metal,MeshRenderer:Cube_Multi,MeshRenderer:Cube_NoMat,MeshRenderer:Cube_Red,MeshRenderer:Cube_Shared,MeshRenderer:Cube_Tex,Transform:Added,Transform:Cube_Alpha,Transform:Cube_Emit,Transform:Cube_EmitTex,Transform:Cube_Metal,Transform:Cube_Multi,Transform:Cube_NoMat,Transform:Cube_Red,Transform:Cube_Shared,Transform:Cube_Tex,Transform:Materials"}
+{"k":"assets.Assets/Models/Animated.fbx","v":"AnimationClip:Moving|MovingAction,AnimationClip:__preview__Moving|MovingAction,GameObject:Animated,Material:M_Move,Mesh:Moving,MeshFilter:Animated,MeshRenderer:Animated,Transform:Animated"}
+{"k":"assets.Assets/Audio/Tone.wav","v":"AudioClip:Tone"}
+{"k":"texture.Assets/Tex/Plain.png","v":"Plain 16x16 format=10 mips=5 filter=1 wrap=0 readable=0 graphicsFormat=97"}
+{"k":"texture.Assets/Tex/Shrink.png","v":"Shrink 32x32 format=4 mips=1 filter=0 wrap=1 readable=1 graphicsFormat=8"}
+{"k":"texture.Assets/Tex/Shrink.png.mip0","v":"fa692b8ffca0c8ea first=RGBA(201, 111, 60, 174)"}
+{"k":"texture.Assets/Tex/Invert.png","v":"Invert 32x32 format=3 mips=6 filter=1 wrap=0 readable=1 graphicsFormat=7"}
+{"k":"texture.Assets/Tex/Invert.png.mip0","v":"76e556083cac1265 first=RGBA(170, 148, 124, 255)"}
+{"k":"texture.Assets/Tex/Invert.png.mip1","v":"e322c3cb89602145 first=RGBA(155, 167, 137, 255)"}
+{"k":"texture.Assets/Tex/Invert.png.mip2","v":"06252a03e165ad80 first=RGBA(122, 126, 161, 255)"}
+{"k":"texture.Assets/Tex/Invert.png.mip3","v":"7266c0c0e0680b3a first=RGBA(113, 122, 104, 255)"}
+{"k":"texture.Assets/Tex/Invert.png.mip4","v":"cfc66c63a39b3bcc first=RGBA(104, 106, 107, 255)"}
+{"k":"texture.Assets/Tex/Invert.png.mip5","v":"07658ac584bb257d first=RGBA(105, 104, 116, 255)"}
+{"k":"texture.Assets/Tex/Sprite.png","v":"Sprite 32x32 format=12 mips=1 filter=1 wrap=1 readable=0 graphicsFormat=101"}
+{"k":"texture.Assets/Tex/Sprite.png.sprite.Sprite","v":"ppu=50 rect=(x:0.00, y:0.00, width:32.00, height:32.00) bounds=(0.64,0.64,0.2)"}
+{"k":"model.Assets/Models/Materials.fbx.Materials","v":"pos=(0,0,0) scale=(1,1,1) components=Transform"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Added","v":"pos=(1,2,3) scale=(1,1,1) components=Transform,BoxCollider box=(0,0,0) (4,5,6)"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Alpha","v":"pos=(-12,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Alpha vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Alpha:RGBA(0.000, 1.000, 0.000, 1.000) meshCollider=Cube_Alpha"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Emit","v":"pos=(-16,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Emit vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Emit:RGBA(0.100, 0.100, 0.100, 1.000) meshCollider=Cube_Emit"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_EmitTex","v":"pos=(-20,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_EmitTex vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_EmitTex:RGBA(0.800, 0.800, 0.800, 1.000) meshCollider=Cube_EmitTex"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Metal","v":"pos=(-24,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Metal vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Metal:RGBA(0.700, 0.700, 0.750, 1.000) meshCollider=Cube_Metal"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Multi","v":"pos=(-28,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Multi vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Red:RGBA(0.800, 0.100, 0.100, 1.000),M_Alpha:RGBA(0.000, 1.000, 0.000, 1.000) meshCollider=Cube_Multi"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_NoMat","v":"pos=(-32,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_NoMat vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=No Name:RGBA(1.000, 1.000, 1.000, 1.000) meshCollider=Cube_NoMat"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Red","v":"pos=(0,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Red vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=Override:RGBA(1.000, 0.000, 0.000, 1.000) meshCollider=Cube_Red"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Shared","v":"pos=(-4,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Shared vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Red:RGBA(0.800, 0.100, 0.100, 1.000) meshCollider=Cube_Shared"}
+{"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Tex","v":"pos=(-8,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Tex vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Tex:RGBA(0.800, 0.800, 0.800, 1.000) meshCollider=Cube_Tex"}
+{"k":"model.Assets/Models/Animated.fbx.Animated","v":"pos=(0,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer mesh=Moving vertices=24 bounds=(0.01,0.01,0.01) readable=False materials=M_Move:RGBA(0.900, 0.900, 0.500, 1.000)"}
+{"k":"model.Assets/Models/Animated.fbx.clip.Moving|MovingAction","v":"length=0.7916667 events=0"}
+{"k":"clip.Assets/Audio/Tone.wav","v":"Tone channels=1 frequency=22050 samples=2205 load=0 ambisonic=0 preload=0 background=0"}
+{"k":"clip.Assets/Audio/Tone.wav.data","v":"f4ebbbb10bb1e830 first=-0.9999695,-0.948761"}
+{"k":"importer.Assets/Tex/Plain.png","v":"TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"meta.Assets/Tex/Plain.png","v":"534fcb8db92ec2e9"}
+{"k":"importer.Assets/Tex/Shrink.png","v":"TextureImporter missing=0 type=0 max=32 filter=0 wrap=1 mips=0 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"meta.Assets/Tex/Shrink.png","v":"1064e1517c4bfadc"}
+{"k":"importer.Assets/Tex/Invert.png","v":"TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"meta.Assets/Tex/Invert.png","v":"05d7b9489bcb7489"}
+{"k":"importer.Assets/Tex/Sprite.png","v":"TextureImporter missing=0 type=8 max=2048 filter=1 wrap=1 mips=0 readable=0 srgb=1 compression=1 npot=0 alphaIsTransparency=1 alphaSource=1 aniso=1 spriteMode=1 ppu=50"}
+{"k":"meta.Assets/Tex/Sprite.png","v":"4e8fece793a44fa2"}
+{"k":"importer.Assets/Models/Materials.fbx","v":"ModelImporter missing=0 scale=2 fileScale=1 anim=1 materials=1 readable=1 collider=1 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"meta.Assets/Models/Materials.fbx","v":"8f7d9aa45418c024"}
+{"k":"importer.Assets/Models/Animated.fbx","v":"ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"meta.Assets/Models/Animated.fbx","v":"981c51f5bf77efea"}
+{"k":"importer.Assets/Audio/Tone.wav","v":"AudioImporter missing=0 mono=1 background=0 ambisonic=0 load=0 format=0 quality=1 rate=0 rateOverride=44100 preload=0"}
+{"k":"meta.Assets/Audio/Tone.wav","v":"c24d40560d2d5470"}
+{"k":"events.Assets/Audio.count","v":"4"}
+{"k":"events.Assets/Audio.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Audio.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Audio.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Audio.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio target=2"}
+{"k":"events.Assets/Audio/Tone.wav.count","v":"8"}
+{"k":"events.Assets/Audio/Tone.wav.00","v":"PPEarly.OnPreprocessAsset AudioImporter missing=0 mono=0 background=0 ambisonic=0 load=0 format=1 quality=1 rate=0 rateOverride=44100 preload=0"}
+{"k":"events.Assets/Audio/Tone.wav.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Audio/Tone.wav.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Audio/Tone.wav.03","v":"PPLate.OnPreprocessAsset context=Assets/Audio/Tone.wav target=2"}
+{"k":"events.Assets/Audio/Tone.wav.04","v":"PPEarly.OnPreprocessAudio context=Assets/Audio/Tone.wav target=2"}
+{"k":"events.Assets/Audio/Tone.wav.05","v":"PPLate.OnPreprocessAudio AudioImporter missing=0 mono=1 background=0 ambisonic=0 load=0 format=1 quality=1 rate=0 rateOverride=44100 preload=0"}
+{"k":"events.Assets/Audio/Tone.wav.06","v":"PPEarly.OnPostprocessAudio  channels=1 frequency=22050 samples=2205 load=0 ambisonic=0 preload=0 background=0"}
+{"k":"events.Assets/Audio/Tone.wav.07","v":"PPLate.OnPostprocessAudio  channels=1 frequency=22050 samples=2205 load=0 ambisonic=0 preload=0 background=0"}
+{"k":"events.Assets/Editor.count","v":"4"}
+{"k":"events.Assets/Editor.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Editor.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Editor.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Editor.03","v":"PPLate.OnPreprocessAsset context=Assets/Editor target=2"}
+{"k":"events.Assets/Materials.count","v":"4"}
+{"k":"events.Assets/Materials.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Materials.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Materials.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Materials.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials target=2"}
+{"k":"events.Assets/Materials/Override.mat.count","v":"4"}
+{"k":"events.Assets/Materials/Override.mat.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
+{"k":"events.Assets/Materials/Override.mat.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Materials/Override.mat.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Materials/Override.mat.03","v":"PPLate.OnPreprocessAsset context=Assets/Materials/Override.mat target=2"}
+{"k":"events.Assets/Models.count","v":"4"}
+{"k":"events.Assets/Models.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Models.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Models.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Models.03","v":"PPLate.OnPreprocessAsset context=Assets/Models target=2"}
+{"k":"events.Assets/Models/Animated.fbx.count","v":"14"}
+{"k":"events.Assets/Models/Animated.fbx.00","v":"PPEarly.OnPreprocessAsset ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"events.Assets/Models/Animated.fbx.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Models/Animated.fbx.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Models/Animated.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Animated.fbx target=2"}
+{"k":"events.Assets/Models/Animated.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Animated.fbx target=2"}
+{"k":"events.Assets/Models/Animated.fbx.05","v":"PPLate.OnPreprocessModel ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"events.Assets/Models/Animated.fbx.06","v":"PPParts.OnPreprocessMaterialDescription M_Move clips=0"}
+{"k":"events.Assets/Models/Animated.fbx.07","v":"PPParts.OnAssignMaterialModel M_Move Moving"}
+{"k":"events.Assets/Models/Animated.fbx.08","v":"PPParts.OnPreprocessMaterialDescription M_Move clips=0"}
+{"k":"events.Assets/Models/Animated.fbx.09","v":"PPParts.OnPostprocessMeshHierarchy Moving[] components=Transform,MeshFilter,MeshRenderer"}
+{"k":"events.Assets/Models/Animated.fbx.10","v":"PPParts.OnPreprocessAnimation"}
+{"k":"events.Assets/Models/Animated.fbx.11","v":"PPParts.OnPostprocessAnimation Animated Moving|MovingAction length=0.7916667"}
+{"k":"events.Assets/Models/Animated.fbx.12","v":"PPEarly.OnPostprocessModel Animated[] components=Transform,MeshFilter,MeshRenderer"}
+{"k":"events.Assets/Models/Animated.fbx.13","v":"PPLate.OnPostprocessModel Animated[] components=Transform,MeshFilter,MeshRenderer"}
+{"k":"events.Assets/Models/Materials.fbx.count","v":"45"}
+{"k":"events.Assets/Models/Materials.fbx.00","v":"PPEarly.OnPreprocessAsset ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=1 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"events.Assets/Models/Materials.fbx.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Models/Materials.fbx.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Models/Materials.fbx.03","v":"PPLate.OnPreprocessAsset context=Assets/Models/Materials.fbx target=2"}
+{"k":"events.Assets/Models/Materials.fbx.04","v":"PPEarly.OnPreprocessModel context=Assets/Models/Materials.fbx target=2"}
+{"k":"events.Assets/Models/Materials.fbx.05","v":"PPLate.OnPreprocessModel ModelImporter missing=0 scale=2 fileScale=1 anim=1 materials=1 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
+{"k":"events.Assets/Models/Materials.fbx.06","v":"PPParts.OnPostprocessMaterial M_Alpha shader=Standard color=RGBA(0.200, 0.400, 0.900, 0.400)"}
+{"k":"events.Assets/Models/Materials.fbx.07","v":"PPParts.OnAssignMaterialModel M_Alpha Cube_Alpha"}
+{"k":"events.Assets/Models/Materials.fbx.08","v":"PPParts.OnPostprocessMaterial M_Alpha shader=Standard color=RGBA(0.200, 0.400, 0.900, 0.400)"}
+{"k":"events.Assets/Models/Materials.fbx.09","v":"PPParts.OnPostprocessMeshHierarchy Cube_Alpha[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.10","v":"PPParts.OnPostprocessMaterial M_Emit shader=Standard color=RGBA(0.100, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.11","v":"PPParts.OnAssignMaterialModel M_Emit Cube_Emit"}
+{"k":"events.Assets/Models/Materials.fbx.12","v":"PPParts.OnPostprocessMaterial M_Emit shader=Standard color=RGBA(0.100, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.13","v":"PPParts.OnPostprocessMeshHierarchy Cube_Emit[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.14","v":"PPParts.OnPostprocessMaterial M_EmitTex shader=Standard color=RGBA(0.800, 0.800, 0.800, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.15","v":"PPParts.OnAssignMaterialModel M_EmitTex Cube_EmitTex"}
+{"k":"events.Assets/Models/Materials.fbx.16","v":"PPParts.OnPostprocessMaterial M_EmitTex shader=Standard color=RGBA(0.800, 0.800, 0.800, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.17","v":"PPParts.OnPostprocessMeshHierarchy Cube_EmitTex[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.18","v":"PPParts.OnPostprocessMaterial M_Metal shader=Standard color=RGBA(0.700, 0.700, 0.750, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.19","v":"PPParts.OnAssignMaterialModel M_Metal Cube_Metal"}
+{"k":"events.Assets/Models/Materials.fbx.20","v":"PPParts.OnPostprocessMaterial M_Metal shader=Standard color=RGBA(0.700, 0.700, 0.750, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.21","v":"PPParts.OnPostprocessMeshHierarchy Cube_Metal[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.22","v":"PPParts.OnPostprocessMaterial M_Red shader=Standard color=RGBA(0.800, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.23","v":"PPParts.OnAssignMaterialModel M_Red Cube_Multi"}
+{"k":"events.Assets/Models/Materials.fbx.24","v":"PPParts.OnPostprocessMaterial M_Red shader=Standard color=RGBA(0.800, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.25","v":"PPParts.OnPostprocessMaterial M_Alpha shader=Standard color=RGBA(0.200, 0.400, 0.900, 0.400)"}
+{"k":"events.Assets/Models/Materials.fbx.26","v":"PPParts.OnAssignMaterialModel M_Alpha Cube_Multi"}
+{"k":"events.Assets/Models/Materials.fbx.27","v":"PPParts.OnPostprocessMeshHierarchy Cube_Multi[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.28","v":"PPParts.OnPostprocessMaterial No Name shader=Standard color=RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.29","v":"PPParts.OnAssignMaterialModel No Name Cube_NoMat"}
+{"k":"events.Assets/Models/Materials.fbx.30","v":"PPParts.OnPostprocessMaterial No Name shader=Standard color=RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.31","v":"PPParts.OnPostprocessMeshHierarchy Cube_NoMat[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.32","v":"PPParts.OnPostprocessMaterial M_Red shader=Standard color=RGBA(0.800, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.33","v":"PPParts.OnAssignMaterialModel M_Red Cube_Red"}
+{"k":"events.Assets/Models/Materials.fbx.34","v":"PPParts.OnPostprocessMeshHierarchy Cube_Red[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.35","v":"PPParts.OnPostprocessMaterial M_Red shader=Standard color=RGBA(0.800, 0.100, 0.100, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.36","v":"PPParts.OnAssignMaterialModel M_Red Cube_Shared"}
+{"k":"events.Assets/Models/Materials.fbx.37","v":"PPParts.OnPostprocessMeshHierarchy Cube_Shared[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.38","v":"PPParts.OnPostprocessMaterial M_Tex shader=Standard color=RGBA(0.800, 0.800, 0.800, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.39","v":"PPParts.OnAssignMaterialModel M_Tex Cube_Tex"}
+{"k":"events.Assets/Models/Materials.fbx.40","v":"PPParts.OnPostprocessMaterial M_Tex shader=Standard color=RGBA(0.800, 0.800, 0.800, 1.000)"}
+{"k":"events.Assets/Models/Materials.fbx.41","v":"PPParts.OnPostprocessMeshHierarchy Cube_Tex[] components=Transform,MeshFilter,MeshRenderer,MeshCollider"}
+{"k":"events.Assets/Models/Materials.fbx.42","v":"PPParts.OnPreprocessAnimation"}
+{"k":"events.Assets/Models/Materials.fbx.43","v":"PPEarly.OnPostprocessModel Materials[Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex] components=Transform"}
+{"k":"events.Assets/Models/Materials.fbx.44","v":"PPLate.OnPostprocessModel Materials[Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex] components=Transform"}
+{"k":"events.Assets/Scenes.count","v":"4"}
+{"k":"events.Assets/Scenes.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Scenes.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Scenes.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Scenes.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes target=2"}
+{"k":"events.Assets/Scenes/Probe.unity.count","v":"4"}
+{"k":"events.Assets/Scenes/Probe.unity.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=0"}
+{"k":"events.Assets/Scenes/Probe.unity.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Scenes/Probe.unity.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Scenes/Probe.unity.03","v":"PPLate.OnPreprocessAsset context=Assets/Scenes/Probe.unity target=2"}
+{"k":"events.Assets/Tex.count","v":"4"}
+{"k":"events.Assets/Tex.00","v":"PPEarly.OnPreprocessAsset AssetImporter missing=1"}
+{"k":"events.Assets/Tex.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Tex.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Tex.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex target=2"}
+{"k":"events.Assets/Tex/Invert.png.count","v":"11"}
+{"k":"events.Assets/Tex/Invert.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Invert.png.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Invert.png.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Invert.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Invert.png target=2"}
+{"k":"events.Assets/Tex/Invert.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Invert.png target=2 same=1"}
+{"k":"events.Assets/Tex/Invert.png.05","v":"PPTieA.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Invert.png.06","v":"PPTieB.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Invert.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
+{"k":"events.Assets/Tex/Invert.png.08","v":"PPLate.OnPreprocessTexture TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Invert.png.09","v":"PPEarly.OnPostprocessTexture Invert 32x32 format=3 mips=6 filter=1 wrap=0 readable=1"}
+{"k":"events.Assets/Tex/Invert.png.10","v":"PPLate.OnPostprocessTexture Invert 32x32 format=3 mips=6 filter=1 wrap=0 readable=1 first=RGBA(0.667, 0.580, 0.486, 1.000)"}
+{"k":"events.Assets/Tex/Plain.png.count","v":"11"}
+{"k":"events.Assets/Tex/Plain.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Plain.png.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Plain.png.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Plain.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Plain.png target=2"}
+{"k":"events.Assets/Tex/Plain.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Plain.png target=2 same=1"}
+{"k":"events.Assets/Tex/Plain.png.05","v":"PPTieA.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Plain.png.06","v":"PPTieB.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Plain.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
+{"k":"events.Assets/Tex/Plain.png.08","v":"PPLate.OnPreprocessTexture TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Plain.png.09","v":"PPEarly.OnPostprocessTexture Plain 16x16 format=3 mips=5 filter=1 wrap=0 readable=1"}
+{"k":"events.Assets/Tex/Plain.png.10","v":"PPLate.OnPostprocessTexture Plain 16x16 format=3 mips=5 filter=1 wrap=0 readable=1"}
+{"k":"events.Assets/Tex/Shrink.png.count","v":"11"}
+{"k":"events.Assets/Tex/Shrink.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Shrink.png.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Shrink.png.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Shrink.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Shrink.png target=2"}
+{"k":"events.Assets/Tex/Shrink.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Shrink.png target=2 same=1"}
+{"k":"events.Assets/Tex/Shrink.png.05","v":"PPTieA.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Shrink.png.06","v":"PPTieB.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Shrink.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
+{"k":"events.Assets/Tex/Shrink.png.08","v":"PPLate.OnPreprocessTexture TextureImporter missing=0 type=0 max=2048 filter=0 wrap=1 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Shrink.png.09","v":"PPEarly.OnPostprocessTexture Shrink 32x32 format=4 mips=1 filter=0 wrap=1 readable=1"}
+{"k":"events.Assets/Tex/Shrink.png.10","v":"PPLate.OnPostprocessTexture Shrink 32x32 format=4 mips=1 filter=0 wrap=1 readable=1"}
+{"k":"events.Assets/Tex/Sprite.png.count","v":"12"}
+{"k":"events.Assets/Tex/Sprite.png.00","v":"PPEarly.OnPreprocessAsset TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
+{"k":"events.Assets/Tex/Sprite.png.01","v":"PPTieA.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Sprite.png.02","v":"PPTieB.OnPreprocessAsset"}
+{"k":"events.Assets/Tex/Sprite.png.03","v":"PPLate.OnPreprocessAsset context=Assets/Tex/Sprite.png target=2"}
+{"k":"events.Assets/Tex/Sprite.png.04","v":"PPEarly.OnPreprocessTexture context=Assets/Tex/Sprite.png target=2 same=1"}
+{"k":"events.Assets/Tex/Sprite.png.05","v":"PPTieA.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Sprite.png.06","v":"PPTieB.OnPreprocessTexture"}
+{"k":"events.Assets/Tex/Sprite.png.07","v":"PPVersioned.OnPreprocessTexture v1"}
+{"k":"events.Assets/Tex/Sprite.png.08","v":"PPLate.OnPreprocessTexture TextureImporter missing=0 type=8 max=2048 filter=1 wrap=1 mips=0 readable=0 srgb=1 compression=1 npot=0 alphaIsTransparency=1 alphaSource=1 aniso=1 spriteMode=1 ppu=100"}
+{"k":"events.Assets/Tex/Sprite.png.09","v":"PPEarly.OnPostprocessTexture Sprite 32x32 format=4 mips=1 filter=1 wrap=1 readable=1"}
+{"k":"events.Assets/Tex/Sprite.png.10","v":"PPLate.OnPostprocessTexture Sprite 32x32 format=4 mips=1 filter=1 wrap=1 readable=1"}
+{"k":"events.Assets/Tex/Sprite.png.11","v":"PPParts.OnPostprocessSprites Sprite Sprite:50"}
+{"k":"allAssets.count","v":"2"}
+{"k":"allAssets.0","v":"PPAllA imported=0 assets=[] deleted=0 moved=0 movedFrom=0 reload=1"}
+{"k":"allAssets.1","v":"PPAllZ imported=0 assets=[] deleted=0 moved=0 movedFrom=0 reload=1"}
+{"k":"timeline","v":"InitializeOnLoad | InitializeOnLoadMethod | DidReloadScripts | afterAssemblyReload | PPAllA.OnPostprocessAllAssets reload=1 | PPAllZ.OnPostprocessAllAssets reload=1 | BeforeSceneLoad | playModeStateChanged EnteredPlayMode"}
+{"k":"complete","v":true}
