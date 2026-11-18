@@ -1,5 +1,19 @@
 {"k":"scene_load.logs","v":"Warning: The Animator Controller (OverrideEmpty) you have used is not valid. Animations will not play"}
 {"k":"scene_load.events","v":"ArgOnlyBehaviour.Awake ArgScene\nArgOnlyBehaviour.OnEnable ArgScene"}
+{"k":"twice.scene","v":"4: CountedBehaviour:twin CountedBehaviour:twin CountedBehaviour:live@worker CountedBehaviour:live@worker"}
+{"k":"twice.scene_objects","v":"2"}
+{"k":"twice.add","v":"returns LateCounted 'CountedHost'"}
+{"k":"twice.add.made","v":"1: LateCounted:live"}
+{"k":"twice.add_again","v":"returns LateCounted 'CountedHost2'"}
+{"k":"twice.add_again.made","v":"1: LateCounted:live"}
+{"k":"twice.data","v":"returns CountedData ''"}
+{"k":"twice.data.made","v":"1: CountedData:live"}
+{"k":"twice.data_again","v":"returns CountedData ''"}
+{"k":"twice.data_again.made","v":"1: CountedData:live"}
+{"k":"twice.prefab_load","v":"returns GameObject 'Counted'"}
+{"k":"twice.prefab_load.made","v":"1: PrefabCounted:live"}
+{"k":"twice.prefab_instantiate","v":"returns GameObject 'Counted(Clone)'"}
+{"k":"twice.prefab_instantiate.made","v":"1: PrefabCounted:live"}
 {"k":"ctor.after_scene","v":"argOnly=0 base=0 derived=0 private=2 data=0"}
 {"k":"ctor.scene.arg_only","v":"number=11 text=scene list=[4] array=8 nested=12/4 transient=0 transientList=null enabled=True"}
 {"k":"ctor.scene.derived","v":"baseNumber=20 baseTransient=0 derivedNumber=30 derivedTransient=0"}
@@ -321,38 +335,38 @@
 {"k":"compilation.Editor.Assembly-CSharp.root_namespace","v":""}
 {"k":"compilation.Editor.Assembly-CSharp.flags","v":"None"}
 {"k":"compilation.Editor.Assembly-CSharp.output","v":"Library/ScriptAssemblies/Assembly-CSharp.dll"}
-{"k":"compilation.Editor.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs]"}
+{"k":"compilation.Editor.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/ConstructionLog.cs,Assets/Scripts/CountedBehaviour.cs,Assets/Scripts/CountedData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/GizmoProbe.cs,Assets/Scripts/LateCounted.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrefabCounted.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs,Assets/Scripts/RspReportMain.cs]"}
 {"k":"compilation.Editor.Assembly-CSharp.references","v":"[ProbeUnsafeLib]"}
 {"k":"compilation.Editor.Assembly-CSharp.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[<project>/Assets/csc.rsp] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.root_namespace","v":""}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.flags","v":"EditorAssembly"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.output","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll"}
-{"k":"compilation.Editor.Assembly-CSharp-Editor.sources","v":"[Assets/Editor/ProbeRunner.cs,Assets/Editor/ProbeSetup.cs]"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.sources","v":"[Assets/Editor/ProbeDefinesHook.cs,Assets/Editor/ProbeRunner.cs,Assets/Editor/ProbeSetup.cs,Assets/Editor/RspReportEditor.cs]"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.references","v":"[Assembly-CSharp,ProbeUnsafeLib]"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.Assembly-CSharp-Editor.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[<project>/Assets/csc.rsp] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Editor.ProbeUnsafeLib.root_namespace","v":"ProbeLib"}
 {"k":"compilation.Editor.ProbeUnsafeLib.flags","v":"None"}
 {"k":"compilation.Editor.ProbeUnsafeLib.output","v":"Library/ScriptAssemblies/ProbeUnsafeLib.dll"}
 {"k":"compilation.Editor.ProbeUnsafeLib.sources","v":"[Assets/UnsafeLib/UnsafeSum.cs]"}
 {"k":"compilation.Editor.ProbeUnsafeLib.references","v":"[]"}
 {"k":"compilation.Editor.ProbeUnsafeLib.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[<project>/Assets/csc.rsp] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Player.Assembly-CSharp.root_namespace","v":""}
 {"k":"compilation.Player.Assembly-CSharp.flags","v":"None"}
 {"k":"compilation.Player.Assembly-CSharp.output","v":"Library/ScriptAssemblies/Assembly-CSharp.dll"}
-{"k":"compilation.Player.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs]"}
+{"k":"compilation.Player.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/ConstructionLog.cs,Assets/Scripts/CountedBehaviour.cs,Assets/Scripts/CountedData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/GizmoProbe.cs,Assets/Scripts/LateCounted.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrefabCounted.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs,Assets/Scripts/RspReportMain.cs]"}
 {"k":"compilation.Player.Assembly-CSharp.references","v":"[ProbeUnsafeLib]"}
 {"k":"compilation.Player.Assembly-CSharp.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Player.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Player.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[<project>/Assets/csc.rsp] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Player.ProbeUnsafeLib.root_namespace","v":"ProbeLib"}
 {"k":"compilation.Player.ProbeUnsafeLib.flags","v":"None"}
 {"k":"compilation.Player.ProbeUnsafeLib.output","v":"Library/ScriptAssemblies/ProbeUnsafeLib.dll"}
 {"k":"compilation.Player.ProbeUnsafeLib.sources","v":"[Assets/UnsafeLib/UnsafeSum.cs]"}
 {"k":"compilation.Player.ProbeUnsafeLib.references","v":"[]"}
 {"k":"compilation.Player.ProbeUnsafeLib.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Player.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Player.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[<project>/Assets/csc.rsp] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.options_new","v":"returns unsafe=False api=NET_Unity_4_8 optimization=None language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
 {"k":"compilation.ctor_options","v":"returns name=Made rootNamespace=MadeNs flags=EditorAssembly output=Out/Made.dll sources=[Assets/A.cs] defines=[MADE] references=[] compiled=[Assets/Plugins/ShapeCore.dll] options=unsafe=True api=NET_Unity_4_8 optimization=Debug language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
 {"k":"compilation.ctor_options_no_namespace","v":"returns name=Made rootNamespace= flags=None output=Out/Made.dll sources=[Assets/A.cs] defines=[] references=[] compiled=[] options=unsafe=False api=NET_Unity_4_8 optimization=None language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
@@ -382,15 +396,175 @@
 {"k":"plugins.extras.reference","v":"ShapeCore 1.0.0.0"}
 {"k":"plugins.extras.answer","v":"returns 42"}
 {"k":"plugins.extras.core_name","v":"returns ShapeCore"}
-{"k":"plugins.extras.types","v":"returns types Microsoft.CodeAnalysis.EmbeddedAttribute,ShapeExtras.Circle,ShapeExtras.ExtrasInfo,ShapeExtras.Square,System.Runtime.CompilerServices.RefSafetyRulesAttribute"}
+{"k":"plugins.extras.types","v":"returns types Microsoft.CodeAnalysis.EmbeddedAttribute,ShapeExtras.Circle,ShapeExtras.ExtrasInfo,ShapeExtras.FloatPlug,ShapeExtras.Pentagon,ShapeExtras.Ruler,ShapeExtras.Square,System.Runtime.CompilerServices.RefSafetyRulesAttribute"}
 {"k":"plugins.extras.square","v":"returns 4"}
 {"k":"plugins.extras.circle_type","v":"returns found"}
 {"k":"plugins.extras.circle_by_name","v":"returns found"}
 {"k":"plugins.extras.circle_create","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.extras.circle_create_again","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.extras.circle_base","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.extras.circle_methods","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.extras.circle_static","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.extras.pentagon_create","v":"throws System.TypeLoadException: Type ShapeExtras.Pentagon has invalid vtable method slot 4 with method none"}
+{"k":"plugins.extras.ruler_create","v":"throws System.TypeLoadException: VTable setup of type ShapeExtras.Ruler failed"}
+{"k":"plugins.extras.ruler_interfaces","v":"throws System.TypeLoadException: VTable setup of type ShapeExtras.Ruler failed"}
+{"k":"plugins.extras.floatplug_create","v":"throws System.TypeLoadException: Type ShapeExtras.FloatPlug has invalid vtable method slot 4 with method none"}
 {"k":"plugins.later.info","v":"true"}
 {"k":"plugins.later.reference","v":"ShapeCore 3.0.0.0"}
 {"k":"plugins.later.core_version","v":"returns 2"}
 {"k":"plugins.later.types","v":"returns types Microsoft.CodeAnalysis.EmbeddedAttribute,ShapeLater.LaterInfo,ShapeLater.Triangle,System.Runtime.CompilerServices.RefSafetyRulesAttribute"}
 {"k":"plugins.later.triangle","v":"returns 2"}
 {"k":"plugins.loaded","v":"ShapeCore,ShapeExtras,ShapeLater"}
+{"k":"rsp.Assembly-CSharp.present","v":"true"}
+{"k":"rsp.Assembly-CSharp.defines","v":"returns RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA"}
+{"k":"rsp.Assembly-CSharp.nullable","v":"true"}
+{"k":"rsp.Assembly-CSharp-Editor.present","v":"true"}
+{"k":"rsp.Assembly-CSharp-Editor.defines","v":"returns RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA"}
+{"k":"rsp.Assembly-CSharp-Editor.nullable","v":"true"}
+{"k":"rsp.ProbeRspLocal.present","v":"true"}
+{"k":"rsp.ProbeRspLocal.defines","v":"returns RSP_LOCAL"}
+{"k":"rsp.ProbeRspLocal.nullable","v":"true"}
+{"k":"rsp.ProbeRspInherit.present","v":"true"}
+{"k":"rsp.ProbeRspInherit.defines","v":"returns RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA"}
+{"k":"rsp.ProbeRspInherit.nullable","v":"true"}
+{"k":"rsp.ProbeRspConstrained.present","v":"true"}
+{"k":"rsp.ProbeRspConstrained.defines","v":"returns RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA"}
+{"k":"rsp.ProbeRspConstrained.nullable","v":"true"}
+{"k":"rsp.ProbeRspLocalOnly.present","v":"false"}
+{"k":"rsp.ProbeRspPackage.present","v":"true"}
+{"k":"rsp.ProbeRspPackage.defines","v":"returns RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA"}
+{"k":"rsp.ProbeRspPackage.nullable","v":"true"}
+{"k":"rsp.ProbeRspPackageLocal.present","v":"true"}
+{"k":"rsp.ProbeRspPackageLocal.defines","v":"returns RSP_PACKAGE"}
+{"k":"rsp.ProbeRspPackageLocal.nullable","v":"true"}
+{"k":"rsp.unsafe","v":"returns 3"}
+{"k":"rsp.reference","v":"returns 77"}
+{"k":"rsp.langversion","v":"returns csharp-ten"}
+{"k":"rsp.parse.project","v":"returns defines=[RSP_GLOBAL,RSP_SECOND,RSP_SHORT,RSP_COMMA] references=[<project>/Assets/RspPlugins/RspRef.dll] unsafe=True errors=[] other=[/nowarn:CS0219]"}
+{"k":"rsp.parse.local","v":"returns defines=[RSP_LOCAL] references=[] unsafe=False errors=[] other=[/nullable:enable,/langversion:10]"}
+{"k":"rsp.parse.missing","v":"returns defines=[] references=[] unsafe=False errors=[] other=[]"}
+{"k":"rsp.obsolete_names","v":"returns [mcs.rsp]"}
+{"k":"rsp.pipeline.Assembly-CSharp.response_files","v":"[<project>/Assets/csc.rsp]"}
+{"k":"rsp.pipeline.Assembly-CSharp.unsafe","v":"true"}
+{"k":"rsp.pipeline.Assembly-CSharp.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.Assembly-CSharp.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.Assembly-CSharp-Editor.response_files","v":"[<project>/Assets/csc.rsp]"}
+{"k":"rsp.pipeline.Assembly-CSharp-Editor.unsafe","v":"true"}
+{"k":"rsp.pipeline.Assembly-CSharp-Editor.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.Assembly-CSharp-Editor.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.ProbeRspConstrained.response_files","v":"[<project>/Assets/csc.rsp]"}
+{"k":"rsp.pipeline.ProbeRspConstrained.unsafe","v":"false"}
+{"k":"rsp.pipeline.ProbeRspConstrained.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.ProbeRspConstrained.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.ProbeRspInherit.response_files","v":"[<project>/Assets/csc.rsp]"}
+{"k":"rsp.pipeline.ProbeRspInherit.unsafe","v":"false"}
+{"k":"rsp.pipeline.ProbeRspInherit.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.ProbeRspInherit.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.ProbeRspLocal.response_files","v":"[<project>/Assets/RspLocal/csc.rsp]"}
+{"k":"rsp.pipeline.ProbeRspLocal.unsafe","v":"false"}
+{"k":"rsp.pipeline.ProbeRspLocal.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.ProbeRspLocal.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.ProbeRspPackage.response_files","v":"[<project>/Assets/csc.rsp]"}
+{"k":"rsp.pipeline.ProbeRspPackage.unsafe","v":"false"}
+{"k":"rsp.pipeline.ProbeRspPackage.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.ProbeRspPackage.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.ProbeRspPackageLocal.response_files","v":"[<project>/Packages/com.probe.rsp/Local/csc.rsp]"}
+{"k":"rsp.pipeline.ProbeRspPackageLocal.unsafe","v":"false"}
+{"k":"rsp.pipeline.ProbeRspPackageLocal.defines","v":"[PROBE_DELEGATE_DEFINE]"}
+{"k":"rsp.pipeline.ProbeRspPackageLocal.arguments","v":"[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702]"}
+{"k":"rsp.pipeline.listed","v":"[Assembly-CSharp,Assembly-CSharp-Editor,ProbeRspConstrained,ProbeRspInherit,ProbeRspLocal,ProbeRspPackage,ProbeRspPackageLocal]"}
+{"k":"rsp.defines_from_name","v":"returns []"}
+{"k":"async.asset_parent.start","v":"returns operation"}
+{"k":"async.asset_parent.result","v":"done=True count=1 Piece (Clone):under EditNone scene=none"}
+{"k":"async.asset_parent_count.start","v":"returns operation"}
+{"k":"async.asset_parent_count.result","v":"done=True count=2 Piece (Clone):under EditNone scene=none Piece (Clone):under EditNone scene=none"}
+{"k":"async.asset_parent_parameters.start","v":"returns operation"}
+{"k":"async.asset_parent_parameters.result","v":"done=True count=1 Piece (Clone):under EditNone scene=none"}
+{"k":"async.scene_parent.start","v":"returns operation"}
+{"k":"async.scene_parent.result","v":"done=True count=1 Piece (Clone):under AsyncSceneParent scene=Probe"}
+{"k":"async.asset_tree","v":"EditNone(Body(Head,Arm),Base(Foot))"}
+{"k":"animator.runtime_invalid.assign","v":"returns done"}
+{"k":"animator.runtime_invalid.assign.logs","v":"Error: Could not set Runtime Animator Controller. The controller OverrideEmpty is an AnimatorOverrideController with no AnimatorController to override."}
+{"k":"animator.runtime_invalid.controller","v":"none"}
+{"k":"animator.runtime_invalid.initialized","v":"returns True"}
+{"k":"animator.runtime_invalid.set_float","v":"returns done"}
+{"k":"animator.runtime_invalid.set_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.runtime_invalid.parameter_count","v":"returns 0"}
+{"k":"animator.runtime_invalid.parameter_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.runtime_invalid.layer_count","v":"returns 0"}
+{"k":"animator.runtime_invalid.layer_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.runtime_invalid.play","v":"returns done"}
+{"k":"animator.runtime_invalid.play.logs","v":"Warning: Animator does not have an AnimatorController"}
+{"k":"animator.runtime_invalid.deactivate","v":"returns done"}
+{"k":"animator.runtime_invalid.activate","v":"returns done"}
+{"k":"animator.runtime_invalid.initialized_after_activate","v":"returns True"}
+{"k":"animator.runtime_invalid.reassign_valid","v":"returns done"}
+{"k":"animator.runtime_invalid.valid.initialized","v":"returns True"}
+{"k":"animator.runtime_invalid.valid.set_float","v":"returns done"}
+{"k":"animator.runtime_invalid.valid.get_float","v":"returns 3"}
+{"k":"animator.runtime_invalid.valid.parameter_count","v":"returns 3"}
+{"k":"animator.runtime_invalid.back_to_invalid","v":"returns done"}
+{"k":"animator.runtime_invalid.back_to_invalid.logs","v":"Error: Could not set Runtime Animator Controller. The controller OverrideEmpty is an AnimatorOverrideController with no AnimatorController to override."}
+{"k":"animator.runtime_invalid.back.initialized","v":"returns True"}
+{"k":"animator.runtime_invalid.back.set_float","v":"returns done"}
+{"k":"editor_controller.type","v":"UnityEditor.Animations.AnimatorController"}
+{"k":"editor_controller.override_type","v":"UnityEngine.AnimatorOverrideController"}
+{"k":"editor_controller.is_editor_class","v":"true"}
+{"k":"editor_controller.parameters","v":"returns speed:Float:0/0/False:254213878 go:Trigger:0/0/False:-1234660522 flag:Bool:0/0/False:-772478054"}
+{"k":"editor_controller.layers","v":"returns Base Layer:0:Override:-1:False:Base Layer"}
+{"k":"editor_controller.states","v":"returns Idle:1:2081823275"}
+{"k":"editor_controller.default_state","v":"returns Idle"}
+{"k":"editor_controller.clips","v":"returns 0"}
+{"k":"editor_controller.name","v":"returns Anim"}
+{"k":"objectchange.record","v":"returns done"}
+{"k":"objectchange.record.published","v":"+0 ChangeGameObjectOrComponentProperties Transform'ChangeTarget' Probe"}
+{"k":"objectchange.plain","v":"returns done"}
+{"k":"objectchange.plain.published","v":"none"}
+{"k":"objectchange.created","v":"returns done"}
+{"k":"objectchange.created.published","v":"+0 CreateGameObjectHierarchy GameObject'UndoMade' Probe"}
+{"k":"objectchange.add_component","v":"returns done"}
+{"k":"objectchange.add_component.published","v":"+0 ChangeGameObjectStructure GameObject'ChangeTarget' Probe"}
+{"k":"objectchange.set_parent","v":"returns done"}
+{"k":"objectchange.set_parent.published","v":"+0 ChangeGameObjectParent GameObject'ChangeChild' from=0 to=GameObject'ChangeTarget' Probe>Probe"}
+{"k":"objectchange.destroy","v":"returns done"}
+{"k":"objectchange.destroy.published","v":"+0 DestroyGameObjectHierarchy missing parent=0 Probe"}
+{"k":"objectchange.record_data","v":"returns done"}
+{"k":"objectchange.record_data.published","v":"+0 ChangeAssetObjectProperties CountedData'ChangeData'"}
+{"k":"objectchange.two_in_one_frame","v":"returns done"}
+{"k":"objectchange.two_in_one_frame.published","v":"+0 ChangeGameObjectOrComponentProperties GameObject'ChangeTargetRenamed' Probe; CreateGameObjectHierarchy GameObject'UndoMade2' Probe"}
+{"k":"objectchange.undo","v":"returns done"}
+{"k":"objectchange.undo.published","v":"+0 DestroyGameObjectHierarchy missing parent=0 Probe; ChangeGameObjectOrComponentProperties GameObject'ChangeTarget' Probe; ChangeAssetObjectProperties CountedData'ChangeData'; CreateGameObjectHierarchy GameObject'ChangeDoomed' Probe; ChangeGameObjectParent GameObject'ChangeChild' from=GameObject'ChangeTarget' to=0 Probe>Probe; ChangeGameObjectStructure GameObject'ChangeTarget' Probe; DestroyGameObjectHierarchy missing parent=0 Probe; ChangeGameObjectOrComponentProperties Transform'ChangeTarget' Probe"}
+{"k":"objectchange.redo","v":"returns done"}
+{"k":"objectchange.redo.published","v":"+0 ChangeGameObjectOrComponentProperties Transform'ChangeTargetRenamed' Probe; CreateGameObjectHierarchy GameObject'UndoMade' Probe; ChangeGameObjectStructure GameObject'ChangeTargetRenamed' Probe; ChangeGameObjectParent GameObject'ChangeChild' from=0 to=GameObject'ChangeTargetRenamed' Probe>Probe; DestroyGameObjectHierarchy missing parent=0 Probe; ChangeAssetObjectProperties CountedData'ChangeData'; ChangeGameObjectOrComponentProperties GameObject'ChangeTargetRenamed' Probe; CreateGameObjectHierarchy GameObject'UndoMade2' Probe"}
+{"k":"annotation.count","v":"58"}
+{"k":"annotation.scripts","v":"AnimationPlayableAsset:114:1:1:6 AnimationTrack:114:1:1:6 GizmoProbe:114:1:1:2"}
+{"k":"annotation.builtin","v":"20:1:1:3 41:1:1:2 58:1:1:2 59:1:1:2 60:1:1:2 61:1:1:2 64:1:1:2 65:1:1:2 66:1:1:2 68:1:1:2 70:1:1:2 82:1:1:3 95:1:1:2 108:1:1:3 111:1:1:2 119:1:1:3 123:1:1:1 135:1:1:2 136:1:1:2 137:1:1:2 143:1:1:2 144:1:1:2 145:1:1:2 146:1:1:2 153:1:1:2 167:1:1:2 182:1:1:3 183:1:1:2 192:1:1:2 193:1:1:2 195:1:1:2 198:1:1:1 205:1:1:2 208:1:1:2 215:1:1:3 220:1:1:1 223:1:1:2 224:1:1:2 231:1:1:2 232:1:1:2 233:1:1:2 234:1:1:2 235:1:1:2 251:1:1:2 253:1:1:2 254:1:1:2 255:1:1:2 256:1:1:2 257:1:1:2 259:1:1:3 330:1:1:3 19719996:1:1:2 156049354:1:1:2 893571522:1:1:2 2083052967:1:1:3"}
+{"k":"annotation.set_icon.script","v":"returns icon=1 gizmo=1 flags=2"}
+{"k":"annotation.set_icon.builtin","v":"returns icon=0 gizmo=1 flags=3"}
+{"k":"annotation.set_icon.unlisted","v":"returns "}
+{"k":"annotation.set_icon.unlisted.logs","v":"Log: Warning: Annotation not found!"}
+{"k":"annotation.set_gizmo.builtin","v":"returns icon=0 gizmo=0 flags=3"}
+{"k":"annotation.restore","v":"returns icon=1 gizmo=1 flags=2 icon=1 gizmo=1 flags=3"}
+{"k":"builddefines.registered","v":"added"}
+{"k":"builddefines.calls_before","v":"true"}
+{"k":"builddefines.compiled_main","v":"false"}
+{"k":"builddefines.get","v":"returns [INPUT_A,PROBE_DELEGATE_DEFINE]"}
+{"k":"builddefines.get_calls","v":"1"}
+{"k":"builddefines.active","v":"returns True"}
+{"k":"builddefines.pipeline","v":"throws System.ArgumentNullException: Value cannot be null.\nParameter name: source"}
+{"k":"mat.variant.load","v":"parent=MatA variant=True queue=2100 keywords=[_EMISSION] gloss=0.3 metal=0 color=RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"mat.variant.overrides","v":"returns color=True gloss=False queue=False"}
+{"k":"mat.variant.so_before","v":"returns queue=-1 valid=1"}
+{"k":"mat.variant.apply","v":"returns True"}
+{"k":"mat.variant.applied","v":"queue=2100 keywords=[_ALPHATEST_ON,_EMISSION] gloss=0.3 metal=0 color=RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"mat.variant.applied_overrides","v":"returns color=True queue=False"}
+{"k":"mat.variant.touch","v":"returns queue=2100 keywords=[_ALPHATEST_ON,_EMISSION] gloss=0.3 metal=0.75 color=RGBA(0.000, 0.000, 1.000, 1.000)"}
+{"k":"mat.variant.so_after","v":"returns queue=2300 keywords=[_ALPHATEST_ON,_EMISSION]"}
+{"k":"mat.variant.parent_after","v":"queue=2100 keywords=[_EMISSION] gloss=0.3 metal=0 color=RGBA(1.000, 0.000, 0.000, 1.000)"}
+{"k":"mat.multi.before","v":"a: queue=2100 keywords=[_EMISSION] gloss=0.3 metal=0 color=RGBA(1.000, 0.000, 0.000, 1.000) b: queue=2000 keywords=[] gloss=0.7 metal=0.5 color=RGBA(0.000, 1.000, 0.000, 1.000)"}
+{"k":"mat.multi.targets","v":"2 multiple=True"}
+{"k":"mat.multi.gloss","v":"returns 0.3 mixed=True"}
+{"k":"mat.multi.queue","v":"returns 2100 mixed=True"}
+{"k":"mat.multi.apply","v":"returns True"}
+{"k":"mat.multi.after","v":"a: queue=2400 keywords=[_EMISSION] gloss=0.25 metal=0 color=RGBA(1.000, 0.000, 0.000, 1.000) b: queue=2400 keywords=[] gloss=0.25 metal=0.5 color=RGBA(0.000, 1.000, 0.000, 1.000)"}
 {"k":"complete","v":true}

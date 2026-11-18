@@ -1,0 +1,5 @@
+-define:RSP_GLOBAL;RSP_SECOND
+-d:RSP_SHORT,RSP_COMMA
+-unsafe
+-r:Assets/RspPlugins/RspRef.dll
+-nowarn:CS0219

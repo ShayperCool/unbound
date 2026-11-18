@@ -31,6 +31,8 @@ public class GameInteropProbe : MonoBehaviour
         if (!ProbeLog.Open) yield break;
         // What loading the scene logged and ran (Awake, OnEnable of its scripts).
         ProbeLog.Flush("scene_load");
+        s_MainThread = System.Threading.Thread.CurrentThread.ManagedThreadId;
+        Run("twice", Twice);
         Run("constructors", Constructors);
         yield return Hierarchy();
         Run("reentrant", Reentrant);
@@ -39,6 +41,14 @@ public class GameInteropProbe : MonoBehaviour
         Run("compilation", Compilation);
         Run("timeline", Timelines);
         Run("plugins", Plugins);
+        Run("rsp", Rsp);
+        yield return AsyncParent();
+        yield return RuntimeController();
+        Run("editor_controller", EditorController);
+        yield return ObjectChanges();
+        Run("annotation", Annotations);
+        Run("builddefines", BuildDefinesRows);
+        Run("mat", Materials);
         ProbeLog.Flush("end");
         ProbeLog.Close();
 #if UNITY_EDITOR
@@ -70,6 +80,58 @@ public class GameInteropProbe : MonoBehaviour
     static string List(List<int> list) => list == null ? "null" : "[" + string.Join(",", list) + "]";
 
     static int[] counted = new int[5];
+    static int s_MainThread;
+    static int s_Constructions;
+
+    sealed class SameObject : IEqualityComparer<object>
+    {
+        public new bool Equals(object a, object b) => ReferenceEquals(a, b);
+        public int GetHashCode(object o) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(o);
+    }
+
+    /// <summary>The counted scripts' constructions since the previous call: type; "live" for the very
+    /// object the scene holds or the call returned, "twin" for another object with that one's
+    /// instance ID, "alive"/"dead" for any other (whether it compares unequal to null); "@worker" off
+    /// the main thread.</summary>
+    static string Constructions(params UnityEngine.Object[] returned)
+    {
+        List<(object Made, int Thread)> made;
+        lock (ConstructionLog.Made) made = ConstructionLog.Made.Skip(s_Constructions).ToList();
+        s_Constructions += made.Count;
+        var live = new List<UnityEngine.Object>(FindObjectsByType<CountedBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+        foreach (var r in returned) if (!ReferenceEquals(r, null)) live.Add(r);
+        var same = new HashSet<object>(live, new SameObject());
+        return made.Count + ": " + string.Join(" ", made.Select(m =>
+        {
+            var o = (UnityEngine.Object)m.Made;
+            var state = same.Contains(o) ? "live" : live.Any(l => l != null && o.GetInstanceID() == l.GetInstanceID()) ? "twin" : o != null ? "alive" : "dead";
+            return o.GetType().Name + ":" + state + (m.Thread == s_MainThread ? "" : "@worker");
+        }));
+    }
+
+    static void Twice()
+    {
+        Row("twice.scene", Constructions());
+        Row("twice.scene_objects", FindObjectsByType<CountedBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length);
+        var host = new GameObject("CountedHost");
+        LateCounted late = null;
+        Try("twice.add", () => late = host.AddComponent<LateCounted>());
+        Row("twice.add.made", Constructions(late));
+        Try("twice.add_again", () => late = new GameObject("CountedHost2").AddComponent<LateCounted>());
+        Row("twice.add_again.made", Constructions(late));
+        CountedData data = null;
+        Try("twice.data", () => data = ScriptableObject.CreateInstance<CountedData>());
+        Row("twice.data.made", Constructions(data));
+        Try("twice.data_again", () => data = ScriptableObject.CreateInstance<CountedData>());
+        Row("twice.data_again.made", Constructions(data));
+        GameObject prefab = null;
+        Try("twice.prefab_load", () => prefab = Resources.Load<GameObject>("Counted"));
+        Row("twice.prefab_load.made", Constructions(prefab == null ? null : prefab.GetComponent<PrefabCounted>()));
+        GameObject clone = null;
+        Try("twice.prefab_instantiate", () => clone = Instantiate(prefab));
+        Row("twice.prefab_instantiate.made", Constructions(clone == null ? null : clone.GetComponent<PrefabCounted>()));
+        Destroy(host);
+    }
 
     /// <summary>How many times each script's own constructor ran since the previous count.</summary>
     static string Counts()
@@ -334,7 +396,7 @@ public class GameInteropProbe : MonoBehaviour
     /// Editor's current one (a user preference of the machine) reads "editor".</summary>
     static string Options(ScriptCompilerOptions o, bool relative = false) => o == null ? "null" :
         $"unsafe={o.AllowUnsafeCode} api={o.ApiCompatibilityLevel} optimization={(relative && o.CodeOptimization == CompilationPipeline.codeOptimization ? "editor" : o.CodeOptimization.ToString())} language={o.LanguageVersion ?? "null"} " +
-        $"responseFiles={Join(o.ResponseFiles)} arguments={Join(o.AdditionalCompilerArguments)} analyzers={Join(o.RoslynAnalyzerDllPaths?.Select(System.IO.Path.GetFileName))} " +
+        $"responseFiles={Join(o.ResponseFiles?.Select(Rel))} arguments={Join(o.AdditionalCompilerArguments)} analyzers={Join(o.RoslynAnalyzerDllPaths?.Select(System.IO.Path.GetFileName))} " +
         $"ruleset={o.RoslynAnalyzerRulesetPath ?? "null"} config={o.AnalyzerConfigPath ?? "null"} additional={Join(o.RoslynAdditionalFilePaths)} " +
         $"editorCompatibility={o.EditorAssembliesCompatibilityLevel}";
 
@@ -440,6 +502,16 @@ public class GameInteropProbe : MonoBehaviour
             Try("plugins.extras.circle_type", () => extras.GetType("ShapeExtras.Circle") == null ? "null" : "found");
             Try("plugins.extras.circle_by_name", () => Type.GetType("ShapeExtras.Circle, ShapeExtras") == null ? "null" : "found");
             Try("plugins.extras.circle_create", () => Activator.CreateInstance(extras.GetType("ShapeExtras.Circle", true)).GetType().Name);
+            Try("plugins.extras.circle_create_again", () => Activator.CreateInstance(extras.GetType("ShapeExtras.Circle", true)).GetType().Name);
+            Try("plugins.extras.circle_base", () => extras.GetType("ShapeExtras.Circle", true).BaseType.FullName);
+            Try("plugins.extras.circle_methods", () => string.Join(",", extras.GetType("ShapeExtras.Circle", true)
+                .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                .Select(m => m.Name).OrderBy(s => s, StringComparer.Ordinal)));
+            Try("plugins.extras.circle_static", () => Call(extras.GetType("ShapeExtras.Circle", true), "Count"));
+            Try("plugins.extras.pentagon_create", () => Activator.CreateInstance(extras.GetType("ShapeExtras.Pentagon", true)).GetType().Name);
+            Try("plugins.extras.ruler_create", () => Activator.CreateInstance(extras.GetType("ShapeExtras.Ruler", true)).GetType().Name);
+            Try("plugins.extras.ruler_interfaces", () => string.Join(",", extras.GetType("ShapeExtras.Ruler", true).GetInterfaces().Select(i => i.FullName)));
+            Try("plugins.extras.floatplug_create", () => Activator.CreateInstance(extras.GetType("ShapeExtras.FloatPlug", true)).GetType().Name);
         }
         var later = Type.GetType("ShapeLater.LaterInfo, ShapeLater");
         Row("plugins.later.info", later != null);
@@ -451,5 +523,355 @@ public class GameInteropProbe : MonoBehaviour
             Try("plugins.later.triangle", () => ((ShapeCore.Shape)Activator.CreateInstance(later.Assembly.GetType("ShapeLater.Triangle"))).Area(2f));
         }
         Row("plugins.loaded", string.Join(",", AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetName().Name).Where(n => n.StartsWith("Shape")).Distinct().OrderBy(s => s, StringComparer.Ordinal)));
+    }
+    // ------------------------------------------------------------------ response files
+
+    static string Rel(string path)
+    {
+        if (path == null) return "null";
+        path = path.Replace('\\', '/');
+        var root = System.IO.Path.GetDirectoryName(Application.dataPath).Replace('\\', '/');
+        return path.StartsWith(root + "/", StringComparison.Ordinal) ? "<project>/" + path.Substring(root.Length + 1) : path;
+    }
+
+    /// <summary>Whether the compiler recorded nullable annotations in the type (only in a nullable
+    /// context does it emit its Nullable attributes).</summary>
+    static bool Nullable(Type type)
+    {
+        bool Has(IEnumerable<CustomAttributeData> attributes) => attributes.Any(a => a.AttributeType.Name.StartsWith("Nullable", StringComparison.Ordinal));
+        var echo = type.GetMethod("Echo");
+        return Has(type.CustomAttributes) || echo != null && (Has(echo.CustomAttributes) || echo.GetParameters().Any(p => Has(p.CustomAttributes)) || Has(echo.ReturnParameter.CustomAttributes));
+    }
+
+    static readonly (string Assembly, string Type)[] s_RspReports =
+    {
+        ("Assembly-CSharp", "RspReportMain"), ("Assembly-CSharp-Editor", "RspReportEditor"), ("ProbeRspLocal", "RspReportLocal"),
+        ("ProbeRspInherit", "RspReportInherit"), ("ProbeRspConstrained", "RspReportConstrained"), ("ProbeRspLocalOnly", "RspReportLocalOnly"),
+        ("ProbeRspPackage", "RspReportPackage"), ("ProbeRspPackageLocal", "RspReportPackageLocal"),
+    };
+
+    static void Rsp()
+    {
+        foreach (var (assembly, typeName) in s_RspReports)
+        {
+            var key = "rsp." + assembly;
+            var type = Type.GetType(typeName + ", " + assembly);
+            Row(key + ".present", type != null);
+            if (type == null) continue;
+            Try(key + ".defines", () => Call(type, "Defines"));
+            Row(key + ".nullable", Nullable(type));
+        }
+        Try("rsp.unsafe", () => Call(Type.GetType("RspReportInherit, ProbeRspInherit", true), "Unsafe"));
+        Try("rsp.reference", () => RspReportMain.Reference());
+        Try("rsp.langversion", () => Type.GetType("RspReportLocal, ProbeRspLocal", true).GetField("Version").GetValue(null));
+#if UNITY_EDITOR
+        var project = System.IO.Path.GetDirectoryName(Application.dataPath);
+        foreach (var (key, file) in new[] { ("rsp.parse.project", "Assets/csc.rsp"), ("rsp.parse.local", "Assets/RspLocal/csc.rsp"), ("rsp.parse.missing", "Assets/None/csc.rsp") })
+            Try(key, () =>
+            {
+                var data = CompilationPipeline.ParseResponseFile(file, project, new string[0]);
+                return $"defines={Join(data.Defines)} references={Join(data.FullPathReferences?.Select(Rel))} unsafe={data.Unsafe} errors={Join(data.Errors)} other={Join(data.OtherArguments)}";
+            });
+        Try("rsp.obsolete_names", () =>
+        {
+            var type = typeof(Editor).Assembly.GetType("UnityEditor.Scripting.Compilers.CompilerSpecificResponseFiles");
+            var field = type?.GetField("MicrosoftCSharpCompilerObsolete", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            return field == null ? "none" : Join((string[])field.GetValue(null));
+        });
+        var names = s_RspReports.Select(r => r.Assembly).ToArray();
+        foreach (var a in CompilationPipeline.GetAssemblies(AssembliesType.Editor).Where(a => names.Contains(a.name)).OrderBy(a => a.name, StringComparer.Ordinal))
+        {
+            Row("rsp.pipeline." + a.name + ".response_files", Join(a.compilerOptions.ResponseFiles?.Select(Rel)));
+            Row("rsp.pipeline." + a.name + ".unsafe", a.compilerOptions.AllowUnsafeCode);
+            Row("rsp.pipeline." + a.name + ".defines", Join(a.defines.Where(d => d.StartsWith("RSP_") || d.StartsWith("PROBE_")).OrderBy(s => s, StringComparer.Ordinal)));
+            Row("rsp.pipeline." + a.name + ".arguments", Join(a.compilerOptions.AdditionalCompilerArguments));
+        }
+        Row("rsp.pipeline.listed", Join(CompilationPipeline.GetAssemblies(AssembliesType.Editor).Select(a => a.name).Where(names.Contains).OrderBy(s => s, StringComparer.Ordinal)));
+        Try("rsp.defines_from_name", () => Join(CompilationPipeline.GetDefinesFromAssemblyName("ProbeRspInherit")?.Where(d => d.StartsWith("RSP_")).OrderBy(s => s, StringComparer.Ordinal)));
+#endif
+    }
+
+    // ------------------------------------------------------------------ InstantiateAsync with a parent in an asset
+
+    static string Results(AsyncInstantiateOperation<GameObject> op) => op == null ? "no operation" :
+        $"done={op.isDone} count={op.Result?.Length ?? -1} " + string.Join(" ", (op.Result ?? new GameObject[0]).Select(g => g == null ? "null" : g.name + ":" + Where(g.transform)));
+
+    static IEnumerator AsyncParent()
+    {
+        var original = Resources.Load<GameObject>("Hier/Piece");
+        var asset = Resources.Load<GameObject>("Hier/EditNone").transform;
+        var scene = new GameObject("AsyncSceneParent").transform;
+        var cases = new (string Key, Func<AsyncInstantiateOperation<GameObject>> Start)[]
+        {
+            ("async.asset_parent", () => InstantiateAsync(original, asset)),
+            ("async.asset_parent_count", () => InstantiateAsync(original, 2, asset, new Vector3(1, 2, 3), Quaternion.identity)),
+            ("async.asset_parent_parameters", () => InstantiateAsync(original, new InstantiateParameters { parent = asset, worldSpace = false })),
+            ("async.scene_parent", () => InstantiateAsync(original, scene)),
+        };
+        foreach (var (key, start) in cases)
+        {
+            AsyncInstantiateOperation<GameObject> op = null;
+            Try(key + ".start", () => { op = start(); return op == null ? "null" : "operation"; });
+            for (int i = 0; i < 30 && op != null && !op.isDone; i++) yield return null;
+            Row(key + ".result", Results(op));
+            ProbeLog.Flush(key + ".after");
+            if (op?.Result != null) foreach (var g in op.Result) if (g != null) Destroy(g);
+        }
+        Row("async.asset_tree", Tree(asset));
+        Destroy(scene.gameObject);
+    }
+
+    // ------------------------------------------------------------------ invalid controller assigned while running
+
+    static IEnumerator RuntimeController()
+    {
+        var go = new GameObject("RuntimeAnimator");
+        var animator = go.AddComponent<Animator>();
+        const string key = "animator.runtime_invalid";
+        Do(key + ".assign", () => animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("OverrideEmpty"));
+        Row(key + ".controller", animator.runtimeAnimatorController == null ? "none" : animator.runtimeAnimatorController.GetType().Name);
+        Try(key + ".initialized", () => animator.isInitialized);
+        Do(key + ".set_float", () => animator.SetFloat("speed", 1f));
+        Try(key + ".parameter_count", () => animator.parameterCount);
+        Try(key + ".layer_count", () => animator.layerCount);
+        Do(key + ".play", () => animator.Play("Idle"));
+        yield return null;
+        yield return null;
+        ProbeLog.Flush(key + ".frames");
+        Do(key + ".deactivate", () => go.SetActive(false));
+        Do(key + ".activate", () => go.SetActive(true));
+        Try(key + ".initialized_after_activate", () => animator.isInitialized);
+        Do(key + ".reassign_valid", () => animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Anim"));
+        Try(key + ".valid.initialized", () => animator.isInitialized);
+        Do(key + ".valid.set_float", () => animator.SetFloat("speed", 3f));
+        Try(key + ".valid.get_float", () => animator.GetFloat("speed"));
+        Try(key + ".valid.parameter_count", () => animator.parameterCount);
+        Do(key + ".back_to_invalid", () => animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("OverrideEmpty"));
+        Try(key + ".back.initialized", () => animator.isInitialized);
+        Do(key + ".back.set_float", () => animator.SetFloat("speed", 4f));
+        yield return null;
+        ProbeLog.Flush(key + ".back.frames");
+        Destroy(go);
+    }
+
+    // ------------------------------------------------------------------ the Editor's controller class
+
+    static void EditorController()
+    {
+#if UNITY_EDITOR
+        var loaded = Resources.Load<RuntimeAnimatorController>("Anim");
+        Row("editor_controller.type", loaded == null ? "none" : loaded.GetType().FullName);
+        Row("editor_controller.override_type", Resources.Load<RuntimeAnimatorController>("Override")?.GetType().FullName ?? "none");
+        var controller = loaded as UnityEditor.Animations.AnimatorController;
+        Row("editor_controller.is_editor_class", controller != null);
+        if (controller == null) return;
+        Try("editor_controller.parameters", () => string.Join(" ", controller.parameters.Select(p =>
+            $"{p.name}:{p.type}:{p.defaultFloat}/{p.defaultInt}/{p.defaultBool}:{p.nameHash}")));
+        Try("editor_controller.layers", () => string.Join(" ", controller.layers.Select(l =>
+            $"{l.name}:{l.defaultWeight}:{l.blendingMode}:{l.syncedLayerIndex}:{l.iKPass}:{(l.stateMachine == null ? "null" : l.stateMachine.name)}")));
+        Try("editor_controller.states", () => string.Join(" ", controller.layers[0].stateMachine.states.Select(s => s.state.name + ":" + s.state.speed + ":" + s.state.nameHash)));
+        Try("editor_controller.default_state", () => controller.layers[0].stateMachine.defaultState?.name ?? "null");
+        Try("editor_controller.clips", () => controller.animationClips.Length);
+        Try("editor_controller.name", () => controller.name);
+#endif
+    }
+
+    // ------------------------------------------------------------------ ObjectChangeEvents
+
+#if UNITY_EDITOR
+    static readonly List<string> s_Changes = new List<string>();
+    static int s_ChangeFrame;
+
+    static string Named(int id)
+    {
+        if (id == 0) return "0";
+        var o = EditorUtility.InstanceIDToObject(id);
+        return o == null ? "missing" : o.GetType().Name + "'" + o.name + "'";
+    }
+
+    static void OnChanges(ref ObjectChangeEventStream stream)
+    {
+        var parts = new List<string>();
+        for (int i = 0; i < stream.length; i++)
+        {
+            var kind = stream.GetEventType(i);
+            string detail;
+            switch (kind)
+            {
+                case ObjectChangeKind.ChangeScene: stream.GetChangeSceneEvent(i, out var scene); detail = scene.scene.name; break;
+                case ObjectChangeKind.CreateGameObjectHierarchy: stream.GetCreateGameObjectHierarchyEvent(i, out var create); detail = Named(create.instanceId) + " " + create.scene.name; break;
+                case ObjectChangeKind.DestroyGameObjectHierarchy: stream.GetDestroyGameObjectHierarchyEvent(i, out var destroy); detail = Named(destroy.instanceId) + " parent=" + Named(destroy.parentInstanceId) + " " + destroy.scene.name; break;
+                case ObjectChangeKind.ChangeGameObjectStructureHierarchy: stream.GetChangeGameObjectStructureHierarchyEvent(i, out var hierarchy); detail = Named(hierarchy.instanceId) + " " + hierarchy.scene.name; break;
+                case ObjectChangeKind.ChangeGameObjectStructure: stream.GetChangeGameObjectStructureEvent(i, out var structure); detail = Named(structure.instanceId) + " " + structure.scene.name; break;
+                case ObjectChangeKind.ChangeGameObjectParent: stream.GetChangeGameObjectParentEvent(i, out var parent); detail = Named(parent.instanceId) + " from=" + Named(parent.previousParentInstanceId) + " to=" + Named(parent.newParentInstanceId) + " " + parent.previousScene.name + ">" + parent.newScene.name; break;
+                case ObjectChangeKind.ChangeChildrenOrder: stream.GetChangeChildrenOrderEvent(i, out var children); detail = Named(children.instanceId) + " " + children.scene.name; break;
+                case ObjectChangeKind.ChangeRootOrder: stream.GetChangeRootOrderEvent(i, out var root); detail = Named(root.instanceId) + " " + root.scene.name; break;
+                case ObjectChangeKind.ChangeGameObjectOrComponentProperties: stream.GetChangeGameObjectOrComponentPropertiesEvent(i, out var properties); detail = Named(properties.instanceId) + " " + properties.scene.name; break;
+                case ObjectChangeKind.CreateAssetObject: stream.GetCreateAssetObjectEvent(i, out var createAsset); detail = Named(createAsset.instanceId); break;
+                case ObjectChangeKind.DestroyAssetObject: stream.GetDestroyAssetObjectEvent(i, out var destroyAsset); detail = Named(destroyAsset.instanceId); break;
+                case ObjectChangeKind.ChangeAssetObjectProperties: stream.GetChangeAssetObjectPropertiesEvent(i, out var assetProperties); detail = Named(assetProperties.instanceId); break;
+                case ObjectChangeKind.UpdatePrefabInstances: stream.GetUpdatePrefabInstancesEvent(i, out var prefabs); detail = prefabs.instanceIds.Length + " " + prefabs.scene.name; break;
+                default: detail = ""; break;
+            }
+            parts.Add(kind + " " + detail);
+        }
+        s_Changes.Add("+" + (Time.frameCount - s_ChangeFrame) + " " + string.Join("; ", parts));
+    }
+#endif
+
+    static IEnumerator ObjectChanges()
+    {
+#if UNITY_EDITOR
+        var target = new GameObject("ChangeTarget");
+        var child = new GameObject("ChangeChild");
+        var doomed = new GameObject("ChangeDoomed");
+        var data = ScriptableObject.CreateInstance<CountedData>();
+        data.name = "ChangeData";
+        yield return null;
+        ObjectChangeEvents.changesPublished += OnChanges;
+        var steps = new (string Key, Action Change)[]
+        {
+            ("record", () => { Undo.RecordObject(target.transform, "move"); target.transform.position = new Vector3(1, 2, 3); }),
+            ("plain", () => target.transform.position = new Vector3(4, 5, 6)),
+            ("created", () => Undo.RegisterCreatedObjectUndo(new GameObject("UndoMade"), "make")),
+            ("add_component", () => Undo.AddComponent<BoxCollider>(target)),
+            ("set_parent", () => Undo.SetTransformParent(child.transform, target.transform, "parent")),
+            ("destroy", () => Undo.DestroyObjectImmediate(doomed)),
+            ("record_data", () => { Undo.RecordObject(data, "data"); data.number = 5; }),
+            ("two_in_one_frame", () => { Undo.RecordObject(target, "rename"); target.name = "ChangeTargetRenamed"; Undo.RegisterCreatedObjectUndo(new GameObject("UndoMade2"), "make2"); }),
+            ("undo", () => Undo.PerformUndo()),
+            ("redo", () => Undo.PerformRedo()),
+        };
+        foreach (var (key, change) in steps)
+        {
+            s_Changes.Clear();
+            s_ChangeFrame = Time.frameCount;
+            Do("objectchange." + key, change);
+            for (int i = 0; i < 3; i++) yield return null;
+            Row("objectchange." + key + ".published", s_Changes.Count == 0 ? "none" : string.Join(" | ", s_Changes));
+        }
+        ObjectChangeEvents.changesPublished -= OnChanges;
+        Undo.ClearAll();
+#else
+        yield break;
+#endif
+    }
+
+    // ------------------------------------------------------------------ gizmo annotations
+
+    static void Annotations()
+    {
+#if UNITY_EDITOR
+        var util = typeof(Editor).Assembly.GetType("UnityEditor.AnnotationUtility");
+        var annotationType = typeof(Editor).Assembly.GetType("UnityEditor.Annotation");
+        const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        var get = util.GetMethod("GetAnnotations", any);
+        string Field(object a, string name) => annotationType.GetField(name).GetValue(a)?.ToString() ?? "null";
+        List<object> All() => ((Array)get.Invoke(null, null)).Cast<object>().ToList();
+        var all = All();
+        Row("annotation.count", all.Count);
+        Row("annotation.scripts", string.Join(" ", all.Where(a => Field(a, "scriptClass") != "").Select(a =>
+            $"{Field(a, "scriptClass")}:{Field(a, "classID")}:{Field(a, "iconEnabled")}:{Field(a, "gizmoEnabled")}:{Field(a, "flags")}").OrderBy(s => s, StringComparer.Ordinal)));
+        Row("annotation.builtin", string.Join(" ", all.Where(a => Field(a, "scriptClass") == "").Select(a =>
+            $"{Field(a, "classID")}:{Field(a, "iconEnabled")}:{Field(a, "gizmoEnabled")}:{Field(a, "flags")}").OrderBy(s => int.Parse(s.Split(':')[0]))));
+        string Entry(int classID, string script) => string.Join(",", All().Where(a => Field(a, "classID") == classID.ToString() && Field(a, "scriptClass") == script)
+            .Select(a => $"icon={Field(a, "iconEnabled")} gizmo={Field(a, "gizmoEnabled")} flags={Field(a, "flags")}"));
+        var setIcon = util.GetMethod("SetIconEnabled", any);
+        var setGizmo = util.GetMethod("SetGizmoEnabled", any);
+        Try("annotation.set_icon.script", () => { setIcon.Invoke(null, new object[] { 114, "GizmoProbe", 0 }); return Entry(114, "GizmoProbe"); });
+        Try("annotation.set_icon.builtin", () => { setIcon.Invoke(null, new object[] { 20, "", 0 }); return Entry(20, ""); });
+        Try("annotation.set_icon.unlisted", () => { setIcon.Invoke(null, new object[] { 114, "CountedBehaviour", 0 }); return Entry(114, "CountedBehaviour"); });
+        Try("annotation.set_gizmo.builtin", () => { setGizmo.Invoke(null, new object[] { 20, "", 0, false }); return Entry(20, ""); });
+        Try("annotation.restore", () =>
+        {
+            setIcon.Invoke(null, new object[] { 114, "GizmoProbe", 1 });
+            setIcon.Invoke(null, new object[] { 20, "", 1 });
+            setGizmo.Invoke(null, new object[] { 20, "", 1, false });
+            return Entry(114, "GizmoProbe") + " " + Entry(20, "");
+        });
+#endif
+    }
+
+    // ------------------------------------------------------------------ BuildDefines delegates
+
+    static void BuildDefinesRows()
+    {
+#if UNITY_EDITOR
+        var hook = Type.GetType("ProbeDefinesHook, Assembly-CSharp-Editor");
+        Row("builddefines.registered", hook?.GetField("Registered").GetValue(null)?.ToString() ?? "no hook");
+        int Calls() => (int)hook.GetField("Calls").GetValue(null);
+        Row("builddefines.calls_before", Calls() > 0);
+        Row("builddefines.compiled_main", RspReportMain.Defines().Contains("PROBE_DELEGATE_DEFINE"));
+        var buildDefines = typeof(Editor).Assembly.GetType("UnityEditor.Build.BuildDefines");
+        var get = buildDefines?.GetMethod("GetScriptCompilationDefines", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        var before = Calls();
+        Try("builddefines.get", () =>
+        {
+            var result = (string[])get.Invoke(null, new object[] { EditorUserBuildSettings.activeBuildTarget, new[] { "INPUT_A" } });
+            return Join(result.Where(d => d == "INPUT_A" || d == "PROBE_DELEGATE_DEFINE" || d == "UNITY_EDITOR"));
+        });
+        Row("builddefines.get_calls", Calls() - before);
+        Try("builddefines.active", () => EditorUserBuildSettings.activeScriptCompilationDefines.Contains("PROBE_DELEGATE_DEFINE"));
+        Try("builddefines.pipeline", () => CompilationPipeline.GetDefinesFromAssemblyName("Assembly-CSharp").Contains("PROBE_DELEGATE_DEFINE"));
+#endif
+    }
+
+    // ------------------------------------------------------------------ material serialized objects
+
+#if UNITY_EDITOR
+    static SerializedProperty Saved(SerializedObject so, string list, string name)
+    {
+        var array = so.FindProperty("m_SavedProperties." + list);
+        for (int i = 0; i < array.arraySize; i++)
+        {
+            var entry = array.GetArrayElementAtIndex(i);
+            if (entry.FindPropertyRelative("first").stringValue == name) return entry.FindPropertyRelative("second");
+        }
+        return null;
+    }
+
+    static string Keywords(Material m) => "[" + string.Join(",", m.shaderKeywords.OrderBy(s => s, StringComparer.Ordinal)) + "]";
+
+    static string State(Material m) => m == null ? "none" :
+        $"queue={m.renderQueue} keywords={Keywords(m)} gloss={m.GetFloat("_Glossiness")} metal={m.GetFloat("_Metallic")} color={m.GetColor("_Color")}";
+#endif
+
+    static void Materials()
+    {
+#if UNITY_EDITOR
+        var variant = Resources.Load<Material>("MatVariant");
+        Row("mat.variant.load", $"parent={(variant.parent == null ? "none" : variant.parent.name)} variant={variant.isVariant} " + State(variant));
+        Try("mat.variant.overrides", () => $"color={variant.IsPropertyOverriden("_Color")} gloss={variant.IsPropertyOverriden("_Glossiness")} queue={variant.IsPropertyOverriden("m_CustomRenderQueue")}");
+        var vso = new SerializedObject(variant);
+        Try("mat.variant.so_before", () => $"queue={vso.FindProperty("m_CustomRenderQueue").intValue} valid={vso.FindProperty("m_ValidKeywords")?.arraySize}");
+        Try("mat.variant.apply", () =>
+        {
+            vso.FindProperty("m_CustomRenderQueue").intValue = 2300;
+            var valid = vso.FindProperty("m_ValidKeywords");
+            valid.arraySize++;
+            valid.GetArrayElementAtIndex(valid.arraySize - 1).stringValue = "_ALPHATEST_ON";
+            return vso.ApplyModifiedPropertiesWithoutUndo();
+        });
+        Row("mat.variant.applied", State(variant));
+        Try("mat.variant.applied_overrides", () => $"color={variant.IsPropertyOverriden("_Color")} queue={variant.IsPropertyOverriden("m_CustomRenderQueue")}");
+        Try("mat.variant.touch", () => { variant.SetFloat("_Metallic", 0.75f); return State(variant); });
+        Try("mat.variant.so_after", () => { var again = new SerializedObject(variant); return $"queue={again.FindProperty("m_CustomRenderQueue").intValue} keywords={Join(Enumerable.Range(0, again.FindProperty("m_ValidKeywords").arraySize).Select(i => again.FindProperty("m_ValidKeywords").GetArrayElementAtIndex(i).stringValue))}"; });
+        Row("mat.variant.parent_after", State(Resources.Load<Material>("MatA")));
+        var a = Resources.Load<Material>("MatA");
+        var b = Resources.Load<Material>("MatB");
+        Row("mat.multi.before", "a: " + State(a) + " b: " + State(b));
+        var so = new SerializedObject(new UnityEngine.Object[] { a, b });
+        Row("mat.multi.targets", so.targetObjects.Length + " multiple=" + so.isEditingMultipleObjects);
+        Try("mat.multi.gloss", () => { var p = Saved(so, "m_Floats", "_Glossiness"); return p.floatValue + " mixed=" + p.hasMultipleDifferentValues; });
+        Try("mat.multi.queue", () => { var p = so.FindProperty("m_CustomRenderQueue"); return p.intValue + " mixed=" + p.hasMultipleDifferentValues; });
+        Try("mat.multi.apply", () =>
+        {
+            Saved(so, "m_Floats", "_Glossiness").floatValue = 0.25f;
+            so.FindProperty("m_CustomRenderQueue").intValue = 2400;
+            return so.ApplyModifiedPropertiesWithoutUndo();
+        });
+        Row("mat.multi.after", "a: " + State(a) + " b: " + State(b));
+
+#endif
     }
 }

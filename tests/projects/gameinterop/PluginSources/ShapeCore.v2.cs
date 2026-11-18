@@ -15,3 +15,26 @@ namespace ShapeCore
         public static int Version() => 2;
     }
 }
+
+namespace ShapeCore
+{
+    /// <summary>Sides now takes a scale and Edges is new: a figure built against version 1
+    /// implements neither.</summary>
+    public abstract class Figure
+    {
+        public virtual int Id() => 1;
+        public abstract int Sides(int scale);
+        public abstract int Edges();
+    }
+
+    public interface IMeasured
+    {
+        int Measure(int scale);
+    }
+
+    /// <summary>Apply now takes a time as well.</summary>
+    public abstract class Plug<T>
+    {
+        public abstract T Apply(T value, float time);
+    }
+}

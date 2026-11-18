@@ -1,0 +1,16 @@
+{
+    "name": "ProbeRspConstrained",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "RSP_GLOBAL"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

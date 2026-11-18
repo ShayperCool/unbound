@@ -7,6 +7,25 @@ namespace ShapeExtras
     {
         public float radius = 1f;
         public override float Area() => 3f * radius * radius;
+        public static int Count() => 1;
+    }
+
+    /// <summary>Implements version 1's Figure.Sides() only.</summary>
+    public class Pentagon : ShapeCore.Figure
+    {
+        public override int Sides() => 5;
+    }
+
+    /// <summary>Implements version 1's IMeasured.Measure() only.</summary>
+    public class Ruler : ShapeCore.IMeasured
+    {
+        public int Measure() => 30;
+    }
+
+    /// <summary>Implements version 1's Plug<float>.Apply(float) only.</summary>
+    public class FloatPlug : ShapeCore.Plug<float>
+    {
+        public override float Apply(float value) => value * 2f;
     }
 
     public class Square

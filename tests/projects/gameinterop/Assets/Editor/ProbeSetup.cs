@@ -9,7 +9,8 @@ using UnityEngine.Timeline;
 /// Authors the probe's scene and assets with the Editor itself:
 /// `Unity -batchmode -projectPath tests/projects/gameinterop -executeMethod ProbeSetup.Build -quit`.
 /// CutsceneMissing.playable is then made from Cutscene.playable by hand: its ProbeMarker
-/// documents name a script GUID that does not exist (see README.md).
+/// documents name a script GUID that does not exist (see README.md). `ProbeSetup.Add` later added
+/// the counted scripts' objects and prefab and the materials to the existing scene and assets.
 /// </summary>
 public static class ProbeSetup
 {
@@ -106,6 +107,44 @@ public static class ProbeSetup
         Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>Adds to the scene and assets Build made, keeping them (and their GUIDs) as they are.</summary>
+    public static void Add()
+    {
+        if (!File.Exists(Res + "Counted.prefab"))
+        {
+            var counted = new GameObject("Counted");
+            counted.AddComponent<PrefabCounted>();
+            Save(counted, Res + "Counted.prefab");
+        }
+
+        var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/ProbePlain.shader");
+        var a = new Material(shader) { name = "MatA" };
+        a.SetFloat("_Glossiness", 0.3f);
+        a.SetColor("_Color", Color.red);
+        a.renderQueue = 2100;
+        a.EnableKeyword("_EMISSION");
+        AssetDatabase.CreateAsset(a, Res + "MatA.mat");
+        var b = new Material(shader) { name = "MatB" };
+        b.SetFloat("_Glossiness", 0.7f);
+        b.SetFloat("_Metallic", 0.5f);
+        b.SetColor("_Color", Color.green);
+        AssetDatabase.CreateAsset(b, Res + "MatB.mat");
+        var variant = new Material(a) { name = "MatVariant" };
+        AssetDatabase.CreateAsset(variant, Res + "MatVariant.mat");
+        variant.parent = a;
+        variant.SetColor("_Color", Color.blue);
+        EditorUtility.SetDirty(variant);
+
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        if (GameObject.Find("Counted1") == null)
+        {
+            new GameObject("Counted1").AddComponent<CountedBehaviour>();
+            new GameObject("Counted2").AddComponent<CountedBehaviour>();
+            EditorSceneManager.SaveScene(scene);
+        }
         AssetDatabase.SaveAssets();
     }
 

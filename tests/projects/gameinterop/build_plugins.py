@@ -2,7 +2,8 @@
 """Rebuilds the probe's precompiled plugins in Assets/Plugins from PluginSources/ (they are
 committed; run this only after changing a source). ShapeCore.dll is version 2 of the library;
 ShapeExtras.dll is built against version 1 and ShapeLater.dll against version 3, which are not
-part of the project. Uses the C# compiler of the .NET SDK and the Editor's netstandard 2.1
+part of the project. Assets/RspPlugins/RspRef.dll has Auto Reference off: only Assets/csc.rsp
+references it. Uses the C# compiler of the .NET SDK and the Editor's netstandard 2.1
 reference assembly, deterministically."""
 from pathlib import Path
 import os
@@ -44,6 +45,7 @@ def main():
         build(src/'ShapeCore.v2.cs', plugins/'ShapeCore.dll')
         build(src/'ShapeExtras.cs', plugins/'ShapeExtras.dll', [Path(tmp)/'v1/ShapeCore.dll'])
         build(src/'ShapeLater.cs', plugins/'ShapeLater.dll', [Path(tmp)/'v3/ShapeCore.dll'])
+        build(src/'RspRef.cs', HERE/'Assets/RspPlugins/RspRef.dll')
 
 
 if __name__ == '__main__':
