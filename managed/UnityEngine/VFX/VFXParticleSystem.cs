@@ -360,7 +360,11 @@ namespace Unbound.Runtime
             {
                 int at = eventIndex * structure + to;
                 if (at + size > m_SourceWords.Length) Array.Resize(ref m_SourceWords, Math.Max(at + size, m_SourceWords.Length * 2));
-                Array.Copy(attributes, from, m_SourceWords, at, size);
+                // An event's attributes may be another asset's, of a shorter layout: what
+                // they do not hold is zero.
+                int held = Math.Clamp(attributes.Length - from, 0, size);
+                Array.Copy(attributes, from, m_SourceWords, at, held);
+                Array.Clear(m_SourceWords, at + held, size - held);
             }
             m_Spawned += count;
             m_SpawnPrefix.Add((eventIndex == 0 ? 0u : m_SpawnPrefix[eventIndex - 1]) + count);

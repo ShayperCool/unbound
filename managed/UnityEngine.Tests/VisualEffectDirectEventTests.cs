@@ -1,6 +1,7 @@
 using System;
 using Unbound.Runtime;
 using UnityEditor.VFX;
+using UnityEngine.Rendering;
 using UnityEngine.VFX;
 using Xunit;
 
@@ -28,6 +29,74 @@ namespace UnityEngine.Tests
             asset.m_Settings.CullingFlags = VFXCullingFlags.CullNone;
             asset.m_Settings.PreWarmStepCount = 0;
             return asset;
+        }
+
+        [Fact]
+        public void AnEventsAttributesOfAShorterLayoutLeaveWhatTheyDoNotHoldAtZero()
+        {
+            // The asset's events carry a count and a position, which its system's particles
+            // inherit: the kernels read the position from the system's source buffer.
+            var system = new VFXEditorSystemDesc
+            {
+                name = "Particles", type = VFXSystemType.Particle, layer = 0, capacity = 8, flags = VFXSystemFlag.SystemHasAttributeBuffer | VFXSystemFlag.SystemHasDirectLink,
+                buffers = new[] { new VFXMapping("sourceAttributeBuffer", 0) }, values = Array.Empty<VFXMapping>(), tasks = Array.Empty<VFXEditorTaskDesc>(),
+            };
+            var initial = new VFXCPUBufferData();
+            initial.PushFloat(1f);
+            initial.PushFloat(0f);
+            initial.PushFloat(0f);
+            initial.PushFloat(0f);
+            var resource = new VisualEffectResource();
+            resource.SetRuntimeData(new VFXExpressionSheet { expressions = Array.Empty<VFXExpressionDesc>(), values = Array.Empty<VFXExpressionValueContainerDesc>(), exposed = Array.Empty<VFXExposedMapping>() },
+                new[] { system },
+                new[]
+                {
+                    new VFXEventDesc { name = "OnPlay", startSystems = Array.Empty<uint>(), stopSystems = Array.Empty<uint>(), initSystems = Array.Empty<uint>() },
+                    new VFXEventDesc { name = "Hit", startSystems = Array.Empty<uint>(), stopSystems = Array.Empty<uint>(), initSystems = new uint[] { 0 } },
+                },
+                new[]
+                {
+                    new VFXGPUBufferDesc
+                    {
+                        target = GraphicsBuffer.Target.Raw, size = 3, stride = 4, capacity = 1,
+                        layout = new[] { new VFXLayoutElementDesc { name = "position", type = VFXValueType.Float3, offset = new VFXLayoutOffset { structure = 3 } } },
+                    },
+                },
+                new[]
+                {
+                    new VFXCPUBufferDesc
+                    {
+                        capacity = 1, stride = 4, initialData = initial,
+                        layout = new[]
+                        {
+                            new VFXLayoutElementDesc { name = "spawnCount", type = VFXValueType.Float, offset = new VFXLayoutOffset { structure = 4 } },
+                            new VFXLayoutElementDesc { name = "position", type = VFXValueType.Float3, offset = new VFXLayoutOffset { structure = 4, element = 1 } },
+                        },
+                    },
+                },
+                null, null, ShadowCastingMode.Off, MotionVectorGenerationMode.Camera, VFXInstancingDisabledReason.None, 7);
+            var data = resource.m_Data;
+            data.Seal();
+            var asset = VisualEffectAsset.Create();
+            asset.m_Data = data;
+            asset.m_Settings.CullingFlags = VFXCullingFlags.CullNone;
+            asset.m_Settings.PreWarmStepCount = 0;
+            VisualEffect effect = Running(asset), other = Running(Wired());
+            try
+            {
+                effect.UpdateEffect(Thirtieth);
+                // Attributes made for another asset, whose events carry a count alone.
+                var foreign = other.CreateVFXEventAttribute();
+                foreign.SetFloat("spawnCount", 2f);
+                effect.SendEvent("Hit", foreign);
+                effect.UpdateEffect(Thirtieth);
+                Assert.Equal(2, effect.aliveParticleCount);
+            }
+            finally
+            {
+                Object.DestroyImmediate(effect.gameObject);
+                Object.DestroyImmediate(other.gameObject);
+            }
         }
 
         [Fact]
