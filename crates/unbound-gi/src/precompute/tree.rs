@@ -367,8 +367,9 @@ mod tests {
 
     #[test]
     fn a_large_system_with_far_outliers_makes_a_tree() {
-        // A grid of 4800 clusters on a floor and 200 far from it in a line, each farther: the
-        // splits that peel one outlier off at a time still end, without deep recursion.
+        // A grid of 4800 clusters on a floor and 200 far from it in a line, each farther than
+        // the one before: splits that peel one outlier off at a time make a tree 200 levels
+        // deep, well formed.
         let mut f = Vec::new();
         for i in 0..4800 {
             f.push(described(
@@ -378,7 +379,7 @@ mod tests {
         }
         for i in 0..200 {
             f.push(described(
-                [1e3 * 2f32.powi(i / 20), 5.0, 0.0],
+                [1e3 * 2f32.powf(i as f32 / 20.0), 5.0, 0.0],
                 [0.0, -1.0, 0.0],
             ));
         }

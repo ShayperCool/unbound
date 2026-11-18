@@ -3407,10 +3407,10 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     // references the cases from `room-pointoff` on have about the same medians, 0.9 to 1.6%,
     // and the environment-only ones from `room-gradient` on are 0.6 to 0.7% low at the median,
     // with this tree or one of positions alone: the transport's, cause open; the earlier budget
-    // over a tree of positions alone happened to offset it.) (In an earlier local experiment, before the present cluster tree and
-    // budget of references, with the Editor's own cluster geometry, which its precompute keeps
-    // outside the project, and this transport, the first four were 12, 14, 29 and 81 values:
-    // docs/REALTIME_GI.md, Unbound's precompute.)
+    // over a tree of positions alone happened to offset it. In an earlier local experiment,
+    // before the present cluster tree and budget of references, with the Editor's own cluster
+    // geometry, which its precompute keeps outside the project, and this transport, the first
+    // four were 12, 14, 29 and 81 values: docs/REALTIME_GI.md, Unbound's precompute.)
     let cases = [
         (BASE, "room-base", 75, 17, 48),
         (moved, "room-moved", 143, 22, 66),

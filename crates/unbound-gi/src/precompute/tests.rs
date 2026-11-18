@@ -688,11 +688,14 @@ fn the_budget_bounds_a_texels_references() {
             );
             left_out += (*k < 0.01 && *a >= 0.01) as usize;
         }
+        // The lid and floor, of most of the light, are kept.
+        assert!(
+            (kept[0] - all[0]).abs() < 0.01,
+            "{texel:?}: {kept:?} of {all:?}"
+        );
     }
-    eprintln!(
-        "{left_out} sources of light left out over {} texels",
-        limited.len()
-    );
+    // Measured: 49 faces of the environment, each seen at a grazing angle, over 128 texels.
+    assert!(left_out > 0 && left_out < limited.len(), "{left_out}");
 }
 
 #[test]
