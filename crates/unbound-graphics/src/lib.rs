@@ -193,6 +193,16 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan | Self::Metal)
     }
 
+    /// Whether `ComputeBuffer.CopyCount` (and `CommandBuffer.CopyCounterValue`) writes the hidden
+    /// counter of an Append or Counter buffer that no dispatch has bound as one yet: the macOS
+    /// Editor's Metal device copies it (0 when the buffer is made, else the value
+    /// `SetCounterValue` gave), where the Linux OpenGL Core Editor writes nothing
+    /// (tests/projects/gpubuffers `metal` values `append.boundonly`, `append.plainbind`,
+    /// `counter.created`, `counter.cbtype`, `indirect.copycount`, `cmddata.counter.*`).
+    pub fn copies_unused_counters(self) -> bool {
+        matches!(self, Self::Metal)
+    }
+
     /// Whether a draw into a packed render target (4-4-4-4 included) keeps each channel's nearest
     /// level, read back as exactly `level / (2^bits - 1)`: the macOS Editor's Metal device
     /// stores the formats themselves (0.5 reads 16/31 in a 5-bit channel, 0.7 11/15 in a 4-bit

@@ -138,6 +138,8 @@ pub struct DeviceConventions {
     pub packed_clears_round: bool,
     /// Draws into packed targets round to their bits (`GraphicsDevice::packed_writes_round`).
     pub packed_writes_round: bool,
+    /// A counter no dispatch has used is copied too (`GraphicsDevice::copies_unused_counters`).
+    pub copies_unused_counters: bool,
 }
 
 impl DeviceConventions {
@@ -157,6 +159,7 @@ impl DeviceConventions {
             mip_bias: device.applies_mip_bias(),
             packed_clears_round: device.packed_clears_round(),
             packed_writes_round: device.packed_writes_round(),
+            copies_unused_counters: device.copies_unused_counters(),
         }
     }
 

@@ -605,10 +605,12 @@ impl UnityRenderer {
             .buffers
             .get(&source)
             .map(|b| (b.counter.clone(), b.counter_used));
+        let copies_unused = self.conventions.copies_unused_counters;
         let counter = match counter {
-            Some((Some(counter), true)) => counter,
-            // A counter no dispatch has used yet: nothing is written, as in Unity.
-            Some((Some(_), false)) => return None,
+            Some((Some(counter), used)) if used || copies_unused => counter,
+            // A counter no dispatch has used yet: nothing is written, as on the Editor's
+            // OpenGL Core device (`DeviceConventions::copies_unused_counters`).
+            Some((Some(_), _)) => return None,
             _ => {
                 self.warn_once(format!("nocounter{source}"), || {
                     format!("buffer {source} has no counter (not an Append or Counter buffer): its count is not copied")

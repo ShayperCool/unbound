@@ -455,7 +455,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Writes a hidden counter into a buffer: nothing for buffers without one, nor (the
-        /// renderer decides) for one whose counter no dispatch has bound yet; an offset that is not a multiple of 4 warns and still
+        /// renderer decides, by device: `GraphicsDevice::copies_unused_counters`) for one whose
+        /// counter no dispatch has bound yet; an offset that is not a multiple of 4 warns and still
         /// copies there; one past the end asserts and copies nothing.</summary>
         internal static void CopyCount(GpuBufferStorage source, GpuBufferStorage destination, long offset)
         {
