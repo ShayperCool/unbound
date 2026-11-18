@@ -49,22 +49,63 @@ namespace Unbound.Runtime
         }
     }
 
+    /// <summary>An object whose SerializedObject iterates a native type tree over the object's
+    /// data as YAML (<see cref="TypeTreeSerialized"/>): a settings file, a Material.</summary>
+    internal interface ITypeTreeTarget
+    {
+        TypeTreeNode[] Tree { get; }
+        /// <summary>The object's data (null: none, every value its tree's default).</summary>
+        YText Body { get; }
+        /// <summary>The root's type name.</summary>
+        string RootTypeName { get; }
+        /// <summary>The object a reference in the data names.</summary>
+        Object Resolve(ObjectRef reference);
+        /// <summary>How the data names an object it did not name before.</summary>
+        ObjectRef Reference(Object o);
+        /// <summary>A SerializedObject applied changes into <see cref="Body"/>.</summary>
+        void Applied();
+    }
+
+    /// <summary>The type tree an object's SerializedObject iterates, if it has one.</summary>
+    internal static class TypeTreeTargets
+    {
+        internal static ITypeTreeTarget Of(Object o) =>
+            (ITypeTreeTarget)SettingsAssets.Of(o) ?? (o is Material material ? new MaterialTypeTree(material) : null);
+    }
+
     /// <summary>A file of ProjectSettings/: its object (as AssetDatabase loads it), its text as
     /// read and as edited, and whether it was edited since saved.</summary>
-    internal sealed class SettingsFile
+    internal sealed class SettingsFile : ITypeTreeTarget
     {
         internal string Name;
         internal string Guid;
         internal string ClassName;
         internal string ObjectName;
-        internal TypeTreeNode[] Tree;
+        internal TypeTreeNode[] TreeNodes;
         internal List<YTextDocument> Documents;
         internal Object Object;
         internal bool Dirty;
 
         internal string AssetPath => "ProjectSettings/" + Name + ".asset";
         internal string FilePath => Path.Combine(ProjectInfo.ProjectPath ?? "", "ProjectSettings", Name + ".asset");
-        internal YText Body => Documents != null && Documents.Count > 0 ? Documents[0].Body : null;
+        public YText Body => Documents != null && Documents.Count > 0 ? Documents[0].Body : null;
+
+        public TypeTreeNode[] Tree => TreeNodes;
+
+        public string RootTypeName => Body == null ? "Object" : Documents[0].ClassName;
+
+        /// <summary>A reference into the project's assets (a local one names nothing loaded).</summary>
+        public Object Resolve(ObjectRef r)
+        {
+            if (r.IsNull || r.Guid == null) return null;
+            try { return AssetDatabaseRuntime.Load(r.Guid, r.FileId, typeof(Object)); }
+            catch (Exception) { return null; }
+        }
+
+        public ObjectRef Reference(Object o) =>
+            AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId) ? new ObjectRef(fileId, guid, 2) : default;
+
+        public void Applied() => SettingsAssets.Applied(this);
     }
 
     /// <summary>
@@ -101,7 +142,7 @@ namespace Unbound.Runtime
                             Guid = p.Value.GetProperty("guid").GetString(),
                             ClassName = p.Value.GetProperty("class").GetString(),
                             ObjectName = p.Value.GetProperty("name").GetString(),
-                            Tree = p.Value.GetProperty("tree").EnumerateArray().Select(TypeTreeNode.Read).ToArray(),
+                            TreeNodes = p.Value.GetProperty("tree").EnumerateArray().Select(TypeTreeNode.Read).ToArray(),
                         };
                     }
                 }
@@ -328,12 +369,13 @@ namespace Unbound.Runtime
 
         // ---------------------------------------------------------------- reading
 
-        internal static SerializedNode BuildRoot(SettingsFile file)
+        internal static SerializedNode BuildRoot(ITypeTreeTarget file, Object target)
         {
             var root = new SerializedNode
             {
-                Kind = SerializedNodeKind.Root, Name = "Base", Path = "", Depth = -1, TypeName = file.Body == null ? "Object" : file.Documents[0].ClassName,
-                PropertyType = SerializedPropertyType.Generic, ClrType = file.Object?.GetType() ?? typeof(Object), TypeTree = true,
+                Kind = SerializedNodeKind.Root, Name = "Base", Path = "", Depth = -1, TypeName = file.RootTypeName,
+                PropertyType = SerializedPropertyType.Generic, ClrType = target?.GetType() ?? typeof(Object), TypeTree = true,
+                TreeTarget = file,
             };
             var body = file.Body ?? YText.Map();
             foreach (var s in file.Tree)
@@ -381,7 +423,7 @@ namespace Unbound.Runtime
                 node.Shape = Shape.UnityObject;
                 node.ClrType = typeof(Object);
                 node.PropertyType = SerializedPropertyType.ObjectReference;
-                node.Value = Resolve(y);
+                node.Value = Resolve(node, y);
                 foreach (var c in s.Children) Add(node, PPtrPart(node, c));
                 return node;
             }
@@ -655,9 +697,15 @@ namespace Unbound.Runtime
 
         static ObjectRef RefOf(SerializedNode pptr, Object o)
         {
-            if (pptr.Extra is YText y && ReferenceEquals(Resolve(y), o)) return ToRef(y);
-            if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId)) return new ObjectRef(fileId, guid, 2);
-            return default;
+            if (pptr.Extra is YText y && ReferenceEquals(Resolve(pptr, y), o)) return ToRef(y);
+            return TargetOf(pptr)?.Reference(o) ?? default;
+        }
+
+        /// <summary>The object whose data a node is part of.</summary>
+        static ITypeTreeTarget TargetOf(SerializedNode node)
+        {
+            while (node.Parent != null) node = node.Parent;
+            return node.TreeTarget;
         }
 
         static ObjectRef ToRef(YText y)
@@ -669,12 +717,10 @@ namespace Unbound.Runtime
             return new ObjectRef(fileId, string.IsNullOrEmpty(guid) ? null : guid, type);
         }
 
-        static Object Resolve(YText y)
+        static Object Resolve(SerializedNode node, YText y)
         {
             var r = ToRef(y);
-            if (r.IsNull || r.Guid == null) return null;
-            try { return AssetDatabaseRuntime.Load(r.Guid, r.FileId, typeof(Object)); }
-            catch (Exception) { return null; }
+            return r.IsNull ? null : TargetOf(node)?.Resolve(r);
         }
 
         static Type ClrOf(Shape shape)
@@ -798,7 +844,7 @@ namespace Unbound.Runtime
 
         // ---------------------------------------------------------------- writing back
 
-        internal static void Apply(SerializedNode root, SettingsFile file)
+        internal static void Apply(SerializedNode root, ITypeTreeTarget file)
         {
             var body = file.Body;
             if (body == null) return;
@@ -807,7 +853,7 @@ namespace Unbound.Runtime
                 if (!child.Dirty || child.Schema == null) continue;
                 body.Set(child.Name, Write(child, body.Get(child.Name), 2 + child.Name.Length + 2, 2));
             }
-            SettingsAssets.Applied(file);
+            file.Applied();
         }
 
         /// <summary>A node's YAML: its old YAML where it did not change, else written as the Editor
@@ -930,7 +976,7 @@ namespace Unbound.Runtime
                 case Shape.UnityObject:
                 {
                     var o = node.Value as Object;
-                    if (old != null && old.Kind == YKind.Map && ReferenceEquals(Resolve(old), o) && (o != null || ToRef(old).IsNull)) return old;
+                    if (old != null && old.Kind == YKind.Map && ReferenceEquals(Resolve(node, old), o) && (o != null || ToRef(old).IsNull)) return old;
                     var map = YText.Map(flow: true);
                     map.Raw = null;
                     if (o == null) { map.Add("fileID", YText.Scalar("0")); return map; }

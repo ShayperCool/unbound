@@ -25,6 +25,99 @@ namespace UnityEngine
             internal bool SentDestroyed;
         }
 
+        /// <summary>
+        /// The names a material's saved property sheet (<c>m_SavedProperties</c>) lists, by kind:
+        /// what a SerializedObject over it shows and writes (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/toolapis matx.*). A new material lists every property of its shader; a
+        /// loaded one, or one a SerializedObject wrote, exactly the entries written, the shader's
+        /// or not; a script's value for a name its shader does not declare is not listed. Reading
+        /// or writing a property value through the Material API, or assigning a shader, lists every
+        /// property of the shader again (the names already listed stay).
+        /// </summary>
+        internal sealed class SavedSheet
+        {
+            readonly HashSet<int>[] m_Lists = { null, new HashSet<int>(), new HashSet<int>(), new HashSet<int>(), new HashSet<int>() };
+            /// <summary>The shader every property of which is listed (null: none since the sheet was written).</summary>
+            internal Shader FilledFor;
+
+            /// <summary>The names listed of a kind (none for <see cref="SheetKind.None"/>).</summary>
+            internal HashSet<int> List(SheetKind kind) => m_Lists[(int)kind];
+
+            internal void CopyFrom(SavedSheet other)
+            {
+                for (int k = 1; k < m_Lists.Length; k++)
+                {
+                    m_Lists[k].Clear();
+                    AddAll(m_Lists[k], other.m_Lists[k]);
+                }
+                FilledFor = other.FilledFor;
+            }
+
+            /// <summary>Lists every property of <paramref name="shader"/>.</summary>
+            internal void Fill(Shader shader)
+            {
+                FilledFor = shader;
+                if (shader == null) return;
+                foreach (var p in shader.m_Properties)
+                    List(KindOf(p.Type))?.Add(Shader.PropertyToID(p.Name));
+            }
+        }
+
+        /// <summary>The sheet's lists: a legacy Int property is a float, an Integer an int, a
+        /// Vector a colour (measured).</summary>
+        internal enum SheetKind { None, Textures, Ints, Floats, Colors }
+
+        internal static SheetKind KindOf(ShaderPropertyType type) => type switch
+        {
+            ShaderPropertyType.Texture => SheetKind.Textures,
+            ShaderPropertyType.Int => SheetKind.Ints,
+            ShaderPropertyType.Float or ShaderPropertyType.Range => SheetKind.Floats,
+            ShaderPropertyType.Color or ShaderPropertyType.Vector => SheetKind.Colors,
+            _ => SheetKind.None,
+        };
+
+        /// <summary>The sheet, null while it is every property of the current shader and nothing else.</summary>
+        SavedSheet m_Sheet { get => m_State.m_Sheet; set => m_State.m_Sheet = value; }
+
+        /// <summary>A property value read or written through the Material API: the sheet lists every
+        /// property of the shader again (nothing to do while it does).</summary>
+        void TouchSheet()
+        {
+            var sheet = m_State.m_Sheet;
+            if (sheet != null && sheet.FilledFor != m_Shader) sheet.Fill(m_Shader);
+        }
+
+        /// <summary>The names the sheet lists of one kind (a new list, sorted by name as the Editor
+        /// writes them: ordinal).</summary>
+        internal List<int> SheetNames(SheetKind kind)
+        {
+            var names = new List<int>();
+            if (m_Sheet != null)
+                names.AddRange(m_Sheet.List(kind));
+            else if (m_Shader != null)
+                foreach (var p in m_Shader.m_Properties)
+                {
+                    int id = Shader.PropertyToID(p.Name);
+                    if (KindOf(p.Type) == kind && !names.Contains(id)) names.Add(id);
+                }
+            names.Sort((a, b) => string.CompareOrdinal(Shader.IdToName(a), Shader.IdToName(b)));
+            return names;
+        }
+
+        /// <summary>The sheet's stored value of a float, int or colour entry: the material's own,
+        /// else its shader's default.</summary>
+        internal float SheetFloat(int id) =>
+            m_Floats.TryGetValue(id, out var f) ? f : m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? p.DefaultValue.x : 0f;
+
+        internal int SheetInt(int id) =>
+            m_Ints.TryGetValue(id, out var i) ? i : m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? (int)p.DefaultValue.x : 0;
+
+        internal Vector4 SheetColor(int id) =>
+            m_Vectors.TryGetValue(id, out var v) ? v : m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? p.DefaultValue : Vector4.zero;
+
+        internal (Texture Texture, Vector2 Scale, Vector2 Offset) SheetTexture(int id) =>
+            m_Textures.TryGetValue(id, out var slot) ? (slot.Texture ? slot.Texture : null, slot.Scale, slot.Offset) : (null, Vector2.one, Vector2.zero);
+
         // Reload wrappers share one material's values and renderer state. Ordinary copies
         // construct a separate state through the regular constructors.
         sealed class MaterialState
@@ -67,6 +160,7 @@ namespace UnityEngine
             internal bool m_InheritQueue;
             internal bool m_InheritFlags;
             internal bool m_InheritKeywords;
+            internal SavedSheet m_Sheet;
         }
         readonly MaterialState m_State = new MaterialState();
 
@@ -196,6 +290,8 @@ namespace UnityEngine
         void CopyFrom(Material source)
         {
             m_Shader = source.m_Shader;
+            if (source.m_Sheet == null) m_Sheet = null;
+            else (m_Sheet ??= new SavedSheet()).CopyFrom(source.m_Sheet);
             m_CustomRenderQueue = source.m_CustomRenderQueue;
             foreach (var p in source.m_Floats) m_Floats[p.Key] = p.Value;
             foreach (var p in source.m_Ints) m_Ints[p.Key] = p.Value;
@@ -274,8 +370,15 @@ namespace UnityEngine
                     // lacks is unseen, also back under a shader without it, and seen with its
                     // value under one declaring it).
                     m_ScriptSet.Clear();
+                    // The sheet keeps the properties of the shader it leaves (measured).
+                    if (m_Sheet == null && m_Shader != null)
+                    {
+                        m_Sheet = new SavedSheet();
+                        m_Sheet.Fill(m_Shader);
+                    }
                 }
                 m_Shader = value;
+                TouchSheet();
                 AddTextureNames();
                 MarkDirty();
             }
@@ -386,16 +489,7 @@ namespace UnityEngine
         {
             get
             { MainThreadCheck.Check("GetShaderKeywords");
-                Inherit();
-                var declarations = KeywordDeclarations;
-                var valid = new List<string>();
-                var invalid = new List<string>();
-                foreach (var k in m_Keywords)
-                    if (k.Length > 0) (declarations == null || declarations.IndexOf(k) >= 0 ? valid : invalid).Add(k);
-                if (declarations != null)
-                    foreach (var k in m_KeywordExtras) if (declarations.IndexOf(k) < 0) invalid.Add(k);
-                valid.Sort(StringComparer.Ordinal);
-                invalid.Sort(StringComparer.Ordinal);
+                var (valid, invalid) = SerializedKeywords();
                 valid.AddRange(invalid);
                 return valid.ToArray();
             }
@@ -409,6 +503,37 @@ namespace UnityEngine
                         if (k != null && (k.Length == 0 || !m_Keywords.Add(k))) m_KeywordExtras.Add(k);
                 MarkDirty();
             }
+        }
+
+        /// <summary>The keywords as the material stores them (m_ValidKeywords, m_InvalidKeywords):
+        /// those its shader declares that are on, and the others, each sorted.</summary>
+        internal (List<string> Valid, List<string> Invalid) SerializedKeywords()
+        {
+            Inherit();
+            var declarations = KeywordDeclarations;
+            var valid = new List<string>();
+            var invalid = new List<string>();
+            foreach (var k in m_Keywords)
+                if (k.Length > 0) (declarations == null || declarations.IndexOf(k) >= 0 ? valid : invalid).Add(k);
+            if (declarations != null)
+                foreach (var k in m_KeywordExtras) if (declarations.IndexOf(k) < 0) invalid.Add(k);
+            valid.Sort(StringComparer.Ordinal);
+            invalid.Sort(StringComparer.Ordinal);
+            return (valid, invalid);
+        }
+
+        /// <summary>The disabled passes as stored: upper case (measured).</summary>
+        internal IEnumerable<string> DisabledPassNames()
+        {
+            if (m_DisabledPasses == null) yield break;
+            foreach (var pass in m_DisabledPasses) yield return pass.ToUpperInvariant();
+        }
+
+        /// <summary>The names of the properties locked for variants.</summary>
+        internal IEnumerable<string> LockedPropertyNames()
+        {
+            if (m_Locked == null) yield break;
+            foreach (var id in m_Locked) yield return Shader.IdToName(id);
         }
 
         /// <summary>The shader's keyword space when it is known (null: not known, every name then
@@ -919,6 +1044,7 @@ namespace UnityEngine
 
         public void SetFloat(int nameID, float value)
         {
+            TouchSheet();
             MainThreadCheck.Check("SetFloatImpl");
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
@@ -930,6 +1056,7 @@ namespace UnityEngine
 
         public float GetFloat(int nameID)
         {
+            TouchSheet();
             MainThreadCheck.Check("GetFloatImpl");
             Inherit();
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
@@ -947,6 +1074,7 @@ namespace UnityEngine
 
         public void SetInteger(int nameID, int value)
         {
+            TouchSheet();
             m_Ints[nameID] = value;
             ScriptSet(nameID);
             MarkDirty();
@@ -955,6 +1083,7 @@ namespace UnityEngine
         public int GetInteger(string name) => GetInteger(Shader.PropertyToID(name));
         public int GetInteger(int nameID)
         {
+            TouchSheet();
             if (!IsInteger(nameID)) { Missing(nameID, "an int"); return 0; }
             if (m_Ints.TryGetValue(nameID, out var i)) return i;
             if (m_Floats.TryGetValue(nameID, out var f)) return (int)f;
@@ -970,6 +1099,7 @@ namespace UnityEngine
 
         public void SetVector(int nameID, Vector4 value)
         {
+            TouchSheet();
             if (ScaleOffsetOf(nameID, out var texture))
             {
                 var slot = Slot(texture);
@@ -989,6 +1119,7 @@ namespace UnityEngine
 
         public Vector4 GetVector(int nameID)
         {
+            TouchSheet();
             Inherit();
             if (!IsVector(nameID)) { Missing(nameID, "a color"); return Vector4.zero; }
             if (m_Vectors.TryGetValue(nameID, out var v))
@@ -1007,6 +1138,7 @@ namespace UnityEngine
 
         public void SetMatrix(int nameID, Matrix4x4 value)
         {
+            TouchSheet();
             m_Matrices[nameID] = value;
             ScriptSet(nameID);
             MarkDirty();
@@ -1016,6 +1148,7 @@ namespace UnityEngine
 
         public Matrix4x4 GetMatrix(int nameID)
         {
+            TouchSheet();
             if (!IsMatrix(nameID)) { Missing(nameID, "a matrix"); return Matrix4x4.identity; }
             return m_Matrices.TryGetValue(nameID, out var m) ? m : Matrix4x4.identity;
         }
@@ -1031,6 +1164,7 @@ namespace UnityEngine
         /// GetTexture returns the texture whatever the element.</summary>
         void SetTextureElement(int nameID, Texture value, RenderTextureSubElement element, bool elementBinding)
         {
+            TouchSheet();
             var slot = Slot(nameID);
             slot.Texture = value;
             slot.Element = element;
@@ -1043,6 +1177,7 @@ namespace UnityEngine
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
         public Texture GetTexture(int nameID)
         {
+            TouchSheet();
             Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
             if (!m_Textures.TryGetValue(nameID, out var slot)) return null;
@@ -1077,6 +1212,7 @@ namespace UnityEngine
 
         public void SetTextureOffset(int nameID, Vector2 value)
         {
+            TouchSheet();
             m_Own?.Add(nameID);
             Slot(nameID).Offset = value;
             MarkDirty();
@@ -1086,6 +1222,7 @@ namespace UnityEngine
 
         public void SetTextureScale(int nameID, Vector2 value)
         {
+            TouchSheet();
             m_Own?.Add(nameID);
             Slot(nameID).Scale = value;
             MarkDirty();
@@ -1108,6 +1245,7 @@ namespace UnityEngine
         public Vector2 GetTextureOffset(string name) => GetTextureOffset(Shader.PropertyToID(name));
         public Vector2 GetTextureOffset(int nameID)
         {
+            TouchSheet();
             Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.zero; }
             return m_Textures.TryGetValue(nameID, out var slot) ? slot.Offset : Vector2.zero;
@@ -1115,6 +1253,7 @@ namespace UnityEngine
         public Vector2 GetTextureScale(string name) => GetTextureScale(Shader.PropertyToID(name));
         public Vector2 GetTextureScale(int nameID)
         {
+            TouchSheet();
             Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return Vector2.one; }
             return m_Textures.TryGetValue(nameID, out var slot) ? slot.Scale : Vector2.one;
@@ -1457,10 +1596,14 @@ namespace UnityEngine
             if (tags != null && tags.Kind == YKind.Map)
                 for (int i = 0; i < tags.Keys.Length; i++) m_Tags[tags.Keys[i]] = tags.Values[i].AsString();
             var saved = body.Get("m_SavedProperties");
+            // The sheet lists exactly the entries read (measured: tests/projects/toolapis matx.partial).
+            var sheet = new SavedSheet();
+            m_Sheet = sheet;
             if (saved != null)
             {
                 foreach (var (name, value) in Entries(saved.Get("m_TexEnvs")))
                 {
+                    sheet.List(SheetKind.Textures).Add(Shader.PropertyToID(name));
                     var slot = Slot(Shader.PropertyToID(name));
                     var texRef = value.Ref("m_Texture");
                     slot.Texture = texRef.IsNull ? null : resolver.Resolve(texRef, typeof(Texture)) as Texture;
@@ -1468,11 +1611,23 @@ namespace UnityEngine
                     slot.Offset = value.Vector2("m_Offset");
                 }
                 foreach (var (name, value) in Entries(saved.Get("m_Floats")))
-                    m_Floats[Shader.PropertyToID(name)] = value.AsFloat();
+                {
+                    int id = Shader.PropertyToID(name);
+                    sheet.List(SheetKind.Floats).Add(id);
+                    m_Floats[id] = value.AsFloat();
+                }
                 foreach (var (name, value) in Entries(saved.Get("m_Ints")))
-                    m_Ints[Shader.PropertyToID(name)] = value.AsInt();
+                {
+                    int id = Shader.PropertyToID(name);
+                    sheet.List(SheetKind.Ints).Add(id);
+                    m_Ints[id] = value.AsInt();
+                }
                 foreach (var (name, value) in Entries(saved.Get("m_Colors")))
-                    m_Vectors[Shader.PropertyToID(name)] = new Vector4(value.Float("r"), value.Float("g"), value.Float("b"), value.Float("a"));
+                {
+                    int id = Shader.PropertyToID(name);
+                    sheet.List(SheetKind.Colors).Add(id);
+                    m_Vectors[id] = new Vector4(value.Float("r"), value.Float("g"), value.Float("b"), value.Float("a"));
+                }
             }
             // Instancing and GI flags (a variant takes its parent's, its own unless overridden).
             m_EnableInstancing = body.Bool("m_EnableInstancingVariants");
@@ -1504,6 +1659,33 @@ namespace UnityEngine
             // A material sub-asset of an imported model: made by its importer.
             if (body.Get("m_UnboundMaterialImport") is YNode import && import.Kind == YKind.Map)
                 ModelMaterialImport.Apply(this, import, resolver);
+        }
+
+        /// <summary>
+        /// What a SerializedObject applied: the material becomes what its serialized data reads
+        /// as, as a loaded one does (<see cref="ReadSerialized"/>): the saved properties, keywords,
+        /// passes, tags, locks, queue and flags it holds replace the material's, so values a script
+        /// set for names the sheet does not list are gone and a declared property the sheet leaves
+        /// out reads its shader's default (measured: tests/projects/toolapis matx.edit, mat.after).
+        /// Values the sheet never holds (matrices, buffers, arrays) and the parent stay.
+        /// </summary>
+        internal void ApplySerialized(YNode body, IReferenceResolver resolver)
+        {
+            Inherit();
+            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
+            m_Keywords.Clear(); m_KeywordExtras.Clear(); m_Tags.Clear(); m_TextureNames.Clear();
+            m_DisabledPasses = null;
+            m_Locked = null;
+            m_ScriptSet.RemoveWhere(id => !m_Matrices.ContainsKey(id) && !m_Buffers.ContainsKey(id) && !m_Arrays.ContainsKey(id));
+            foreach (var p in m_Textures)
+            {
+                p.Value.Texture = null;
+                (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(p.Value);
+            }
+            m_Textures.Clear();
+            m_Name = body.Str("m_Name");
+            hideFlags = (HideFlags)body.Int("m_ObjectHideFlags");
+            ReadSerialized(body, resolver);
         }
 
         /// <summary>A built-in Material's stored state from its record (the install's object as

@@ -226,6 +226,8 @@ namespace Unbound.Runtime
         internal object Value;
         internal ISerializedAccessor Accessor;
         internal ComponentDef Component;
+        /// <summary>A type tree root's object (<see cref="ITypeTreeTarget"/>).</summary>
+        internal ITypeTreeTarget TreeTarget;
         /// <summary>A settings object's node: built from its class's type tree and its YAML
         /// (<see cref="TypeTreeSerialized"/>).</summary>
         internal bool TypeTree;

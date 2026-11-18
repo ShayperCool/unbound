@@ -46,8 +46,8 @@ namespace UnityEditor
 
         void Read()
         {
-            var settings = SettingsAssets.Of(m_Targets[0]);
-            m_UnboundRoot = settings != null ? TypeTreeSerialized.BuildRoot(settings) : SerializedTree.BuildRoot(m_Targets[0], callbacks: true);
+            var tree = TypeTreeTargets.Of(m_Targets[0]);
+            m_UnboundRoot = tree != null ? TypeTreeSerialized.BuildRoot(tree, m_Targets[0]) : SerializedTree.BuildRoot(m_Targets[0], callbacks: true);
             m_UnboundTreeVersion++;
             m_Modified = false;
             m_OtherRoots = null;
@@ -104,8 +104,8 @@ namespace UnityEditor
             {
                 var target = m_Targets[i];
                 if (target == null) continue;
-                var settings = SettingsAssets.Of(target);
-                if (settings != null) TypeTreeSerialized.Apply(m_UnboundRoot, settings);
+                var tree = TypeTreeTargets.Of(target);
+                if (tree != null) TypeTreeSerialized.Apply(m_UnboundRoot, tree);
                 else SerializedTree.Apply(m_UnboundRoot, target, primary: i == 0);
             }
             SerializedTree.ClearDirty(m_UnboundRoot);
@@ -170,7 +170,11 @@ namespace UnityEditor
             if (m_OtherRoots != null) return m_OtherRoots;
             var roots = new SerializedNode[m_Targets.Length - 1];
             for (int i = 1; i < m_Targets.Length; i++)
-                roots[i - 1] = m_Targets[i] != null ? SerializedTree.BuildRoot(m_Targets[i], callbacks: true) : null;
+            {
+                var target = m_Targets[i];
+                var tree = target != null ? TypeTreeTargets.Of(target) : null;
+                roots[i - 1] = target == null ? null : tree != null ? TypeTreeSerialized.BuildRoot(tree, target) : SerializedTree.BuildRoot(target, callbacks: true);
+            }
             return m_OtherRoots = roots;
         }
     }
@@ -473,6 +477,9 @@ namespace UnityEditor
             get
             {
                 var n = N;
+                // A type tree's array: its element's type name.
+                if (n.Kind == SerializedNodeKind.Array && n.TypeTree && n.Schema?.Child("Array")?.Child("data") is TypeTreeNode element)
+                    return element.TypeName;
                 if (n.Kind == SerializedNodeKind.Array)
                     return n.ElementShape == Shape.ManagedReference
                         ? SerializedTree.TypeNameOf(n.ElementType, Shape.ManagedReference)
