@@ -1,0 +1,63 @@
+{"k":"file.returns","v":"True"}
+{"k":"file.after","v":"Assets/FileUtilDeleteScratch/a.txt=none Assets/FileUtilDeleteScratch/a.txt.meta=file"}
+{"k":"file.logs","v":""}
+{"k":"tree.returns","v":"True"}
+{"k":"tree.after","v":"Assets/FileUtilDeleteScratch/tree=none Assets/FileUtilDeleteScratch/tree.meta=file"}
+{"k":"tree.logs","v":""}
+{"k":"trailingSlash.returns","v":"True"}
+{"k":"trailingSlash.after","v":"Assets/FileUtilDeleteScratch/slash=none"}
+{"k":"trailingSlash.logs","v":""}
+{"k":"backslashes.returns","v":"True"}
+{"k":"backslashes.after","v":"Assets/FileUtilDeleteScratch/back/x.txt=none Assets/FileUtilDeleteScratch/back=dir"}
+{"k":"backslashes.logs","v":""}
+{"k":"missingFile.returns","v":"False"}
+{"k":"missingFile.after","v":""}
+{"k":"missingFile.logs","v":""}
+{"k":"missingDirectory.returns","v":"False"}
+{"k":"missingDirectory.after","v":""}
+{"k":"missingDirectory.logs","v":""}
+{"k":"null.returns","v":"System.ArgumentNullException: Value cannot be null.\u000aParameter name: path"}
+{"k":"null.after","v":""}
+{"k":"null.logs","v":""}
+{"k":"empty.returns","v":"System.ArgumentException: path\u000aParameter name: The path cannot be empty."}
+{"k":"empty.after","v":"Assets=dir ProjectSettings=dir"}
+{"k":"empty.logs","v":""}
+{"k":"absoluteOutside.returns","v":"True"}
+{"k":"absoluteOutside.after","v":"<outside>/o.txt=none <outside>/keep.txt=file"}
+{"k":"absoluteOutside.logs","v":""}
+{"k":"absoluteInside.returns","v":"True"}
+{"k":"absoluteInside.after","v":"Assets/FileUtilDeleteScratch/abs.txt=none"}
+{"k":"absoluteInside.logs","v":""}
+{"k":"readOnlyFile.returns","v":"True"}
+{"k":"readOnlyFile.after","v":"Assets/FileUtilDeleteScratch/readonly.txt=none"}
+{"k":"readOnlyFile.logs","v":""}
+{"k":"treeWithReadOnlyFile.returns","v":"True"}
+{"k":"treeWithReadOnlyFile.after","v":"Assets/FileUtilDeleteScratch/rodir=none"}
+{"k":"treeWithReadOnlyFile.logs","v":""}
+{"k":"emptyDirectory.returns","v":"True"}
+{"k":"emptyDirectory.after","v":"Assets/FileUtilDeleteScratch/emptydir=none"}
+{"k":"emptyDirectory.logs","v":""}
+{"k":"dotDot.returns","v":"True"}
+{"k":"dotDot.after","v":"Assets/FileUtilDeleteScratch/dots/x.txt=none Assets/FileUtilDeleteScratch/dots=dir"}
+{"k":"dotDot.logs","v":""}
+{"k":"space.returns","v":"True"}
+{"k":"space.after","v":"Assets/FileUtilDeleteScratch/with space=none"}
+{"k":"space.logs","v":""}
+{"k":"wildcard.returns","v":"False"}
+{"k":"wildcard.after","v":"Assets/FileUtilDeleteScratch/wild=dir Assets/FileUtilDeleteScratch/wild/x.txt=file"}
+{"k":"wildcard.logs","v":""}
+{"k":"symlinkToDirectory.made","v":"0"}
+{"k":"symlinkToDirectory.returns","v":"True"}
+{"k":"symlinkToDirectory.after","v":"Assets/FileUtilDeleteScratch/dirlink=none <outside>/target=dir <outside>/target/kept.txt=file"}
+{"k":"symlinkToDirectory.logs","v":""}
+{"k":"symlinkToFile.made","v":"0"}
+{"k":"symlinkToFile.returns","v":"True"}
+{"k":"symlinkToFile.after","v":"Assets/FileUtilDeleteScratch/filelink=none <outside>/target.txt=file"}
+{"k":"symlinkToFile.logs","v":""}
+{"k":"again.returns","v":"False"}
+{"k":"again.after","v":"Assets/FileUtilDeleteScratch/a.txt=none"}
+{"k":"again.logs","v":""}
+{"k":"directoryOfScratch.returns","v":"True"}
+{"k":"directoryOfScratch.after","v":"Assets/FileUtilDeleteScratch=none Assets/FileUtilDeleteScratch/last.txt=none"}
+{"k":"directoryOfScratch.logs","v":""}
+{"k":"complete","v":true}

@@ -1,0 +1,7 @@
+{
+  "commands": ["python3 tests/projects/fileutildelete/run.py gate"],
+  "summary": "fileutildelete: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/FileUtil.cs"
+  ]
+}
