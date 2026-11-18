@@ -82,6 +82,14 @@ namespace Unbound.Runtime
         /// factors and dynamically scaled render textures take the scaled size;
         /// tests/projects/nativegfx dynres.*). Unbound scales them as it does.</summary>
         internal bool EditorDynamicResolution { get; init; }
+        /// <summary>A partial screen camera's HDR intermediate, where it keeps the color under it
+        /// (Depth only, Don't Clear), starts from the screen's stored bytes read as linear values,
+        /// so in Linear color space that color shows encoded twice after the resolve (Metal: the
+        /// macOS Editor's Game view, tests/projects/camerastack `metal/Linear` *.part.bH*, two
+        /// captures on an Apple M2 Pro; its LDR and full-screen intermediates and every Gamma case
+        /// start from the decoded colors, as on the Linux devices). Unmeasured for explicit
+        /// targets.</summary>
+        internal bool PartialScreenSeedUndecoded { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
@@ -219,6 +227,7 @@ namespace Unbound.Runtime
             EditorGeometryShaders = false,
             EditorConservativeRaster = false,
             HiddenSurfaceRemovalOnGPU = true,
+            PartialScreenSeedUndecoded = true,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
             Compressed3DTextures = true,

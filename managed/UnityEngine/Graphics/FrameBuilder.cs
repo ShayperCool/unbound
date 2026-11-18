@@ -2183,7 +2183,13 @@ namespace Unbound.Runtime
         static void SeedFromScreen(RenderTexture intermediate, Rect pixelRect)
         {
             int width = Math.Max(1, Screen.width), height = Math.Max(1, Screen.height);
-            var screen = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            // A device whose partial HDR intermediates read the screen's bytes as linear values
+            // (GraphicsDeviceProfile.PartialScreenSeedUndecoded): the copy is not sRGB there.
+            bool partial = pixelRect.x > 0 || pixelRect.y > 0 || pixelRect.width < width || pixelRect.height < height;
+            bool undecoded = partial && Unbound.Runtime.GraphicsDeviceProfile.Current.PartialScreenSeedUndecoded
+                && GraphicsFormatUtility.IsHDRFormat(intermediate.graphicsFormat);
+            var screen = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32,
+                undecoded ? RenderTextureReadWrite.Linear : RenderTextureReadWrite.Default);
             screen.filterMode = FilterMode.Point;
             GfxStream.CopyTexture(RenderTexture.ScreenStandIn?.EnsureCreated() ?? 0, 0, 0, new RectInt(0, 0, width, height),
                 screen.EnsureCreated(), 0, 0, 0, 0);
