@@ -101,6 +101,36 @@ class PinnedSourceTests(unittest.TestCase):
                     self.prepare('0' * 64)
                 download.assert_not_called()
 
+    def test_a_certificate_failure_retries_with_the_system_bundle(self):
+        url = 'https://example.invalid/source.tar.gz'
+        payload = b'archive bytes'
+        sha = hashlib.sha256(payload).hexdigest()
+        calls = []
+
+        def fetch(url, output, limit, context=None):
+            calls.append(context)
+            if context is None:
+                raise pinned_source.urllib.error.URLError(pinned_source.ssl.SSLCertVerificationError('CERTIFICATE_VERIFY_FAILED'))
+            output.write(payload)
+
+        bundle = Path(self.directory.name) / 'cert.pem'
+        bundle.write_text('')
+        target = Path(self.directory.name) / 'downloaded.tar.gz'
+        with mock.patch.object(pinned_source, 'fetch', fetch), \
+                mock.patch.object(pinned_source, 'SYSTEM_CA_BUNDLES', (str(bundle),)), \
+                mock.patch.object(pinned_source.ssl, 'create_default_context', lambda cafile: ('context', cafile)):
+            pinned_source.download(url, sha, target, 1 << 20)
+        self.assertEqual(payload, target.read_bytes())
+        self.assertEqual([None, ('context', str(bundle))], calls)
+
+    def test_another_download_error_is_not_retried(self):
+        def fetch(url, output, limit, context=None):
+            raise pinned_source.urllib.error.URLError('no route to host')
+        with mock.patch.object(pinned_source, 'fetch', fetch), \
+                mock.patch.object(pinned_source, 'fetch_with_system_trust', mock.Mock(side_effect=AssertionError('retried'))):
+            with self.assertRaises(pinned_source.urllib.error.URLError):
+                pinned_source.download('https://example.invalid/a.tar.gz', '0' * 64, Path(self.directory.name) / 'a.tar.gz', 1 << 20)
+
     def test_an_empty_cache_home_means_the_default(self):
         with mock.patch.dict(os.environ, {'XDG_CACHE_HOME': ''}):
             self.assertEqual(pinned_source.cache_root('test'), Path.home() / '.cache/unbound/dependencies/test')

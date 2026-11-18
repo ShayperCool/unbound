@@ -709,7 +709,7 @@ fn build_without_stubs(family: &str) -> Result<NoStubsBuild> {
             .map(PathBuf::from),
     )?;
     let no_stubs = target.join("managed-nostubs");
-    let output = std::process::Command::new(unbound_host::dotnet_root()?.join("dotnet"))
+    let output = std::process::Command::new(unbound_host::dotnet_sdk_root()?.join("dotnet"))
         .args([
             "build",
             "-c",

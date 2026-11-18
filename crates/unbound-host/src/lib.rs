@@ -29,27 +29,19 @@ pub struct ManagedRuntime {
 unsafe impl Send for ManagedRuntime {}
 unsafe impl Sync for ManagedRuntime {}
 
-/// The .NET installation: `DOTNET_ROOT`, `~/.dotnet`, or a system location.
+mod dotnet_install;
+pub use dotnet_install::{DOTNET_MAJOR, DotnetNeed, find_dotnet};
+
+/// The .NET installation that runs the managed engine: the first of `DOTNET_ROOT`, `~/.dotnet`,
+/// the system locations and `PATH` with the .NET runtime the engine targets (one with other
+/// versions only is skipped).
 pub fn dotnet_root() -> Result<PathBuf> {
-    let mut candidates = Vec::new();
-    if let Some(root) = std::env::var_os("DOTNET_ROOT") {
-        candidates.push(PathBuf::from(root));
-    }
-    if let Some(home) = std::env::var_os("HOME") {
-        candidates.push(PathBuf::from(home).join(".dotnet"));
-    }
-    candidates.extend(
-        [
-            "/usr/share/dotnet",
-            "/usr/lib/dotnet",
-            "/usr/local/share/dotnet",
-        ]
-        .map(PathBuf::from),
-    );
-    candidates
-        .into_iter()
-        .find(|root| root.join("host/fxr").is_dir())
-        .context("no .NET installation found; install the .NET SDK or set DOTNET_ROOT")
+    find_dotnet(DotnetNeed::Runtime).map_err(anyhow::Error::msg)
+}
+
+/// The .NET installation that builds the managed engine: as [`dotnet_root`], with its SDK.
+pub fn dotnet_sdk_root() -> Result<PathBuf> {
+    find_dotnet(DotnetNeed::Sdk).map_err(anyhow::Error::msg)
 }
 
 /// Where the managed engine was built: `UNBOUND_MANAGED_DIR`, `managed/` beside the executable or

@@ -11,9 +11,16 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
+import ssl
+import subprocess
 import tarfile
 import tempfile
+import urllib.error
 import urllib.request
+
+# The system's CA bundles, for a Python whose own has none (the python.org macOS build until its
+# "Install Certificates" step runs): macOS and most Linux distributions, Debian, Fedora.
+SYSTEM_CA_BUNDLES = ('/etc/ssl/cert.pem', '/etc/ssl/certs/ca-certificates.crt', '/etc/pki/tls/certs/ca-bundle.crt')
 
 
 def cache_root(name):
@@ -26,18 +33,59 @@ def offline():
             or os.environ.get('CARGO_NET_OFFLINE', '').lower() in ('1', 'true'))
 
 
-def download(url, sha256, archive, limit):
+def certificate_failure(error):
+    reason = getattr(error, 'reason', error)
+    return isinstance(reason, ssl.SSLCertVerificationError) or 'CERTIFICATE_VERIFY_FAILED' in str(reason)
+
+
+def fetch(url, output, limit, context=None):
     request = urllib.request.Request(url, headers={'User-Agent': 'Unbound-build'})
+    with urllib.request.urlopen(request, timeout=60, context=context) as response:
+        size = 0
+        while chunk := response.read(256 * 1024):
+            size += len(chunk)
+            if size > limit:
+                raise RuntimeError(f'archive exceeds its download limit: {url}')
+            output.write(chunk)
+
+
+def fetch_with_system_trust(url, output, limit, error):
+    """When Python cannot verify the server's certificate: the system's CA bundle, else curl
+    (which uses the system's trust store). The archive's checksum is checked either way."""
+    for bundle in SYSTEM_CA_BUNDLES:
+        if Path(bundle).is_file():
+            output.seek(0)
+            output.truncate()
+            try:
+                fetch(url, output, limit, ssl.create_default_context(cafile=bundle))
+                return
+            except urllib.error.URLError as again:
+                if not certificate_failure(again):
+                    raise
+    curl = shutil.which('curl')
+    if curl is None:
+        raise RuntimeError(f'{url}: the certificate cannot be verified ({error}) and no system CA bundle '
+                           f'or curl is available; set SSL_CERT_FILE to a CA bundle') from error
+    output.seek(0)
+    output.truncate()
+    output.flush()
+    result = subprocess.run([curl, '-fsSL', '--max-time', '300', '--max-filesize', str(limit), '-o', output.name, url],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f'{url}: curl failed: {result.stderr.strip()}') from error
+    output.seek(0, os.SEEK_END)
+
+
+def download(url, sha256, archive, limit):
     with tempfile.NamedTemporaryFile(dir=archive.parent, delete=False) as output:
         temporary = Path(output.name)
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                size = 0
-                while chunk := response.read(256 * 1024):
-                    size += len(chunk)
-                    if size > limit:
-                        raise RuntimeError(f'archive exceeds its download limit: {url}')
-                    output.write(chunk)
+            try:
+                fetch(url, output, limit)
+            except urllib.error.URLError as error:
+                if not certificate_failure(error):
+                    raise
+                fetch_with_system_trust(url, output, limit, error)
             output.flush()
             if hashlib.sha256(temporary.read_bytes()).hexdigest() != sha256:
                 raise RuntimeError(f'archive checksum mismatch: {url}')

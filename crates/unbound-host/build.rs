@@ -443,14 +443,17 @@ fn archive(
     archive
 }
 
+mod dotnet_install {
+    include!("src/dotnet_install.rs");
+}
+
+/// The `dotnet` of the first installation with a .NET SDK the managed engine builds with (the
+/// runtime host picks its installation by the same rule, src/dotnet_install.rs).
 fn dotnet_executable() -> PathBuf {
-    if let Some(root) = std::env::var_os("DOTNET_ROOT") {
-        return PathBuf::from(root).join("dotnet");
+    println!("cargo:rerun-if-env-changed=DOTNET_ROOT");
+    println!("cargo:rerun-if-env-changed=PATH");
+    match dotnet_install::find_dotnet(dotnet_install::DotnetNeed::Sdk) {
+        Ok(root) => root.join("dotnet"),
+        Err(message) => panic!("{message}"),
     }
-    let home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
-    let user = home.join(".dotnet/dotnet");
-    if user.exists() {
-        return user;
-    }
-    PathBuf::from("dotnet")
 }
