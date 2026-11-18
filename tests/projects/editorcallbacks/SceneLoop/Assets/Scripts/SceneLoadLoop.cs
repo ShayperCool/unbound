@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.SceneManagement;
 
-public sealed class SceneLoadLoop : MonoBehaviour
+public sealed partial class SceneLoadLoop : MonoBehaviour
 {
     sealed class Marker { }
     public static bool Finished;
@@ -76,10 +76,10 @@ public sealed class SceneLoadLoop : MonoBehaviour
                 string name = phase.type.Name + "." + leaf.type.Name;
                 list.Add(new PlayerLoopSystem { type = typeof(Marker), updateDelegate = () => Phase = name });
                 if (leaf.type == typeof(UnityEngine.PlayerLoop.EarlyUpdate.UpdatePreloading))
-                    list.Add(new PlayerLoopSystem { type = typeof(Marker), updateDelegate = () => Sample("preloading.before") });
+                    list.Add(new PlayerLoopSystem { type = typeof(Marker), updateDelegate = () => { Sample("preloading.before"); BudgetPreloading(true); } });
                 list.Add(leaf);
                 if (leaf.type == typeof(UnityEngine.PlayerLoop.EarlyUpdate.UpdatePreloading))
-                    list.Add(new PlayerLoopSystem { type = typeof(Marker), updateDelegate = () => Sample("preloading.after") });
+                    list.Add(new PlayerLoopSystem { type = typeof(Marker), updateDelegate = () => { BudgetPreloading(false); Sample("preloading.after"); } });
             }
             phase.subSystemList = list.ToArray();
             loop.subSystemList[i] = phase;
@@ -109,6 +109,13 @@ public sealed class SceneLoadLoop : MonoBehaviour
 
     IEnumerator Start()
     {
+        if (Environment.GetEnvironmentVariable("SCENE_LOAD_QUEUE_BUDGET") == "1")
+        {
+            FrameSleepMilliseconds = 100;
+            yield return QueueBudgetControl();
+            Finish();
+            yield break;
+        }
         if (Environment.GetEnvironmentVariable("SCENE_LOAD_QUEUE_THREE") == "1")
         {
             yield return QueueThreeControl();

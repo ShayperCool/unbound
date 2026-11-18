@@ -578,6 +578,11 @@ def recipes(release):
         step.kind = 'compare'
         step.summary = r'quitcontrol: [0-9]+/[0-9]+ values match.*'
         R['editorcallbacks'].append(step)
+    # The integration-budget profile, after the existing steps so their baseline positions hold.
+    step = driver('scene_loop.py', 'check', '--release', '{release}', '--label', '{label}-scene-budget', '--queue-budget')
+    step.kind = 'compare'
+    step.summary = r'[0-9]+/[0-9]+ receiver/driver streams match.*'
+    R['editorcallbacks'].append(step)
     R['droppedparams'] = guarded(jsonl('capture.jsonl'))
     R['spriteimport'] = guarded(jsonl('sprites.jsonl'))
     R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',

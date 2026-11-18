@@ -18,6 +18,8 @@ SOURCE = PROBE / 'SceneLoop'
 # The full case ladder finishes near frame 50; isolated profiles finish before frame 16.
 MATRIX_FRAMES = 160
 PROFILE_FRAMES = 30
+# The integration-budget ladder runs about 30 cases of up to 16 frames each.
+BUDGET_FRAMES = 600
 
 
 def prepare(project, release):
@@ -49,6 +51,7 @@ def main():
     profiles.add_argument('--starts-only', action='store_true')
     profiles.add_argument('--queue-only', action='store_true')
     profiles.add_argument('--queue-three', action='store_true')
+    profiles.add_argument('--queue-budget', action='store_true')
     parser.add_argument('--label', default='run-' + str(time.time_ns()))
     parser.add_argument('--repeat', choices=('native1', 'native2'), default='native1')
     args = parser.parse_args()
@@ -57,7 +60,8 @@ def main():
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     names = {'single_first': 'scene-loop-single-first', 'force_only': 'scene-loop-force',
-             'starts_only': 'scene-loop-starts', 'queue_only': 'scene-loop-queue', 'queue_three': 'scene-loop-queue-three'}
+             'starts_only': 'scene-loop-starts', 'queue_only': 'scene-loop-queue', 'queue_three': 'scene-loop-queue-three',
+             'queue_budget': 'scene-loop-queue-budget'}
     name = next((name for flag, name in names.items() if getattr(args, flag)), 'scene-loop')
     reference = PROBE / 'Reference' / ('unity-' + args.release) / (name + '.txt')
     if args.mode == 'publish':
@@ -76,7 +80,7 @@ def main():
         result = run(EditorJob(project, out / 'editor.log', out,
                      args=['-force-glcore', '-executeMethod', 'SceneLoopRunner.Create', '-quit'] if create else ['-force-glcore', '-executeMethod', 'SceneLoopRunner.Record'],
                      batch=create, graphics=True, private_display=False, timeout=900, shutdown_grace=90,
-                     env=vulkan_display_env() if create else {**vulkan_display_env(), 'SCENE_LOAD_LOOP_OUT': str(out / 'values.txt'), 'SCENE_LOAD_SINGLE_FIRST': '1' if args.single_first else '0', 'SCENE_LOAD_FORCE_ONLY': '1' if args.force_only else '0', 'SCENE_LOAD_STARTS_ONLY': '1' if args.starts_only else '0', 'SCENE_LOAD_QUEUE_ONLY': '1' if args.queue_only or args.queue_three else '0', 'SCENE_LOAD_QUEUE_THREE': '1' if args.queue_three else '0'},
+                     env=vulkan_display_env() if create else {**vulkan_display_env(), 'SCENE_LOAD_LOOP_OUT': str(out / 'values.txt'), 'SCENE_LOAD_SINGLE_FIRST': '1' if args.single_first else '0', 'SCENE_LOAD_FORCE_ONLY': '1' if args.force_only else '0', 'SCENE_LOAD_STARTS_ONLY': '1' if args.starts_only else '0', 'SCENE_LOAD_QUEUE_ONLY': '1' if args.queue_only or args.queue_three else '0', 'SCENE_LOAD_QUEUE_THREE': '1' if args.queue_three else '0', 'SCENE_LOAD_QUEUE_BUDGET': '1' if args.queue_budget else '0'},
                      progress_files=[] if create else [out / 'values.txt'],
                      progress_timeout=None if create else 600))
         print(summary(result))
@@ -99,8 +103,8 @@ def main():
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND')
     if not cli:
         parser.error('set UNBOUND_CLI to an immutable runtime')
-    frames = MATRIX_FRAMES if name == 'scene-loop' else PROFILE_FRAMES
-    env = dict(os.environ, SCENE_LOAD_LOOP_OUT=str(out / 'values.txt'), SCENE_LOAD_SINGLE_FIRST='1' if args.single_first else '0', SCENE_LOAD_FORCE_ONLY='1' if args.force_only else '0', SCENE_LOAD_STARTS_ONLY='1' if args.starts_only else '0', SCENE_LOAD_QUEUE_ONLY='1' if args.queue_only or args.queue_three else '0', SCENE_LOAD_QUEUE_THREE='1' if args.queue_three else '0')
+    frames = {'scene-loop': MATRIX_FRAMES, 'scene-loop-queue-budget': BUDGET_FRAMES}.get(name, PROFILE_FRAMES)
+    env = dict(os.environ, SCENE_LOAD_LOOP_OUT=str(out / 'values.txt'), SCENE_LOAD_SINGLE_FIRST='1' if args.single_first else '0', SCENE_LOAD_FORCE_ONLY='1' if args.force_only else '0', SCENE_LOAD_STARTS_ONLY='1' if args.starts_only else '0', SCENE_LOAD_QUEUE_ONLY='1' if args.queue_only or args.queue_three else '0', SCENE_LOAD_QUEUE_THREE='1' if args.queue_three else '0', SCENE_LOAD_QUEUE_BUDGET='1' if args.queue_budget else '0')
     with (out / 'unbound.log').open('w') as log:
         result = subprocess.run([str(Path.home() / '.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
                                  'timeout', '600', cli, 'run', '-p', str(project), '--scene', 'Assets/Scenes/Boot.unity',

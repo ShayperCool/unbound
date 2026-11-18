@@ -18,7 +18,10 @@ def streams(lines):
     result = defaultdict(list)
     for line in lines:
         fields = line.split('|')
-        if len(fields) >= 7 and fields[3] in CALLBACKS:
+        if fields[0] == 'budget' and len(fields) >= 2:
+            # The integration-budget profile: one stream per case.
+            key = ('budget', fields[1])
+        elif len(fields) >= 7 and fields[3] in CALLBACKS:
             # Scene names and receiver names are authored labels. Repeated loads with
             # the same labels remain in one ordered stream, keeping every occurrence.
             key = (fields[0], fields[4], fields[5])

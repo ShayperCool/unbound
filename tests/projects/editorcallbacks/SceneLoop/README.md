@@ -27,7 +27,8 @@ python3 tests/projects/editorcallbacks/scene_loop.py publish --release 6000.0.71
 ```
 
 Use distinct labels and add `--single-first` or `--force-only` to all three commands
-for the other profiles. Use `--starts-only` for the Start control and `--queue-only` for the unheld queue. Publication requires byte-identical canonical records,
+for the other profiles. Use `--starts-only` for the Start control, `--queue-only` for the unheld queue,
+`--queue-three` for three queued loads and `--queue-budget` for the integration time limit. Publication requires byte-identical canonical records,
 normal Editor exits, completion markers and a verified GPU renderer. It never
 overwrites a reference. Request-time progress is checked against `[0,0.9]`, because
 its exact read races background preparation. Settled frame reads remain exact.
@@ -44,6 +45,8 @@ UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scen
 UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scene_loop.py check --release 6000.0.71f1 --force-only
 UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scene_loop.py check --release 6000.0.71f1 --starts-only
 UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scene_loop.py check --release 6000.0.71f1 --queue-only
+UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scene_loop.py check --release 6000.0.71f1 --queue-three
+UNBOUND_CLI=/path/to/runtime/unbound python3 tests/projects/editorcallbacks/scene_loop.py check --release 6000.0.71f1 --queue-budget
 ```
 
 `scene_loop_compare.py` prints the complete ordered raw delta, then compares every
@@ -81,21 +84,42 @@ unheld queue's second load also completed in frame 3 or 4; both repeats still
 integrated the two loads in distinct preloading passes. The scene input format correction changes
 runtime hierarchy queries and does not change imported/cache output.
 
-## Deferred unheld-queue duration
+## Integration time limit (`--queue-budget`)
 
-The `--queue-only` reference is a strict diagnostic. At its 500 ms frame pause,
-two identical Editor captures complete the first/second loads at frames 2/4;
-Unbound completes them at 2/3. Earlier Editor captures at 50 ms also complete the
-second load at 3 or 4. The second load's elapsed duration and the renderer callback
-repeats during that wait remain raw failures, not passes. Both implementations
-integrate the scenes in distinct preloading passes, with matching lifecycle phases,
-root answers and per-scene callback state. No duration tolerance or reference value
-is changed to erase the delta. This variation in unspecified asynchronous loading
-time is Deferred, not a follow-up or a separate timing special case.
+Scene loads, scene unloads and unused-asset unloads share one queue. Its timing
+follows the per-frame main-thread integration limit of
+[Application.backgroundLoadingPriority](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Application-backgroundLoadingPriority.html).
+The profile runs about 30 cases with a 100 ms frame pause. A busy wait in each
+loaded scene's `PlainA.Awake` (`d2`, `d25`, `d70`: milliseconds) makes an
+integration take a known minimum time.
 
-The four main, cold-single, forced-load and Start profiles pass their receiver/driver
-checks. The suite retains all five strict results, including this duration diagnostic
-and the original callback/prefab failures. The worker's regression gate compares the
-whole player-loop probe set with its saved baseline; it does not call the diagnostic
-a pass. Runtime frame limits leave space beyond each fixture's final marker and
-avoid spending hundreds of additional frames after recording ends.
+| Source for Unity 6000.0 | Documented guarantee | Measured in the Linux GPU Editor (this profile) |
+|---|---|---|
+| [backgroundLoadingPriority](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Application-backgroundLoadingPriority.html) | Main-thread integration of asynchronous operations is limited per frame: Low 2 ms, BelowNormal 4 ms, Normal 10 ms, High 50 ms. The default is BelowNormal. The page says the setting has no effect in the Editor. | The initial value is BelowNormal. Normal and High read back as Low, and their limit is Low's: a 2 ms Awake lets the next load arm in the same pass under BelowNormal and not under Low, Normal or High. |
+| [allowSceneActivation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-allowSceneActivation.html) | A held load stops at 0.9 and stalls the operations queued behind it. | A load that reaches the head prepared waits one pass, then integrates in a later pass. A pass goes on to the next request while its elapsed time, rounded to milliseconds, is below the limit: queued loads complete 2/3/4 frames after the request below the limit and 2/4/6 beyond it (`d70`). A held first load released at frame 4 completes at 5; the second completes at 6 or 7 by the same rule. |
+| [UnloadSceneAsync](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SceneManagement.SceneManager.UnloadSceneAsync.html) | Unloads in the background and returns an operation. | An unload behind a load integrates as soon as it heads the queue: in the load's pass below the limit, in the next pass beyond it. |
+| [AsyncOperation.priority](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AsyncOperation-priority.html) | Of queued operations, the highest priority executes first; a change after an operation has started has no effect. | With an unused-asset unload requested first, loads requested in the same frame complete in priority order. Priorities set one frame later have no effect. Without that unload, whether the loader takes the first load before its priority is set varies between Editor runs (`priority.request`, sidecar only). |
+| [EditorSettings.forceAssetUnloadAndGCOnSceneLoad](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorSettings-forceAssetUnloadAndGCOnSceneLoad.html), [Resources.UnloadUnusedAssets](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Resources.UnloadUnusedAssets.html) | After a Single load the Editor unloads unused assets and collects the managed heap. UnloadUnusedAssets returns an operation. | The unload after a Single load is a queued operation. Loads queued behind it do not start before it completes, so a load queued behind a Single load (at once or after it completed) completes three frames after it. With the setting off, the queued load completes two frames after it. `Resources.UnloadUnusedAssets` alone completes at the next preloading pass and holds back later loads in the same way. |
+
+Below the limit, frames depend on the integration's own duration, which machine load
+changes. Those cases keep their frames in the sidecar. Each case's canonical
+`limit=` line instead checks every gap between consecutive completions against the
+pass time the probe measured around `EarlyUpdate.UpdatePreloading`. A gap is skipped
+when the next request was not prepared or was held, or when the pass time is within
+0.6 ms of the rounding boundary. Cases beyond the limit (`d25`, `d70`) and the held
+and Single cases also record absolute frames. A request's progress read at a
+coroutine point races the loader for a request it has just started. The record keeps
+the last pending progress before completion; the sidecar keeps every read and pass
+time.
+
+Unbound applies the same rule with its own pass time. With built-in lighting data read
+once per session, its integration of these scenes takes well under a millisecond,
+so `--queue-only` (Editor frames 2/4 at its first, cold queue) and the main profile's
+queue control match. Machine load can still move a below-limit gap, as in the Editor.
+Unmeasured: the macOS priority read-back, other asynchronous operations (Resources
+and AssetBundle loads) sharing the limit, and other releases. Those releases keep the
+previous one-pass timing.
+
+The main, cold-single, forced-load, Start, unheld-queue and three-load profiles pass
+their receiver/driver checks. The suite retains every strict result. Runtime frame
+limits leave space beyond each fixture's final marker.
