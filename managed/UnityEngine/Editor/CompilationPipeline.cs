@@ -223,9 +223,119 @@ namespace UnityEditor.Compilation
             return true;
         }
 
+        public static event Action<object> compilationStarted;
+        public static event Action<object> compilationFinished;
+        [Obsolete("Use compilationStarted, compilationFinished or assemblyCompilationFinished instead. Note that using any of these functions to do time measurements is a bad idea as they run async to actual compilation.")]
+        public static event Action<string> assemblyCompilationStarted;
+        public static event Action<string> assemblyCompilationNotRequired;
+        public static event Action<string, CompilerMessage[]> assemblyCompilationFinished;
+
+        /// <summary>An assembly of a recompilation: compiled (with the compiler's messages) or not
+        /// required.</summary>
+        internal readonly struct CompiledAssembly
+        {
+            internal readonly string Name;
+            internal readonly bool Compiled;
+            internal readonly CompilerMessage[] Messages;
+
+            internal CompiledAssembly(string name, bool compiled, CompilerMessage[] messages)
+            {
+                Name = name;
+                Compiled = compiled;
+                Messages = messages ?? Array.Empty<CompilerMessage>();
+            }
+        }
+
+        /// <summary>
+        /// A recompilation of the scripts, as the Editor reports one (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/compileevents): compilationStarted with the build's context, each
+        /// compiled assembly's started and finished events (output path, its errors and warnings),
+        /// assemblyCompilationNotRequired for each assembly that did not need compiling, then
+        /// compilationFinished with the same context. Unbound raises it when its hot reload
+        /// recompiles; it patches the code in place, so no assembly reload follows (the Editor
+        /// reloads the domain after a successful one).
+        /// </summary>
+        internal static void RaiseCompilation(IReadOnlyList<CompiledAssembly> assemblies)
+        {
+            var context = new Bee.BeeDriver.ActiveBuild();
+            Raise(compilationStarted, context);
+            foreach (var assembly in assemblies)
+            {
+                string path = $"Library/ScriptAssemblies/{assembly.Name}.dll";
+                if (!assembly.Compiled)
+                {
+                    Raise(assemblyCompilationNotRequired, path);
+                    continue;
+                }
+#pragma warning disable 618
+                Raise(assemblyCompilationStarted, path);
+#pragma warning restore 618
+                if (assemblyCompilationFinished != null)
+                    foreach (Action<string, CompilerMessage[]> callback in assemblyCompilationFinished.GetInvocationList())
+                    {
+                        try { callback(path, assembly.Messages); }
+                        catch (Exception e) { UnityEngine.Debug.LogException(e); }
+                    }
+            }
+            Raise(compilationFinished, context);
+        }
+
+        static void Raise<T>(Action<T> callbacks, T argument)
+        {
+            if (callbacks == null) return;
+            foreach (Action<T> callback in callbacks.GetInvocationList())
+            {
+                try { callback(argument); }
+                catch (Exception e) { UnityEngine.Debug.LogException(e); }
+            }
+        }
+
+        /// <summary>A compiler diagnostic as the Editor reports it: "file(line,column): error|warning
+        /// id: text", the file as the project names it.</summary>
+        internal static CompilerMessage Message(bool error, string id, string text, string file, int line, int column)
+        {
+            string projectFile = string.IsNullOrEmpty(file) ? "" : Unbound.Runtime.UnityStackTrace.SourcePath(file, UnityEngine.ProjectInfo.ProjectPath);
+            string kind = error ? "error" : "warning";
+            string where = projectFile.Length == 0 ? "" : $"{projectFile}({line},{column}): ";
+            return new CompilerMessage
+            {
+                message = $"{where}{kind} {id}: {text}",
+                file = projectFile,
+                line = line,
+                column = column,
+                type = error ? CompilerMessageType.Error : CompilerMessageType.Warning,
+            };
+        }
+
         /// <summary>The game's code reloads on its own when sources change (hot reload); a forced
         /// recompilation (with its domain reload and compilation events) is not started.</summary>
         public static void RequestScriptCompilation() =>
             Stubs.Ignored("CompilationPipeline.RequestScriptCompilation", "does not recompile (scripts reload when their sources change)");
+    }
+
+    /// <summary>A compiler diagnostic of an assembly's compilation.</summary>
+    public partial struct CompilerMessage
+    {
+        public string message;
+        public string file;
+        public int line;
+        public int column;
+        public CompilerMessageType type;
+    }
+
+    public enum CompilerMessageType
+    {
+        Error = 0,
+        Warning = 1,
+        Info = 2,
+    }
+}
+
+namespace Bee.BeeDriver
+{
+    /// <summary>The build a compilation's events pass as their context (the Editor's build object's
+    /// type name; scripts only compare or print it).</summary>
+    internal sealed class ActiveBuild
+    {
     }
 }

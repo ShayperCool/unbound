@@ -55,6 +55,7 @@ internal static class HotReload
         var response = new HotReloadResponse();
         var compiled = compiler.Compile(request.Compile);
         response.Compile = compiled;
+        RaiseCompilationEvents(compiled);
         if (compiled.Failed > 0)
         {
             response.Status = "compile-errors";
@@ -153,8 +154,26 @@ internal static class HotReload
         return response;
     }
 
+    /// <summary>A recompilation that compiled an assembly (or failed to) is reported to scripts as
+    /// the Editor reports one (UnityEditor.Compilation.CompilationPipeline.RaiseCompilation): the
+    /// compiled and failed assemblies with their errors, then warnings, and every other assembly of
+    /// the request (cached, unchanged, or skipped after a failed reference) as not required.</summary>
+    internal static void RaiseCompilationEvents(CompileResponse compiled)
+    {
+        static bool Compiled(AssemblyResult a) => a.Status == "compiled" || a.Status == "failed";
+        if (!compiled.Assemblies.Any(Compiled)) return;
+        static UnityEditor.Compilation.CompilerMessage Message(DiagnosticInfo d, bool error) =>
+            UnityEditor.Compilation.CompilationPipeline.Message(error, d.Id, d.Message, d.File, d.Line, d.Column);
+        var assemblies = compiled.Assemblies.Select(a => new UnityEditor.Compilation.CompilationPipeline.CompiledAssembly(a.Name, Compiled(a),
+            Compiled(a) ? a.Errors.Select(d => Message(d, true)).Concat(a.WarningList.Select(d => Message(d, false))).ToArray() : null)).ToList();
+        UnityEditor.Compilation.CompilationPipeline.RaiseCompilation(assemblies);
+    }
+
+    /// <summary>The edit restarts the session, Unbound's reload of the scripts: scripts get
+    /// beforeAssemblyReload now and afterAssemblyReload in the new session (EditorInitialization).</summary>
     static HotReloadResponse Restart(HotReloadResponse response, string reason, System.Diagnostics.Stopwatch watch, bool optimized = false)
     {
+        UnityEditor.AssemblyReloadEvents.RaiseBefore();
         response.Status = "restart-required";
         response.Reason = reason;
         response.Optimized = optimized;

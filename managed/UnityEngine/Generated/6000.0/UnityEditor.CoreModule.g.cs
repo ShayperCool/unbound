@@ -30956,11 +30956,6 @@ namespace UnityEditor.Compilation
         [global::Unbound.Stub] internal static string GetAssemblyDefinitionFilePathFromScriptPath(global::UnityEditor.Scripting.ScriptCompilation.EditorCompilation editorCompilation, string sourceFilePath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromScriptPath"); return default; }
         [global::Unbound.Stub] public static void RequestScriptCompilation(global::UnityEditor.Compilation.RequestScriptCompilationOptions options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation"); }
         [global::Unbound.Stub] internal static void OnCodeOptimizationChanged(bool scriptDebugInfoEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.OnCodeOptimizationChanged"); }
-        public static event global::System.Action<object> compilationStarted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.compilationStarted"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<object> compilationFinished { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.compilationFinished"); } [global::Unbound.Stub] remove { } }
-        [global::System.Obsolete("Use compilationStarted, compilationFinished or assemblyCompilationFinished instead. Note that using any of these functions to do time measurements is a bad idea as they run async to actual compilation.")] public static event global::System.Action<string> assemblyCompilationStarted { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.assemblyCompilationStarted"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<string> assemblyCompilationNotRequired { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.assemblyCompilationNotRequired"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<string, global::UnityEditor.Compilation.CompilerMessage[]> assemblyCompilationFinished { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.assemblyCompilationFinished"); } [global::Unbound.Stub] remove { } }
         public static event global::System.Action<global::UnityEditor.Compilation.CodeOptimization> codeOptimizationChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Compilation.CompilationPipeline.codeOptimizationChanged"); } [global::Unbound.Stub] remove { } }
         [global::System.Flags]
         public enum PrecompiledAssemblySources
@@ -30979,21 +30974,6 @@ namespace UnityEditor.Compilation
         None = 0,
         LoadError = 1,
         All = 1,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct CompilerMessage
-    {
-        [global::Unbound.Stub] public string message;
-        [global::Unbound.Stub] public string file;
-        [global::Unbound.Stub] public int line;
-        [global::Unbound.Stub] public int column;
-        [global::Unbound.Stub] public global::UnityEditor.Compilation.CompilerMessageType type;
-    }
-    public enum CompilerMessageType
-    {
-        Error = 0,
-        Warning = 1,
-        Info = 2,
     }
     [global::System.Obsolete("PrecompiledAssemblyException is no longer being thrown by Unity and will be removed.")]
     [global::Unbound.Stub]

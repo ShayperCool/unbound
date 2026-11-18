@@ -28,6 +28,8 @@ namespace UnityEditor
         const string InitializeOnLoad = "UnityEditor.InitializeOnLoadAttribute";
         const string InitializeOnLoadMethod = "UnityEditor.InitializeOnLoadMethodAttribute";
         const string InitializeOnEnterPlayMode = "UnityEditor.InitializeOnEnterPlayModeAttribute";
+        /// <summary>Set by the host for a session it relaunched for a script edit (crates/unbound).</summary>
+        const string ScriptReloadVariable = "UNBOUND_SCRIPT_RELOAD";
 
         internal static void BeforePlayMode()
         {
@@ -56,6 +58,9 @@ namespace UnityEditor
                 ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
             }
             finally { PlayModeDomainLoading = false; }
+            // A session relaunched for a script edit is the scripts' reload: after the domain's load
+            // callbacks (matches the Unity 6000.0.71f1 Editor, tests/projects/compileevents).
+            if (Environment.GetEnvironmentVariable(ScriptReloadVariable) == "1") UnityEditor.AssemblyReloadEvents.RaiseAfter();
             // The Editor sends it before the domain reloads, in Edit mode.
             if (enteringPlayMode) EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
             try

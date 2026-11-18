@@ -164,7 +164,8 @@ namespace UnityEditor
         public static Object[] GetFiltered(Type type, SelectionMode mode) => Filtered(type, mode).ToArray();
     }
 
-    /// <summary>Domain reloads: the hot reload's fallback raises these around the reload.</summary>
+    /// <summary>Script reloads: the session a script edit restarts raises these around the restart
+    /// (beforeAssemblyReload in the old session, afterAssemblyReload in the new one).</summary>
     public static partial class AssemblyReloadEvents
     {
         public delegate void AssemblyReloadCallback();
