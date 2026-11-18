@@ -463,6 +463,7 @@ namespace Unbound.Runtime
         /// negative ones.</summary>
         internal static uint UnsignedFloat(float value, int mantissaBits)
         {
+            // NaN's mantissa bits are a choice (unmeasured): any nonzero mantissa is a NaN.
             if (float.IsNaN(value)) return (31u << mantissaBits) | ((1u << mantissaBits) - 1);
             if (float.IsPositiveInfinity(value)) return 31u << mantissaBits;
             if (!(value > 0f)) return 0;
