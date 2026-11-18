@@ -3,6 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
 
+namespace UnityEditor
+{
+    public enum ApiCompatibilityLevel
+    {
+        NET_2_0 = 1,
+        NET_2_0_Subset = 2,
+        NET_4_6 = 3,
+        NET_Web = 4,
+        NET_Micro = 5,
+        NET_Standard_2_0 = 6,
+        NET_Standard = 6,
+        NET_Unity_4_8 = 3,
+    }
+
+    public enum EditorAssembliesCompatibilityLevel
+    {
+        Default = 1,
+        NET_Unity_4_8 = 2,
+        NET_Standard = 3,
+    }
+}
+
 namespace UnityEditor.Compilation
 {
     public enum AssembliesType
@@ -19,7 +41,9 @@ namespace UnityEditor.Compilation
         EditorAssembly = 1,
     }
 
-    /// <summary>A script assembly as the Editor's compilation pipeline describes it.</summary>
+    /// <summary>A script assembly as the Editor's compilation pipeline describes it. The
+    /// constructors keep what they are given, null arrays too; one without compiler options gets
+    /// default ones (Unity 6000.0.71f1, tests/projects/gameinterop compilation.ctor_*).</summary>
     public partial class Assembly
     {
         string m_Name;
@@ -29,17 +53,26 @@ namespace UnityEditor.Compilation
         Assembly[] m_AssemblyReferences;
         string[] m_CompiledAssemblyReferences;
         AssemblyFlags m_Flags;
+        ScriptCompilerOptions m_CompilerOptions;
         internal string m_RootNamespace = "";
 
         public Assembly(string name, string outputPath, string[] sourceFiles, string[] defines, Assembly[] assemblyReferences, string[] compiledAssemblyReferences, AssemblyFlags flags)
+            : this(name, outputPath, sourceFiles, defines, assemblyReferences, compiledAssemblyReferences, flags, new ScriptCompilerOptions(), "") { }
+
+        public Assembly(string name, string outputPath, string[] sourceFiles, string[] defines, Assembly[] assemblyReferences, string[] compiledAssemblyReferences, AssemblyFlags flags, ScriptCompilerOptions compilerOptions)
+            : this(name, outputPath, sourceFiles, defines, assemblyReferences, compiledAssemblyReferences, flags, compilerOptions, "") { }
+
+        public Assembly(string name, string outputPath, string[] sourceFiles, string[] defines, Assembly[] assemblyReferences, string[] compiledAssemblyReferences, AssemblyFlags flags, ScriptCompilerOptions compilerOptions, string rootNamespace)
         {
             m_Name = name;
             m_OutputPath = outputPath;
-            m_SourceFiles = sourceFiles ?? Array.Empty<string>();
-            m_Defines = defines ?? Array.Empty<string>();
-            m_AssemblyReferences = assemblyReferences ?? Array.Empty<Assembly>();
-            m_CompiledAssemblyReferences = compiledAssemblyReferences ?? Array.Empty<string>();
+            m_SourceFiles = sourceFiles;
+            m_Defines = defines;
+            m_AssemblyReferences = assemblyReferences;
+            m_CompiledAssemblyReferences = compiledAssemblyReferences;
             m_Flags = flags;
+            m_CompilerOptions = compilerOptions;
+            m_RootNamespace = rootNamespace;
         }
 
         public string name { get => m_Name; private set => m_Name = value; }
@@ -62,8 +95,65 @@ namespace UnityEditor.Compilation
 
         public AssemblyFlags flags { get => m_Flags; private set => m_Flags = value; }
 
+        public ScriptCompilerOptions compilerOptions { get => m_CompilerOptions; internal set => m_CompilerOptions = value; }
+
         /// <summary>The output paths of the referenced script assemblies, then the precompiled references.</summary>
-        public string[] allReferences => m_AssemblyReferences.Select(a => a.outputPath).Concat(m_CompiledAssemblyReferences).ToArray();
+        public string[] allReferences =>
+            (m_AssemblyReferences ?? Array.Empty<Assembly>()).Select(a => a.outputPath).Concat(m_CompiledAssemblyReferences ?? Array.Empty<string>()).ToArray();
+    }
+
+    /// <summary>The compiler settings of an assembly. A new instance has the defaults of Unity
+    /// 6000.0.71f1 (tests/projects/gameinterop compilation.options_new).</summary>
+    public partial class ScriptCompilerOptions
+    {
+        /// <summary>The C# version of a new instance (the release's compiler language version).</summary>
+        const string DefaultLanguageVersion = "9.0";
+
+        string[] m_ResponseFiles = Array.Empty<string>();
+
+        public ScriptCompilerOptions()
+        {
+            ApiCompatibilityLevel = ApiCompatibilityLevel.NET_Unity_4_8;
+            CodeOptimization = CodeOptimization.None;
+            EditorAssembliesCompatibilityLevel = EditorAssembliesCompatibilityLevel.Default;
+            RoslynAnalyzerDllPaths = Array.Empty<string>();
+            RoslynAdditionalFilePaths = Array.Empty<string>();
+            LanguageVersion = DefaultLanguageVersion;
+            UseDeterministicCompilation = true;
+        }
+
+        internal ScriptCompilerOptions(ScriptCompilerOptions scriptCompilerOptions)
+        {
+            AllowUnsafeCode = scriptCompilerOptions.AllowUnsafeCode;
+            ApiCompatibilityLevel = scriptCompilerOptions.ApiCompatibilityLevel;
+            CodeOptimization = scriptCompilerOptions.CodeOptimization;
+            EditorAssembliesCompatibilityLevel = scriptCompilerOptions.EditorAssembliesCompatibilityLevel;
+            RoslynAnalyzerDllPaths = scriptCompilerOptions.RoslynAnalyzerDllPaths;
+            RoslynAnalyzerRulesetPath = scriptCompilerOptions.RoslynAnalyzerRulesetPath;
+            RoslynAdditionalFilePaths = scriptCompilerOptions.RoslynAdditionalFilePaths;
+            AnalyzerConfigPath = scriptCompilerOptions.AnalyzerConfigPath;
+            AdditionalCompilerArguments = scriptCompilerOptions.AdditionalCompilerArguments;
+            m_ResponseFiles = scriptCompilerOptions.m_ResponseFiles;
+            LanguageVersion = scriptCompilerOptions.LanguageVersion;
+            UseDeterministicCompilation = scriptCompilerOptions.UseDeterministicCompilation;
+#pragma warning disable 618
+            EmitReferenceAssembly = scriptCompilerOptions.EmitReferenceAssembly;
+#pragma warning restore 618
+        }
+
+        public string RoslynAnalyzerRulesetPath { get; set; }
+        public string[] RoslynAnalyzerDllPaths { get; set; }
+        public string[] RoslynAdditionalFilePaths { get; set; }
+        public string AnalyzerConfigPath { get; set; }
+        public bool AllowUnsafeCode { get; set; }
+        [Obsolete("Use of reference assemblies is always enabled")] public bool EmitReferenceAssembly { get; set; }
+        internal bool UseDeterministicCompilation { get; set; }
+        public string[] AdditionalCompilerArguments { get; set; }
+        public CodeOptimization CodeOptimization { get; set; }
+        public ApiCompatibilityLevel ApiCompatibilityLevel { get; set; }
+        public EditorAssembliesCompatibilityLevel EditorAssembliesCompatibilityLevel { get; set; }
+        public string[] ResponseFiles { get => m_ResponseFiles; set => m_ResponseFiles = value ?? Array.Empty<string>(); }
+        public string LanguageVersion { get; internal set; }
     }
 
     /// <summary>
@@ -73,15 +163,47 @@ namespace UnityEditor.Compilation
     /// </summary>
     public static partial class CompilationPipeline
     {
-        static Assembly[] s_Assemblies;
+        static Assembly[] s_Assemblies, s_PlayerAssemblies;
         static int s_Generation = -1;
+
+        /// <summary>The release's compiler language version, compiler arguments and analyzers (the
+        /// compatibility profile's), and whether the project's API compatibility level for its
+        /// target is .NET Standard.</summary>
+        internal static (string LanguageVersion, string[] Arguments, string[] Analyzers, bool NetStandard) s_Compiler = ("9.0", Array.Empty<string>(), Array.Empty<string>(), true);
+
+        /// <summary>An assembly's compiler options as the pipeline reports them: its unsafe-code
+        /// flag, the project's API compatibility level (Editor assemblies too), the release's
+        /// language version, arguments and analyzers, and the optimization it builds with (Unity 6000.0.71f1, tests/projects/gameinterop
+        /// compilation.*.options).</summary>
+        static ScriptCompilerOptions OptionsOf(GameAssembly d, CodeOptimization optimization) => new ScriptCompilerOptions
+        {
+            AllowUnsafeCode = d.AllowUnsafe,
+            ApiCompatibilityLevel = s_Compiler.NetStandard ? ApiCompatibilityLevel.NET_Standard : ApiCompatibilityLevel.NET_Unity_4_8,
+            CodeOptimization = optimization,
+            LanguageVersion = s_Compiler.LanguageVersion,
+            AdditionalCompilerArguments = (string[])s_Compiler.Arguments.Clone(),
+            RoslynAnalyzerDllPaths = (string[])s_Compiler.Analyzers.Clone(),
+            RoslynAnalyzerRulesetPath = "",
+            AnalyzerConfigPath = "",
+        };
 
         static IEnumerable<GameAssembly> ScriptAssemblies() => GameDomain.Descriptions.Where(d => d.PluginGuid == null);
 
-        /// <summary>The assemblies with their references linked, built once per code load.</summary>
-        static Assembly[] All()
+        /// <summary>The assemblies with their references linked, built once per code load: as the
+        /// Editor builds them (its code optimization), and as a player build would (release).</summary>
+        static Assembly[] All(bool player = false)
         {
-            if (s_Assemblies != null && s_Generation == GameDomain.Generation) return s_Assemblies;
+            if (s_Generation != GameDomain.Generation)
+            {
+                s_Assemblies = BuildAll(s_CodeOptimization);
+                s_PlayerAssemblies = BuildAll(CodeOptimization.Release);
+                s_Generation = GameDomain.Generation;
+            }
+            return player ? s_PlayerAssemblies : s_Assemblies;
+        }
+
+        static Assembly[] BuildAll(CodeOptimization optimization)
+        {
             var descriptions = ScriptAssemblies().ToList();
             var byName = new Dictionary<string, Assembly>(StringComparer.Ordinal);
             var built = new List<Assembly>();
@@ -97,25 +219,20 @@ namespace UnityEditor.Compilation
                     if (!visiting.Contains(r) && pending.TryGetValue(r, out var target)) references.Add(Build(target, visiting));
                 visiting.Remove(d.Name);
                 var assembly = new Assembly(d.Name, $"Library/ScriptAssemblies/{d.Name}.dll", d.Sources, d.Defines, references.ToArray(), d.CompiledReferences,
-                    d.Editor ? AssemblyFlags.EditorAssembly : AssemblyFlags.None)
-                {
-                    m_RootNamespace = d.RootNamespace ?? "",
-                };
+                    d.Editor ? AssemblyFlags.EditorAssembly : AssemblyFlags.None, OptionsOf(d, optimization), d.RootNamespace ?? "");
                 byName[d.Name] = assembly;
                 built.Add(assembly);
                 return assembly;
             }
             foreach (var d in descriptions) Build(d, new HashSet<string>(StringComparer.Ordinal));
-            s_Assemblies = descriptions.Select(d => byName[d.Name]).ToArray();
-            s_Generation = GameDomain.Generation;
-            return s_Assemblies;
+            return descriptions.Select(d => byName[d.Name]).ToArray();
         }
 
         public static Assembly[] GetAssemblies() => GetAssemblies(AssembliesType.Editor);
 
         public static Assembly[] GetAssemblies(AssembliesType assembliesType)
         {
-            var all = All();
+            var all = All(player: assembliesType != AssembliesType.Editor);
             switch (assembliesType)
             {
                 case AssembliesType.Player:

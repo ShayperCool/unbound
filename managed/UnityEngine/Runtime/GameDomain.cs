@@ -33,6 +33,7 @@ namespace Unbound.Runtime
         /// <summary>The asmdef's Unity path, "" for a predefined assembly.</summary>
         internal string Asmdef = "";
         internal string RootNamespace = "";
+        internal bool AllowUnsafe;
     }
 
     /// <summary>

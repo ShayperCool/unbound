@@ -33,6 +33,7 @@ public sealed class GameConfig
     public List<string> CommandLine { get; set; } = new();
     /// <summary><c>debug</c> or <c>release</c>: the Code Optimization scripts were compiled with.</summary>
     public string CodeOptimization { get; set; } = "release";
+    public ScriptCompilerConfig ScriptCompiler { get; set; } = new();
     public List<BuildSceneConfig> BuildScenes { get; set; } = new();
     public List<AssemblyConfig> Assemblies { get; set; } = new();
     public List<string> Tags { get; set; } = new();
@@ -217,6 +218,15 @@ public sealed class BuildSceneConfig
     public string Guid { get; set; } = "";
 }
 
+/// <summary>The release's compiler settings CompilationPipeline reports.</summary>
+public sealed class ScriptCompilerConfig
+{
+    public string LanguageVersion { get; set; } = "";
+    public List<string> Arguments { get; set; } = new();
+    public List<string> Analyzers { get; set; } = new();
+    public bool NetStandard { get; set; }
+}
+
 public sealed class AssemblyConfig
 {
     public string Name { get; set; } = "";
@@ -232,6 +242,7 @@ public sealed class AssemblyConfig
     public List<string> CompiledReferences { get; set; } = new();
     public string? Asmdef { get; set; }
     public string? RootNamespace { get; set; }
+    public bool AllowUnsafe { get; set; }
 }
 
 public sealed class ScriptConfig
@@ -294,6 +305,7 @@ public static unsafe class Game
                     CompiledReferences = a.CompiledReferences.ToArray(),
                     Asmdef = a.Asmdef ?? "",
                     RootNamespace = a.RootNamespace ?? "",
+                    AllowUnsafe = a.AllowUnsafe,
                 };
                 foreach (var s in a.Scripts) ga.Scripts.Add((s.ClassName ?? s.FileName, s.Guid, s.Namespace));
                 assemblies.Add(ga);
@@ -333,6 +345,7 @@ public static unsafe class Game
     {
         ProjectInfo.ProjectPath = c.ProjectPath;
         Unbound.EditorProcess.s_CommandLine = c.CommandLine.Count > 0 ? c.CommandLine.ToArray() : null;
+        UnityEditor.Compilation.CompilationPipeline.s_Compiler = (c.ScriptCompiler.LanguageVersion, c.ScriptCompiler.Arguments.ToArray(), c.ScriptCompiler.Analyzers.ToArray(), c.ScriptCompiler.NetStandard);
         UnityEditor.Compilation.CompilationPipeline.s_CodeOptimization = c.CodeOptimization == "debug"
             ? UnityEditor.Compilation.CodeOptimization.Debug
             : UnityEditor.Compilation.CodeOptimization.Release;

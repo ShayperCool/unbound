@@ -131,10 +131,10 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             .collect();
         // What CompilationPipeline reports about it, with Unity's project-relative paths.
         let sources: Vec<&str> = script.sources.iter().map(|s| s.path.as_str()).collect();
-        let compiled_references: Vec<PathBuf> = script
+        let compiled_references: Vec<String> = script
             .plugins
             .iter()
-            .map(|p| crate::view::to_view(project, p))
+            .map(|p| crate::view::unity_path(project, p))
             .collect();
         assemblies.push(json!({
             "name": result.name,
@@ -149,6 +149,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             "compiledReferences": compiled_references,
             "asmdef": script.asmdef.as_ref().map(|a| crate::view::unity_path(project, a)),
             "rootNamespace": script.root_namespace,
+            "allowUnsafe": script.allow_unsafe,
         }));
     }
     for plugin in &plugins {
@@ -275,6 +276,19 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     config["codeOptimization"] = json!(options.code_optimization.name());
     // Every group's defines (PlayerSettings.GetScriptingDefineSymbols of any named target).
     config["scriptingDefinesByGroup"] = json!(settings.scripting_defines);
+    // What CompilationPipeline reports of the release's compiler settings and the project's API
+    // compatibility level (of the target, for every assembly).
+    let profile = &project.profile.data;
+    config["scriptCompiler"] = json!({
+        "netStandard": settings.uses_net_standard(&options.target),
+        "languageVersion": profile.language_version,
+        "arguments": profile.compiler_options,
+        "analyzers": profile
+            .source_generators
+            .iter()
+            .map(|g| project.install.data.join(g))
+            .collect::<Vec<_>>(),
+    });
     if let Some((width, height)) = options.screen {
         config["screenWidth"] = json!(width);
         config["screenHeight"] = json!(height);
