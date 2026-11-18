@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/uidepth/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+  ],
+  "summary": "uidepth: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UI/CanvasSystem.cs",
+    "managed/UnityEngine/UI/CanvasSystem.Depths.cs",
+    "managed/UnityEngine/UI/Canvas.cs"
+  ]
+}
