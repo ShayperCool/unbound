@@ -36,7 +36,8 @@ public class OpsInputs : VFXSpawnerCallbacks
     static readonly Dictionary<string, int> s_Updates = new Dictionary<string, int>();
     static readonly FieldInfo[] s_Inputs = typeof(InputProperties).GetFields();
 
-    static string F(float f) => BitConverter.ToInt32(BitConverter.GetBytes(f), 0).ToString("x8");
+    /// <summary>A float's bits in hexadecimal.</summary>
+    public static string F(float f) => BitConverter.ToInt32(BitConverter.GetBytes(f), 0).ToString("x8");
 
     static string Read(VFXExpressionValues values, FieldInfo input)
     {

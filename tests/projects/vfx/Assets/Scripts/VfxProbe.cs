@@ -715,8 +715,9 @@ public sealed class VfxProbe : MonoBehaviour
 
     /// <summary>The controls of event attributes read in a spawn context (README.md): from frame
     /// 3 the exposed lifetime changes; at frame 5 the effect plays again with attributes of its
-    /// own; at frame 6 the seed and alive change; at frame 8 it stops; at frame 10 it plays again
-    /// without attributes. The rows are written at frame 20.</summary>
+    /// own; at frame 6 the seed and alive change; at frame 7 the second spawn context's lifetime
+    /// changes; at frame 8 it stops; at frame 10 it plays again without attributes. The rows are
+    /// written at frame 20.</summary>
     void EventReadFrame()
     {
         if (m_EventReads == null) return;
@@ -737,6 +738,9 @@ public sealed class VfxProbe : MonoBehaviour
             case 6:
                 effect.SetUInt("S", 12);
                 effect.SetBool("A", false);
+                break;
+            case 7:
+                effect.SetFloat("L2", 0.5f);
                 break;
             case 8:
                 effect.SendEvent("OnStop");

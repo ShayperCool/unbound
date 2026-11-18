@@ -6,7 +6,7 @@ using UnityEngine.VFX;
 /// <summary>
 /// Spawner blocks written as scripts, for the probe's controls of event attributes read in a spawn
 /// context: their inputs are the spawn context's own event attributes as Get Attribute (Current)
-/// reads them (a float, a vector, an unsigned integer and a bool), written down as
+/// reads them (floats, a vector, an unsigned integer and a bool), written down as
 /// <see cref="OpsInputs"/> does, each block's rows under its own name. A spawn context has the
 /// first before its blocks that set attributes and the second after them.
 /// </summary>
@@ -14,8 +14,8 @@ public abstract class EventReads : VFXSpawnerCallbacks
 {
     public class Inputs
     {
-        /// <summary>The event's lifetime, colour, seed and alive.</summary>
-        public float f00;
+        /// <summary>The event's lifetime, colour, seed and alive, and its spawn count.</summary>
+        public float f00, f01;
         public Vector3 v00;
         public uint u00;
         public bool b00;

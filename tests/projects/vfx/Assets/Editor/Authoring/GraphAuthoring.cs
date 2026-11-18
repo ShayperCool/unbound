@@ -599,7 +599,8 @@ public static class GraphAuthoring
     /// "Event attributes read in a spawn context"): a spawn context whose blocks, in order, are a
     /// script block reading its event attributes through Get Attribute (Current), blocks setting
     /// the lifetime (exposed), the colour (from the lifetime as read), the seed and alive
-    /// (exposed), and a second script block reading them again.</summary>
+    /// (exposed), and a second script block reading them again; and a second spawn context
+    /// whose loop duration is its own lifetime as read there.</summary>
     static void EventReadings()
     {
         var graph = NewGraph("OpsEvent", OperationFolder);
@@ -618,7 +619,7 @@ public static class GraphAuthoring
             var block = Make<VFXSpawnerCustomWrapper>();
             block.SetSettingValue("m_customType", new SerializableType(type));
             spawn.AddChild(block);
-            foreach (var (attribute, input) in new[] { ("lifetime", "f00"), ("color", "v00"), ("seed", "u00"), ("alive", "b00") })
+            foreach (var (attribute, input) in new[] { ("lifetime", "f00"), ("spawnCount", "f01"), ("color", "v00"), ("seed", "u00"), ("alive", "b00") })
                 Link(Current(attribute), Input(block, input));
         }
         void SetFrom(string attribute, VFXSlot from)
@@ -634,6 +635,18 @@ public static class GraphAuthoring
         SetFrom("seed", Parameter(graph, typeof(uint), "S", 5u).outputSlots[0]);
         SetFrom("alive", Parameter(graph, typeof(bool), "A", true).outputSlots[0]);
         Reads(typeof(EventReadsSecond));
+        // A second spawn context whose loop lasts its own lifetime as read there; a block sets
+        // the lifetime (the exposed `L2`) and a script block writes the loop down.
+        var (loop, _, _, _) = System(graph, 8);
+        loop.SetSettingValue("loopDuration", VFXBasicSpawner.LoopMode.Constant);
+        Link(Current("lifetime"), Input(loop, "LoopDuration"));
+        var setLifetime = Make<VFXSpawnerSetAttribute>();
+        setLifetime.SetSettingValue("attribute", "lifetime");
+        loop.AddChild(setLifetime);
+        Link(Parameter(graph, typeof(float), "L2", 0.25f).outputSlots[0], setLifetime.inputSlots[0]);
+        var loopReads = Make<VFXSpawnerCustomWrapper>();
+        loopReads.SetSettingValue("m_customType", new SerializableType(typeof(LoopReads)));
+        loop.AddChild(loopReads);
         graph.GetResource().cullingFlags = VFXCullingFlags.CullNone;
         Save(graph);
     }
