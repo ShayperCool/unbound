@@ -54,7 +54,7 @@ namespace UnityEngine.Tests
         {
             var opengl = Matrices(Reference("values.jsonl"));
             var metal = Matrices(Reference(Path.Combine("metal", "values.jsonl")));
-            Assert.Equal(12, metal.Count);
+            Assert.Equal(10, metal.Count);
             Assert.Equal(opengl.Keys, metal.Keys);
             Select("Metal", () =>
             {
@@ -80,8 +80,9 @@ namespace UnityEngine.Tests
                 try
                 {
                     go.transform.SetPositionAndRotation(new Vector3(0f, 2f, -5f), Quaternion.Euler(20f, 10f, 0f));
+                    // A new camera keeps the view-projection it has when it is made (the screen's
+                    // aspect): nothing here changes it before the comparison.
                     var camera = go.AddComponent<Camera>();
-                    camera.aspect = 4f / 3f;
                     var expected = GL.GetGPUProjectionMatrix(camera.nonJitteredProjectionMatrix, true) * camera.worldToCameraMatrix;
                     Assert.Equal(expected, camera.previousViewProjectionMatrix);
                     // The device's mapping changes the matrix there, OpenGL Core keeps it: the

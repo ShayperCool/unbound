@@ -795,7 +795,7 @@ pub fn widen_bits(level: u32, bits: u32) -> u32 {
 }
 
 /// A channel level `level` of `bits` bits as the nearest 8-bit value, `level * 255 / (2^bits - 1)`
-/// rounded (a 5-bit 3 is 25 where repeating its bits gives 27): the 8-bit stand-in of a level the
+/// rounded (a 5-bit 3 is 25 where repeating its bits gives 24): the 8-bit stand-in of a level the
 /// device stores at its own bits and reads as exactly `level / (2^bits - 1)`
 /// (`DeviceConventions::packed_writes_round`; `PACKED_TEXELS_WGSL` does the same on the GPU).
 pub fn level_byte(level: u32, bits: u32) -> u32 {
@@ -2486,7 +2486,7 @@ mod tests {
             assert_eq!(level_byte(level, 4), widen_bits(level, 4));
         }
         assert_eq!(level_byte(3, 5), 25);
-        assert_eq!(widen_bits(3, 5), 27);
+        assert_eq!(widen_bits(3, 5), 24);
         assert_eq!(level_byte(11, 6), 45);
         let clear = packed_clear([0.25, 0.5, 0.3, 0.7], PACKED_5551_BITS, true);
         assert_eq!(
