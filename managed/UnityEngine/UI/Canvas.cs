@@ -498,7 +498,7 @@ namespace UnityEngine
             // A mesh scripts cannot read is refused (matches the Unity 6000.0.71f1 Editor,
             // tests/projects/meshreadable `canvasRenderer.setMesh`; what the renderer keeps then is
             // unmeasured: its mesh stays as it was).
-            if (mesh != null && !mesh.isReadable)
+            if (mesh != null && !mesh.ScriptsCanRead)
             {
                 Debug.LogError($"Mesh '{mesh.name}' is not readable and can not be used. The CanvasRenderer requires read access to the mesh.");
                 return;

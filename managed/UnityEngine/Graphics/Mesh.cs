@@ -185,10 +185,17 @@ namespace UnityEngine
         /// CPU-addressable data for scripts). The engine's own systems still read it.</summary>
         bool Readable(string what)
         {
-            if (m_IsReadable || s_EngineReads > 0) return true;
+            if (ScriptsCanRead) return true;
             Debug.LogError(NotReadable(what, name));
             return false;
         }
+
+        /// <summary>Whether a script may read or combine the mesh's data now: a readable mesh, a
+        /// read by the engine's own systems, or any mesh outside Play mode (Mesh.isReadable, 6000.0:
+        /// "Access is always allowed in the Unity Editor outside of the game and rendering loop";
+        /// the refusals are measured in Play mode only, tests/projects/meshreadable; Edit mode's
+        /// [ExecuteAlways] updates are unmeasured and allowed).</summary>
+        internal bool ScriptsCanRead => m_IsReadable || s_EngineReads > 0 || !Unbound.Runtime.EditorSession.IsPlaying;
 
         /// <summary>The Editor's text for a refused read of <paramref name="what"/>.</summary>
         internal static string NotReadable(string what, string meshName) =>
@@ -1001,7 +1008,7 @@ namespace UnityEngine
         /// `combine.*`).</summary>
         public void CombineMeshes(CombineInstance[] combine, [Internal.DefaultValue("true")] bool mergeSubMeshes, [Internal.DefaultValue("true")] bool useMatrices, [Internal.DefaultValue("false")] bool hasLightmapData)
         {
-            if (!m_IsReadable)
+            if (!ScriptsCanRead)
             {
                 Debug.LogError($"Cannot combine into mesh that does not allow access: {name}");
                 return;
@@ -1014,7 +1021,7 @@ namespace UnityEngine
             foreach (var c in combine)
             {
                 if (c.mesh == null) continue;
-                if (!c.mesh.m_IsReadable)
+                if (!c.mesh.ScriptsCanRead)
                 {
                     Debug.LogWarning($"Cannot combine mesh that does not allow access: {c.mesh.name}");
                     continue;

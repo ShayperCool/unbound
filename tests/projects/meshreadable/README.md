@@ -38,7 +38,9 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, two identical captures):
   logs the read error; `CanvasRenderer.SetMesh` refuses it ("Mesh '<name>' is not readable and can
   not be used. The CanvasRenderer requires read access to the mesh.").
 
-Unbound matches every value. Unmeasured: other model formats than FBX; colors that are not whole
+Unbound matches every value. Outside Play mode Unbound lets scripts read such meshes, as the
+Mesh.isReadable page says of the Editor ("Access is always allowed in the Unity Editor outside of
+the game and rendering loop"). Unmeasured: Edit mode's [ExecuteAlways] updates (allowed); other model formats than FBX; colors that are not whole
 bytes (rounded to the nearest byte); bone weights, bind poses and blend shapes of meshes that are
 not readable and setters other than `vertices` on them (Unbound does not refuse those); serialized
 mesh assets (Unbound refuses them alike).

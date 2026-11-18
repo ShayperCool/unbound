@@ -33,6 +33,36 @@ namespace UnityEngine.Tests
             return logs;
         }
 
+        /// <summary>Outside Play mode a script reads and combines a mesh that is not readable, as
+        /// Mesh.isReadable documents for the Editor ("Access is always allowed in the Unity Editor
+        /// outside of the game and rendering loop"); back in Play mode the same read is refused.</summary>
+        [Fact]
+        public void EditModeScriptsReadMeshesThatAreNotReadable()
+        {
+            var mesh = Floor(false);
+            mesh.name = "Locked";
+            bool playing = Unbound.Runtime.EditorSession.IsPlaying;
+            try
+            {
+                Unbound.Runtime.EditorSession.IsPlaying = false;
+                Vector3[] vertices = null;
+                var combined = new Mesh();
+                Assert.Empty(Logs(() =>
+                {
+                    vertices = mesh.vertices;
+                    combined.CombineMeshes(new[] { new CombineInstance { mesh = mesh, transform = Matrix4x4.identity } });
+                }));
+                Assert.Equal(4, vertices.Length);
+                Assert.Equal(4, combined.vertexCount);
+                Assert.False(mesh.isReadable);
+
+                Unbound.Runtime.EditorSession.IsPlaying = true;
+                Assert.Equal(new[] { "Error: " + Mesh.NotReadable("vertices", "Locked") }, Logs(() => vertices = mesh.vertices));
+                Assert.Empty(vertices);
+            }
+            finally { Unbound.Runtime.EditorSession.IsPlaying = playing; }
+        }
+
         [Fact]
         public void NavigationMeshesBuildFromMeshesScriptsCannotRead()
         {
