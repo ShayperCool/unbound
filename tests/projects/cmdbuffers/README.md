@@ -76,8 +76,9 @@ what the draw wrote there, the same in four captures; Unbound keeps it). Unbound
 values.
 
 The Linux Editor's `fence.frame2.cpu.passed`, `fence.frames.cpu.executed` and
-`fence.frames.cpu.immediate` differ between runs (two of five Linux pairs recorded on
-2026-11-18 gave false where the reference has true); the reference keeps its recorded values.
+`fence.frames.cpu.immediate` differ between runs (three of seven Linux pairs recorded on
+2026-11-18 gave false where the reference has true, once in only one repeat of the pair); the
+reference keeps its recorded values.
 
 ## Recording
 
