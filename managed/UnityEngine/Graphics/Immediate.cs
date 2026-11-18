@@ -720,6 +720,23 @@ namespace UnityEngine
         /// destination is refused with the Editor's errors.</summary>
         public static bool ConvertTexture(Texture src, Texture dst) => ConvertTexture(src, 0, dst, 0);
 
+        /// <summary>The format of the target ConvertTexture copies a cubemap's face into, and whether
+        /// the face is drawn into it by sampling (<paramref name="drawn"/>) rather than copied. A
+        /// compressed cubemap's blocks cannot be copied into a colour target, and a format the
+        /// device cannot render into (RGB24 on Metal) cannot be the target: the face is then drawn
+        /// into a target of the device's compatible render format (SystemInfo.GetCompatibleFormat),
+        /// as the macOS Editor converts an RGB24 cubemap's face (tests/projects/cubecompression,
+        /// its Metal reference).</summary>
+        internal static GraphicsFormat ConvertFaceFormat(Texture src, out bool drawn)
+        {
+            var compressed = src is Cubemap { m_SourceFormat: not null } cube ? cube : null;
+            var format = compressed != null ? compressed.PixelGraphicsFormat : src.graphicsFormat;
+            drawn = compressed != null;
+            if (SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return format;
+            drawn = true;
+            return SystemInfo.GetCompatibleFormat(format, GraphicsFormatUsage.Render);
+        }
+
         public static bool ConvertTexture(Texture src, int srcElement, Texture dst, int dstElement)
         {
             if (src == null) { Debug.LogError("Graphics.ConvertTexture called with null source texture"); return false; }
@@ -756,18 +773,20 @@ namespace UnityEngine
             RenderTexture faceCopy = null;
             if (face)
             {
-                // A compressed cubemap's blocks cannot be copied into a colour target: its face is
-                // drawn by sampling into a target of its decoded pixels' format.
-                var compressed = src is Cubemap { m_SourceFormat: not null } cube ? cube : null;
-                var faceFormat = compressed != null ? compressed.PixelGraphicsFormat : src.graphicsFormat;
+                var faceFormat = ConvertFaceFormat(src, out bool drawn);
+                if (faceFormat == GraphicsFormat.None)
+                {
+                    Debug.LogError($"Unbound: Graphics.ConvertTexture cannot read the cubemap '{src.name}': the device renders into no format compatible with {src.graphicsFormat}.");
+                    return false;
+                }
                 faceCopy = RenderTexture.GetTemporary(new RenderTextureDescriptor(src.width, src.height, faceFormat, 0));
                 faceCopy.filterMode = src.filterMode;
-                if (compressed == null)
+                if (!drawn)
                     GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
-                else if (!ReflectionProbe.DrawCubeFace(compressed, 0, faceCopy))
+                else if (!ReflectionProbe.DrawCubeFace(src, 0, faceCopy))
                 {
                     RenderTexture.ReleaseTemporary(faceCopy);
-                    Debug.LogError($"Unbound: Graphics.ConvertTexture cannot read the compressed cubemap '{src.name}' (Hidden/CubeCopy is missing).");
+                    Debug.LogError($"Unbound: Graphics.ConvertTexture cannot read the cubemap '{src.name}' (Hidden/CubeCopy is missing).");
                     return false;
                 }
             }
