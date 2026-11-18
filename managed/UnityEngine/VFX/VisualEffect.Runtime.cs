@@ -258,6 +258,10 @@ namespace UnityEngine.VFX
 
         public void SendEvent(int eventNameID, VFXEventAttribute eventAttribute)
         {
+            // Attributes are laid out for the asset that made them: another asset's are refused
+            // before anything is sent (matches the Unity 6000.0.71f1 Editor, tests/projects/vfxdirect).
+            if (eventAttribute != null && eventAttribute.vfxAsset != visualEffectAsset)
+                throw new InvalidOperationException("Invalid VFXEventAttribute provided to VisualEffect. It has been created with another VisualEffectAsset. Use CreateVFXEventAttribute.");
             // Each play of an effect that resets its seed on play takes a new seed.
             if (m_ResetSeedOnPlay && eventNameID == VisualEffectAsset.PlayEventID) m_Seed = NewSeed();
             if (m_Systems.Length == 0) return;

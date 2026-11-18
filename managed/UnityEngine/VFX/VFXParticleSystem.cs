@@ -344,8 +344,8 @@ namespace Unbound.Runtime
         /// <summary>Takes a spawn event: the whole particles it asks for, as far as the system
         /// has room (a system whose particles never die fills up for good). The events of the
         /// system's spawners are taken at each step; an event wired straight to the system's
-        /// Initialize context is taken when the effect processes it, and spawns in the next
-        /// step (tests/projects/vfxdirect).</summary>
+        /// Initialize context is taken when the effect processes it, and spawns in the step
+        /// that processes it (tests/projects/vfxdirect).</summary>
         internal void TakeEvent(uint[] attributes)
         {
             float asked = attributes.Length > 0 ? BitConverter.UInt32BitsToSingle(attributes[0]) : 0f;
@@ -360,11 +360,7 @@ namespace Unbound.Runtime
             {
                 int at = eventIndex * structure + to;
                 if (at + size > m_SourceWords.Length) Array.Resize(ref m_SourceWords, Math.Max(at + size, m_SourceWords.Length * 2));
-                // An event's attributes may be another asset's, of a shorter layout: what
-                // they do not hold is zero.
-                int held = Math.Clamp(attributes.Length - from, 0, size);
-                Array.Copy(attributes, from, m_SourceWords, at, held);
-                Array.Clear(m_SourceWords, at + held, size - held);
+                Array.Copy(attributes, from, m_SourceWords, at, size);
             }
             m_Spawned += count;
             m_SpawnPrefix.Add((eventIndex == 0 ? 0u : m_SpawnPrefix[eventIndex - 1]) + count);

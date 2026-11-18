@@ -1,7 +1,6 @@
 using System;
 using Unbound.Runtime;
 using UnityEditor.VFX;
-using UnityEngine.Rendering;
 using UnityEngine.VFX;
 using Xunit;
 
@@ -32,69 +31,35 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AnEventsAttributesOfAShorterLayoutLeaveWhatTheyDoNotHoldAtZero()
+        public void AttributesOfAnotherAssetAreRefusedBeforeAnythingIsSent()
         {
-            // The asset's events carry a count and a position, which its system's particles
-            // inherit: the kernels read the position from the system's source buffer.
-            var system = new VFXEditorSystemDesc
-            {
-                name = "Particles", type = VFXSystemType.Particle, layer = 0, capacity = 8, flags = VFXSystemFlag.SystemHasAttributeBuffer | VFXSystemFlag.SystemHasDirectLink,
-                buffers = new[] { new VFXMapping("sourceAttributeBuffer", 0) }, values = Array.Empty<VFXMapping>(), tasks = Array.Empty<VFXEditorTaskDesc>(),
-            };
-            var initial = new VFXCPUBufferData();
-            initial.PushFloat(1f);
-            initial.PushFloat(0f);
-            initial.PushFloat(0f);
-            initial.PushFloat(0f);
-            var resource = new VisualEffectResource();
-            resource.SetRuntimeData(new VFXExpressionSheet { expressions = Array.Empty<VFXExpressionDesc>(), values = Array.Empty<VFXExpressionValueContainerDesc>(), exposed = Array.Empty<VFXExposedMapping>() },
-                new[] { system },
-                new[]
-                {
-                    new VFXEventDesc { name = "OnPlay", startSystems = Array.Empty<uint>(), stopSystems = Array.Empty<uint>(), initSystems = Array.Empty<uint>() },
-                    new VFXEventDesc { name = "Hit", startSystems = Array.Empty<uint>(), stopSystems = Array.Empty<uint>(), initSystems = new uint[] { 0 } },
-                },
-                new[]
-                {
-                    new VFXGPUBufferDesc
-                    {
-                        target = GraphicsBuffer.Target.Raw, size = 3, stride = 4, capacity = 1,
-                        layout = new[] { new VFXLayoutElementDesc { name = "position", type = VFXValueType.Float3, offset = new VFXLayoutOffset { structure = 3 } } },
-                    },
-                },
-                new[]
-                {
-                    new VFXCPUBufferDesc
-                    {
-                        capacity = 1, stride = 4, initialData = initial,
-                        layout = new[]
-                        {
-                            new VFXLayoutElementDesc { name = "spawnCount", type = VFXValueType.Float, offset = new VFXLayoutOffset { structure = 4 } },
-                            new VFXLayoutElementDesc { name = "position", type = VFXValueType.Float3, offset = new VFXLayoutOffset { structure = 4, element = 1 } },
-                        },
-                    },
-                },
-                null, null, ShadowCastingMode.Off, MotionVectorGenerationMode.Camera, VFXInstancingDisabledReason.None, 7);
-            var data = resource.m_Data;
-            data.Seal();
-            var asset = VisualEffectAsset.Create();
-            asset.m_Data = data;
-            asset.m_Settings.CullingFlags = VFXCullingFlags.CullNone;
-            asset.m_Settings.PreWarmStepCount = 0;
-            VisualEffect effect = Running(asset), other = Running(Wired());
+            // Two assets of one layout: the attributes belong to the asset that made them, not
+            // to its layout; another effect of the same asset may send them.
+            VisualEffectAsset asset = Wired(), twin = Wired();
+            VisualEffect effect = Running(asset), sibling = Running(asset), other = Running(twin);
             try
             {
                 effect.UpdateEffect(Thirtieth);
-                // Attributes made for another asset, whose events carry a count alone.
                 var foreign = other.CreateVFXEventAttribute();
                 foreign.SetFloat("spawnCount", 2f);
-                effect.SendEvent("Hit", foreign);
+                const string Refusal = "Invalid VFXEventAttribute provided to VisualEffect. It has been created with another VisualEffectAsset. Use CreateVFXEventAttribute.";
+                Assert.Equal(Refusal, Assert.Throws<InvalidOperationException>(() => effect.SendEvent("Hit", foreign)).Message);
+                Assert.Equal(Refusal, Assert.Throws<InvalidOperationException>(() => effect.Play(foreign)).Message);
+                Assert.Equal(Refusal, Assert.Throws<InvalidOperationException>(() => effect.Stop(foreign)).Message);
                 effect.UpdateEffect(Thirtieth);
-                Assert.Equal(2, effect.aliveParticleCount);
+                Assert.Equal(0, effect.aliveParticleCount);
+
+                var shared = sibling.CreateVFXEventAttribute();
+                shared.SetFloat("spawnCount", 3f);
+                effect.SendEvent("Hit", shared);
+                effect.SendEvent("Hit", null);
+                effect.UpdateEffect(Thirtieth);
+                Assert.Equal(4, effect.aliveParticleCount);
             }
             finally
             {
                 Object.DestroyImmediate(effect.gameObject);
+                Object.DestroyImmediate(sibling.gameObject);
                 Object.DestroyImmediate(other.gameObject);
             }
         }
