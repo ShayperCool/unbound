@@ -118,7 +118,7 @@ namespace Unbound.Runtime
         /// its range on each axis) covers: each face clipped by the near plane in clip space, the
         /// bounds of what is left after the perspective divide, clamped to the view (none when they
         /// miss it).</summary>
-        static float PointBoxHeight(Vector3 center, float range, Matrix4x4 viewProjection)
+        internal static float PointBoxHeight(Vector3 center, float range, Matrix4x4 viewProjection)
         {
             for (int i = 0; i < 8; i++)
             {
