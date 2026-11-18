@@ -89,6 +89,10 @@ public class UrpOverlayUiProbe : MonoBehaviour
         GUI.color = previous;
         GUI.DrawTexture(new Rect(220, 140, 80, 30), m_Grey);
         GUI.DrawTexture(new Rect(150, 140, 60, 30), m_LinearGrey);
+        // The same grey textures through Graphics.DrawTexture in the Repaint (GUI coordinates),
+        // along the bottom edge over the background.
+        Graphics.DrawTexture(new Rect(20, 166, 50, 10), m_Grey);
+        Graphics.DrawTexture(new Rect(80, 166, 50, 10), m_LinearGrey);
     }
 
     IEnumerator Start()

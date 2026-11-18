@@ -17,7 +17,8 @@ red one. It reads the screen at the end of the frame:
 - `overlay`: the canvases and the panel;
 - `imgui`: the same with IMGUI drawn in `OnGUI`: a white box at half opacity (over the background
   and the red image), an opaque white box tinted half grey, opaque textures of grey 128, one sRGB
-  and one linear, and a half-transparent blue quad drawn with GL in the Repaint; the value
+  and one linear, a half-transparent blue quad drawn with GL in the Repaint, and the two grey
+  textures again through `Graphics.DrawTexture` along the bottom edge; the value
   `imgui.repaints` counts OnGUI's Repaint events in the recorded frame (one: URP's two overlay
   lists do not run OnGUI twice);
 - `overlay_post`: the canvases and the panel with post-processing and FXAA on the camera (URP's
@@ -31,7 +32,8 @@ captures): the canvases blend in linear space (the white Image at 0.749 over the
 canvases. IMGUI blends in gamma space (the half-opaque white box over that background is 160,
 166, 172; the GL quad too), its colors as given (a box tinted grey 0.5 is 128) and its textures in
 gamma space (the sRGB grey 128 shows 128, the linear one 188), with URP and without; OnGUI gets
-one Repaint a frame.
+one Repaint a frame. `Graphics.DrawTexture` in the Repaint stores its colours unconverted (the
+sRGB grey texture shows 55, the linear one 128).
 
 Unbound draws the canvas images and IMGUI as the Editor does (IMGUI with Unity's own IMGUI
 shaders, which turn texture colours to gamma in a linear project, its draws and what OnGUI draws
