@@ -115,7 +115,13 @@ public partial class CmdBuffersProbe
         // Load and store actions.
         Case("bind.load.clear", () => Bind(2, depthTexture, RenderBufferLoadAction.Clear), cmd => Draw(cmd, 100, 0.5f, CompareFunction.Always));
         Case("bind.load.clearDepth", () => Bind(2, depthTexture, depthLoad: RenderBufferLoadAction.Clear), cmd => Draw(cmd, 100, 0.5f, CompareFunction.Always));
-        Case("bind.load.dontCare", () => Bind(2, depthTexture, RenderBufferLoadAction.DontCare, depthLoad: RenderBufferLoadAction.DontCare), cmd => Draw(cmd, 100, 0.5f));
+        // Targets loaded with DontCare have undefined contents, which this draw's depth test and
+        // output read: on Metal, whose tile memory does not load them, two macOS Editor captures
+        // differed. There the case is not drawn.
+        if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal)
+            Value("bind.load.dontCare.skipped", Q("a draw into targets loaded with DontCare reads undefined contents"));
+        else
+            Case("bind.load.dontCare", () => Bind(2, depthTexture, RenderBufferLoadAction.DontCare, depthLoad: RenderBufferLoadAction.DontCare), cmd => Draw(cmd, 100, 0.5f));
         Case("bind.load.dontCare.nodraw", () => Bind(2, depthTexture, RenderBufferLoadAction.DontCare), cmd => { });
         Case("bind.store.dontCare", () => Bind(2, depthTexture, store: RenderBufferStoreAction.DontCare, depthStore: RenderBufferStoreAction.DontCare), cmd => Draw(cmd, 100, 0.5f));
         Case("bind.store.resolve", () => Bind(2, depthTexture, store: RenderBufferStoreAction.Resolve), cmd => Draw(cmd, 100, 0.5f));
