@@ -705,11 +705,8 @@ namespace UnityEngine
                     () => GfxStream.CopyTexture(TextureHandles.Of(src), srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), TextureHandles.Of(dst), dstElement, dstMip, dstX, dstY));
                 return;
             }
-            if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
-            {
-                if (srcWidth < 0) s2.CopyRetainedLevel(d2);
-                else s2.CopyRetainedPixels(d2, srcX, srcY, srcWidth, srcHeight, dstX, dstY);
-            }
+            if (src is Texture2D s2 && dst is Texture2D d2)
+                Texture2D.CopyRetained(s2, srcMip, srcX, srcY, srcWidth, srcHeight, d2, dstMip, dstX, dstY);
             ulong source = TextureHandles.Of(src), destination = TextureHandles.Of(dst);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         }

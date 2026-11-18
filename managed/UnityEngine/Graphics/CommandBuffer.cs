@@ -729,7 +729,14 @@ namespace UnityEngine.Rendering
             {
                 if (!Texture2D.ValidateBlockCopy(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY)) return;
                 if (srcWidth < 0 && srcElement == 0 && dstElement == 0)
-                    Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
+                {
+                    // Whole levels copy their CPU data too (the macOS Editor, tests/projects/
+                    // cmdbuffers metal.jsonl `metal.copy.bgra32.rgba32.cpu`); regions unmeasured.
+                    if (BlockFormats.BlockBytes(source2D.format) > 0 || BlockFormats.BlockBytes(destination2D.format) > 0)
+                        Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
+                    else
+                        Texture2D.CopyRetained(source2D, srcMip, -1, -1, -1, -1, destination2D, dstMip, 0, 0);
+                }
             }
             ulong source = TextureHandles.Of(sourceTexture), destination = TextureHandles.Of(destinationTexture);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);

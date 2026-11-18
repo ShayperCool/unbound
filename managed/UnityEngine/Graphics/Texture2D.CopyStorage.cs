@@ -6,6 +6,19 @@ namespace UnityEngine
     {
         // The Editor retains CPU storage even when isReadable forbids pixel API access.
         // CopyTexture propagates that storage; subsequent Instantiate/GetRawTextureData see it.
+        /// <summary>The retained CPU pixels a Graphics.CopyTexture of first levels copies besides the
+        /// GPU copy (a width of -1: the whole level, its bytes as they are, so that a BGRA32 level
+        /// copied into an RGBA32 one trades red and blue, as the Unity 6000.0.71f1 macOS Editor's
+        /// CommandBuffer.CopyTexture does, tests/projects/cmdbuffers metal.jsonl
+        /// `metal.copy.bgra32.rgba32.cpu`); other levels keep theirs.</summary>
+        internal static void CopyRetained(Texture2D source, int sourceMip, int x, int y, int width, int height,
+            Texture2D destination, int destinationMip, int destinationX, int destinationY)
+        {
+            if (sourceMip != 0 || destinationMip != 0) return;
+            if (width < 0) source.CopyRetainedLevel(destination);
+            else source.CopyRetainedPixels(destination, x, y, width, height, destinationX, destinationY);
+        }
+
         internal void CopyRetainedPixels(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)
         {
             // Graphics.CopyTexture has fitted the regions to both textures.
