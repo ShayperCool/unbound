@@ -1034,6 +1034,7 @@ class JanitorTests(unittest.TestCase):
         for free in (1, 19*janitor.GIB):
             with self.subTest(free=free), patch.dict(os.environ, {'UNBOUND_JANITOR_MIN_FREE_GIB': '20'}), \
                  patch.object(janitor, 'free_space', return_value={'/': free}), \
+                 patch.object(janitor.processes, 'MACOS', False), \
                  patch.object(janitor.subprocess, 'run') as run, patch.object(janitor, 'main') as collect:
                 run.return_value.returncode = 0
                 janitor.before_gate(self.repo)
@@ -1045,6 +1046,13 @@ class JanitorTests(unittest.TestCase):
              patch.object(janitor.subprocess, 'run') as run:
             janitor.before_gate(self.repo)
         run.assert_not_called()
+        # macOS: the launchd agent is started instead.
+        with patch.dict(os.environ, {'UNBOUND_JANITOR_MIN_FREE_GIB': '20'}), \
+             patch.object(janitor, 'free_space', return_value={'/': 1}), \
+             patch.object(janitor.processes, 'MACOS', True), patch.object(janitor.subprocess, 'run') as run:
+            run.return_value.returncode = 0
+            janitor.before_gate(self.repo)
+        self.assertEqual(run.call_args.args[0], ['launchctl', 'kickstart', f'gui/{os.getuid()}/com.unbound.janitor'])
 
     def test_before_gate_large_backlog_has_bounded_handoff(self):
         # A real slow service-manager substitute must be killed by the timeout.
