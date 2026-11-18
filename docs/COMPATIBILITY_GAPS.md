@@ -1172,21 +1172,147 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
    axis, `.renderTexture` assets, baked reflection probes~~ (done: tests/projects/builtinrp,
    baked, display, materials), ~~Projector, replacement shaders, oblique matrices with inverted
    culling, cubemap renders, realtime probes, deferred and vertex-lit paths~~ (done:
-   tests/projects/builtinfx); SpriteMask and tiled sprites, texture mip chains and formats (one
-   protocol change).
-4. **Animation and audio**: one root-motion pass with a probe; mixer effects and filter
-   components (one DSP chain); constraints; polar 2D blend trees; then humanoid avatars (large).
-5. **Physics**: ~~2D joints~~ (done: tests/projects/joints2d), effectors, particle vertex streams and
-   collision events, NavMeshObstacle, project defaults and DynamicsManager settings, local
-   physics scenes, raycast UVs.
-6. **UI and text**: ~~USS transitions~~ (done: tests/projects/uitransitions), per-draw `_ClipRect`, ~~Unity's built-in UI sprites and GameSkin
-   from its resource files~~ (done: tests/projects/imguiskin), ~~input events within a frame~~ (done: tests/projects/inputframes), clipboard, IME,
+   tests/projects/builtinfx); ~~SpriteMask and tiled sprites~~ (done: tests/projects/resources,
+   urp2d), ~~texture mip chains~~ (done: resources `mips.*`, `rtmips.*`, bundlemips) and formats
+   (16-bit, 10-10-10-2, float and signed formats done: textureformats; open: 4444/5-6-5 render
+   targets sample their 8-bit store, Alpha8 GPU storage is RGBA8, see their rows).
+4. **Animation and audio**: ~~one root-motion pass with a probe~~ (done: tests/projects/animator,
+   modelroot, rootcurves); ~~mixer effects~~ (done: mixerfilters, mixerecho, mixerreverb,
+   mixerduck, mixercompressor, audiodistortion, audiochorus, audioflange, audionormalize,
+   audiopitch) and filter components (Reverb, Distortion, Chorus, Echo and every listener chain
+   done: audioreverb, audiodistortion, audiochorus; open: `AudioLowPassFilter` and
+   `AudioHighPassFilter` on an AudioSource are measured only behind a Chorus, and the low-pass
+   distance curve `customCutoffCurve` is unsupported); ~~constraints~~ (done:
+   tests/projects/constraints); ~~polar 2D blend trees~~ (done: animator `blend.*`); ~~humanoid
+   avatars~~ (done: tests/projects/humanoid, humanfirstpose, animpartial; residuals in the
+   Humanoid row).
+5. **Physics**: ~~2D joints~~ (done: tests/projects/joints2d), ~~effectors~~ (done:
+   tests/projects/effectors), ~~particle vertex streams~~ (done: particles `custom_data`,
+   particlerender) and collision events (contact and bounce done: particlerender `collide/*`;
+   open: `ParticleCollisionEvent.colliderComponent` has no probe, `safeCollisionEventSize`),
+   NavMeshObstacle (carving done: navmesh `carve.*`, navpath `carve.*`; open: avoidance of
+   obstacles, navpath `replan.none` 17/578 and two avoidance groups), ~~project defaults and
+   DynamicsManager settings~~ (done: tests/projects/physicsdefaults, physicsscenesettings), local
+   physics scenes (open: 3D source ready without an Editor probe, 2D local scenes join the main
+   world), ~~raycast UVs~~ (done: tests/projects/rayhits).
+6. **UI and text**: ~~USS transitions~~ (done: tests/projects/uitransitions), ~~per-draw
+   `_ClipRect`~~ (done: tests/projects/uirectclipping), ~~Unity's built-in UI sprites and GameSkin
+   from its resource files~~ (done: tests/projects/imguiskin), ~~input events within a frame~~
+   (done: tests/projects/inputframes), clipboard (done on Linux X11: tests/projects/inputplatform;
+   open: macOS and Wayland unmeasured), IME (defaults only: inputplatform; open: composition with a
+   configured input method, text-field integration),
    ~~TextMesh~~ (done: tests/projects/textmesh and glyphraster, dynamic font texture packing included).
-7. **Assets and networking**: FBX materials, LOD names, lightmap UVs, AssetBundle downloads and
-   caching, audio downloads, ~~`InstantiateAsync`~~ (done: tests/projects/instantiateasync).
+7. **Assets and networking**: ~~FBX materials~~ (done for the built-in pipeline:
+   tests/projects/modelimport), ~~LOD names~~ (done: modelimport), lightmap UVs (partial:
+   tests/projects/lightmapuvs; open: equal-sized charts packed in each other's places),
+   ~~AssetBundle downloads and caching~~ (done: tests/projects/networkcaching), ~~audio
+   downloads~~ (done: networkcaching audio records), ~~`InstantiateAsync`~~ (done:
+   tests/projects/instantiateasync).
 
 Deferred by decision (see ROADMAP): XR, LOD cross-fades, Terrain leftovers, console
 codecs.
+
+### Open and partial rows of the map (audit of 2026-11-18)
+
+Each row of the map above whose status is not "done", checked against main's code and
+probes. Rows whose wording reads open or partial but whose measured scope is complete are
+listed first; for the others, one line says what is missing. Raw residuals stay in their rows.
+
+Measured scope complete, the row's remaining text being residuals or unmeasured contexts:
+`Time.renderedFrameCount` (coreapis), `Pose` (coreapis), the core API recorder repair,
+`OnDemandRendering` and the Game view resize (coreapis, gameview), manual `Object.Destroy`
+requests (destroyphases), `GetTriggerParticles` (particletriggerapi), particle position
+read-back (particletriggerboundary), braking velocity (navbaked), humanoid (humanoid; its row
+lists the residuals), USS transitions (uitransitions), the UI Toolkit text measurement cache,
+colour glyph bitmaps (textcolor), SpeedTree 9 import (speedtree9), the Q464 device follow-ups,
+3D render targets (renderapi `volume*`), MirrorOnce (samplerstates), SpriteAtlas packing
+(spriteatlas), the audio output rates,
+mono effects and Prologic (audiopitch), `AudioSettings.dspTime` (dspclock),
+`velocityUpdateMode` (audiodistortion). The UI Toolkit stubs row is out of date in its title:
+Painter2D (uitkpainter), TreeView and MultiColumn views (uitkcollections `tree`, `columns`),
+TabView (uitkcollections tabs) and data binding (uitkcollections binding) are measured.
+
+Recorded by decision, not gaps: the Mono float rows (off by default, 2026-11-13), the start-up
+material reload, macOS arm64 toolchain artefacts, the STP-under-motion residual (stpmotion),
+`OnRenderObject` initial order (unspecified order), the tilemap re-sort image (classified).
+
+| Row | Missing |
+| --- | --- |
+| Quaternion factory float bits | signed zeros and one-step rounding in Euler/AngleAxis controls (quaternioneuler) |
+| Queued `LoadSceneAsync` staging | a second queued load completes one step early (editorcallbacks 0/9 streams); non-default priorities unsupported |
+| Material.FindPass on generated passes | 11/923 `*.surface.mat.findPass` keys of generated passes past the forward ones (shaderpasscount) |
+| Texture/RenderTexture/TextAsset cloning | GPU visibility of SetPixels32, SetPixelData, LoadRawTextureData and ReadPixels writes on clones unmeasured (assetclones) |
+| An exception in `Awake` leaves the component enabled | documented contract (Awake page, 6000.0: "Unity disables the component") not implemented; no probe |
+| `Resources.UnloadAsset` / `UnloadUnusedAssets` | Cubemap, arrays, 3D, serialized textures, sprites, fonts, shaders, clips, MonoScripts, shared-file assets unmeasured |
+| SerializedProperty `.Array` depth/type | measured once in an exploratory capture, not compared by builtinserial |
+| Yield wrapper marshalling | coroutine pointer ownership and other wrappers (yieldlayouts) |
+| `LazyLoadReference<T>` and instance ids | async single loads, bundles, saving new objects; YAML save of a nonzero unresolved reference fails |
+| `SetGameObjectsActive` / `InstantiateGameObjects` | eleven batch-order pairs (activationorder); per-copy instantiate behaviour unmeasured |
+| `SetScriptingDefineSymbols`, `RequestScriptCompilation`, `RequestScriptReload` | still ignored stubs: no recompile or reload is requested (the Edit-mode reload path of compileevents exists) |
+| `EditorApplication.ExecuteMenuItem` | built-in menus not run |
+| Editor Play-mode events and player messaging | object-change payloads, VCS providers, other built-in menus, attached-peer transport (editorapi) |
+| Consent, crash metadata, analytics | enabled legacy analytics unsupported; fresh-session and reload cases unmeasured (editorservices) |
+| `Application` constants, `Debug.ExtractStackTraceNoAlloc` | ten strict stack values (appfacts) |
+| Profiler memory figures | components, materials and sprites answer 0; one-sample clips and texture history (appfacts MemoryControl) |
+| Built-in lighting images | shadow edges 41-4029 px, `point_range` 4388 px, VertexLit silhouettes (lighting) |
+| Texture/RT formats | 4444/5-6-5 targets sample their 8-bit store; other signed formats' truncation unmeasured |
+| `RenderPrimitives*`, `RenderMeshIndirect`, `RenderMeshPrimitives` | indexed, indirect and unbatched procedural forms measured (cmdbuffers `render.indexed.*`, brg); `RenderMeshPrimitives` and the `IndirectDrawArgs` layouts without an Editor comparison |
+| Light probes query and per-scene probes | lightprobes 383/625; `TetrahedralizeAsync` timing |
+| `SetShadowSamplingMode`, `SetInstanceMultiplier`, `wrapModeW`, mipmap limit | everything but MirrorOnce |
+| Mipmap streaming, texture memory totals | not simulated |
+| Block-compressed imports | texturecompression residuals per profile; R8/RG16 sRGB views |
+| Shader keyword declarations | first missing tag before a tagged SubShader, SRP/backend/device selections, FindPass |
+| Alpha8 GPU storage | RGBA8 on the GPU (memory cost only) |
+| ASTC, Crunch, runtime EAC | native ASTC hardware unverified; residuals in texturecompression |
+| `CullingResults` light/probe index lists | not implemented (custom SRPs) |
+| `SystemInfo` machine identity | GPU device strings, PCI ids and memory not read; macOS hardware and batteries |
+| Renderer below the Editor's device | geometry/tessellation shaders, sparse textures, conservative raster, fences |
+| BatchRendererGroup / GPU Resident Drawer | procedural and non-triangle indirect, GPU-written buffers on GL, sorting-group changes on held renderers |
+| Adaptive Probe Volumes | no probe compares probe-volume lighting (the measured Editor cannot bake them) |
+| Visual Effect Graph drawing | outputs of a system sorting one list for all its outputs; see its row |
+| 2D query contact features | 174044/181440 contact-feature controls; non-Box skin |
+| Seeded particle random draws | the Lights module's random values (particlerandom 6277/6348) |
+| NavMeshObstacle avoidance | navpath `replan.none` 17/578, two avoidance groups |
+| Cross-tile runtime links | `link.wide` two values; reversed ground portals unmeasured |
+| NavMeshAgent local avoidance | avoidance 754 records, navlinks 374 values |
+| Navigation link query residuals | navpath `place.links` 23/163 |
+| Navigation post avoidance | navpath `replan.none` 17/578 |
+| `GetTrails/SetTrails`, bake textures | scratch memory past the data; non-uniform scale mesh bakes |
+| Grass quads | one shading level and edge pixels of distant blades |
+| Realtime GI charts | see its row and docs/REALTIME_GI.md |
+| Terrain auto-connect, `normalmapTexture`, patch LOD | auto-connect without an Editor probe; `normalmapTexture` and patch LOD overrides open |
+| MeshCollider cooking options | source ready, no Editor probe |
+| 2D force send/receive layers | source ready, no Editor probe |
+| Particles `safeCollisionEventSize`, vector fields | not implemented |
+| `ArticulationBody`, `Physics.BakeMesh`, `TerrainCallbacks`, SpeedTree 7/8 wind | not implemented (stubs) |
+| Streamed AudioClip completion | compressed publication latency, real-device queued periods |
+| Audio filter components | LowPass/HighPass on an AudioSource measured only behind a Chorus (audiodistortion `sourcechain=chorus,low`); `customCutoffCurve` unsupported (a serialized curve logs an error and the cutoff stays fixed) |
+| Avatar facts (`hasRootMotion`, `isHuman`, ...) | `Animator.hasRootMotion` always false (stub) |
+| Playable root motion | generic `AnimationStream` velocity without an Editor probe (the humanoid stream is measured); rotational channels |
+| Clip root-motion stats, `EnsureQuaternionContinuity`, SyncLayer | SyncLayer and parameter curves on controller playables without a probe |
+| Spatializer and ambisonic plugins | not loaded |
+| VideoClip audio track info, `VideoClip.sRGB` | source ready, no Editor probe |
+| Tracker modules, `Microphone` | tracker modules not decoded; Microphone recording from the default device unsupported |
+| GraphicRaycaster order between canvases | measured once, no committed probe row |
+| Press and release within one frame | keyboard configuration notification (inputframes 3785/3786) |
+| IME | composition with a configured input method; text-field integration; macOS and Wayland |
+| USS property value validation | invalid values kept instead of dropped with the Editor's error (uitkcursors) |
+| UI Toolkit runtime stubs | EnumField and MinMaxSlider beyond compositefields/sliderdrag rows; ContextualMenuManipulator, DropdownMenu outside the column header menu |
+| `Mouse.WarpCursorPosition` | outside-window motion, locked cursor, macOS and Wayland |
+| Legacy pen input | not read |
+| `GUI.DrawTexture` border radius, `alphaBlend: false` | source ready, no Editor probe |
+| `CanvasRenderer.SetAlphaTexture` | source ready, no Editor probe |
+| `systemCopyBuffer` | macOS and Wayland transports without a capture |
+| `generateSecondaryUV` | equal-sized charts packed in each other's places (lightmapuvs Organic) |
+| `AssetPostprocessor` callbacks | only `OnPostprocessAllAssets` for packages that ask for it; texture/model/audio pre- and post-processors never run |
+| `GetGraphicsFormat` of some texture formats | formatmapping residuals |
+| `RecalculateUVDistributionMetrics` | the metric answers 1 |
+| Reparenting signed zeros | (-0, -0, -0, 1) versus (0, 0, 0, 1) (speedtree9 residuals) |
+| URP 17 sample demo scene | the trees' leaves and the VFX Graph waterfall (mean 4.1) |
+| DDS/KTX/ASTC sources; `.dae/.3ds/.blend/.max` | not imported |
+| `TextureImporter`/`ModelImporter` scripting API, `AssetDatabase.CreateAsset/Refresh` | `Refresh` is a no-op; importer settings changes are not re-imported |
+| `AssetDatabase.ImportAsset`, `ShaderUtil` messages | no re-import except Visual Effect Graphs; compiler messages always none |
+| Unity Transport TLS | stub |
 
 Q64/Q221/Q287: instance multipliers on CPU-expanded mesh instances: done for Unity 6000.0.71f1 on OpenGL Core (tests/projects/cmdbuffers `device.multiplier.mesh.*`, `placed.*`, `camera.*`; NVIDIA only). The Editor multiplies a mesh-instancing call's GPU instance count (the Scripting API: "multiply the instance count of every draw call"), through command buffers and a camera's queued `Graphics.RenderMeshInstanced` and `DrawMeshInstanced`; the added IDs n to n·m − 1 have `unity_InstanceID` equal to the raw ID and read the instance data past the call's elements. Unbound adds them after the call's last instance with zero matrices and instanced properties, which is what the Editor reads where no earlier draw wrote there, and with the last instance's winding (Unbound's choice). Measured, not reproduced: where earlier instanced draws wrote more elements, the Editor's added instances read those (data left in its instance buffer, `device.multiplier.stale.colors.2`, kept as a visible difference); Unbound warns once. Unmeasured: other per-instance built-ins of the added instances (LOD fade, probes, lightmap scale/offset keep the draw's values), standalone instancing whose multiplied IDs pass a native batch (warned, not added), stereo instancing keywords (XR deferred).
 
