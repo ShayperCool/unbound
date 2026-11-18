@@ -1188,10 +1188,10 @@ namespace Unbound.Runtime
             var beforeOpaque = item.OpaqueImgui ? BeginOpaqueImgui() : null;
             try
             {
-                if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties);
+                // (The pass count for the render counters, set just before each of the item's draws.)
+                if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties, passes);
                 else
                 {
-                    // (The pass count for the render counters, set just before the item's own draw.)
                     Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
                     GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
                     item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false);

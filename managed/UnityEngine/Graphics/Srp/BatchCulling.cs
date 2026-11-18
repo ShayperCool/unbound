@@ -893,7 +893,7 @@ namespace Unbound.Runtime
         /// draws of at most <see cref="MaxInstancesPerDraw"/>, each with its batch's window (a sorted
         /// instance's item draws that instance alone); an indirect command's one draw, its counts
         /// from its arguments buffer.</summary>
-        internal static void Draw(in FrameBuilder.DrawItem item, DrawRef dots, ulong material, int pass, Dictionary<int, object> properties)
+        internal static void Draw(in FrameBuilder.DrawItem item, DrawRef dots, ulong material, int pass, Dictionary<int, object> properties, int passes = 1)
         {
             ref var d = ref dots.Output.Drawn;
             var group = dots.Output.Group;
@@ -907,6 +907,7 @@ namespace Unbound.Runtime
                     GfxStream.DotsDraw(dots.Header, batch.Offset, batch.Window, packed, null, 0);
                     GfxStream.DrawShape(IndirectTopology(command.topology), 0);
                     GfxStream.DrawSetup(new DrawSetup { Instances = 1, Args = command.indirectArgsBufferHandle.value, Offset = command.indirectArgsBufferOffset, Indexed = true });
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
                     GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
                     return;
                 }
@@ -921,6 +922,7 @@ namespace Unbound.Runtime
                     setup.Args = command.indirectArgsBufferHandle.value;
                     setup.Offset = command.indirectArgsBufferOffset;
                     GfxStream.DrawSetup(setup);
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
                     GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
                     return;
                 }
@@ -934,7 +936,7 @@ namespace Unbound.Runtime
                     // procedural.c1).
                     bool indexed = setup.Indices != 0;
                     DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, setup,
-                        indexed ? (int)command.baseVertex : 0, indexed ? 0u : command.elementCount, material, pass, properties);
+                        indexed ? (int)command.baseVertex : 0, indexed ? 0u : command.elementCount, material, pass, properties, passes);
                     return;
                 }
                 default:
@@ -942,7 +944,7 @@ namespace Unbound.Runtime
                     var command = d.drawCommands[dots.Command];
                     var batch = group?.GetBatch(command.batchID);
                     if (batch == null) return;
-                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, default, 0, 0, material, pass, properties);
+                    DrawInstances(item, dots, batch, d.visibleInstances + command.visibleOffset, command.visibleCount, default, 0, 0, material, pass, properties, passes);
                     return;
                 }
             }
@@ -953,7 +955,7 @@ namespace Unbound.Runtime
         /// each reading <paramref name="indices"/>' indices plus <paramref name="baseVertex"/> when it
         /// has a buffer, else the first <paramref name="count"/> of its mesh's (0: all).</summary>
         static void DrawInstances(in FrameBuilder.DrawItem item, DrawRef dots, BatchRendererGroup.Batch batch, int* visible, uint visibleCount, DrawSetup indices, int baseVertex,
-            uint count, ulong material, int pass, Dictionary<int, object> properties)
+            uint count, ulong material, int pass, Dictionary<int, object> properties, int passes)
         {
             uint begin = dots.Instance >= 0 ? (uint)dots.Instance : 0u;
             uint end = dots.Instance >= 0 ? Math.Min(begin + 1, visibleCount) : visibleCount;
@@ -967,6 +969,7 @@ namespace Unbound.Runtime
                     indices.Instances = (uint)instances;
                     GfxStream.DrawSetup(indices);
                 }
+                Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
                 GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, 0, null, properties);
             }
         }

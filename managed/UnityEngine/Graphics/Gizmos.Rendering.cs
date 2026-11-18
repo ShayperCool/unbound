@@ -91,7 +91,10 @@ namespace UnityEngine
             {
                 int end = submesh < 0 ? mesh.subMeshCount : submesh + 1;
                 for (int sub = Math.Max(0, submesh); sub < end; sub++)
+                {
+                    Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(geometry, sub, shader, GfxStream.AllPasses, s_Matrix * model, (Color)s_Color);
+                }
             }
             finally { GfxStream.Camera(previous.View, previous.Projection, previous.Flags); }
         }

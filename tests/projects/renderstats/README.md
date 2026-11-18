@@ -12,14 +12,17 @@ frame's values are read in the next frame (`LastValue`), and written into values
 
 Measured in the Unity 6000.0.71f1 Editor (built-in render pipeline, two identical Linux GPU
 captures, NVIDIA driver). The Editor counts its own work: a render with nothing in view is one
-draw (two triangles: the render texture's colour clear), the three cubes are batched into one
+draw (two triangles, a full-screen quad; what it draws was not measured), the three cubes are batched into one
 draw (the point light ends that batching), each object within the point light's range gets a
 forward-add draw, a two-pass shader draws twice, and SetPass calls count material and pass
 changes.
 
 Unbound counts the draw commands its renderer writes: each is one draw call and one batch per pass
-it draws (an instancing call once), and a SetPass call when its material or pass differs from the
-draw before it. A render with nothing in view is one draw in Unbound too. `residuals.json` lists
+it draws, and a SetPass call when its material or pass differs from the draw before it. A render
+with nothing in view is one draw in Unbound too (the copy of the camera's intermediate target into
+the render texture; a clear is no draw). Unbound's choices, unmeasured: the instances of one instancing call
+drawn one after another with the same material and pass count once (whatever their number), and
+UI (Canvas, IMGUI, UI Toolkit) counts its own draw commands. `residuals.json` lists
 where the work differs (the Editor's batching of small meshes) and the counters Unbound does not
 provide (triangles and vertices). Not covered: static batching, automatic GPU instancing of renderers
 sharing a mesh and material (both lower the Editor's counts), and URP's SRP Batcher. The Scripting API documents the counters' names

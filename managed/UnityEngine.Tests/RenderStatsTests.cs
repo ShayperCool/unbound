@@ -70,6 +70,44 @@ namespace UnityEngine.Tests
             Assert.Equal(0, draws.LastValue);
         }
 
+        static void Instance(uint index, uint count, int pass)
+        {
+            GfxStream.DrawSetup(new DrawSetup { Instances = 1, MeshInstance = index, MeshInstanceCount = count });
+            GfxStream.Draw(1, 0, 9, pass, Matrix4x4.identity, Color.white);
+        }
+
+        /// <summary>A run of one instancing call's instances counts once wherever it starts: a
+        /// light's forward-add draws reaching only its later instances, a run after another draw,
+        /// and a second call of as many instances after the first.</summary>
+        [Fact]
+        public void AnInstancingCallsRunCountsOnceWhereverItStarts()
+        {
+            using var draws = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            // Base pass of instances 0-5, forward-add of instances 3-5 only: two draws.
+            for (uint i = 0; i < 6; i++) Instance(i, 6, 0);
+            for (uint i = 3; i < 6; i++) Instance(i, 6, 1);
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            Assert.Equal(2, draws.LastValue);
+            // Instances 0-1, another draw, instances 2-3 of the same call: three draws.
+            Instance(0, 4, 0);
+            Instance(1, 4, 0);
+            GfxStream.Draw(1, 0, 9, 0, Matrix4x4.identity, Color.white);
+            Instance(2, 4, 0);
+            Instance(3, 4, 0);
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            Assert.Equal(3, draws.LastValue);
+            // Two calls of two instances one after the other: two draws.
+            for (int call = 0; call < 2; call++)
+                for (uint i = 0; i < 2; i++) Instance(i, 2, 0);
+            GfxStream.Flush();
+            ProfilerCore.EndFrame();
+            Assert.Equal(2, draws.LastValue);
+        }
+
         sealed class Collect : ILogHandler
         {
             internal readonly System.Collections.Generic.List<string> Lines = new System.Collections.Generic.List<string>();
