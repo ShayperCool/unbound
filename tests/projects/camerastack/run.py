@@ -19,11 +19,18 @@ VirtualGL, the renderer checked); do not wrap this driver in with-heavy-job.
 
 Publishing requires each capture to be complete (strict exit 0 on the GPU, the probe's last
 record `complete: true`, one PNG per recorded case) and the two repeats byte-identical.
+
+On macOS arm64 the Editor is the macOS one, windowed (tests/macos_editor.py: its Game view draws
+with Metal, the device Unbound draws with there too), one repeat after the other, and publish
+writes Reference/unity-R/metal/S: the Game view's stacking is the graphics device's (AGENTS.md
+Platforms), and the suite's macOS comparator reads that reference
+(tools/agents/suite.py `metal_reference`).
 """
 import argparse
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -33,7 +40,11 @@ from probe_paths import reference_root, run_root
 from editor_runner import EditorJob, load_result, publish as publish_repeats, result_problem, \
     run_parallel, summary
 
+import macos_editor  # noqa: E402
+
 PROBE = Path(__file__).resolve().parent
+# The macOS Editor draws with Metal: macOS records Metal references.
+MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
@@ -80,6 +91,14 @@ def job(work, repeat):
 
 
 def editor(work, space, dry_run=False):
+    if MACOS and not dry_run:
+        codes = []
+        for repeat in REPEATS:
+            project, out = copy_project(work/'projects'/repeat, space), fresh_output(work/repeat)
+            codes.append(macos_editor.capture(project, out, [], {'STACK_PROBE_OUT': str(out)},
+                                              timeout=HARD_TIMEOUT, windowed=True))
+            print(repeat, 'exit', codes[-1])
+        return int(any(codes))
     jobs = [job(work, repeat) for repeat in REPEATS]
     if dry_run:
         for j in jobs:
@@ -100,6 +119,10 @@ def images(directory):
 
 
 def editor_problem(repeat):
+    if MACOS:
+        exit_file = repeat/macos_editor.EXIT
+        code = exit_file.read_text().strip() if exit_file.exists() else 'missing'
+        return None if code == '0' else f'macOS Editor exit {code}'
     reason = result_problem(repeat, gpu=True)
     if not reason and (load_result(repeat) or {}).get('forced_exit'):
         reason = 'forced exits are not accepted by this probe'
@@ -151,6 +174,16 @@ def publish(work, space):
         reason = editor_problem(repeat)
         if reason:
             sys.exit(f'{repeat.name}: {reason}; not publishing')
+    if MACOS:
+        for repeat in repeats:
+            problem = capture_problem(repeat)
+            if problem:
+                sys.exit(f'{repeat.name}: {problem}; not publishing')
+        target = reference_root(PROBE)/'metal'/space
+        if target.exists():
+            sys.exit(f'refusing to overwrite reference: {target}')
+        write_reference(target, macos_editor.agreeing(repeats, 'values.jsonl', lambda d: ['values.jsonl', *images(d)]))
+        return 0
     return publish_repeats(repeats, reference_root(PROBE)/space, lambda d: ['values.jsonl', *images(d)],
                            write_reference, complete=[capture_problem], gpu=True)
 
