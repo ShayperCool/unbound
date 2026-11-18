@@ -124,3 +124,10 @@ textures, made in the first frame of Play mode, load in that frame in Unbound (`
 them no events), while textures made in later frames load in their first frame in both.
 Initializing a 3D custom render texture from a texture is not supported (an error, and the
 initialization color instead); the probe does not record it in the Editor.
+
+## Metal (macOS)
+
+On macOS arm64 `editor` runs the windowed macOS Editor directly (one capture after the other) and
+`publish`/`extend` write `Reference/unity-<version>/metal`, the directory the suite compares there.
+Recorded with the 6000.0.71f1 macOS Editor on an Apple M2 Pro; Unbound on Metal matches its 448
+values and 228 images (419 values and 227 images of the Linux reference).

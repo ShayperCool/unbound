@@ -82,3 +82,18 @@ python3 tests/projects/gpubuffers/compare.py tests/projects/gpubuffers/Reference
 reads them as Mono writes them). A readback's timing passes when its events are
 those of an Editor sequence and its later events fall within the frames the Editor showed for
 that phase over all requests (1 to 2).
+
+## Metal (macOS)
+
+On macOS arm64 `editor` runs the windowed macOS Editor directly (one capture after the other) and
+`publish` writes `Reference/unity-<version>/metal`. Recorded with the 6000.0.71f1 macOS Editor on an
+Apple M2 Pro (the main set). The macOS Editor did not repeat three things, which the probe leaves
+out there (`*.skipped`): a command buffer's indirect dispatch (`indirect.cmd`: the group count it
+adds to the output cleared just before, and once the groups it dispatched), a dispatch whose
+arguments lie past the buffer's end (`indirect.beyond`, undefined on any device), and whether the
+section's first readback, polled and read frames later, completes with an error (`rb.buffer`);
+four captures then agree. Unbound on Metal matches 373 of 387 values: the hidden Append/Counter
+counts the Metal Editor reports (`append.*`, `counter.*`, `cmddata.counter.*`,
+`indirect.copycount`), an unaligned indirect dispatch, and an assertion Unbound logs for
+`append.cb.copybeyond`; 12 of 52 readbacks complete in the Metal Editor's frames (52 of 53 against
+the Linux reference's frames). Unresolved.

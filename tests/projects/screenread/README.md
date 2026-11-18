@@ -42,3 +42,11 @@ refuses to overwrite the reference.
 
 `Reference/unity-6000.0.71f1.jsonl` holds the 25 records of the pair `q254-c` (both exit 0 on the
 NVIDIA GeForce RTX 4060, byte-identical).
+
+## Metal (macOS)
+
+On macOS arm64 `editor` runs the windowed macOS Editor directly (no private display or VirtualGL;
+one capture after the other) and `publish`/`unbound` use `Reference/unity-<version>/metal.jsonl`,
+recorded with the 6000.0.71f1 macOS Editor on an Apple M2 Pro. It differs from the Linux
+reference in seven reads by one in the second color channel (127 where the Linux Editor reads 128).
+Unbound on Metal matches all 25 records (18 of the Linux reference's).

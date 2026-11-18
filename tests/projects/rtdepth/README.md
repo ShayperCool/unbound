@@ -143,3 +143,12 @@ edges on pixel boundaries rasterize as on the Editor's screen.
   from it returns those stored bytes into a float texture too, and draws onto it are quantized
   by the GPU's encoding, a value at half a step included (the `ctl.*.none` controls draw straight
   onto it, the `.buffer` ones through a camera stand-in texture of the same format).
+
+## Metal (macOS)
+
+On macOS arm64 the device is `metal` (the default there): the windowed macOS Editor runs directly,
+one capture after the other, Unbound on its Metal device, and the references are
+`Reference/unity-<version>/metal` (and `metal/controls`). Recorded with the 6000.0.71f1 macOS
+Editor on an Apple M2 Pro (the main set; the controls are not recorded on Metal). Unbound on Metal
+matches its 1071 values and 365 of 368 images (965 values and 272 images of the Linux reference);
+the three `fmt.msaa2.*depth*` images differ in every pixel, unresolved.
