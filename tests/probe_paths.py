@@ -34,13 +34,22 @@ def metal_counterpart(path, probe, release=None):
     (default: the probe release): Reference/unity-R.EXT is Reference/unity-R/metal.EXT,
     Reference/unity-R itself (a probe whose whole directory is one reference set, compared as a
     directory) is Reference/unity-R/metal, and Reference/unity-R/PATH is
-    Reference/unity-R/metal/PATH. None for any other path, the Metal reference itself included."""
+    Reference/unity-R/metal/PATH; for a probe in the original flat layout (no unity-R directory),
+    Reference and Reference/PATH are Reference/metal and Reference/metal/PATH. None for any other
+    path, the Metal reference itself included."""
     root = Path(probe)/'Reference'/f'unity-{release or unity_version()}'
     path = Path(path)
     if path.parent == root.parent and path.stem == root.name and path.suffix:
         return root/('metal'+path.suffix)
     if path == root:
         return root/'metal'
+    # The original flat layout (no release directory): Reference/X is Reference/metal/X.
+    flat = Path(probe)/'Reference'
+    if flat.is_dir() and not any(child.name.startswith('unity-') for child in flat.iterdir()):
+        if path == flat:
+            return flat/'metal'
+        if path.is_relative_to(flat) and path.relative_to(flat).parts[0] != 'metal':
+            return flat/'metal'/path.relative_to(flat)
     if path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
         return root/'metal'/path.relative_to(root)
     return None

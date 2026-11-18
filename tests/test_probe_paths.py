@@ -49,6 +49,24 @@ class DeviceReferenceTests(unittest.TestCase):
         for path in (self.probe/'Reference', self.probe/'Reference/unity-S.png', self.probe/'residuals.json'):
             self.assertEqual(self.read(path, publishing=True), path)
 
+    def test_a_flat_reference_layout(self):
+        # A probe whose Reference holds its files directly (no unity-R directory).
+        flat = Path(self.temp.name)/'flat'
+        (flat/'Reference/metal').mkdir(parents=True)
+        for name in ('a.png', 'metal/a.png', 'b.png'):
+            (flat/'Reference'/name).write_text('x')
+        def read(path, macos=True, publishing=False):
+            with patch.object(probe_paths, 'MACOS_ARM64', macos):
+                return probe_paths.device_reference(path, flat, publishing)
+        self.assertEqual(read(flat/'Reference'), flat/'Reference/metal')
+        self.assertEqual(read(flat/'Reference/a.png'), flat/'Reference/metal/a.png')
+        self.assertEqual(read(flat/'Reference/b.png'), flat/'Reference/b.png')
+        self.assertEqual(read(flat/'Reference/b.png', publishing=True), flat/'Reference/metal/b.png')
+        self.assertEqual(read(flat/'Reference/metal/a.png'), flat/'Reference/metal/a.png')
+        self.assertEqual(read(flat/'Reference/a.png', macos=False), flat/'Reference/a.png')
+        # A probe with release directories is not flat: its Reference stays as it is.
+        self.assertEqual(self.read(self.probe/'Reference'), self.probe/'Reference')
+
     def test_a_whole_reference_set(self):
         # The release's directory as one reference (a directory compare) is its Metal directory.
         self.assertEqual(self.read(self.root), self.root/'metal')
