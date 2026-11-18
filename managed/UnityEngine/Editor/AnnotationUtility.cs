@@ -25,7 +25,7 @@ namespace UnityEditor
     /// </summary>
     internal static partial class AnnotationUtility
     {
-        internal enum Flags
+        public enum Flags
         {
             kHasIcon = 1 << 0,
             kHasGizmo = 1 << 1,

@@ -100,6 +100,8 @@ namespace Unbound.Runtime
             Read<Texture2DArray>((a, b, r) => a.ReadSerialized(b, r));
             Read<Texture3D>((a, b, r) => a.ReadSerialized(b, r));
             Read<SpriteAtlas>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEditor.Animations.AnimatorStateMachine>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEditor.Animations.AnimatorState>((a, b, r) => a.ReadSerialized(b, r));
 
             // Cloned only: loaded from their compiled forms.
             Clone<ComputeShader>(a => a.CloneObject());

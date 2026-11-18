@@ -595,6 +595,7 @@ namespace UnityEditor.Animations
     }
 
     /// <summary>A controller layer's settings (a copy: set <see cref="AnimatorController.layers"/> to apply).</summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public partial class AnimatorControllerLayer
     {
         public AnimatorControllerLayer() { }
@@ -610,21 +611,26 @@ namespace UnityEditor.Animations
 
     public partial struct ChildAnimatorState
     {
-        public AnimatorState state { get; set; }
-        public Vector3 position { get; set; }
+        AnimatorState m_State;
+        Vector3 m_Position;
+        public AnimatorState state { get => m_State; set => m_State = value; }
+        public Vector3 position { get => m_Position; set => m_Position = value; }
     }
 
     public partial struct ChildAnimatorStateMachine
     {
-        public AnimatorStateMachine stateMachine { get; set; }
-        public Vector3 position { get; set; }
+        AnimatorStateMachine m_StateMachine;
+        Vector3 m_Position;
+        public AnimatorStateMachine stateMachine { get => m_StateMachine; set => m_StateMachine = value; }
+        public Vector3 position { get => m_Position; set => m_Position = value; }
     }
 
     /// <summary>AnimatorStateMachine (class 1107): an editor object of a controller file. The
     /// Editor's API reads what the file holds (Unity 6000.0.71f1, tests/projects/gameinterop
     /// editor_controller.*); editing it does not change a graph already built from it.</summary>
     [ClassId(1107)]
-    public sealed partial class AnimatorStateMachine : Object, ISerializedAsset
+    [HelpURL("NestedStateMachines")]
+    public sealed partial class AnimatorStateMachine : Object
     {
         internal readonly List<Vector3> StatePositions = new List<Vector3>();
         internal readonly List<Vector3> MachinePositions = new List<Vector3>();
@@ -684,7 +690,7 @@ namespace UnityEditor.Animations
         internal readonly List<StateMachineBehaviour> Behaviours = new List<StateMachineBehaviour>();
         internal AnimatorState DefaultState;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             foreach (var child in body.Get("m_ChildStates")?.Seq() ?? Array.Empty<YNode>())
                 if (UnityEngine.RuntimeAnimatorController.Resolve<AnimatorState>(resolver, child.Ref("m_State")) is AnimatorState s)
@@ -722,7 +728,8 @@ namespace UnityEditor.Animations
 
     /// <summary>AnimatorState (class 1102), read as <see cref="AnimatorStateMachine"/> is.</summary>
     [ClassId(1102)]
-    public sealed partial class AnimatorState : Object, ISerializedAsset
+    [HelpURL("class-State")]
+    public sealed partial class AnimatorState : Object
     {
         public AnimatorState() { }
 
@@ -749,7 +756,7 @@ namespace UnityEditor.Animations
         internal string TimeParameter;
         internal string MirrorParameter;
 
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             Speed = body.Float("m_Speed", 1f);
             CycleOffset = body.Float("m_CycleOffset");
