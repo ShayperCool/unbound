@@ -2288,7 +2288,6 @@ impl UnityRenderer {
         }
     }
 
-    /// The copy of a render target's depth into its filterable color copy.
     /// A direct draw where `SV_VertexID` counts from the draw's first vertex
     /// ([`first_vertex_binding`]).
     fn draw_from_first_vertex(&self, d: &mut PlannedDraw) {
@@ -2310,6 +2309,7 @@ impl UnityRenderer {
             first_vertex_binding(d.base_vertex, inputs, vertices);
     }
 
+    /// The copy of a render target's depth into its filterable color copy.
     fn depth_copy_op(&self, handle: u64) -> Option<DepthCopy> {
         let t = self.textures.get(&handle)?;
         let target = t.depth_copy.clone()?;

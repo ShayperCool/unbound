@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -80,6 +81,21 @@ public partial class CmdBuffersProbe
         plainMesh.bounds = mesh.bounds;
         // Index count, instances, start index, base vertex, start instance.
         Grid("metal.vertexid.mesh.indirect.basevertex", cmd => cmd.DrawMeshInstancedIndirect(plainMesh, 0, withInputs, 0,
+            Args(6, 1, 0, 9, 0)));
+        // The vertices the base vertex reaches: from vertex 9 on, positions half a clip unit to the
+        // right (two pixels), so the cell moves when the attributes come from index + base vertex.
+        var moved = Enumerable.Range(0, 90).Select(v => v < 9 ? Vector3.zero : new Vector3(0.5f, 0, 0)).ToArray();
+        var fetched = Keep(new Mesh());
+        fetched.vertices = moved;
+        fetched.SetIndices(new[] { 0, 1, 10, 0, 10, 9 }, MeshTopology.Triangles, 0);
+        fetched.SetSubMesh(0, new SubMeshDescriptor(0, 6) { baseVertex = 9 }, MeshUpdateFlags.DontRecalculateBounds);
+        fetched.bounds = mesh.bounds;
+        Grid("metal.vertexid.mesh.basevertex.fetch", cmd => cmd.DrawMesh(fetched, Matrix4x4.identity, withInputs, 0, 0));
+        var fetchedPlain = Keep(new Mesh());
+        fetchedPlain.vertices = moved;
+        fetchedPlain.SetIndices(new[] { 0, 1, 10, 0, 10, 9 }, MeshTopology.Triangles, 0);
+        fetchedPlain.bounds = mesh.bounds;
+        Grid("metal.vertexid.mesh.indirect.basevertex.fetch", cmd => cmd.DrawMeshInstancedIndirect(fetchedPlain, 0, withInputs, 0,
             Args(6, 1, 0, 9, 0)));
 
         // Offsets 2 and 14 of { 2, 1, 1, 3, 2, 2 }: rounded down to 0 and 12 (2 and 12 groups), read
