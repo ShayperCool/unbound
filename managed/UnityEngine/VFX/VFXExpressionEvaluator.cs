@@ -522,8 +522,9 @@ namespace Unbound.Runtime
                         var source = spawner.EventAttribute.Words;
                         int element = operands[d + 2];
                         var type = (VFXValueType)operands[d + 3];
-                        int size = type == VFXValueType.Boolean ? 1 : VFXExpressionHelper.GetSizeOfType(type);
-                        if (element < 0 || element + size > source.Length || !ReadableEventAttribute(type)) break;
+                        if (!ReadableEventAttribute(type)) break;
+                        int size = VFXExpressionHelper.GetSizeOfType(type);
+                        if (element < 0 || element + size > source.Length) break;
                         if (type == VFXValueType.Boolean) w[at] = source[element] & 0xffu;
                         else Array.Copy(source, element, w, at, size);
                         break;

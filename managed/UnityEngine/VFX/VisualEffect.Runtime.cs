@@ -138,8 +138,14 @@ namespace UnityEngine.VFX
             {
                 var op = data.Operations[i];
                 if (!VFXExpressionEvaluator.Supported(op)) return $"the expression operation {op}";
-                if (op == VFXExpressionOperation.ReadEventAttribute && !VFXExpressionEvaluator.ReadableEventAttribute((VFXValueType)data.Operands[i * 4 + 3]))
-                    return $"an event attribute of the type {(VFXValueType)data.Operands[i * 4 + 3]} read in a spawn context";
+                if (op == VFXExpressionOperation.ReadEventAttribute)
+                {
+                    var type = (VFXValueType)data.Operands[i * 4 + 3];
+                    if (!VFXExpressionEvaluator.ReadableEventAttribute(type)) return $"an event attribute of the type {type} read in a spawn context";
+                    uint words = data.CpuBuffers.Length > 0 ? data.CpuBuffers[0].stride : 0u;
+                    if ((uint)data.Operands[i * 4 + 2] + (uint)VFXExpressionHelper.GetSizeOfType(type) > words)
+                        return "an event attribute read in a spawn context past the spawn event's attributes";
+                }
             }
             if (data.UnplacedBake) return "a curve or gradient baked among the expressions of a spawn event";
             // What the programs read in them is not measured (the effects still ask for them).

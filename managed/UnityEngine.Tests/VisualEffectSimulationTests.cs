@@ -28,18 +28,20 @@ namespace UnityEngine.Tests
 
         internal static VisualEffectCompiledData Data(VFXExpressionDesc[] expressions, VFXExpressionValueContainerDesc[] values,
             VFXEditorSystemDesc[] systems = null, VFXEventDesc[] events = null, int spawners = 0, VFXExposedMapping[] exposed = null,
-            VFXExpressionDesc[] perSpawnEvent = null)
+            VFXExpressionDesc[] perSpawnEvent = null, uint attributeWords = 1)
         {
             var resource = new VisualEffectResource();
-            // The event attributes (one per spawner after the asset's own): a spawn count of one.
+            // The event attributes (one per spawner after the asset's own): a spawn count of one,
+            // then as many words of zero as asked.
             var buffers = new VFXCPUBufferDesc[spawners + 1];
             for (int i = 0; i < buffers.Length; i++)
             {
                 var initial = new VFXCPUBufferData();
                 initial.PushFloat(1f);
+                for (uint k = 1; k < attributeWords; k++) initial.PushUInt(0u);
                 buffers[i] = new VFXCPUBufferDesc
                 {
-                    capacity = 1, stride = 1, initialData = initial,
+                    capacity = 1, stride = attributeWords, initialData = initial,
                     layout = new[] { new VFXLayoutElementDesc { name = "spawnCount", type = VFXValueType.Float, offset = new VFXLayoutOffset { structure = 1 } } },
                 };
             }
