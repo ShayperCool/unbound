@@ -68,7 +68,7 @@ namespace Unbound.Runtime
                     var postprocessor = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
                     postprocessor.assetPath = assetPath;
                     postprocessor.context = context;
-                    postprocessor.assetImporter = importer;
+                    postprocessor.m_AssetImporter = importer;
                     result = method.Invoke(postprocessor, arguments);
                 }
                 catch (TargetInvocationException e)

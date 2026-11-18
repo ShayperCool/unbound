@@ -602,9 +602,9 @@ namespace UnityEditor
 
     public enum ModelImporterMaterialImportMode
     {
-        None = 0,
-        ImportStandard = 1,
-        ImportViaMaterialDescription = 2,
+        [Tooltip("Do not import materials")] None = 0,
+        [InspectorName("Standard (Legacy)")] [Tooltip("Use the standard Material import method.")] ImportStandard = 1,
+        [InspectorName("Import via MaterialDescription")] [Tooltip("Use AssetPostprocessor.OnPreprocessMaterialDescription.")] ImportViaMaterialDescription = 2,
         [global::System.Obsolete("Use ImportStandard (UnityUpgradable) -> ImportStandard")] LegacyImport = 1,
         [global::System.Obsolete("Use ImportViaMaterialDescription (UnityUpgradable) -> ImportViaMaterialDescription")] Import = 2,
     }

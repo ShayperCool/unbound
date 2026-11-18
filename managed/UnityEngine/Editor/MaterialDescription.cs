@@ -21,8 +21,10 @@ namespace UnityEditor
         /// <summary>The import context of the asset being imported.</summary>
         public AssetImporters.AssetImportContext context { get; internal set; }
 
+        internal AssetImporter m_AssetImporter;
+
         /// <summary>The importer of the asset being imported.</summary>
-        public AssetImporter assetImporter { get; internal set; }
+        public AssetImporter assetImporter => m_AssetImporter;
 
         /// <summary>The version of the postprocessor (part of its assets' import inputs).</summary>
         [Unbound.EditorFaithful("Unity's default for postprocessors that do not override it")]
