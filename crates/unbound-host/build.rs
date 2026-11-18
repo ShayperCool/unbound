@@ -451,9 +451,14 @@ mod dotnet_install {
 /// runtime host picks its installation by the same rule, src/dotnet_install.rs).
 fn dotnet_executable() -> PathBuf {
     println!("cargo:rerun-if-env-changed=DOTNET_ROOT");
-    println!("cargo:rerun-if-env-changed=PATH");
     match dotnet_install::find_dotnet(dotnet_install::DotnetNeed::Sdk) {
-        Ok(root) => root.join("dotnet"),
+        Ok(root) => {
+            // PATH decides only when the installation came from it.
+            if dotnet_install::found_on_path(&root) {
+                println!("cargo:rerun-if-env-changed=PATH");
+            }
+            root.join("dotnet")
+        }
         Err(message) => panic!("{message}"),
     }
 }

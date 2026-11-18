@@ -15,9 +15,9 @@ pub enum DotnetNeed {
     Runtime,
 }
 
-/// Where .NET installations are looked for, in order: `DOTNET_ROOT`, `~/.dotnet`, the system
-/// locations, then the directory of a `dotnet` on `PATH` (through its symlinks).
-pub fn dotnet_candidates() -> Vec<std::path::PathBuf> {
+/// The candidates that do not come from `PATH`: `DOTNET_ROOT`, `~/.dotnet` and the system
+/// locations.
+fn fixed_candidates() -> Vec<std::path::PathBuf> {
     use std::path::PathBuf;
     let mut candidates = Vec::new();
     if let Some(root) = std::env::var_os("DOTNET_ROOT").filter(|r| !r.is_empty()) {
@@ -34,6 +34,19 @@ pub fn dotnet_candidates() -> Vec<std::path::PathBuf> {
         ]
         .map(PathBuf::from),
     );
+    candidates
+}
+
+/// Whether an installation was found only through `PATH`.
+pub fn found_on_path(root: &std::path::Path) -> bool {
+    !fixed_candidates().iter().any(|c| c == root)
+}
+
+/// Where .NET installations are looked for, in order: `DOTNET_ROOT`, `~/.dotnet`, the system
+/// locations, then the directory of a `dotnet` on `PATH` (through its symlinks).
+pub fn dotnet_candidates() -> Vec<std::path::PathBuf> {
+    use std::path::PathBuf;
+    let mut candidates = fixed_candidates();
     if let Some(path) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path) {
             let exe = dir.join("dotnet");
