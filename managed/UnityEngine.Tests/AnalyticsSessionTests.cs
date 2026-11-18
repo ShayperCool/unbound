@@ -128,19 +128,42 @@ namespace UnityEngine.Tests
                 AnalyticsSessionInfo.sessionStateChanged += onState;
                 AnalyticsSessionInfo.sessionStateChanged -= onState;
                 Assert.Equal(before + 2, Hits(member));
+                AnalyticsSessionInfo.IdentityTokenChanged onToken = token => { };
+                AnalyticsSessionInfo.identityTokenChanged += onToken;
+                AnalyticsSessionInfo.identityTokenChanged -= onToken;
+                Assert.Equal(before + 3, Hits(member));
                 int remoteBefore = Hits(remote);
                 RemoteSettings.UpdatedEventHandler onUpdate = () => { };
                 RemoteSettings.Updated += onUpdate;
                 RemoteSettings.Updated -= onUpdate;
                 Assert.Equal(remoteBefore + 1, Hits(remote));
+                Action onFetch = () => { };
+                RemoteSettings.BeforeFetchFromServer += onFetch;
+                RemoteSettings.BeforeFetchFromServer -= onFetch;
+                Assert.Equal(remoteBefore + 2, Hits(remote));
+                Action<bool, bool, int> onCompleted = (server, changed, response) => { };
+                RemoteSettings.Completed += onCompleted;
+                RemoteSettings.Completed -= onCompleted;
+                Assert.Equal(remoteBefore + 3, Hits(remote));
+                // Removing is not a use.
+                RemoteSettings.Completed -= onCompleted;
+                AnalyticsSessionInfo.identityTokenChanged -= onToken;
+                Assert.Equal(remoteBefore + 3, Hits(remote));
+                Assert.Equal(before + 3, Hits(member));
                 EditorServiceSettings.Configured = false;
                 _ = AnalyticsSessionInfo.sessionId;
                 AnalyticsSessionInfo.sessionStateChanged += onState;
                 AnalyticsSessionInfo.sessionStateChanged -= onState;
+                AnalyticsSessionInfo.identityTokenChanged += onToken;
+                AnalyticsSessionInfo.identityTokenChanged -= onToken;
                 RemoteSettings.Updated += onUpdate;
                 RemoteSettings.Updated -= onUpdate;
-                Assert.Equal(before + 2, Hits(member));
-                Assert.Equal(remoteBefore + 1, Hits(remote));
+                RemoteSettings.BeforeFetchFromServer += onFetch;
+                RemoteSettings.BeforeFetchFromServer -= onFetch;
+                RemoteSettings.Completed += onCompleted;
+                RemoteSettings.Completed -= onCompleted;
+                Assert.Equal(before + 3, Hits(member));
+                Assert.Equal(remoteBefore + 3, Hits(remote));
             }
             finally
             {
