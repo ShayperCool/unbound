@@ -62,6 +62,9 @@ pub struct AssetCache {
     index: Mutex<Index>,
     dirty: AtomicBool,
     temp_counter: AtomicU64,
+    /// Settings an asset imports with in this session in place of its `.meta`'s (what the
+    /// project's AssetPostprocessors' preprocessors set), by `.meta` path, with their hash.
+    settings: Mutex<HashMap<PathBuf, (Arc<Value>, [u8; 32])>>,
 }
 
 impl AssetCache {
@@ -81,6 +84,7 @@ impl AssetCache {
             index: Mutex::new(index),
             dirty: AtomicBool::new(false),
             temp_counter: AtomicU64::new(0),
+            settings: Mutex::new(HashMap::new()),
         }
     }
 
@@ -91,6 +95,20 @@ impl AssetCache {
 
     pub fn dir(&self) -> &Path {
         &self.dir
+    }
+
+    /// From now on the asset whose `.meta` is `meta` imports with `settings` (the whole `.meta`
+    /// tree) in place of the file's: part of its entries' keys, so an entry imported with other
+    /// settings is never used for it.
+    pub fn set_settings(&self, meta: &Path, settings: Value) {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"unbound-import-settings\0");
+        hasher.update(&postcard::to_allocvec(&settings).unwrap_or_default());
+        let hash = *hasher.finalize().as_bytes();
+        self.settings
+            .lock()
+            .unwrap()
+            .insert(meta.to_path_buf(), (Arc::new(settings), hash));
     }
 
     /// The imported `source`, from the cache or by running `importer` (and storing the result).
@@ -115,10 +133,14 @@ impl AssetCache {
         let (source_hash, mut source_bytes) = self
             .content_hash(source)
             .with_context(|| format!("reading {}", source.display()))?;
-        let (meta_hash, meta_bytes) = match self.content_hash(meta) {
-            Ok(found) => found,
-            Err(_) if !meta.exists() => (*blake3::hash(b"").as_bytes(), Some(Vec::new())),
-            Err(e) => return Err(e.context(format!("reading {}", meta.display()))),
+        let settings = self.settings.lock().unwrap().get(meta).cloned();
+        let (meta_hash, meta_bytes) = match &settings {
+            Some((_, hash)) => (*hash, None),
+            None => match self.content_hash(meta) {
+                Ok(found) => found,
+                Err(_) if !meta.exists() => (*blake3::hash(b"").as_bytes(), Some(Vec::new())),
+                Err(e) => return Err(e.context(format!("reading {}", meta.display()))),
+            },
         };
         let mut inputs = blake3::Hasher::new();
         inputs.update(&source_hash);
@@ -154,13 +176,22 @@ impl AssetCache {
             Some(bytes) => bytes,
             None => fs::read(source).with_context(|| format!("reading {}", source.display()))?,
         };
-        let meta_bytes = match meta_bytes {
-            Some(bytes) => bytes,
-            None => fs::read(meta).with_context(|| format!("reading {}", meta.display()))?,
+        let parsed;
+        let meta_value: &Value = match &settings {
+            Some((value, _)) => value,
+            None => {
+                let meta_bytes = match meta_bytes {
+                    Some(bytes) => bytes,
+                    None => {
+                        fs::read(meta).with_context(|| format!("reading {}", meta.display()))?
+                    }
+                };
+                parsed = parse_meta(&meta_bytes)
+                    .with_context(|| format!("parsing {}", meta.display()))?;
+                &parsed
+            }
         };
-        let meta_value =
-            parse_meta(&meta_bytes).with_context(|| format!("parsing {}", meta.display()))?;
-        let output = importer.import(source, &source_bytes, &meta_value)?;
+        let output = importer.import(source, &source_bytes, meta_value)?;
         if let Err(e) = self.write_entry(&path, &output) {
             tracing::warn!("cannot write cache entry {}: {e:#}", path.display());
         }
@@ -359,6 +390,43 @@ mod tests {
         fs::remove_file(&meta).unwrap();
         let out = cache.get_or_import(&importer, &source, &meta).unwrap();
         assert_eq!(*out, (5, -1));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn session_settings_replace_the_meta_and_key_their_own_entries() {
+        let dir = temp_dir("settings");
+        let (source, meta) = (dir.join("a.png"), dir.join("a.png.meta"));
+        fs::write(&source, b"12345").unwrap();
+        fs::write(&meta, "n: 7\n").unwrap();
+        let importer = Counting(AtomicUsize::new(0));
+        let cache = AssetCache::new(dir.join("cache"));
+        assert_eq!(
+            *cache.get_or_import(&importer, &source, &meta).unwrap(),
+            (5, 7)
+        );
+        // A preprocessor's settings: imported with them, not with the file's.
+        cache.set_settings(&meta, unbound_yaml::parse_value("n: 9\n").unwrap());
+        let (out, outcome) = cache
+            .get_or_import_traced(&importer, &source, &meta)
+            .unwrap();
+        assert_eq!((*out, outcome), ((5, 9), Outcome::Imported));
+        let (_, outcome) = cache
+            .get_or_import_traced(&importer, &source, &meta)
+            .unwrap();
+        assert_eq!(outcome, Outcome::Hit);
+        // Settings equal to the file's own still key their own entry; another session without
+        // settings uses the file's entry again.
+        cache.set_settings(&meta, unbound_yaml::parse_value("n: 7\n").unwrap());
+        let (out, outcome) = cache
+            .get_or_import_traced(&importer, &source, &meta)
+            .unwrap();
+        assert_eq!((*out, outcome), ((5, 7), Outcome::Imported));
+        let fresh = AssetCache::new(dir.join("cache"));
+        let (out, outcome) = fresh
+            .get_or_import_traced(&importer, &source, &meta)
+            .unwrap();
+        assert_eq!((*out, outcome), ((5, 7), Outcome::Hit));
         let _ = fs::remove_dir_all(&dir);
     }
 

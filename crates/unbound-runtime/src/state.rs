@@ -945,6 +945,31 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             crate::game::request_compilation();
             Ok("{}".to_string())
         }
+        "import-settings" => {
+            // An AssetPostprocessor's preprocessor changed an asset's import settings: the asset
+            // imports with them for the rest of the session (the .meta is not written).
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+                importer: String,
+                settings: serde_json::Value,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let meta_path = PathBuf::from(format!("{}.meta", asset.file.display()));
+            let mut meta = match std::fs::read_to_string(&meta_path) {
+                Ok(text) => unbound_yaml::parse_value(&text)?,
+                Err(_) => unbound_yaml::Value::Map(Default::default()),
+            };
+            if let unbound_yaml::Value::Map(map) = &mut meta {
+                map.insert(&r.importer, json_to_yaml(&r.settings));
+            }
+            s.imports.set_settings(&meta_path, meta);
+            // A model imported before keeps no stale import.
+            s.models.write().unwrap().remove(&guid);
+            Ok("{}".to_string())
+        }
         "script-reload" => {
             // The reload a locked session deferred (EditorApplication.UnlockReloadAssemblies).
             #[derive(Deserialize)]
@@ -2110,6 +2135,26 @@ fn bundle_cache_form(request: &str) -> Result<String> {
         serde_json::json!({ "required": form.required_space, "rewritten": form.rewritten })
             .to_string(),
     )
+}
+
+/// A .meta tree as the managed side sends it (maps as objects, sequences as arrays, scalars as
+/// text).
+fn json_to_yaml(value: &serde_json::Value) -> unbound_yaml::Value {
+    use serde_json::Value as Json;
+    use unbound_yaml::Value;
+    match value {
+        Json::Null => Value::Null,
+        Json::String(text) => Value::Scalar(text.clone()),
+        Json::Bool(b) => Value::Scalar(if *b { "1" } else { "0" }.to_string()),
+        Json::Number(n) => Value::Scalar(n.to_string()),
+        Json::Array(items) => Value::Seq(items.iter().map(json_to_yaml).collect()),
+        Json::Object(map) => Value::Map(
+            map.iter()
+                .map(|(k, v)| (k.clone(), json_to_yaml(v)))
+                .collect::<Vec<_>>()
+                .into(),
+        ),
+    }
 }
 
 #[cfg(test)]
