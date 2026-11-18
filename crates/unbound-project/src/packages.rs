@@ -182,6 +182,7 @@ pub fn resolve(
     let caches = package_caches(project);
     // The user's directories and the project's own cache, without the store.
     let mut project_caches = user_package_dirs();
+    let user_dirs = project_caches.len();
     project_caches.push(project.join("Library/PackageCache"));
     let builtin = install.builtin_packages_dir();
     let bundled = install.data.join("Resources/PackageManager/Editor");
@@ -239,27 +240,41 @@ pub fn resolve(
                     }
                 }
             }
-            // The user's directories and the project's cache, else the commit (the lock's) in
-            // the store, fetched when it is not there.
-            "git" => find_in_caches(&project_caches, &name, None)
-                .map(|(root, found_version)| (root, PackageSource::Git, found_version))
-                .or_else(|| {
-                    let spec = crate::git_packages::parse_spec(&version);
-                    match crate::git_packages::fetch(
-                        &store,
-                        &name,
-                        &spec,
-                        hash.as_deref(),
-                        std::env::var_os("UNBOUND_OFFLINE").is_some(),
-                    ) {
-                        Ok(root) => read_package_json(&root)
-                            .map(|json| (root, PackageSource::Git, json.version)),
-                        Err(e) => {
-                            tracing::warn!("git package {name}: {e:#}");
-                            None
+            // The user's directories and the project's cache when they hold the lock's commit,
+            // else that commit in the store, fetched when it is not there; a cached folder of
+            // another commit only when the commit cannot be fetched, with a warning.
+            "git" => {
+                let (locked, other) = find_git(&project_caches, user_dirs, &name, hash.as_deref());
+                locked
+                    .or_else(|| {
+                        let spec = crate::git_packages::parse_spec(&version);
+                        match crate::git_packages::fetch(
+                            &store,
+                            &name,
+                            &spec,
+                            hash.as_deref(),
+                            std::env::var_os("UNBOUND_OFFLINE").is_some(),
+                        ) {
+                            Ok(root) => read_package_json(&root).map(|json| (root, json.version)),
+                            Err(e) => match other {
+                                Some((root, found)) => {
+                                    tracing::warn!(
+                                        "git package {name}: {e:#}; using {} (another commit than \
+                                         the lock's {})",
+                                        root.display(),
+                                        hash.as_deref().unwrap_or("?")
+                                    );
+                                    Some((root, found))
+                                }
+                                None => {
+                                    tracing::warn!("git package {name}: {e:#}");
+                                    None
+                                }
+                            },
                         }
-                    }
-                }),
+                    })
+                    .map(|(root, found_version)| (root, PackageSource::Git, found_version))
+            }
             // The user's directories and the project's cache (the Editor copies built-in
             // packages there) when they hold this version, else the release's own.
             "builtin" => find_exact(&project_caches, &name, &version)
@@ -731,6 +746,59 @@ fn find_exact(dirs: &[PathBuf], name: &str, version: &str) -> Option<(PathBuf, S
     })
 }
 
+/// A git package's folder in `dirs` (the user's directories, then the project's cache): the
+/// first of the lock's commit `hash`, and the first of another or an unknown commit. The Package
+/// Manager installs the lock's commit (the Manual's "Locked Git dependencies": it "tracks commit
+/// hashes of Git dependencies by using a lock file" so that every user gets the same packages),
+/// and the Editor names a git package's folder in `Library/PackageCache`
+/// `<name>@<the commit's first 12 hexadecimal digits>`, so a folder's suffix names its commit. A
+/// folder without such a suffix is taken as the lock's commit only in the user's directories
+/// (`user`, which the user names), or when the lock pins no commit.
+fn find_git(
+    dirs: &[PathBuf],
+    user: usize,
+    name: &str,
+    hash: Option<&str>,
+) -> (Option<(PathBuf, String)>, Option<(PathBuf, String)>) {
+    let mut other = None;
+    for (index, dir) in dirs.iter().enumerate() {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            continue;
+        };
+        let mut entries: Vec<_> = entries.flatten().collect();
+        entries.sort_by_key(|entry| entry.file_name());
+        for entry in entries {
+            let file_name = entry.file_name();
+            let Some(folder) = file_name.to_str() else {
+                continue;
+            };
+            let (base, suffix) = folder.split_once('@').unwrap_or((folder, ""));
+            if base != name {
+                continue;
+            }
+            let root = entry.path();
+            let Some(json) = read_package_json(&root) else {
+                continue;
+            };
+            if json.name != name {
+                continue;
+            }
+            let commit = (suffix.len() >= 7 && suffix.bytes().all(|b| b.is_ascii_hexdigit()))
+                .then(|| suffix.to_ascii_lowercase());
+            let locked = match (hash, commit) {
+                (None, _) => true,
+                (Some(hash), Some(commit)) => hash.to_ascii_lowercase().starts_with(&commit),
+                (Some(_), None) => index < user,
+            };
+            if locked {
+                return (Some((root, json.version)), None);
+            }
+            other.get_or_insert((root, json.version));
+        }
+    }
+    (None, other)
+}
+
 fn find_in_caches(
     caches: &[PathBuf],
     name: &str,
@@ -976,6 +1044,59 @@ mod tests {
         assert!(unpack_local_tarball(&tarball, &store, "com.test.local").is_err());
         assert!(unpack_local_tarball(&dir.join("absent.tgz"), &store, "com.test.local").is_err());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A git package's folder in the project's cache is taken only when its name holds the lock's
+    /// commit (the Editor names it `<name>@<the commit's first 12 hexadecimal digits>`); a
+    /// folder of another commit is kept as the fallback, one without a commit in the name is taken
+    /// from the user's directories only, and without a locked commit any folder is taken.
+    #[test]
+    fn git_package_folders_are_taken_for_the_locked_commit() {
+        let root = std::env::temp_dir().join(format!("unbound-git-cache-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let user = root.join("user");
+        let cache = root.join("Library/PackageCache");
+        let name = "com.example.git";
+        package(
+            &cache.join(format!("{name}@aaaaaaaaaaaa")),
+            name,
+            "1.0.0",
+            "",
+        );
+        package(
+            &cache.join(format!("{name}@bbbbbbbbbbbb")),
+            name,
+            "2.0.0",
+            "",
+        );
+        let locked_a = "aaaaaaaaaaaa1111111111111111111111111111";
+        let locked_c = "cccccccccccc1111111111111111111111111111";
+        let dirs = vec![user.clone(), cache.clone()];
+
+        let (locked, other) = find_git(&dirs, 1, name, Some(locked_a));
+        assert_eq!(locked.map(|(_, v)| v).as_deref(), Some("1.0.0"));
+        assert!(other.is_none());
+        // Upper-case hashes name the same commit.
+        let upper = locked_a.to_ascii_uppercase();
+        let (locked, _) = find_git(&dirs, 1, name, Some(&upper));
+        assert_eq!(locked.map(|(_, v)| v).as_deref(), Some("1.0.0"));
+
+        let (locked, other) = find_git(&dirs, 1, name, Some(locked_c));
+        assert!(locked.is_none(), "no cached folder holds the lock's commit");
+        assert_eq!(other.map(|(_, v)| v).as_deref(), Some("1.0.0"));
+
+        let (locked, _) = find_git(&dirs, 1, name, None);
+        assert_eq!(locked.map(|(_, v)| v).as_deref(), Some("1.0.0"));
+
+        // A folder without a commit: the user's is taken, the project cache's is not.
+        package(&cache.join(name), name, "3.0.0", "");
+        let (locked, other) = find_git(&dirs, 1, name, Some(locked_c));
+        assert!(locked.is_none());
+        assert!(other.is_some());
+        package(&user.join(name), name, "4.0.0", "");
+        let (locked, _) = find_git(&dirs, 1, name, Some(locked_c));
+        assert_eq!(locked.map(|(_, v)| v).as_deref(), Some("4.0.0"));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
