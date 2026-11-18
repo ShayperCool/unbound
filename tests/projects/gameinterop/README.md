@@ -42,10 +42,42 @@ the scene loads, so what loading the scene logs is kept too (`scene_load.*`).
   `PluginSources/`): the project's ShapeCore is version 2.0.0.0; ShapeExtras was built against
   1.0.0.0, whose abstract `Shape.Area()` version 2 replaced by `Area(float)`, and ShapeLater
   against 3.0.0.0. Rows give what binds, what reflection lists and what creating each type does.
+  Pentagon (a base with a virtual member before the abstract ones), Ruler (an interface) and
+  FloatPlug (a generic base) lack members of version 2 too; `circle_*` rows use such a type's
+  static member, base type and methods.
+* `twice.*`: how often, on which thread and for which object the parameterless constructors of
+  scripts run: two scene objects (`CountedBehaviour`), AddComponent, CreateInstance, a prefab in
+  Resources and its instance.
+* `rsp.*`: response files. `Assets/csc.rsp` (defines with `-define` and `-d`, `-unsafe`, `-r` of
+  `Assets/RspPlugins/RspRef.dll`, whose Auto Reference is off, `-nowarn`), `Assets/RspLocal/csc.rsp`
+  (`-define`, `-nullable:enable`, `-langversion:10`) and the embedded package `com.probe.rsp`'s
+  `Local/csc.rsp`; assemblies without one of their own (Assembly-CSharp, its Editor assembly, an
+  asmdef, an asmdef whose define constraint names a project define, the package's), one whose
+  constraint names another assembly's define. Rows give each assembly's defines and nullable
+  context, the unsafe, referenced and C# 10 code, `ParseResponseFile` and what
+  `CompilationPipeline` reports.
+* `async.*`: `InstantiateAsync` with a parent in a loaded prefab asset (one, several,
+  `InstantiateParameters`) and a scene parent.
+* `animator.runtime_invalid.*`: an override controller with nothing to override assigned to an
+  active Animator at run time, then a valid one and the invalid one again.
+* `editor_controller.*`: the class of a loaded `.controller` and what its Editor API reads.
+* `objectchange.*`: `ObjectChangeEvents.changesPublished` streams of undoable operations, a
+  plain change, two in one frame, undo and redo.
+* `annotation.*`: `AnnotationUtility` (internal, by reflection): the table, SetIconEnabled and
+  SetGizmoEnabled on an engine class, a gizmo script and an unlisted script.
+* `builddefines.*`: a define added through the internal
+  `BuildDefines.getScriptCompilationDefinesDelegates` from `[InitializeOnLoad]`
+  (`Assets/Editor/ProbeDefinesHook.cs`): whether compiled code, `GetScriptCompilationDefines`,
+  `activeScriptCompilationDefines` and the pipeline see it.
+* `mat.*`: a material variant from a file (`Resources/MatVariant.mat` of `MatA`, shader
+  `Assets/Shaders/ProbePlain.shader` without a ShaderGUI) whose queue and keywords a
+  SerializedObject applies, and a SerializedObject over two materials.
 
 `Assets/Editor/ProbeSetup.cs` authored the scene and assets with the Editor
 (`-executeMethod ProbeSetup.Build`); `CutsceneMissing.playable` and the scene's `OverrideEmpty`
-controller reference were then edited by hand as described above.
+controller reference were then edited by hand as described above, and `ProbeSetup.Add` added the
+counted objects, `Counted.prefab` and the materials. The engine runs 240 frames, enough for the
+probe's frame waits.
 
 Measured in the Unity 6000.0.71f1 Editor on macOS in batch mode (two byte-identical captures; none
 of the values depends on the OS or the graphics device):
@@ -70,9 +102,25 @@ of the values depends on the OS or the graphics device):
 * Timeline markers whose script is missing are no markers, without warnings at load.
 * A precompiled plugin binds to the project's library by name whatever version it was built
   against; Mono lists and finds a type that lacks an implementation and fails only when it is
-  created.
+  used (created, its static members called, its members reflected).
+* A scene script's parameterless constructor runs twice on Play mode entry (main thread, then a
+  loading thread for the live object); scripts made later construct once.
+* An assembly definition's assembly takes its folder's `csc.rsp`, else the project's (package
+  assemblies too); the file's arguments follow the Editor's own, `-r` references are no listed
+  plugins and its defines are no listed defines, though define constraints see them. A `#`
+  comment line breaks the compile (found while authoring; the probe's files have none).
+* `InstantiateAsync` with a parent in a prefab asset puts the copies under it, without a message.
+* An empty override controller assigned at run time is refused with an error; the Animator keeps
+  its controller.
+* Undoable operations publish their changes in the frame's Editor update; undo publishes the
+  group's changes in reverse order.
+* A delegate's define reaches the pipeline's answers but not the code compiled before it.
+* A SerializedObject over two materials writes only what changed into each; a variant's
+  SerializedObject reads and applies its own stored queue while its renderQueue stays the
+  parent's.
 
-`residuals.json` lists what stays open, each with its cause: the plugin type CoreCLR refuses when
-it loads, the controller class, the missing-script warning Unbound writes at its first load (the
-Editor at import), and a scene script's constructor that the Editor runs twice on Play mode
-entry. `run.py record` / `publish` / `gate` (tests/value_probe.py).
+`residuals.json` lists what stays open, each with its cause: the text, wrapping and reflection of
+a plugin type's deferred failure, the missing-script warning Unbound writes at its first load (the
+Editor at import), the scene scripts' constructors the Editor runs twice on Play mode entry,
+Unbound's undo that does not recreate destroyed objects, and the two Timeline classes the Gizmos
+table lists. `run.py record` / `publish` / `gate` (tests/value_probe.py).
