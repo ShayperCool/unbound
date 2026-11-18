@@ -92,13 +92,6 @@
   },
   {
     "Release": "6000.0.71f1",
-    "Category": "attributes",
-    "Type": "UnityEngine.Animations.IAnimationJob",
-    "Message": "type attributes is [], Unity's is [Unity.Jobs.LowLevel.Unsafe.JobProducerTypeAttribute:M:.ctor`0(System.Type):System.Void(System.Type:UnityEngine.Animations.ProcessAnimationJobStruct`1<!0>){}]",
-    "Reason": "Q410-animation-job-producer: JobProducerType participates in job discovery. Implement the selected ProcessAnimationJobStruct<T> payload and producer dispatch with real transform ownership/lifetime and scheduling controls before applying the producer marker."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "interfaces",
     "Type": "UnityEditor.ConsoleWindow",
     "Message": "type interfaces is , Unity's is UnityEditor.IHasCustomMenu",

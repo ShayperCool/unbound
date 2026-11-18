@@ -399,18 +399,4 @@ namespace UnityEngine.Animations
         void UpdatePreviewGraph(global::UnityEngine.Playables.PlayableGraph graph);
         global::UnityEngine.Playables.Playable BuildPreviewGraph(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.Playables.Playable inputPlayable);
     }
-    internal enum JobMethodIndex
-    {
-        ProcessRootMotionMethodIndex = 0,
-        ProcessAnimationMethodIndex = 1,
-        MethodIndexCount = 2,
-    }
-    [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
-    [global::Unbound.Stub]
-    internal unsafe partial struct ProcessAnimationJobStruct<T> where T : struct, global::UnityEngine.Animations.IAnimationJob
-    {
-        [global::Unbound.Stub] public static global::System.IntPtr GetJobReflectionData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ProcessAnimationJobStruct<T>.GetJobReflectionData"); return default; }
-        [global::Unbound.Stub] public static void Execute(ref T data, global::System.IntPtr animationStreamPtr, global::System.IntPtr methodIndex, ref global::Unity.Jobs.LowLevel.Unsafe.JobRanges ranges, int jobIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.ProcessAnimationJobStruct<T>.Execute"); }
-        public unsafe delegate void ExecuteJobFunction(ref T data, global::System.IntPtr animationStreamPtr, global::System.IntPtr unusedPtr, ref global::Unity.Jobs.LowLevel.Unsafe.JobRanges ranges, int jobIndex);
-    }
 }

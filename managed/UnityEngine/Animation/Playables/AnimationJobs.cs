@@ -919,6 +919,8 @@ namespace Unbound.Runtime.Playables
     internal sealed class JobKind : AnimationKind
     {
         internal object Job;
+        /// <summary>Runs <see cref="Job"/>'s method by index (AnimationJobDispatch).</summary>
+        internal Action<object, IntPtr, IntPtr> Dispatch;
         internal bool ProcessInputs = true;
 
         /// <summary>A job on a humanoid Animator may read and write its whole human pose
@@ -960,12 +962,16 @@ namespace Unbound.Runtime.Playables
                 }
                 entry = context.Motion;
                 ran = true;
-                if (Job is UnityEngine.Animations.IAnimationJob job)
+                if (Job != null && Dispatch != null)
                 {
                     var stream = context.ToStream();
                     using var jobScope = Unbound.Runtime.Jobs.JobSystem.AnimationJob();
-                    job.ProcessRootMotion(stream);
-                    job.ProcessAnimation(stream);
+                    unsafe
+                    {
+                        var pointer = (IntPtr)(&stream);
+                        Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
+                        Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1013,6 +1019,7 @@ namespace Unbound.Runtime.Playables
 
 namespace UnityEngine.Animations
 {
+    [Unity.Jobs.LowLevel.Unsafe.JobProducerType(typeof(ProcessAnimationJobStruct<>))]
     public partial interface IAnimationJob
     {
         void ProcessAnimation(AnimationStream stream);
@@ -1057,7 +1064,8 @@ namespace UnityEngine.Animations
 
         public static AnimationScriptPlayable Create<T>(PlayableGraph graph, T jobData, int inputCount = 0) where T : struct, IAnimationJob
         {
-            var kind = new JobKind { Job = jobData };
+            ProcessAnimationJobStruct<T>.GetJobReflectionData();
+            var kind = new JobKind { Job = jobData, Dispatch = AnimationJobDispatch<T>.Run };
             var handle = AnimationPlayableUtil.Create(graph, typeof(AnimationScriptPlayable), kind, inputCount);
             var n = PlayableGraphData.Get(handle);
             if (n != null) n.JobType = typeof(T);
