@@ -35,6 +35,9 @@ namespace Unbound.Runtime
             /// <see cref="Axis"/> (the camera's transparency sort mode, else the project's).</summary>
             internal DistanceMetric Metric;
             internal Vector3 Axis;
+            /// <summary>How many times the canvases the camera sees are drawn: once, or a
+            /// scriptable culling's count (see Unbound.Runtime.CullingData.CanvasCopies).</summary>
+            internal int CanvasCopies = 1;
 
             /// <summary>The camera's transparency sort mode and axis, the project's where the
             /// camera's is Default (measured: tests/projects/builtinrp sort_*).</summary>
@@ -859,6 +862,7 @@ namespace Unbound.Runtime
             // The draws' merged properties live until the list is written.
             using var pooled = DrawPropertyPool.Begin();
             var context = ContextOf(data.Camera);
+            context.CanvasCopies = data.CanvasCopies;
             var stripLight = shadows.HasValue && shadowLight >= 0 && shadowLight < data.Lights.Length
                 ? data.Lights[shadowLight].light : null;
             using var stripShadows = new StripShadowScope(context, shadows.HasValue, stripLight, srp: true);

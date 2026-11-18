@@ -221,6 +221,10 @@ namespace Unbound.Runtime
 
         public void CollectCameraDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
+            // A Preview camera's scriptable culling draws no canvases unless UI geometry was
+            // emitted for it; each emission draws them once more (Unbound.Runtime.Culling.EmitUI).
+            if (camera.CanvasCopies <= 0) return;
+            int first = into.Count;
             int depth = 0;
             foreach (var canvas in DrawnCanvases(root =>
                          (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera == camera.Camera) ||
@@ -234,6 +238,17 @@ namespace Unbound.Runtime
                 }
                 CollectCanvas(canvas, camera, into, ref depth);
             }
+            // The further copies draw the same geometry again, each copy after the one before where
+            // the sort leaves them tied (the order between copies is unmeasured: one blended draw
+            // over another of the same colour gives the same result either way).
+            int count = into.Count - first;
+            for (int copy = 1; copy < camera.CanvasCopies; copy++)
+                for (int i = 0; i < count; i++)
+                {
+                    var item = into[first + i];
+                    item.Sequence = FrameBuilder.NextSequence();
+                    into.Add(item);
+                }
         }
 
         void CollectCanvas(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)

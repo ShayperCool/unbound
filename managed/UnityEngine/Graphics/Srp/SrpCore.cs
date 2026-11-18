@@ -192,7 +192,11 @@ namespace UnityEngine.Rendering
             var context = ScriptableRenderContext.Begin();
             FrameBuilder.BeginCameraRendering();
             try { RenderPipelineManager.currentPipeline.InternalProcessRenderRequests(context, camera, data); }
-            finally { FrameBuilder.EndCameraRendering(); }
+            finally
+            {
+                FrameBuilder.EndCameraRendering();
+                Culling.EndRender();
+            }
         }
 
         internal void Dispose()
@@ -334,7 +338,11 @@ namespace UnityEngine.Rendering
             FrameBuilder.BeginCameraRendering();
             try { s_CurrentPipeline.InternalRender(context, cameras); }
             catch (Exception e) { Debug.LogException(e); }
-            finally { FrameBuilder.EndCameraRendering(); }
+            finally
+            {
+                FrameBuilder.EndCameraRendering();
+                Culling.EndRender();
+            }
             return true;
         }
     }

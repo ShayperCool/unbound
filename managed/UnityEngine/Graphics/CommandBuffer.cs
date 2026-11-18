@@ -279,13 +279,20 @@ namespace UnityEngine.Rendering
             SetTarget(rt, mipLevel, cubemapFace, depthSlice);
         }
 
-        void SetTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
+        void SetTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace, int depthSlice) =>
+            Add(c => BindTarget(Resolve(rt, c), mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice), 36);
+
+        /// <summary>Draws go into <paramref name="color"/> (null: the screen) and its own depth
+        /// buffer, which becomes the active render texture.</summary>
+        static void BindTarget(Texture color, int mipLevel = 0, int slice = 0)
         {
-            var color = Resolve(rt, c);
-            ulong handle = TextureHandles.Of(color);
             RenderTexture.SetActiveQuietly(color as RenderTexture);
-            GfxStream.SetTarget(handle, 0, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(color));
-        }, 36);
+            GfxStream.SetTarget(TextureHandles.Of(color), 0, mipLevel, slice, GfxStream.LayersOf(color));
+        }
+
+        /// <summary>Binds <paramref name="camera"/>'s target as SetRenderTarget(CameraTarget) does
+        /// while the camera renders (ScriptableRenderContext.SetupCameraProperties).</summary>
+        internal static void BindCameraTarget(Camera camera) => BindTarget(camera.targetTexture);
 
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth)
         {

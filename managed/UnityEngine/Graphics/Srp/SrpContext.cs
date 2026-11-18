@@ -899,16 +899,17 @@ namespace UnityEngine.Rendering
     {
         IntPtr m_Ptr;
 
-        /// <summary>Hands world-space Canvas geometry to a reflection or preview camera: Unbound's
-        /// canvases already draw for every camera that renders them, so there is nothing to hand
-        /// over (measured to accept any camera and null: tests/projects/runtimeapis
-        /// context.emit_geometry_*).</summary>
-        [Unbound.EditorFaithful("world-space canvases already draw for every camera; measured: tests/projects/runtimeapis context.emit_geometry_*")]
-        public static void EmitGeometryForCamera(Camera camera) { }
+        /// <summary>Adds one more copy of the camera's UI geometry (its world space canvases and
+        /// the screen space canvases that render with it) to the camera's next culling: a Preview
+        /// camera, whose cullings draw no canvases, draws them once, any other camera once more
+        /// than it would. Null is taken and does nothing. Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/emitgeometry and tests/projects/runtimeapis context.emit_geometry_*.</summary>
+        public static void EmitGeometryForCamera(Camera camera) => Culling.EmitUI(camera);
 
-        /// <summary>Hands Canvas UI geometry to the Scene view's camera: Unbound has no Scene view.</summary>
-        [Unbound.EditorFaithful("Unbound has no Scene view; measured: tests/projects/runtimeapis context.emit_world_geometry_for_scene_view")]
-        public static void EmitWorldGeometryForSceneView(Camera cullingCamera) { }
+        /// <summary>As <see cref="EmitGeometryForCamera"/> (with a Scene view camera it would show the
+        /// Scene view's UI; Unbound has no Scene view): each call adds one more copy of the camera's
+        /// UI geometry to its next culling (tests/projects/emitgeometry).</summary>
+        public static void EmitWorldGeometryForSceneView(Camera cullingCamera) => Culling.EmitUI(cullingCamera);
 
         static int s_Next;
         static List<Camera> s_Cameras = new List<Camera>();
@@ -956,6 +957,10 @@ namespace UnityEngine.Rendering
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             s_Camera = camera;
             Camera.Internal_SetCurrent(camera);
+            // The camera's target becomes the render target, whatever the pipeline set before
+            // (measured: tests/projects/emitgeometry target.otherBeforeSetup), as
+            // SetRenderTarget(BuiltinRenderTextureType.CameraTarget) binds it.
+            CommandBuffer.BindCameraTarget(camera);
             GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix, GfxStream.CameraProperties);
         }
 
@@ -1093,6 +1098,9 @@ namespace Unbound.Runtime
         /// culling for the cascades' caster selection.</summary>
         internal Plane[] ShadowFrustum;
         internal bool ShadowFrustumKnown;
+        /// <summary>How many times the culling's lists draw the camera's canvases (see
+        /// <see cref="Culling.EmitUI"/>).</summary>
+        internal int CanvasCopies;
 
         internal void Dispose()
         {
@@ -1110,6 +1118,7 @@ namespace Unbound.Runtime
             Parameters = default;
             ShadowFrustum = null;
             ShadowFrustumKnown = false;
+            CanvasCopies = 0;
             Renderers.Clear();
             Visible.Clear();
             Queued.Clear();
@@ -1143,6 +1152,7 @@ namespace Unbound.Runtime
             var data = s_Free.Count > 0 ? s_Free.Pop() : new CullingData();
             data.Camera = camera;
             data.Parameters = parameters;
+            data.CanvasCopies = TakeCanvasCopies(camera);
             uint mask = parameters.cullingMask;
             // As in the built-in pipeline's culling (not measured in a scriptable pipeline).
             CullingGroup.EvaluateForCamera(camera);
@@ -1225,6 +1235,38 @@ namespace Unbound.Runtime
             var id = (IntPtr)(++s_Next);
             s_Results[id] = data;
             return id;
+        }
+
+        /// <summary>The cameras with emitted UI geometry no culling took yet.</summary>
+        static readonly List<Camera> s_Emitting = new List<Camera>();
+
+        /// <summary>One more copy of the camera's canvases in its next culling
+        /// (ScriptableRenderContext.EmitGeometryForCamera, EmitWorldGeometryForSceneView).</summary>
+        internal static void EmitUI(Camera camera)
+        {
+            if (camera is null) return;
+            if (camera.m_EmittedUI++ == 0) s_Emitting.Add(camera);
+        }
+
+        /// <summary>How many times a culling of <paramref name="camera"/> draws its canvases: once
+        /// for every camera type but Preview, whose cullings draw none, plus once per emission
+        /// since its last culling, which this one takes (measured with Game, Reflection, Preview
+        /// and SceneView cameras, emitting before culling: tests/projects/emitgeometry; nothing
+        /// emitted carries over to the next render). A second culling of the camera in the same
+        /// render gets no emitted copies (unmeasured).</summary>
+        static int TakeCanvasCopies(Camera camera)
+        {
+            if (camera is null) return 0;
+            int copies = (camera.cameraType == CameraType.Preview ? 0 : 1) + camera.m_EmittedUI;
+            camera.m_EmittedUI = 0;
+            return copies;
+        }
+
+        /// <summary>Drops the emissions no culling took when a pipeline's render ends.</summary>
+        internal static void EndRender()
+        {
+            foreach (var camera in s_Emitting) camera.m_EmittedUI = 0;
+            s_Emitting.Clear();
         }
 
         static readonly List<Light> s_VisibleLights = new List<Light>();

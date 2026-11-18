@@ -69,6 +69,9 @@ namespace UnityEngine
         Vector3 m_TransparencySortAxis = new Vector3(0, 0, 1);
         DepthTextureMode m_DepthTextureMode;
         CameraType m_CameraType = CameraType.Game;
+        /// <summary>How many times UI geometry was emitted for the camera's next culling
+        /// (ScriptableRenderContext.EmitGeometryForCamera).</summary>
+        internal int m_EmittedUI;
         int m_EventMask = -1;
 
         /// <summary>A new camera sorts transparent objects as the project's graphics settings say
