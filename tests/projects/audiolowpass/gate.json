@@ -1,0 +1,9 @@
+{
+ "commands": ["python3 tests/projects/audiolowpass/run.py --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+ "summary": "\"tested\": \\d+, \"failed\": \\d+(?=.*\"pcm_steps\": 1\\b)",
+ "engine_paths": [
+  "managed/UnityEngine/Audio/AudioFilterComponents.cs",
+  "managed/UnityEngine/Audio/AudioSource.cs",
+  "crates/unbound-runtime/src/audio/effects.rs"
+ ]
+}
