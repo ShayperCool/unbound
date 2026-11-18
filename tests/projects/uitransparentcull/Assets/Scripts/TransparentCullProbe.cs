@@ -15,12 +15,36 @@ using UnityEngine.UI;
 // says whether the canvas drew it. Writes values.jsonl to UI_CULL_OUT.
 public class TransparentCullProbe : MonoBehaviour
 {
+    /// <summary>A material modifier as UI packages write them: it replaces its previous
+    /// StencilMaterial entry by a new one each time the Graphic asks (Remove, then Add), so the
+    /// material it returned last is destroyed when no other renderer shares that entry.</summary>
+    public sealed class StencilModifier : MonoBehaviour, IMaterialModifier
+    {
+        Material m_Last;
+
+        public Material GetModifiedMaterial(Material baseMaterial)
+        {
+            StencilMaterial.Remove(m_Last);
+            // Stencil ID 1 (Add returns the base material itself for 0 with every colour written);
+            // Always and Keep leave the drawing as it was.
+            m_Last = StencilMaterial.Add(baseMaterial, 1, StencilOp.Keep, CompareFunction.Always, ColorWriteMask.All, 255, 255);
+            return m_Last;
+        }
+    }
+
     const int Size = 256, Cell = 8, Columns = Size / Cell;
     readonly StringBuilder m_Records = new StringBuilder();
     readonly List<(string key, int x, int y)> m_Cells = new List<(string, int, int)>();
     RectTransform m_Root;
     Material m_Solid;
     int m_Next;
+
+    // "destroyed" when the renderer's material is a destroyed object, else "alive".
+    static string HeldMaterial(Image image)
+    {
+        var material = image.canvasRenderer.GetMaterial(0);
+        return material == null && !ReferenceEquals(material, null) ? "\"destroyed\"" : material == null ? "\"none\"" : "\"alive\"";
+    }
 
     static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
     void Value(string key, string value) => m_Records.Append("{\"k\":\"").Append(key).Append("\",\"v\":").Append(value).Append("}\n");
@@ -75,6 +99,36 @@ public class TransparentCullProbe : MonoBehaviour
     }
 
     readonly List<(CanvasRenderer renderer, float alpha)> m_RendererAlphas = new List<(CanvasRenderer, float)>();
+    // Renderers whose material is destroyed after the canvas gave it to them, as the cell's
+    // `destroyed.*` key says; `kept.*` is the control.
+    readonly List<(Image image, Material material, bool dirty)> m_Destroyed = new List<(Image, Material, bool)>();
+    readonly List<Image> m_Modified = new List<Image>();
+
+    // Destroyed materials (`destroyed.*`, green Images): a renderer still holding its destroyed
+    // material, and one rebuilt after it (its Graphic then takes the default UI material), against
+    // a kept material (`kept.solid`). The StencilMaterial modifier (`modifier.*`, green Images on
+    // UI/Default): one renderer whose modifier is asked again after the canvas gave it its
+    // material (the entry's only user: the material it holds is destroyed), and two sharing the
+    // base material and so the entry (it survives).
+    void BuildDestroyed()
+    {
+        foreach (var (key, dirty) in new[] { ("destroyed.solid", false), ("destroyed.solid.rebuilt", true), ("kept.solid", false) })
+        {
+            var image = SolidImage(key, m_Root, Color.green);
+            var own = new Material(m_Solid);
+            image.material = own;
+            if (key.StartsWith("destroyed", StringComparison.Ordinal)) m_Destroyed.Add((image, own, dirty));
+        }
+        var single = new Material(Shader.Find("UI/Default"));
+        var shared = new Material(Shader.Find("UI/Default"));
+        foreach (var (key, baseMaterial) in new[] { ("modifier.single", single), ("modifier.shared.1", shared), ("modifier.shared.2", shared) })
+        {
+            var image = SolidImage(key, m_Root, Color.green);
+            image.material = baseMaterial;
+            image.gameObject.AddComponent<StencilModifier>();
+            m_Modified.Add(image);
+        }
+    }
 
     void Build()
     {
@@ -182,9 +236,19 @@ public class TransparentCullProbe : MonoBehaviour
         canvas.planeDistance = 1;
         m_Root = (RectTransform)canvasObject.transform;
         Build();
+        BuildDestroyed();
         // A renderer's alpha is set after its Graphic has built its mesh, as a script does each frame.
         yield return null;
         foreach (var (renderer, alpha) in m_RendererAlphas) renderer.SetAlpha(alpha);
+        // The canvas has given each renderer its material: destroy some of them, and ask the
+        // modifiers again (as a script reading materialForRendering does), without a rebuild.
+        foreach (var (destroyedImage, material, dirty) in m_Destroyed)
+        {
+            DestroyImmediate(material);
+            if (dirty) destroyedImage.SetMaterialDirty();
+        }
+        foreach (var modified in m_Modified) _ = modified.materialForRendering;
+        for (int i = 0; i < m_Modified.Count; i++) Value(m_Modified[i].name + ".held", HeldMaterial(m_Modified[i]));
         yield return null;
         Canvas.ForceUpdateCanvases();
         camera.Render();
