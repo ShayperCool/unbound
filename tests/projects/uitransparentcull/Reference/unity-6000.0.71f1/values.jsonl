@@ -1,3 +1,6 @@
+{"k":"modifier.single.held","v":"none"}
+{"k":"modifier.shared.1.held","v":"alive"}
+{"k":"modifier.shared.2.held","v":"alive"}
 {"k":"renderer.0","v":[0,0,0,0]}
 {"k":"renderer.1E-07","v":[255,0,0,255]}
 {"k":"renderer.0.0001","v":[255,0,0,255]}
@@ -68,6 +71,12 @@
 {"k":"reverseMask.0.002","v":[0,0,0,0]}
 {"k":"reverseMask.0.004","v":[0,0,0,0]}
 {"k":"reverseMask.1","v":[0,0,0,0]}
+{"k":"destroyed.solid","v":[0,0,0,0]}
+{"k":"destroyed.solid.rebuilt","v":[0,255,0,255]}
+{"k":"kept.solid","v":[255,0,0,255]}
+{"k":"modifier.single","v":[0,0,0,0]}
+{"k":"modifier.shared.1","v":[0,255,0,255]}
+{"k":"modifier.shared.2","v":[0,255,0,255]}
 {"k":"overlay.screen","v":"256x256"}
 {"k":"overlay.renderer.0","v":[0,0,0,0]}
 {"k":"overlay.renderer.1E-07","v":[255,0,0,255]}
@@ -139,4 +148,10 @@
 {"k":"overlay.reverseMask.0.002","v":[0,0,0,0]}
 {"k":"overlay.reverseMask.0.004","v":[0,0,0,0]}
 {"k":"overlay.reverseMask.1","v":[0,0,0,0]}
+{"k":"overlay.destroyed.solid","v":[0,0,0,0]}
+{"k":"overlay.destroyed.solid.rebuilt","v":[0,255,0,255]}
+{"k":"overlay.kept.solid","v":[255,0,0,255]}
+{"k":"overlay.modifier.single","v":[0,0,0,0]}
+{"k":"overlay.modifier.shared.1","v":[0,255,0,255]}
+{"k":"overlay.modifier.shared.2","v":[0,255,0,255]}
 {"k":"complete","v":true}

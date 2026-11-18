@@ -20,6 +20,14 @@ drawn whatever its vertex colour, so a cell's centre pixel says whether the Canv
   the child left no hole, clear where it did. This is the reverse-mask technique UI packages use
   with a renderer alpha just above zero.
 - `maskAlpha.<cull|noCull>.<a>`: a Mask whose own renderer alpha is `a`, with a red child.
+- `destroyed.solid`, `destroyed.solid.rebuilt`, `kept.solid`: green Images on their own copy of
+  `Probe/Solid`, destroyed after the canvas gave it to the renderer (left so, and with the Image
+  rebuilt by SetMaterialDirty), against a kept copy.
+- `modifier.*`: green Images on UI/Default with a material modifier that, each time the Graphic
+  asks, removes its previous StencilMaterial entry and adds a new one (as UI packages do), asked
+  again after the canvas gave the renderer its material: `single` the only user of its entry,
+  `shared.1` and `shared.2` two Images sharing the base material and so the entry; `*.held` says
+  whether `CanvasRenderer.GetMaterial(0)` then reads a live material or null.
 
 The whole grid is drawn twice: through a Screen Space Camera canvas into a render texture, and
 as a Screen Space Overlay canvas captured with `ScreenCapture.CaptureScreenshotAsTexture`
@@ -35,7 +43,15 @@ The renderer's alpha is not rounded to a byte for these decisions. The reverse m
 hole at alpha 0.002 and not at 0.00196: the vertex alpha byte rounds to 1 and 0, and the alpha
 clip leaves no stencil write at 0. Camera and overlay canvases agree.
 
-Unmeasured: pop instructions of a renderer left out at alpha zero (the engine still emits them;
+A renderer whose material was destroyed after it was set draws nothing, on a camera canvas and
+on an overlay one, until its Graphic gives it another (rebuilt, it draws with the default UI
+material, its vertex colour); `GetMaterial` reads null for it. The modifier's single user so
+destroys the material its renderer holds when asked again (`StencilMaterial.Remove` drops the
+entry's last reference) and is not drawn; two sharing the entry keep it alive and are drawn.
+Recorded on the Linux GPU Editor (two identical captures); two macOS Editor captures give the same
+values.
+
+Unmeasured: a destroyed material set again on a renderer, a destroyed pop material, pop instructions of a renderer left out at alpha zero (the engine still emits them;
 a Mask's pop materials clip alpha, so they write nothing there), and releases other than
 6000.0.71f1.
 
