@@ -1,0 +1,17 @@
+{"k":"ScriptCompilationDuringPlay","v":"0"}
+{"k":"round1.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,afterAssemblyReload"}
+{"k":"round1.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp-Editor.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp-Editor.dll || assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Warning Assets/Scripts/Warn.cs(1,50) Assets/Scripts/Warn.cs(1,50): warning CS0219: The variable 'unused' is assigned but its value is never used] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"round1.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
+{"k":"round1.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round1.contextShared","v":"True"}
+{"k":"round2.order","v":"compilationStarted,assembly,compilationFinished"}
+{"k":"round2.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Error Assets/Scripts/Changing.cs(1,59) Assets/Scripts/Changing.cs(1,59): error CS1525: Invalid expression term ';'] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"round2.notRequired","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll,Library/ScriptAssemblies/Other.dll"}
+{"k":"round2.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round2.contextShared","v":"True"}
+{"k":"round3.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,afterAssemblyReload"}
+{"k":"round3.assemblies","v":"assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp-Editor.dll [] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp-Editor.dll || assemblyCompilationFinished Library/ScriptAssemblies/Assembly-CSharp.dll [Warning Assets/Scripts/Warn.cs(1,50) Assets/Scripts/Warn.cs(1,50): warning CS0219: The variable 'unused' is assigned but its value is never used] || assemblyCompilationStarted Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"round3.notRequired","v":"Library/ScriptAssemblies/Other.dll"}
+{"k":"round3.contexts","v":"Bee.BeeDriver.ActiveBuild"}
+{"k":"round3.contextShared","v":"True"}
+{"k":"complete","v":true}

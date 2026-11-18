@@ -1,0 +1,12 @@
+{
+  "commands": ["python3 tests/projects/compileevents/run.py gate"],
+  "summary": "compileevents: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/CompilationPipeline.cs",
+    "managed/Unbound.Host/HotReload.cs",
+    "managed/Unbound.Compiler/CompilerService.cs",
+    "managed/Unbound.Compiler/Protocol.cs",
+    "crates/unbound-runtime/src/game.rs",
+    "crates/unbound-runtime/src/watch.rs"
+  ]
+}
