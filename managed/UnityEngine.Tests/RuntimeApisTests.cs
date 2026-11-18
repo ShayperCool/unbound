@@ -291,9 +291,16 @@ namespace UnityEngine.Tests
         {
             try
             {
-                GraphicsSettings.LoadShaderModes(new Dictionary<string, int> { ["m_LightHalo"] = 1, ["m_MotionVectors"] = 1 });
-                // Listed without a shader that resolves: none until one is set.
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int> { ["m_LightHalo"] = 1, ["m_MotionVectors"] = 1, ["m_LensFlare"] = 0 });
+                // Listed without a shader: no motion vectors until one is set (measured); a flare
+                // draws with Unity's own, warned once (unmeasured).
                 Assert.Null(GraphicsSettings.RendererShader(BuiltinShaderType.MotionVectors));
+                using (var logs = new RecordedLogs())
+                {
+                    Assert.Same(Shader.Find("Hidden/Internal-Flare"), GraphicsSettings.RendererShader(BuiltinShaderType.LensFlare));
+                    Assert.Same(Shader.Find("Hidden/Internal-Flare"), GraphicsSettings.RendererShader(BuiltinShaderType.LensFlare));
+                    Assert.Single(logs.Logged, l => l.Contains("give m_LensFlare no shader"));
+                }
                 var shader = CustomShader();
                 GraphicsSettings.SetCustomShader(BuiltinShaderType.LightHalo, shader);
                 GraphicsSettings.SetShaderMode(BuiltinShaderType.LightHalo, BuiltinShaderMode.Disabled);
@@ -312,8 +319,12 @@ namespace UnityEngine.Tests
                 var second = GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref cached);
                 Assert.Same(other, second.shader);
                 Assert.NotSame(first, second);
-                // Control: a setting the project does not list draws with Unity's own shader.
-                Assert.Same(Shader.Find("Hidden/Internal-Flare"), GraphicsSettings.RendererShader(BuiltinShaderType.LensFlare));
+                // Control: a setting the project does not list draws with Unity's own shader, quietly.
+                using (var logs = new RecordedLogs())
+                {
+                    Assert.Same(Shader.Find("Hidden/Internal-DeferredReflections"), GraphicsSettings.RendererShader(BuiltinShaderType.DeferredReflections));
+                    Assert.Empty(logs.Logged);
+                }
             }
             finally
             {
@@ -343,6 +354,20 @@ namespace UnityEngine.Tests
                     Assert.True(GraphicsSettings.ScreenShadowsDisabled());
                     Assert.Equal(2, logs.Logged.Count(l => l.Contains("Screenspace cascaded shadow map support")));
                 }
+                // A target without screen-space shadows does not use the setting.
+                var defines = typeof(GraphicsSettings).GetField("s_PlatformDefines", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                var saved = defines.GetValue(null);
+                try
+                {
+                    GraphicsSettings.SetPlatformShaderDefines(new[] { "UNITY_NO_SCREENSPACE_SHADOWS" });
+                    Assert.False(GraphicsSettings.UsesScreenSpaceShadows);
+                    Assert.False(GraphicsSettings.ScreenShadowsDisabled());
+                }
+                finally
+                {
+                    defines.SetValue(null, saved);
+                }
+                Assert.True(GraphicsSettings.ScreenShadowsDisabled());
                 GraphicsSettings.SetShaderMode(BuiltinShaderType.DeferredReflections, BuiltinShaderMode.Disabled);
                 Assert.True(GraphicsSettings.DeferredReflectionsDisabled);
                 // Control: No Support of another setting keeps its shader drawing.

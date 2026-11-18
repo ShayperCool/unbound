@@ -646,20 +646,26 @@ namespace UnityEngine.Rendering
 
         /// <summary>The shader the built-in renderer draws a setting's effect with when it draws it:
         /// the setting's shader (<see cref="GetCustomShader"/>) when it has one, whatever its mode;
-        /// without one, the shader it last drew that effect with, and none when it never had one
-        /// (that effect is not drawn). Measured in the Editor (tests/projects/builtinfx settings.*,
-        /// settings_*): a custom shader draws in the custom, built-in and No Support modes alike;
-        /// SetCustomShader(null) keeps the last shader drawn with, and so does a shader set and
-        /// unset again before any draw (settings_halo_unrendered); a depth-normals or motion vector
-        /// texture whose setting never had a shader is not made. Unmeasured, chosen: a setting the
-        /// project's graphics settings do not list draws with Unity's own shader.</summary>
+        /// without one, the shader it last drew that effect with. Measured in the Editor
+        /// (tests/projects/builtinfx settings.*, settings_*): a custom shader draws in the custom,
+        /// built-in and No Support modes alike; SetCustomShader(null) keeps the last shader drawn
+        /// with, and so does a shader set and unset again before any draw
+        /// (settings_halo_unrendered); a depth-normals or motion vector texture whose setting never
+        /// had a shader is not made (none is returned). Unmeasured, chosen: the other effects whose
+        /// setting never had a shader draw with Unity's own (with a warning once: the project's No
+        /// Support without a shader, say), as does a setting the project does not list (quietly).</summary>
         internal static Shader RendererShader(BuiltinShaderType type)
         {
             int slot = (int)type;
             var shader = GetCustomShader(type);
             if (shader != null) s_RendererShaders[slot] = shader;
-            else if (s_RendererShaders[slot] == null && !s_ShaderListed[slot] && s_BuiltinShaderNames[slot] != null)
+            else if (s_RendererShaders[slot] == null && type != BuiltinShaderType.DepthNormals && type != BuiltinShaderType.MotionVectors
+                && s_BuiltinShaderNames[slot] != null)
+            {
                 s_RendererShaders[slot] = Shader.Find(s_BuiltinShaderNames[slot]);
+                if (s_ShaderListed[slot])
+                    Debug.LogWarning($"Unbound: the graphics settings give {s_ShaderModeSettings[slot]} no shader; it draws with Unity's own (what the Editor draws then is unmeasured)");
+            }
             return s_RendererShaders[slot];
         }
 
@@ -679,15 +685,22 @@ namespace UnityEngine.Rendering
 
         static bool s_ScreenShadowsDisabledReported;
 
-        /// <summary>Whether screen-space shadows are switched off (the No Support mode): a
-        /// directional light then casts no shadows, with the Editor's warning (measured,
-        /// tests/projects/builtinfx settings.screenSpaceShadows.disabled; logged once a mode
-        /// change here, the Editor's repetition is unmeasured). The other settings' No Support
-        /// mode draws as the others do, except deferred reflections (<see
-        /// cref="DeferredReflectionsDisabled"/>).</summary>
+        /// <summary>Whether the build target collects directional shadows in screen space (its
+        /// shaders lack UNITY_NO_SCREENSPACE_SHADOWS, as on desktop; the Graphics settings call the
+        /// screen-space shadows shader the one for cascaded shadow maps on PC and consoles). Where
+        /// they do not, the screen-space shadows setting is not used: Unbound's own collector, Unity's
+        /// shader, stands for sampling the shadow map directly.</summary>
+        internal static bool UsesScreenSpaceShadows => !HasShaderDefine(BuiltinShaderDefine.UNITY_NO_SCREENSPACE_SHADOWS);
+
+        /// <summary>Whether screen-space shadows are switched off (the No Support mode, where the
+        /// target uses them): a directional light then casts no shadows, with the Editor's warning
+        /// (measured on the desktop target, tests/projects/builtinfx
+        /// settings.screenSpaceShadows.disabled; logged once a mode change here, the Editor's
+        /// repetition is unmeasured). The other settings' No Support mode draws as the others do,
+        /// except deferred reflections (<see cref="DeferredReflectionsDisabled"/>).</summary>
         internal static bool ScreenShadowsDisabled()
         {
-            if (s_ShaderModes[(int)BuiltinShaderType.ScreenSpaceShadows] != BuiltinShaderMode.Disabled) return false;
+            if (s_ShaderModes[(int)BuiltinShaderType.ScreenSpaceShadows] != BuiltinShaderMode.Disabled || !UsesScreenSpaceShadows) return false;
             if (!s_ScreenShadowsDisabledReported)
             {
                 s_ScreenShadowsDisabledReported = true;

@@ -332,9 +332,11 @@ namespace UnityEngine.Rendering
             GfxStream.SetTarget(colorHandle, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(colorTexture));
         }, TargetsCommandSize);
 
-        /// <summary>A color or depth target of <see cref="BuiltinRenderTextureType.None"/> binds
-        /// nothing: later draws and clears go nowhere, not into the target bound before (measured
-        /// on the Editor's GL device: tests/projects/cmdbuffers bind.noneDepth.*, bind.noneColor).</summary>
+        /// <summary>A color or depth target of <see cref="BuiltinRenderTextureType.None"/> given with
+        /// the other (a binding, an array, a color with a depth target) binds nothing: later draws
+        /// and clears go nowhere, not into the target bound before (measured on the Editor's GL
+        /// device: tests/projects/cmdbuffers bind.noneDepth.*, bind.noneColor). A None identifier
+        /// alone is unmeasured and still binds the screen.</summary>
         static void BindNothing()
         {
             RenderTexture.SetActiveQuietly(null);

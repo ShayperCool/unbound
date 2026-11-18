@@ -16,7 +16,7 @@ namespace Unbound.Runtime
         static readonly List<DrawItem> s_Casters = new List<DrawItem>();
         static readonly Func<ShaderPassInfo, bool> s_HasShadowCaster = info => info.ShadowCasterPass >= 0;
         static readonly List<RenderTexture> s_ShadowTemporaries = new List<RenderTexture>();
-        static Material s_Collector;
+        static Material s_Collector, s_OwnCollector;
         static Mesh s_CollectorQuad;
         /// <summary>The camera being drawn has a screen-space shadow mask (SHADOWS_SCREEN).</summary>
         static bool s_ScreenShadows;
@@ -170,8 +170,11 @@ namespace Unbound.Runtime
         {
             float distance = Mathf.Min(QualitySettings.shadowDistance, camera.farClipPlane);
             if (distance <= camera.nearClipPlane) return null;
-            // The project's collector shader (none: no screen-space shadows).
-            var collector = GraphicsSettings.RendererMaterial(BuiltinShaderType.ScreenSpaceShadows, ref s_Collector);
+            // The project's collector shader where the target collects shadows in screen space,
+            // else Unity's own standing for the direct shadow map reads.
+            var collector = GraphicsSettings.UsesScreenSpaceShadows
+                ? GraphicsSettings.RendererMaterial(BuiltinShaderType.ScreenSpaceShadows, ref s_Collector)
+                : s_OwnCollector ??= new Material(Shader.Find("Hidden/Internal-ScreenSpaceShadows")) { hideFlags = HideFlags.HideAndDontSave };
             if (collector == null) return null;
             if (QualitySettings.shadowNearPlaneOffset != 3f)
                 Stubs.Ignored("QualitySettings.shadowNearPlaneOffset", "directional shadow maps keep the near plane measured at the default offset of 3");

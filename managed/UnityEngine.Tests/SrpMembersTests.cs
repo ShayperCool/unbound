@@ -68,8 +68,9 @@ namespace Unbound.Tests
         }
 
         /// <summary>A binding draws into every color at the call's level (slice -1 is 0); a None
-        /// depth or color target binds nothing, through any overload (tests/projects/cmdbuffers
-        /// bind.colors.*, bind.slice.all, bind.noneDepth.*, bind.noneColor).</summary>
+        /// depth or color target given with the other binds nothing, through the binding, array,
+        /// color-and-depth and actions overloads (tests/projects/cmdbuffers bind.colors.*,
+        /// bind.slice.all, bind.noneDepth.*, bind.noneColor).</summary>
         [Fact]
         public void ABindingBindsEveryColorAndANoneTargetBindsNothing()
         {
@@ -93,7 +94,8 @@ namespace Unbound.Tests
                 Assert.Equal((0, 0), (state.Mip, state.Slice));
                 Run(cb => cb.SetRenderTarget(Binding(ids, ids[0]), 1, CubemapFace.Unknown, -1));
                 Assert.Equal((1, 0), (GfxStream.Current.Mip, GfxStream.Current.Slice));
-                // Control: the array overload keeps binding every slice with -1.
+                // Control: the array overload keeps slice -1 in the target state (a clear clears
+                // every slice; draws go into the first).
                 Run(cb => cb.SetRenderTarget(ids, ids[0], 1, CubemapFace.Unknown, -1));
                 Assert.Equal(-1, GfxStream.Current.Slice);
 

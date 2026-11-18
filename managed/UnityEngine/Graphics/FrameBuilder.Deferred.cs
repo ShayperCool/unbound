@@ -18,6 +18,7 @@ namespace Unbound.Runtime
     {
         static Material s_DeferredShading, s_DeferredReflections, s_DeferredReflectionsOver;
         static bool s_CustomShadingReported;
+        static Shader s_OwnShading;
         static readonly int s_SrcBlend = Shader.PropertyToID("_SrcBlend");
         static readonly int s_DstBlend = Shader.PropertyToID("_DstBlend");
         static readonly int s_LightAsQuad = Shader.PropertyToID("_LightAsQuad");
@@ -138,7 +139,8 @@ namespace Unbound.Runtime
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
             var shading = GraphicsSettings.RendererMaterial(BuiltinShaderType.DeferredShading, ref s_DeferredShading);
-            if (shading != null && !s_CustomShadingReported && shading.shader.name != "Hidden/Internal-DeferredShading")
+            if (shading != null && !s_CustomShadingReported
+                && shading.shader != (s_OwnShading ??= Shader.Find("Hidden/Internal-DeferredShading")))
             {
                 // Measured differences (tests/projects/builtinfx settings_deferred*_custom): the
                 // Editor draws a custom shader's light pass over the scene's pixels only, and an

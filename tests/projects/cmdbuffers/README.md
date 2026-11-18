@@ -68,7 +68,7 @@ difference for invalid Append bindings, not an insignificant visual residual.
 * **Render target bindings**: a draw writes each fragment output into the binding's color of that
   index; the depth texture is tested and written, the first color's identifier as depth target is
   that color's own depth buffer (none here: no depth test). A None depth or color target, through
-  the binding or any other overload, binds nothing: the draws go nowhere, not into the target bound
+  the binding, an array, a color with a depth target or with actions, binds nothing: the draws go nowhere, not into the target bound
   before. The call's mip, cube face and slice apply to every color, whatever the identifiers carry;
   slice -1 is slice 0. `ClearRenderTarget` clears every bound color (one background color each with
   an array). The Clear load action throws `ArgumentException: RenderBufferLoadAction.Clear is not
