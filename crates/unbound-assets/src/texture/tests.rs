@@ -2284,3 +2284,96 @@ fn tree_maps_join_the_texture_cache_key() {
     assert!(texture.settings.srgb);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// 4x4 linear colours whose 2x2 means fall between byte steps once gamma-encoded.
+fn float_colors(alpha: f32) -> Vec<[f32; 4]> {
+    (0..16)
+        .map(|i| {
+            let v = 0.011 + i as f32 * 0.0173;
+            [v, 1.0 - v, v * 0.5, alpha]
+        })
+        .collect()
+}
+
+/// Level 1 of a 4x4 image: the box mean of each 2x2 block, `encode`d to bytes.
+fn box_level1(colors: &[[f32; 4]], encode: impl Fn([f32; 4]) -> [f32; 4]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for y in 0..2 {
+        for x in 0..2 {
+            let at = |dx: usize, dy: usize| colors[(2 * y + dy) * 4 + 2 * x + dx];
+            let (a, b, c, d) = (at(0, 0), at(1, 0), at(0, 1), at(1, 1));
+            let mean: [f32; 4] = std::array::from_fn(|i| (((a[i] + b[i]) + c[i]) + d[i]) * 0.25);
+            out.extend(encode(mean).map(|v| mipmaps::quantize((v * 255.0) as f64)));
+        }
+    }
+    out
+}
+
+fn generated(colors: Vec<[f32; 4]>, settings: TextureSettings) -> ImportedTexture {
+    import_generated(
+        "Generated",
+        4,
+        4,
+        GeneratedTexels::LinearColor(colors),
+        &Value::Null,
+        settings,
+    )
+    .unwrap()
+}
+
+#[test]
+fn generated_linear_colors_filter_their_mips_from_the_floats() {
+    let colors = float_colors(1.0);
+    // An sRGB texture filters the linear colour and encodes each level.
+    let srgb = generated(colors.clone(), TextureSettings::default());
+    assert_eq!(srgb.mips[1].data, box_level1(&colors, gamma_color));
+    // A linear texture filters the gamma-encoded colour.
+    let linear = generated(
+        colors.clone(),
+        TextureSettings {
+            srgb: false,
+            ..TextureSettings::default()
+        },
+    );
+    let gamma: Vec<[f32; 4]> = colors.iter().map(|&c| gamma_color(c)).collect();
+    assert_eq!(linear.mips[1].data, box_level1(&gamma, |c| c));
+    // The top level is the gamma encoding in bytes either way, and differs from the bytes' own
+    // filtering below it (the case the floats decide).
+    assert_eq!(srgb.mips[0].data, linear.mips[0].data);
+    let bytes = import_generated(
+        "Generated",
+        4,
+        4,
+        GeneratedTexels::Rgba8(srgb.mips[0].data.clone()),
+        &Value::Null,
+        TextureSettings {
+            srgb: false,
+            ..TextureSettings::default()
+        },
+    )
+    .unwrap();
+    assert_ne!(bytes.mips[1].data, linear.mips[1].data);
+}
+
+#[test]
+fn generated_linear_colors_whose_import_changes_them_filter_bytes() {
+    // Alpha source None makes the half-transparent colour opaque: the floats no longer describe
+    // the top level, which is filtered as bytes are.
+    let settings = TextureSettings {
+        alpha_source: AlphaSource::None,
+        srgb: false,
+        ..TextureSettings::default()
+    };
+    let texture = generated(float_colors(0.5), settings.clone());
+    assert!(texture.mips[0].data.chunks(4).all(|p| p[3] == 255));
+    let bytes = import_generated(
+        "Generated",
+        4,
+        4,
+        GeneratedTexels::Rgba8(texture.mips[0].data.clone()),
+        &Value::Null,
+        settings,
+    )
+    .unwrap();
+    assert_eq!(texture.mips[1].data, bytes.mips[1].data);
+}

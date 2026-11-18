@@ -1673,16 +1673,20 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     upload_imported(s, handle, texture, Some((&asset.file, &meta)), sprite_count)
 }
 
-/// Imports a script's RGBA8 texels (rows bottom-up) with a `.meta`-shaped settings document
-/// under a new `generated:` key and uploads them to `handle` (TextureGenerator.GenerateTexture).
+/// Imports a script's texels (rows bottom-up: RGBA8, or linear RGBA float colour with
+/// `linearColor`) with a `.meta`-shaped settings document under a new `generated:` key and uploads
+/// them to `handle` (TextureGenerator.GenerateTexture).
 pub fn generate_texture(handle: u64, request: &str, texels: &[u8]) -> Result<ImportedTextureInfo> {
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     struct Request {
         key: String,
         name: String,
         width: u32,
         height: u32,
         meta: String,
+        #[serde(default)]
+        linear_color: bool,
     }
     let s = state();
     let r: Request = serde_json::from_str(request)?;
@@ -1696,13 +1700,29 @@ pub fn generate_texture(handle: u64, request: &str, texels: &[u8]) -> Result<Imp
     let importer = texture_importer(s);
     let settings = importer.settings(&meta);
     let polygon = settings.sprite.mode == unbound_assets::sprite::SpriteMode::Polygon;
+    let texels = if r.linear_color {
+        anyhow::ensure!(
+            texels.len() % 16 == 0,
+            "{} bytes of float colour",
+            texels.len()
+        );
+        unbound_assets::texture::GeneratedTexels::LinearColor(
+            texels
+                .as_chunks::<16>()
+                .0
+                .iter()
+                .map(|c| {
+                    std::array::from_fn(|i| {
+                        f32::from_le_bytes(c[i * 4..i * 4 + 4].try_into().unwrap())
+                    })
+                })
+                .collect(),
+        )
+    } else {
+        unbound_assets::texture::GeneratedTexels::Rgba8(texels.to_vec())
+    };
     let mut texture = unbound_assets::texture::import_generated(
-        &r.name,
-        r.width,
-        r.height,
-        texels.to_vec(),
-        &meta,
-        settings,
+        &r.name, r.width, r.height, texels, &meta, settings,
     )?;
     importer.store(&mut texture)?;
     let sprites = std::mem::take(&mut texture.sprites);

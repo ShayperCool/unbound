@@ -216,22 +216,17 @@ namespace UnityEditor.AssetImporters
 
         public static TextureGenerationOutput GenerateTexture(TextureGenerationSettings settings, NativeArray<Color> colorBuffer)
         {
-            // Float colours are linear: in a gamma-space project they are gamma-encoded and
-            // rounded to bytes, whatever the texture's sRGB setting, and then import as bytes do
-            // (tests/projects/toolapis g.colorOverload, g.colorOverloadLinear). Linear-space
-            // projects and HDR sources are unmeasured.
+            // Float colours are linear: in a gamma-space project the top level is their gamma
+            // encoding rounded to bytes, whatever the texture's sRGB setting, and the mips are
+            // filtered from the floats (the importer does both; tests/projects/toolapis
+            // g.colorOverload, g.colorOverloadLinear). Linear-space projects and HDR sources are
+            // unmeasured.
             var source = Validate(settings, colorBuffer.IsCreated ? colorBuffer.Length : -1);
             if (source.hdr)
                 throw new NotSupportedException("Unbound: TextureGenerator.GenerateTexture of an HDR source is not supported yet");
             if (QualitySettings.activeColorSpace != ColorSpace.Gamma)
                 throw new NotSupportedException("Unbound: TextureGenerator.GenerateTexture of Color texels in a linear-space project is not supported yet (the Color32 overload is)");
-            var texels = new Color32[colorBuffer.Length];
-            for (int i = 0; i < texels.Length; i++)
-            {
-                var c = colorBuffer[i];
-                texels[i] = new Color(Mathf.LinearToGammaSpace(c.r), Mathf.LinearToGammaSpace(c.g), Mathf.LinearToGammaSpace(c.b), c.a);
-            }
-            return Generate(settings, source, MemoryMarshal.AsBytes(texels.AsSpan()));
+            return Generate(settings, source, MemoryMarshal.AsBytes(colorBuffer.AsReadOnlySpan()), linearColor: true);
         }
 
         static SourceTextureInformation Validate(TextureGenerationSettings settings, int length)
@@ -244,7 +239,7 @@ namespace UnityEditor.AssetImporters
             return source;
         }
 
-        static TextureGenerationOutput Generate(TextureGenerationSettings settings, SourceTextureInformation source, ReadOnlySpan<byte> texels)
+        static TextureGenerationOutput Generate(TextureGenerationSettings settings, SourceTextureInformation source, ReadOnlySpan<byte> texels, bool linearColor = false)
         {
             var s = settings.textureImporterSettings;
             if (settings.secondarySpriteTextures is { Length: > 0 } && s_WarnedSecondary.Add(settings.assetPath ?? ""))
@@ -252,7 +247,7 @@ namespace UnityEditor.AssetImporters
             var key = KeyPrefix + Guid.NewGuid().ToString("N");
             // The texture takes the asset path's file name (none without a path).
             var name = System.IO.Path.GetFileNameWithoutExtension(settings.assetPath ?? "");
-            var request = JsonSerializer.Serialize(new { key, name, source.width, source.height, meta = Meta(settings) });
+            var request = JsonSerializer.Serialize(new { key, name, source.width, source.height, meta = Meta(settings), linearColor });
             ulong handle = RenderHandles.Next();
             var info = Native.GenerateTexture(handle, request, texels);
             var texture = Texture2D.FromImport(handle, key, name, info);
@@ -262,7 +257,7 @@ namespace UnityEditor.AssetImporters
             var sprites = info.SpriteCount > 0
                 ? Unbound.Runtime.AssetImporters.ImportedSprites(texture, key, name).ConvertAll(p => p.Sprite).ToArray()
                 : Array.Empty<Sprite>();
-            var output = new TextureGenerationOutput(texture, Thumbnail(source, texels), sprites);
+            var output = new TextureGenerationOutput(texture, Thumbnail(source, texels, linearColor), sprites);
             if (settings.enablePostProcessor)
             {
                 s_TextureHooks ??= AssetPostprocessorHooks.Find("OnPostprocessTexture", new[] { typeof(Texture2D) });
@@ -281,7 +276,8 @@ namespace UnityEditor.AssetImporters
             catch (InvalidOperationException) { }
         }
 
-        static Texture2D Thumbnail(SourceTextureInformation source, ReadOnlySpan<byte> texels)
+        /// <summary>The thumbnail from the source's texels: Color32, or linear Color gamma-encoded.</summary>
+        static Texture2D Thumbnail(SourceTextureInformation source, ReadOnlySpan<byte> texels, bool linearColor)
         {
             var thumbnail = new Texture2D(k_ThumbnailSize, k_ThumbnailSize, TextureFormat.RGBA32, false);
             var pixels = new Color32[k_ThumbnailSize * k_ThumbnailSize];
@@ -289,7 +285,13 @@ namespace UnityEditor.AssetImporters
                 for (int x = 0; x < k_ThumbnailSize; x++)
                 {
                     int i = (y * source.height / k_ThumbnailSize) * source.width + x * source.width / k_ThumbnailSize;
-                    pixels[y * k_ThumbnailSize + x] = MemoryMarshal.Cast<byte, Color32>(texels)[i];
+                    if (linearColor)
+                    {
+                        var c = MemoryMarshal.Cast<byte, Color>(texels)[i];
+                        pixels[y * k_ThumbnailSize + x] = new Color(Mathf.LinearToGammaSpace(c.r), Mathf.LinearToGammaSpace(c.g), Mathf.LinearToGammaSpace(c.b), c.a);
+                    }
+                    else
+                        pixels[y * k_ThumbnailSize + x] = MemoryMarshal.Cast<byte, Color32>(texels)[i];
                 }
             thumbnail.SetPixels32(pixels);
             thumbnail.Apply();

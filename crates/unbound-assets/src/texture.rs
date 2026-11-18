@@ -1647,32 +1647,114 @@ pub fn import_texture(
     import_image(source, image, meta, settings)
 }
 
-/// A texture made from the caller's RGBA8 texels (`width` x `height`, rows bottom-up as Unity's
-/// colour buffers are) instead of a file, imported as a file with the `.meta`-shaped `meta` and
-/// its `settings` would be: TextureGenerator.GenerateTexture (matches the Unity 6000.0.71f1
-/// Editor, tests/projects/toolapis). `name` names the texture and its messages.
+/// The texels of a script-made texture, rows bottom-up as Unity's colour buffers are.
+pub enum GeneratedTexels {
+    /// RGBA8 colour (TextureGenerator's `Color32` buffer).
+    Rgba8(Vec<u8>),
+    /// Linear RGBA float colour (its `Color` buffer) of a gamma-space project.
+    LinearColor(Vec<[f32; 4]>),
+}
+
+/// A texture made from the caller's texels (`width` x `height`) instead of a file, imported as a
+/// file with the `.meta`-shaped `meta` and its `settings` would be: TextureGenerator.GenerateTexture
+/// (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis). `name` names the texture and
+/// its messages.
+///
+/// Linear float colour (`GeneratedTexels::LinearColor`) is gamma-encoded and rounded to bytes for
+/// the top level, whatever the texture's sRGB setting, and its mips are filtered from the floats:
+/// an sRGB texture's from the linear colour, encoded per level; a linear texture's from the
+/// gamma-encoded colour (tests/projects/toolapis g.colorOverload, g.colorOverloadLinear). Where
+/// the import changes the top level's texels (resizing, dilation, alpha from gray or none, a
+/// cookie, a normal map) the floats no longer describe it: those mips come from the bytes, which
+/// is unmeasured, and a warning says so.
 pub fn import_generated(
     name: &str,
     width: u32,
     height: u32,
-    texels: Vec<u8>,
+    texels: GeneratedTexels,
     meta: &Value,
     settings: TextureSettings,
 ) -> Result<ImportedTexture> {
+    let count = width as usize * height as usize;
+    let (bytes, colors) = match texels {
+        GeneratedTexels::Rgba8(bytes) => (bytes, None),
+        GeneratedTexels::LinearColor(colors) => {
+            anyhow::ensure!(
+                colors.len() == count,
+                "{} colours for a {width}x{height} image",
+                colors.len()
+            );
+            let gamma: Vec<[f32; 4]> = colors.iter().map(|&c| gamma_color(c)).collect();
+            let bytes = gamma
+                .iter()
+                .flat_map(|c| c.map(|v| mipmaps::quantize((v * 255.0) as f64)))
+                .collect();
+            (bytes, Some((colors, gamma)))
+        }
+    };
     anyhow::ensure!(
-        texels.len() == width as usize * height as usize * 4,
+        bytes.len() == count * 4,
         "{} texel bytes for a {width}x{height} RGBA8 image",
-        texels.len()
+        bytes.len()
     );
+    let top = colors.is_some().then(|| bytes.clone());
     let mut image = Image {
         width,
         height,
         format: TextureFormat::Rgba8,
-        data: texels,
+        data: bytes,
     };
     // The import works on rows top-down, as files decode.
     image.flip_rows();
-    import_image(Path::new(name), image, meta, settings)
+    let mut texture = import_image(Path::new(name), image, meta, settings)?;
+    if let (Some((linear, gamma)), Some(top)) = (colors, top)
+        && texture.mips.len() > 1
+    {
+        let settings = &texture.settings;
+        let plain = texture.format == TextureFormat::Rgba8
+            && settings.shape == TextureShape::Texture2D
+            && settings.normal_from_height.is_none()
+            && settings.texture_type != TextureType::NormalMap
+            && texture.mips[0].data == top;
+        if plain {
+            let srgb = (settings.srgb || settings.single_channel_mip_srgb)
+                && settings.texture_type != TextureType::Lightmap;
+            let floats = if srgb { linear } else { gamma };
+            let data: Vec<u8> = floats
+                .iter()
+                .flat_map(|c| c.iter().flat_map(|v| v.to_le_bytes()))
+                .collect();
+            let top = mipmaps::Level::decode(
+                width,
+                height,
+                &data,
+                TextureFormat::Rgba32F,
+                mipmaps::Top::Bytes,
+            );
+            let encoding = mip_encoding(settings, None, srgb);
+            let chain = mipmaps::chain(top, &mip_options(settings));
+            for (i, level) in chain.iter().enumerate().skip(1) {
+                texture.mips[i].data = level.encode(i, TextureFormat::Rgba8, &encoding);
+            }
+        } else {
+            tracing::warn!(
+                "{name}: the mips of a texture generated from Color texels whose import changes them \
+                 (resizing, dilation, alpha, a cookie or a normal map) are filtered from bytes; \
+                 the Editor's filtering there is unmeasured"
+            );
+        }
+    }
+    Ok(texture)
+}
+
+/// A linear colour gamma-encoded (alpha as it is).
+fn gamma_color(c: [f32; 4]) -> [f32; 4] {
+    [
+        mipmaps::linear_to_gamma(c[0]),
+        mipmaps::linear_to_gamma(c[1]),
+        mipmaps::linear_to_gamma(c[2]),
+        c[3],
+    ]
 }
 
 /// Imports a decoded image (rows top-down) of `source`.
@@ -1959,24 +2041,9 @@ fn mip_chain_with_columns(
     let columns = first_columns
         .map(|data| mipmaps::Level::decode(image.width, image.height, data, format, top));
     let top = mipmaps::Level::decode(image.width, image.height, &image.data, format, top);
-    let options = mipmaps::Options {
-        filter: if settings.mip_filter == 1 {
-            mipmaps::Filter::Kaiser
-        } else {
-            mipmaps::Filter::Box
-        },
-        border: settings.border_mipmap,
-        coverage: settings.preserve_coverage,
-    };
+    let options = mip_options(settings);
     let hdr_gamma = settings.gamma_hdr && format == TextureFormat::Rgba32F;
-    let encoding = mipmaps::Encoding {
-        height,
-        normal_map: settings.texture_type == TextureType::NormalMap,
-        dxt5nm: !settings.normal_maps_xyz,
-        flip_green: settings.flip_green,
-        srgb: srgb || hdr_gamma,
-        fade: settings.mip_fade,
-    };
+    let encoding = mip_encoding(settings, height, srgb || hdr_gamma);
     let chain = if levels {
         mipmaps::chain_with_columns(top, &options, columns.as_ref())
     } else {
@@ -1992,6 +2059,36 @@ fn mip_chain_with_columns(
             data: level.encode(i, output_format, &encoding),
         })
         .collect()
+}
+
+/// The chain's filtering settings.
+fn mip_options(settings: &TextureSettings) -> mipmaps::Options {
+    mipmaps::Options {
+        filter: if settings.mip_filter == 1 {
+            mipmaps::Filter::Kaiser
+        } else {
+            mipmaps::Filter::Box
+        },
+        border: settings.border_mipmap,
+        coverage: settings.preserve_coverage,
+    }
+}
+
+/// How the chain's levels are encoded: `height` a normal map made from height, `srgb` linear
+/// colour back to gamma.
+fn mip_encoding(
+    settings: &TextureSettings,
+    height: Option<(f32, bool)>,
+    srgb: bool,
+) -> mipmaps::Encoding {
+    mipmaps::Encoding {
+        height,
+        normal_map: settings.texture_type == TextureType::NormalMap,
+        dxt5nm: !settings.normal_maps_xyz,
+        flip_green: settings.flip_green,
+        srgb,
+        fade: settings.mip_fade,
+    }
 }
 
 /// A Texture2DArray or Texture3D: the image cut into `flipbookColumns` x `flipbookRows` cells of
