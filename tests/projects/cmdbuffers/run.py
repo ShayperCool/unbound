@@ -95,6 +95,8 @@ def publish(labels, section=None, merge=False):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
     target = device_reference(reference_file(ROOT, 'jsonl'), ROOT, publishing=True)
+    if (merge or section == 'devices') and not target.exists():
+        raise SystemExit(f'no reference to extend at {target}: publish without --merge or --section first')
     if merge:
         candidate = WORK/('publish-' + labels[0])/OUT
         code = editor_runner.publish([WORK/label for label in labels], candidate, lambda d: [OUT], write,

@@ -46,18 +46,19 @@ fragment programs in `Assets/Resources/UavWrite*.shader`). Every case records it
 
 ## Instances a multiplier adds
 
-The instances `SetInstanceMultiplier` adds read the call's instance data past its own
-instances. On the Linux Editor (OpenGL Core) that data holds what an earlier call left there
-(`device.multiplier.stale`): a full run read earlier sections' colors, a run of the device
-section alone read zero. Every case that reads past its own instances therefore first draws six
-instances with clear colors (placed off the target, or by instance ID and then cleared). On Metal the added instances do not read that
-data (a clearing call with visible colors and placements is not read) and two captures differed
-in what they drew, so there the probe records `device.multiplier.mesh.{2,3}.*.skipped` instead
-of drawing those cases and masks (`-`) every column from the call's own instance count on in the ID-placed color cases
-(also those no added instance reaches). Unmeasured:
-what the Metal Editor's added instances read. For the same reason the Metal probe does not draw
-`bind.load.dontCare` (`bind.load.dontCare.skipped`): its draw tests against and writes into
-targets loaded with `DontCare`, whose contents are undefined, and two Metal captures differed.
+The instances `SetInstanceMultiplier` adds read the call's instance data past its own instances. On
+the Linux Editor (OpenGL Core) that data holds what an earlier call left there
+(`device.multiplier.stale`): a full run read earlier sections' colors, a run of the device section
+alone read zero. Every case that reads past its own instances therefore first draws six instances
+with clear colors (placed off the target, or by instance ID and then cleared). On Metal the added
+instances do not read that data (a clearing call with visible colors and placements is not read) and
+two captures differed in what they drew, so there the probe records
+`device.multiplier.mesh.{2,3}.*.skipped` instead of drawing those cases and masks (`-`) every column
+from the call's own instance count on in the ID-placed color cases (also those no added instance
+reaches). Unmeasured: what the Metal Editor's added instances read. For the same reason the Metal
+probe does not draw `bind.load.dontCare` (`bind.load.dontCare.skipped`): its draw tests against and
+writes into targets loaded with `DontCare`, whose contents are undefined, and two Metal captures
+differed.
 
 ## Metal (macOS)
 
@@ -65,20 +66,14 @@ On macOS arm64 `native` records the macOS Editor (Metal, Apple M2 Pro) and `publ
 `check` use `Reference/unity-<version>/metal.jsonl`. Unbound on Metal differs from it, unresolved,
 in: the random write target against a material's buffer of the same name (`uav.material`,
 `uav.after`: the Metal Editor writes neither), the Append buffer without a counter (as on Linux),
-red and blue swapped in temporary array slices (`tarray.slices`, `tarray.blit`), indexed
-procedural and indirect draws one grid row off (`cmd.indirect.indexed*`,
-`graphics.indirect.indexed.now`, `render.indexed.*`), an extra cell in `indirect.pool.writer.True`,
-a CPU fence that has passed one frame later (`fence.frame1.cpu.passed`), `foveatedRenderingCaps`
-(2 on Metal, 0 in Unbound) and side-by-side stereo (`device.stereo.1`, `device.stereo.2`: the
-Metal Editor draws both eyes' instances; Unbound refuses stereo clipping, as on Linux, and draws
-one), and the targets stored with `DontCare` (`bind.store.dontCare*`: the Metal Editor discards
-what the draw wrote there, the same in four captures; Unbound keeps it). Unbound matches 967 of 994
-values.
-
-The Linux Editor's `fence.frame2.cpu.passed`, `fence.frames.cpu.executed` and
-`fence.frames.cpu.immediate` differ between runs (three of seven Linux pairs recorded on
-2026-11-18 gave false where the reference has true, once in only one repeat of the pair); the
-reference keeps its recorded values.
+red and blue swapped in temporary array slices (`tarray.slices`, `tarray.blit`), indexed procedural
+and indirect draws one grid row off (`cmd.indirect.indexed*`, `graphics.indirect.indexed.now`,
+`render.indexed.*`), an extra cell in `indirect.pool.writer.True`, a CPU fence that has passed one
+frame later (`fence.frame1.cpu.passed`), `foveatedRenderingCaps` (2 on Metal, 0 in Unbound) and
+side-by-side stereo (`device.stereo.1`, `device.stereo.2`: the Metal Editor draws both eyes'
+instances; Unbound refuses stereo clipping, as on Linux, and draws one), and the targets stored with
+`DontCare` (`bind.store.dontCare*`: the Metal Editor discards what the draw wrote there, the same in
+four captures; Unbound keeps it). Unbound matches 967 of 994 values.
 
 ## Recording
 
@@ -251,7 +246,8 @@ capture, and this result does not generalize the procedural-indirect raw-ID obse
 
 Additional Native recordings during this task also observed existing CPU-fence timing
 variation: `fence.frame2.cpu.passed`, `fence.frames.cpu.executed` and
-`fence.frames.cpu.immediate` were false in some complete repeats, and true in others.
+`fence.frames.cpu.immediate` were false in some complete repeats, and true in others (again
+on 2026-11-18: three of seven Linux pairs, once in only one repeat of the pair).
 All mesh-instancing records agreed. The prior fence oracle values and assertions remain
 unchanged; raw complete captures and strict comparisons retain these differences outside Git.
 This is a separate follow-up about Native fence progress in batchmode frames, not an
