@@ -176,7 +176,9 @@ adds to that is not separated.
   material, double sided lighting, an output that receives no shadows: the generated shaders
   compile them like any shader, and none is measured here.
 - A mesh with vertex colours or tangents, of 32-bit indices, or of other topologies than
-  triangles.
+  triangles (quads), or whose submeshes' indices are not in submesh order; a mesh or mask of an
+  output drawn through an indirect buffer changed in a frame where its system takes no step at
+  all (a frame shorter than the fixed step: the draw then describes its submeshes anew).
 - The depth passes of an opaque output (a depth prepass, the camera's depth and normals
   textures), an additive lit output through the deferred renderer, the order in which several
   outputs of an effect are drawn where it shows.

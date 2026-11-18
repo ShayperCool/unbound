@@ -1222,6 +1222,23 @@ namespace UnityEngine
             return m_Handle;
         }
 
+        /// <summary>Where the renderer's index list holds a submesh's indices once uploaded:
+        /// the submeshes' indices follow one another in submesh order, a quad's four as two
+        /// triangles' six (the renderer's mesh build), whatever ranges <c>SetSubMesh</c> gave them.
+        /// An indirect draw of a submesh reads its indices by these, with its base vertex.</summary>
+        internal (uint Start, uint Count, int BaseVertex) UploadedIndexRange(int submesh)
+        {
+            uint start = 0;
+            for (int i = 0; i < submesh; i++) start += UploadedIndexCount(i);
+            return (start, UploadedIndexCount(submesh), m_SubMeshes[submesh].BaseVertex);
+        }
+
+        uint UploadedIndexCount(int submesh)
+        {
+            int count = SyncedIndexCount(submesh);
+            return (uint)(m_SubMeshes[submesh].Topology == MeshTopology.Quads ? count / 4 * 6 : count);
+        }
+
         int SyncedIndexCount(int submesh) =>
             m_StreamIndexCount >= 0 && submesh == 0 ? m_StreamIndexCount : m_SubMeshes[submesh].Indices.Length;
 

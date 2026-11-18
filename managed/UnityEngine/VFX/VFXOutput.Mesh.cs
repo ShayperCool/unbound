@@ -90,8 +90,8 @@ namespace Unbound.Runtime
         /// submesh is not the one it was described by.</summary>
         void MeshEntry(VFXIndirectArgs arguments, Mesh mesh, int subMesh)
         {
-            var descriptor = mesh.GetSubMesh(subMesh);
-            uint count = (uint)descriptor.indexCount, first = (uint)descriptor.indexStart, baseVertex = (uint)descriptor.baseVertex;
+            // The indices as the renderer holds them, not as SetSubMesh placed them.
+            var (first, count, baseVertex) = Uploaded(mesh, subMesh);
             int at = subMesh * SubMeshWords;
             int entry = m_MeshEntries[subMesh];
             if (entry < 0) entry = m_MeshEntries[subMesh] = arguments.Reserve(VFXIndirectArgs.Kind.Meshes, count, first, baseVertex);
@@ -101,6 +101,12 @@ namespace Unbound.Runtime
             m_MeshDescribed[at] = count;
             m_MeshDescribed[at + 1] = first;
             m_MeshDescribed[at + 2] = baseVertex;
+        }
+
+        static (uint First, uint Count, uint BaseVertex) Uploaded(Mesh mesh, int subMesh)
+        {
+            var range = mesh.UploadedIndexRange(subMesh);
+            return (range.Start, range.Count, (uint)range.BaseVertex);
         }
 
         /// <summary>Whether each submesh the mask names has an entry described by that submesh
@@ -116,10 +122,9 @@ namespace Unbound.Runtime
             {
                 if ((mask & 1) == 0) continue;
                 if (m_MeshEntries[subMesh] < 0) return false;
-                var descriptor = mesh.GetSubMesh(subMesh);
+                var (first, count, baseVertex) = Uploaded(mesh, subMesh);
                 int at = subMesh * SubMeshWords;
-                if (m_MeshDescribed[at] != (uint)descriptor.indexCount || m_MeshDescribed[at + 1] != (uint)descriptor.indexStart || m_MeshDescribed[at + 2] != (uint)descriptor.baseVertex)
-                    return false;
+                if (m_MeshDescribed[at] != count || m_MeshDescribed[at + 1] != first || m_MeshDescribed[at + 2] != baseVertex) return false;
             }
             return true;
         }
