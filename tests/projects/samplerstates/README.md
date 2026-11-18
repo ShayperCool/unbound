@@ -88,7 +88,7 @@ stored depth on the measured NVIDIA devices. Vulkan has no remaining scalar resi
 Core retains six comparison-lane residuals across comparison-only and comparison-plus-Load kernels.
 The mixed compute kernels now compile and their raw Load lanes match in all four cases;
 the mapLinear mixed case matches completely. Current scalar results are OpenGL Core
-558/564 with six declared residuals and Vulkan 564/564.
+639/645 with six declared residuals and Vulkan 645/645.
 D16 uses a normalized 16-bit color copy so its linear filtering keeps the measured depth
 precision. OpenGL Core and Vulkan use native mirror-clamp-to-edge where the device enables it. A depth buffer of 16 bits is stored as 16 bits
 without stencil, as in the Editor.
@@ -214,13 +214,14 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
 `DepthReads.*` (recorded last) reads a depth-only target no draw has sampled yet: a kernel loads
 both texels as four floats, a draw reads the first through an integer slot (`Texture2D<uint4>`,
 the 16-bit halves of its four words in `.high` and `.low`), a draw samples it as floats, then the
-kernel and the integer read again. The Metal Editor gives (d, d, d, 1) to the kernel and the
+kernel and the integer read again. The target is requested with 24 bits (Metal stores D32; D16 and
+depth with stencil are not measured). The Metal Editor gives (d, d, d, 1) to the kernel and the
 float draw, and the bits of (d, d, d, 1.0) to the integer slot, before and after the draw; OpenGL
 Core and Vulkan give (d, 0, 0, 1) and the bits of (d, 0, 0, 1.0) (OpenGL Core reads 0.25 as
 0x3E800001, 0.25000003). So what a kernel or an integer slot reads does not depend on whether a
 draw sampled the target first.
 
-Unbound on Metal: 632/645; the 13 `Packed.*` rows of the 16-bit targets (ARGB4444, RGB565,
+Unbound on Metal: 632/645; the 13 `Packed.*` rows (declared in `residuals-metal.json`) of the 16-bit targets (ARGB4444, RGB565,
 ARGB1555) differ because Unbound stores them with 8 bits per channel there (unresolved). Before the
 `Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
 the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
