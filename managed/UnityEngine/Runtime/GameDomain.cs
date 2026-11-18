@@ -151,7 +151,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static Type[] SafeTypes(Assembly assembly)
+        internal static Type[] SafeTypes(Assembly assembly)
         {
             try
             {

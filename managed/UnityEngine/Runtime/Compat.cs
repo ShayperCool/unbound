@@ -18,6 +18,12 @@ namespace Unbound.Runtime
         // Payload production/access and other releases remain unsupported or unmeasured.
         internal const int ObjectChangeStreamStorageWords = 12;
 
+        // The engine classes the Gizmos menu lists, with their AnnotationUtility flags (1 icon, 2
+        // gizmo), measured on 6000.0.71f1 in a project with the default modules
+        // (tests/projects/gameinterop annotation.builtin).
+        internal static bool AnnotationTableMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal static readonly (int ClassId, int Flags)[] BuiltinAnnotations = { (20, 3), (41, 2), (58, 2), (59, 2), (60, 2), (61, 2), (64, 2), (65, 2), (66, 2), (68, 2), (70, 2), (82, 3), (95, 2), (108, 3), (111, 2), (119, 3), (123, 1), (135, 2), (136, 2), (137, 2), (143, 2), (144, 2), (145, 2), (146, 2), (153, 2), (167, 2), (182, 3), (183, 2), (192, 2), (193, 2), (195, 2), (198, 1), (205, 2), (208, 2), (215, 3), (220, 1), (223, 2), (224, 2), (231, 2), (232, 2), (233, 2), (234, 2), (235, 2), (251, 2), (253, 2), (254, 2), (255, 2), (256, 2), (257, 2), (259, 3), (330, 3), (19719996, 2), (156049354, 2), (893571522, 2), (2083052967, 3) };
+
         /// <summary>Editor name lookup uses the class table measured for the release's family
         /// (exactly its measured release's): another family's table must not supply its answers.</summary>
         internal static System.Collections.Generic.SortedDictionary<int, ClassCoverage.UnityClass> EditorClassTable(string release)
