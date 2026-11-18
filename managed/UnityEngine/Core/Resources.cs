@@ -161,13 +161,13 @@ namespace UnityEngine
 
         /// <summary>The forced unload after a Single load (Scripting API 6000.0,
         /// EditorSettings.forceAssetUnloadAndGCOnSceneLoad: it unloads unused assets and collects
-        /// the managed heap). Unbound collects the heap and compacts the object registry, as scene
-        /// loads did before; it does not walk the heap for unused assets (the walk an explicit
-        /// UnloadUnusedAssets makes), whose cost on every scene change is not measured.</summary>
+        /// the managed heap). Unbound collects the heap, then compacts the object registry (scene
+        /// loads only compacted it before); it does not walk the heap for unused assets (the walk an
+        /// explicit UnloadUnusedAssets makes), whose cost on every scene change is not measured.</summary>
         internal static void UnloadAfterSingleLoad()
         {
-            UnloadUnusedAssetsInternal();
             GC.Collect();
+            UnloadUnusedAssetsInternal();
         }
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();
