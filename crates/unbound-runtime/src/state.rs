@@ -1878,6 +1878,7 @@ fn upload_imported(
             dimension,
             logical: None,
             screen_order: false,
+            packed: 0,
         },
     );
     set_texture_mip_bias(handle, texture.mip_bias);

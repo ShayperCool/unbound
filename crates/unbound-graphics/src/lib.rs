@@ -184,6 +184,14 @@ impl GraphicsDevice {
         !matches!(self, Self::Metal)
     }
 
+    /// Whether a clear of a 5-6-5 or 5-5-5-1 render target rounds its color to the channels'
+    /// bits directly: the Vulkan Editor clears 0.5 to 32 of 63 (and 16 of 31), where a draw, and
+    /// every OpenGL Core write, keeps the top bits of the 8-bit value (31 of 63)
+    /// (tests/projects/samplerstates Packed.*.clear). Unmeasured on Metal (false).
+    pub fn packed_clears_round(self) -> bool {
+        matches!(self, Self::Vulkan)
+    }
+
     /// Whether a graphics program samples a texture through the texture's own sampler state
     /// whatever sampler it names, an inline one or another texture's: OpenGL Core, where the
     /// state is the texture's. The other devices sample through the sampler a program names

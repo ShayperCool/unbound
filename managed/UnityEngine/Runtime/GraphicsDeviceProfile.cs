@@ -91,6 +91,14 @@ namespace Unbound.Runtime
         /// targets and for a partial deferred camera without HDR (its light buffer is half float
         /// in Unbound, so it takes this seed too).</summary>
         internal bool PartialScreenSeedUndecoded { get; init; }
+        /// <summary>A 5-6-5 or 1-5-5-5 render target keeps what is drawn into it (or cleared, here
+        /// as drawn) at its channels' bits: a program sampling it reads each 8-bit value with its
+        /// low bits dropped and the kept ones repeated below them (0.5 reads 125/255 in a 6-bit
+        /// channel, 0.2 48/255), no alpha as 1 (5-6-5) and alpha as one bit (1-5-5-5); a blended
+        /// draw reads them so too. A 4444 target keeps 8-bit values. Measured on the Editor's
+        /// OpenGL Core and Vulkan devices (tests/projects/samplerstates Packed.*, NVIDIA; Vulkan's
+        /// clear rounds where Unbound truncates). False: Unbound's 8-bit store (unmeasured, Metal).</summary>
+        internal bool PackedTargetsKeepChannelBits { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
         /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
@@ -213,6 +221,7 @@ namespace Unbound.Runtime
             MaxTiledPixelStorage = int.MaxValue,
             TiledStorageMeasured = true,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
+            PackedTargetsKeepChannelBits = true,
         };
 
         internal static readonly GraphicsDeviceProfile Vulkan = new GraphicsDeviceProfile(
@@ -222,6 +231,7 @@ namespace Unbound.Runtime
             BatchBufferTarget.RawBuffer, GraphicsCapsTable.Vulkan, VulkanIdentity.Read, framebufferReadback: false, alpha8Readback: Alpha8ReadbackMode.Red)
         {
             ProceduralQuads = UnityEngine.MeshTopology.Triangles,
+            PackedTargetsKeepChannelBits = true,
         };
 
         /// <summary>The macOS Editor's device (tests/projects/urp CapsProbe

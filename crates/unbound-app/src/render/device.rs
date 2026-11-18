@@ -134,6 +134,8 @@ pub struct DeviceConventions {
     pub screen_bgra: bool,
     /// Sampling applies `Texture.mipMapBias` (`GraphicsDevice::applies_mip_bias`).
     pub mip_bias: bool,
+    /// Clears of packed targets round to their bits (`GraphicsDevice::packed_clears_round`).
+    pub packed_clears_round: bool,
 }
 
 impl DeviceConventions {
@@ -151,6 +153,7 @@ impl DeviceConventions {
             compute_depth_sampler_state: device.compute_depth_sampler_state(),
             screen_bgra: device.screen_bgra(),
             mip_bias: device.applies_mip_bias(),
+            packed_clears_round: device.packed_clears_round(),
         }
     }
 

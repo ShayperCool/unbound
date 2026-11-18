@@ -550,7 +550,16 @@ namespace UnityEngine
 
         // Texture packet flag: process automatic mip updates at attachment transitions.
         const int DeferredMipUpdates = 8, RetainedMsaaResolve = 16, BindMultisampled = 32, CompareDepth = 64, DepthSamplerState = 128,
-            ScreenOrder = 1 << 16;
+            ScreenOrder = 1 << 16, Packed565 = 1 << 17, Packed5551 = 2 << 17;
+
+        /// <summary>The packet bits of a 5-6-5 or 1-5-5-5 target whose drawn values the device keeps
+        /// at its channels' bits (GraphicsDeviceProfile.PackedTargetsKeepChannelBits), else 0.</summary>
+        int PackedChannelBits() => !GraphicsDeviceProfile.Current.PackedTargetsKeepChannelBits ? 0 : m_Descriptor.graphicsFormat switch
+        {
+            GraphicsFormat.R5G6B5_UNormPack16 or GraphicsFormat.B5G6R5_UNormPack16 => Packed565,
+            GraphicsFormat.A1R5G5B5_UNormPack16 or GraphicsFormat.B5G5R5A1_UNormPack16 or GraphicsFormat.R5G5B5A1_UNormPack16 => Packed5551,
+            _ => 0,
+        };
 
         /// <summary>Stored as the screen is (a screen camera's stand-in): the renderer keeps it in
         /// the screen's channel order and shows it to native plugins as the screen.</summary>
@@ -612,7 +621,7 @@ namespace UnityEngine
                 WrapW = (int)wrapModeW,
                 AnisoLevel = SamplerAnisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
-                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8) | (m_ScreenOrder ? ScreenOrder : 0),
+                RenderTarget = 1 | (Compat.RenderingMeasured ? DeferredMipUpdates | RetainedMsaaResolve | DepthSamplerState | (m_Descriptor.bindMS ? BindMultisampled : 0) | (m_Descriptor.shadowSamplingMode == ShadowSamplingMode.CompareDepths ? CompareDepth : 0) : 0) | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8) | (m_ScreenOrder ? ScreenOrder : 0) | PackedChannelBits(),
                 DepthBits = depthBits,
                 Layers = layers,
                 Dimension = dimension != TextureDimension.Tex2D || layers > 1 ? (int)dimension : 0,

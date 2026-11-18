@@ -572,6 +572,8 @@ pub struct GpuTexture {
     pub logical: Option<(u32, u32)>,
     /// Stored in the screen's channel order (a screen camera's stand-in).
     pub screen_order: bool,
+    /// The channel bits drawn values keep (`owned::PACKED_565`, `owned::PACKED_5551`; 0: none).
+    pub packed: u8,
     pub format: i32,
     pub mip_count: u32,
     pub render_target: bool,
@@ -777,6 +779,33 @@ pub fn unorm8_clear(format: wgpu::TextureFormat, color: [f32; 4]) -> [f32; 4] {
         return color;
     }
     color.map(|v| (v.clamp(0.0, 1.0) * 255.0 - 0.5).ceil().max(0.0) / 255.0)
+}
+
+/// A channel level `level` of `bits` bits widened to 8 by repeating its bits below them (a 5-bit 8
+/// is 66, a 6-bit 31 is 125, a 1-bit 1 is 255), as packed targets are read
+/// (`PACKED_TEXELS_WGSL` does the same on the GPU).
+pub fn widen_bits(level: u32, bits: u32) -> u32 {
+    let mut widened = level << (8 - bits);
+    let mut filled = bits;
+    while filled < 8 {
+        widened |= widened >> filled;
+        filled *= 2;
+    }
+    widened & 0xff
+}
+
+/// A clear color of a packed target on a device whose clears round to its channels' `bits`
+/// (`DeviceConventions::packed_clears_round`; 0 bits: no channel, which reads 1), as the 8-bit
+/// value its store then keeps.
+pub fn packed_clear(color: [f32; 4], bits: [u32; 4]) -> [f32; 4] {
+    std::array::from_fn(|i| {
+        let b = bits[i];
+        if b == 0 {
+            return 1.0;
+        }
+        let level = (color[i].clamp(0.0, 1.0) * ((1u32 << b) - 1) as f32).round() as u32;
+        widen_bits(level, b) as f32 / 255.0
+    })
 }
 
 /// [`unorm8_clear`] of a pass's clear color (each attachment's own format).
@@ -1928,6 +1957,7 @@ pub fn upload_texture_with(
                 height,
                 logical: t.logical,
                 screen_order: t.screen_order,
+                packed: t.packed,
                 format: t.format,
                 mip_count,
                 render_target,
@@ -2131,6 +2161,7 @@ pub fn default_textures(
         dimension: 2,
         logical: None,
         screen_order: false,
+        packed: 0,
     };
     use texture_format::{LINEAR_RGBA8, SRGB_RGBA8};
     let mut map = HashMap::new();
@@ -2370,6 +2401,29 @@ mod tests {
 
     /// A screen camera's stand-in is stored blue first as the screen is; other storages, and
     /// textures not so marked, keep theirs.
+    /// The measured packed levels (tests/projects/samplerstates Packed.*): draws keep the top
+    /// bits of the 8-bit value, a Vulkan clear rounds.
+    #[test]
+    fn packed_levels_widen_by_repeating_their_bits() {
+        assert_eq!(widen_bits(8, 5), 66);
+        assert_eq!(widen_bits(31, 6), 125);
+        assert_eq!(widen_bits(12, 6), 48);
+        assert_eq!(widen_bits(6, 5), 49);
+        assert_eq!(widen_bits(1, 1), 255);
+        assert_eq!(widen_bits(0, 1), 0);
+        assert_eq!(widen_bits(15, 4), 255);
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], [5, 6, 5, 0]);
+        assert_eq!(
+            clear.map(|v| (v * 255.0).round() as u32),
+            [66, 130, 74, 255]
+        );
+        let clear = packed_clear([0.25, 0.5, 0.3, 0.7], [5, 5, 5, 1]);
+        assert_eq!(
+            clear.map(|v| (v * 255.0).round() as u32),
+            [66, 132, 74, 255]
+        );
+    }
+
     #[test]
     fn screen_ordered_textures_are_stored_blue_first() {
         use wgpu::TextureFormat as F;

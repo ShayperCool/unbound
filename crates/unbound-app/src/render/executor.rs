@@ -310,13 +310,19 @@ enum CopyKind {
     ToR8,
     ToRgba8,
     ToBgra8,
+    /// An RGBA8 target's texels as a 5-6-5 or 5-5-5-1 target keeps them (`PACKED_TEXELS_WGSL`:
+    /// the Editor's OpenGL Core and Vulkan devices keep a value drawn into such a target at its
+    /// channels' bits, measured by tests/projects/samplerstates Packed.*; Unbound stores RGBA8
+    /// and packs a level drawn into before anything reads it, `mark_packed`).
+    Packed565,
+    Packed5551,
 }
 
 // The texture protocol supports 1, 2, 4 and 8 samples.
 const COPY_SAMPLE_CLASSES: usize = 4;
 
 impl CopyKind {
-    const COUNT: usize = 9;
+    const COUNT: usize = 11;
 
     fn index(self) -> usize {
         self as usize
@@ -684,6 +690,9 @@ pub struct UnityRenderer {
     pipelines: Pipelines,
     mipmaps: mipmaps::Mipmaps,
     pending_mips: HashMap<wgpu::Texture, wgpu::TextureFormat>,
+    /// Packed targets drawn into since their texels were last packed (`mark_packed`): by
+    /// texture, mip and layer, their size and kind.
+    pending_packed: HashMap<(wgpu::Texture, u32, u32), (wgpu::Extent3d, CopyKind)>,
     resolve_history: HashMap<wgpu::Texture, msaa::ResolveHistory>,
     resolve_targets: msaa::ResolveTargets,
     readback: readback::Staging,
@@ -849,6 +858,7 @@ impl UnityRenderer {
             fence_completed: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             mipmaps: Default::default(),
             pending_mips: Default::default(),
+            pending_packed: Default::default(),
             resolve_history: Default::default(),
             resolve_targets: Default::default(),
             readback: Default::default(),
@@ -2509,6 +2519,8 @@ impl UnityRenderer {
             CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
             CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
             CopyKind::ToR8 | CopyKind::ToRgba8 | CopyKind::ToBgra8 => CHANNEL_COPY_WGSL.into(),
+            CopyKind::Packed565 => PACKED_TEXELS_WGSL.replace("BITS", "vec4<u32>(5u, 6u, 5u, 0u)"),
+            CopyKind::Packed5551 => PACKED_TEXELS_WGSL.replace("BITS", "vec4<u32>(5u, 5u, 5u, 1u)"),
         };
         let (sample_type, target_format) = match kind {
             CopyKind::Depth | CopyKind::DepthMultisampled => (
@@ -2531,7 +2543,7 @@ impl UnityRenderer {
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::R8Unorm,
             ),
-            CopyKind::ToRgba8 => (
+            CopyKind::ToRgba8 | CopyKind::Packed565 | CopyKind::Packed5551 => (
                 wgpu::TextureSampleType::Float { filterable: false },
                 wgpu::TextureFormat::Rgba8Unorm,
             ),
@@ -3149,8 +3161,67 @@ impl UnityRenderer {
         }
     }
 
+    /// A packed target's level drawn into is packed again before anything reads it: before
+    /// other attachments are prepared, a copy, and the end of each submission's work.
+    fn mark_packed(&mut self, target: &Target) {
+        let packed = match self.textures.get(&self.target_handles.0).map(|t| t.packed) {
+            Some(owned::PACKED_565) => CopyKind::Packed565,
+            Some(owned::PACKED_5551) => CopyKind::Packed5551,
+            _ => return,
+        };
+        if let Some((texture, layer, level)) = &target.texture {
+            if texture.format() != wgpu::TextureFormat::Rgba8Unorm {
+                self.warn_once(format!("packed-format{:?}", texture.format()), || {
+                    "a packed render target is not stored as linear RGBA8: its channel bits are not kept".into()
+                });
+                return;
+            }
+            let size = wgpu::Extent3d {
+                width: target.width,
+                height: target.height,
+                depth_or_array_layers: 1,
+            };
+            self.pending_packed
+                .insert((texture.clone(), *level, *layer), (size, packed));
+        }
+    }
+
+    /// Each pending packed level drawn again in its channels' bits (`PACKED_TEXELS_WGSL`).
+    fn process_packed(&mut self, operations: &mut Vec<Op>) {
+        for ((texture, mip, layer), (size, kind)) in self.pending_packed.drain() {
+            let origin = wgpu::Origin3d {
+                x: 0,
+                y: 0,
+                z: layer,
+            };
+            operations.push(Op::Copy(Copy {
+                channels: Some(ChannelCopy {
+                    source: texture.create_view(&wgpu::TextureViewDescriptor {
+                        label: Some("unbound packed texels"),
+                        dimension: Some(wgpu::TextureViewDimension::D2),
+                        base_mip_level: mip,
+                        mip_level_count: Some(1),
+                        base_array_layer: layer,
+                        array_layer_count: Some(1),
+                        ..Default::default()
+                    }),
+                    size,
+                    kind,
+                }),
+                source: texture.clone(),
+                source_mip: mip,
+                source_origin: origin,
+                destination: texture,
+                destination_mip: mip,
+                destination_origin: origin,
+                size,
+            }));
+        }
+    }
+
     fn prepare_framebuffer(&mut self, operations: &mut Vec<Op>) {
         if self.framebuffer_dirty {
+            self.process_packed(operations);
             self.process_mips(operations);
             self.defer_target_mips();
             self.framebuffer_dirty = false;
@@ -3158,6 +3229,7 @@ impl UnityRenderer {
     }
 
     fn new_pass(&mut self, target: Target) -> Pass {
+        self.mark_packed(&target);
         // Vulkan publishes both aspects after ordinary attachment writes. OpenGL retains its
         // published image until a clear, shader read or explicit self-resolve.
         #[cfg(target_os = "linux")]
@@ -3611,6 +3683,15 @@ impl UnityRenderer {
                         self.mark_msaa_written(&target);
                     }
                     let color = resources::unorm8_clear(target.format, color);
+                    let color = match self.textures.get(&self.target_handles.0).map(|t| t.packed) {
+                        Some(owned::PACKED_565) if self.conventions.packed_clears_round => {
+                            resources::packed_clear(color, [5, 6, 5, 0])
+                        }
+                        Some(owned::PACKED_5551) if self.conventions.packed_clears_round => {
+                            resources::packed_clear(color, [5, 5, 5, 1])
+                        }
+                        _ => color,
+                    };
                     let clear_depth =
                         flags & (commands::clear::DEPTH | commands::clear::STENCIL) != 0;
                     let viewport = self.state.viewport;
@@ -4057,6 +4138,7 @@ impl UnityRenderer {
                     destination_y,
                 } => {
                     open = false;
+                    self.process_packed(&mut passes);
                     if (source == 0 || destination == 0) && !self.screen_touched {
                         // The frame's screen starts at its first use, a copy too: the slot still
                         // holds an older frame's image.
@@ -4112,6 +4194,7 @@ impl UnityRenderer {
         }
         // A depth-only target still being drawn: read back before the next submission.
         self.copy_depth(&mut passes, depth_mark);
+        self.process_packed(&mut passes);
         self.encode(passes);
         // What plugins encoded from scripts this frame runs after its work.
         #[cfg(target_os = "macos")]
@@ -4939,6 +5022,7 @@ impl UnityRenderer {
                 dimension: 2,
                 logical: None,
                 screen_order: false,
+                packed: 0,
             };
             // A blue-first source (the screen on such a device) is grabbed into the same storage,
             // so the copy stays a copy of its texels. The texture is rewritten in place only in
@@ -5897,6 +5981,42 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
     let texel = textureLoad(source, vec2<i32>(p.xy), 0);
     return texel;
+}
+"#;
+
+/// A packed target's texels (`CopyKind::Packed565`): each 8-bit channel keeps its top `BITS` bits,
+/// repeated below them to fill the byte (0 bits: no channel, read as 1).
+const PACKED_TEXELS_WGSL: &str = r#"
+@group(0) @binding(0) var source: texture_2d<f32>;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+fn keep(value: f32, bits: u32) -> f32 {
+    if (bits == 0u) {
+        return 1.0;
+    }
+    let byte = u32(round(clamp(value, 0.0, 1.0) * 255.0));
+    var widened = (byte >> (8u - bits)) << (8u - bits);
+    var filled = bits;
+    loop {
+        if (filled >= 8u) {
+            break;
+        }
+        widened = widened | (widened >> filled);
+        filled = filled * 2u;
+    }
+    return f32(widened & 255u) / 255.0;
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
+    let texel = textureLoad(source, vec2<i32>(p.xy), 0);
+    let bits = BITS;
+    return vec4<f32>(keep(texel.r, bits.x), keep(texel.g, bits.y), keep(texel.b, bits.z), keep(texel.w, bits.w));
 }
 "#;
 

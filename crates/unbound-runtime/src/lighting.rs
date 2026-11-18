@@ -210,6 +210,7 @@ pub fn load_texture_object(
             dimension: t.dimension,
             logical: None,
             screen_order: false,
+            packed: 0,
         },
     );
     Ok(json!({
