@@ -83,11 +83,15 @@ def display_env():
 
 
 def editor_data(release):
-    """The Editor's data directory of `release`, which holds its bundled .NET runtime
-    (`NetCoreRuntime`) and compiler (`DotNetSdkRoslyn`)."""
+    """The data directory of the Editor that runs (`$UNBOUND_PROBE_UNITY`, else the Hub's of
+    `release`, as tests/probe_paths.py `editor_path` chooses it), which holds its bundled .NET
+    runtime (`NetCoreRuntime`) and compiler (`DotNetSdkRoslyn`)."""
+    override = os.environ.get('UNBOUND_PROBE_UNITY')
     if MACOS_ARM64:
-        return Path('/Applications/Unity/Hub/Editor')/release/'Unity.app/Contents'
-    return Path.home()/'Unity/Hub/Editor'/release/'Editor/Data'
+        # <Editor>/Unity.app/Contents/MacOS/Unity
+        return Path(override).parents[1] if override else Path('/Applications/Unity/Hub/Editor')/release/'Unity.app/Contents'
+    # <Editor>/Editor/Unity
+    return Path(override).parent/'Data' if override else Path.home()/'Unity/Hub/Editor'/release/'Editor/Data'
 
 
 def project_of(command):

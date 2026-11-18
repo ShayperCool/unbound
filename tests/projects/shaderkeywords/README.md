@@ -241,8 +241,8 @@ messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception t
 `context.isBatchMode` alone failing: a property of the batch-mode capture. The windowed re-record
 (two byte-identical Linux GPU captures, every other key unchanged) closes it: no key fails on
 Linux (the landing gate of 2026-11-17, 1510/1510). A Mac run of 2026-11-17 failed 12 before the
-message change; a current Mac run is expected to fail only the OS-decided `context.platform` and
-`context.graphicsDeviceType`.
+message change; against the Metal reference a current Mac run fails the three capability-keyword
+keys (see Metal).
 Anything else is a regression.
 
 ## Metal (macOS)
@@ -255,8 +255,8 @@ fixture there is a batchmode Editor run of a fresh copy of this probe:
 `python3 tests/guarded_editor.py fixture --probe tests/projects/shaderkeywords --release <version> --label <label>`
 prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
 update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
-windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
-first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall is
+expected to run first (unmeasured with this runner); the `enter` event's detail names the path. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
 
 Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ from the Linux
 reference in 5 keys: the device keys, and the Metal device enables the global keywords

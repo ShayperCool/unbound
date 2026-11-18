@@ -102,11 +102,15 @@ fixture there is a batchmode Editor run of a fresh copy of this probe:
 `python3 tests/guarded_editor.py fixture --probe tests/projects/destroycontract --release <version> --label <label>`
 prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
 update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
-windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
-first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall is
+expected to run first (unmeasured with this runner); the `enter` event's detail names the path. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
 
-Not recorded on Metal: two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro
-differ from the Linux reference in the device keys and in 886 `cb.wfeof` states, the macOS Editor
-resuming WaitForEndOfFrame once more, in the first frame: the windowed Editor's first Game-view
-frame, a windowing difference rather than a graphics device's answer (AGENTS.md Platforms), so the
-Mac compares with the Linux reference, where Unbound on Metal fails only the two device keys.
+Not recorded on Metal (`publish` refuses there): two identical captures of the 6000.0.71f1 macOS
+Editor on an Apple M2 Pro differ from the Linux reference in the device keys and in 886 `cb.wfeof`
+states, the macOS Editor resuming WaitForEndOfFrame once more, in the first frame. Unresolved
+which of two differences between the recordings causes it: the windowed Editors' first Game-view
+frame (a windowing difference, which AGENTS.md Platforms leaves to the Linux references), or the
+Play mode entry, through the update handler on macOS (the Mac captures; their `enter` events
+predate the entry path detail) and through Record's delayCall on Linux. A Linux capture entering
+from the update handler would separate them. Until then the Mac compares with the Linux
+reference, where Unbound on Metal fails only the two device keys.

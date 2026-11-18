@@ -183,9 +183,8 @@ order or comparator rule changes. The Python runner creates no X server.
 The strict comparison fails 8 of 208 keys: the six `op.*` and two `wake.*` cross-object
 callback orders above, each with the same callbacks and payloads on both sides. They are
 recorded residuals (Unity documents no order between these objects; `docs/COMPATIBILITY_GAPS.md`
-"Order and text Unity's documentation leaves open"). A run on macOS also differs in the
-OS-decided `context.platform` and `context.graphicsDeviceType`. Any other failing key, or a
-change in these eight, is a regression.
+"Order and text Unity's documentation leaves open"). On macOS the same eight fail against the
+Metal reference (see Metal). Any other failing key, or a change in these eight, is a regression.
 
 ## Metal (macOS)
 
@@ -197,8 +196,8 @@ fixture there is a batchmode Editor run of a fresh copy of this probe:
 `python3 tests/guarded_editor.py fixture --probe tests/projects/activationorder --release <version> --label <label>`
 prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
 update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
-windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
-first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall is
+expected to run first (unmeasured with this runner); the `enter` event's detail names the path. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
 
 Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ from the Linux
 reference only in the OS-decided `context.platform` (OSXEditor) and `context.graphicsDeviceType`

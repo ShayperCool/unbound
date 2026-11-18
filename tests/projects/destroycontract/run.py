@@ -220,6 +220,8 @@ def check(work, repeat, release):
 
 
 def publish(work, release):
+    if guarded_editor.DEVICE == 'Metal':
+        sys.exit('destroycontract has no Metal reference (README "Metal (macOS)"): the Mac compares with the Linux one')
     for repeat in REPEATS:
         problems = check_problems(work, repeat, release)
         if problems:

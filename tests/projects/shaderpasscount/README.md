@@ -229,10 +229,10 @@ fixture there is a batchmode Editor run of a fresh copy of this probe:
 `python3 tests/guarded_editor.py fixture --probe tests/projects/shaderpasscount --release <version> --label <label>`
 prints the `--launch` and `--rsp-dir` the preflight takes. `ProbeRunner` enters Play mode from its
 update handler when the delayCall `Record` schedules has not run after `SettleTicks` updates: the
-windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall runs
-first. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
+windowed macOS Editor did not run it (the runner's watchdog then fired); on Linux the delayCall is
+expected to run first (unmeasured with this runner); the `enter` event's detail names the path. `Controls/controls.py` mocks the Linux Editor and runs on Linux.
 
 Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ from the Linux
-reference in 29 keys: the 8-bit colours the cases read, channels one step apart (127 on OpenGL
-Core where Metal stores 128). Unbound on Metal matches all 923 keys there (29 fail against the Linux
+reference in 29 keys: 27 of the 8-bit colours the cases read, channels one step apart (127 on
+OpenGL Core where Metal stores 128), and the two device keys. Unbound on Metal matches all 923 keys there (29 fail against the Linux
 reference).

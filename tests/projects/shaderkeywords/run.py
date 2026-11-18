@@ -42,10 +42,9 @@ import guards  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
-# The graphics device of the Linux GPU Editor (OpenGL Core). Platform-conditional declarations
-# (the SHADER_API_D3D11 block) are measured for this device only.
 # The graphics device of the windowed GPU Editor: OpenGL Core on Linux, Metal on macOS arm64
-# (tests/guarded_editor.py).
+# (tests/guarded_editor.py). Platform-conditional declarations (the SHADER_API_D3D11 block) are
+# measured for these devices only.
 DEVICE = guarded_editor.DEVICE
 # The external progress deadline also covers cold import and an unresponsive Editor.
 # Only probe transitions and the completed record count as progress, never Editor log noise.

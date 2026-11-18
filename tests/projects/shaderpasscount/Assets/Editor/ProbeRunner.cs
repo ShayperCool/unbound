@@ -86,15 +86,16 @@ public static class ProbeRunner
             SessionState.SetBool(State + "finished", true);
             return;
         }
-        EditorApplication.delayCall += Enter;
+        EditorApplication.delayCall += () => Enter("delayCall");
     }
 
-    /// <summary>Enters Play mode once (Record's delayCall, else Tick).</summary>
-    static void Enter()
+    /// <summary>Enters Play mode once (Record's delayCall, else Tick), naming the path in the
+    /// `enter` event's detail.</summary>
+    static void Enter(string path)
     {
         if (SessionState.GetBool(State + "entered", false)) return;
         SessionState.SetBool(State + "entered", true);
-        Event("enter", null);
+        Event("enter", path);
         EditorApplication.EnterPlaymode();
     }
 
@@ -133,7 +134,7 @@ public static class ProbeRunner
                 // The windowed macOS Editor does not always run the delayCall Record schedules
                 // during -executeMethod; Play mode is then entered from here, SettleTicks
                 // updates later.
-                if (!SessionState.GetBool(State + "entered", false) && ++enterTicks >= SettleTicks) Enter();
+                if (!SessionState.GetBool(State + "entered", false) && ++enterTicks >= SettleTicks) Enter("update");
                 return;
             }
             if (ShaderPassCountProbe.finishedCode == null) return;
