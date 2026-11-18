@@ -12,7 +12,7 @@ class SafeAppendGateTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(dir=run.ROOT/'Library'/'Unbound')
         self.addCleanup(self.directory.cleanup)
         self.out = Path(self.directory.name)
-        self.rows = [json.loads(line) for line in run.reference_file(run.ROOT, 'jsonl').read_text().splitlines()]
+        self.rows = [json.loads(line) for line in run.device_reference(run.reference_file(run.ROOT, 'jsonl'), run.ROOT).read_text().splitlines()]
         self.rows = [row for row in self.rows if row['k'] != 'uav.append.nocounter.log']
         next(row for row in self.rows if row['k'] == 'uav.append.nocounter')['v'] = [0xAAAA0000] * 48
         self.unsupported('device.stereo.1',
@@ -38,7 +38,7 @@ class SafeAppendGateTests(unittest.TestCase):
         self.assertEqual(self.verify(), 0)
 
     def test_exact_editor_candidate_still_fails_safe_gate(self):
-        self.rows = [json.loads(line) for line in run.reference_file(run.ROOT, 'jsonl').read_text().splitlines()]
+        self.rows = [json.loads(line) for line in run.device_reference(run.reference_file(run.ROOT, 'jsonl'), run.ROOT).read_text().splitlines()]
         self.assertEqual(self.verify(allow=False), 0)
         self.assertNotEqual(self.verify(), 0)
 

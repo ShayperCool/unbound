@@ -3,6 +3,7 @@
 
     run.py native --label L          two independent GPU Editor captures (L-1, L-2) through the job pool
     run.py publish L-1 L-2           two byte-identical captures become Reference/unity-<version>.jsonl
+                                     (on macOS arm64 Reference/unity-<version>/metal.jsonl, read there too)
     run.py publish --merge L-1 L-2   the same, adding only the keys the reference lacks (rows a
                                      probe extension records last); every existing row stays as
                                      it is, and those the captures read otherwise are printed
@@ -25,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import reference_file, run_root, unity_version  # noqa: E402
+from probe_paths import device_reference, reference_file, run_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
 
 WORK = run_root(ROOT, 'runs')
@@ -93,7 +94,7 @@ def publish(labels, section=None, merge=False):
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    target = reference_file(ROOT, 'jsonl')
+    target = device_reference(reference_file(ROOT, 'jsonl'), ROOT, publishing=True)
     if merge:
         candidate = WORK/('publish-' + labels[0])/OUT
         code = editor_runner.publish([WORK/label for label in labels], candidate, lambda d: [OUT], write,
@@ -124,17 +125,19 @@ def publish(labels, section=None, merge=False):
 
 
 def verify(candidate, safe_append_skip=False):
-    code = subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference_file(ROOT, 'jsonl')), str(candidate)]).returncode
+    reference = device_reference(reference_file(ROOT, 'jsonl'), ROOT)
+    code = subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference), str(candidate)]).returncode
     if not safe_append_skip:
         return code
     # The task explicitly requires skipping an Append draw without a counter, rather than
     # reproducing the Editor's unrelated-counter writes. Keep the strict report above intact.
     import compare
-    ref, act = compare.rows(reference_file(ROOT, 'jsonl')), compare.rows(candidate)
+    ref, act = compare.rows(reference), compare.rows(candidate)
     missing = object()
     differences = {key for key in ref.keys() | act.keys() if ref.get(key, missing) != act.get(key, missing)}
     warning = 'uses the counter of buffer `_App`, which is not set or not an Append or Counter buffer: the draw is skipped'
-    expected = {'uav.append.nocounter', 'uav.append.nocounter.log'}
+    # The Editor's own warning for it, where it logs one (the Metal Editor does not).
+    expected = {'uav.append.nocounter'} | ({'uav.append.nocounter.log'} & ref.keys())
     stereo = 'device.stereo.1'
     if stereo + '.record.ok' in ref:
         expected.update({stereo + '.record.ok', stereo + '.record.error', stereo + '.pixels'})
@@ -144,10 +147,12 @@ def verify(candidate, safe_append_skip=False):
             return code or 1
     # The instances a multiplier adds read zero in Unbound, the Editor's what an earlier call
     # left in its instance buffer: the call's own two colors must still match.
-    stale = 'device.multiplier.stale.colors.2.pixels'
+    # (The Metal Editor's added instances read the same as without the earlier call.)
+    stale, fresh = 'device.multiplier.stale.colors.2.pixels', 'device.multiplier.placed.colors.2.pixels'
     if stale in ref:
-        expected.add(stale)
-        if act.get(stale) != ref.get('device.multiplier.placed.colors.2.pixels'):
+        if ref[stale] != ref.get(fresh):
+            expected.add(stale)
+        if act.get(stale) != ref.get(fresh):
             return code or 1
     if (differences == expected
             and act.get('uav.append.nocounter') == [0xAAAA0000] * 48
