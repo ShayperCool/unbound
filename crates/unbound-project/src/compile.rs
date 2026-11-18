@@ -251,15 +251,18 @@ impl Project {
                 wanted.extend(a.references.iter().map(String::as_str));
             }
         }
-        // Packages the Editor does not let you edit (registry, git and built-in ones, kept in a
-        // package cache) are never hot-reloaded: they are always optimized.
+        // Packages the Editor does not let you edit (registry, git, built-in and local tarball
+        // ones, kept in a package cache) are never hot-reloaded: they are always optimized.
         let immutable: Vec<&std::path::Path> = self
             .packages
             .iter()
             .filter(|p| {
                 matches!(
                     p.source,
-                    PackageSource::Registry | PackageSource::Git | PackageSource::BuiltIn
+                    PackageSource::Registry
+                        | PackageSource::Git
+                        | PackageSource::BuiltIn
+                        | PackageSource::LocalTarball
                 )
             })
             .map(|p| p.root.as_path())

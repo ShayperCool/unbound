@@ -131,6 +131,7 @@ fn package_info(package: &Package, direct: bool) -> Json {
         PackageSource::Embedded => 3,
         PackageSource::Local => 4,
         PackageSource::Git => 5,
+        PackageSource::LocalTarball => 6,
     };
     json!({
         "name": package.name,

@@ -5,6 +5,7 @@ pub mod assetdb;
 pub mod builtin_shaders;
 pub mod compile;
 pub mod editor_archive;
+pub mod git_packages;
 pub mod install;
 pub mod modules;
 pub mod net;

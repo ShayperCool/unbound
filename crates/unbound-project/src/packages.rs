@@ -2,9 +2,12 @@
 //! packages; their contents come from the project (embedded, local), the Unity installation
 //! (built-in), or a package cache (registry and git packages). A registry package no cache has is
 //! unpacked from the tarball the installation ships (`Resources/PackageManager/Editor`) into the
-//! Unbound package store, as the Editor does; without a lock file, the packages' own dependencies are
-//! followed (the highest version asked for wins, and where the release's rules say so no version
-//! below the Editor's own minimum for the package: [`PackageResolutionRules`]).
+//! Unbound package store, as the Editor does, else downloaded from its registry (with the user's
+//! credentials: [`crate::upm_config`]); a local tarball is unpacked into the store, and a git
+//! package no cache has is fetched into it ([`crate::git_packages`]). Without a lock file, the
+//! packages' own dependencies are followed (the highest version asked for wins, and where the
+//! release's rules say so no version below the Editor's own minimum for the package:
+//! [`PackageResolutionRules`]).
 use crate::install::UnityInstall;
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -21,6 +24,8 @@ pub enum PackageSource {
     BuiltIn,
     Registry,
     Git,
+    /// A `file:<path>.tgz` dependency, unpacked into the store.
+    LocalTarball,
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +150,9 @@ pub fn resolve(
         }
         None => {
             for (name, version) in &manifest.dependencies {
-                let source = if version.starts_with("file:") {
+                let source = if version.starts_with("file:") && is_tarball(version) {
+                    "local-tarball"
+                } else if version.starts_with("file:") {
                     "local"
                 } else if version.contains(".git") || version.starts_with("git") {
                     "git"
@@ -173,8 +180,9 @@ pub fn resolve(
     }
 
     let caches = package_caches(project);
-    let mut builtin_dirs = user_package_dirs();
-    builtin_dirs.push(project.join("Library/PackageCache"));
+    // The user's directories and the project's own cache, without the store.
+    let mut project_caches = user_package_dirs();
+    project_caches.push(project.join("Library/PackageCache"));
     let builtin = install.builtin_packages_dir();
     let bundled = install.data.join("Resources/PackageManager/Editor");
     let store = crate::cache_root().join("packages");
@@ -191,7 +199,7 @@ pub fn resolve(
         .map(|(name, want)| (name, want, false))
         .collect();
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
-    while let Some((name, (mut version, source, _hash), indirect)) = queue.pop() {
+    while let Some((name, (mut version, source, hash), indirect)) = queue.pop() {
         // Without a lock, a package asking for a registry package below the Editor's minimum gets
         // the minimum; the project's own dependencies keep the version they name (also when a
         // package asks for them too: unmeasured).
@@ -217,35 +225,54 @@ pub fn resolve(
             "embedded" => find_embedded(&packages_dir, &name)
                 .map(|root| (root, PackageSource::Embedded, version.clone())),
             "local" => {
-                let path = version.trim_start_matches("file:");
-                let root = if Path::new(path).is_absolute() {
-                    PathBuf::from(path)
-                } else {
-                    packages_dir.join(path)
-                };
+                let root = local_path(&packages_dir, &version);
                 read_package_json(&root).map(|json| (root, PackageSource::Local, json.version))
             }
+            "local-tarball" => {
+                let tarball = local_path(&packages_dir, &version);
+                match unpack_local_tarball(&tarball, &store, &name) {
+                    Ok(root) => read_package_json(&root)
+                        .map(|json| (root, PackageSource::LocalTarball, json.version)),
+                    Err(e) => {
+                        tracing::warn!("package {name} ({version}): {e:#}");
+                        None
+                    }
+                }
+            }
+            // The user's directories and the project's cache, else the commit (the lock's) in
+            // the store, fetched when it is not there.
+            "git" => find_in_caches(&project_caches, &name, None)
+                .map(|(root, found_version)| (root, PackageSource::Git, found_version))
+                .or_else(|| {
+                    let spec = crate::git_packages::parse_spec(&version);
+                    match crate::git_packages::fetch(
+                        &store,
+                        &name,
+                        &spec,
+                        hash.as_deref(),
+                        std::env::var_os("UNBOUND_OFFLINE").is_some(),
+                    ) {
+                        Ok(root) => read_package_json(&root)
+                            .map(|json| (root, PackageSource::Git, json.version)),
+                        Err(e) => {
+                            tracing::warn!("git package {name}: {e:#}");
+                            None
+                        }
+                    }
+                }),
             // The user's directories and the project's cache (the Editor copies built-in
             // packages there) when they hold this version, else the release's own.
-            "builtin" => find_exact(&builtin_dirs, &name, &version)
+            "builtin" => find_exact(&project_caches, &name, &version)
                 .or_else(|| {
                     let root = builtin.join(&name);
                     read_package_json(&root).map(|json| (root, json.version))
                 })
                 .map(|(root, version)| (root, PackageSource::BuiltIn, version)),
-            other => {
-                let kind = if other == "git" {
-                    PackageSource::Git
-                } else {
-                    PackageSource::Registry
-                };
-                let cached = find_in_caches(
-                    &caches,
-                    &name,
-                    (kind == PackageSource::Registry).then_some(&*version),
-                );
+            _ => {
+                let kind = PackageSource::Registry;
+                let cached = find_in_caches(&caches, &name, Some(&version));
                 let exact = cached.as_ref().is_some_and(|(_, v)| *v == version);
-                if kind == PackageSource::Registry && !exact {
+                if !exact {
                     let fetched = unpack_bundled(&bundled, &store, &name, &version)
                         .with_context(|| "unpacking the installation's tarball".to_string())
                         .and_then(|found| match found {
@@ -482,16 +509,44 @@ fn unpack_tarball(
     version: &str,
     origin: &str,
 ) -> Result<PathBuf> {
+    unpack_tarball_at(gzipped, &store.join(format!("{name}@{version}")))?;
     let root = store.join(format!("{name}@{version}"));
-    std::fs::create_dir_all(store)?;
-    let staging = store.join(format!(".{name}@{version}.{}", std::process::id()));
+    tracing::info!(
+        "package {name}@{version}: unpacked from {origin} into {}",
+        root.display()
+    );
+    Ok(root)
+}
+
+/// A gzipped npm tarball's `package/` folder unpacked as `root` (staged beside it, then moved).
+fn unpack_tarball_at(gzipped: &[u8], root: &Path) -> Result<()> {
+    let parent = root.parent().context("a store entry has a parent")?;
+    std::fs::create_dir_all(parent)?;
+    let file_name = root
+        .file_name()
+        .context("a store entry has a name")?
+        .to_string_lossy();
+    let staging = parent.join(format!(".{file_name}.{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&staging);
-    std::fs::create_dir_all(&staging)?;
     let mut data = Vec::new();
-    std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(gzipped), &mut data)?;
-    for (path, kind, contents) in tar_entries(&data)? {
-        // Everything sits under `package/`; nothing may leave the staging folder.
-        let Ok(relative) = Path::new(&path).strip_prefix("package") else {
+    std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(gzipped), &mut data)
+        .context("not a gzipped tarball")?;
+    let result = extract_tar(&data, "package", &staging).and_then(|()| {
+        let _ = std::fs::remove_dir_all(root);
+        Ok(std::fs::rename(&staging, root)?)
+    });
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(&staging);
+    }
+    result
+}
+
+/// The files and folders of tar archive `data` under its folder `prefix` ("" for all of it)
+/// written to `target`; nothing may leave `target`, and links are skipped.
+pub(crate) fn extract_tar(data: &[u8], prefix: &str, target: &Path) -> Result<()> {
+    std::fs::create_dir_all(target)?;
+    for (path, kind, contents) in tar_entries(data)? {
+        let Ok(relative) = Path::new(&path).strip_prefix(prefix) else {
             continue;
         };
         if relative.as_os_str().is_empty()
@@ -501,25 +556,67 @@ fn unpack_tarball(
         {
             continue;
         }
-        let target = staging.join(relative);
+        let destination = target.join(relative);
         match kind {
-            b'5' => std::fs::create_dir_all(&target)?,
+            b'5' => std::fs::create_dir_all(&destination)?,
             b'0' | 0 | b'7' => {
-                if let Some(parent) = target.parent() {
+                if let Some(parent) = destination.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                std::fs::write(&target, contents)?;
+                std::fs::write(&destination, contents)?;
             }
             _ => {}
         }
     }
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::rename(&staging, &root)?;
+    Ok(())
+}
+
+/// Whether a `file:` dependency names a tarball rather than a folder (the Editor's
+/// `local-tarball`).
+fn is_tarball(version: &str) -> bool {
+    let path = version.to_ascii_lowercase();
+    path.ends_with(".tgz") || path.ends_with(".tar.gz")
+}
+
+/// A `file:` dependency's path: absolute, or relative to the `Packages` folder (the Unity 6000.0
+/// Manual's "Local folder or local tarball paths").
+fn local_path(packages_dir: &Path, version: &str) -> PathBuf {
+    let path = version.trim_start_matches("file:");
+    if Path::new(path).is_absolute() {
+        PathBuf::from(path)
+    } else {
+        packages_dir.join(path)
+    }
+}
+
+/// A local tarball unpacked into the store's `tarballs/` folder, keyed by a hash of its contents,
+/// so a replaced archive is unpacked again whatever its size and time.
+fn unpack_local_tarball(tarball: &Path, store: &Path, name: &str) -> Result<PathBuf> {
+    let bytes = std::fs::read(tarball).with_context(|| format!("opening {}", tarball.display()))?;
+    let key = blake3::hash(&bytes).to_hex();
+    let root = store
+        .join("tarballs")
+        .join(format!("{name}@{}", &key[..16]));
+    if package_name(&root).as_deref() == Some(name) {
+        return Ok(root);
+    }
+    unpack_tarball_at(&bytes, &root).with_context(|| format!("unpacking {}", tarball.display()))?;
+    anyhow::ensure!(
+        package_name(&root).as_deref() == Some(name),
+        "{} holds no package/package.json naming {name}",
+        tarball.display()
+    );
     tracing::info!(
-        "package {name}@{version}: unpacked from {origin} into {}",
+        "package {name}: unpacked {} into {}",
+        tarball.display(),
         root.display()
     );
     Ok(root)
+}
+
+/// The name in `root`'s package.json.
+pub(crate) fn package_name(root: &Path) -> Option<String> {
+    read_package_json(root).map(|json| json.name)
 }
 
 /// A tar archive's entries: path, type flag, contents. Reads ustar names with their prefix, GNU
@@ -805,5 +902,88 @@ mod tests {
         assert!(newer("1.10.0", "1.9.3"));
         assert!(newer("2.0.0", "2.0.0-pre.1"));
         assert!(!newer("1.2.0", "1.2.0"));
+    }
+
+    /// A gzipped npm tarball of `files` under `package/`.
+    fn npm_tarball(files: &[(&str, &str)]) -> Vec<u8> {
+        let mut tar = Vec::new();
+        for (path, text) in files {
+            tar.extend(header(
+                &format!("package/{path}"),
+                text.len(),
+                b'0',
+                b"ustar\x0000",
+                "",
+            ));
+            tar.extend(padded(text.as_bytes()));
+        }
+        tar.extend(vec![0u8; 1024]);
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+        std::io::Write::write_all(&mut encoder, &tar).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    #[test]
+    fn local_tarballs_are_unpacked_by_their_contents() {
+        let dir = std::env::temp_dir().join(format!("unbound-tarball-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let store = dir.join("store");
+        let tarball = dir.join("com.test.local-1.0.0.tgz");
+        let package =
+            |version: &str| format!(r#"{{"name": "com.test.local", "version": "{version}"}}"#);
+        let write = |version: &str, marker: &str| {
+            std::fs::write(
+                &tarball,
+                npm_tarball(&[("package.json", &package(version)), ("Marker.txt", marker)]),
+            )
+            .unwrap();
+            let file = std::fs::File::options().write(true).open(&tarball).unwrap();
+            file.set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000))
+                .unwrap();
+        };
+        write("1.0.0", "one");
+        let first = unpack_local_tarball(&tarball, &store, "com.test.local").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(first.join("Marker.txt")).unwrap(),
+            "one"
+        );
+        assert!(first.starts_with(store.join("tarballs")));
+        // Replaced by an archive of the same size and time: unpacked again.
+        write("1.0.0", "two");
+        let second = unpack_local_tarball(&tarball, &store, "com.test.local").unwrap();
+        assert_ne!(first, second);
+        assert_eq!(
+            std::fs::read_to_string(second.join("Marker.txt")).unwrap(),
+            "two"
+        );
+        // The same contents again: the first entry.
+        write("1.0.0", "one");
+        assert_eq!(
+            unpack_local_tarball(&tarball, &store, "com.test.local").unwrap(),
+            first
+        );
+        // An archive of another package, or not an archive, fails.
+        assert!(unpack_local_tarball(&tarball, &store, "com.test.other").is_err());
+        std::fs::write(&tarball, b"not a tarball").unwrap();
+        assert!(unpack_local_tarball(&tarball, &store, "com.test.local").is_err());
+        assert!(unpack_local_tarball(&dir.join("absent.tgz"), &store, "com.test.local").is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn file_dependencies_name_folders_or_tarballs_relative_to_packages() {
+        assert!(is_tarball("file:../LocalPackages/a-1.0.0.tgz"));
+        assert!(is_tarball("file:/abs/A.TAR.GZ"));
+        assert!(!is_tarball("file:../my_package_folder"));
+        let packages = Path::new("/project/Packages");
+        assert_eq!(
+            local_path(packages, "file:../x.tgz"),
+            Path::new("/project/Packages/../x.tgz")
+        );
+        assert_eq!(
+            local_path(packages, "file:/abs/x.tgz"),
+            Path::new("/abs/x.tgz")
+        );
     }
 }
