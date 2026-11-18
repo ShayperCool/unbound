@@ -19,7 +19,7 @@ namespace UnityEngine.Tests
         public class Actor : MonoBehaviour
         {
             internal bool Fail = true, ToggleBeforeFailure, DestroyBeforeFailure, DeactivateBeforeFailure;
-            internal int Awakes, Enables, Starts, Updates, Lates, Fixed;
+            internal int Awakes, Enables, Disables, Starts, Updates, Lates, Fixed;
             void Awake()
             {
                 Awakes++;
@@ -29,6 +29,7 @@ namespace UnityEngine.Tests
                 if (Fail) throw new InvalidOperationException(Failure);
             }
             void OnEnable() => Enables++;
+            void OnDisable() => Disables++;
             void Start() => Starts++;
             void Update() => Updates++;
             void LateUpdate() => Lates++;
@@ -199,6 +200,8 @@ namespace UnityEngine.Tests
             Assert.True(actor.didAwake);
             Assert.Equal(1, actor.Awakes);
             Assert.Equal(0, actor.Enables);
+            // The disable sends OnDisable without an OnEnable before (tests/projects/awakerootmotion).
+            Assert.Equal(1, actor.Disables);
             scope.Pump();
             NoFrameMessages(actor);
             scope.Unregistered(actor);
@@ -214,9 +217,11 @@ namespace UnityEngine.Tests
             Assert.Equal(0, actor.Awakes);
             go.SetActive(true);
             Assert.False(actor.enabled);
+            Assert.Equal(1, actor.Disables);
             go.SetActive(false);
             go.SetActive(true);
             Assert.Equal(1, actor.Awakes);
+            Assert.Equal(1, actor.Disables);
             scope.Pump();
             NoFrameMessages(actor);
             scope.ExceptionFor(actor);
@@ -233,6 +238,7 @@ namespace UnityEngine.Tests
             Assert.False(actor.enabled);
             Assert.Equal(1, actor.Awakes);
             Assert.Equal(0, actor.Enables);
+            Assert.Equal(0, actor.Disables);
             scope.Pump();
             NoFrameMessages(actor);
             scope.ExceptionFor(actor);
@@ -269,6 +275,9 @@ namespace UnityEngine.Tests
             go.SetActive(true);
             Assert.False(actor.enabled);
             Assert.False(actor.m_EnabledState);
+            // OnEnable ran inside Awake, so the disable's OnDisable is its usual one, sent once.
+            Assert.Equal(1, actor.Enables);
+            Assert.Equal(1, actor.Disables);
             scope.Unregistered(actor);
             scope.Pump();
             NoFrameMessages(actor);
@@ -286,6 +295,7 @@ namespace UnityEngine.Tests
             go.SetActive(true);
             Assert.False(go.activeSelf);
             Assert.False(actor.enabled);
+            Assert.Equal(0, actor.Disables);
             actor.DeactivateBeforeFailure = false;
             go.SetActive(true);
             Assert.Equal(1, actor.Awakes);

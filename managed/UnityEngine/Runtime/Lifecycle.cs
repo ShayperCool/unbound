@@ -277,9 +277,17 @@ namespace Unbound.Runtime
             catch (Exception e)
             {
                 Debug.LogException(e, mb);
-                // Unity 6000.0 MonoBehaviour.Awake: an exception disables the component.
-                // Use the normal setter to remove any registrations from reentrant enabling.
-                if (!mb.m_Destroyed) mb.enabled = false;
+                // Unity 6000.0 MonoBehaviour.Awake: an exception disables the component. An enabled
+                // one gets OnDisable at once, though it had no OnEnable; a disabled one only stays
+                // disabled (matches the Unity 6000.0.71f1 Editor, tests/projects/awakerootmotion;
+                // an object Awake deactivated is unmeasured and gets no OnDisable). The normal
+                // setter removes any registrations from reentrant enabling (and sends OnDisable to
+                // a script that OnEnable reached).
+                if (mb.m_Destroyed || !mb.m_Enabled) return;
+                bool notified = mb.m_EnabledState;
+                mb.enabled = false;
+                if (!notified && !mb.m_Destroyed && mb.m_GameObject.activeInHierarchy)
+                    CallOnDisable(mb, ScriptMessages.For(mb.GetType()));
             }
         }
 
@@ -311,12 +319,14 @@ namespace Unbound.Runtime
             if (!mb.m_EnabledState && (!(includeAwakened && mb.m_DidAwake) || mb.m_DestroyDisableSent)) return;
             if (includeAwakened) mb.m_DestroyDisableSent = true;
             mb.m_EnabledState = false;
-            var m = ScriptMessages.For(mb.GetType());
-            if (m.OnDisable != null)
-            {
-                try { m.OnDisable(mb); }
-                catch (Exception e) { Debug.LogException(e, mb); }
-            }
+            CallOnDisable(mb, ScriptMessages.For(mb.GetType()));
+        }
+
+        static void CallOnDisable(MonoBehaviour mb, ScriptMessages m)
+        {
+            if (m.OnDisable == null) return;
+            try { m.OnDisable(mb); }
+            catch (Exception e) { Debug.LogException(e, mb); }
         }
 
         static void RemoveFromLists(MonoBehaviour mb)
