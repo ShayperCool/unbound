@@ -373,10 +373,11 @@ namespace Unbound.Runtime
                 // batched with it and takes its alpha texture (see AlphaRun).
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
-                    // An unset slot draws the default UI material; a destroyed material, which a
-                    // renderer keeps until its Graphic gives it another, draws nothing, as its pop
-                    // materials do (6000.0.71f1, tests/projects/uitransparentcull destroyed.*,
-                    // modifier.*: a StencilMaterial entry removed by its only user).
+                    // A destroyed material, which a renderer keeps until its Graphic gives it
+                    // another, draws nothing (6000.0.71f1, tests/projects/uitransparentcull
+                    // destroyed.*, modifier.*: a StencilMaterial entry removed by its only user);
+                    // destroyed pop materials are skipped alike below (unmeasured). An unset slot
+                    // draws the default UI material (unmeasured).
                     var held = i < cr.m_Materials.Length ? cr.m_Materials[i] : null;
                     if (!ReferenceEquals(held, null) && held == null) continue;
                     var material = held ?? DefaultMaterial;

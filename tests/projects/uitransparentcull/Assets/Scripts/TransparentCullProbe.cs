@@ -39,7 +39,8 @@ public class TransparentCullProbe : MonoBehaviour
     Material m_Solid;
     int m_Next;
 
-    // "destroyed" when the renderer's material is a destroyed object, else "alive".
+    // What CanvasRenderer.GetMaterial(0) reads: "destroyed" (a destroyed object), "none" (null) or
+    // "alive".
     static string HeldMaterial(Image image)
     {
         var material = image.canvasRenderer.GetMaterial(0);

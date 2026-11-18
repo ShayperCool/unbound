@@ -498,7 +498,8 @@ namespace UnityEngine
             m_PopMaterials[index] = material;
         }
 
-        /// <summary>A pop material; a destroyed one reads as null, as a destroyed material does.</summary>
+        /// <summary>A pop material; a destroyed one reads as null, by analogy with a destroyed
+        /// material (unmeasured for pop materials).</summary>
         public Material GetPopMaterial(int index) => index >= 0 && index < m_PopMaterials.Length && m_PopMaterials[index] != null ? m_PopMaterials[index] : null;
 
         public void SetTexture(Texture texture) => m_Texture = texture;
