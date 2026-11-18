@@ -35,7 +35,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 66;
+pub const FORMAT_VERSION: u32 = 67;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -488,10 +488,14 @@ impl Pragmas {
                     }
                 }
                 "multi_compile_prepassfinal" => {
-                    // A Deferred pass: ambient from light probes or a lightmap, an HDR light
+                    // A Deferred pass: ambient from light probes or a lightmap, as a forward base
+                    // pass has it (a renderer without a lightmap samples the probes: tests/projects/
+                    // builtinfx deferred_volume_*, the flat ambient under no light), an HDR light
                     // buffer, the shadow mask.
-                    p.keyword_sets
-                        .push((words(&["LIGHTPROBE_SH", "LIGHTMAP_ON"]), true));
+                    p.keyword_sets.push((
+                        words(&["LIGHTPROBE_SH", "LIGHTMAP_ON", "DYNAMICLIGHTMAP_ON"]),
+                        false,
+                    ));
                     p.keyword_sets
                         .push((words(&["DIRLIGHTMAP_COMBINED"]), true));
                     p.keyword_sets.push((words(&["DYNAMICLIGHTMAP_ON"]), true));
@@ -2004,6 +2008,23 @@ mod tests {
         assert!(both.contains(&"LIGHTMAP_ON".to_string()));
         assert!(both.contains(&"DYNAMICLIGHTMAP_ON".to_string()));
         assert!(!both.contains(&"LIGHTPROBE_SH".to_string()));
+    }
+
+    #[test]
+    fn deferred_passes_sample_light_probes_without_a_lightmap() {
+        let lines = vec![preprocess::Pragma {
+            words: words(&["multi_compile_prepassfinal"]),
+        }];
+        let p = Pragmas::read(&lines);
+        let select = |enabled: &[&str]| p.select(&words(enabled));
+        assert!(select(&[]).contains(&"LIGHTPROBE_SH".to_string()));
+        assert!(select(&["UNITY_HDR_ON"]).contains(&"LIGHTPROBE_SH".to_string()));
+        let baked = select(&["LIGHTMAP_ON"]);
+        assert!(baked.contains(&"LIGHTMAP_ON".to_string()));
+        assert!(!baked.contains(&"LIGHTPROBE_SH".to_string()));
+        let realtime = select(&["DYNAMICLIGHTMAP_ON"]);
+        assert!(realtime.contains(&"DYNAMICLIGHTMAP_ON".to_string()));
+        assert!(!realtime.contains(&"LIGHTPROBE_SH".to_string()));
     }
 
     #[test]
