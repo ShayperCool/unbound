@@ -125,12 +125,10 @@ namespace UnityEngine.Tests
             bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
             try
             {
-                Unbound.Runtime.EditorSession.BeginEnteringPlayMode();
-                EditorInitialization.LoadEditorDomain(enteringPlayMode: true);
+                EditorInitialization.BeforePlayMode();
             }
             finally
             {
-                Unbound.Runtime.EditorSession.EndEnteringPlayMode();
                 Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
                 AssemblyReloadEvents.afterAssemblyReload -= after;
                 AssemblyReloadEvents.beforeAssemblyReload -= beforeReload;
@@ -152,10 +150,10 @@ namespace UnityEngine.Tests
                 EditorSettings.enterPlayModeOptionsEnabled = true;
                 EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.None;
                 Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());
-                // Options that keep the domain: no pre-reload event (the domain's own load still ends
-                // with afterAssemblyReload, standing for the Editor's start).
+                // Options that keep the domain: the domain loads as the Editor's start does, in Edit mode
+                // (ending with afterAssemblyReload), then Play mode is entered without a reload.
                 EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
-                Assert.Equal(new[] { "ExitingEditMode", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());
+                Assert.Equal(new[] { "afterAssemblyReload", "ExitingEditMode" }, LoadEditorDomainForPlayMode());
                 // Control: the same options while the options are off reload the domain.
                 EditorSettings.enterPlayModeOptionsEnabled = false;
                 Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());

@@ -441,6 +441,7 @@ namespace UnityEditor
         static void Load()
         {
             if (s_Loaded) return;
+            string failure = null;
             lock (s_LoadLock)
             {
                 if (s_Loaded) return;
@@ -459,10 +460,13 @@ namespace UnityEditor
                 {
                     s_EnterPlayModeOptionsEnabled = false;
                     s_EnterPlayModeOptions = EnterPlayModeOptions.None;
-                    Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + e.Message + "): Enter Play Mode Options keep their defaults");
+                    failure = e.Message;
                 }
                 finally { s_Loaded = true; }
             }
+            // Logged once loaded: a log listener reading these settings does not come back here.
+            if (failure != null)
+                Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + failure + "): Enter Play Mode Options keep their defaults");
         }
 
         /// <summary>The options Play mode is entered with: the project's when enabled, else None.</summary>

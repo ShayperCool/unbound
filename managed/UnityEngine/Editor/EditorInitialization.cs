@@ -45,6 +45,21 @@ namespace UnityEditor
 
         internal static void BeforePlayMode()
         {
+            // Enter Play Mode Options that keep the domain: the Editor's domain is the one it loaded
+            // at its start, in Edit mode; entering Play mode then reloads nothing (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/compileeventsnoreload start.load).
+            if ((EditorSettings.ActiveEnterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) != 0)
+            {
+                LoadEditorDomain();
+                EditorSession.BeginEnteringPlayMode();
+                try
+                {
+                    EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+                    EnterPlayModeMethods();
+                }
+                finally { EditorSession.EndEnteringPlayMode(); }
+                return;
+            }
             EditorSession.BeginEnteringPlayMode();
             try { LoadEditorDomain(enteringPlayMode: true); }
             finally { EditorSession.EndEnteringPlayMode(); }
@@ -77,9 +92,8 @@ namespace UnityEditor
             {
                 EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
                 // A session restarted for a script edit continues that reload (its old session raised
-                // beforeAssemblyReload).
-                if (!ContinuesScriptReload() && (EditorSettings.ActiveEnterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) == 0)
-                    UnityEditor.AssemblyReloadEvents.RaiseBefore();
+                // beforeAssemblyReload). Options that keep the domain do not come here (BeforePlayMode).
+                if (!ContinuesScriptReload()) UnityEditor.AssemblyReloadEvents.RaiseBefore();
             }
             try
             {
