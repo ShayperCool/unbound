@@ -883,6 +883,21 @@ SubShader {
         assert_eq!((p.state.color_mask, p.state.targets), (0, None));
     }
 
+    /// A `Stencil` block's settings in any case, as Unity reads them (its deferred shading final
+    /// pass writes them in lower case).
+    #[test]
+    fn stencil_settings_ignore_case() {
+        let lower = r#"Shader "Probe/Lower" {
+SubShader {
+    Pass { Stencil { ref 128 readmask 128 compback equal compfront equal } }
+}}"#;
+        let mut r = Resolver::new(index(&[lower]));
+        let m = r.resolve(&material("Probe/Lower", vec![]));
+        let s = m.passes[0].state.stencil.expect("a test");
+        assert_eq!((s.read_mask, m.passes[0].stencil_ref), (128, 128));
+        assert_eq!((s.comp, s.back[0]), (3, 3));
+    }
+
     /// `Comp`/`Pass` are both faces'; `CompBack`/`PassBack` (as URP's deferred SimpleLit light
     /// passes write them) a back face's own, the front then testing nothing; a mirrored draw's
     /// faces swap.

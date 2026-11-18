@@ -928,6 +928,33 @@ fn command(word: &str) -> &str {
         .unwrap_or(word)
 }
 
+/// A `Stencil` block's setting as Unbound matches it, case-insensitively like the commands
+/// (Unity's deferred shading final pass writes `ref`, `readmask`, `compback`, `compfront`).
+fn stencil_setting(word: &str) -> &str {
+    const KNOWN: [&str; 15] = [
+        "Ref",
+        "Comp",
+        "Pass",
+        "Fail",
+        "ZFail",
+        "CompFront",
+        "PassFront",
+        "FailFront",
+        "ZFailFront",
+        "CompBack",
+        "PassBack",
+        "FailBack",
+        "ZFailBack",
+        "ReadMask",
+        "WriteMask",
+    ];
+    KNOWN
+        .iter()
+        .find(|k| k.eq_ignore_ascii_case(word))
+        .copied()
+        .unwrap_or(word)
+}
+
 /// A tag's name as Unbound looks it up: Unity's tag names are case-insensitive (the legacy
 /// VertexLit shader writes `"LIGHTMODE"`).
 fn canonical_tag(name: String) -> String {
@@ -1518,7 +1545,7 @@ impl Parser<'_> {
                         Token::Close => break,
                         Token::Word(w) => {
                             let v = self.value();
-                            match w.as_str() {
+                            match stencil_setting(&w) {
                                 "Ref" => s.reference = v,
                                 "Comp" => s.comp = v,
                                 "Pass" => s.pass = v,
