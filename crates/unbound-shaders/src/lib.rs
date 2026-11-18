@@ -19,6 +19,7 @@ mod exponents;
 pub mod fetch;
 mod fit;
 mod matrix_swizzles;
+mod opaque_members;
 mod samplers;
 mod scopes;
 mod surface;
@@ -34,7 +35,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 65;
+pub const FORMAT_VERSION: u32 = 66;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1313,7 +1314,7 @@ fn fxc_compatible(source: &str) -> String {
         &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
                 &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
-                    &scopes::flatten_scopes(source),
+                    &opaque_members::opaque_members(&scopes::flatten_scopes(source)),
                 ))),
             ))),
         ))),
@@ -2293,6 +2294,27 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             .unwrap();
         assert!(compiled.texture_aliases.is_empty());
         assert_eq!(compiled.textures, ["_A", "_B"]);
+    }
+
+    /// A fragment samples a texture and a sampler of the struct a call returns, and calls its
+    /// member function (Shader Graph's texture slots that no node feeds): the program compiles
+    /// and binds the texture.
+    #[test]
+    fn a_texture_of_the_struct_a_call_returns_is_sampled() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let source = "#pragma vertex vert\n#pragma fragment frag\n\
+            struct UT { Texture2D tex; SamplerState samplerstate; float4 hdr; float2 Transformed(float2 uv) { return uv * hdr.xy; } };\n\
+            UT Build(Texture2D t, SamplerState s, float4 h) { UT r; r.tex = t; r.samplerstate = s; r.hdr = h; return r; }\n\
+            Texture2D _T; SamplerState sampler_T;\n\
+            float4 vert(float4 position : POSITION) : SV_POSITION { return position; }\n\
+            float4 frag(float4 p : SV_POSITION) : SV_Target {\n\
+              float4 c = Build(_T, sampler_T, 1).tex.SampleBias(Build(_T, sampler_T, 1).samplerstate, Build(_T, sampler_T, 1).Transformed(p.xy), 0);\n\
+              if (Build(_T, sampler_T, 1).hdr.x > 0) c *= 2;\n\
+              return c; }\n";
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert_eq!(compiled.textures, ["_T"]);
     }
 
     /// A fragment program reads its position's `w` as Direct3D gives it (the clip-space w),
