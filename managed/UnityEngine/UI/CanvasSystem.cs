@@ -345,8 +345,11 @@ namespace Unbound.Runtime
                 // mesh) is hit so.
                 cr.m_AbsoluteDepth = depth++;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
+                // A renderer whose alpha (its own times its groups') is zero or less is never drawn,
+                // cullTransparentMesh or not; the flag adds the test for all-transparent vertices
+                // (6000.0.71f1, tests/projects/uitransparentcull).
                 float alpha = cr.m_Color.a * cr.GetInheritedAlpha();
-                if (cr.m_CullTransparentMesh && alpha <= 0f) continue;
+                if (alpha <= 0f) continue;
                 if (cr.m_CullTransparentMesh && Transparent(cr.m_Mesh)) continue;
                 var color = new Color(cr.m_Color.r, cr.m_Color.g, cr.m_Color.b, alpha);
                 bool alwaysGamma = canvas.m_VertexColorAlwaysGammaSpace;
