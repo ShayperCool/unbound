@@ -1461,6 +1461,7 @@ impl UnityRenderer {
             self.depth_element_view(base);
         }
         if depth_element {
+            self.fill_depth_copy(base);
             let Some(view) = self.depth_element_view(base) else {
                 return self.main_bind_group(0, default, space);
             };
@@ -1867,15 +1868,10 @@ impl UnityRenderer {
         // Integer slots read a float texture's values as their bits, within its size, and zeros
         // where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
         // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
-        // A depth-only texture a slot reads outside a comparison (as floats, or their bits) reads
-        // its filled copy.
-        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
-            if is_2d(*dim)
-                && !slot.comparison
-                && !slot.depth()
-                && !slot.multisampled
-                && !handle::split(raw[k]).1
-            {
+        // A depth-only texture a slot reads outside a comparison (as floats, or their bits, by
+        // itself or as its depth element) reads its filled copy.
+        for (h, _, dim, slot) in slots.iter() {
+            if is_2d(*dim) && !slot.comparison && !slot.depth() && !slot.multisampled {
                 self.fill_depth_copy(*h);
             }
         }
