@@ -165,7 +165,8 @@ namespace UnityEditor.Compilation
 
         /// <summary>The release's compiler language version, compiler arguments and analyzers (the
         /// compatibility profile's), and whether the project's API compatibility level for its
-        /// target is .NET Standard.</summary>
+        /// target is .NET Standard. The game's configuration always sets it; the initial value
+        /// serves managed tests only.</summary>
         internal static (string LanguageVersion, string[] Arguments, string[] Analyzers, bool NetStandard) s_Compiler = ("9.0", Array.Empty<string>(), Array.Empty<string>(), true);
 
         /// <summary>An assembly's compiler options as the pipeline reports them: its unsafe-code

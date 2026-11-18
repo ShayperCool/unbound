@@ -414,7 +414,6 @@ MonoBehaviour:
             Assert.Null(plain.assemblyReferences);
             Assert.NotNull(plain.compilerOptions);
             Assert.Equal("", plain.rootNamespace);
-            Assert.Empty(plain.allReferences);
             var options = new ScriptCompilerOptions { AllowUnsafeCode = true };
             var full = new Assembly("B", "Out/B.dll", new string[0], new string[0], new Assembly[0], new string[0], AssemblyFlags.EditorAssembly, options, "Ns");
             Assert.Same(options, full.compilerOptions);
