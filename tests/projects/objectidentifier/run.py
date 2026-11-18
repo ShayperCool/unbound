@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Record independent Editor captures or replay the build object identifier serialization controls.
 
-The controls compare managed element state only. The reference was recorded with
+The controls compare managed serialization values only. The reference was recorded with
 the macOS Editor in batch mode (it does not depend on the OS or the graphics device); on Linux
 `native` uses the shared GPU Editor runner."""
 import argparse

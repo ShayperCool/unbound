@@ -14,6 +14,7 @@ namespace UnityEngine.Tests
 
         static ObjectIdentifier Make(long fileId) => new ObjectIdentifier { localIdentifierInFile = fileId, filePath = "a.asset" };
 
+        // Arrays are Unbound's choice, unmeasured: each element is an empty object and reads back as the default.
         [Fact]
         public void ItSerializesAsAnEmptyObject()
         {
@@ -34,7 +35,9 @@ namespace UnityEngine.Tests
             {
                 source.identifier = Make(17);
                 source.control = 23;
-                JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source), target);
+                var json = JsonUtility.ToJson(source);
+                Assert.Contains("\"identifier\":{}", json);
+                JsonUtility.FromJsonOverwrite(json, target);
                 Assert.Equal(29, target.identifier.localIdentifierInFile);
                 Assert.Equal(23, target.control);
             }
