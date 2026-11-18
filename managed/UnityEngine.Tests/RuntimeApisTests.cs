@@ -387,6 +387,38 @@ namespace UnityEngine.Tests
             cb.Release();
         }
 
+        /// <summary>The kinds measured in Q565 (tests/projects/runtimeapis size.*): data-carrying
+        /// kinds grow with their data, an unaligned kind (SetWireframe, 5) pads the next command.</summary>
+        [Fact]
+        public void FurtherCommandSizesFollowTheirData()
+        {
+            var cb = new CommandBuffer();
+            int id = Shader.PropertyToID("_SizeProbe");
+            var buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 16, 4);
+            try
+            {
+                cb.SetBufferData(buffer, new float[4]);
+                Assert.Equal(48, cb.sizeInBytes);
+                cb.SetBufferData(buffer, new float[16]);
+                Assert.Equal(48 + 96, cb.sizeInBytes);
+                cb.Clear();
+                cb.SetWireframe(true);
+                Assert.Equal(5, cb.sizeInBytes);
+                cb.SetGlobalInteger(id, 1);
+                Assert.Equal(8 + 12, cb.sizeInBytes);
+                cb.Clear();
+                cb.SetGlobalBuffer(id, buffer);
+                cb.ClearRandomWriteTargets();
+                cb.WaitAllAsyncReadbackRequests();
+                Assert.Equal(12 + 4 + 4, cb.sizeInBytes);
+            }
+            finally
+            {
+                buffer.Release();
+                cb.Release();
+            }
+        }
+
         [Fact]
         public void ImportExceptionsCarryTheirMessage()
         {

@@ -104,7 +104,7 @@ namespace UnityEngine.Rendering
         public GraphicsFence CreateGraphicsFence(GraphicsFenceType fenceType, SynchronisationStageFlags stage)
         {
             var fence = GraphicsFences.Create(fenceType);
-            Add(c => GraphicsFences.Ran(fence));
+            Add(c => GraphicsFences.Ran(fence), 24);
             return fence;
         }
 
@@ -112,9 +112,17 @@ namespace UnityEngine.Rendering
         public GraphicsFence CreateAsyncGraphicsFence(SynchronisationStage stage) => CreateGraphicsFence(GraphicsFenceType.AsyncQueueSynchronisation, SynchronisationStageFlags.PixelProcessing);
 
         /// <summary>Checked when recorded; the GPU has nothing to wait for on one queue.</summary>
-        public void WaitOnAsyncGraphicsFence(GraphicsFence fence) => GraphicsFences.CheckWait(fence);
-        public void WaitOnAsyncGraphicsFence(GraphicsFence fence, SynchronisationStage stage) => GraphicsFences.CheckWait(fence);
-        public void WaitOnAsyncGraphicsFence(GraphicsFence fence, SynchronisationStageFlags stage) => GraphicsFences.CheckWait(fence);
+        public void WaitOnAsyncGraphicsFence(GraphicsFence fence) => WaitOnFence(fence);
+        public void WaitOnAsyncGraphicsFence(GraphicsFence fence, SynchronisationStage stage) => WaitOnFence(fence);
+        public void WaitOnAsyncGraphicsFence(GraphicsFence fence, SynchronisationStageFlags stage) => WaitOnFence(fence);
+
+        /// <summary>The wait is a command of its own (24 bytes, measured: tests/projects/runtimeapis
+        /// size.wait_fence) that does nothing when run.</summary>
+        void WaitOnFence(GraphicsFence fence)
+        {
+            GraphicsFences.CheckWait(fence);
+            AddWithoutEffect(24);
+        }
     }
 }
 

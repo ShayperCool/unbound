@@ -147,6 +147,12 @@ namespace UnityEngine.Rendering
         // tests/projects/runtimeapis size.*).
         int m_Size;
         const int UnmeasuredCommandSize = 64;
+        /// <summary>A compute parameter array's size before its values (4 bytes each component;
+        /// measured: size.compute_floats2, compute_floats4, compute_vector_array2,
+        /// compute_matrix_array2).</summary>
+        const int ComputeParamSize = 20;
+        /// <summary>SetBufferData's size before its data (measured: size.set_buffer_data4 and 16).</summary>
+        const int BufferDataSize = 32;
 
         public int sizeInBytes => m_Size;
 
@@ -346,7 +352,7 @@ namespace UnityEngine.Rendering
                 ulong depthHandle = depth == copy[0] ? 0 : TextureHandles.Of(Resolve(depth, c));
                 RenderTexture.SetActiveQuietly(first as RenderTexture);
                 GfxStream.SetTargets(handles, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(first));
-            });
+            }, 152);
         }
 
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor) => ClearRenderTarget(clearDepth, clearColor, backgroundColor, 1f, 0);
@@ -396,8 +402,8 @@ namespace UnityEngine.Rendering
         public void DisableScissorRect() => Add(c => GfxStream.Scissor(null), 4);
 
         public void SetViewProjectionMatrices(Matrix4x4 view, Matrix4x4 proj) => Add(c => GfxStream.Camera(view, proj, GfxStream.Current.Flags), 136);
-        public void SetViewMatrix(Matrix4x4 view) => Add(c => GfxStream.Camera(view, GfxStream.Current.Projection, GfxStream.Current.Flags));
-        public void SetProjectionMatrix(Matrix4x4 proj) => Add(c => GfxStream.Camera(GfxStream.Current.View, proj, GfxStream.Current.Flags));
+        public void SetViewMatrix(Matrix4x4 view) => Add(c => GfxStream.Camera(view, GfxStream.Current.Projection, GfxStream.Current.Flags), 136);
+        public void SetProjectionMatrix(Matrix4x4 proj) => Add(c => GfxStream.Camera(GfxStream.Current.View, proj, GfxStream.Current.Flags), 136);
 
         // ------------------------------------------------------------ temporaries
 
@@ -560,7 +566,7 @@ namespace UnityEngine.Rendering
         {
             if (Resolve(rt, c) is RenderTexture texture) texture.GenerateMips();
             else Debug.LogError("CommandBuffer.GenerateMips: the target is not a render texture.");
-        });
+        }, 16);
 
         public void GenerateMips(RenderTexture rt)
         {
@@ -691,7 +697,7 @@ namespace UnityEngine.Rendering
 
         public void ConvertTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => ConvertTexture(src, 0, dst, 0);
         public void ConvertTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) =>
-            Add(c => Graphics.ConvertTexture(Resolve(src, c), srcElement, Resolve(dst, c), dstElement));
+            Add(c => Graphics.ConvertTexture(Resolve(src, c), srcElement, Resolve(dst, c), dstElement), 20);
 
         // ------------------------------------------------------------ random write targets
 
@@ -713,7 +719,7 @@ namespace UnityEngine.Rendering
                 if (storage.Released) return;
                 if (!preserveCounterValue) GpuBufferOps.SetCounter(storage, 0);
                 RandomWriteTargets.Set(index, storage.Handle);
-            });
+            }, 16);
         }
 
         /// <summary>A render texture is checked when the command runs and not bound (see
@@ -726,48 +732,48 @@ namespace UnityEngine.Rendering
                 if (Resolve(rt, c) is RenderTexture texture && !texture.enableRandomWrite)
                     Debug.LogError($"CommandBuffer: RenderTexture '{texture.name}' cannot be used with SetRandomWriteTarget because it does not have random write enabled");
                 else RandomWriteTargets.Set(index, 0);
-            });
+            }, 20);
         }
 
-        public void ClearRandomWriteTargets() => Add(c => RandomWriteTargets.Clear());
+        public void ClearRandomWriteTargets() => Add(c => RandomWriteTargets.Clear(), 4);
 
         // ------------------------------------------------------------ compute
 
-        public void SetComputeFloatParam(ComputeShader computeShader, int nameID, float val) => Add(c => computeShader.SetFloat(nameID, val));
+        public void SetComputeFloatParam(ComputeShader computeShader, int nameID, float val) => Add(c => computeShader.SetFloat(nameID, val), 24);
         public void SetComputeFloatParam(ComputeShader computeShader, string name, float val) => SetComputeFloatParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeIntParam(ComputeShader computeShader, int nameID, int val) => Add(c => computeShader.SetInt(nameID, val));
+        public void SetComputeIntParam(ComputeShader computeShader, int nameID, int val) => Add(c => computeShader.SetInt(nameID, val), 24);
         public void SetComputeIntParam(ComputeShader computeShader, string name, int val) => SetComputeIntParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeVectorParam(ComputeShader computeShader, int nameID, Vector4 val) => Add(c => computeShader.SetVector(nameID, val));
+        public void SetComputeVectorParam(ComputeShader computeShader, int nameID, Vector4 val) => Add(c => computeShader.SetVector(nameID, val), 36);
         public void SetComputeVectorParam(ComputeShader computeShader, string name, Vector4 val) => SetComputeVectorParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeMatrixParam(ComputeShader computeShader, int nameID, Matrix4x4 val) => Add(c => computeShader.SetMatrix(nameID, val));
+        public void SetComputeMatrixParam(ComputeShader computeShader, int nameID, Matrix4x4 val) => Add(c => computeShader.SetMatrix(nameID, val), 84);
         public void SetComputeMatrixParam(ComputeShader computeShader, string name, Matrix4x4 val) => SetComputeMatrixParam(computeShader, Shader.PropertyToID(name), val);
         public void SetComputeFloatParams(ComputeShader computeShader, int nameID, params float[] values)
         {
             var copy = (float[])values.Clone();
-            Add(c => computeShader.SetFloats(nameID, copy));
+            Add(c => computeShader.SetFloats(nameID, copy), ComputeParamSize + 4 * copy.Length);
         }
         public void SetComputeFloatParams(ComputeShader computeShader, string name, params float[] values) => SetComputeFloatParams(computeShader, Shader.PropertyToID(name), values);
         public void SetComputeIntParams(ComputeShader computeShader, int nameID, params int[] values)
         {
             var copy = (int[])values.Clone();
-            Add(c => computeShader.SetInts(nameID, copy));
+            Add(c => computeShader.SetInts(nameID, copy), ComputeParamSize + 4 * copy.Length);
         }
         public void SetComputeIntParams(ComputeShader computeShader, string name, params int[] values) => SetComputeIntParams(computeShader, Shader.PropertyToID(name), values);
         public void SetComputeVectorArrayParam(ComputeShader computeShader, int nameID, Vector4[] values)
         {
             var copy = (Vector4[])values.Clone();
-            Add(c => computeShader.SetVectorArray(nameID, copy));
+            Add(c => computeShader.SetVectorArray(nameID, copy), ComputeParamSize + 16 * copy.Length);
         }
         public void SetComputeVectorArrayParam(ComputeShader computeShader, string name, Vector4[] values) => SetComputeVectorArrayParam(computeShader, Shader.PropertyToID(name), values);
         public void SetComputeMatrixArrayParam(ComputeShader computeShader, int nameID, Matrix4x4[] values)
         {
             var copy = (Matrix4x4[])values.Clone();
-            Add(c => computeShader.SetMatrixArray(nameID, copy));
+            Add(c => computeShader.SetMatrixArray(nameID, copy), ComputeParamSize + 64 * copy.Length);
         }
         public void SetComputeMatrixArrayParam(ComputeShader computeShader, string name, Matrix4x4[] values) => SetComputeMatrixArrayParam(computeShader, Shader.PropertyToID(name), values);
 
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, int nameID, RenderTargetIdentifier rt, int mipLevel) =>
-            Add(c => computeShader.SetTexture(kernelIndex, nameID, Resolve(rt, c), mipLevel));
+            Add(c => computeShader.SetTexture(kernelIndex, nameID, Resolve(rt, c), mipLevel), 36);
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, int nameID, RenderTargetIdentifier rt) => SetComputeTextureParam(computeShader, kernelIndex, nameID, rt, 0);
         // The identifier names a render texture (whose element applies) only when the command runs,
         // so the element reaches ComputeShader.SetTexture then; another texture is bound as itself.
@@ -777,7 +783,7 @@ namespace UnityEngine.Rendering
                 var texture = Resolve(rt, c);
                 if (texture is RenderTexture target) computeShader.SetTexture(kernelIndex, nameID, target, mipLevel, element);
                 else computeShader.SetTexture(kernelIndex, nameID, texture, mipLevel);
-            });
+            }, 36);
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt) =>
             SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, 0);
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt, int mipLevel) =>
@@ -785,41 +791,41 @@ namespace UnityEngine.Rendering
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt, int mipLevel, RenderTextureSubElement element) =>
             SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, mipLevel, element);
 
-        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, ComputeBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer));
+        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, ComputeBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer), 20);
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, ComputeBuffer buffer) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), buffer);
-        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer));
+        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer), 20);
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, GraphicsBuffer buffer) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), buffer);
-        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBufferHandle bufferHandle) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, bufferHandle));
+        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBufferHandle bufferHandle) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, bufferHandle), 20);
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, GraphicsBufferHandle bufferHandle) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), bufferHandle);
-        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, ComputeBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size));
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, ComputeBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size), 24);
         public void SetComputeConstantBufferParam(ComputeShader computeShader, string name, ComputeBuffer buffer, int offset, int size) => SetComputeConstantBufferParam(computeShader, Shader.PropertyToID(name), buffer, offset, size);
-        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, GraphicsBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size));
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, GraphicsBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size), 24);
         public void SetComputeConstantBufferParam(ComputeShader computeShader, string name, GraphicsBuffer buffer, int offset, int size) => SetComputeConstantBufferParam(computeShader, Shader.PropertyToID(name), buffer, offset, size);
 
         public void DispatchCompute(ComputeShader computeShader, int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) =>
-            Add(c => computeShader.Dispatch(kernelIndex, threadGroupsX, threadGroupsY, threadGroupsZ));
+            Add(c => computeShader.Dispatch(kernelIndex, threadGroupsX, threadGroupsY, threadGroupsZ), 32);
 
-        public void SetGlobalBuffer(int nameID, ComputeBuffer value) => Add(c => Shader.SetGlobalBuffer(nameID, value));
+        public void SetGlobalBuffer(int nameID, ComputeBuffer value) => Add(c => Shader.SetGlobalBuffer(nameID, value), 12);
         public void SetGlobalBuffer(string name, ComputeBuffer value) => SetGlobalBuffer(Shader.PropertyToID(name), value);
-        public void SetGlobalBuffer(int nameID, GraphicsBuffer value) => Add(c => Shader.SetGlobalBuffer(nameID, value));
+        public void SetGlobalBuffer(int nameID, GraphicsBuffer value) => Add(c => Shader.SetGlobalBuffer(nameID, value), 12);
         public void SetGlobalBuffer(string name, GraphicsBuffer value) => SetGlobalBuffer(Shader.PropertyToID(name), value);
-        public void SetGlobalConstantBuffer(ComputeBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size));
+        public void SetGlobalConstantBuffer(ComputeBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size), 20);
         public void SetGlobalConstantBuffer(ComputeBuffer buffer, string name, int offset, int size) => SetGlobalConstantBuffer(buffer, Shader.PropertyToID(name), offset, size);
-        public void SetGlobalConstantBuffer(GraphicsBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size));
+        public void SetGlobalConstantBuffer(GraphicsBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size), 20);
         public void SetGlobalConstantBuffer(GraphicsBuffer buffer, string name, int offset, int size) => SetGlobalConstantBuffer(buffer, Shader.PropertyToID(name), offset, size);
 
         // The data is checked and copied when recorded, written when the command runs.
         void SetBufferData(GpuBufferStorage buffer, Array data, int start, int bufferStart, int count, GpuBufferStorage.Names names)
         {
             var (offset, bytes) = buffer.Prepare(data, start, bufferStart, count, names);
-            Add(c => buffer.Write(offset, bytes));
+            Add(c => buffer.Write(offset, bytes), BufferDataSize + bytes.Length);
         }
 
         unsafe void SetBufferData<T>(GpuBufferStorage buffer, NativeArray<T> data, int start, int bufferStart, int count, GpuBufferStorage.Names names) where T : struct
         {
             var (offset, bytes) = buffer.Prepare(Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data), data.Length,
                 Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>(), start, bufferStart, count, names);
-            Add(c => buffer.Write(offset, bytes));
+            Add(c => buffer.Write(offset, bytes), BufferDataSize + bytes.Length);
         }
 
         static readonly GpuBufferStorage.Names s_GraphicsNames = GpuBufferStorage.Commands;
@@ -844,20 +850,20 @@ namespace UnityEngine.Rendering
         public void SetBufferData<T>(ComputeBuffer buffer, NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
             SetBufferData(buffer.Storage, data, nativeBufferStartIndex, graphicsBufferStartIndex, count, s_ComputeNames);
 
-        public void SetBufferCounterValue(ComputeBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue));
-        public void SetBufferCounterValue(GraphicsBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue));
+        public void SetBufferCounterValue(ComputeBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue), 12);
+        public void SetBufferCounterValue(GraphicsBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue), 12);
         public void CopyCounterValue(ComputeBuffer src, ComputeBuffer dst, uint dstOffsetBytes) => CopyCounterValue(src?.Storage, dst?.Storage, dstOffsetBytes);
         public void CopyCounterValue(GraphicsBuffer src, ComputeBuffer dst, uint dstOffsetBytes) => CopyCounterValue(src?.Storage, dst?.Storage, dstOffsetBytes);
         public void CopyCounterValue(ComputeBuffer src, GraphicsBuffer dst, uint dstOffsetBytes) => CopyCounterValue(src?.Storage, dst?.Storage, dstOffsetBytes);
         public void CopyCounterValue(GraphicsBuffer src, GraphicsBuffer dst, uint dstOffsetBytes) => CopyCounterValue(src?.Storage, dst?.Storage, dstOffsetBytes);
-        void CopyCounterValue(GpuBufferStorage src, GpuBufferStorage dst, uint offset) => Add(c => GpuBufferOps.CopyCount(src, dst, offset));
+        void CopyCounterValue(GpuBufferStorage src, GpuBufferStorage dst, uint offset) => Add(c => GpuBufferOps.CopyCount(src, dst, offset), 16);
 
         public void CopyBuffer(GraphicsBuffer source, GraphicsBuffer dest)
         {
             GpuBufferOps.ValidateCopy(source, dest);
             var sourceStorage = source.Storage;
             var destStorage = dest.Storage;
-            Add(c => GpuBufferOps.CopyChecked(sourceStorage, destStorage));
+            Add(c => GpuBufferOps.CopyChecked(sourceStorage, destStorage), 12);
         }
 
         public void DispatchCompute(ComputeShader computeShader, int kernelIndex, ComputeBuffer indirectBuffer, uint argsOffset) =>
@@ -866,17 +872,17 @@ namespace UnityEngine.Rendering
             DispatchCompute(computeShader, kernelIndex, indirectBuffer?.Storage, argsOffset);
 
         void DispatchCompute(ComputeShader shader, int kernel, GpuBufferStorage args, uint offset) =>
-            Add(c => shader.DispatchIndirect(kernel, args, offset, null));
+            Add(c => shader.DispatchIndirect(kernel, args, offset, null), 32);
 
         // ------------------------------------------------------------ readbacks
 
-        public void WaitAllAsyncReadbackRequests() => Add(c => AsyncGPUReadback.WaitAllRequests());
+        public void WaitAllAsyncReadbackRequests() => Add(c => AsyncGPUReadback.WaitAllRequests(), 4);
         public void RequestAsyncReadback(ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback) => RequestAsyncReadback(src?.Storage, (int)(src?.Storage?.Size ?? 0), 0, callback);
         public void RequestAsyncReadback(GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback) => RequestAsyncReadback(src?.Storage, (int)(src?.Storage?.Size ?? 0), 0, callback);
         public void RequestAsyncReadback(ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) => RequestAsyncReadback(src?.Storage, size, offset, callback);
         public void RequestAsyncReadback(GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) => RequestAsyncReadback(src?.Storage, size, offset, callback);
         void RequestAsyncReadback(GpuBufferStorage src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) =>
-            Add(c => AsyncReadbacks.Start(AsyncReadbacks.Buffer(src, size, offset, callback)));
+            Add(c => AsyncReadbacks.Start(AsyncReadbacks.Buffer(src, size, offset, callback)), 64);
 
         // Command requests share conversion and completion, without direct-request source validation
         // (6000.0.71f1, tests/projects/nativegfx readbackValidation.command.*).
@@ -968,7 +974,7 @@ namespace UnityEngine.Rendering
         public void SetGlobalFloat(string name, float value) => SetGlobalFloat(Shader.PropertyToID(name), value);
         public void SetGlobalInt(int nameID, int value) => Add(c => Shader.SetGlobalInt(nameID, value), 12);
         public void SetGlobalInt(string name, int value) => SetGlobalInt(Shader.PropertyToID(name), value);
-        public void SetGlobalInteger(int nameID, int value) => Add(c => Shader.SetGlobalInteger(nameID, value));
+        public void SetGlobalInteger(int nameID, int value) => Add(c => Shader.SetGlobalInteger(nameID, value), 12);
         public void SetGlobalInteger(string name, int value) => SetGlobalInteger(Shader.PropertyToID(name), value);
         public void SetGlobalVector(int nameID, Vector4 value) => Add(c => Shader.SetGlobalVector(nameID, value), 24);
         public void SetGlobalVector(string name, Vector4 value) => SetGlobalVector(Shader.PropertyToID(name), value);
@@ -1034,10 +1040,10 @@ namespace UnityEngine.Rendering
         public void SetGlobalDepthBias(float bias, float slopeBias) => Add(c => GfxStream.DepthBias(bias, slopeBias), 12);
 
         public void SetInvertCulling(bool invertCulling) => Add(c => GL.invertCulling = invertCulling, 5);
-        public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable);
+        public void SetWireframe(bool enable) => Add(c => GL.wireframe = enable, 5);
         [Unbound.EditorFaithful("no-op is equivalent: the flags only restrict which commands a buffer may hold (async compute validation)")]
         public void SetExecutionFlags(CommandBufferExecutionFlags flags) { }
-        public void SetInstanceMultiplier(uint multiplier) => Add(c => GfxStream.InstanceMultiplier(multiplier));
+        public void SetInstanceMultiplier(uint multiplier) => Add(c => GfxStream.InstanceMultiplier(multiplier), 8);
         // Profiler samples: nothing a game observes (no profiler is attached) but their size.
         public void BeginSample(string name) => Grow(16);
         public void EndSample(string name) => Grow(16);

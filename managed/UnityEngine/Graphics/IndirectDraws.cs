@@ -141,7 +141,7 @@ namespace UnityEngine.Rendering
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             var values = Immediate.Values(properties);
-            Add(c => ProceduralMeshes.DrawIndirect(matrix, material, shaderPass, topology, args, argsOffset, values));
+            Add(c => ProceduralMeshes.DrawIndirect(matrix, material, shaderPass, topology, args, argsOffset, values), 92);
         }
 
         public void DrawProceduralIndirect(Matrix4x4 matrix, Material material, int shaderPass, MeshTopology topology, ComputeBuffer bufferWithArgs, int argsOffset, MaterialPropertyBlock properties) =>
@@ -163,7 +163,7 @@ namespace UnityEngine.Rendering
             if (material == null) throw new ArgumentNullException(nameof(material));
             var values = Immediate.Values(properties);
             var setup = new DrawSetup { Instances = 1, Args = args, Offset = (uint)argsOffset, Indexed = true };
-            Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values));
+            Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values), 28);
         }
 
         // ------------------------------------------------------------ indexed procedural draws
@@ -258,7 +258,7 @@ namespace UnityEngine.Rendering
                     if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values);
                 }
-            });
+            }, 20);
         }
 
         public void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, int shaderPass, Matrix4x4[] matrices, int count) =>
@@ -274,7 +274,7 @@ namespace UnityEngine.Rendering
             if (count <= 0) return;
             var values = Immediate.Values(properties);
             var setup = new DrawSetup { Instances = (uint)count };
-            Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values));
+            Add(c => IndirectArgs.Mesh(mesh, submeshIndex, material, shaderPass, setup, values), 24);
         }
     }
 }

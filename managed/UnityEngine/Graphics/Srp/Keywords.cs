@@ -183,31 +183,31 @@ namespace UnityEngine.Rendering
 {
     public partial class CommandBuffer
     {
-        public void EnableKeyword(in GlobalKeyword keyword) { var name = keyword.name; Add(c => Shader.EnableKeyword(name)); }
-        public void DisableKeyword(in GlobalKeyword keyword) { var name = keyword.name; Add(c => Shader.DisableKeyword(name)); }
+        public void EnableKeyword(in GlobalKeyword keyword) { var name = keyword.name; Add(c => Shader.EnableKeyword(name), 12); }
+        public void DisableKeyword(in GlobalKeyword keyword) { var name = keyword.name; Add(c => Shader.DisableKeyword(name), 12); }
 
         public void SetKeyword(in GlobalKeyword keyword, bool value)
         {
             var name = keyword.name;
-            Add(c => { if (value) Shader.EnableKeyword(name); else Shader.DisableKeyword(name); });
+            Add(c => { if (value) Shader.EnableKeyword(name); else Shader.DisableKeyword(name); }, 12);
         }
 
-        public void EnableKeyword(Material material, in LocalKeyword keyword) { var name = keyword.name; Add(c => material.EnableKeyword(name)); }
-        public void DisableKeyword(Material material, in LocalKeyword keyword) { var name = keyword.name; Add(c => material.DisableKeyword(name)); }
+        public void EnableKeyword(Material material, in LocalKeyword keyword) { var name = keyword.name; Add(c => material.EnableKeyword(name), 12); }
+        public void DisableKeyword(Material material, in LocalKeyword keyword) { var name = keyword.name; Add(c => material.DisableKeyword(name), 12); }
 
         public void SetKeyword(Material material, in LocalKeyword keyword, bool value)
         {
             var name = keyword.name;
-            Add(c => { if (value) material.EnableKeyword(name); else material.DisableKeyword(name); });
+            Add(c => { if (value) material.EnableKeyword(name); else material.DisableKeyword(name); }, 12);
         }
 
-        public void EnableKeyword(ComputeShader computeShader, in LocalKeyword keyword) { var name = keyword.name; Add(c => computeShader.EnableKeyword(name)); }
-        public void DisableKeyword(ComputeShader computeShader, in LocalKeyword keyword) { var name = keyword.name; Add(c => computeShader.DisableKeyword(name)); }
+        public void EnableKeyword(ComputeShader computeShader, in LocalKeyword keyword) { var name = keyword.name; Add(c => computeShader.EnableKeyword(name), 12); }
+        public void DisableKeyword(ComputeShader computeShader, in LocalKeyword keyword) { var name = keyword.name; Add(c => computeShader.DisableKeyword(name), 12); }
 
         public void SetKeyword(ComputeShader computeShader, in LocalKeyword keyword, bool value)
         {
             var name = keyword.name;
-            Add(c => { if (value) computeShader.EnableKeyword(name); else computeShader.DisableKeyword(name); });
+            Add(c => { if (value) computeShader.EnableKeyword(name); else computeShader.DisableKeyword(name); }, 12);
         }
 
         // Profiler samples: nothing a game observes (no profiler is attached) but their size
@@ -223,13 +223,13 @@ namespace UnityEngine.Rendering
         {
             if (dest.InstanceID != 0 && Unbound.Runtime.ObjectRegistry.FindById(dest.InstanceID) is Texture texture)
                 texture.IncrementUpdateCount();
-        });
+        }, 16);
 
         public void SetShadowSamplingMode(RenderTargetIdentifier shadowmap, ShadowSamplingMode mode) =>
             Unbound.Runtime.Stubs.Ignored("CommandBuffer.SetShadowSamplingMode", "is not honoured yet: the shadow map keeps its sampling mode");
 
         /// <summary>Draws a renderer list (made by ScriptableRenderContext.CreateRendererList).</summary>
-        public void DrawRendererList(RendererList rendererList) => Add(c => Unbound.Runtime.RendererLists.Draw(rendererList));
+        public void DrawRendererList(RendererList rendererList) => Add(c => Unbound.Runtime.RendererLists.Draw(rendererList), 32);
 
         public void SetupCameraProperties(Camera camera) => Add(c => ScriptableRenderContext.SetupCamera(camera, bindTarget: false));
 
