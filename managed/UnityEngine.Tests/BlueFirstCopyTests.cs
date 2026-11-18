@@ -16,7 +16,7 @@ namespace Unbound.Tests
     /// first by the renderer and flagged so (texture packet bit 19), where the Metal device stores
     /// it blue first and its copies to and from red-first textures move the stored bytes
     /// (tests/projects/cmdbuffers metal.jsonl `metal.copy.*`); a screen stand-in keeps the screen's
-    /// order instead. A command buffer's whole-level copy between Texture2Ds copies their CPU
+    /// order instead. A command buffer's whole-level copy between readable Texture2Ds copies their CPU
     /// bytes too, as they are (`metal.copy.bgra32.rgba32.cpu`).</summary>
     public unsafe class BlueFirstCopyTests : IDisposable
     {
@@ -135,6 +135,17 @@ namespace Unbound.Tests
                 Graphics.ExecuteCommandBuffer(cmd);
             }
             Assert.Equal(rgba.GetPixels32(), same.GetPixels32());
+            // Another control: an unreadable source copies on the GPU alone, the CPU data stays.
+            var unreadable = Keep(Pixels(TextureFormat.RGBA32));
+            unreadable.Apply(false, true);
+            var untouched = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true));
+            var before = untouched.GetPixels32();
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.CopyTexture(unreadable, untouched);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Assert.Equal(before, untouched.GetPixels32());
         }
     }
 }
