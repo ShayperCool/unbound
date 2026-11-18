@@ -98,8 +98,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Made)
                 if (go != null) Object.DestroyImmediate(go);
             foreach (var scene in m_Scenes)
-                if (scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
-            SceneManagerInternal.ProcessPending();
+                if (scene.isLoaded) SceneOperations.Unload(scene);
             Physics2D.Simulate(Dt);
         }
 
@@ -315,8 +314,7 @@ namespace UnityEngine.Tests
             var local = LocalScene();
             var physics = local.GetPhysicsScene2D();
             Floor("Gone", new Vector2(20f, 0f), local);
-            SceneManager.UnloadSceneAsync(local);
-            SceneManagerInternal.ProcessPending();
+            SceneOperations.Unload(local);
 
             Assert.False(physics.IsValid());
             Assert.NotEqual(Physics2D.defaultPhysicsScene, physics);

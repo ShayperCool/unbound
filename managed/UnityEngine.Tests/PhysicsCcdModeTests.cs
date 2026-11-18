@@ -72,8 +72,7 @@ namespace UnityEngine.Tests
             foreach (var mesh in m_Meshes) Object.DestroyImmediate(mesh);
             m_Space.Simulate(Dt);
             SceneManager.SetActiveScene(m_PreviousScene);
-            SceneManager.UnloadSceneAsync(m_Scene);
-            SceneManagerInternal.ProcessPending();
+            SceneOperations.Unload(m_Scene);
             ProjectInfo.UnityVersion = m_Release;
             Physics.gravity = m_Gravity;
             Physics.autoSyncTransforms = m_AutoSync;

@@ -45,14 +45,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Made)
                 if (go != null) Object.DestroyImmediate(go);
             foreach (var scene in m_Scenes)
-                if (scene.isLoaded) Drain(SceneManager.UnloadSceneAsync(scene));
-        }
-
-        /// <summary>Processes the scene queue until the operation completes: a pass stops at the
-        /// loading time limit, so operations other tests queued before can hold this one back.</summary>
-        static void Drain(AsyncOperation operation)
-        {
-            for (int i = 0; operation != null && !operation.isDone && i < 64; i++) SceneManagerInternal.ProcessPending();
+                if (scene.isLoaded) SceneOperations.Unload(scene);
         }
 
         Scene LocalScene()
@@ -122,10 +115,8 @@ namespace UnityEngine.Tests
             var local = LocalScene();
             var physics = local.GetPhysicsScene();
             In(local, () => Ball("Unloaded", Vector3.zero));
-            var unload = SceneManager.UnloadSceneAsync(local);
             // The unload is queued to the scripting point that completes it (Compat.DestroyPhasesMeasured).
-            Drain(unload);
-            Assert.True(unload.isDone);
+            SceneOperations.Unload(local);
 
             // Documented: the physics scene of a destroyed scene is no longer valid; the default
             // one always is. What its other methods do then is not documented and not asserted.

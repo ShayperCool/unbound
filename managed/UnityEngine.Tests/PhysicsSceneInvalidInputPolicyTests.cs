@@ -63,9 +63,8 @@ namespace UnityEngine.Tests
             var local = SceneManager.CreateScene("InvalidInputPolicy" + s_Created++, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
             m_Scenes.Add(local);
             var physics = local.GetPhysicsScene();
-            SceneManager.UnloadSceneAsync(local);
             // The unload is queued to the scripting point that completes it (Compat.DestroyPhasesMeasured).
-            SceneManagerInternal.ProcessPending();
+            SceneOperations.Unload(local);
             Assert.False(physics.IsValid());
 
             var empty = Assert.Throws<InvalidOperationException>(() => physics.IsEmpty());
