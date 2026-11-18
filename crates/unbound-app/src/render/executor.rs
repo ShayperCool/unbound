@@ -665,6 +665,8 @@ enum InstancingMode {
 const DOTS_INSTANCING_KEYWORD: &str = "DOTS_INSTANCING_ON";
 /// The keyword of the instancing variant (GPU instancing, mesh-instance replays).
 const INSTANCING_KEYWORD: &str = "INSTANCING_ON";
+/// The renderer constant a sprite shape's color reaches programs without `unity_SpriteColor` by.
+const RENDERER_COLOR: &str = "_RendererColor";
 /// The draw property (and byte address buffer) of a BatchRendererGroup batch's instance data.
 const DOTS_INSTANCE_DATA: &str = "unity_DOTSInstanceData";
 
@@ -4675,18 +4677,6 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
-            // A renderer's color of the constants alone reaches a program declaring
-            // `unity_SpriteColor` there only: the renderer's constants (`_RendererColor`, all a
-            // draw of that tint carries) are left out for it (matches the Unity 6000.0.71f1
-            // Editor, tests/projects/vertexcolors spriteshape.urprenderercolor).
-            let overrides: &[(String, owned::PropertyValue)] = if draw.tint
-                == commands::DrawTint::Constant
-                && self.compiled.declares_sprite_color(id)
-            {
-                &[]
-            } else {
-                overrides
-            };
             let (mut state, mut stencil_ref) = if errored {
                 (Default::default(), 0)
             } else {
@@ -4821,7 +4811,7 @@ impl UnityRenderer {
                 id,
                 space,
                 &globals,
-                overrides,
+                &draw.properties,
                 draw.main_texture,
             ) else {
                 self.pre_draw.clear();
@@ -4916,6 +4906,13 @@ impl UnityRenderer {
                 linear: space == 1,
                 material: material_props,
                 overrides,
+                // A renderer's color of the constants alone reaches a program declaring
+                // `unity_SpriteColor` there only: the renderer's `_RendererColor` is not set for
+                // it (matches the Unity 6000.0.71f1 Editor, tests/projects/vertexcolors
+                // spriteshape.urprenderercolor); the draw's other properties are.
+                hidden: (draw.tint == commands::DrawTint::Constant
+                    && self.compiled.declares_sprite_color(id))
+                .then_some(RENDERER_COLOR),
                 lab: &resolved.lab,
                 globals: &globals,
                 globals_index,

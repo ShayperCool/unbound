@@ -203,6 +203,9 @@ pub struct DrawValues<'a, 'buffers> {
     /// The draw's own properties (a MaterialPropertyBlock, per-renderer lights and probes), over
     /// the material's: the last of a name wins.
     pub overrides: &'a [(String, PropertyValue)],
+    /// A property of the draw's own the program does not take (a renderer's constant it reads
+    /// elsewhere): left out wherever `overrides` are read.
+    pub hidden: Option<&'static str>,
     pub lab: &'a ShaderLab,
     /// Global shader properties (`Shader.SetGlobal*`, lights, ambient).
     pub globals: &'a [(String, PropertyValue)],
@@ -237,11 +240,22 @@ impl DrawValues<'_, '_> {
 
     /// The draw's own property of a name (the last one).
     fn override_of(&self, name: &str) -> Option<&PropertyValue> {
+        if self.hidden == Some(name) {
+            return None;
+        }
         self.overrides
             .iter()
             .rev()
             .find(|(n, _)| n == name)
             .map(|(_, v)| v)
+    }
+
+    /// The draw's own properties the program takes (all but [`DrawValues::hidden`]).
+    fn taken_overrides(&self) -> impl Iterator<Item = &(String, PropertyValue)> {
+        let hidden = self.hidden;
+        self.overrides
+            .iter()
+            .filter(move |(n, _)| hidden != Some(n.as_str()))
     }
 }
 
@@ -1543,7 +1557,7 @@ fn fill_over_block(
             write_uniform(program, plan, i as usize, values, out);
         }
     };
-    for (property, value) in values.overrides {
+    for (property, value) in values.taken_overrides() {
         if !matches!(value, PropertyValue::Texture { .. }) {
             for suffix in TEXTURE_SUFFIXES {
                 redo(out, property, suffix, false);
@@ -1551,7 +1565,7 @@ fn fill_over_block(
         }
     }
     fill_constant_buffers(program, values, out);
-    for (property, value) in values.overrides {
+    for (property, value) in values.taken_overrides() {
         redo(out, property, "", true);
         if matches!(value, PropertyValue::Texture { .. }) {
             for suffix in TEXTURE_SUFFIXES {
@@ -1850,7 +1864,7 @@ mod tests {
             write_uniform(program, plan, i as usize, values, out);
         }
         fill_constant_buffers(program, values, out);
-        for (name, value) in values.overrides {
+        for (name, value) in values.taken_overrides() {
             let mut redo = |uniform: &str| {
                 if let Some(&i) = by_name.get(uniform) {
                     write_uniform(program, plan, i as usize, values, out);
@@ -2013,16 +2027,26 @@ mod tests {
             ],
         ];
         let instances = [None, Some(0), Some(1), Some(2)];
-        for (overrides, instance) in cases
+        // A hidden override (a renderer constant the program reads elsewhere): every path fills
+        // what it fills without that override, and the others still apply.
+        let hiddens = [None, Some("_Color"), Some("_Cut")];
+        for ((overrides, instance), hidden) in cases
             .iter()
             .flat_map(|o| instances.iter().map(move |i| (o, *i)))
+            .flat_map(|c| hiddens.iter().map(move |h| (c, *h)))
         {
+            let kept: Vec<(String, PropertyValue)> = overrides
+                .iter()
+                .filter(|(n, _)| Some(n.as_str()) != hidden)
+                .cloned()
+                .collect();
             let values = DrawValues {
                 gizmo_draw: false,
                 color: [1.0; 4],
                 sprite_color: [1.0; 4],
                 globals_index: &globals_index,
                 overrides,
+                hidden,
                 model,
                 view: model,
                 proj: model,
@@ -2046,6 +2070,14 @@ mod tests {
             };
             let mut full = vec![0u8; offset as usize];
             fill(&program, &plan, &values, &mut full);
+            let mut without = vec![0u8; offset as usize];
+            let unhidden = DrawValues {
+                overrides: &kept,
+                hidden: None,
+                ..values
+            };
+            fill(&program, &plan, &unhidden, &mut without);
+            assert_eq!(full, without, "hidden {hidden:?}, overrides {overrides:?}");
             let mut over = vec![0xffu8; offset as usize];
             fill_over_block(
                 &program,
@@ -2060,7 +2092,7 @@ mod tests {
             fill_over_block_reference(&program, &plan, &by_name, &block, &values, &mut reference);
             assert_eq!(
                 reference, over,
-                "overrides {overrides:?}, instance {instance:?}"
+                "overrides {overrides:?}, instance {instance:?}, hidden {hidden:?}"
             );
             if !overrides.iter().any(|(_, v)| {
                 matches!(
@@ -2165,6 +2197,7 @@ mod tests {
             sprite_color: [1.0; 4],
             globals_index: &globals_index,
             overrides: &[],
+            hidden: None,
             model,
             view: model,
             proj: model,
