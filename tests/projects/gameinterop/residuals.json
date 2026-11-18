@@ -1,0 +1,19 @@
+{
+  "Precompiled plugin type that lacks an implementation of an abstract member of the library version the project has: the Editor's Mono runtime fails only when the type is used (creating it throws its own TypeLoadException), CoreCLR refuses the type when it loads, so GetTypes, GetType and Type.GetType fail for it and its message differs. Both runtimes bind plugin references by assembly name, whatever version they were built against (plugins.extras.reference, plugins.later.*). Follow-up: defer such a type's failure to its first use (gap: plugin types with missing implementations)": [
+    "plugins.extras.types",
+    "plugins.extras.circle_type",
+    "plugins.extras.circle_by_name",
+    "plugins.extras.circle_create"
+  ],
+  "A .controller file loads as RuntimeAnimatorController, the player's class; the Editor's class for it is UnityEditor.Animations.AnimatorController (gap: Editor animator controller class)": [
+    "animator.Controller.controller",
+    "animator.Disabled.controller",
+    "animator.Inactive.controller"
+  ],
+  "Unbound has no import step: the warning the Editor writes when it imports an asset whose sub-object's script is missing, Unbound writes when it first loads the asset in Play mode": [
+    "timeline.CutsceneMissing.load.logs"
+  ],
+  "Entering Play mode with the probe scene open, the Editor runs the parameterless constructor of a scene script twice (once more than its one object); Unbound loads the scene once. Not specific to scripts without one (gap: script constructions on Play mode entry)": [
+    "ctor.after_scene"
+  ]
+}

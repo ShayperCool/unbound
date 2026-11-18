@@ -1,0 +1,371 @@
+{"k":"scene_load.logs","v":"Warning: The Animator Controller (OverrideEmpty) you have used is not valid. Animations will not play"}
+{"k":"scene_load.events","v":"ArgOnlyBehaviour.Awake ArgScene\nArgOnlyBehaviour.OnEnable ArgScene"}
+{"k":"ctor.after_scene","v":"argOnly=0 base=0 derived=0 private=2 data=0"}
+{"k":"ctor.scene.arg_only","v":"number=11 text=scene list=[4] array=8 nested=12/4 transient=0 transientList=null enabled=True"}
+{"k":"ctor.scene.derived","v":"baseNumber=20 baseTransient=0 derivedNumber=30 derivedTransient=0"}
+{"k":"ctor.scene.private","v":"number=5 transient=8"}
+{"k":"ctor.scene.components","v":"Transform,ArgOnlyBehaviour,ArgDerived,PrivateCtorBehaviour,ArgHolder"}
+{"k":"ctor.scene.holder.arg_only","v":"true"}
+{"k":"ctor.scene.holder.derived","v":"true"}
+{"k":"ctor.scene.holder.private","v":"true"}
+{"k":"ctor.scene.holder.data","v":"none"}
+{"k":"ctor.prefab.load","v":"returns GameObject 'ArgPrefab'"}
+{"k":"ctor.prefab.load.events","v":"ArgOnlyData.Awake ArgData\nArgOnlyData.OnEnable ArgData"}
+{"k":"ctor.prefab.counts","v":"argOnly=0 base=0 derived=0 private=1 data=0"}
+{"k":"ctor.prefab.asset.arg_only","v":"number=13 text=prefab list=[4] array=8 nested=12/4 transient=0 transientList=null enabled=True"}
+{"k":"ctor.prefab.asset.derived","v":"baseNumber=20 baseTransient=0 derivedNumber=30 derivedTransient=0"}
+{"k":"ctor.prefab.asset.private","v":"number=5 transient=8"}
+{"k":"ctor.prefab.asset.components","v":"Transform,ArgOnlyBehaviour,ArgDerived,PrivateCtorBehaviour,ArgHolder"}
+{"k":"ctor.prefab.asset.holder.arg_only","v":"true"}
+{"k":"ctor.prefab.asset.holder.derived","v":"true"}
+{"k":"ctor.prefab.asset.holder.private","v":"true"}
+{"k":"ctor.prefab.asset.holder.data","v":"name=ArgData number=17 list=[9] transient=0"}
+{"k":"ctor.prefab.instantiate","v":"returns GameObject 'ArgPrefab(Clone)'"}
+{"k":"ctor.prefab.instantiate.events","v":"ArgOnlyBehaviour.Awake ArgPrefab(Clone)\nArgOnlyBehaviour.OnEnable ArgPrefab(Clone)"}
+{"k":"ctor.prefab.instantiate.counts","v":"argOnly=0 base=0 derived=0 private=1 data=0"}
+{"k":"ctor.prefab.clone.arg_only","v":"number=13 text=prefab list=[4] array=8 nested=12/4 transient=0 transientList=null enabled=True"}
+{"k":"ctor.prefab.clone.derived","v":"baseNumber=20 baseTransient=0 derivedNumber=30 derivedTransient=0"}
+{"k":"ctor.prefab.clone.private","v":"number=5 transient=8"}
+{"k":"ctor.prefab.clone.components","v":"Transform,ArgOnlyBehaviour,ArgDerived,PrivateCtorBehaviour,ArgHolder"}
+{"k":"ctor.prefab.clone.holder.arg_only","v":"true"}
+{"k":"ctor.prefab.clone.holder.derived","v":"true"}
+{"k":"ctor.prefab.clone.holder.private","v":"true"}
+{"k":"ctor.prefab.clone.holder.data","v":"name=ArgData number=17 list=[9] transient=0"}
+{"k":"ctor.scene.instantiate","v":"returns GameObject 'ArgScene(Clone)'"}
+{"k":"ctor.scene.instantiate.events","v":"ArgOnlyBehaviour.Awake ArgScene(Clone)\nArgOnlyBehaviour.OnEnable ArgScene(Clone)"}
+{"k":"ctor.scene.copy.arg_only","v":"number=11 text=scene list=[4] array=8 nested=12/4 transient=0 transientList=null enabled=True"}
+{"k":"ctor.scene.copy.derived","v":"baseNumber=20 baseTransient=0 derivedNumber=30 derivedTransient=0"}
+{"k":"ctor.scene.copy.private","v":"number=5 transient=8"}
+{"k":"ctor.scene.copy.components","v":"Transform,ArgOnlyBehaviour,ArgDerived,PrivateCtorBehaviour,ArgHolder"}
+{"k":"ctor.scene.copy.holder.arg_only","v":"true"}
+{"k":"ctor.scene.copy.holder.derived","v":"true"}
+{"k":"ctor.scene.copy.holder.private","v":"true"}
+{"k":"ctor.scene.copy.holder.data","v":"none"}
+{"k":"ctor.add_call.arg_only","v":"returns ArgOnlyBehaviour 'Added'"}
+{"k":"ctor.add_call.arg_only.events","v":"ArgOnlyBehaviour.Awake Added\nArgOnlyBehaviour.OnEnable Added"}
+{"k":"ctor.add_call.derived","v":"returns ArgDerived 'Added'"}
+{"k":"ctor.add_call.private","v":"returns PrivateCtorBehaviour 'Added'"}
+{"k":"ctor.add.counts","v":"argOnly=0 base=0 derived=0 private=2 data=0"}
+{"k":"ctor.add.arg_only","v":"number=0 text=null list=null array=null nested=null transient=0 transientList=null enabled=True"}
+{"k":"ctor.add.derived","v":"baseNumber=0 baseTransient=0 derivedNumber=0 derivedTransient=0"}
+{"k":"ctor.add.private","v":"number=5 transient=8"}
+{"k":"ctor.add.components","v":"Transform,ArgOnlyBehaviour,ArgDerived,PrivateCtorBehaviour"}
+{"k":"ctor.new_game_object","v":"returns GameObject 'Made'"}
+{"k":"ctor.new_game_object.events","v":"ArgOnlyBehaviour.Awake Made\nArgOnlyBehaviour.OnEnable Made"}
+{"k":"ctor.new_game_object.fields","v":"number=0 text=null list=null array=null nested=null transient=0 transientList=null enabled=True"}
+{"k":"ctor.data.load","v":"returns ArgOnlyData 'ArgData'"}
+{"k":"ctor.data.load.fields","v":"name=ArgData number=17 list=[9] transient=0"}
+{"k":"ctor.data.create_generic","v":"returns ArgOnlyData ''"}
+{"k":"ctor.data.create_generic.events","v":"ArgOnlyData.Awake \nArgOnlyData.OnEnable "}
+{"k":"ctor.data.create_generic.fields","v":"name= number=0 list=null transient=0"}
+{"k":"ctor.data.create_type","v":"returns name= number=0 list=null transient=0"}
+{"k":"ctor.data.create_type.events","v":"ArgOnlyData.Awake \nArgOnlyData.OnEnable "}
+{"k":"ctor.data.create_name","v":"returns name= number=0 list=null transient=0"}
+{"k":"ctor.data.create_name.events","v":"ArgOnlyData.Awake \nArgOnlyData.OnEnable "}
+{"k":"ctor.data.instantiate","v":"returns name=ArgData(Clone) number=17 list=[9] transient=0"}
+{"k":"ctor.data.instantiate.events","v":"ArgOnlyData.Awake ArgData(Clone)\nArgOnlyData.OnEnable ArgData(Clone)"}
+{"k":"ctor.data.counts","v":"argOnly=0 base=0 derived=0 private=0 data=0"}
+{"k":"ctor.data.json","v":"returns name= number=21 list=[] transient=0"}
+{"k":"ctor.data.json.events","v":"ArgOnlyData.Awake \nArgOnlyData.OnEnable "}
+{"k":"hier.control.load","v":"returns GameObject 'EditNone'"}
+{"k":"hier.control.validations","v":"0"}
+{"k":"hier.control.asset","v":"EditNone(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.control.head","v":"under Body scene=none"}
+{"k":"hier.control.instantiate","v":"returns GameObject 'EditNone(Clone)'"}
+{"k":"hier.control.clone","v":"EditNone(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_inside.load","v":"returns GameObject 'EditInside'"}
+{"k":"hier.set_parent_inside.validations","v":"0"}
+{"k":"hier.set_parent_inside.edit","v":"returns done"}
+{"k":"hier.set_parent_inside.edit.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.set_parent_inside.asset","v":"EditInside(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_inside.head","v":"under Body scene=none"}
+{"k":"hier.set_parent_inside.instantiate","v":"returns GameObject 'EditInside(Clone)'"}
+{"k":"hier.set_parent_inside.clone","v":"EditInside(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_null.load","v":"returns GameObject 'EditNull'"}
+{"k":"hier.set_parent_null.validations","v":"0"}
+{"k":"hier.set_parent_null.edit","v":"returns done"}
+{"k":"hier.set_parent_null.edit.logs","v":"Error: Transform resides in a Prefab asset and cannot be set to prevent data corruption"}
+{"k":"hier.set_parent_null.asset","v":"EditNull(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_null.head","v":"under Body scene=none"}
+{"k":"hier.set_parent_null.instantiate","v":"returns GameObject 'EditNull(Clone)'"}
+{"k":"hier.set_parent_null.clone","v":"EditNull(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.parent_property.load","v":"returns GameObject 'EditProperty'"}
+{"k":"hier.parent_property.validations","v":"0"}
+{"k":"hier.parent_property.edit","v":"returns done"}
+{"k":"hier.parent_property.edit.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.parent_property.asset","v":"EditProperty(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.parent_property.head","v":"under Body scene=none"}
+{"k":"hier.parent_property.instantiate","v":"returns GameObject 'EditProperty(Clone)'"}
+{"k":"hier.parent_property.clone","v":"EditProperty(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_scene.load","v":"returns GameObject 'EditScene'"}
+{"k":"hier.set_parent_scene.validations","v":"0"}
+{"k":"hier.set_parent_scene.edit","v":"returns SceneParent"}
+{"k":"hier.set_parent_scene.edit.logs","v":"Error: Transform resides in a Prefab asset and cannot be set to prevent data corruption"}
+{"k":"hier.set_parent_scene.asset","v":"EditScene(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.set_parent_scene.head","v":"under Body scene=none"}
+{"k":"hier.set_parent_scene.instantiate","v":"returns GameObject 'EditScene(Clone)'"}
+{"k":"hier.set_parent_scene.clone","v":"EditScene(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.scene_under_asset.load","v":"returns GameObject 'EditLoose'"}
+{"k":"hier.scene_under_asset.validations","v":"0"}
+{"k":"hier.scene_under_asset.edit","v":"returns root scene=Probe"}
+{"k":"hier.scene_under_asset.edit.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.scene_under_asset.asset","v":"EditLoose(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.scene_under_asset.head","v":"under Body scene=none"}
+{"k":"hier.scene_under_asset.instantiate","v":"returns GameObject 'EditLoose(Clone)'"}
+{"k":"hier.scene_under_asset.clone","v":"EditLoose(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.sibling_index.load","v":"returns GameObject 'EditSibling'"}
+{"k":"hier.sibling_index.validations","v":"0"}
+{"k":"hier.sibling_index.edit","v":"returns 0"}
+{"k":"hier.sibling_index.asset","v":"EditSibling(Body(Arm,Head),Base(Foot))"}
+{"k":"hier.sibling_index.head","v":"under Body scene=none"}
+{"k":"hier.sibling_index.instantiate","v":"returns GameObject 'EditSibling(Clone)'"}
+{"k":"hier.sibling_index.clone","v":"EditSibling(Clone)(Body(Arm,Head),Base(Foot))"}
+{"k":"hier.instantiate_under.load","v":"returns GameObject 'EditInstantiate'"}
+{"k":"hier.instantiate_under.validations","v":"0"}
+{"k":"hier.instantiate_under.edit","v":"returns root scene=Probe"}
+{"k":"hier.instantiate_under.edit.logs","v":"Error: Cannot instantiate objects with a parent which is persistent. New object will be created without a parent."}
+{"k":"hier.instantiate_under.asset","v":"EditInstantiate(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.instantiate_under.head","v":"under Body scene=none"}
+{"k":"hier.instantiate_under.instantiate","v":"returns GameObject 'EditInstantiate(Clone)'"}
+{"k":"hier.instantiate_under.clone","v":"EditInstantiate(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.instantiate_under_world.load","v":"returns GameObject 'EditInstantiateWorld'"}
+{"k":"hier.instantiate_under_world.validations","v":"0"}
+{"k":"hier.instantiate_under_world.edit","v":"returns root scene=Probe"}
+{"k":"hier.instantiate_under_world.edit.logs","v":"Error: Cannot instantiate objects with a parent which is persistent. New object will be created without a parent."}
+{"k":"hier.instantiate_under_world.asset","v":"EditInstantiateWorld(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.instantiate_under_world.head","v":"under Body scene=none"}
+{"k":"hier.instantiate_under_world.instantiate","v":"returns GameObject 'EditInstantiateWorld(Clone)'"}
+{"k":"hier.instantiate_under_world.clone","v":"EditInstantiateWorld(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.detach_children.load","v":"returns GameObject 'EditDetach'"}
+{"k":"hier.detach_children.validations","v":"0"}
+{"k":"hier.detach_children.edit","v":"returns done"}
+{"k":"hier.detach_children.edit.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption (GameObject: 'Head')."}
+{"k":"hier.detach_children.asset","v":"EditDetach(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.detach_children.head","v":"under Body scene=none"}
+{"k":"hier.detach_children.instantiate","v":"returns GameObject 'EditDetach(Clone)'"}
+{"k":"hier.detach_children.clone","v":"EditDetach(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.rect_transform.load","v":"returns GameObject 'EditRect'"}
+{"k":"hier.rect_transform.validations","v":"0"}
+{"k":"hier.rect_transform.edit","v":"returns null"}
+{"k":"hier.rect_transform.edit.logs","v":"Log: Changing Transform on a Prefab instance (Arm) is not allowed."}
+{"k":"hier.rect_transform.asset","v":"EditRect(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.rect_transform.head","v":"under Body scene=none"}
+{"k":"hier.rect_transform.instantiate","v":"returns GameObject 'EditRect(Clone)'"}
+{"k":"hier.rect_transform.clone","v":"EditRect(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.destroy_child.load","v":"returns GameObject 'EditDestroy'"}
+{"k":"hier.destroy_child.validations","v":"0"}
+{"k":"hier.destroy_child.edit","v":"returns done"}
+{"k":"hier.destroy_child.edit.logs","v":"Error: Destroying assets is not permitted to avoid data loss.\nIf you really want to remove an asset use DestroyImmediate (theObject, true);"}
+{"k":"hier.destroy_child.asset","v":"EditDestroy(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.destroy_child.head","v":"under Body scene=none"}
+{"k":"hier.destroy_child.instantiate","v":"returns GameObject 'EditDestroy(Clone)'"}
+{"k":"hier.destroy_child.clone","v":"EditDestroy(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.new_child.load","v":"returns GameObject 'EditNewChild'"}
+{"k":"hier.new_child.validations","v":"0"}
+{"k":"hier.new_child.edit","v":"returns root scene=Probe"}
+{"k":"hier.new_child.edit.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.new_child.asset","v":"EditNewChild(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.new_child.head","v":"under Body scene=none"}
+{"k":"hier.new_child.instantiate","v":"returns GameObject 'EditNewChild(Clone)'"}
+{"k":"hier.new_child.clone","v":"EditNewChild(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.validate_reparent.load","v":"returns GameObject 'ValidateReparent'"}
+{"k":"hier.validate_reparent.load.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.validate_reparent.load.events","v":"LimbRig.OnValidate ValidateReparent reparent"}
+{"k":"hier.validate_reparent.validations","v":"1"}
+{"k":"hier.validate_reparent.asset","v":"ValidateReparent(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.validate_reparent.head","v":"under Body scene=none"}
+{"k":"hier.validate_reparent.instantiate","v":"returns GameObject 'ValidateReparent(Clone)'"}
+{"k":"hier.validate_reparent.clone","v":"ValidateReparent(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.validate_add.load","v":"returns GameObject 'ValidateAdd'"}
+{"k":"hier.validate_add.load.logs","v":"Warning: SendMessage cannot be called during Awake, CheckConsistency, or OnValidate (Added: OnDidAddComponent)\n---\nError: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.validate_add.load.events","v":"LimbRig.OnValidate ValidateAdd add"}
+{"k":"hier.validate_add.validations","v":"2"}
+{"k":"hier.validate_add.asset","v":"ValidateAdd(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.validate_add.head","v":"under Body scene=none"}
+{"k":"hier.validate_add.instantiate","v":"returns GameObject 'ValidateAdd(Clone)'"}
+{"k":"hier.validate_add.clone","v":"ValidateAdd(Clone)(Body(Head,Arm),Base(Foot))"}
+{"k":"hier.validations","v":"2"}
+{"k":"hier.nested.load","v":"returns GameObject 'Outer'"}
+{"k":"hier.nested.load.events","v":"LimbRig.OnValidate Figure "}
+{"k":"hier.nested.validations","v":"3"}
+{"k":"hier.nested.asset","v":"Outer(Lid,Figure(Body(Head(Hat),Arm),Base(Foot)))"}
+{"k":"hier.nested.head","v":"none"}
+{"k":"hier.nested.instantiate","v":"returns GameObject 'Outer(Clone)'"}
+{"k":"hier.nested.clone","v":"Outer(Clone)(Lid,Figure(Body(Head(Hat),Arm),Base(Foot)))"}
+{"k":"hier.variant.load","v":"returns GameObject 'OuterVariant'"}
+{"k":"hier.variant.load.events","v":"LimbRig.OnValidate Figure "}
+{"k":"hier.variant.validations","v":"4"}
+{"k":"hier.variant.asset","v":"OuterVariant(Lid,Figure(Body(Head(Hat),Arm,Extra),Base(Foot)))"}
+{"k":"hier.variant.head","v":"none"}
+{"k":"hier.variant.instantiate","v":"returns GameObject 'OuterVariant(Clone)'"}
+{"k":"hier.variant.clone","v":"OuterVariant(Clone)(Lid,Figure(Body(Head(Hat),Arm,Extra),Base(Foot)))"}
+{"k":"hier.nested_validate.load","v":"returns GameObject 'OuterValidate'"}
+{"k":"hier.nested_validate.load.logs","v":"Error: Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption"}
+{"k":"hier.nested_validate.load.events","v":"LimbRig.OnValidate Figure reparent"}
+{"k":"hier.nested_validate.validations","v":"5"}
+{"k":"hier.nested_validate.asset","v":"OuterValidate(Lid,Figure(Body(Head(Hat),Arm),Base(Foot)))"}
+{"k":"hier.nested_validate.head","v":"none"}
+{"k":"hier.nested_validate.instantiate","v":"returns GameObject 'OuterValidate(Clone)'"}
+{"k":"hier.nested_validate.clone","v":"OuterValidate(Clone)(Lid,Figure(Body(Head(Hat),Arm),Base(Foot)))"}
+{"k":"reentrant.before","v":"returns done"}
+{"k":"reentrant.before.x","v":"under P3 scene=Probe"}
+{"k":"reentrant.before.trees","v":"P1 P2 P3(X)"}
+{"k":"reentrant.before.sibling_index","v":"returns 0"}
+{"k":"reentrant.before.instantiate_p2","v":"returns GameObject 'P2(Clone)'"}
+{"k":"reentrant.before.copy_p2","v":"P2(Clone)"}
+{"k":"reentrant.before.instantiate_p3","v":"returns GameObject 'P3(Clone)'"}
+{"k":"reentrant.before.copy_p3","v":"P3(Clone)(X)"}
+{"k":"reentrant.after","v":"returns done"}
+{"k":"reentrant.after.y","v":"under Q2 scene=Probe"}
+{"k":"reentrant.after.trees","v":"Q1 Q2(Y) Q3"}
+{"k":"animator.Bare.controller","v":"none"}
+{"k":"animator.Bare.initialized","v":"returns True"}
+{"k":"animator.Bare.set_float","v":"returns done"}
+{"k":"animator.Bare.set_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.get_float","v":"returns 0"}
+{"k":"animator.Bare.get_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.set_trigger","v":"returns done"}
+{"k":"animator.Bare.set_trigger.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.set_bool_hash","v":"returns done"}
+{"k":"animator.Bare.set_bool_hash.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.parameter_count","v":"returns 0"}
+{"k":"animator.Bare.parameter_count.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.state","v":"returns False"}
+{"k":"animator.Bare.state.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Bare.play","v":"returns done"}
+{"k":"animator.Bare.play.logs","v":"Warning: Animator does not have an AnimatorController"}
+{"k":"animator.Inactive.controller","v":"AnimatorController"}
+{"k":"animator.Inactive.initialized","v":"returns False"}
+{"k":"animator.Inactive.set_float","v":"returns done"}
+{"k":"animator.Inactive.set_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.get_float","v":"returns 0"}
+{"k":"animator.Inactive.get_float.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.set_trigger","v":"returns done"}
+{"k":"animator.Inactive.set_trigger.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.set_bool_hash","v":"returns done"}
+{"k":"animator.Inactive.set_bool_hash.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.parameter_count","v":"returns 3"}
+{"k":"animator.Inactive.state","v":"returns False"}
+{"k":"animator.Inactive.state.logs","v":"Warning: Animator is not playing an AnimatorController"}
+{"k":"animator.Inactive.play","v":"returns done"}
+{"k":"animator.Inactive.play.logs","v":"Warning: Game object with animator is inactive"}
+{"k":"animator.Disabled.controller","v":"AnimatorController"}
+{"k":"animator.Disabled.initialized","v":"returns True"}
+{"k":"animator.Disabled.set_float","v":"returns done"}
+{"k":"animator.Disabled.get_float","v":"returns 1"}
+{"k":"animator.Disabled.set_trigger","v":"returns done"}
+{"k":"animator.Disabled.set_bool_hash","v":"returns done"}
+{"k":"animator.Disabled.parameter_count","v":"returns 3"}
+{"k":"animator.Disabled.state","v":"returns True"}
+{"k":"animator.Disabled.play","v":"returns done"}
+{"k":"animator.OverrideEmpty.controller","v":"AnimatorOverrideController"}
+{"k":"animator.OverrideEmpty.initialized","v":"returns False"}
+{"k":"animator.OverrideEmpty.set_float","v":"returns done"}
+{"k":"animator.OverrideEmpty.set_float.logs","v":"Warning: Animator has not been initialized."}
+{"k":"animator.OverrideEmpty.get_float","v":"returns 0"}
+{"k":"animator.OverrideEmpty.get_float.logs","v":"Warning: Animator has not been initialized."}
+{"k":"animator.OverrideEmpty.set_trigger","v":"returns done"}
+{"k":"animator.OverrideEmpty.set_trigger.logs","v":"Warning: Animator has not been initialized."}
+{"k":"animator.OverrideEmpty.set_bool_hash","v":"returns done"}
+{"k":"animator.OverrideEmpty.set_bool_hash.logs","v":"Warning: Animator has not been initialized."}
+{"k":"animator.OverrideEmpty.parameter_count","v":"returns 0"}
+{"k":"animator.OverrideEmpty.state","v":"returns False"}
+{"k":"animator.OverrideEmpty.play","v":"returns done"}
+{"k":"animator.Override.controller","v":"AnimatorOverrideController"}
+{"k":"animator.Override.initialized","v":"returns True"}
+{"k":"animator.Override.set_float","v":"returns done"}
+{"k":"animator.Override.get_float","v":"returns 1"}
+{"k":"animator.Override.set_trigger","v":"returns done"}
+{"k":"animator.Override.set_bool_hash","v":"returns done"}
+{"k":"animator.Override.parameter_count","v":"returns 3"}
+{"k":"animator.Override.state","v":"returns True"}
+{"k":"animator.Override.play","v":"returns done"}
+{"k":"animator.Controller.controller","v":"AnimatorController"}
+{"k":"animator.Controller.initialized","v":"returns True"}
+{"k":"animator.Controller.set_float","v":"returns done"}
+{"k":"animator.Controller.get_float","v":"returns 1"}
+{"k":"animator.Controller.set_trigger","v":"returns done"}
+{"k":"animator.Controller.set_bool_hash","v":"returns done"}
+{"k":"animator.Controller.parameter_count","v":"returns 3"}
+{"k":"animator.Controller.state","v":"returns True"}
+{"k":"animator.Controller.play","v":"returns done"}
+{"k":"animator.assigned.assign","v":"returns done"}
+{"k":"animator.assigned.set_float","v":"returns done"}
+{"k":"animator.assigned.get_float","v":"returns 2"}
+{"k":"stats.screen_res_form","v":"returns True"}
+{"k":"compilation.Editor.Assembly-CSharp.root_namespace","v":""}
+{"k":"compilation.Editor.Assembly-CSharp.flags","v":"None"}
+{"k":"compilation.Editor.Assembly-CSharp.output","v":"Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"compilation.Editor.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs]"}
+{"k":"compilation.Editor.Assembly-CSharp.references","v":"[ProbeUnsafeLib]"}
+{"k":"compilation.Editor.Assembly-CSharp.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
+{"k":"compilation.Editor.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.root_namespace","v":""}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.flags","v":"EditorAssembly"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.output","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.sources","v":"[Assets/Editor/ProbeRunner.cs,Assets/Editor/ProbeSetup.cs]"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.references","v":"[Assembly-CSharp,ProbeUnsafeLib]"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.ProbeUnsafeLib.root_namespace","v":"ProbeLib"}
+{"k":"compilation.Editor.ProbeUnsafeLib.flags","v":"None"}
+{"k":"compilation.Editor.ProbeUnsafeLib.output","v":"Library/ScriptAssemblies/ProbeUnsafeLib.dll"}
+{"k":"compilation.Editor.ProbeUnsafeLib.sources","v":"[Assets/UnsafeLib/UnsafeSum.cs]"}
+{"k":"compilation.Editor.ProbeUnsafeLib.references","v":"[]"}
+{"k":"compilation.Editor.ProbeUnsafeLib.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
+{"k":"compilation.Editor.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Player.Assembly-CSharp.root_namespace","v":""}
+{"k":"compilation.Player.Assembly-CSharp.flags","v":"None"}
+{"k":"compilation.Player.Assembly-CSharp.output","v":"Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"compilation.Player.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs]"}
+{"k":"compilation.Player.Assembly-CSharp.references","v":"[ProbeUnsafeLib]"}
+{"k":"compilation.Player.Assembly-CSharp.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
+{"k":"compilation.Player.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Player.ProbeUnsafeLib.root_namespace","v":"ProbeLib"}
+{"k":"compilation.Player.ProbeUnsafeLib.flags","v":"None"}
+{"k":"compilation.Player.ProbeUnsafeLib.output","v":"Library/ScriptAssemblies/ProbeUnsafeLib.dll"}
+{"k":"compilation.Player.ProbeUnsafeLib.sources","v":"[Assets/UnsafeLib/UnsafeSum.cs]"}
+{"k":"compilation.Player.ProbeUnsafeLib.references","v":"[]"}
+{"k":"compilation.Player.ProbeUnsafeLib.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
+{"k":"compilation.Player.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Release language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.options_new","v":"returns unsafe=False api=NET_Unity_4_8 optimization=None language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
+{"k":"compilation.ctor_options","v":"returns name=Made rootNamespace=MadeNs flags=EditorAssembly output=Out/Made.dll sources=[Assets/A.cs] defines=[MADE] references=[] compiled=[Assets/Plugins/ShapeCore.dll] options=unsafe=True api=NET_Unity_4_8 optimization=Debug language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
+{"k":"compilation.ctor_options_no_namespace","v":"returns name=Made rootNamespace= flags=None output=Out/Made.dll sources=[Assets/A.cs] defines=[] references=[] compiled=[] options=unsafe=False api=NET_Unity_4_8 optimization=None language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
+{"k":"compilation.ctor_plain","v":"returns name=Made rootNamespace= flags=None output=Out/Made.dll sources=[Assets/A.cs] defines=null references=null compiled=null options=unsafe=False api=NET_Unity_4_8 optimization=None language=9.0 responseFiles=[] arguments=null analyzers=[] ruleset=null config=null additional=[] editorCompatibility=Default"}
+{"k":"compilation.ctor_null_options","v":"returns name=Made rootNamespace=null flags=None output=Out/Made.dll sources=[] defines=[] references=[] compiled=[] options=null"}
+{"k":"timeline.Cutscene.load","v":"returns TimelineAsset 'Cutscene'"}
+{"k":"timeline.Cutscene.duration","v":"4.999999999999"}
+{"k":"timeline.Cutscene.root_tracks","v":"4"}
+{"k":"timeline.Cutscene.output_tracks","v":"4"}
+{"k":"timeline.Cutscene.track.Markers","v":"returns MarkerTrack clips=0 markers=1 [ProbeMarker@0.25] parent=Cutscene"}
+{"k":"timeline.Cutscene.track.Move","v":"returns AnimationTrack clips=1 markers=1 [SignalEmitter@0.5] parent=Cutscene"}
+{"k":"timeline.Cutscene.track.Show","v":"returns ActivationTrack clips=1 markers=0 [] parent=Cutscene"}
+{"k":"timeline.Cutscene.track.Inner","v":"returns AnimationTrack clips=0 markers=1 [ProbeMarker@1] parent=Group"}
+{"k":"timeline.Cutscene.marker_track","v":"returns 1 [ProbeMarker]"}
+{"k":"timeline.Cutscene.load_all","v":"returns ActivationPlayableAsset:ActivationPlayableAsset,ActivationTrack:Show,AnimationPlayableAsset:Move,AnimationTrack:Inner,AnimationTrack:Move,GroupTrack:Group,MarkerTrack:Markers,ProbeMarker:,ProbeMarker:,SignalEmitter:,TimelineAsset:Cutscene"}
+{"k":"timeline.CutsceneMissing.load","v":"returns TimelineAsset 'Cutscene'"}
+{"k":"timeline.CutsceneMissing.duration","v":"4.999999999999"}
+{"k":"timeline.CutsceneMissing.root_tracks","v":"4"}
+{"k":"timeline.CutsceneMissing.output_tracks","v":"4"}
+{"k":"timeline.CutsceneMissing.track.Markers","v":"returns MarkerTrack clips=0 markers=0 [] parent=Cutscene"}
+{"k":"timeline.CutsceneMissing.track.Move","v":"returns AnimationTrack clips=1 markers=1 [SignalEmitter@0.5] parent=Cutscene"}
+{"k":"timeline.CutsceneMissing.track.Show","v":"returns ActivationTrack clips=1 markers=0 [] parent=Cutscene"}
+{"k":"timeline.CutsceneMissing.track.Inner","v":"returns AnimationTrack clips=0 markers=0 [] parent=Group"}
+{"k":"timeline.CutsceneMissing.marker_track","v":"returns 0 []"}
+{"k":"plugins.core","v":"ShapeCore 2.0.0.0"}
+{"k":"plugins.extras.info","v":"true"}
+{"k":"plugins.extras.reference","v":"ShapeCore 1.0.0.0"}
+{"k":"plugins.extras.answer","v":"returns 42"}
+{"k":"plugins.extras.core_name","v":"returns ShapeCore"}
+{"k":"plugins.extras.types","v":"returns types Microsoft.CodeAnalysis.EmbeddedAttribute,ShapeExtras.Circle,ShapeExtras.ExtrasInfo,ShapeExtras.Square,System.Runtime.CompilerServices.RefSafetyRulesAttribute"}
+{"k":"plugins.extras.square","v":"returns 4"}
+{"k":"plugins.extras.circle_type","v":"returns found"}
+{"k":"plugins.extras.circle_by_name","v":"returns found"}
+{"k":"plugins.extras.circle_create","v":"throws System.TypeLoadException: Type ShapeExtras.Circle has invalid vtable method slot 5 with method none"}
+{"k":"plugins.later.info","v":"true"}
+{"k":"plugins.later.reference","v":"ShapeCore 3.0.0.0"}
+{"k":"plugins.later.core_version","v":"returns 2"}
+{"k":"plugins.later.types","v":"returns types Microsoft.CodeAnalysis.EmbeddedAttribute,ShapeLater.LaterInfo,ShapeLater.Triangle,System.Runtime.CompilerServices.RefSafetyRulesAttribute"}
+{"k":"plugins.later.triangle","v":"returns 2"}
+{"k":"plugins.loaded","v":"ShapeCore,ShapeExtras,ShapeLater"}
+{"k":"complete","v":true}
