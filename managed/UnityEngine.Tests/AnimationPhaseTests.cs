@@ -40,7 +40,7 @@ namespace UnityEngine.Tests
         {
             var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.PanelController), "test.asset", null, ObjectGraphBuilder.Kind.Asset, null);
             recorder = ScriptableObject.CreateInstance<SlotRecorder>();
-            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Behaviours.Add(recorder);
+            foreach (var state in file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>()) state.Behaviours.Add(recorder);
             return (RuntimeAnimatorController)file.Objects[9100000];
         }
 
@@ -128,7 +128,7 @@ namespace UnityEngine.Tests
             s_Calls.Clear();
             var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.PanelController), "test.asset", null, ObjectGraphBuilder.Kind.Asset, null);
             var recorder = ScriptableObject.CreateInstance<SlotRecorder>();
-            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Behaviours.Add(recorder);
+            foreach (var state in file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>()) state.Behaviours.Add(recorder);
             var root = new GameObject("Panel", typeof(RectTransform));
             var animator = root.AddComponent<Animator>();
             animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];

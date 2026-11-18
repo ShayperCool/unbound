@@ -205,7 +205,7 @@ namespace UnityEngine.Tests
                 Curve = AnimationCurve.Constant(0f, 1f, 0.3f),
             });
             idle.m_Version++;
-            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Mirror = true;
+            foreach (var state in file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>()) state.Mirror = true;
             var playable = Play(animator, (RuntimeAnimatorController)file.Objects[9100000], out var g);
             g.Evaluate(0f);
             Assert.NotNull(idle.StateMirroredIfMade);

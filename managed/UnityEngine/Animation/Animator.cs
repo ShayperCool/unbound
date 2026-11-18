@@ -278,6 +278,13 @@ namespace UnityEngine
             set
             { MainThreadCheck.Check("set_runtimeAnimatorController");
                 if (m_Controller == value) return;
+                // An override controller with nothing to override is refused; the Animator keeps
+                // its controller (Unity 6000.0.71f1, tests/projects/gameinterop animator.runtime_invalid.*).
+                if (value is AnimatorOverrideController empty && empty.runtimeAnimatorController == null)
+                {
+                    Debug.LogError(AnimatorErrors.EmptyOverrideAssigned(empty.name), this);
+                    return;
+                }
                 ResetBindings();
                 m_Controller = value;
                 m_Player = null;

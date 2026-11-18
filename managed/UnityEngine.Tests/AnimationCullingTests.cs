@@ -478,12 +478,12 @@ namespace UnityEngine.Tests
             var clip = new AnimationClip { legacy = true };
             clip.SetCurve("Held", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 4f));
             clip.legacy = false;
-            var empty = new ControllerStateAsset { name = "Empty", WriteDefaults = false };
-            var moving = new ControllerStateAsset { name = "Moving", Motion = clip };
-            var holding = new ControllerStateAsset { name = "Hold", WriteDefaults = false };
-            var basis = new ControllerStateMachineAsset { name = "Base", DefaultState = empty };
+            var empty = new UnityEditor.Animations.AnimatorState { name = "Empty", WriteDefaults = false };
+            var moving = new UnityEditor.Animations.AnimatorState { name = "Moving", Motion = clip };
+            var holding = new UnityEditor.Animations.AnimatorState { name = "Hold", WriteDefaults = false };
+            var basis = new UnityEditor.Animations.AnimatorStateMachine { name = "Base", DefaultState = empty };
             basis.States.Add(empty);
-            var partial = new ControllerStateMachineAsset { name = "Partial", DefaultState = moving };
+            var partial = new UnityEditor.Animations.AnimatorStateMachine { name = "Partial", DefaultState = moving };
             partial.States.Add(moving);
             partial.States.Add(holding);
             controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = basis });
@@ -553,8 +553,8 @@ namespace UnityEngine.Tests
             clip.SetCurve("ContinueText", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 4f));
             clip.legacy = false;
             clip.AddEvent(new AnimationEvent { time = 0.05f, functionName = "BindNow" });
-            var state = new ControllerStateAsset { name = "Moving", Motion = clip, WriteDefaults = writeDefaults };
-            var machine = new ControllerStateMachineAsset { name = "Base", DefaultState = state };
+            var state = new UnityEditor.Animations.AnimatorState { name = "Moving", Motion = clip, WriteDefaults = writeDefaults };
+            var machine = new UnityEditor.Animations.AnimatorStateMachine { name = "Base", DefaultState = state };
             machine.States.Add(state);
             controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = machine });
             foreach (var asset in new Object[] { controller, clip, state, machine }) m_Objects.Add(asset);
@@ -601,7 +601,7 @@ namespace UnityEngine.Tests
             var file = Load(AnimationFixtures.PopupButton);
             var prototype = ScriptableObject.CreateInstance<PlayableMoveState>();
             m_Objects.Add(prototype);
-            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Behaviours.Add(prototype);
+            foreach (var state in file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>()) state.Behaviours.Add(prototype);
             var root = new GameObject("PlayableController");
             m_Objects.Add(root);
             new GameObject("ContinueText").transform.SetParent(root.transform, false);

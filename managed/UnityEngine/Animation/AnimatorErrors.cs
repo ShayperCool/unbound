@@ -10,6 +10,8 @@ namespace UnityEngine
         internal const string NotPlaying = "Animator is not playing an AnimatorController";
         internal const string NoController = "Animator does not have an AnimatorController";
         internal const string NotInitialized = "Animator has not been initialized.";
+        internal static string EmptyOverrideAssigned(string name) =>
+            $"Could not set Runtime Animator Controller. The controller {name} is an AnimatorOverrideController with no AnimatorController to override.";
         internal const string Inactive = "Game object with animator is inactive";
         internal const string StateNotFound = "Animator.GotoState: State could not be found";
 

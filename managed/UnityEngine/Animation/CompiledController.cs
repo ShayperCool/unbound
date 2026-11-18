@@ -118,7 +118,7 @@ namespace Unbound.Runtime
             s_Built.Clear();
         }
 
-        static readonly Dictionary<ControllerLayerData, List<ControllerStateAsset>> s_Built = new Dictionary<ControllerLayerData, List<ControllerStateAsset>>();
+        static readonly Dictionary<ControllerLayerData, List<UnityEditor.Animations.AnimatorState>> s_Built = new Dictionary<ControllerLayerData, List<UnityEditor.Animations.AnimatorState>>();
 
         /// <summary>State machine behaviours by the full path hash of their state or machine.</summary>
         static Dictionary<(uint, int), List<StateMachineBehaviour>> Behaviours(YNode body, IReferenceResolver resolver)
@@ -154,17 +154,17 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A layer's state machine with its sub-machines, rebuilt from the states' full paths.</summary>
-        static ControllerStateMachineAsset BuildMachine(YNode machine, string layerName, int layerIndex, Context ctx,
-            Dictionary<(uint, int), List<StateMachineBehaviour>> behaviours, out List<ControllerStateAsset> states)
+        static UnityEditor.Animations.AnimatorStateMachine BuildMachine(YNode machine, string layerName, int layerIndex, Context ctx,
+            Dictionary<(uint, int), List<StateMachineBehaviour>> behaviours, out List<UnityEditor.Animations.AnimatorState> states)
         {
-            var root = Make<ControllerStateMachineAsset>(layerName);
-            var byPath = new Dictionary<string, ControllerStateMachineAsset> { [layerName] = root };
-            ControllerStateMachineAsset MachineAt(string path)
+            var root = Make<UnityEditor.Animations.AnimatorStateMachine>(layerName);
+            var byPath = new Dictionary<string, UnityEditor.Animations.AnimatorStateMachine> { [layerName] = root };
+            UnityEditor.Animations.AnimatorStateMachine MachineAt(string path)
             {
                 if (byPath.TryGetValue(path, out var m)) return m;
                 int dot = path.LastIndexOf('.');
                 var parent = dot > 0 ? MachineAt(path.Substring(0, dot)) : root;
-                m = Make<ControllerStateMachineAsset>(dot > 0 ? path.Substring(dot + 1) : path);
+                m = Make<UnityEditor.Animations.AnimatorStateMachine>(dot > 0 ? path.Substring(dot + 1) : path);
                 parent.Machines.Add(m);
                 byPath[path] = m;
                 return m;
@@ -172,13 +172,13 @@ namespace Unbound.Runtime
 
             var constants = new List<YNode>();
             foreach (var s in Items(machine, "m_StateConstantArray")) constants.Add(Data(s));
-            var built = new List<ControllerStateAsset>();
+            var built = new List<UnityEditor.Animations.AnimatorState>();
             states = built;
             foreach (var s in constants)
             {
                 var name = ctx.Name(U(s, "m_NameID")) ?? "State";
                 var full = ctx.Name(U(s, "m_FullPathID")) ?? layerName + "." + name;
-                var state = Make<ControllerStateAsset>(name);
+                var state = Make<UnityEditor.Animations.AnimatorState>(name);
                 state.Speed = s.Float("m_Speed", 1f);
                 state.CycleOffset = s.Float("m_CycleOffset");
                 state.WriteDefaults = s.Bool("m_WriteDefaultValues", true);
@@ -199,7 +199,7 @@ namespace Unbound.Runtime
             // Selectors: a machine's entry (its entry transitions, its default) and exit.
             var selectors = new List<YNode>();
             foreach (var sel in Items(machine, "m_SelectorStateConstantArray")) selectors.Add(Data(sel));
-            ControllerStateMachineAsset SelectorMachine(YNode sel)
+            UnityEditor.Animations.AnimatorStateMachine SelectorMachine(YNode sel)
             {
                 var path = ctx.Name(U(sel, "m_FullPathID"));
                 return path != null && byPath.TryGetValue(path, out var m) ? m : root;
@@ -276,7 +276,7 @@ namespace Unbound.Runtime
             return root;
         }
 
-        static ControllerStateMachineAsset ParentOf(ControllerStateMachineAsset node, ControllerStateMachineAsset child)
+        static UnityEditor.Animations.AnimatorStateMachine ParentOf(UnityEditor.Animations.AnimatorStateMachine node, UnityEditor.Animations.AnimatorStateMachine child)
         {
             foreach (var m in node.Machines)
             {

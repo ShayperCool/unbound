@@ -193,9 +193,9 @@ namespace UnityEngine.Tests
             var clip = new AnimationClip { name = "motion" };
             var replacement = new AnimationClip { name = "replacement" };
             var controller = new Controller();
-            var machine = new ControllerStateMachineAsset();
-            machine.States.Add(new ControllerStateAsset { name = "A", Motion = clip });
-            machine.States.Add(new ControllerStateAsset { name = "B", Motion = clip });
+            var machine = new UnityEditor.Animations.AnimatorStateMachine();
+            machine.States.Add(new UnityEditor.Animations.AnimatorState { name = "A", Motion = clip });
+            machine.States.Add(new UnityEditor.Animations.AnimatorState { name = "B", Motion = clip });
             controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = machine });
             var clone = Object.Instantiate((RuntimeAnimatorController)controller);
             var overrides = new AnimatorOverrideController(clone);

@@ -45,7 +45,7 @@ namespace Unbound.Runtime
             g.Parameters = parameters.ToArray();
 
             var layers = new List<LayerDef>();
-            var assetMaps = new List<Dictionary<ControllerStateAsset, StateDef>>();
+            var assetMaps = new List<Dictionary<UnityEditor.Animations.AnimatorState, StateDef>>();
             for (int i = 0; i < controller.m_Layers.Count; i++)
             {
                 var data = controller.m_Layers[i];
@@ -59,7 +59,7 @@ namespace Unbound.Runtime
                     SyncedLayerIndex = data.SyncedLayerIndex,
                     IKPass = data.IKPass,
                 };
-                var map = new Dictionary<ControllerStateAsset, StateDef>();
+                var map = new Dictionary<UnityEditor.Animations.AnimatorState, StateDef>();
                 if (data.SyncedLayerIndex < 0 && data.StateMachine != null)
                 {
                     var builder = new Builder(g, layer, map);
@@ -107,19 +107,19 @@ namespace Unbound.Runtime
         {
             readonly ControllerGraph m_Graph;
             readonly LayerDef m_Layer;
-            readonly Dictionary<ControllerStateAsset, StateDef> m_States;
-            readonly Dictionary<ControllerStateMachineAsset, MachineDef> m_Machines = new Dictionary<ControllerStateMachineAsset, MachineDef>();
-            readonly List<(ControllerStateMachineAsset Asset, MachineDef Def)> m_PendingMachines = new List<(ControllerStateMachineAsset, MachineDef)>();
-            readonly List<(ControllerStateAsset Asset, StateDef Def)> m_PendingStates = new List<(ControllerStateAsset, StateDef)>();
+            readonly Dictionary<UnityEditor.Animations.AnimatorState, StateDef> m_States;
+            readonly Dictionary<UnityEditor.Animations.AnimatorStateMachine, MachineDef> m_Machines = new Dictionary<UnityEditor.Animations.AnimatorStateMachine, MachineDef>();
+            readonly List<(UnityEditor.Animations.AnimatorStateMachine Asset, MachineDef Def)> m_PendingMachines = new List<(UnityEditor.Animations.AnimatorStateMachine, MachineDef)>();
+            readonly List<(UnityEditor.Animations.AnimatorState Asset, StateDef Def)> m_PendingStates = new List<(UnityEditor.Animations.AnimatorState, StateDef)>();
 
-            internal Builder(ControllerGraph graph, LayerDef layer, Dictionary<ControllerStateAsset, StateDef> states)
+            internal Builder(ControllerGraph graph, LayerDef layer, Dictionary<UnityEditor.Animations.AnimatorState, StateDef> states)
             {
                 m_Graph = graph;
                 m_Layer = layer;
                 m_States = states;
             }
 
-            internal MachineDef BuildMachine(ControllerStateMachineAsset asset, MachineDef parent, string path)
+            internal MachineDef BuildMachine(UnityEditor.Animations.AnimatorStateMachine asset, MachineDef parent, string path)
             {
                 if (m_Machines.TryGetValue(asset, out var existing)) return existing;
                 var m = new MachineDef

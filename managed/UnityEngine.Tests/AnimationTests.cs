@@ -1259,7 +1259,7 @@ namespace UnityEngine.Tests
             var file = Load(AnimationFixtures.Machines);
             var recorder = ScriptableObject.CreateInstance<StateRecorder>();
             // On the start state, which every player enters at once.
-            ((ControllerStateAsset)file.Objects[1102000001]).Behaviours.Add(recorder);
+            ((UnityEditor.Animations.AnimatorState)file.Objects[1102000001]).Behaviours.Add(recorder);
             var graph = UnityEngine.Playables.PlayableGraph.Create("Unplayed");
             var root = Hierarchy("Character", "Body");
             int before = Resources.FindObjectsOfTypeAll<StateRecorder>().Length;
@@ -1326,7 +1326,7 @@ namespace UnityEngine.Tests
             // Mirrored states play humanoid clips mirrored: the flag must get there.
             var file = Load(AnimationFixtures.Locomotion);
             var controller = (RuntimeAnimatorController)file.Objects[9100000];
-            var state = file.Objects.Values.OfType<ControllerStateAsset>().First();
+            var state = file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>().First();
             state.Mirror = true;
             var graph = ControllerGraph.Build(controller);
             var def = graph.Layers.SelectMany(l => l.States).Single(s => s.Name == state.m_Name);
@@ -1360,7 +1360,7 @@ namespace UnityEngine.Tests
             });
             clip.m_Version++;
             clip.AddEvent(new AnimationEvent { time = 0.1f, functionName = "OnStep" });
-            file.Objects.Values.OfType<ControllerStateAsset>().Single().Mirror = true;
+            file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>().Single().Mirror = true;
             Assert.True(clip.HasHumanCurves);
 
             var root = new GameObject("Button", typeof(RectTransform));
@@ -1390,7 +1390,7 @@ namespace UnityEngine.Tests
             StateRecorder.Calls.Clear();
             var file = Load(AnimationFixtures.Machines);
             var recorder = ScriptableObject.CreateInstance<StateRecorder>();
-            ((ControllerStateAsset)file.Objects[1102000002]).Behaviours.Add(recorder);
+            ((UnityEditor.Animations.AnimatorState)file.Objects[1102000002]).Behaviours.Add(recorder);
             var root = Hierarchy("Character", "Body");
             var body = root.transform.Find("Body");
             var animator = root.AddComponent<Animator>();
