@@ -146,7 +146,10 @@ namespace Unbound.Runtime
         /// a Scene or Game view repaint with gizmos enabled (renderapi). Game-view callbacks run
         /// only when that view enables gizmos. Interface callbacks
         /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
-        static readonly (Type Host, string Name)[] s_NotSent = Array.Empty<(Type, string)>();
+        /// <summary>Unity messages Unbound does not send yet: the AssetPostprocessor callbacks
+        /// <see cref="UnityEditor.AssetPostprocessing.Unsupported"/> names.</summary>
+        static readonly (Type Host, string Name)[] s_NotSent =
+            Array.ConvertAll(UnityEditor.AssetPostprocessing.Unsupported, name => (typeof(UnityEditor.AssetPostprocessor), name));
 
         internal static System.Collections.Generic.IReadOnlyList<(Type Host, string Name)> NotSent => s_NotSent;
 

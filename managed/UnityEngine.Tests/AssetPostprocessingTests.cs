@@ -99,6 +99,21 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnOlderModelMetaKeepsReadWriteInItsMeshesSection()
+        {
+            var model = (ModelImporter)AssetImporter.FromMeta("Assets/O.fbx", "3123456789abcdef0123456789abcdef", "ModelImporter",
+                TestYaml.DocumentBody("ModelImporter:\n  meshes:\n    isReadable: 1\n  userData: \n"));
+            Assert.True(model.isReadable);
+            model.isReadable = false;
+            Assert.False(MetaSettings.Bool(model.m_Settings, "meshes.isReadable", true));
+            Assert.Null(MetaSettings.Find(model.m_Settings, "animations.isReadable"));
+            // Sparse sections answer the importer's defaults.
+            Assert.True(model.useFileScale);
+            Assert.True(model.importAnimation);
+            Assert.True(model.importBlendShapes);
+        }
+
+        [Fact]
         public void SetAddsMissingKeysAndAMissingSequenceEntryStaysUnset()
         {
             var root = TestYaml.DocumentBody("TextureImporter:\n  platformSettings: []\n  userData: \n");
@@ -125,12 +140,26 @@ namespace UnityEngine.Tests
                 s_AllAssetsCalls.Add("A " + string.Join(",", imported));
         }
 
+        // Sorts first by name, but asks to run after the Z class; Y asks to run before A.
+        sealed class BAllAssets : AssetPostprocessor
+        {
+            [UnityEditor.Callbacks.RunAfterClass(typeof(ZAllAssets))]
+            static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom) => s_AllAssetsCalls.Add("B");
+        }
+
+        sealed class YAllAssets : AssetPostprocessor
+        {
+            [UnityEditor.Callbacks.RunBeforeClass(typeof(AAllAssets))]
+            static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom) => s_AllAssetsCalls.Add("Y");
+        }
+
         [Fact]
-        public void OnPostprocessAllAssetsRunsByClassNameWhateverThePostprocessOrder()
+        public void OnPostprocessAllAssetsRunsByClassNameWhateverThePostprocessOrderAsTheirOrderingAttributesAsk()
         {
             s_AllAssetsCalls.Clear();
             AssetPostprocessing.ImportedAssets(typeof(AssetPostprocessingTests).Assembly, new[] { "Assets/X.vfx" });
-            Assert.Equal(new[] { "A Assets/X.vfx", "Z Assets/X.vfx False" }, s_AllAssetsCalls.FindAll(c => c.StartsWith("A ") || c.StartsWith("Z ")));
+            Assert.Equal(new[] { "Y", "A Assets/X.vfx", "Z Assets/X.vfx False", "B" },
+                s_AllAssetsCalls.FindAll(c => c.StartsWith("A ") || c.StartsWith("Z ") || c == "B" || c == "Y"));
         }
     }
 }

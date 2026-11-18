@@ -302,8 +302,8 @@ const PCM: i32 = 0;
 
 /// Converted samples as a PCM import stores them: 16-bit, full scale 32767 truncated toward zero,
 /// read back over 32768 (matches the Unity 6000.0.71f1 Editor, tests/projects/assetpostprocessors
-/// Tone.wav forced to mono: every sample, the downmix's peak reading -32767/32768; resampled clips
-/// are unmeasured).
+/// Tone.wav forced to mono and normalized: every sample, the peak reading -32767/32768; downmixes
+/// without normalization and resampled clips take the same rule, unmeasured).
 pub fn quantize_pcm16(samples: &mut [f32]) {
     for s in samples {
         *s = (s.clamp(-1.0, 1.0) * 32767.0).trunc() / 32768.0;
@@ -393,7 +393,16 @@ mod tests {
         // Out of range samples clamp; fractions truncate toward zero; silence stays silent.
         let mut wide = vec![1.5, -2.0, 0.0, 0.99 / 32767.0, -1.99 / 32767.0];
         super::quantize_pcm16(&mut wide);
-        assert_eq!(wide, vec![32767.0 / 32768.0, -32767.0 / 32768.0, 0.0, 0.0, -1.0 / 32768.0]);
+        assert_eq!(
+            wide,
+            vec![
+                32767.0 / 32768.0,
+                -32767.0 / 32768.0,
+                0.0,
+                0.0,
+                -1.0 / 32768.0
+            ]
+        );
     }
 
     const META: &str = r#"fileFormatVersion: 2

@@ -27,30 +27,29 @@ namespace UnityEditor
     {
         const string AllAssets = "OnPostprocessAllAssets";
 
-        /// <summary>The callbacks Unbound does not run yet, by the kind of asset they postprocess: a
-        /// postprocessor declaring one is reported (once, <see cref="Stubs.Ignored"/>) when an asset
-        /// of that kind loads. A model's are its import's (Unbound's model prefabs, which scenes
-        /// expand natively, do not run managed postprocessors).</summary>
-        static readonly (string Kind, string Callback)[] s_Unsupported =
+        /// <summary>The callbacks Unbound does not run yet (<see cref="ScriptMessages.NotSent"/>,
+        /// which <c>unbound doctor</c> lists too): model postprocessors (Unbound's model prefabs, which
+        /// scenes expand natively, run no managed postprocessor), OnPostprocessPrefab and the 2D array
+        /// and 3D texture postprocessors. Each postprocessor declaring one is reported once as the
+        /// editor domain loads.</summary>
+        internal static readonly string[] Unsupported =
         {
-            ("model", "OnPostprocessMeshHierarchy"), ("model", "OnAssignMaterialModel"), ("model", "OnPostprocessMaterial"),
-            ("model", "OnPostprocessAnimation"), ("model", "OnPostprocessModel"), ("model", "OnPostprocessGameObjectWithUserProperties"),
-            ("model", "OnPostprocessGameObjectWithAnimatedUserProperties"), ("model", "OnPreprocessCameraDescription"),
-            ("model", "OnPreprocessLightDescription"), ("prefab", "OnPostprocessPrefab"),
-            ("texture3d", "OnPostprocessTexture3D"), ("texture2darray", "OnPostprocessTexture2DArray"),
+            "OnPostprocessMeshHierarchy", "OnAssignMaterialModel", "OnPostprocessMaterial", "OnPostprocessAnimation",
+            "OnPostprocessModel", "OnPostprocessGameObjectWithUserProperties", "OnPostprocessGameObjectWithAnimatedUserProperties",
+            "OnPreprocessCameraDescription", "OnPreprocessLightDescription", "OnPostprocessPrefab",
+            "OnPostprocessTexture2DArray", "OnPostprocessTexture3D",
         };
 
-        static readonly HashSet<string> s_ReportedKinds = new HashSet<string>(StringComparer.Ordinal);
-
-        /// <summary>Reports the postprocessors of an asset kind that loaded which Unbound does not run.</summary>
-        internal static void ReportUnsupported(string kind)
+        static void ReportUnsupported()
         {
-            if (kind == null || !s_ReportedKinds.Add(kind)) return;
-            foreach (var (k, callback) in s_Unsupported)
+            foreach (var assembly in GameDomain.Assemblies())
             {
-                if (k != kind) continue;
-                foreach (var type in TypesDeclaring(callback))
-                    Stubs.Ignored("AssetPostprocessor." + callback, $"is not run yet ({type.FullName}): the {kind} assets it would change load without it");
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException e) { types = e.Types; }
+                foreach (var type in types)
+                    if (type != null && !type.IsAbstract && typeof(AssetPostprocessor).IsAssignableFrom(type) && !type.IsDefined(typeof(Unbound.StubAttribute), false))
+                        ScriptMessages.WarnNotSent(type);
             }
         }
 
@@ -90,8 +89,7 @@ namespace UnityEditor
             foreach (var assembly in GameDomain.Assemblies())
                 foreach (var method in s_Callbacks.GetValue(assembly, Callbacks))
                     if (method.GetParameters().Length == 5) methods.Add(method);
-            methods.Sort((a, b) => string.CompareOrdinal(a.DeclaringType.Name, b.DeclaringType.Name));
-            foreach (var method in methods) Call(method, Array.Empty<string>(), true);
+            foreach (var method in Ordered(methods)) Call(method, Array.Empty<string>(), true);
         }
 
         static void Call(MethodInfo method, string[] imported, bool didDomainReload)
@@ -121,10 +119,95 @@ namespace UnityEditor
                 if (parameters.Length != 4 && !(parameters.Length == 5 && parameters[4].ParameterType == typeof(bool))) continue;
                 callbacks.Add(method);
             }
-            // GetPostprocessOrder does not order these (Scripting API 6000.0); the Editor runs them
-            // by class name (tests/projects/assetpostprocessors allAssets.*).
-            callbacks.Sort((a, b) => string.CompareOrdinal(a.DeclaringType.Name, b.DeclaringType.Name));
-            return callbacks.ToArray();
+            return Ordered(callbacks).ToArray();
+        }
+
+        /// <summary>OnPostprocessAllAssets callbacks in calling order: GetPostprocessOrder does not
+        /// order them (Scripting API 6000.0); the Editor runs them by class name
+        /// (tests/projects/assetpostprocessors allAssets.*), moved as their RunAfterClass,
+        /// RunBeforeClass, RunAfterAssembly, RunBeforeAssembly, RunAfterPackage and RunBeforePackage
+        /// attributes ask (each callback after every one it must follow, the others keeping their
+        /// order; a cycle keeps the name order, with a warning).</summary>
+        internal static List<MethodInfo> Ordered(List<MethodInfo> callbacks)
+        {
+            callbacks.Sort((a, b) =>
+            {
+                int byName = string.CompareOrdinal(a.DeclaringType.Name, b.DeclaringType.Name);
+                return byName != 0 ? byName : string.CompareOrdinal(a.DeclaringType.FullName, b.DeclaringType.FullName);
+            });
+            int n = callbacks.Count;
+            var after = new List<int>[n];
+            for (int i = 0; i < n; i++) after[i] = new List<int>();
+            for (int i = 0; i < n; i++)
+                foreach (var (relation, target) in OrderAttributes(callbacks[i]))
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (j == i || !Matches(callbacks[j], relation, target)) continue;
+                        if (relation.StartsWith("RunAfter", StringComparison.Ordinal)) after[i].Add(j);
+                        else after[j].Add(i);
+                    }
+            var done = new bool[n];
+            var ordered = new List<MethodInfo>(n);
+            while (ordered.Count < n)
+            {
+                int next = -1;
+                for (int i = 0; i < n && next < 0; i++)
+                    if (!done[i] && after[i].TrueForAll(j => done[j])) next = i;
+                if (next < 0)
+                {
+                    Debug.LogWarning("Unbound: the RunAfter/RunBefore attributes of OnPostprocessAllAssets callbacks form a cycle; the rest run by class name");
+                    for (int i = 0; i < n; i++) if (!done[i]) { done[i] = true; ordered.Add(callbacks[i]); }
+                    break;
+                }
+                done[next] = true;
+                ordered.Add(callbacks[next]);
+            }
+            return ordered;
+        }
+
+        /// <summary>A callback's ordering attributes (read without making them: Unbound has no
+        /// classes of its own for them), as (attribute name, its class, assembly or package).</summary>
+        static IEnumerable<(string Relation, object Target)> OrderAttributes(MethodInfo method)
+        {
+            IList<CustomAttributeData> attributes;
+            try { attributes = method.GetCustomAttributesData(); }
+            catch (Exception) { yield break; }
+            foreach (var attribute in attributes)
+            {
+                var type = attribute.AttributeType;
+                if (type.Namespace != "UnityEditor.Callbacks" || attribute.ConstructorArguments.Count != 1) continue;
+                var name = type.Name.EndsWith("Attribute", StringComparison.Ordinal) ? type.Name.Substring(0, type.Name.Length - "Attribute".Length) : type.Name;
+                if (!name.StartsWith("RunAfter", StringComparison.Ordinal) && !name.StartsWith("RunBefore", StringComparison.Ordinal)) continue;
+                var value = attribute.ConstructorArguments[0].Value;
+                if (name.EndsWith("Class", StringComparison.Ordinal) && value is string qualified) value = Type.GetType(qualified, throwOnError: false);
+                if (value != null) yield return (name, value);
+            }
+        }
+
+        static bool Matches(MethodInfo method, string relation, object target)
+        {
+            var type = method.DeclaringType;
+            if (relation.EndsWith("Class", StringComparison.Ordinal)) return target is Type t && t == type;
+            if (relation.EndsWith("Assembly", StringComparison.Ordinal)) return target is string a && a == type.Assembly.GetName().Name;
+            return target is string package && PackageOf(type.Assembly) == package;
+        }
+
+        /// <summary>The package a script assembly's sources are in (null for the project's).</summary>
+        static string PackageOf(Assembly assembly)
+        {
+            var name = assembly.GetName().Name;
+            foreach (var description in GameDomain.Descriptions)
+            {
+                if (description.Name != name) continue;
+                foreach (var source in description.Sources)
+                    if (source.StartsWith("Packages/", StringComparison.Ordinal))
+                    {
+                        int slash = source.IndexOf('/', "Packages/".Length);
+                        return slash < 0 ? null : source.Substring("Packages/".Length, slash - "Packages/".Length);
+                    }
+                return null;
+            }
+            return null;
         }
 
         // ------------------------------------------------------------------ the import pass
@@ -136,6 +219,7 @@ namespace UnityEditor
         /// are preprocessed when they first load (<see cref="EnsurePreprocessed"/>).</summary>
         internal static void PrepareImports()
         {
+            ReportUnsupported();
             if (Hooks("OnPreprocessAsset").Count == 0 && Hooks("OnPreprocessModel").Count == 0 && Hooks("OnPreprocessAnimation").Count == 0)
                 return;
             foreach (var path in AssetDatabase.GetAllAssetPaths())
@@ -151,22 +235,6 @@ namespace UnityEditor
             if (Hooks("OnPreprocessAsset").Count == 0 && Hooks(own).Count == 0 && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
             Preprocess(path, kind);
-        }
-
-        static IEnumerable<Type> TypesDeclaring(string name)
-        {
-            foreach (var assembly in GameDomain.Assemblies())
-            {
-                Type[] types;
-                try { types = assembly.GetTypes(); }
-                catch (ReflectionTypeLoadException e) { types = e.Types; }
-                foreach (var type in types)
-                {
-                    if (type == null || type.IsAbstract || !typeof(AssetPostprocessor).IsAssignableFrom(type)) continue;
-                    if (type.GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) != null)
-                        yield return type;
-                }
-            }
         }
 
         /// <summary>An asset's preprocessors: OnPreprocessAsset, then its type's (a model's
@@ -193,9 +261,15 @@ namespace UnityEditor
             }
             if (importer == null || !importer.m_SettingsChanged || importer.m_Settings == null) return;
             importer.m_SettingsChanged = false;
+            // Settings set to the values they had are the .meta's: the import stays the file's.
+            var settings = MetaSettings.ToJson(importer.m_Settings);
+            if (settings == importer.m_ImportedSettings) return;
+            importer.m_ImportedSettings = settings;
             var guid = AssetDatabase.AssetPathToGUID(path);
+            if (AssetDatabaseRuntime.IsMainLoaded(guid))
+                Debug.LogWarning($"Unbound: {path} loaded before its preprocessors ran; it keeps the import of its .meta's settings for this session");
             Native.Call("import-settings", "{\"guid\":" + JsonSerializer.Serialize(guid) + ",\"importer\":" + JsonSerializer.Serialize(importer.m_SettingsType)
-                + ",\"settings\":" + MetaSettings.ToJson(importer.m_Settings) + "}");
+                + ",\"settings\":" + settings + "}");
         }
 
         // ------------------------------------------------------------------ postprocessing at load

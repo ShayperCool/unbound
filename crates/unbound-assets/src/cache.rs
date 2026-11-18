@@ -100,15 +100,16 @@ impl AssetCache {
     /// From now on the asset whose `.meta` is `meta` imports with `settings` (the whole `.meta`
     /// tree) in place of the file's: part of its entries' keys, so an entry imported with other
     /// settings is never used for it.
-    pub fn set_settings(&self, meta: &Path, settings: Value) {
+    pub fn set_settings(&self, meta: &Path, settings: Value) -> Result<()> {
         let mut hasher = blake3::Hasher::new();
         hasher.update(b"unbound-import-settings\0");
-        hasher.update(&postcard::to_allocvec(&settings).unwrap_or_default());
+        hasher.update(&postcard::to_allocvec(&settings).context("encoding the import settings")?);
         let hash = *hasher.finalize().as_bytes();
         self.settings
             .lock()
             .unwrap()
             .insert(meta.to_path_buf(), (Arc::new(settings), hash));
+        Ok(())
     }
 
     /// The imported `source`, from the cache or by running `importer` (and storing the result).
@@ -406,7 +407,9 @@ mod tests {
             (5, 7)
         );
         // A preprocessor's settings: imported with them, not with the file's.
-        cache.set_settings(&meta, unbound_yaml::parse_value("n: 9\n").unwrap());
+        cache
+            .set_settings(&meta, unbound_yaml::parse_value("n: 9\n").unwrap())
+            .unwrap();
         let (out, outcome) = cache
             .get_or_import_traced(&importer, &source, &meta)
             .unwrap();
@@ -417,7 +420,9 @@ mod tests {
         assert_eq!(outcome, Outcome::Hit);
         // Settings equal to the file's own still key their own entry; another session without
         // settings uses the file's entry again.
-        cache.set_settings(&meta, unbound_yaml::parse_value("n: 7\n").unwrap());
+        cache
+            .set_settings(&meta, unbound_yaml::parse_value("n: 7\n").unwrap())
+            .unwrap();
         let (out, outcome) = cache
             .get_or_import_traced(&importer, &source, &meta)
             .unwrap();

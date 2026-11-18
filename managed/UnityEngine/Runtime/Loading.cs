@@ -828,10 +828,10 @@ namespace Unbound.Runtime
                 {
                     case "prefab":
                     case "model":
+                        if (info.Kind == "model") UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model");
                         // A model is the prefab it imports to (the native side makes its documents).
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         if (info.Kind == "model") ModelMaterialImport.UsePipelineDefault(file);
-                        UnityEditor.AssetPostprocessing.ReportUnsupported(info.Kind);
                         break;
                     case "yaml":
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);

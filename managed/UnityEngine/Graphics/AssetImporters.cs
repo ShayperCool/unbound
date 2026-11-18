@@ -214,7 +214,6 @@ namespace Unbound.Runtime
             }
             if (imported.Dimension == 5 || imported.Dimension == 3)
             {
-                UnityEditor.AssetPostprocessing.ReportUnsupported(imported.Dimension == 5 ? "texture2darray" : "texture3d");
                 // The Texture2DArray and Texture3D shapes: one object of the shape's class.
                 Texture layered = imported.Dimension == 5
                     ? Texture2DArray.FromImport(handle, info.Guid, name, imported)

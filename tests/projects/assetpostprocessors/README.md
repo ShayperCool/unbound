@@ -73,7 +73,7 @@ target is left out (it is the Editor's platform).
 
 Unbound on macOS, 2026-11-18: 108/211 values, 0 failures and 103 recorded residuals
 (`residuals.json`, five causes): model postprocessors are not run yet (Unbound's model prefabs
-expand natively in scenes; they are reported once when a model loads), OnPreprocessAsset is given
+expand natively in scenes; they are reported once as the editor domain loads), OnPreprocessAsset is given
 only the textures, models and audio clips Unbound imports, the Editor's rewritten `.meta` files,
 the compressed format a block-compressed texture has in OnPostprocessTexture, and the Play mode
 domain's ExitingEditMode (as in compileevents).

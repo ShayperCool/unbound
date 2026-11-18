@@ -108,10 +108,11 @@ fn message_coverage(
     for warning in &graph.warnings {
         tracing::warn!("{warning}");
     }
+    // Editor Play mode runs the editor assemblies too (AssetPostprocessors' messages included).
     let request = project.compile_request(
         &graph,
         mode,
-        false,
+        mode == unbound_compat::CompileMode::EditorPlayMode,
         unbound_project::CodeOptimization::at_startup(&[]),
     );
     let facade_dir = unbound_project::cache_root()

@@ -41,7 +41,22 @@
     "events.Assets/Tex.03",
     "events.Assets/Tex.count"
   ],
-  "Model postprocessors (OnPostprocessMaterial, OnAssignMaterialModel, OnPostprocessMeshHierarchy, OnPostprocessAnimation, OnPostprocessModel) are not run yet (reported once as a model loads): Unbound's model prefabs are expanded natively in scenes; OnPreprocessAnimation runs right after OnPreprocessModel in Unbound's preprocessing (follow-up queued)": [
+  "Unbound writes no .meta file: the Editor saves the settings preprocessors changed into the asset's .meta (Unbound imports with them in memory)": [
+    "meta.Assets/Audio/Tone.wav",
+    "meta.Assets/Models/Materials.fbx",
+    "meta.Assets/Tex/Shrink.png",
+    "meta.Assets/Tex/Sprite.png"
+  ],
+  "OnPostprocessTexture gets a block-compressed import in its final format (DXT1, DXT5); the Editor hands it the uncompressed RGB24/RGBA32 texture before compressing": [
+    "events.Assets/Tex/Plain.png.09",
+    "events.Assets/Tex/Plain.png.10",
+    "events.Assets/Tex/Sprite.png.09",
+    "events.Assets/Tex/Sprite.png.10"
+  ],
+  "Unbound has one editor domain, loaded as Play mode starts: its editor scripts load before Play mode entry's ExitingEditMode, which the Editor sends in its Edit-mode domain (tests/projects/compileevents start.load)": [
+    "timeline"
+  ],
+  "Model postprocessors (OnPostprocessMaterial, OnAssignMaterialModel, OnPostprocessMeshHierarchy, OnPostprocessAnimation, OnPostprocessModel) are not run yet (reported once per postprocessor as the editor domain loads, and by unbound doctor): Unbound's model prefabs are expanded natively in scenes; OnPreprocessAnimation runs right after OnPreprocessModel in Unbound's preprocessing (follow-up queued)": [
     "assets.Assets/Models/Materials.fbx",
     "events.Assets/Models/Animated.fbx.06",
     "events.Assets/Models/Animated.fbx.07",
@@ -96,20 +111,5 @@
     "model.Assets/Models/Materials.fbx.Materials/Cube_Alpha",
     "model.Assets/Models/Materials.fbx.Materials/Cube_Multi",
     "model.Assets/Models/Materials.fbx.Materials/Cube_Red"
-  ],
-  "Unbound writes no .meta file: the Editor saves the settings preprocessors changed into the asset's .meta (Unbound imports with them in memory)": [
-    "meta.Assets/Audio/Tone.wav",
-    "meta.Assets/Models/Materials.fbx",
-    "meta.Assets/Tex/Shrink.png",
-    "meta.Assets/Tex/Sprite.png"
-  ],
-  "OnPostprocessTexture gets a block-compressed import in its final format (DXT1, DXT5); the Editor hands it the uncompressed RGB24/RGBA32 texture before compressing": [
-    "events.Assets/Tex/Plain.png.09",
-    "events.Assets/Tex/Plain.png.10",
-    "events.Assets/Tex/Sprite.png.09",
-    "events.Assets/Tex/Sprite.png.10"
-  ],
-  "Unbound has one editor domain, loaded as Play mode starts: its editor scripts load before Play mode entry's ExitingEditMode, which the Editor sends in its Edit-mode domain (tests/projects/compileevents start.load)": [
-    "timeline"
   ]
 }

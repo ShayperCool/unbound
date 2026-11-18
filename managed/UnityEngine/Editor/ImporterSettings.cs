@@ -165,6 +165,9 @@ namespace UnityEditor
         internal YNode m_Settings;
         internal string m_SettingsType;
         internal bool m_SettingsChanged;
+        /// <summary>The settings the asset imports with, as JSON (the .meta's until a
+        /// preprocessor changes them).</summary>
+        internal string m_ImportedSettings;
 
         internal void Changed() => m_SettingsChanged = true;
     }
@@ -177,8 +180,15 @@ namespace UnityEditor
 
         int I(string path, int fallback = 0) => MetaSettings.Int(m_Settings, path, fallback);
         bool B(string path) => MetaSettings.Bool(m_Settings, path);
-        void SetI(string path, long value) { MetaSettings.SetInt(m_Settings, path, value); Changed(); }
-        void SetB(string path, bool value) { MetaSettings.SetBool(m_Settings, path, value); Changed(); }
+        void SetI(string path, long value) { NeedsPlatform(path); MetaSettings.SetInt(m_Settings, path, value); Changed(); }
+        void SetB(string path, bool value) { NeedsPlatform(path); MetaSettings.SetBool(m_Settings, path, value); Changed(); }
+
+        /// <summary>A default-platform setting of a .meta without that platform's entry is not kept.</summary>
+        void NeedsPlatform(string path)
+        {
+            if (path.StartsWith(Default, StringComparison.Ordinal) && MetaSettings.Find(m_Settings, Default.TrimEnd('.')) == null)
+                Debug.LogWarning($"Unbound: {assetPath}'s .meta has no DefaultTexturePlatform settings; {path.Substring(Default.Length)} set by a script is not kept");
+        }
 
         /// <summary>Setting a type sets what the type implies, as
         /// <see cref="TextureImporterSettings.ApplyTextureType"/> does (matches the Unity 6000.0.71f1
@@ -404,13 +414,13 @@ namespace UnityEditor
 
         public bool useFileScale
         {
-            get { CheckImporterState("get_useFileScale"); return B("meshes.useFileScale"); }
+            get { CheckImporterState("get_useFileScale"); return MetaSettings.Bool(m_Settings, "meshes.useFileScale", true); }
             set { CheckImporterState("set_useFileScale"); SetB("meshes.useFileScale", value); }
         }
 
         public bool importAnimation
         {
-            get { CheckImporterState("get_importAnimation"); return B("importAnimation"); }
+            get { CheckImporterState("get_importAnimation"); return MetaSettings.Bool(m_Settings, "importAnimation", true); }
             set { CheckImporterState("set_importAnimation"); SetB("importAnimation", value); }
         }
 
@@ -420,11 +430,14 @@ namespace UnityEditor
             set { CheckImporterState("set_materialImportMode"); SetI("materials.materialImportMode", (int)value); }
         }
 
-        /// <summary>Read/Write: serialized in the animations section.</summary>
+        /// <summary>Read/Write: the meshes section's in older .meta layouts, else the animations
+        /// section's (the native importer reads the same).</summary>
+        string ReadableKey => MetaSettings.Find(m_Settings, "meshes.isReadable") != null ? "meshes.isReadable" : "animations.isReadable";
+
         public bool isReadable
         {
-            get { CheckImporterState("get_isReadable"); return B("animations.isReadable"); }
-            set { CheckImporterState("set_isReadable"); SetB("animations.isReadable", value); }
+            get { CheckImporterState("get_isReadable"); return B(ReadableKey); }
+            set { CheckImporterState("set_isReadable"); SetB(ReadableKey, value); }
         }
 
         public bool addCollider
@@ -441,7 +454,7 @@ namespace UnityEditor
 
         public bool importBlendShapes
         {
-            get { CheckImporterState("get_importBlendShapes"); return B("meshes.importBlendShapes"); }
+            get { CheckImporterState("get_importBlendShapes"); return MetaSettings.Bool(m_Settings, "meshes.importBlendShapes", true); }
             set { CheckImporterState("set_importBlendShapes"); SetB("meshes.importBlendShapes", value); }
         }
 

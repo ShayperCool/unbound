@@ -965,9 +965,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             if let unbound_yaml::Value::Map(map) = &mut meta {
                 map.insert(&r.importer, json_to_yaml(&r.settings));
             }
-            s.imports.set_settings(&meta_path, meta);
-            // A model imported before keeps no stale import.
+            s.imports.set_settings(&meta_path, meta)?;
+            // A model imported or expanded before keeps no stale import.
             s.models.write().unwrap().remove(&guid);
+            s.loader.invalidate(Some(guid));
             Ok("{}".to_string())
         }
         "script-reload" => {
