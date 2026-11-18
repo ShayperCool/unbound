@@ -6031,3 +6031,123 @@
 {"k":"Skinned/Skinned.mat0._SrcBlend","v":1}
 {"k":"Skinned/Skinned.mat0._DstBlend","v":0}
 {"k":"Skinned/Skinned.mat0._ZWrite","v":1}
+{"k":"stages.Exotic.M_ArnoldMax.afterArnold.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMax.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMax.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMax.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_ArnoldMax.afterFbx.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMax.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMax.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMax.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_ArnoldMax.afterInteractive.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMax.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMax.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMax.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterArnold.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterFbx.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterInteractive.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_ArnoldMaya.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_Bump.afterArnold.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Bump.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Bump.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Bump.afterArnold.shader","v":"Standard"}
+{"k":"stages.Exotic.M_Bump.afterFbx.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Bump.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Bump.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Bump.afterFbx.shader","v":"Standard"}
+{"k":"stages.Exotic.M_Bump.afterInteractive.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Bump.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Bump.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Bump.afterInteractive.shader","v":"Standard"}
+{"k":"stages.Exotic.M_Interactive.afterArnold.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Interactive.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Interactive.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Interactive.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_Interactive.afterFbx.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Interactive.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Interactive.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Interactive.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_Interactive.afterInteractive.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Interactive.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Interactive.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Interactive.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterArnold.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterFbx.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterInteractive.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_InteractiveCutout.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_LambertBare.afterArnold.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_LambertBare.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_LambertBare.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_LambertBare.afterArnold.shader","v":"Standard"}
+{"k":"stages.Exotic.M_LambertBare.afterFbx.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_LambertBare.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_LambertBare.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_LambertBare.afterFbx.shader","v":"Standard"}
+{"k":"stages.Exotic.M_LambertBare.afterInteractive.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_LambertBare.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_LambertBare.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_LambertBare.afterInteractive.shader","v":"Standard"}
+{"k":"stages.Exotic.M_Physical.afterArnold.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Physical.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Physical.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Physical.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_Physical.afterFbx.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Physical.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Physical.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Physical.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_Physical.afterInteractive.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_Physical.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_Physical.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_Physical.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterArnold.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterArnold.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterFbx.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterFbx.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterInteractive.gi","v":"RealtimeEmissive, EmissiveIsBlack"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_SimplifiedPhysical.afterInteractive.shader","v":"Autodesk Interactive"}
+{"k":"stages.Exotic.M_TransparentColor.afterArnold.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentColor.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentColor.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentColor.afterArnold.shader","v":"Standard"}
+{"k":"stages.Exotic.M_TransparentColor.afterFbx.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentColor.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentColor.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentColor.afterFbx.shader","v":"Standard"}
+{"k":"stages.Exotic.M_TransparentColor.afterInteractive.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentColor.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentColor.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentColor.afterInteractive.shader","v":"Standard"}
+{"k":"stages.Exotic.M_TransparentTex.afterArnold.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentTex.afterArnold.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentTex.afterArnold.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentTex.afterArnold.shader","v":"Standard"}
+{"k":"stages.Exotic.M_TransparentTex.afterFbx.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentTex.afterFbx.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentTex.afterFbx.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentTex.afterFbx.shader","v":"Standard"}
+{"k":"stages.Exotic.M_TransparentTex.afterInteractive.gi","v":"EmissiveIsBlack"}
+{"k":"stages.Exotic.M_TransparentTex.afterInteractive.hasEmissionColor","v":"true"}
+{"k":"stages.Exotic.M_TransparentTex.afterInteractive.queueControl","v":"none"}
+{"k":"stages.Exotic.M_TransparentTex.afterInteractive.shader","v":"Standard"}

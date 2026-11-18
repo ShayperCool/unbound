@@ -80,6 +80,7 @@ public class ModelImportProbe : MonoBehaviour
             DestroyImmediate(instance);
         }
         var path = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
+        Stages(path);
         if (!string.IsNullOrEmpty(path))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
@@ -94,6 +95,20 @@ public class ModelImportProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>The import stages the Editor-side MaterialStages recorder wrote beside the output
+    /// (the last record of a key: a model imported again records again), by key.</summary>
+    void Stages(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path + ".stages")) return;
+        var stages = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var line in File.ReadAllLines(path + ".stages"))
+        {
+            int tab = line.IndexOf('\t');
+            if (tab > 0) stages[line.Substring(0, tab)] = line.Substring(tab + 1);
+        }
+        foreach (var pair in stages) Add(pair.Key, pair.Value);
     }
 
     void Model(string name, Transform root)

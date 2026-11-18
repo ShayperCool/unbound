@@ -102,3 +102,56 @@ public class DescriptionDump : AssetPostprocessor
         File.AppendAllText(path, b.ToString());
     }
 }
+
+/// <summary>
+/// With <c>MODEL_IMPORT_PROBE_OUT</c> set, appends the state of each material of the Exotic models
+/// at points of their import to that path plus <c>.stages</c>, which <see cref="ModelImportProbe"/>
+/// adds to its record (<c>stages.&lt;model&gt;.&lt;material&gt;.&lt;stage&gt;.*</c>): after the
+/// render pipeline's FBX preprocessor (order -975), after its Autodesk Interactive one (-965),
+/// and after its Arnold and 3ds Max Physical ones (-955); no OnPostprocessMaterial (a project
+/// postprocessor with one changes how the legacy importer's materials end). Each point gives the shader, the GI flags, whether the shader has _EmissionColor and its
+/// _QueueControl (none without one).
+/// </summary>
+public static class MaterialStages
+{
+    public static void Record(string assetPath, Material material, string stage)
+    {
+        var path = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
+        if (string.IsNullOrEmpty(path) || !assetPath.Contains("/Exotic")) return;
+        var key = "stages." + Path.GetFileNameWithoutExtension(assetPath) + "." + material.name + "." + stage;
+        var shader = material.shader;
+        var b = new StringBuilder();
+        b.Append(key).Append(".shader\t").Append(shader != null ? shader.name : "null").Append('\n');
+        b.Append(key).Append(".gi\t").Append(material.globalIlluminationFlags.ToString()).Append('\n');
+        b.Append(key).Append(".hasEmissionColor\t").Append(material.HasProperty("_EmissionColor") ? "true" : "false").Append('\n');
+        b.Append(key).Append(".queueControl\t").Append(material.HasProperty("_QueueControl")
+            ? material.GetFloat("_QueueControl").ToString("R", System.Globalization.CultureInfo.InvariantCulture) : "none").Append('\n');
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
+        File.AppendAllText(path + ".stages", b.ToString());
+    }
+}
+
+public class MaterialStageAfterFbx : AssetPostprocessor
+{
+    public override int GetPostprocessOrder() => -975;
+
+    public void OnPreprocessMaterialDescription(MaterialDescription description, Material material, AnimationClip[] clips) =>
+        MaterialStages.Record(assetPath, material, "afterFbx");
+
+}
+
+public class MaterialStageAfterInteractive : AssetPostprocessor
+{
+    public override int GetPostprocessOrder() => -965;
+
+    public void OnPreprocessMaterialDescription(MaterialDescription description, Material material, AnimationClip[] clips) =>
+        MaterialStages.Record(assetPath, material, "afterInteractive");
+}
+
+public class MaterialStageAfterArnold : AssetPostprocessor
+{
+    public override int GetPostprocessOrder() => -955;
+
+    public void OnPreprocessMaterialDescription(MaterialDescription description, Material material, AnimationClip[] clips) =>
+        MaterialStages.Record(assetPath, material, "afterArnold");
+}
