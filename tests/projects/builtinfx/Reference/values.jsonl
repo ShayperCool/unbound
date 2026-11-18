@@ -433,3 +433,15 @@
 {"k":"deferredDontClear.ldrSolid.first","v":false}
 {"k":"deferredDontClear.ldrSolid.second","v":true}
 {"k":"deferredDontClear.ldrSolid.background","v":false}
+{"k":"deferredDontClear.ldrOther.first","v":true}
+{"k":"deferredDontClear.ldrOther.second","v":true}
+{"k":"deferredDontClear.ldrOther.background","v":false}
+{"k":"deferredDontClear.ldrOther.other","v":false}
+{"k":"deferredEvents.ldr.BeforeLighting","v":[0,0,0,1]}
+{"k":"deferredEvents.ldr.AfterLighting","v":[0,0,0,1]}
+{"k":"deferredEvents.ldr.BeforeFinalPass","v":[0,0,1,1]}
+{"k":"deferredEvents.ldr.AfterFinalPass","v":[1,1,0,1]}
+{"k":"deferredEvents.hdr.BeforeLighting","v":[1,0,0,1]}
+{"k":"deferredEvents.hdr.AfterLighting","v":[0,1,0,1]}
+{"k":"deferredEvents.hdr.BeforeFinalPass","v":[0,0,1,1]}
+{"k":"deferredEvents.hdr.AfterFinalPass","v":[1,1,0,1]}

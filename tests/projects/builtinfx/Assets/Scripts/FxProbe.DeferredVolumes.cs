@@ -78,16 +78,72 @@ public partial class FxProbe
     /// in that second render drawing white where stencil bit 7 (the G-buffer's mark) is set:
     /// <c>deferredDontClear.&lt;camera&gt;.&lt;point&gt;</c> at the sphere's first place, its
     /// second and the background, for an HDR and an LDR camera that clear nothing, and HDR and LDR
-    /// cameras that clear to a solid colour (the controls).</summary>
+    /// cameras that clear to a solid colour (the controls); <c>ldrOther</c>: an LDR camera that
+    /// clears nothing, with another LDR deferred camera of the same size rendering into its own
+    /// target between the two renders. Then the command buffer draws of <see cref="DeferredEventDraws"/>.</summary>
     void DeferredDontClear()
     {
         DontClearCase("hdr", true, CameraClearFlags.Nothing);
         DontClearCase("ldr", false, CameraClearFlags.Nothing);
         DontClearCase("hdrSolid", true, CameraClearFlags.SolidColor);
         DontClearCase("ldrSolid", false, CameraClearFlags.SolidColor);
+        DontClearCase("ldrOther", false, CameraClearFlags.Nothing, true);
+        DeferredEventDraws("ldr", false);
+        DeferredEventDraws("hdr", true);
     }
 
-    void DontClearCase(string name, bool hdr, CameraClearFlags clear)
+    /// <summary>What a command buffer draws into CameraTarget at the deferred camera events leaves
+    /// in the image: a small unlit quad over the background at each of BeforeLighting,
+    /// AfterLighting, BeforeFinalPass and AfterFinalPass (<c>deferredEvents.&lt;camera&gt;.&lt;event&gt;</c>:
+    /// the colour read there), for an LDR and an HDR camera that clear to a solid colour.</summary>
+    void DeferredEventDraws(string name, bool hdr)
+    {
+        string key = "deferredEvents." + name;
+        try
+        {
+            Primitive(PrimitiveType.Sphere, new Vector3(0f, 0.5f, 0f), Standard(new Color(0.8f, 0.8f, 0.8f)));
+            Directional(new Vector3(50f, -30f, 0f), Color.white, 0.8f);
+            var camera = MakeCamera();
+            camera.renderingPath = RenderingPath.DeferredShading;
+            camera.allowHDR = hdr;
+            camera.backgroundColor = Color.black;
+            var quad = Add(Instantiate(Resources.GetBuiltinResource<Mesh>("Quad.fbx")));
+            var events = new[] { CameraEvent.BeforeLighting, CameraEvent.AfterLighting, CameraEvent.BeforeFinalPass, CameraEvent.AfterFinalPass };
+            var places = new[] { new Vector2Int(20, 20), new Vector2Int(Width - 20, 20), new Vector2Int(20, Height - 20), new Vector2Int(Width - 20, Height - 20) };
+            var colors = new[] { new Color(1f, 0f, 0f, 1f), new Color(0f, 1f, 0f, 1f), new Color(0f, 0f, 1f, 1f), new Color(1f, 1f, 0f, 1f) };
+            var buffers = new CommandBuffer[events.Length];
+            for (int i = 0; i < events.Length; i++)
+            {
+                var material = Unlit(colors[i]);
+                var world = camera.ScreenToWorldPoint(new Vector3(places[i].x + 0.5f, places[i].y + 0.5f, 2f));
+                var matrix = Matrix4x4.TRS(world, camera.transform.rotation, Vector3.one * 0.15f);
+                buffers[i] = new CommandBuffer { name = "deferredEvents." + events[i] };
+                buffers[i].SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+                buffers[i].DrawMesh(quad, matrix, material);
+                camera.AddCommandBuffer(events[i], buffers[i]);
+            }
+            camera.Render();
+            var t = Read(camera.targetTexture);
+            for (int i = 0; i < events.Length; i++) Value(key + "." + events[i], C(t.GetPixel(places[i].x, places[i].y)));
+            DestroyImmediate(t);
+            for (int i = 0; i < events.Length; i++)
+            {
+                camera.RemoveCommandBuffer(events[i], buffers[i]);
+                buffers[i].Release();
+            }
+        }
+        catch (Exception e)
+        {
+            Value(key + ".exception", S(e.GetType().Name + ": " + e.Message));
+        }
+        Clear();
+        Environment(new Color(0.1f, 0.1f, 0.1f));
+    }
+
+    /// <param name="other">Another LDR deferred camera of the same size renders a sphere of its
+    /// own into its own target between the two renders (<c>.other</c>: that sphere's place in
+    /// this camera's image).</param>
+    void DontClearCase(string name, bool hdr, CameraClearFlags clear, bool other = false)
     {
         string key = "deferredDontClear." + name;
         try
@@ -111,6 +167,20 @@ public partial class FxProbe
             }
             var first = At(sphere.transform.position);
             camera.Render();
+            Vector2Int otherAt = default;
+            if (other)
+            {
+                var otherCamera = MakeCamera();
+                otherCamera.renderingPath = RenderingPath.DeferredShading;
+                otherCamera.allowHDR = false;
+                otherCamera.backgroundColor = Color.black;
+                var otherSphere = Primitive(PrimitiveType.Sphere, new Vector3(0f, 1.5f, 0f), Standard(new Color(0.8f, 0.8f, 0.8f)));
+                otherAt = At(otherSphere.transform.position);
+                sphere.SetActive(false);
+                otherCamera.Render();
+                otherSphere.SetActive(false);
+                sphere.SetActive(true);
+            }
             camera.clearFlags = clear;
             sphere.transform.position = new Vector3(1f, 0.5f, 0f);
             var second = At(sphere.transform.position);
@@ -120,6 +190,7 @@ public partial class FxProbe
             Value(key + ".first", B(t.GetPixel(first.x, first.y).g > 0.99f));
             Value(key + ".second", B(t.GetPixel(second.x, second.y).g > 0.99f));
             Value(key + ".background", B(t.GetPixel(2, Height - 3).g > 0.99f));
+            if (other) Value(key + ".other", B(t.GetPixel(otherAt.x, otherAt.y).g > 0.99f));
             DestroyImmediate(t);
             Save(camera.targetTexture, "deferred_dontclear_" + name);
         }
