@@ -32,7 +32,9 @@ the scene loads, so what loading the scene logs is kept too (`scene_load.*`).
 * `stats.*`: `UnityStats.screenRes` has the form "WIDTHxHEIGHT".
 * `compilation.*`: `CompilationPipeline.GetAssemblies` for the Editor and for players (the
   probe's assemblies: root namespace, flags, output, sources, references, plugins and compiler
-  options), `new ScriptCompilerOptions()`, and the `Assembly` constructors.
+  options; in the Editor's list an optimization equal to `CompilationPipeline.codeOptimization`,
+  the machine's Editor preference, reads "editor"), `new ScriptCompilerOptions()`, and the
+  `Assembly` constructors.
 * `timeline.*`: `Cutscene.playable` (animation, activation, group, marker tracks; signal and
   ProbeMarker markers) and `CutsceneMissing.playable`, the same timeline whose ProbeMarker
   documents name a script GUID that does not exist.

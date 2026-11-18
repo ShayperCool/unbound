@@ -330,8 +330,10 @@ public class GameInteropProbe : MonoBehaviour
 #if UNITY_EDITOR
     static string Join(IEnumerable<string> values) => values == null ? "null" : "[" + string.Join(",", values) + "]";
 
-    static string Options(ScriptCompilerOptions o) => o == null ? "null" :
-        $"unsafe={o.AllowUnsafeCode} api={o.ApiCompatibilityLevel} optimization={o.CodeOptimization} language={o.LanguageVersion ?? "null"} " +
+    /// <summary>Compiler options; with <paramref name="relative"/>, an optimization equal to the
+    /// Editor's current one (a user preference of the machine) reads "editor".</summary>
+    static string Options(ScriptCompilerOptions o, bool relative = false) => o == null ? "null" :
+        $"unsafe={o.AllowUnsafeCode} api={o.ApiCompatibilityLevel} optimization={(relative && o.CodeOptimization == CompilationPipeline.codeOptimization ? "editor" : o.CodeOptimization.ToString())} language={o.LanguageVersion ?? "null"} " +
         $"responseFiles={Join(o.ResponseFiles)} arguments={Join(o.AdditionalCompilerArguments)} analyzers={Join(o.RoslynAnalyzerDllPaths?.Select(System.IO.Path.GetFileName))} " +
         $"ruleset={o.RoslynAnalyzerRulesetPath ?? "null"} config={o.AnalyzerConfigPath ?? "null"} additional={Join(o.RoslynAdditionalFilePaths)} " +
         $"editorCompatibility={o.EditorAssembliesCompatibilityLevel}";
@@ -355,7 +357,7 @@ public class GameInteropProbe : MonoBehaviour
                 Row(key + ".sources", Join(a.sourceFiles.OrderBy(s => s, StringComparer.Ordinal)));
                 Row(key + ".references", Join(a.assemblyReferences.Select(r => r.name).Where(probeAssemblies.Contains).OrderBy(s => s, StringComparer.Ordinal)));
                 Row(key + ".plugins", Join(a.compiledAssemblyReferences.Where(r => r.Replace('\\', '/').Contains("Assets/")).OrderBy(s => s, StringComparer.Ordinal)));
-                Row(key + ".options", Options(a.compilerOptions));
+                Row(key + ".options", Options(a.compilerOptions, relative: type == AssembliesType.Editor));
             }
         Try("compilation.options_new", () => Options(new ScriptCompilerOptions()));
         Try("compilation.ctor_options", () =>

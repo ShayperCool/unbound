@@ -324,21 +324,21 @@
 {"k":"compilation.Editor.Assembly-CSharp.sources","v":"[Assets/Scripts/ArgBase.cs,Assets/Scripts/ArgDerived.cs,Assets/Scripts/ArgHolder.cs,Assets/Scripts/ArgOnlyBehaviour.cs,Assets/Scripts/ArgOnlyData.cs,Assets/Scripts/GameInteropProbe.cs,Assets/Scripts/LimbRig.cs,Assets/Scripts/PrivateCtorBehaviour.cs,Assets/Scripts/ProbeLog.cs,Assets/Scripts/ProbeMarker.cs,Assets/Scripts/ReparentOnAfter.cs,Assets/Scripts/ReparentOnBefore.cs]"}
 {"k":"compilation.Editor.Assembly-CSharp.references","v":"[ProbeUnsafeLib]"}
 {"k":"compilation.Editor.Assembly-CSharp.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.Assembly-CSharp.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.root_namespace","v":""}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.flags","v":"EditorAssembly"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.output","v":"Library/ScriptAssemblies/Assembly-CSharp-Editor.dll"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.sources","v":"[Assets/Editor/ProbeRunner.cs,Assets/Editor/ProbeSetup.cs]"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.references","v":"[Assembly-CSharp,ProbeUnsafeLib]"}
 {"k":"compilation.Editor.Assembly-CSharp-Editor.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.Assembly-CSharp-Editor.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.Assembly-CSharp-Editor.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Editor.ProbeUnsafeLib.root_namespace","v":"ProbeLib"}
 {"k":"compilation.Editor.ProbeUnsafeLib.flags","v":"None"}
 {"k":"compilation.Editor.ProbeUnsafeLib.output","v":"Library/ScriptAssemblies/ProbeUnsafeLib.dll"}
 {"k":"compilation.Editor.ProbeUnsafeLib.sources","v":"[Assets/UnsafeLib/UnsafeSum.cs]"}
 {"k":"compilation.Editor.ProbeUnsafeLib.references","v":"[]"}
 {"k":"compilation.Editor.ProbeUnsafeLib.plugins","v":"[Assets/Plugins/ShapeCore.dll,Assets/Plugins/ShapeExtras.dll,Assets/Plugins/ShapeLater.dll]"}
-{"k":"compilation.Editor.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=Debug language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
+{"k":"compilation.Editor.ProbeUnsafeLib.options","v":"unsafe=True api=NET_Standard_2_0 optimization=editor language=9.0 responseFiles=[] arguments=[/nowarn:0169,/nowarn:0649,/nowarn:0282,/nowarn:1701,/nowarn:1702] analyzers=[Unity.SourceGenerators.dll,Unity.Properties.SourceGenerator.dll,Unity.UIToolkit.SourceGenerator.dll] ruleset= config= additional=[] editorCompatibility=Default"}
 {"k":"compilation.Player.Assembly-CSharp.root_namespace","v":""}
 {"k":"compilation.Player.Assembly-CSharp.flags","v":"None"}
 {"k":"compilation.Player.Assembly-CSharp.output","v":"Library/ScriptAssemblies/Assembly-CSharp.dll"}
