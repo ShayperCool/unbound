@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using Xunit;
 
@@ -15,6 +16,8 @@ namespace UnityEngine.Tests
         readonly string m_Root = Path.Combine(Path.GetTempPath(), "unbound-fileutil-" + Guid.NewGuid().ToString("N"));
 
         public FileUtilDeleteTests() => Directory.CreateDirectory(m_Root);
+
+        static int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == FileUtil.UnsupportedMember).Value;
 
         public void Dispose()
         {
@@ -112,10 +115,14 @@ namespace UnityEngine.Tests
             var manifest = Make("project/Packages/manifest.json");
             var embedded = Make("project/Packages/com.example.tool/package.json");
             var outside = Make("outside/kept.txt");
+            var shared = Make("store/com.example.shared/package.json");
+            var other = Make("project/Other/o.txt");
             Directory.CreateSymbolicLink(Path.Combine(project, "UserLink"), Path.GetDirectoryName(outside));
-            foreach (var name in new[] { "Builds", "Logs", "Assets", "UserLink" })
+            foreach (var name in new[] { "Builds", "Logs", "Assets", "UserLink", "Other" })
                 Directory.CreateSymbolicLink(Path.Combine(view, name), Path.Combine(project, name));
             Directory.CreateSymbolicLink(Path.Combine(view, "Packages", "com.example.tool"), Path.GetDirectoryName(embedded));
+            Directory.CreateSymbolicLink(Path.Combine(view, "Packages", "com.example.shared"), Path.GetDirectoryName(shared));
+            File.CreateSymbolicLink(Path.Combine(view, "Packages", "manifest.json"), manifest);
             var previousDirectory = Directory.GetCurrentDirectory();
             var previousProject = ProjectInfo.ProjectPath;
             try
@@ -138,9 +145,25 @@ namespace UnityEngine.Tests
                 Assert.True(FileUtil.DeleteFileOrDirectory("UserLink"));
                 Assert.False(Directory.Exists(Path.Combine(project, "UserLink")));
                 Assert.True(File.Exists(outside));
-                // Control: the same names outside a project view are only the paths themselves.
+                // A package kept outside the project and the project folder itself are refused and
+                // reported (unmeasured): nothing goes.
+                int reported = Hits();
+                Assert.False(FileUtil.DeleteFileOrDirectory("Packages/com.example.shared"));
+                Assert.True(File.Exists(shared));
+                Assert.True(Directory.Exists(Path.Combine(view, "Packages", "com.example.shared")));
+                Assert.False(FileUtil.DeleteFileOrDirectory("."));
+                Assert.True(File.Exists(other));
+                Assert.Equal(reported + 2, Hits());
+                // The Packages folder: the project's goes, and the view's folder of links with it.
+                Assert.True(FileUtil.DeleteFileOrDirectory("Packages"));
+                Assert.False(Directory.Exists(Path.Combine(project, "Packages")));
+                Assert.False(Directory.Exists(Path.Combine(view, "Packages")));
+                Assert.True(File.Exists(shared));
+                // Control: outside a project view the same name is only the path itself.
                 ProjectInfo.ProjectPath = Path.Combine(m_Root, "elsewhere");
-                Assert.False(FileUtil.DeleteFileOrDirectory("Builds"));
+                Assert.True(FileUtil.DeleteFileOrDirectory("Other"));
+                Assert.False(Directory.Exists(Path.Combine(view, "Other")));
+                Assert.True(File.Exists(other));
             }
             finally
             {

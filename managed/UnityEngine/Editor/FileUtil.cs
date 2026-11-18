@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Unbound.Runtime;
 
 namespace UnityEditor
 {
@@ -12,7 +13,8 @@ namespace UnityEditor
         /// relative path is the working directory's (the project's); backslashes separate folders;
         /// read-only files go too; a symbolic link is removed, not what it points to; a .meta file
         /// beside the path stays; nothing is logged. Unbound's choices (unmeasured): links inside a
-        /// deleted tree are removed, not followed; a path the process may not delete gives false.
+        /// deleted tree are removed, not followed; a path the process may not delete gives false;
+        /// paths through the project view, see <see cref="ThroughProjectView"/>.
         /// </summary>
         public static bool DeleteFileOrDirectory(string path)
         {
@@ -21,21 +23,29 @@ namespace UnityEditor
             string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path.Replace('\\', '/')));
             try
             {
-                string viewLink = ProjectViewLink(full, out string projectEntry);
-                if (projectEntry != null)
+                switch (ThroughProjectView(full, out string projectEntry, out string viewEntry))
                 {
-                    if (!Delete(projectEntry)) return false;
-                    // The view's link to it goes too, as if the entry had never been there.
-                    if (viewLink != null && new FileInfo(viewLink).LinkTarget != null) File.Delete(viewLink);
-                    return true;
+                    case ViewEntry.None:
+                        return Delete(full);
+                    case ViewEntry.Unsupported:
+                        Stubs.NotImplemented(UnsupportedMember);
+                        return false;
+                    default:
+                        if (!Delete(projectEntry)) return false;
+                        // The view's own entry goes too (only links live there), as if the project's
+                        // entry had never been there.
+                        if (new FileInfo(viewEntry).LinkTarget != null) File.Delete(viewEntry);
+                        else if (Directory.Exists(viewEntry)) Directory.Delete(viewEntry, true);
+                        return true;
                 }
-                return Delete(full);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 return false;
             }
         }
+
+        internal const string UnsupportedMember = "FileUtil.DeleteFileOrDirectory of the project folder or of a package that is not embedded in the project's Packages folder";
 
         static bool Delete(string full)
         {
@@ -46,45 +56,56 @@ namespace UnityEditor
             return true;
         }
 
+        enum ViewEntry { None, ProjectEntry, Unsupported }
+
         /// <summary>
         /// The game's working directory is Unbound's project view (<c>Library/Unbound/ProjectView</c>):
-        /// a directory of links to each top-level project entry and to each <c>Packages/&lt;name&gt;</c>.
-        /// A path naming one of those links, the view's <c>Packages</c> folder or the view itself
-        /// names the project's own entry, which is returned with the view link (null for the folder
-        /// and the view); paths below them already reach the project's files through the link.
+        /// a directory of links to each top-level project entry and to each package as
+        /// <c>Packages/&lt;name&gt;</c>. A path naming a top-level link, the view's <c>Packages</c>
+        /// folder or an embedded package's link (one in the project's Packages folder) names the
+        /// project's own entry (Unbound's reading, unmeasured). The view itself (the project folder)
+        /// and a package kept elsewhere (the Editor's built-in packages, a package cache or store, a
+        /// local package outside Packages) are not deleted and are reported: what the Editor does
+        /// with them is unmeasured. Paths below those links reach the project's files through them.
         /// </summary>
-        static string ProjectViewLink(string full, out string projectEntry)
+        static ViewEntry ThroughProjectView(string full, out string projectEntry, out string viewEntry)
         {
-            projectEntry = null;
+            projectEntry = viewEntry = null;
             string view = UnityEngine.ProjectInfo.ProjectPath;
-            if (string.IsNullOrEmpty(view)) return null;
+            if (string.IsNullOrEmpty(view)) return ViewEntry.None;
             view = Path.TrimEndingDirectorySeparator(Path.GetFullPath(view));
             string unbound = Path.GetDirectoryName(view), library = Path.GetDirectoryName(unbound);
             if (Path.GetFileName(view) != "ProjectView" || Path.GetFileName(unbound) != "Unbound" || Path.GetFileName(library) != "Library")
-                return null;
+                return ViewEntry.None;
             string project = Path.GetDirectoryName(library);
             // Compared as physical paths: the working directory is spelled without the links above
             // it (a temporary or home directory may be one), the configured view with them.
-            string physicalView = Unbound.Runtime.ConsoleLogPath.Resolve(view);
+            string physicalView = ConsoleLogPath.Resolve(view);
             string physicalPackages = Path.Combine(physicalView, "Packages");
-            string physicalFull = Unbound.Runtime.ConsoleLogPath.Resolve(full);
-            if (physicalFull == physicalView)
-            {
-                projectEntry = project;
-                return null;
-            }
+            string physicalFull = ConsoleLogPath.Resolve(full);
+            if (physicalFull == physicalView) return ViewEntry.Unsupported;
             if (physicalFull == physicalPackages)
             {
                 projectEntry = Path.Combine(project, "Packages");
-                return null;
+                viewEntry = full;
+                return ViewEntry.ProjectEntry;
             }
             string parent = Path.GetDirectoryName(full);
-            string physicalParent = Unbound.Runtime.ConsoleLogPath.Resolve(parent);
-            if (physicalParent != physicalView && physicalParent != physicalPackages) return null;
+            string physicalParent = ConsoleLogPath.Resolve(parent);
+            if (physicalParent != physicalView && physicalParent != physicalPackages) return ViewEntry.None;
             string target = new FileInfo(full).LinkTarget;
-            if (target == null) return null;
-            projectEntry = Path.GetFullPath(target, parent);
-            return full;
+            if (target == null) return ViewEntry.None;
+            target = Path.GetFullPath(target, parent);
+            if (physicalParent == physicalPackages && !Path.Exists(target)) return ViewEntry.None;
+            if (physicalParent == physicalPackages)
+            {
+                string embedded = ConsoleLogPath.Resolve(Path.Combine(project, "Packages")) + Path.DirectorySeparatorChar;
+                string physicalTarget = ConsoleLogPath.Resolve(Path.GetDirectoryName(target)) + Path.DirectorySeparatorChar + Path.GetFileName(target);
+                if (!physicalTarget.StartsWith(embedded, StringComparison.Ordinal)) return ViewEntry.Unsupported;
+            }
+            projectEntry = target;
+            viewEntry = full;
+            return ViewEntry.ProjectEntry;
         }
     }
 }
