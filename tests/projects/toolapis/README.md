@@ -30,6 +30,15 @@ and compared with Unbound:
   `com.unity.2d.psdimporter` 9.1.3 package with its defaults: the objects of the asset, the
   mosaic texture, the two sprites and the prefab's hierarchy. Its `.meta` is the one the Editor
   wrote on the first import (the importer generates the sprite IDs then and keeps them there).
+* The Editor's internal build platform list, which 2D Common reads to name a build target's texture
+  platform settings: each platform's type, name, group, title, tooltip, visibility, subtarget and
+  default target (Standalone's, and which platforms are installed, depend on the machine and are
+  left out).
+* Which importer `AssetImporter.GetAtPath` gives during an asset's own import (a ScriptedImporter
+  of `Data.toolapis`, imported again in Play mode) and afterwards.
+* Sprites outside an atlas (`Sprite.Create` of both mesh types): packing; a sprite whose positions
+  are rewritten through `SpriteDataAccessExtensions` before and after its UVs are written; the
+  materials of a `SpriteRenderer` a script adds and of the PSD prefab's renderers.
 * A `Material`'s `m_SavedProperties` through `SerializedObject` (the Visual Effect Graph's material
   settings write their float list this way): the floats, ints, colours and textures of a
   `Sprites/Default` material, and the result of replacing the float list with two entries (one the
@@ -52,4 +61,10 @@ python3 tests/projects/toolapis/run.py publish native-a native-b
 UNBOUND=/path/to/unbound python3 tests/projects/toolapis/run.py gate
 ```
 
-Values compare exactly (tolerance 0). Before the engine changes: 612/2079 values matched.
+Values compare exactly (tolerance 0). `Packages/packages-lock.json` is the one the Editor wrote: it pins
+the indirect dependencies (Burst 1.8.28) the reference was captured with.
+
+Unbound on macOS, 2026-11-18: 3129/3154 values, 0 failures and 26 recorded residuals
+(`residuals.json`): the material sheet (not modelled, queued), the `Color` overload's mips (filtered
+from bytes; the Editor filters the float colours), and NotEditable on the PSD importer's texture.
+Before the engine changes, 612 of the first 2079 values matched.

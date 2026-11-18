@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.U2D;
 using UnityEngine.UIElements;
 
 /// <summary>
@@ -49,6 +50,8 @@ public static class ToolApisProbe
         var text = value switch
         {
             null => "null",
+            // Enums as numbers: several of these enums give one value two names.
+            Enum e => Convert.ToInt64(e, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
             float f => F(f),
             bool b => b ? "true" : "false",
             Vector2 v => V2(v),
@@ -88,6 +91,8 @@ public static class ToolApisProbe
         Guard("generate", Generate);
         Guard("postprocessor", Postprocessor);
         Guard("errors", Errors);
+        Guard("platforms", Platforms);
+        Guard("importer", ImporterIdentity);
         Guard("psd", Psd);
         Guard("material", MaterialProperties);
         Guard("uss", UssSetup);
@@ -125,7 +130,7 @@ public static class ToolApisProbe
         Put(key + ".mipmapFadeDistanceStart", s.mipmapFadeDistanceStart); Put(key + ".mipmapFadeDistanceEnd", s.mipmapFadeDistanceEnd);
         Put(key + ".convertToNormalMap", s.convertToNormalMap); Put(key + ".heightmapScale", s.heightmapScale);
         Put(key + ".normalMapFilter", s.normalMapFilter); Put(key + ".flipGreenChannel", s.flipGreenChannel);
-        Put(key + ".swizzle", $"{s.swizzleR},{s.swizzleG},{s.swizzleB},{s.swizzleA}");
+        Put(key + ".swizzle", $"{(int)s.swizzleR},{(int)s.swizzleG},{(int)s.swizzleB},{(int)s.swizzleA}");
         Put(key + ".alphaSource", s.alphaSource); Put(key + ".singleChannelComponent", s.singleChannelComponent);
         Put(key + ".flipbook", s.flipbookRows + "x" + s.flipbookColumns); Put(key + ".readable", s.readable);
         Put(key + ".streamingMipmaps", s.streamingMipmaps); Put(key + ".streamingMipmapsPriority", s.streamingMipmapsPriority);
@@ -133,7 +138,7 @@ public static class ToolApisProbe
         Put(key + ".generateCubemap", s.generateCubemap); Put(key + ".cubemapConvolution", s.cubemapConvolution);
         Put(key + ".seamlessCubemap", s.seamlessCubemap); Put(key + ".filterMode", s.filterMode); Put(key + ".aniso", s.aniso);
         Put(key + ".mipmapBias", s.mipmapBias);
-        Put(key + ".wrap", $"{s.wrapMode},{s.wrapModeU},{s.wrapModeV},{s.wrapModeW}");
+        Put(key + ".wrap", $"{(int)s.wrapMode},{(int)s.wrapModeU},{(int)s.wrapModeV},{(int)s.wrapModeW}");
         Put(key + ".alphaIsTransparency", s.alphaIsTransparency); Put(key + ".ignorePngGamma", s.ignorePngGamma);
         Put(key + ".spriteMode", s.spriteMode); Put(key + ".spritePixelsPerUnit", s.spritePixelsPerUnit);
         Put(key + ".spriteTessellationDetail", s.spriteTessellationDetail); Put(key + ".spriteExtrude", s.spriteExtrude);
@@ -170,6 +175,24 @@ public static class ToolApisProbe
         PlatformSettings(key + ".platform", g.platformSettings);
     }
 
+    static TextureImporterSettings High() => new TextureImporterSettings
+    {
+        textureShape = TextureImporterShape.Texture2DArray, mipmapEnabled = true, sRGBTexture = true, borderMipmap = true,
+        readable = true, aniso = 5, wrapMode = TextureWrapMode.Mirror, alphaIsTransparency = true,
+        alphaSource = TextureImporterAlphaSource.FromGrayScale, npotScale = TextureImporterNPOTScale.ToLarger, spriteMode = 3,
+        spriteGenerateFallbackPhysicsShape = true, generateCubemap = TextureImporterGenerateCubemap.Spheremap,
+        spritePixelsPerUnit = 32, filterMode = FilterMode.Trilinear,
+    };
+
+    static TextureImporterSettings Low() => new TextureImporterSettings
+    {
+        textureShape = TextureImporterShape.Texture3D, mipmapEnabled = false, sRGBTexture = false, borderMipmap = false,
+        readable = false, aniso = 0, wrapMode = TextureWrapMode.MirrorOnce, alphaIsTransparency = false,
+        alphaSource = TextureImporterAlphaSource.None, npotScale = TextureImporterNPOTScale.None, spriteMode = 0,
+        spriteGenerateFallbackPhysicsShape = false, generateCubemap = TextureImporterGenerateCubemap.None,
+        spritePixelsPerUnit = 7, filterMode = FilterMode.Point,
+    };
+
     static void Defaults()
     {
         GenerationSettings("defaults.struct", new TextureGenerationSettings());
@@ -182,10 +205,18 @@ public static class ToolApisProbe
             s.ApplyTextureType(type);
             ImporterSettings("settings.apply." + type, s);
         }
-        // ApplyTextureType on settings that already differ from a new object's.
-        var changed = new TextureImporterSettings { mipmapEnabled = false, readable = true, spritePixelsPerUnit = 32, wrapMode = TextureWrapMode.Mirror, alphaSource = TextureImporterAlphaSource.None };
-        changed.ApplyTextureType(TextureImporterType.Sprite);
-        ImporterSettings("settings.applyChanged.Sprite", changed);
+        // ApplyTextureType on settings that already differ from a new object's, both ways: which
+        // fields each type sets, and which it leaves as they were.
+        foreach (var type in s_Types)
+        {
+            var high = High();
+            high.ApplyTextureType(type);
+            ImporterSettings("settings.applyHigh." + type, high);
+            var low = Low();
+            low.ApplyTextureType(type);
+            ImporterSettings("settings.applyLow." + type, low);
+        }
+        var changed = High();
         var copy = new TextureImporterSettings();
         changed.CopyTo(copy);
         Put("settings.copyTo.equal", TextureImporterSettings.Equal(changed, copy));
@@ -198,7 +229,7 @@ public static class ToolApisProbe
         PlatformSettings("platform.copyTo", platformCopy);
         Put("source.new", $"{new SourceTextureInformation().width}x{new SourceTextureInformation().height} alpha {new SourceTextureInformation().containsAlpha} hdr {new SourceTextureInformation().hdr}");
         var data = new SpriteImportData();
-        Put("spriteImportData.new", $"{data.name ?? "null"} {R(data.rect)} {data.alignment} {V2(data.pivot)} {V4(data.border)} {(data.outline == null ? "null" : data.outline.Count.ToString(CultureInfo.InvariantCulture))} {F(data.tessellationDetail)} {data.spriteID ?? "null"}");
+        Put("spriteImportData.new", $"{data.name ?? "null"} {R(data.rect)} {(int)data.alignment} {V2(data.pivot)} {V4(data.border)} {(data.outline == null ? "null" : data.outline.Count.ToString(CultureInfo.InvariantCulture))} {F(data.tessellationDetail)} {data.spriteID ?? "null"}");
     }
 
     // ------------------------------------------------------------------ generation
@@ -238,7 +269,7 @@ public static class ToolApisProbe
         if (t == null) { Put(key, null); return; }
         Put(key + ".name", t.name); Put(key + ".size", t.width + "x" + t.height); Put(key + ".format", t.format);
         Put(key + ".graphicsFormat", t.graphicsFormat); Put(key + ".mipmapCount", t.mipmapCount);
-        Put(key + ".filterMode", t.filterMode); Put(key + ".wrap", $"{t.wrapModeU},{t.wrapModeV},{t.wrapModeW}");
+        Put(key + ".filterMode", t.filterMode); Put(key + ".wrap", $"{(int)t.wrapModeU},{(int)t.wrapModeV},{(int)t.wrapModeW}");
         Put(key + ".anisoLevel", t.anisoLevel); Put(key + ".mipMapBias", t.mipMapBias); Put(key + ".isReadable", t.isReadable);
         Put(key + ".hideFlags", t.hideFlags); Put(key + ".alphaIsTransparency", t.alphaIsTransparency);
         if (!t.isReadable) return;
@@ -354,9 +385,50 @@ public static class ToolApisProbe
         for (int y = 0; y < 32; y++)
             for (int x = 0; x < 64; x++)
                 colors[y * 64 + x] = Pixel(x, y, 64, 32);
-        try { Output("g.colorOverload", TextureGenerator.GenerateTexture(Settings(TextureImporterType.Default, 64, 32), colors)); }
+        try
+        {
+            Output("g.colorOverload", TextureGenerator.GenerateTexture(Settings(TextureImporterType.Default, 64, 32), colors));
+            Output("g.colorOverloadLinear", TextureGenerator.GenerateTexture(Settings(TextureImporterType.Default, 64, 32,
+                (ref TextureGenerationSettings g) => g.textureImporterSettings.sRGBTexture = false), colors));
+        }
         catch (Exception e) { Put("g.colorOverload.threw", e.GetType().FullName + ": " + e.Message); }
         finally { colors.Dispose(); }
+        // A sprite's UVs when its mesh is rewritten through SpriteDataAccessExtensions (the 2D
+        // Animation package rewrites rigged sprites' meshes this way).
+        Guard("spriteMesh", () =>
+        {
+            var tex = new Texture2D(64, 32);
+            var mesh = UnityEngine.Sprite.Create(tex, new Rect(16, 8, 32, 16), new Vector2(0.5f, 0.5f), 16, 0, SpriteMeshType.FullRect);
+            void Dump(string step)
+            {
+                Put("spriteMesh." + step + ".uv", string.Join(";", mesh.uv.Select(V2)));
+                Put("spriteMesh." + step + ".texCoord0", string.Join(";", mesh.GetVertexAttribute<Vector2>(UnityEngine.Rendering.VertexAttribute.TexCoord0).ToArray().Select(V2)));
+                Put("spriteMesh." + step + ".vertices", string.Join(";", mesh.vertices.Select(V2)));
+            }
+            Dump("initial");
+            mesh.SetVertexCount(3);
+            var positions = new NativeArray<Vector3>(new[] { new Vector3(-1, -0.5f, 0), new Vector3(1, -0.5f, 0), new Vector3(0, 0.25f, 0) }, Allocator.Temp);
+            mesh.SetVertexAttribute(UnityEngine.Rendering.VertexAttribute.Position, positions);
+            mesh.SetIndices(new NativeArray<ushort>(new ushort[] { 0, 1, 2 }, Allocator.Temp));
+            Dump("positions");
+            mesh.SetVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord0, new NativeArray<Vector2>(new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 1) }, Allocator.Temp));
+            Dump("texCoords");
+            positions[2] = new Vector3(0.5f, 0.5f, 0);
+            mesh.SetVertexAttribute(UnityEngine.Rendering.VertexAttribute.Position, positions);
+            Dump("positionsAgain");
+        });
+        // A sprite renderer a script adds: its materials (no render pipeline here).
+        var holder = new GameObject("AddedRenderer");
+        var added = holder.AddComponent<SpriteRenderer>();
+        Put("spriteRenderer.added.materials", string.Join(",", added.sharedMaterials.Select(m => m == null ? "null" : m.name + "/" + m.shader.name)));
+        UnityEngine.Object.DestroyImmediate(holder);
+        // Sprites made by script, outside any atlas.
+        var source = new Texture2D(16, 16);
+        foreach (var mesh in new[] { SpriteMeshType.FullRect, SpriteMeshType.Tight })
+        {
+            var created = UnityEngine.Sprite.Create(source, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 100, 0, mesh);
+            Put("spriteCreate." + mesh + ".packing", $"packed {created.packed} mode {(int)created.packingMode} rotation {(int)created.packingRotation}");
+        }
     }
 
     // ------------------------------------------------------------------ postprocessors
@@ -389,6 +461,47 @@ public static class ToolApisProbe
         Case("err.zeroSize", Settings(TextureImporterType.Default, 0, 0), 64, 32);
     }
 
+    // ------------------------------------------------------------------ importer identity
+
+    /// <summary>The importer AssetImporter.GetAtPath gives during an asset's import (the 2D
+    /// Animation package's sprite postprocessor reads the importing PSD importer's data through
+    /// it), and afterwards.</summary>
+    static void ImporterIdentity()
+    {
+        const string path = "Assets/Data.toolapis";
+        ToolApisImporter.During = "not imported";
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        Put("importer.main", AssetDatabase.LoadMainAssetAtPath(path) is TextAsset t ? t.text : "null");
+        Put("importer.during", ToolApisImporter.During);
+        var after = AssetImporter.GetAtPath(path) as ToolApisImporter;
+        Put("importer.after", after == null ? "null" : "imports " + after.imports);
+    }
+
+    // ------------------------------------------------------------------ build platforms
+
+    /// <summary>The Editor's internal build platform list, which the 2D packages read to name a
+    /// build target's platform settings. Which platforms are installed and the Standalone default
+    /// target depend on the machine and are left out.</summary>
+    static void Platforms()
+    {
+        var type = typeof(Editor).Assembly.GetType("UnityEditor.Build.BuildPlatforms");
+        var instance = type.GetProperty("instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+        var platforms = (Array)type.GetField("buildPlatforms").GetValue(instance);
+        Put("platforms.count", platforms.Length);
+        for (int i = 0; i < platforms.Length; i++)
+        {
+            var p = platforms.GetValue(i);
+            var t = p.GetType();
+            object Get(string n) => t.GetField(n)?.GetValue(p) ?? t.GetProperty(n)?.GetValue(p);
+            var named = Get("namedBuildTarget");
+            var group = Get("targetGroup");
+            bool standalone = (BuildTargetGroup)group == BuildTargetGroup.Standalone;
+            Put("platforms." + i, $"{t.Name} name {Get("name")} target {named.GetType().GetProperty("TargetName").GetValue(named)} group {Convert.ToInt32(group, CultureInfo.InvariantCulture)} "
+                + $"default {(standalone ? "host" : Convert.ToInt32(Get("defaultTarget"), CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture))} hide {Get("hideInUi")} "
+                + $"subtarget {t.GetField("subtarget")?.GetValue(p) ?? "-"} tooltip {Get("tooltip")} title {((GUIContent)Get("title")).text}");
+        }
+    }
+
     // ------------------------------------------------------------------ PSD importer
 
     static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
@@ -409,7 +522,7 @@ public static class ToolApisProbe
             {
                 var sr = t.GetComponent<SpriteRenderer>();
                 Put("psd.prefab." + PathOf(t), $"active {t.gameObject.activeSelf} pos {t.localPosition.x.ToString("R", CultureInfo.InvariantCulture)},{t.localPosition.y.ToString("R", CultureInfo.InvariantCulture)},{t.localPosition.z.ToString("R", CultureInfo.InvariantCulture)} "
-                    + (sr == null ? "no renderer" : $"sprite {(sr.sprite ? sr.sprite.name : "null")} order {sr.sortingOrder} enabled {sr.enabled}"));
+                    + (sr == null ? "no renderer" : $"sprite {(sr.sprite ? sr.sprite.name : "null")} order {sr.sortingOrder} enabled {sr.enabled} materials {string.Join(",", sr.sharedMaterials.Select(m => m == null ? "null" : m.name))}"));
             }
         Put("psd.logs", TakeLogs());
     }
