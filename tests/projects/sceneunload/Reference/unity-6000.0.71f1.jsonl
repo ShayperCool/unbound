@@ -1,0 +1,255 @@
+{"k": "single/before/res.data", "v": "loaded 99"}
+{"k": "single/before/res.mat", "v": "loaded 1,0"}
+{"k": "single/before/res.text", "v": "loaded"}
+{"k": "single/before/res.plain", "v": "loaded"}
+{"k": "single/before/res.plainmat", "v": "loaded"}
+{"k": "single/before/scene.data", "v": "loaded 55"}
+{"k": "single/before/scene.mat", "v": "loaded 0,1"}
+{"k": "single/before/held", "v": "loaded 88"}
+{"k": "single/sceneLoaded/res.data", "v": "loaded 99"}
+{"k": "single/sceneLoaded/res.mat", "v": "loaded 1,0"}
+{"k": "single/sceneLoaded/res.text", "v": "loaded"}
+{"k": "single/sceneLoaded/res.plain", "v": "loaded"}
+{"k": "single/sceneLoaded/res.plainmat", "v": "loaded"}
+{"k": "single/sceneLoaded/scene.data", "v": "loaded 55"}
+{"k": "single/sceneLoaded/scene.mat", "v": "loaded 0,1"}
+{"k": "single/sceneLoaded/held", "v": "loaded 88"}
+{"k": "single/f1/res.data", "v": "unloaded"}
+{"k": "single/f1/res.mat", "v": "loaded 1,0"}
+{"k": "single/f1/res.text", "v": "unloaded"}
+{"k": "single/f1/res.plain", "v": "unloaded"}
+{"k": "single/f1/res.plainmat", "v": "unloaded"}
+{"k": "single/f1/scene.data", "v": "unloaded"}
+{"k": "single/f1/scene.mat", "v": "loaded 0,1"}
+{"k": "single/f1/held", "v": "loaded 88"}
+{"k": "single/f2/res.data", "v": "unloaded"}
+{"k": "single/f2/res.mat", "v": "loaded 1,0"}
+{"k": "single/f2/res.text", "v": "unloaded"}
+{"k": "single/f2/res.plain", "v": "unloaded"}
+{"k": "single/f2/res.plainmat", "v": "unloaded"}
+{"k": "single/f2/scene.data", "v": "unloaded"}
+{"k": "single/f2/scene.mat", "v": "loaded 0,1"}
+{"k": "single/f2/held", "v": "loaded 88"}
+{"k": "single/f3/res.data", "v": "unloaded"}
+{"k": "single/f3/res.mat", "v": "loaded 1,0"}
+{"k": "single/f3/res.text", "v": "unloaded"}
+{"k": "single/f3/res.plain", "v": "unloaded"}
+{"k": "single/f3/res.plainmat", "v": "unloaded"}
+{"k": "single/f3/scene.data", "v": "unloaded"}
+{"k": "single/f3/scene.mat", "v": "loaded 0,1"}
+{"k": "single/f3/held", "v": "loaded 88"}
+{"k": "single/reload.res.data", "v": "7 same id"}
+{"k": "single/reload.res.mat", "v": "1,0 same id"}
+{"k": "singleasync/before/res.data", "v": "loaded 99"}
+{"k": "singleasync/before/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/before/res.text", "v": "loaded"}
+{"k": "singleasync/before/res.plain", "v": "loaded"}
+{"k": "singleasync/before/res.plainmat", "v": "loaded"}
+{"k": "singleasync/before/scene.data", "v": "loaded 55"}
+{"k": "singleasync/before/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/before/held", "v": "loaded 88"}
+{"k": "singleasync/sceneLoaded/res.data", "v": "loaded 99"}
+{"k": "singleasync/sceneLoaded/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/sceneLoaded/res.text", "v": "loaded"}
+{"k": "singleasync/sceneLoaded/res.plain", "v": "loaded"}
+{"k": "singleasync/sceneLoaded/res.plainmat", "v": "loaded"}
+{"k": "singleasync/sceneLoaded/scene.data", "v": "loaded 55"}
+{"k": "singleasync/sceneLoaded/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/sceneLoaded/held", "v": "loaded 88"}
+{"k": "singleasync/done/res.data", "v": "loaded 99"}
+{"k": "singleasync/done/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/done/res.text", "v": "loaded"}
+{"k": "singleasync/done/res.plain", "v": "loaded"}
+{"k": "singleasync/done/res.plainmat", "v": "loaded"}
+{"k": "singleasync/done/scene.data", "v": "loaded 55"}
+{"k": "singleasync/done/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/done/held", "v": "loaded 88"}
+{"k": "singleasync/f1/res.data", "v": "unloaded"}
+{"k": "singleasync/f1/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/f1/res.text", "v": "unloaded"}
+{"k": "singleasync/f1/res.plain", "v": "unloaded"}
+{"k": "singleasync/f1/res.plainmat", "v": "unloaded"}
+{"k": "singleasync/f1/scene.data", "v": "unloaded"}
+{"k": "singleasync/f1/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/f1/held", "v": "loaded 88"}
+{"k": "singleasync/f2/res.data", "v": "unloaded"}
+{"k": "singleasync/f2/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/f2/res.text", "v": "unloaded"}
+{"k": "singleasync/f2/res.plain", "v": "unloaded"}
+{"k": "singleasync/f2/res.plainmat", "v": "unloaded"}
+{"k": "singleasync/f2/scene.data", "v": "unloaded"}
+{"k": "singleasync/f2/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/f2/held", "v": "loaded 88"}
+{"k": "singleasync/f3/res.data", "v": "unloaded"}
+{"k": "singleasync/f3/res.mat", "v": "loaded 1,0"}
+{"k": "singleasync/f3/res.text", "v": "unloaded"}
+{"k": "singleasync/f3/res.plain", "v": "unloaded"}
+{"k": "singleasync/f3/res.plainmat", "v": "unloaded"}
+{"k": "singleasync/f3/scene.data", "v": "unloaded"}
+{"k": "singleasync/f3/scene.mat", "v": "loaded 0,1"}
+{"k": "singleasync/f3/held", "v": "loaded 88"}
+{"k": "singleasync/reload.res.data", "v": "7 same id"}
+{"k": "singleasync/reload.res.mat", "v": "1,0 same id"}
+{"k": "additive/before/res.data", "v": "loaded 99"}
+{"k": "additive/before/res.mat", "v": "loaded 1,0"}
+{"k": "additive/before/res.text", "v": "loaded"}
+{"k": "additive/before/res.plain", "v": "loaded"}
+{"k": "additive/before/res.plainmat", "v": "loaded"}
+{"k": "additive/before/scene.data", "v": "loaded 55"}
+{"k": "additive/before/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/before/held", "v": "loaded 88"}
+{"k": "additive/sceneLoaded/res.data", "v": "loaded 99"}
+{"k": "additive/sceneLoaded/res.mat", "v": "loaded 1,0"}
+{"k": "additive/sceneLoaded/res.text", "v": "loaded"}
+{"k": "additive/sceneLoaded/res.plain", "v": "loaded"}
+{"k": "additive/sceneLoaded/res.plainmat", "v": "loaded"}
+{"k": "additive/sceneLoaded/scene.data", "v": "loaded 55"}
+{"k": "additive/sceneLoaded/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/sceneLoaded/held", "v": "loaded 88"}
+{"k": "additive/done/res.data", "v": "loaded 99"}
+{"k": "additive/done/res.mat", "v": "loaded 1,0"}
+{"k": "additive/done/res.text", "v": "loaded"}
+{"k": "additive/done/res.plain", "v": "loaded"}
+{"k": "additive/done/res.plainmat", "v": "loaded"}
+{"k": "additive/done/scene.data", "v": "loaded 55"}
+{"k": "additive/done/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/done/held", "v": "loaded 88"}
+{"k": "additive/f1/res.data", "v": "loaded 99"}
+{"k": "additive/f1/res.mat", "v": "loaded 1,0"}
+{"k": "additive/f1/res.text", "v": "loaded"}
+{"k": "additive/f1/res.plain", "v": "loaded"}
+{"k": "additive/f1/res.plainmat", "v": "loaded"}
+{"k": "additive/f1/scene.data", "v": "loaded 55"}
+{"k": "additive/f1/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/f1/held", "v": "loaded 88"}
+{"k": "additive/f2/res.data", "v": "loaded 99"}
+{"k": "additive/f2/res.mat", "v": "loaded 1,0"}
+{"k": "additive/f2/res.text", "v": "loaded"}
+{"k": "additive/f2/res.plain", "v": "loaded"}
+{"k": "additive/f2/res.plainmat", "v": "loaded"}
+{"k": "additive/f2/scene.data", "v": "loaded 55"}
+{"k": "additive/f2/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/f2/held", "v": "loaded 88"}
+{"k": "additive/f3/res.data", "v": "loaded 99"}
+{"k": "additive/f3/res.mat", "v": "loaded 1,0"}
+{"k": "additive/f3/res.text", "v": "loaded"}
+{"k": "additive/f3/res.plain", "v": "loaded"}
+{"k": "additive/f3/res.plainmat", "v": "loaded"}
+{"k": "additive/f3/scene.data", "v": "loaded 55"}
+{"k": "additive/f3/scene.mat", "v": "loaded 0,1"}
+{"k": "additive/f3/held", "v": "loaded 88"}
+{"k": "additive/reload.res.data", "v": "99 same id"}
+{"k": "additive/reload.res.mat", "v": "1,0 same id"}
+{"k": "noforce/before/res.data", "v": "loaded 99"}
+{"k": "noforce/before/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/before/res.text", "v": "loaded"}
+{"k": "noforce/before/res.plain", "v": "loaded"}
+{"k": "noforce/before/res.plainmat", "v": "loaded"}
+{"k": "noforce/before/scene.data", "v": "loaded 55"}
+{"k": "noforce/before/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/before/held", "v": "loaded 88"}
+{"k": "noforce/sceneLoaded/res.data", "v": "loaded 99"}
+{"k": "noforce/sceneLoaded/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/sceneLoaded/res.text", "v": "loaded"}
+{"k": "noforce/sceneLoaded/res.plain", "v": "loaded"}
+{"k": "noforce/sceneLoaded/res.plainmat", "v": "loaded"}
+{"k": "noforce/sceneLoaded/scene.data", "v": "loaded 55"}
+{"k": "noforce/sceneLoaded/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/sceneLoaded/held", "v": "loaded 88"}
+{"k": "noforce/done/res.data", "v": "loaded 99"}
+{"k": "noforce/done/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/done/res.text", "v": "loaded"}
+{"k": "noforce/done/res.plain", "v": "loaded"}
+{"k": "noforce/done/res.plainmat", "v": "loaded"}
+{"k": "noforce/done/scene.data", "v": "loaded 55"}
+{"k": "noforce/done/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/done/held", "v": "loaded 88"}
+{"k": "noforce/f1/res.data", "v": "loaded 99"}
+{"k": "noforce/f1/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/f1/res.text", "v": "loaded"}
+{"k": "noforce/f1/res.plain", "v": "loaded"}
+{"k": "noforce/f1/res.plainmat", "v": "loaded"}
+{"k": "noforce/f1/scene.data", "v": "loaded 55"}
+{"k": "noforce/f1/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/f1/held", "v": "loaded 88"}
+{"k": "noforce/f2/res.data", "v": "loaded 99"}
+{"k": "noforce/f2/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/f2/res.text", "v": "loaded"}
+{"k": "noforce/f2/res.plain", "v": "loaded"}
+{"k": "noforce/f2/res.plainmat", "v": "loaded"}
+{"k": "noforce/f2/scene.data", "v": "loaded 55"}
+{"k": "noforce/f2/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/f2/held", "v": "loaded 88"}
+{"k": "noforce/f3/res.data", "v": "loaded 99"}
+{"k": "noforce/f3/res.mat", "v": "loaded 1,0"}
+{"k": "noforce/f3/res.text", "v": "loaded"}
+{"k": "noforce/f3/res.plain", "v": "loaded"}
+{"k": "noforce/f3/res.plainmat", "v": "loaded"}
+{"k": "noforce/f3/scene.data", "v": "loaded 55"}
+{"k": "noforce/f3/scene.mat", "v": "loaded 0,1"}
+{"k": "noforce/f3/held", "v": "loaded 88"}
+{"k": "noforce/reload.res.data", "v": "99 same id"}
+{"k": "noforce/reload.res.mat", "v": "1,0 same id"}
+{"k": "explicit/before/res.data", "v": "loaded 99"}
+{"k": "explicit/before/res.mat", "v": "loaded 1,0"}
+{"k": "explicit/before/res.text", "v": "loaded"}
+{"k": "explicit/before/res.plain", "v": "loaded"}
+{"k": "explicit/before/res.plainmat", "v": "loaded"}
+{"k": "explicit/before/scene.data", "v": "loaded 55"}
+{"k": "explicit/before/scene.mat", "v": "loaded 0,1"}
+{"k": "explicit/before/held", "v": "loaded 88"}
+{"k": "explicit/done/res.data", "v": "unloaded"}
+{"k": "explicit/done/res.mat", "v": "loaded 1,0"}
+{"k": "explicit/done/res.text", "v": "unloaded"}
+{"k": "explicit/done/res.plain", "v": "unloaded"}
+{"k": "explicit/done/res.plainmat", "v": "unloaded"}
+{"k": "explicit/done/scene.data", "v": "loaded 55"}
+{"k": "explicit/done/scene.mat", "v": "loaded 0,1"}
+{"k": "explicit/done/held", "v": "loaded 88"}
+{"k": "explicit/f1/res.data", "v": "unloaded"}
+{"k": "explicit/f1/res.mat", "v": "loaded 1,0"}
+{"k": "explicit/f1/res.text", "v": "unloaded"}
+{"k": "explicit/f1/res.plain", "v": "unloaded"}
+{"k": "explicit/f1/res.plainmat", "v": "unloaded"}
+{"k": "explicit/f1/scene.data", "v": "loaded 55"}
+{"k": "explicit/f1/scene.mat", "v": "loaded 0,1"}
+{"k": "explicit/f1/held", "v": "loaded 88"}
+{"k": "explicit/f2/res.data", "v": "unloaded"}
+{"k": "explicit/f2/res.mat", "v": "loaded 1,0"}
+{"k": "explicit/f2/res.text", "v": "unloaded"}
+{"k": "explicit/f2/res.plain", "v": "unloaded"}
+{"k": "explicit/f2/res.plainmat", "v": "unloaded"}
+{"k": "explicit/f2/scene.data", "v": "loaded 55"}
+{"k": "explicit/f2/scene.mat", "v": "loaded 0,1"}
+{"k": "explicit/f2/held", "v": "loaded 88"}
+{"k": "explicit/f3/res.data", "v": "unloaded"}
+{"k": "explicit/f3/res.mat", "v": "loaded 1,0"}
+{"k": "explicit/f3/res.text", "v": "unloaded"}
+{"k": "explicit/f3/res.plain", "v": "unloaded"}
+{"k": "explicit/f3/res.plainmat", "v": "unloaded"}
+{"k": "explicit/f3/scene.data", "v": "loaded 55"}
+{"k": "explicit/f3/scene.mat", "v": "loaded 0,1"}
+{"k": "explicit/f3/held", "v": "loaded 88"}
+{"k": "explicit/reload.res.data", "v": "7 same id"}
+{"k": "explicit/reload.res.mat", "v": "1,0 same id"}
+{"k": "queue.sceneFirst/held/scene.progress", "v": "0.9"}
+{"k": "queue.sceneFirst/held/resource", "v": "waiting"}
+{"k": "queue.sceneFirst/held/bundle", "v": "waiting"}
+{"k": "queue.sceneFirst/released/scene", "v": "done after release"}
+{"k": "queue.sceneFirst/released/resource", "v": "done after release"}
+{"k": "queue.sceneFirst/released/bundle", "v": "done after release"}
+{"k": "queue.sceneFirst/resource.asset", "v": "ResQueue2 10"}
+{"k": "queue.sceneFirst/held/bundle.asset", "v": "waiting"}
+{"k": "queue.sceneFirst/released/bundle.asset", "v": "done after release"}
+{"k": "queue.sceneFirst/bundle.asset.text", "v": "bundled text\u000asecond line"}
+{"k": "queue.resourceFirst/held/scene.progress", "v": "0.9"}
+{"k": "queue.resourceFirst/held/resource", "v": "done"}
+{"k": "queue.resourceFirst/held/bundle", "v": "waiting"}
+{"k": "queue.resourceFirst/released/scene", "v": "done after release"}
+{"k": "queue.resourceFirst/released/resource", "v": "done while held"}
+{"k": "queue.resourceFirst/released/bundle", "v": "done after release"}
+{"k": "queue.resourceFirst/resource.asset", "v": "ResQueue1 9"}
+{"k": "queue.resourceFirst/held/bundle.asset", "v": "waiting"}
+{"k": "queue.resourceFirst/released/bundle.asset", "v": "done after release"}
+{"k": "queue.resourceFirst/bundle.asset.text", "v": "bundled text\u000asecond line"}
+{"k": "complete", "v": "1"}
