@@ -55,7 +55,9 @@ data (a clearing call with visible colors and placements is not read) and two ca
 in what they drew, so there the probe records `device.multiplier.mesh.{2,3}.*.skipped` instead
 of drawing those cases and masks (`-`) every column from the call's own instance count on in the ID-placed color cases
 (also those no added instance reaches). Unmeasured:
-what the Metal Editor's added instances read.
+what the Metal Editor's added instances read. For the same reason the Metal probe does not draw
+`bind.load.dontCare` (`bind.load.dontCare.skipped`): its draw tests against and writes into
+targets loaded with `DontCare`, whose contents are undefined, and two Metal captures differed.
 
 ## Metal (macOS)
 
@@ -69,7 +71,9 @@ procedural and indirect draws one grid row off (`cmd.indirect.indexed*`,
 a CPU fence that has passed one frame later (`fence.frame1.cpu.passed`), `foveatedRenderingCaps`
 (2 on Metal, 0 in Unbound) and side-by-side stereo (`device.stereo.1`, `device.stereo.2`: the
 Metal Editor draws both eyes' instances; Unbound refuses stereo clipping, as on Linux, and draws
-one).
+one), and the targets stored with `DontCare` (`bind.store.dontCare*`: the Metal Editor discards
+what the draw wrote there, the same in four captures; Unbound keeps it). Unbound matches 967 of 994
+values.
 
 The Linux Editor's `fence.frame2.cpu.passed`, `fence.frames.cpu.executed` and
 `fence.frames.cpu.immediate` differ between runs (two of five Linux pairs recorded on
