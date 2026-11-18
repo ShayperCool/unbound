@@ -234,8 +234,7 @@ Unbound on Metal keeps the nearest levels in its 8-bit store (`GraphicsDevice::p
 4444 targets included, clears rounded at every level): 643/665; the 22 `Packed.*` rows declared in
 `residuals-metal.json` differ because a 5- or 6-bit level has no exact 8-bit value (within 1/510),
 Unbound's single-precision draw keeps 0.7 at 10/15, and Unbound packs between the two Blits of the
-blend. Before the
-`Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
+blend. Before the `Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
 the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
 the pipeline failure the program's (`GraphicsDevice::draws_depth_output_without_depth_buffer`: the pass
 is not drawn, with a warning).

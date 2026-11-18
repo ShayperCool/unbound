@@ -6090,13 +6090,13 @@ fn level_of(texture: &Option<(wgpu::Texture, u32, u32)>) -> u32 {
 }
 
 /// A clear color as a packed color keeps it: rounded to its channels' bits where the device's
-/// clears round (`DeviceConventions::packed_clears_round`) and the cleared level is a texture's
-/// first, else as given (its packing then truncates it as a draw's: on the Vulkan Editor a
-/// clear of mip level 1 and a further color's clear at level 0 differ so, Unity 6000.0.71f1,
-/// tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`). Where the device's
-/// writes round too (Metal) a clear rounds at every level, to the nearest level's byte
-/// (`resources::packed_clear`; `metal.jsonl` `Packed.*.mip.clear`: 0.7 clears mip 1 of a 4-4-4-4
-/// target to 11/15).
+/// clears round (`DeviceConventions::packed_clears_round`), else as given (its packing then
+/// truncates it as a draw's). On Vulkan only a texture's first level rounds so (the Vulkan
+/// Editor's clear of mip level 1 and a further color's clear at level 0 differ, Unity
+/// 6000.0.71f1, tests/projects/samplerstates `Packed.*.mip.clear`, `Packed.*.mrt.clear`); where
+/// the device's writes round too (Metal) a clear rounds at every level, to the nearest level's
+/// byte (`resources::packed_clear`; `metal.jsonl` `Packed.*.mip.clear`: 0.7 clears mip 1 of a
+/// 4-4-4-4 target to 11/15).
 fn packed_clear(
     conventions: DeviceConventions,
     packed: u8,
@@ -6511,12 +6511,13 @@ mod tests {
         }
     }
 
-    /// A packed clear rounds to the channels' bits on a device whose clears round, at a
-    /// texture's first level only (each color by its own packing); elsewhere it stays for the
-    /// packing to truncate (tests/projects/samplerstates `Packed.*.clear`, `.mip.clear`,
+    /// A packed clear rounds to the channels' bits on a device whose clears round, on Vulkan at a
+    /// texture's first level only, on Metal at every level (each color by its own packing);
+    /// elsewhere it stays for the packing to truncate (tests/projects/samplerstates
+    /// `Packed.*.clear`, `.mip.clear`,
     /// `.mrt.clear`, Vulkan and OpenGL Core Editors).
     #[test]
-    fn packed_clears_round_at_the_first_level_where_the_device_rounds() {
+    fn packed_clears_round_at_the_levels_where_the_device_rounds() {
         use unbound_compat::GraphicsDevice;
         let vulkan = DeviceConventions::of(GraphicsDevice::Vulkan);
         let gl = DeviceConventions::of(GraphicsDevice::OpenGLCore);
@@ -6538,8 +6539,13 @@ mod tests {
         let metal = DeviceConventions::of(GraphicsDevice::Metal);
         let rounded = [68.0 / 255.0, 136.0 / 255.0, 85.0 / 255.0, 187.0 / 255.0];
         assert_eq!(packed_clear(metal, owned::PACKED_4444, 0, color), rounded);
-        // A further level rounds there too (`Packed.ARGB4444.mip.clear`), unlike Vulkan's.
+        // A further level rounds there too (`Packed.*.mip.clear`), unlike Vulkan's: 0.25, 0.5,
+        // 0.3 read 8/31, 16/31, 9/31 in a 1-5-5-5 target (66, 132, 74 as bytes).
         assert_eq!(packed_clear(metal, owned::PACKED_4444, 1, color), rounded);
+        assert_eq!(
+            packed_clear(metal, owned::PACKED_5551, 1, color),
+            [66.0 / 255.0, 132.0 / 255.0, 74.0 / 255.0, 1.0]
+        );
     }
 
     #[test]

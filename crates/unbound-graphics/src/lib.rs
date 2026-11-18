@@ -210,8 +210,9 @@ impl GraphicsDevice {
     /// at 8 bits (tests/projects/samplerstates `metal.jsonl` Packed.*, an Apple M2 Pro). A blended
     /// Blit right after another reads that draw's unrounded value there (the probe's added 0.04
     /// lands on 0.3, not on its rounded 9/31; presumably both Blits share one render pass, which
-    /// Unbound does not reproduce: residuals-metal.json). The managed device profile's `Packs4444Targets` is the same mechanism (it
-    /// sends 4-4-4-4 targets as packed): both are true on Metal only and change together.
+    /// Unbound does not reproduce: residuals-metal.json). The managed device profile's
+    /// `Packs4444Targets` is the same mechanism (it sends 4-4-4-4 targets as packed): both are true
+    /// on Metal only and change together.
     pub fn packed_writes_round(self) -> bool {
         matches!(self, Self::Metal)
     }
