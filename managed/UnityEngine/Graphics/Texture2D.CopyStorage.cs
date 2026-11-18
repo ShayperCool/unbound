@@ -10,11 +10,15 @@ namespace UnityEngine
         /// GPU copy (a width of -1: the whole level, its bytes as they are, so that a BGRA32 level
         /// copied into an RGBA32 one trades red and blue, as the Unity 6000.0.71f1 macOS Editor's
         /// CommandBuffer.CopyTexture does, tests/projects/cmdbuffers metal.jsonl
-        /// `metal.copy.bgra32.rgba32.cpu`); other levels keep theirs.</summary>
+        /// `metal.copy.bgra32.rgba32.cpu`); other levels keep theirs, and a region that leaves
+        /// either level copies nothing here (the GPU copy reports it).</summary>
         internal static void CopyRetained(Texture2D source, int sourceMip, int x, int y, int width, int height,
             Texture2D destination, int destinationMip, int destinationX, int destinationY)
         {
             if (sourceMip != 0 || destinationMip != 0) return;
+            static bool Fits(Texture2D t, int left, int bottom, int w, int h) =>
+                left >= 0 && bottom >= 0 && h >= 0 && (long)left + w <= t.width && (long)bottom + h <= t.height;
+            if (width >= 0 && (!Fits(source, x, y, width, height) || !Fits(destination, destinationX, destinationY, width, height))) return;
             if (width < 0) source.CopyRetainedLevel(destination);
             else source.CopyRetainedPixels(destination, x, y, width, height, destinationX, destinationY);
         }

@@ -728,16 +728,14 @@ namespace UnityEngine.Rendering
             if (sourceTexture is Texture2D source2D && destinationTexture is Texture2D destination2D)
             {
                 if (!Texture2D.ValidateBlockCopy(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY)) return;
-                if (srcWidth < 0 && srcElement == 0 && dstElement == 0)
-                {
-                    // Whole levels of two readable textures copy their CPU data too (the 6000.0
-                    // Scripting API's Graphics.CopyTexture; the macOS Editor, tests/projects/
-                    // cmdbuffers metal.jsonl `metal.copy.bgra32.rgba32.cpu`); regions unmeasured.
-                    if (BlockFormats.BlockBytes(source2D.format) > 0 || BlockFormats.BlockBytes(destination2D.format) > 0)
-                        Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
-                    else if (source2D.isReadable && destination2D.isReadable)
-                        Texture2D.CopyRetained(source2D, srcMip, -1, -1, -1, -1, destination2D, dstMip, 0, 0);
-                }
+                bool blocks = BlockFormats.BlockBytes(source2D.format) > 0 || BlockFormats.BlockBytes(destination2D.format) > 0;
+                if (blocks && srcWidth < 0 && srcElement == 0 && dstElement == 0)
+                    Texture2D.CopyBlockData(source2D, srcMip, destination2D, dstMip);
+                // Two readable textures copy their CPU data too, a region as a whole level (the 6000.0
+                // Scripting API's CommandBuffer.CopyTexture; the macOS Editor, tests/projects/
+                // cmdbuffers metal.jsonl `metal.copy.bgra32.rgba32.cpu`).
+                else if (!blocks && source2D.isReadable && destination2D.isReadable)
+                    Texture2D.CopyRetained(source2D, srcMip, srcX, srcY, srcWidth, srcHeight, destination2D, dstMip, dstX, dstY);
             }
             ulong source = TextureHandles.Of(sourceTexture), destination = TextureHandles.Of(destinationTexture);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);

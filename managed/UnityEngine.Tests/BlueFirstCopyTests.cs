@@ -146,6 +146,19 @@ namespace Unbound.Tests
                 Graphics.ExecuteCommandBuffer(cmd);
             }
             Assert.Equal(before, untouched.GetPixels32());
+            // A region copies its pixels' bytes (the documented CPU copy of readable textures); one
+            // that leaves the destination copies nothing on the CPU.
+            var region = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true));
+            var blank = region.GetPixels32();
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.CopyTexture(rgba, 0, 0, 1, 1, 1, 1, region, 0, 0, 0, 0);
+                cmd.CopyTexture(rgba, 0, 0, 0, 0, 2, 2, region, 0, 0, 1, 1);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            var expected = (Color32[])blank.Clone();
+            expected[0] = rgba.GetPixels32()[3];
+            Assert.Equal(expected, region.GetPixels32());
         }
     }
 }

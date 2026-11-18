@@ -5316,9 +5316,11 @@ impl UnityRenderer {
         let screen_order =
             self.conventions.screen_bgra && (screen_end(source) || screen_end(destination));
         // Unity's B8G8R8A8 textures are kept red first; where the device stores them blue first
-        // a copy into or out of one stored red first moves the stored bytes.
+        // a CopyTexture (`resolved_images`) into or out of one stored red first moves the stored
+        // bytes. A resolve (ResolveAntiAliasedSurface) keeps the channels (unmeasured).
         let blue_first = |handle: u64| self.textures.get(&handle).is_some_and(|t| t.blue_first);
-        let bytes_swap = self.conventions.bgra_copies_bytes
+        let bytes_swap = resolved_images
+            && self.conventions.bgra_copies_bytes
             && !screen_end(source)
             && !screen_end(destination)
             && blue_first(source) != blue_first(destination);
