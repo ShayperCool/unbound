@@ -47,8 +47,10 @@ Measured:
   are (0, 2) and (2, 1).
 - A read in the message after scheduling sees the particles as they were. The job runs once the
   messages are over, alongside the frame: a read after it has run (waited for in LateUpdate) sees its
-  writes before the update ends. Whether a LateUpdate read without waiting comes before or after the
-  job depends on timing, so it is not recorded. SetParticles in LateUpdate keeps the job's velocities
+  writes before the update ends. A LateUpdate read without waiting saw the particles before the job
+  in the versions before the Pending control, and after it once that control read and wrote another
+  system with a pending job just before (each version repeatable). It is not recorded; whether that
+  comes from timing or from a read of one system waiting for the whole job batch is unmeasured. SetParticles in LateUpdate keeps the job's velocities
   with the script's positions.
 
 Unmeasured: Mesh-mode mesh indices, a script's write in the message while its job has not run, jobs

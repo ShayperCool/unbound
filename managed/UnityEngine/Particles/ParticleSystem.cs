@@ -1858,10 +1858,9 @@ namespace Unbound.Runtime
                 ps.m_StoppedThisFrame = false;
                 if (ps.m_Registered) SendJobMessage(ps);
             }
-            // The messages' jobs run once they return, alongside the frame in Unity; Unbound finishes
-            // them here, so the frame's scripts see their writes (6000.0.71f1, tests/projects/particlejobs
-            // sync.*, pending.*: a read in a message sees the particles before its job, a read or a
-            // SetParticles after the job has run sees its writes).
+            // Unbound finishes the messages' jobs here, so the frame's later scripts see their writes
+            // (6000.0.71f1, tests/projects/particlejobs sync.*, pending.*: a read in a message sees the
+            // particles before its job, a read or a SetParticles after the job has run sees its writes).
             CompleteJobs();
             Array.Clear(s_Snapshot, 0, n);
             s_CompletionPending = true;

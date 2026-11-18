@@ -608,12 +608,12 @@ namespace ParticleJobsProbe
                 {
                     // SetParticles after the system's job (velocities) was scheduled; it may or may not have run.
                     var pending = Particles(m_Pending);
-                    // Whether the job has run by now depends on timing: not recorded.
+                    // Whether the job has run by now is not recorded (see sync.lateUpdate in the README).
                     pending[0].position = new Vector3(5f, 5f, 5f);
                     pending[1].position = new Vector3(6f, 6f, 6f);
                     m_Pending.SetParticles(pending, pending.Length);
-                    // A read here may or may not see the job's writes (the job runs once its batch is
-                    // out, alongside the frame): not recorded. The job finished (it runs once its batch is out), the update has not ended.
+                    // A read here saw the job's writes in one version of this probe and not in another:
+                    // not recorded. The job finished (it runs once its batch is out), the update has not ended.
                     JobHandle.ScheduleBatchedJobs();
                     var waited = System.Diagnostics.Stopwatch.StartNew();
                     while (!m_Handle.IsCompleted && waited.ElapsedMilliseconds < 5000) System.Threading.Thread.Sleep(1);
