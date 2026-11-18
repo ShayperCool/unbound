@@ -131,7 +131,6 @@ public static class CompileEventsProbe
         var rows = new StringBuilder();
         void Put(string key, string value) =>
             rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"}\n");
-        Put("ScriptCompilationDuringPlay", EditorPrefs.GetInt("ScriptCompilationDuringPlay", -1).ToString());
         // How the domain the rounds start in loaded: its events from the reload entering Play mode
         // on (the Editor loaded others before, in Edit mode).
         int first = Array.IndexOf(lines, "round 1");

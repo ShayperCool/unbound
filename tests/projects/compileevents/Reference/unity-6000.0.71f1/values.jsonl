@@ -1,4 +1,3 @@
-{"k":"ScriptCompilationDuringPlay","v":"0"}
 {"k":"start.load","v":"beforeAssemblyReload,initializeOnLoad,enterPlayMode:None,didReloadScripts,afterAssemblyReload,playMode:EnteredPlayMode"}
 {"k":"round1.playMode","v":""}
 {"k":"round1.order","v":"compilationStarted,assembly,compilationFinished,beforeAssemblyReload,initializeOnLoad,didReloadScripts,afterAssemblyReload"}

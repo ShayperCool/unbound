@@ -1,7 +1,8 @@
 # Compilation events when a script changes in Play mode
 
 Unity 6000.0.71f1, recorded with the macOS Editor in batch mode in Play mode (two byte-identical
-captures; "Recompile And Continue Playing", the default, `ScriptCompilationDuringPlay` 0). None of
+captures; "Recompile And Continue Playing", the default: the recording Editor's
+`ScriptCompilationDuringPlay` preference was 0; it is a machine preference, not a compared value). None of
 the values depends on the OS or the graphics device. The gate runs the engine with `--watch`, so
 its hot reload sees the probe's edits, and compares every value exactly.
 
