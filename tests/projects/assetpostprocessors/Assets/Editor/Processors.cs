@@ -83,6 +83,26 @@ static class PPLog
         return t.name + "[" + string.Join(",", parts) + "] components=" + string.Join(",", t.GetComponents<Component>().Select(c => c.GetType().Name));
     }
 
+    /// <summary>A whole hierarchy: each GameObject's <see cref="Hierarchy"/> line (with its layer
+    /// when not 0), depth first.</summary>
+    internal static string Deep(Transform t)
+    {
+        var line = Hierarchy(t) + (t.gameObject.layer != 0 ? " layer=" + t.gameObject.layer : "");
+        foreach (Transform child in t) line += " / " + Deep(child);
+        return line;
+    }
+
+    /// <summary>A user property value with its type.</summary>
+    internal static string Value(object v) => v switch
+    {
+        null => "null",
+        float f => "float:" + F(f),
+        double d => "double:" + d.ToString("R", CultureInfo.InvariantCulture),
+        Vector4 v4 => "Vector4:(" + F(v4.x) + "," + F(v4.y) + "," + F(v4.z) + "," + F(v4.w) + ")",
+        Color c => "Color:(" + F(c.r) + "," + F(c.g) + "," + F(c.b) + "," + F(c.a) + ")",
+        _ => v.GetType().Name + ":" + Convert.ToString(v, CultureInfo.InvariantCulture),
+    };
+
     internal static string Clip(AudioClip c) =>
         c.name + " channels=" + c.channels + " frequency=" + c.frequency + " samples=" + c.samples + " load=" + N(c.loadType)
         + " ambisonic=" + B(c.ambisonic) + " preload=" + B(c.preloadAudioData) + " background=" + B(c.loadInBackground);
@@ -211,7 +231,7 @@ class PPEarly : AssetPostprocessor
     void OnPreprocessAudio()
     {
         PPLog.Event(this, "OnPreprocessAudio", assetPath, PPLog.Context(context));
-        ((AudioImporter)assetImporter).forceToMono = true;
+        if (assetPath.EndsWith("/Tone.wav")) ((AudioImporter)assetImporter).forceToMono = true;
     }
 
     void OnPostprocessAudio(AudioClip clip) => PPLog.Event(this, "OnPostprocessAudio", assetPath, PPLog.Clip(clip));
@@ -232,12 +252,21 @@ class PPParts : AssetPostprocessor
         PPLog.Event(this, "OnPostprocessMeshHierarchy", assetPath, PPLog.Hierarchy(root.transform));
         var renamed = root.transform.Find("Cube_NoMat");
         if (renamed != null) renamed.name = "Renamed";
+        // The user-property model's node without properties: renamed, with a component added.
+        if (assetPath.EndsWith("UserProps.fbx") && root.name == "Bare")
+        {
+            root.name = "BareRenamed";
+            root.AddComponent<CapsuleCollider>().height = 7;
+        }
     }
 
     Material OnAssignMaterialModel(Material material, Renderer renderer)
     {
         PPLog.Event(this, "OnAssignMaterialModel", assetPath, (material != null ? material.name : "null") + " " + (renderer != null ? renderer.name : "null"));
-        return renderer != null && renderer.name == "Cube_Red" ? AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Override.mat") : null;
+        // Cube_Red's slot and the user-property model's Tagged get Override.mat (PPInstance, later,
+        // then sees whether a returned material ends the calls).
+        return renderer != null && (renderer.name == "Cube_Red" || (assetPath.EndsWith("UserProps.fbx") && renderer.name == "Tagged"))
+            ? AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Override.mat") : null;
     }
 
     void OnPostprocessMaterial(Material material)
@@ -254,8 +283,15 @@ class PPParts : AssetPostprocessor
     void OnPostprocessAnimation(GameObject root, AnimationClip clip) =>
         PPLog.Event(this, "OnPostprocessAnimation", assetPath, root.name + " " + clip.name + " length=" + PPLog.F(clip.length));
 
-    void OnPostprocessGameObjectWithUserProperties(GameObject go, string[] names, object[] values) =>
-        PPLog.Event(this, "OnPostprocessGameObjectWithUserProperties", assetPath, go.name + " " + string.Join(",", names));
+    void OnPostprocessGameObjectWithUserProperties(GameObject go, string[] names, object[] values)
+    {
+        PPLog.Event(this, "OnPostprocessGameObjectWithUserProperties", assetPath, PPLog.Hierarchy(go.transform) + " parent="
+            + (go.transform.parent != null ? go.transform.parent.name : "null") + " "
+            + string.Join(",", names.Select((n, i) => n + "=" + PPLog.Value(i < values.Length ? values[i] : null))));
+        // A node whose "collider" property is true gets a collider of that radius.
+        int at = Array.IndexOf(names, "collider");
+        if (at >= 0 && values[at] is bool on && on) go.AddComponent<SphereCollider>().radius = 0.25f;
+    }
 
     void OnPreprocessCameraDescription(CameraDescription description, Camera camera, AnimationClip[] clips) =>
         PPLog.Event(this, "OnPreprocessCameraDescription", assetPath, camera.name);
@@ -268,7 +304,58 @@ class PPParts : AssetPostprocessor
 
     void OnPostprocessCubemap(Cubemap texture) => PPLog.Event(this, "OnPostprocessCubemap", assetPath, texture.name);
 
-    void OnPostprocessPrefab(GameObject root) => PPLog.Event(this, "OnPostprocessPrefab", assetPath, root.name);
+    void OnPostprocessPrefab(GameObject root) => PPLog.Event(this, "OnPostprocessPrefab", assetPath, PPLog.Deep(root.transform));
+}
+
+/// <summary>Whether one postprocessor object serves every callback of an import (each callback
+/// logs how many callbacks its object has had), and whether a material an
+/// earlier postprocessor's OnAssignMaterialModel returned ends the calls (this one returns
+/// Override.mat for Inner, whose material PPParts leaves). Only for the user-property model and
+/// one tree map.</summary>
+class PPInstance : AssetPostprocessor
+{
+    int m_Calls;
+
+    public override int GetPostprocessOrder() => 50;
+
+    bool Ours => assetPath.EndsWith("UserProps.fbx") || assetPath.EndsWith("Trees/Leaf_Color.png");
+
+    void Log(string callback, string detail = "")
+    {
+        if (Ours) PPLog.Event(this, callback, assetPath, "call=" + ++m_Calls + (detail.Length > 0 ? " " + detail : ""));
+    }
+
+    void OnPreprocessAsset() => Log("OnPreprocessAsset");
+    void OnPreprocessModel() => Log("OnPreprocessModel");
+    void OnPreprocessTexture() => Log("OnPreprocessTexture");
+    void OnPostprocessTexture(Texture2D texture) => Log("OnPostprocessTexture");
+    void OnPostprocessMeshHierarchy(GameObject root) => Log("OnPostprocessMeshHierarchy", root.name);
+    void OnPostprocessModel(GameObject root) => Log("OnPostprocessModel");
+
+    Material OnAssignMaterialModel(Material material, Renderer renderer)
+    {
+        if (!Ours) return null;
+        Log("OnAssignMaterialModel", (material != null ? material.name : "null") + " " + renderer.name);
+        return renderer.name == "Inner" ? AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Override.mat") : null;
+    }
+}
+
+/// <summary>Changes the imported prefabs (OnPostprocessPrefab, after PPParts by class name): the
+/// box prefab's root gets a collider, its box collider a size and its child a layer; the variant's
+/// root gets a capsule collider.</summary>
+class PPPrefab : AssetPostprocessor
+{
+    void OnPostprocessPrefab(GameObject root)
+    {
+        PPLog.Event(this, "OnPostprocessPrefab", assetPath, PPLog.Deep(root.transform));
+        if (assetPath.EndsWith("/Box.prefab"))
+        {
+            root.AddComponent<SphereCollider>().radius = 3;
+            root.GetComponent<BoxCollider>().size = new Vector3(2, 2, 2);
+            root.transform.Find("Child").gameObject.layer = 5;
+        }
+        if (assetPath.EndsWith("/BoxVariant.prefab")) root.AddComponent<CapsuleCollider>().radius = 4;
+    }
 }
 
 class PPAllZ : AssetPostprocessor

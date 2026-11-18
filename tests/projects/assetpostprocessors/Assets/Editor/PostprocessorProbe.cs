@@ -23,8 +23,12 @@ public static class PostprocessorProbe
     const string VersionedFile = "Assets/Editor/PPVersioned.cs";
 
     static readonly string[] Textures = { "Assets/Tex/Plain.png", "Assets/Tex/Shrink.png", "Assets/Tex/Invert.png", "Assets/Tex/Sprite.png" };
-    static readonly string[] Models = { "Assets/Models/Materials.fbx", "Assets/Models/Animated.fbx" };
-    static readonly string[] Clips = { "Assets/Audio/Tone.wav" };
+    static readonly string[] Models = { "Assets/Models/Materials.fbx", "Assets/Models/Animated.fbx", "Assets/Models/UserProps.fbx" };
+    static readonly string[] Prefabs = { "Assets/Prefabs/Box.prefab", "Assets/Prefabs/Nest.prefab", "Assets/Prefabs/BoxVariant.prefab" };
+    static readonly string[] Clips = { "Assets/Audio/Tone.wav", "Assets/Audio/Tone8.wav", "Assets/Audio/Tone24.wav", "Assets/Audio/ToneFloat.wav" };
+    /// <summary>The maps of the SpeedTree 9 tree Calm.st9, whose import sets their settings.</summary>
+    static readonly string[] TreeTextures =
+        { "Assets/Trees/Bark_Color.png", "Assets/Trees/Bark_Normal.png", "Assets/Trees/Leaf_Color.png", "Assets/Trees/Leaf_Extra.png", "Assets/Trees/Billboard_Color.png" };
 
     static PostprocessorProbe()
     {
@@ -63,10 +67,13 @@ public static class PostprocessorProbe
 
     // ------------------------------------------------------------ Editor-only steps (not compared)
 
-    /// <summary>The Editor's entry: three changes of the postprocessors, each followed by the
-    /// import they cause (events-version.txt, events-code.txt, events-added.txt), then Play mode.</summary>
+    /// <summary>The Editor's entry: opens the probe's scene, makes three changes of the
+    /// postprocessors, each followed by the import they cause (events-version.txt,
+    /// events-code.txt, events-added.txt), then enters Play mode.</summary>
     public static void Record()
     {
+        // Play mode plays the probe's scene (a batch-mode Editor opens none).
+        UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
         SessionState.SetInt(StepKey, 1);
         Next();
     }
@@ -178,16 +185,26 @@ public static class PostprocessorProbe
     static void Run()
     {
         // Load every asset first: Unbound runs an asset's postprocessors when it imports it.
-        foreach (var path in Textures.Concat(Models).Concat(Clips))
+        foreach (var path in Textures.Concat(Models).Concat(Prefabs).Concat(Clips))
             Guard("assets." + path, () =>
             {
                 var objects = AssetDatabase.LoadAllAssetsAtPath(path)
                     .Select(o => o.GetType().Name + ":" + o.name).OrderBy(s => s, StringComparer.Ordinal);
                 Put("assets." + path, string.Join(",", objects));
             });
+        // The scene's model and prefab instances, before the probe instantiates anything (scenes instantiate the imported prefabs).
+        foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().OrderBy(g => g.name, StringComparer.Ordinal))
+            Guard("scene." + root.name, () => RecordHierarchy("scene.", root.transform));
         foreach (var path in Textures) Guard("texture." + path, () => RecordTexture(path));
-        foreach (var path in Models) Guard("model." + path, () => RecordModel(path));
+        foreach (var path in Models) Guard("model." + path, () => RecordModel("model.", path));
+        foreach (var path in Prefabs) Guard("prefab." + path, () => RecordModel("prefab.", path));
+        foreach (var path in Models.Concat(Prefabs)) Guard("fileid." + path, () => RecordAddedIds(path));
         foreach (var path in Clips) Guard("clip." + path, () => RecordClip(path));
+        foreach (var path in TreeTextures)
+        {
+            Guard("rule." + path, () => Put("rule." + path, TreeRule((TextureImporter)AssetImporter.GetAtPath(path))));
+            Guard("texture." + path, () => RecordTexture(path));
+        }
         foreach (var path in Textures.Concat(Models).Concat(Clips))
         {
             Guard("importer." + path, () => Put("importer." + path, PPLog.Settings(AssetImporter.GetAtPath(path))));
@@ -212,14 +229,40 @@ public static class PostprocessorProbe
             Put(key + ".sprite." + sprite.name, "ppu=" + F(sprite.pixelsPerUnit) + " rect=" + sprite.rect + " bounds=" + V3(sprite.bounds.size));
     }
 
-    static void RecordModel(string path)
+    /// <summary>The colour-map, normal-map and sRGB settings a tree's import gives its maps.</summary>
+    static string TreeRule(TextureImporter t) =>
+        "type=" + (int)t.textureType + " srgb=" + (t.sRGBTexture ? 1 : 0) + " alphaIsTransparency=" + (t.alphaIsTransparency ? 1 : 0)
+        + " preserveCoverage=" + (t.mipMapsPreserveCoverage ? 1 : 0) + " alphaTestReference=" + F(t.alphaTestReferenceValue)
+        + " readable=" + (t.isReadable ? 1 : 0) + " mips=" + (t.mipmapEnabled ? 1 : 0) + " compression=" + (int)t.textureCompression;
+
+    /// <summary>The local file ids of the objects postprocessors added to an import (GameObjects
+    /// named Added or BareRenamed and their components, sphere and capsule colliders).</summary>
+    static void RecordAddedIds(string path)
+    {
+        foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
+        {
+            var go = o as GameObject ?? (o as Component)?.gameObject;
+            if (go == null) continue;
+            if (!(o is SphereCollider || o is CapsuleCollider || go.name == "Added" || go.name == "BareRenamed")) continue;
+            if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(o, out string guid, out long id)) id = 0;
+            Put("fileid." + path + "." + NodePath(go.transform) + "." + o.GetType().Name, id);
+        }
+    }
+
+    static void RecordModel(string prefix, string path)
     {
         var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         var instance = UnityEngine.Object.Instantiate(asset);
         instance.name = asset.name;
-        foreach (var t in instance.GetComponentsInChildren<Transform>(true))
+        RecordHierarchy(prefix + path + ".", instance.transform);
+        if (prefix == "model.") RecordModelClips(path);
+    }
+
+    static void RecordHierarchy(string prefix, Transform root)
+    {
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
         {
-            string key = "model." + path + "." + NodePath(t);
+            string key = prefix + NodePath(t);
             var parts = new List<string>
             {
                 "pos=" + V3(t.localPosition) + " scale=" + V3(t.localScale),
@@ -236,8 +279,18 @@ public static class PostprocessorProbe
                 parts.Add("meshCollider=" + (meshCollider.sharedMesh != null ? meshCollider.sharedMesh.name : "null"));
             if (t.TryGetComponent(out BoxCollider box))
                 parts.Add("box=" + V3(box.center) + " " + V3(box.size));
+            if (t.TryGetComponent(out SphereCollider sphere))
+                parts.Add("sphere=" + F(sphere.radius));
+            if (t.TryGetComponent(out CapsuleCollider capsule))
+                parts.Add("capsule=" + F(capsule.radius) + "," + F(capsule.height));
+            if (t.gameObject.layer != 0)
+                parts.Add("layer=" + t.gameObject.layer);
             Put(key, string.Join(" ", parts));
         }
+    }
+
+    static void RecordModelClips(string path)
+    {
         foreach (var clip in AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview__")))
             Put("model." + path + ".clip." + clip.name, "length=" + F(clip.length) + " events=" + clip.events.Length);
     }
@@ -253,6 +306,9 @@ public static class PostprocessorProbe
             var data = new float[clip.samples * clip.channels];
             clip.GetData(data, 0);
             Put("clip." + path + ".data", Hash(data.SelectMany(BitConverter.GetBytes)) + " first=" + F(data[0]) + "," + F(data[1]));
+            // The unconverted clips' first samples, as multiples of 2^-15 (16-bit storage shows whole numbers).
+            if (path != "Assets/Audio/Tone.wav")
+                Put("clip." + path + ".head", string.Join(",", data.Take(24).Select(v => F(v * 32768f))));
         }
     }
 
