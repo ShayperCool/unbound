@@ -67,133 +67,133 @@
 {"k":"sim/hit/f012","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f012","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=8 sleeping=0"}
 {"k":"sim/on play/f012","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=8 sleeping=0"}
-{"k":"sim/both/f012","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=32 sleeping=0"}
+{"k":"sim/both/f012","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
 {"k":"sim/two/f012","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f012","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f013","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f013","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=8 sleeping=0"}
 {"k":"sim/on play/f013","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=8 sleeping=0"}
-{"k":"sim/both/f013","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=32 sleeping=0"}
+{"k":"sim/both/f013","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
 {"k":"sim/two/f013","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f013","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f015","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f015","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f015","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=8 sleeping=0"}
-{"k":"sim/both/f015","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=32 sleeping=0"}
+{"k":"sim/both/f015","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
 {"k":"sim/two/f015","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f015","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f016","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f016","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f016","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=8 sleeping=0"}
-{"k":"sim/both/f016","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=32 sleeping=0"}
+{"k":"sim/both/f016","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
 {"k":"sim/two/f016","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f016","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f017","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f017","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f017","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=8 sleeping=0"}
-{"k":"sim/both/f017","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=32 sleeping=0"}
+{"k":"sim/both/f017","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
 {"k":"sim/two/f017","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f017","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f018","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f018","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f018","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=8 sleeping=0"}
-{"k":"sim/both/f018","v":"alive=7 culled=0 awake=1 | System (1): alive=7 capacity=32 sleeping=0"}
+{"k":"sim/both/f018","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
 {"k":"sim/two/f018","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f018","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f020","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f020","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f020","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f020","v":"alive=7 culled=0 awake=1 | System (1): alive=7 capacity=32 sleeping=0"}
+{"k":"sim/both/f020","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
 {"k":"sim/two/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f020","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f021","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f021","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f021","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f021","v":"alive=7 culled=0 awake=1 | System (1): alive=7 capacity=32 sleeping=0"}
+{"k":"sim/both/f021","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
 {"k":"sim/two/f021","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f021","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f022","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f022","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f022","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f022","v":"alive=7 culled=0 awake=1 | System (1): alive=7 capacity=32 sleeping=0"}
+{"k":"sim/both/f022","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
 {"k":"sim/two/f022","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f022","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f023","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f023","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
 {"k":"sim/on play/f023","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f023","v":"alive=7 culled=0 awake=1 | System (1): alive=7 capacity=32 sleeping=0"}
+{"k":"sim/both/f023","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
 {"k":"sim/two/f023","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f023","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f025","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f025","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f025","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f025","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on play/f025","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0"}
+{"k":"sim/both/f025","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=32 sleeping=0"}
 {"k":"sim/two/f025","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f025","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f026","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f026","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f026","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f026","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on play/f026","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0"}
+{"k":"sim/both/f026","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=32 sleeping=0"}
 {"k":"sim/two/f026","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f026","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f027","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f027","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f027","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f027","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on play/f027","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0"}
+{"k":"sim/both/f027","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=32 sleeping=0"}
 {"k":"sim/two/f027","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f027","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f028","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f028","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f028","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f028","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=32 sleeping=0"}
+{"k":"sim/on play/f028","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0"}
+{"k":"sim/both/f028","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=32 sleeping=0"}
 {"k":"sim/two/f028","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f028","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f030","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f030","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f030","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f030","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
+{"k":"sim/on play/f030","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f030","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=32 sleeping=0"}
 {"k":"sim/two/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f030","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f031","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f031","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f031","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f031","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
+{"k":"sim/on play/f031","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f031","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=32 sleeping=0"}
 {"k":"sim/two/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f031","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f032","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f032","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f032","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f032","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
+{"k":"sim/on play/f032","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f032","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=32 sleeping=0"}
 {"k":"sim/two/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f032","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f033","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f033","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f033","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f033","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
+{"k":"sim/on play/f033","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f033","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=32 sleeping=0"}
 {"k":"sim/two/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f033","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f034","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f034","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f034","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f034","v":"alive=9 culled=0 awake=1 | System (1): alive=9 capacity=32 sleeping=0"}
+{"k":"sim/on play/f034","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f034","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=32 sleeping=0"}
 {"k":"sim/two/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f034","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f036","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f036","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f036","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f036","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
+{"k":"sim/on play/f036","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f036","v":"alive=13 culled=0 awake=1 | System (1): alive=13 capacity=32 sleeping=0"}
 {"k":"sim/two/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f036","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f040","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f040","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f040","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f040","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=32 sleeping=0"}
+{"k":"sim/on play/f040","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f040","v":"alive=13 culled=0 awake=1 | System (1): alive=13 capacity=32 sleeping=0"}
 {"k":"sim/two/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f040","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"sim/hit/f044","v":"alive=5 culled=0 awake=1 | System (1): alive=5 capacity=32 sleeping=0"}
 {"k":"sim/keep/f044","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
-{"k":"sim/on play/f044","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=8 sleeping=0"}
-{"k":"sim/both/f044","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=32 sleeping=0"}
+{"k":"sim/on play/f044","v":"alive=8 culled=0 awake=1 | System (1): alive=8 capacity=8 sleeping=0"}
+{"k":"sim/both/f044","v":"alive=14 culled=0 awake=1 | System (1): alive=14 capacity=32 sleeping=0"}
 {"k":"sim/two/f044","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=8 sleeping=0 | System (2): alive=3 capacity=8 sleeping=0"}
 {"k":"sim/paused/f044","v":"alive=4 culled=0 awake=1 | System (1): alive=4 capacity=32 sleeping=0"}
 {"k":"capture/graphs imported while playing","v":""}
