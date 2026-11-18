@@ -63,7 +63,7 @@ public sealed class VertexColorProbe : MonoBehaviour
     readonly List<UnityEngine.Object> m_Made = new List<UnityEngine.Object>();
     Texture2D m_White;
     Sprite m_Sprite;
-    Material m_Raw;
+    Material m_Raw, m_UrpRaw;
     string m_Pipeline;
     bool m_Urp;
     int m_Renderer;
@@ -88,6 +88,7 @@ public sealed class VertexColorProbe : MonoBehaviour
         m_White.Apply();
         m_Sprite = Sprite.Create(m_White, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 5f);
         m_Raw = new Material(Shader.Find("Probe/VertexColor")) { name = "raw" };
+        m_UrpRaw = new Material(Shader.Find("Probe/UrpVertexColor")) { name = "urpraw" };
         Rec("colorspace", "\"" + QualitySettings.activeColorSpace + "\"");
         var urp = Resources.Load<UniversalRenderPipelineAsset>("Settings/ProbeURP");
         bool batcher = urp.useSRPBatcher;
@@ -185,11 +186,15 @@ public sealed class VertexColorProbe : MonoBehaviour
             Sprites(root, material);
         });
         Case("sprite.raw", root => Sprites(root, m_Raw));
+        // URP's include declares unity_SpriteColor; this shader does not read it.
+        if (m_Urp) Case("sprite.urpraw", root => Sprites(root, m_UrpRaw));
         Case("tilemap.chunk", root => Tiles(root, Stock(), TilemapRenderer.Mode.Chunk, Color.white));
         Case("tilemap.individual", root => Tiles(root, Stock(), TilemapRenderer.Mode.Individual, Color.white));
         Case("tilemap.tinted", root => Tiles(root, Stock(), TilemapRenderer.Mode.Chunk, TilemapColor));
         Case("tilemap.individualtinted", root => Tiles(root, Stock(), TilemapRenderer.Mode.Individual, TilemapColor));
         Case("tilemap.raw", root => Tiles(root, m_Raw, TilemapRenderer.Mode.Chunk, Color.white));
+        if (m_Urp) Case("tilemap.urprawindividual", root => Tiles(root, m_UrpRaw, TilemapRenderer.Mode.Individual, Color.white));
+        if (m_Urp) Case("spriteshape.urpraw", root => Shapes(root, m_UrpRaw, false));
         Case("spriteshape.stock", root => Shapes(root, Stock(), false));
         Case("spriteshape.raw", root => Shapes(root, m_Raw, false));
         Case("spriteshape.channels", root => Shapes(root, m_Raw, true));
@@ -264,7 +269,7 @@ public sealed class VertexColorProbe : MonoBehaviour
         {
             var go = Child(root, "shape", i);
             var r = go.AddComponent<SpriteShapeRenderer>();
-            if (i == 0 && !channels && material != m_Raw) Rec(m_Pipeline + ".spriteshape.defaultmaterials", "\"" + Names(r.sharedMaterials) + "\"");
+            if (i == 0 && !channels && material.name == "stock") Rec(m_Pipeline + ".spriteshape.defaultmaterials", "\"" + Names(r.sharedMaterials) + "\"");
             // One material: a renderer draws its last submesh again with each material past its
             // submeshes, as the defaults would be here.
             r.sharedMaterials = new[] { material };
