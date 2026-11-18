@@ -20,6 +20,7 @@ const MATERIAL: i32 = 21;
 const MESH_RENDERER: i32 = 23;
 const MESH_FILTER: i32 = 33;
 const MESH: i32 = 43;
+const MESH_COLLIDER: i32 = 64;
 const ANIMATOR: i32 = 95;
 const AVATAR: i32 = 90;
 const ANIMATION: i32 = 111;
@@ -282,6 +283,21 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                             ("m_Materials", materials),
                         ]),
                     ));
+                    if let Some(collider) = renderer.collider {
+                        components.push(local(collider.id));
+                        docs.push(doc(
+                            MESH_COLLIDER,
+                            collider.id,
+                            "MeshCollider",
+                            map(vec![
+                                ("m_GameObject", local(go)),
+                                ("m_Enabled", scalar(1)),
+                                ("m_IsTrigger", scalar(0)),
+                                ("m_Convex", scalar(0)),
+                                ("m_Mesh", local(mesh_id)),
+                            ]),
+                        ));
+                    }
                 }
                 RendererKind::SkinnedMesh => {
                     components.push(local(renderer.renderer.id));

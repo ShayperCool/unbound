@@ -27,6 +27,7 @@ pub mod class {
     pub const TEXTURE_2D: i32 = 28;
     pub const MESH_FILTER: i32 = 33;
     pub const MESH: i32 = 43;
+    pub const MESH_COLLIDER: i32 = 64;
     pub const ANIMATION_CLIP: i32 = 74;
     pub const AVATAR: i32 = 90;
     pub const ANIMATOR: i32 = 95;

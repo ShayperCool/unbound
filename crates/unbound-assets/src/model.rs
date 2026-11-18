@@ -123,6 +123,8 @@ pub struct ModelSettings {
     /// Bake the source coordinate axes into static geometry and node-local transforms.
     pub bake_axis_conversion: bool,
     pub import_blend_shapes: bool,
+    /// `meshes.addColliders`: every mesh node gets a MeshCollider of its mesh.
+    pub add_colliders: bool,
     /// `meshes.importBlendShapeDeformPercent`: renderers start at the file's shape weights.
     pub import_deform_percent: bool,
     pub swap_uv_channels: bool,
@@ -238,6 +240,7 @@ impl ModelSettings {
             use_file_scale: boolean(imp, "meshes.useFileScale").unwrap_or(true),
             bake_axis_conversion: boolean(imp, "meshes.bakeAxisConversion").unwrap_or(false),
             import_blend_shapes: boolean(imp, "meshes.importBlendShapes").unwrap_or(true),
+            add_colliders: boolean(imp, "meshes.addColliders").unwrap_or(false),
             import_deform_percent: boolean(imp, "importBlendShapeDeformPercent").unwrap_or(true),
             swap_uv_channels: boolean(imp, "meshes.swapUVChannels").unwrap_or(false),
             normals: match int(imp, "tangentSpace.normalImportMode").unwrap_or(0) {
@@ -374,6 +377,9 @@ pub struct ModelRenderer {
     pub renderer: FileId,
     /// The MeshFilter (`RendererKind::Mesh` only).
     pub filter: Option<FileId>,
+    /// The MeshCollider `addColliders` gives a mesh node (`RendererKind::Mesh` only).
+    #[serde(default)]
+    pub collider: Option<FileId>,
     /// Skinned: the bone nodes, in the order of the mesh's bone indices and bind poses.
     pub bones: Vec<u32>,
     pub root_bone: Option<u32>,
@@ -855,7 +861,8 @@ impl Default for ModelImporter {
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 59;
+    // 60: `addColliders` gives every mesh node a MeshCollider.
+    const VERSION: u32 = 60;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -2157,6 +2164,7 @@ impl<'a> Builder<'a> {
                         )
                         .into(),
                     filter: None,
+                    collider: None,
                     bones,
                     root_bone,
                     blend_shape_weights: weights,
@@ -2175,6 +2183,10 @@ impl<'a> Builder<'a> {
                         self.hierarchy_id(ids, class::MESH_FILTER, "MeshFilter", &key, &path)
                             .into(),
                     ),
+                    collider: self.settings.add_colliders.then(|| {
+                        self.hierarchy_id(ids, class::MESH_COLLIDER, "MeshCollider", &key, &path)
+                            .into()
+                    }),
                     bones: Vec::new(),
                     root_bone: None,
                     blend_shape_weights: Vec::new(),

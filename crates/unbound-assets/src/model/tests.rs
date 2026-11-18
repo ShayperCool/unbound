@@ -2026,3 +2026,49 @@ fn old_importer_versions_without_a_generation_hash_hierarchy_names() {
         hashed_file_id("GameObject", "Box", 0)
     );
 }
+
+/// `addColliders` gives every mesh node a MeshCollider of its own (tests/projects/assetpostprocessors
+/// Materials.fbx, set by a preprocessor), with an id beside its renderer's; off, none.
+#[test]
+fn add_colliders_gives_every_mesh_node_a_mesh_collider() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/modelimport/Assets/Models/Materials.fbx");
+    let bytes = std::fs::read(&source).unwrap();
+    let import = |text: &str| {
+        ModelImporter::default()
+            .import(&source, &bytes, &meta(text))
+            .unwrap()
+    };
+    let with = import("ModelImporter:\n  meshes:\n    addColliders: 1\n");
+    let renderers: Vec<_> = with
+        .nodes
+        .iter()
+        .filter_map(|n| n.renderer.as_ref())
+        .collect();
+    assert_eq!(renderers.len(), 9);
+    let mut ids = std::collections::HashSet::new();
+    for renderer in &renderers {
+        let collider = renderer.collider.expect("a mesh node's collider");
+        assert_ne!(collider.id, 0);
+        assert!(ids.insert(collider.id), "collider ids are distinct");
+        assert_ne!(Some(collider.id), renderer.filter.map(|f| f.id));
+        assert_ne!(collider.id, renderer.renderer.id);
+    }
+    let without = import("ModelImporter:\n  meshes:\n    addColliders: 0\n");
+    assert!(
+        without
+            .nodes
+            .iter()
+            .filter_map(|n| n.renderer.as_ref())
+            .all(|r| r.collider.is_none())
+    );
+    // The other components keep their ids.
+    let ids_of = |m: &ImportedModel| -> Vec<(i64, Option<i64>)> {
+        m.nodes
+            .iter()
+            .filter_map(|n| n.renderer.as_ref())
+            .map(|r| (r.renderer.id, r.filter.map(|f| f.id)))
+            .collect()
+    };
+    assert_eq!(ids_of(&with), ids_of(&without));
+}

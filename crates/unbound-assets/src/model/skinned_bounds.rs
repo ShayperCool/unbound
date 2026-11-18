@@ -536,6 +536,7 @@ mod tests {
                 source: FileIdSource::Derived,
             },
             filter: None,
+            collider: None,
             bones,
             root_bone,
             blend_shape_weights: Vec::new(),
