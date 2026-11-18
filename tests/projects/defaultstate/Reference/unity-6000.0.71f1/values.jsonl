@@ -404,6 +404,12 @@
 {"key":"UnityEditor.CloudProjectSettingsEventManager/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Compilation.Assembly/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.Compilation.CompilationPipeline/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.Compilation.CompilerMessage/@factory","status":"value","value":"struct"}
+{"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/column","status":"value","value":"0"}
+{"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/file","status":"value","value":"null"}
+{"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/line","status":"value","value":"0"}
+{"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/message","status":"value","value":"null"}
+{"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/type","status":"value","value":"enum:0"}
 {"key":"UnityEditor.ConsoleWindow/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.ConsoleWindow/Property/UnityEditor.EditorWindow/antiAlias","status":"value","value":"1"}
 {"key":"UnityEditor.ConsoleWindow/Property/UnityEditor.EditorWindow/autoRepaintOnSceneChange","status":"value","value":"false"}

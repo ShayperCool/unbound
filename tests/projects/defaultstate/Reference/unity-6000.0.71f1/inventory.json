@@ -1135,6 +1135,12 @@
       "type": "UnityEditor.Compilation.CompilationPipeline"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Compilation.CompilerMessage"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

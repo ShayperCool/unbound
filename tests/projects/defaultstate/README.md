@@ -28,6 +28,9 @@ independent GPU captures that agree on them; earlier rows are unchanged. The win
 and place match; its data-mode controller, overlay canvas and UI root are queued as for the other
 windows, and the two text-asset identity rows record their shifted implementation values.
 
+The compilation events slice adds 6 rows for CompilerMessage (now hand-written) from two
+independent GPU captures that agree on them; earlier rows are unchanged.
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.
