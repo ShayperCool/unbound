@@ -81,5 +81,42 @@ namespace Unbound.Tests
                 finally { Object.DestroyImmediate(rt); }
             }
         }
+    
+        /// <summary>CommandBuffer.GetTemporaryRT with a legacy format the device cannot render
+        /// falls back as RenderTexture.GetTemporary does, warned when the command is recorded
+        /// (unmeasured for the command buffer); OpenGL Core keeps 4444 (control).</summary>
+        [Fact]
+        public void ACommandBufferTemporaryOfALegacyFormatFallsBackWhenRecorded()
+        {
+            var handler = Debug.unityLogger.logHandler;
+            var collect = new Collect();
+            int id = Shader.PropertyToID("_PackedTemporary");
+            GraphicsFormat Temporary(string device) => On(device, () =>
+            {
+                using var cb = new UnityEngine.Rendering.CommandBuffer();
+                cb.GetTemporaryRT(id, 2, 1, 0, FilterMode.Point, RenderTextureFormat.ARGB4444);
+                int recorded = collect.Lines.Count;
+                Graphics.ExecuteCommandBuffer(cb);
+                Assert.Equal(recorded, collect.Lines.Count);
+                var rt = (RenderTexture)Shader.GetGlobalTexture(id);
+                var format = rt.graphicsFormat;
+                using var release = new UnityEngine.Rendering.CommandBuffer();
+                release.ReleaseTemporaryRT(id);
+                Graphics.ExecuteCommandBuffer(release);
+                return format;
+            });
+            try
+            {
+                Debug.unityLogger.logHandler = collect;
+                Assert.Equal(GraphicsFormat.R8G8B8A8_UNorm, Temporary("Vulkan"));
+                Assert.Single(collect.Lines, l => l.Contains("'B4G4R4A4_UNormPack16' is not supported"));
+                Assert.Equal(GraphicsFormat.B4G4R4A4_UNormPack16, Temporary("OpenGLCore"));
+                Assert.Single(collect.Lines);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+            }
+        }
     }
 }

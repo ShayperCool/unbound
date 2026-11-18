@@ -3447,6 +3447,8 @@ impl UnityRenderer {
                     }
                 }
                 Command::EndFrame => {
+                    // A packed level is packed before its mips are made from it.
+                    self.process_packed(&mut passes);
                     self.process_mips(&mut passes);
                     self.copy_depth(&mut passes, depth_mark);
                     self.depth_target = None;
