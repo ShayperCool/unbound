@@ -732,6 +732,12 @@ namespace UnityEngine.Tests
             Assert.Equal((22000f, 22000f), (lowPass.cutoffFrequency, Assert.Single(Collected(source)).Cutoff));
             Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve);
             Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            // A serialized curve is not applied there, and says so.
+            var key = YNode.MakeMap(("time", YNode.MakeScalar("0")), ("value", YNode.MakeScalar("0.5")));
+            var curve = YNode.MakeMap(("m_Curve", new YNode { Kind = YKind.Seq, Items = new[] { key } }));
+            lowPass.ReadSerialized(YNode.MakeMap(("m_LowpassResonanceQ", YNode.MakeScalar("2")), ("lowpassLevelCustomCurve", curve)), null);
+            Assert.Equal((5000f, 2f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ));
+            Assert.Contains("custom cutoff curve is not supported", Assert.Single(Errors("AudioLowPassFilter's serialized")));
         }
 
         [Fact]
