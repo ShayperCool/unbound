@@ -114,7 +114,7 @@ Editor and collection-validation methods.
 
 | Category | Before Q410 | Q410 entries retained |
 | --- | ---: | ---: |
-| Attributes | 938 | 12 |
+| Attributes | 938 | 11 |
 | Modifiers | 87 | 6 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 98 |
+| Total | 1,332 | 97 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
@@ -131,10 +131,11 @@ extras slice, Q516's slider drag slice removes BaseSlider's IValueField entry an
 layout slice ColumnLayout's IDisposable entry, its mixer slice the two mixer sub-asset marker
 entries, its text command slice TextElement's event-interest entry, its field interface
 slice BaseField's interface entry, its capture event slice PointerCaptureEventBase's interface
-entry and its style-animation slice VisualElement's IStylePropertyAnimations entry; Q528's group box slice removes BaseVisualElementPanel's IGroupBox entry and its collection
+entry, its style-animation slice VisualElement's IStylePropertyAnimations entry and its animation job
+producer slice IAnimationJob's producer-marker entry; Q528's group box slice removes BaseVisualElementPanel's IGroupBox entry and its collection
 view slice BaseVerticalCollectionView's serialization-callback entry; Q534 removes ray-tracing
 BuildSettings' layout entry. With the one pipeline-restriction lookup entry outside Q410, the
-allow-list holds 99 entries.
+allow-list holds 98 entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
@@ -411,7 +412,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-UI-command-events` | 0 | Done by `textcommands`: text fields take command and IME events; the composition preview is covered by managed tests with a stand-in input method. |
 | `Q410-UI-interfaces` | 0 | Done: the element's internal style-animation interface by `styleanimations` (its starts run on the USS transition animations, covered by `uitransitions`, `uitransitioncallbacks`, `uitransitioninline` and `uitransitionkinds`); the collection views' serialization callbacks are covered by `collectionjson`, the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify`, hierarchy equality by `declarationextras`, the slider's value-field interface by `sliderdrag`, the column layout's lifetime by `columnlayout`, the base field's mixed-value, prefix-label and editing interfaces by `fieldinterfaces`, the capture events' internal pointer interface by `captureevents` and the panel's group box interface by `radiogroups`. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
-| `Q410-animation-job-producer` | 1 | Animation producer payload and scheduling/lifetime controls. Observed in a scratch macOS Editor probe outside the repository (Unity 6000.0.71f1, Q534): the marker names ProcessAnimationJobStruct`1, and AnimationScriptPlayable.Create accepts jobs with managed fields as Unbound does. |
+| `Q410-animation-job-producer` | 0 | Done by `animjobproducer`: IAnimationJob names ProcessAnimationJobStruct<T>, whose cached reflection data and Execute (a job's method by index on a stream copied from the pointer) script playables run their jobs through. |
 | `Q410-asset-interface-adapters` | 0 | All asset types use the typed registry (`assetdispatch`, `assetadapters`, `audioadapters`, `manifestadapters`); the mixer group and snapshot declare the subasset-duplication marker (`mixerclone`). |
 | `Q410-built-in-inspector-registration` | 3 | Target-specific single/multiple-object inspector behavior before registry annotations. |
 | `Q410-enumerator-current-state` | 0 | Done by `propertyenumerator`: Current caches each advance, including false, and preserves its state across Reset/Dispose for enumerable, list, indexed and default forms. |
