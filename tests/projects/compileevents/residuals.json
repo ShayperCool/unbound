@@ -1,0 +1,5 @@
+{
+  "Unbound has one editor domain, loaded as Play mode starts: its editor scripts load before Play mode entry's pre-reload events (ExitingEditMode, beforeAssemblyReload), which the Editor sends in its Edit-mode domain before loading the Play mode one": [
+    "start.load"
+  ]
+}

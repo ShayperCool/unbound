@@ -23,14 +23,21 @@ path `Library/ScriptAssemblies/<name>.dll`, the warnings with them) and assembly
 for each assembly that did not need compiling, then compilationFinished with the same context, a
 `Bee.BeeDriver.ActiveBuild`. A successful round is followed by beforeAssemblyReload, the editor
 scripts' load and afterAssemblyReload; a failed one compiles only the failing assembly (its error in
-the messages), reports its dependents as not required and reloads nothing. Every domain load ends
-with afterAssemblyReload after the editor scripts' load, the Play mode one included.
+the messages), reports its dependents as not required and reloads nothing. Every domain load runs
+the editor scripts' load, then `[DidReloadScripts]`, then afterAssemblyReload; entering Play mode
+(Enter Play Mode Options on, None: the domain reloads) first sends beforeAssemblyReload.
 
 Unbound raises the compilation events from its hot reload's recompilation, an assembly whose
 changed inputs matched an earlier output of its compile cache (an edit undone) counting as compiled
-with the warnings stored beside that output. Its editor domain load ends with afterAssemblyReload.
-An edit it patches in place reloads nothing; one it cannot patch (here a changed constant) restarts
-the session, which it reports as the reload: beforeAssemblyReload before the restart, then the new
-session's load. Unmeasured: the order of several messages of one assembly (Unbound
+with the warnings stored beside that output. Its one editor domain load, as Play mode starts, runs
+the editor scripts' load, ExitingEditMode, beforeAssemblyReload (unless Enter Play Mode Options
+disable the domain reload), `[DidReloadScripts]` and afterAssemblyReload. An edit it patches in
+place reloads nothing; one it cannot patch (here a changed constant) restarts the session, which it
+reports as the reload: beforeAssemblyReload before the restart, then the new session's load without
+a second one. The restarted session also enters Play mode again (its Play mode callbacks run and
+the scene starts over), which the Editor's reload does not.
+
+Recorded residual (`residuals.json`): `start.load`, because Unbound's editor scripts load before
+Play mode entry's pre-reload events, which the Editor sends in its Edit-mode domain. Unmeasured: the order of several messages of one assembly (Unbound
 lists errors, then warnings), RequestScriptCompilation, "Recompile After Finished Playing" and
 "Stop Playing And Recompile", other releases.
