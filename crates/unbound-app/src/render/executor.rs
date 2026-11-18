@@ -2637,8 +2637,8 @@ impl UnityRenderer {
             .as_mut()
             .and_then(|p| p.depth_resolve(destination, self.frame_number + 1));
         // A depth copy between a top-down screen and a texture mirrors the rows (measured on
-        // Metal: tests/projects/camerastack `metal/*` *.full.bH.def.persp; Vulkan's screen is
-        // top-down too, unmeasured there).
+        // Metal and Vulkan: tests/projects/camerastack `metal/*` and `vulkan/*`
+        // *.full.bH.def.persp).
         let flip = self.conventions.top_down(true)
             && self.stored_as_screen(source) != self.stored_as_screen(destination);
         match (from, to, to_view) {

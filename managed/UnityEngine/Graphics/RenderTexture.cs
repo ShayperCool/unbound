@@ -531,7 +531,7 @@ namespace UnityEngine
         /// and 128/255, 159/255, 191/255, 1 (XR) (Unity 6000.0.71f1, tests/projects/textureformats
         /// metal.jsonl readback.*.read.*, .asyncfloat). No 8-bit value lies halfway between two
         /// levels of 4, 5 or 6 bits, nor a code over 1023 halfway between two bytes. Shaders
-        /// sampling a 4-bit or 5-6-5 target still read its 8-bit values.</summary>
+        /// sampling one read what the device keeps (GraphicsDeviceProfile.PackedTargetsKeepChannelBits).</summary>
         internal static unsafe void QuantizeReadTexels(GraphicsFormat format, byte[] floatTexels)
         {
             var bits = StoredChannelBits(format);
