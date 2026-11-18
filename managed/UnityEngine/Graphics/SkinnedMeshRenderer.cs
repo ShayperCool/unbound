@@ -391,7 +391,7 @@ namespace UnityEngine
             m_Skinned.AdoptVertices(positions);
             if (normals != null) m_Skinned.AdoptNormals(normals);
             if (tangents != null) m_Skinned.AdoptTangents(tangents);
-            m_Skinned.RecalculateBounds();
+            m_Skinned.UpdateBounds();
             return m_Skinned;
         }
 

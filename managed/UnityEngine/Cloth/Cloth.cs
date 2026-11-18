@@ -795,7 +795,7 @@ namespace UnityEngine
                 }
                 m_Rendered.vertices = vertices;
                 m_Rendered.normals = normals;
-                m_Rendered.RecalculateBounds();
+                m_Rendered.UpdateBounds();
                 m_RenderedVersion = m_Version;
             }
             return m_Rendered;

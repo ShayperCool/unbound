@@ -197,6 +197,16 @@ namespace UnityEngine
         /// [ExecuteAlways] updates are unmeasured and allowed).</summary>
         internal bool ScriptsCanRead => m_IsReadable || s_EngineReads > 0 || !Unbound.Runtime.EditorSession.IsPlaying;
 
+        /// <summary>A script's call of a method that computes from the data (RecalculateNormals,
+        /// RecalculateBounds, RecalculateTangents) on a mesh it cannot read: the Editor's error, and
+        /// the mesh left as it is (tests/projects/meshreadable `write.*.Recalculate*`).</summary>
+        bool CanCall(string method)
+        {
+            if (ScriptsCanRead) return true;
+            Debug.LogError($"Not allowed to call {method}() on mesh '{name}'");
+            return false;
+        }
+
         /// <summary>The Editor's text for a refused read of <paramref name="what"/>.</summary>
         internal static string NotReadable(string what, string meshName) =>
             $"Not allowed to access {what} on mesh '{meshName}' (isReadable is false; Read/Write must be enabled in import settings)";
@@ -279,9 +289,9 @@ namespace UnityEngine
                 // added). Only a shorter array needs the indices read: indices set without
                 // validation (MeshUpdateFlags.DontValidateIndices) past the current vertices are not
                 // checked against a longer array (unmeasured).
-                // Refused on a mesh scripts cannot read, with the read's error (matches the Unity
-                // 6000.0.71f1 Editor, tests/projects/meshreadable `set.lockedVertices`; the other
-                // setters are unmeasured there).
+                // Refused on a mesh scripts cannot read, with the read's error, as every channel and
+                // index setter is (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
+                // `set.lockedVertices`, `write.*`).
                 if (!Readable("vertices")) return;
                 int length = value?.Length ?? 0;
                 if (length < m_Vertices.Length && HighestIndexedVertex() >= length)
@@ -325,7 +335,7 @@ namespace UnityEngine
             ResizeVertexChannel(ref m_BoneWeights, count);
             for (int channel = 0; channel < m_UVs.Length; channel++)
                 ResizeVertexChannel(ref m_UVs[channel], count);
-            RecalculateBounds();
+            UpdateBounds();
             InvalidatePackedChannel(VertexAttribute.Position);
             ResizePackedChannels(count);
             Changed(indices: false);
@@ -339,7 +349,7 @@ namespace UnityEngine
         public Vector3[] normals
         {
             get => Readable("normals") && m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
-            set => AdoptNormals(Checked(value, "normals"));
+            set { if (Readable("normals")) AdoptNormals(Checked(value, "normals")); }
         }
 
         /// <summary>Mesh.normals with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
@@ -351,7 +361,7 @@ namespace UnityEngine
         public Vector4[] tangents
         {
             get => Readable("tangents") && m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
-            set => AdoptTangents(Checked(value, "tangents"));
+            set { if (Readable("tangents")) AdoptTangents(Checked(value, "tangents")); }
         }
 
         /// <summary>Mesh.tangents with a checked array the mesh keeps (see <see cref="AdoptVertices"/>).</summary>
@@ -372,6 +382,7 @@ namespace UnityEngine
             }
             set
             {
+                if (!Readable("colors")) return;
                 if (value == null || value.Length == 0) { m_Colors = null; InvalidatePackedChannel(VertexAttribute.Color); Changed(indices: false); return; }
                 var c = new Color32[value.Length];
                 for (int i = 0; i < c.Length; i++) c[i] = value[i];
@@ -385,7 +396,7 @@ namespace UnityEngine
         public Color32[] colors32
         {
             get => Readable("colors") && m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
-            set { m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); SetColorFormat(VertexAttributeFormat.UNorm8); Changed(indices: false); }
+            set { if (!Readable("colors")) return; m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); SetColorFormat(VertexAttributeFormat.UNorm8); Changed(indices: false); }
         }
 
         T[] Checked<T>(T[] value, string what)
@@ -422,6 +433,7 @@ namespace UnityEngine
 
         void SetUV2(int channel, Vector2[] value)
         {
+            if (!Readable(s_UVNames[channel])) return;
             if (value == null || value.Length == 0) { InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel); m_UVs[channel] = null; m_UVDimensions[channel] = 0; Changed(indices: false); return; }
             if (value.Length != m_Vertices.Length)
             {
@@ -510,6 +522,7 @@ namespace UnityEngine
                 Debug.LogError(InvalidUVChannel);
                 return;
             }
+            if (!Readable(s_UVNames[channel])) return;
             if (values == null || values.Length == 0)
             {
                 InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel);
@@ -608,7 +621,9 @@ namespace UnityEngine
             set
             {
                 // The mesh becomes one submesh even when the triangles are then refused
-                // (tests/projects/apierrors `mesh.triangles_not_multiple_submeshes`).
+                // (tests/projects/apierrors `mesh.triangles_not_multiple_submeshes`), unless scripts
+                // cannot write it at all (tests/projects/meshreadable `write.*.triangles`).
+                if (!Readable(TrianglesOrIndices)) return;
                 subMeshCount = 1;
                 SetTriangles(value, 0);
             }
@@ -621,8 +636,18 @@ namespace UnityEngine
 
         public int[] GetTriangles(int submesh, [Internal.DefaultValue("true")] bool applyBaseVertex)
         {
-            if (!CanAccessSubmesh(submesh, triangles: true) || !Readable(TrianglesOrIndices)) return Array.Empty<int>();
+            if (!CanAccessSubmesh(submesh, triangles: true) || !Readable(TrianglesOrIndices) || !TriangleTopology(submesh)) return Array.Empty<int>();
             return TrianglesOf(submesh, applyBaseVertex);
+        }
+
+        /// <summary>GetTriangles of a sub-mesh of lines or points: an error, and no triangles
+        /// (matches the Unity 6000.0.71f1 Editor for the list getter, tests/projects/meshreadable
+        /// `write.readableScripted.SetIndices`; the array getter takes the same rule, unmeasured).</summary>
+        bool TriangleTopology(int submesh)
+        {
+            if (m_SubMeshes[submesh].Topology == MeshTopology.Triangles) return true;
+            Debug.LogError("Failed getting triangles. Submesh topology is lines or points.", this);
+            return false;
         }
 
         /// <summary>A sub-mesh's triangles, readable or not (the list getters read them so:
@@ -643,7 +668,7 @@ namespace UnityEngine
             if (triangles == null) throw new ArgumentNullException(nameof(triangles), "The result triangles list cannot be null.");
             CheckSubmesh(submesh);
             triangles.Clear();
-            triangles.AddRange(TrianglesOf(submesh, applyBaseVertex));
+            if (TriangleTopology(submesh)) triangles.AddRange(TrianglesOf(submesh, applyBaseVertex));
         }
 
         public int[] GetIndices(int submesh) => GetIndices(submesh, true);
@@ -735,12 +760,12 @@ namespace UnityEngine
 
         public void SetTriangles(int[] triangles, int submesh, [Internal.DefaultValue("true")] bool calculateBounds, [Internal.DefaultValue("0")] int baseVertex)
         {
-            if (CanAccessSubmesh(submesh, triangles: true)) SetIndicesOf(submesh, triangles, MeshTopology.Triangles, calculateBounds, baseVertex);
+            if (CanAccessSubmesh(submesh, triangles: true) && Readable(TrianglesOrIndices)) SetIndicesOf(submesh, triangles, MeshTopology.Triangles, calculateBounds, baseVertex);
         }
 
         public void SetTriangles(int[] triangles, int trianglesStart, int trianglesLength, int submesh, bool calculateBounds = true, int baseVertex = 0)
         {
-            if (CanAccessSubmesh(submesh, triangles: true))
+            if (CanAccessSubmesh(submesh, triangles: true) && Readable(TrianglesOrIndices))
                 SetIndicesOf(submesh, new ArraySegment<int>(triangles, trianglesStart, trianglesLength).ToArray(), MeshTopology.Triangles, calculateBounds, baseVertex);
         }
 
@@ -764,7 +789,7 @@ namespace UnityEngine
 
         public void SetIndices(int[] indices, MeshTopology topology, int submesh, [Internal.DefaultValue("true")] bool calculateBounds, [Internal.DefaultValue("0")] int baseVertex)
         {
-            if (CanAccessSubmesh(submesh, triangles: false)) SetIndicesOf(submesh, indices, topology, calculateBounds, baseVertex);
+            if (CanAccessSubmesh(submesh, triangles: false) && Readable(TrianglesOrIndices)) SetIndicesOf(submesh, indices, topology, calculateBounds, baseVertex);
         }
 
         void SetIndicesOf(int submesh, int[] indices, MeshTopology topology, bool calculateBounds, int baseVertex)
@@ -779,7 +804,7 @@ namespace UnityEngine
             // The index buffer is the submeshes' indices again.
             m_IndexBuffer = null;
             foreach (var other in m_SubMeshes) other.IndexStart = -1;
-            if (calculateBounds) RecalculateBounds();
+            if (calculateBounds) UpdateBounds();
             Changed(false);
         }
 
@@ -863,13 +888,22 @@ namespace UnityEngine
             }
             m_IndexBuffer = null;
             if (!keepVertexLayout) m_Layout = null;
-            m_Bounds = default;
+            // The bounds stay (matches the Unity 6000.0.71f1 Editor, tests/projects/meshreadable
+            // `write.*.Clear`, readable or not; Clear(false) unmeasured, the same).
             Changed();
         }
 
         public void RecalculateBounds() => RecalculateBounds(MeshUpdateFlags.Default);
 
         public void RecalculateBounds([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
+        {
+            if (!CanCall(nameof(RecalculateBounds))) return;
+            UpdateBounds();
+        }
+
+        /// <summary>The bounds made again from the vertices: RecalculateBounds without its check, for
+        /// the engine's own writes (the deformed copies of meshes scripts cannot read among them).</summary>
+        internal void UpdateBounds()
         {
             if (m_Vertices.Length == 0)
             {
@@ -895,6 +929,7 @@ namespace UnityEngine
 
         public void RecalculateNormals([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
         {
+            if (!CanCall(nameof(RecalculateNormals))) return;
             var normals = new Vector3[m_Vertices.Length];
             foreach (var s in m_SubMeshes)
             {
@@ -918,6 +953,7 @@ namespace UnityEngine
 
         public void RecalculateTangents([Internal.DefaultValue("MeshUpdateFlags.Default")] MeshUpdateFlags flags)
         {
+            if (!CanCall(nameof(RecalculateTangents))) return;
             var uv = m_UVs[0];
             if (uv == null || m_Normals == null) return;
             var tan1 = new Vector3[m_Vertices.Length];
@@ -1055,7 +1091,7 @@ namespace UnityEngine
             m_Colors = colors.ToArray();
             subMeshCount = Math.Max(1, submeshes.Count);
             for (int i = 0; i < submeshes.Count; i++) SetTriangles(submeshes[i], i);
-            RecalculateBounds();
+            UpdateBounds();
         }
 
         static List<int> NewList(List<List<int>> into)
