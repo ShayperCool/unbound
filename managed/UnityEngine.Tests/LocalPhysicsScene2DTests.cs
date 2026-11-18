@@ -31,6 +31,20 @@ namespace UnityEngine.Tests
         void OnCollisionExit2D(Collision2D c) { if (onExit && target != null) target.SetActive(false); }
     }
 
+    /// <summary>Puts its body at a spawn point when its parent changes.</summary>
+    public class SpawnOnParentChange2D : MonoBehaviour
+    {
+        public Vector2 spawn;
+        void OnTransformParentChanged() => GetComponent<Rigidbody2D>().position = spawn;
+    }
+
+    /// <summary>Disables a sibling collider when one of its contacts ends.</summary>
+    public class DisableSiblingOnExit2D : MonoBehaviour
+    {
+        public Collider2D sibling;
+        void OnCollisionExit2D(Collision2D c) { if (sibling != null) sibling.enabled = false; }
+    }
+
     /// <summary>On its first collision, moves a body of another scene under this GameObject and gives
     /// it a new collider, both inside the callback.</summary>
     public class AdoptOnCollision2D : MonoBehaviour
@@ -347,6 +361,42 @@ namespace UnityEngine.Tests
             Assert.Equal(5f, body.position.y, 4);
             Assert.Equal("Kept", Physics2D.Raycast(new Vector2(0f, 10f), Vector2.down, 100f).collider.name);
             Assert.Null(Physics2D.Raycast(new Vector2(100f, 10f), Vector2.down, 100f).collider);
+        }
+
+        [Fact]
+        public void ParentChangeMessagesSeeTheBodyInItsNewPhysicsScene()
+        {
+            Physics2D.autoSyncTransforms = false;
+            var local = LocalScene();
+            var body = Box("Spawned", new Vector2(0f, 5f), local);
+            body.gravityScale = 0f;
+            body.gameObject.AddComponent<SpawnOnParentChange2D>().spawn = new Vector2(7f, 3f);
+            var holder = Make("SpawnHolder", new Vector2(50f, 0f));
+            body.transform.SetParent(holder.transform, true);
+            // The message moved the body in the default physics scene, where it stays.
+            Assert.Equal(new Vector2(7f, 3f), body.position);
+            Run(1);
+            Assert.Equal(new Vector2(7f, 3f), body.position);
+        }
+
+        [Fact]
+        public void ExitsOfAReparentRunOnceEveryComponentHasMoved()
+        {
+            var local = LocalScene();
+            Floor("LocalFloor", new Vector2(20f, 0f), local);
+            var body = Box("Pair", new Vector2(20f, 1f), local);
+            var second = body.gameObject.AddComponent<CircleCollider2D>();
+            second.radius = 0.25f;
+            second.offset = new Vector2(0f, 2f);
+            body.gameObject.AddComponent<DisableSiblingOnExit2D>().sibling = second;
+            Step(local.GetPhysicsScene2D(), 10);
+            var holder = Make("PairHolder", new Vector2(0f, 0f));
+            body.transform.SetParent(holder.transform, true);
+            // The exit from the local floor disabled the second collider after it moved: it is not
+            // in the default physics scene.
+            Assert.False(second.enabled);
+            Assert.DoesNotContain(second, Physics2D.OverlapPointAll(body.position + new Vector2(0f, 2f)));
+            Assert.Contains(body.GetComponent<BoxCollider2D>(), Physics2D.OverlapPointAll(body.position));
         }
 
         [Fact]

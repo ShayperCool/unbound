@@ -332,6 +332,9 @@ namespace Unbound.Runtime
 
             if (worldPositionStays) t.KeepWorldPose(worldPosition, worldRotation, worldScale, parent);
             else t.MarkChanged();
+            // At its kept world pose, before its messages, its 2D bodies and colliders go to the new
+            // scene's physics scene (the 3D ones move at the next physics access).
+            if (sceneChanged) Unbound.Runtime.Physics2DWorld.SceneMembershipChanged();
 
             // Renderers that changed canvas lose their depth at once (tests/projects/uidepth).
             Unbound.Runtime.CanvasSystem.ReleaseDepths(t);
@@ -343,9 +346,6 @@ namespace Unbound.Runtime
             bool isActive = go.ActiveInHierarchyNoThrow;
             if (wasActive != isActive)
                 Lifecycle.OnHierarchyActiveChanged(go, isActive);
-            // Once its world pose is kept and its messages are sent, its 2D bodies and colliders go
-            // to the new scene's physics scene (the 3D ones move at the next physics access).
-            if (sceneChanged) Unbound.Runtime.Physics2DWorld.SceneMembershipChanged();
         }
 
         internal static List<Transform> Siblings(Transform t)

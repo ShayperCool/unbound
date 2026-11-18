@@ -91,6 +91,8 @@ namespace Unbound.Runtime
             internal readonly Dictionary<Contact, ContactObservation> ContactObservations = new Dictionary<Contact, ContactObservation>();
             internal int SubStepCount;
             internal float SubStepLostTime;
+            /// <summary>Removal exits that waited for another dispatch to end.</summary>
+            internal bool RemovalsDeferred;
             /// <summary>The handle of the scene that owns it; 0 for the default physics scene.</summary>
             internal readonly int Scene;
             /// <summary>Its PhysicsScene2D identity: 0 for the default one; local identities are
@@ -231,16 +233,24 @@ namespace Unbound.Runtime
             Collect(s_Default);
             for (int i = 0; i < s_Locals.Count; i++) Collect(s_Locals[i]);
             if (bodies == null && colliders == null) return;
-            if (colliders != null) foreach (var c in colliders) Remove(c);
-            if (bodies != null)
-                foreach (var rb in bodies)
-                {
-                    Remove(rb);
-                    rb.m_PendingVelocity = Vector2.zero;
-                    rb.m_PendingAngularVelocity = 0f;
-                }
-            if (bodies != null) foreach (var rb in bodies) Add(rb);
-            if (colliders != null) foreach (var c in colliders) Add(c);
+            // The exits of the contacts they leave wait until every component is in its new physics
+            // scene, so no callback runs between leaving and joining.
+            s_Dispatching = true;
+            try
+            {
+                if (colliders != null) foreach (var c in colliders) Remove(c);
+                if (bodies != null)
+                    foreach (var rb in bodies)
+                    {
+                        Remove(rb);
+                        rb.m_PendingVelocity = Vector2.zero;
+                        rb.m_PendingAngularVelocity = 0f;
+                    }
+                if (bodies != null) foreach (var rb in bodies) if (!rb.m_Destroyed) Add(rb);
+                if (colliders != null) foreach (var c in colliders) if (!c.m_Destroyed) Add(c);
+            }
+            finally { s_Dispatching = false; }
+            DispatchPendingRemovals();
 
             void Collect(Space space)
             {
@@ -949,9 +959,9 @@ namespace Unbound.Runtime
             if (s_MembershipPending) SceneMembershipChanged();
             // A valid local physics scene steps even before anything joined it (Unbound's choice,
             // unmeasured: the measured steps have members); the default one needs its world.
+            if (deltaTime < 0f) return false;
             if (s_World == null && !ReferenceEquals(s_Space, s_Default)) EnsureWorld();
             if (s_World == null) return false;
-            if (deltaTime < 0f) return false;
             Physics2D.ApplyTuning();
             SyncCurrent();
             Physics2DJoints.Sync();
@@ -1037,8 +1047,9 @@ namespace Unbound.Runtime
                 bool sent;
                 do
                 {
-                    sent = s_Default.Listener.DispatchOwnRemovals();
-                    for (int i = 0; i < s_Locals.Count; i++) sent |= s_Locals[i].Listener.DispatchOwnRemovals();
+                    sent = s_Default.RemovalsDeferred && s_Default.Listener.DispatchOwnRemovals();
+                    for (int i = 0; i < s_Locals.Count; i++)
+                        if (s_Locals[i].RemovalsDeferred) sent |= s_Locals[i].Listener.DispatchOwnRemovals();
                 }
                 while (sent);
             }
@@ -1539,7 +1550,12 @@ namespace Unbound.Runtime
             internal bool DispatchOwnRemovals()
             {
                 using var scope = Enter(m_Owner);
-                if (s_Dispatching) return false;
+                if (s_Dispatching)
+                {
+                    m_Owner.RemovalsDeferred = true;
+                    return false;
+                }
+                m_Owner.RemovalsDeferred = false;
                 bool sent = false;
                 s_Dispatching = true;
                 try
