@@ -16,7 +16,8 @@ namespace UnityEngine.Diagnostics
     /// Crashes the process as the Editor does when a script asks for it: the lines the Editor prints
     /// for the category, then the signal it dies of. AccessViolation dies of SIGSEGV; Abort,
     /// PureVirtualFunction and MonoAbort of SIGABRT. Matches the Unity 6000.0.71f1 Editor on Linux
-    /// (tests/projects/forcecrash); macOS prints the same lines (the macOS Editor's are unmeasured).
+    /// (tests/projects/forcecrash). On macOS Unbound prints the same Linux lines without a measurement
+    /// of the macOS Editor's. A value outside the enum (unmeasured) is reported and does not crash.
     /// FatalError logs the Editor's error, but its end is not matched: the Editor starts shutting
     /// down and never exits by itself, where Unbound aborts after the error without the shutdown.
     /// </summary>
@@ -48,6 +49,9 @@ namespace UnityEngine.Diagnostics
                 case ForcedCrashCategory.MonoAbort:
                     Print("* Assertion at unity-utils.c:183, condition `klass' not met");
                     Die(SIGABRT);
+                    break;
+                default:
+                    Unbound.Runtime.Stubs.NotImplemented("Utils.ForceCrash with a value outside ForcedCrashCategory");
                     break;
             }
         }
