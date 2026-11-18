@@ -1099,7 +1099,9 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (!MaskShape(out var mesh, out var model, out var texture)) return;
-            FrameBuilder.AddMeshDraws(this, mesh, model, m_Color, camera, into, texture, m_Sprite.SecondaryProperties());
+            // The renderer's color, in the project's color space (tests/projects/vertexcolors sprite.*).
+            FrameBuilder.AddMeshDraws(this, mesh, model, VertexColors.InColorSpace(m_Color), camera, into, texture, m_Sprite.SecondaryProperties(),
+                tint: DrawTint.Vertices);
         }
 
         bool m_WarnedTexturelessLayout;

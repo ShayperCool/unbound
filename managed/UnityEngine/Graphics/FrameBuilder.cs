@@ -95,6 +95,9 @@ namespace Unbound.Runtime
             internal Material Material;
             internal Matrix4x4 Model;
             internal Color Color;
+            /// <summary>Whether <see cref="Color"/> is a renderer's own color, and where it goes (see
+            /// <see cref="VertexColors"/>).</summary>
+            internal DrawTint Tint;
             internal ulong MainTexture;
             internal Rect Clip;
             internal bool ClipEnabled;
@@ -250,7 +253,7 @@ namespace Unbound.Runtime
 
         /// <summary>Adds one draw per submesh/material pair of a mesh renderer.</summary>
         internal static void AddMeshDraws(Renderer renderer, Mesh mesh, Matrix4x4 model, Color color, CameraContext camera, List<DrawItem> into, Texture mainTexture = null,
-            Dictionary<int, object> properties = null, int firstMaterial = 0, int materialCount = -1)
+            Dictionary<int, object> properties = null, int firstMaterial = 0, int materialCount = -1, DrawTint tint = DrawTint.None)
         {
             var materials = renderer.m_Materials;
             int end = materialCount < 0 ? materials.Length : Math.Min(materials.Length, firstMaterial + materialCount);
@@ -274,6 +277,7 @@ namespace Unbound.Runtime
                     Material = material,
                     Model = model,
                     Color = color,
+                    Tint = tint,
                     MainTexture = texture,
                     Queue = material.renderQueue,
                     SortingLayer = SortingLayer.GetLayerValueFromID(renderer.m_SortingLayerID),
@@ -1206,7 +1210,7 @@ namespace Unbound.Runtime
                 {
                     Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
                     GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false);
+                    item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
                 }
             }
             finally

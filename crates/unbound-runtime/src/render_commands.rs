@@ -38,6 +38,46 @@ pub mod camera {
     pub const GIZMO: u32 = 64;
 }
 
+/// Whether a draw's color is a renderer's own color (SpriteRenderer.color, a tilemap cell's,
+/// SpriteShapeRenderer.color), and where it reaches the shader (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/vertexcolors).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum DrawTint {
+    /// The color multiplies the vertex color as it is.
+    #[default]
+    None,
+    /// A renderer's color of the vertices: `unity_SpriteColor` as it is, the vertex color
+    /// left alone, for a program that reads it; else the vertex color times the color as
+    /// bytes (each channel clamped to 0..1, times 255, rounded half up).
+    Vertices,
+    /// A renderer's color of the constants alone: `unity_SpriteColor` for a program that reads
+    /// it; the vertex color is left alone.
+    Constant,
+}
+
+impl DrawTint {
+    const VERTICES: u8 = 8;
+    const CONSTANT: u8 = 16;
+
+    fn from_flags(flags: u8) -> DrawTint {
+        if flags & Self::VERTICES != 0 {
+            DrawTint::Vertices
+        } else if flags & Self::CONSTANT != 0 {
+            DrawTint::Constant
+        } else {
+            DrawTint::None
+        }
+    }
+
+    fn flags(self) -> u8 {
+        match self {
+            DrawTint::None => 0,
+            DrawTint::Vertices => Self::VERTICES,
+            DrawTint::Constant => Self::CONSTANT,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Draw {
     pub mesh: u64,
@@ -46,8 +86,11 @@ pub struct Draw {
     /// A pass of the material's shader, or [`FORWARD_PASSES`], [`ALL_PASSES`], [`TAGGED_PASSES`].
     pub pass: i32,
     pub model: [f32; 16],
-    /// Multiplies the vertex color (a CanvasRenderer's color and alpha).
+    /// Multiplies the vertex color (a CanvasRenderer's color and alpha), unless [`Draw::tint`]
+    /// says otherwise.
     pub color: [f32; 4],
+    /// Whether `color` is a renderer's own color, and where it goes.
+    pub tint: DrawTint,
     /// Overrides the material's `_MainTex` (a sprite's or CanvasRenderer's texture); 0: none.
     pub main_texture: u64,
     /// Pixels, origin bottom-left: a scissor rectangle within the viewport.
@@ -835,6 +878,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     clip: (draw_flags & 1 != 0).then_some(clip),
                     raw_winding: draw_flags & 2 != 0,
                     flip_winding: draw_flags & 4 != 0,
+                    tint: DrawTint::from_flags(draw_flags),
                     properties,
                 }))
             }
@@ -1456,7 +1500,8 @@ impl Writer {
                 self.bytes.push(
                     d.clip.is_some() as u8
                         | ((d.raw_winding as u8) << 1)
-                        | ((d.flip_winding as u8) << 2),
+                        | ((d.flip_winding as u8) << 2)
+                        | d.tint.flags(),
                 );
                 self.floats(&d.clip.unwrap_or_default());
                 self.u32(d.properties.len() as u32);
@@ -1623,6 +1668,7 @@ mod tests {
                 clip: Some([1.0, 2.0, 3.0, 4.0]),
                 raw_winding: true,
                 flip_winding: true,
+                tint: DrawTint::Vertices,
                 properties: vec![
                     ("_Glow".into(), PropertyValue::Float(2.0)),
                     ("_M".into(), PropertyValue::Matrix([4.0; 16])),
@@ -1970,16 +2016,27 @@ mod tests {
         }
     }
 
+    #[test]
+    fn a_draws_tint_travels_in_its_flags_beside_the_others() {
+        for tint in [DrawTint::None, DrawTint::Vertices, DrawTint::Constant] {
+            for others in [0u8, 1, 2, 4, 7] {
+                let flags = others | tint.flags();
+                assert_eq!(DrawTint::from_flags(flags), tint);
+                assert_eq!(flags & 7, others);
+            }
+        }
+    }
+
     /// `DrawIndices` is decoded from NativeApi 18 on, the version render protocol 8 has with the
     /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing, 87 packed targets' channel bits.
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing, 87 packed targets' channel bits, 88 a draw's renderer color flags.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 87);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 88);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

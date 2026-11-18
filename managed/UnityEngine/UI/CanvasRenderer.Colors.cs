@@ -52,8 +52,6 @@ namespace UnityEngine
             return m_PreparedMesh;
         }
 
-        static Color32 QuantizeCanvasColor(Color color) => new Color32(
-            (byte)(Mathf.Clamp01(color.r) * 255f + .5f), (byte)(Mathf.Clamp01(color.g) * 255f + .5f),
-            (byte)(Mathf.Clamp01(color.b) * 255f + .5f), (byte)(Mathf.Clamp01(color.a) * 255f + .5f));
+        static Color32 QuantizeCanvasColor(Color color) => VertexColors.Bytes(color);
     }
 }

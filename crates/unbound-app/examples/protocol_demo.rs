@@ -111,6 +111,7 @@ fn frame_commands(
                     d.clip.height,
                 ]),
                 raw_winding: false,
+                tint: Default::default(),
                 flip_winding: false,
                 properties: Vec::new(),
             })));

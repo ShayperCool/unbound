@@ -649,7 +649,7 @@ namespace UnityEngine.Rendering
                     if (items.Count > 1 && i != submeshIndex) continue;
                     if (shaderPass < 0) Unbound.Runtime.Profiling.RenderStats.NextDrawAllPasses(material);
                     GfxStream.Draw(item.Mesh, item.Submesh, handle, pass, item.Model, item.Color, item.MainTexture, item.ClipEnabled ? item.Clip : (Rect?)null,
-                        Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, item.Properties));
+                        Unbound.Runtime.FrameBuilder.WithRenderingLayer(renderer.renderingLayerMask, item.Properties), tint: item.Tint);
                 }
             });
         }

@@ -95,7 +95,10 @@ use std::ffi::c_void;
 /// external indices and a cap on the indices it reads.
 /// 86: `SetTarget`'s color may be `NO_TEXTURE`: a None target binds nothing.
 /// 87: texture packet flags 17..18 give the channel bits a 5-6-5 or 5-5-5-1 target keeps.
-pub const NATIVE_API_VERSION: u32 = 87;
+/// 88: Draw render command flags 8/16 mark the draw's color as a renderer's color ([`DrawTint`]).
+///
+/// [`DrawTint`]: crate::render_commands::DrawTint
+pub const NATIVE_API_VERSION: u32 = 88;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

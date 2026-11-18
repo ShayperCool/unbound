@@ -12,7 +12,7 @@ namespace UnityEngine
         [Unbound.EditorFaithful("The 6000.0.71f1 Play-mode constructor has no observable effect (renderapi).")]
         public Gizmos() { }
         // The drawing color is stored as 8-bit channels, with half values rounded up.
-        static byte Channel(float value) => (byte)(Mathf.Clamp01(value) * 255f + .5f);
+        static byte Channel(float value) => VertexColors.Byte(value);
         public static Color color
         {
             get => s_Color;

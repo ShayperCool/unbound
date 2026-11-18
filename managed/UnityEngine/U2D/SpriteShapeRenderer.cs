@@ -79,6 +79,10 @@ namespace UnityEngine.U2D
     public unsafe partial class SpriteShapeRenderer : Renderer
     {
         Color m_Color = Color.white;
+        /// <summary>The draws' `_RendererColor`, kept while the tint stays (see <see cref="CollectDraws"/>).</summary>
+        Dictionary<int, object> m_TintProperties;
+        Color m_TintPropertiesFor;
+        static readonly int s_RendererColor = Shader.PropertyToID("_RendererColor");
         SpriteMaskInteraction m_MaskInteraction;
         Texture m_ShapeTexture;
         Sprite[] m_Sprites = Array.Empty<Sprite>();
@@ -384,6 +388,16 @@ namespace UnityEngine.U2D
             if (m_Parts.Count == 0 || m_Materials.Length == 0 || m_Mesh == null) return;
             ulong mesh = m_Mesh.Sync();
             var model = transform.localToWorldMatrix;
+            // The renderer's color reaches the shader as constants, never in the vertices: URP's
+            // `unity_SpriteColor` as it is, the built-in pipeline's `_RendererColor` as bytes
+            // (tests/projects/vertexcolors spriteshape.*).
+            var tint = VertexColors.InColorSpace(m_Color);
+            if (m_TintProperties == null || !m_TintPropertiesFor.Equals(tint))
+            {
+                m_TintProperties ??= new Dictionary<int, object>(1);
+                m_TintProperties[s_RendererColor] = (Color)VertexColors.Bytes(tint);
+                m_TintPropertiesFor = tint;
+            }
             float distance = FrameBuilder.Distance(camera, bounds.center);
             var groups = FrameBuilder.GroupsOf(this, camera);
             int layer = SortingLayer.GetLayerValueFromID(m_SortingLayerID);
@@ -398,7 +412,9 @@ namespace UnityEngine.U2D
                     Submesh = part.Submesh,
                     Material = material,
                     Model = model,
-                    Color = m_Color,
+                    Color = tint,
+                    Tint = DrawTint.Constant,
+                    Properties = m_TintProperties,
                     MainTexture = TextureHandles.Of(part.Texture),
                     Queue = material.renderQueue,
                     SortingLayer = layer,

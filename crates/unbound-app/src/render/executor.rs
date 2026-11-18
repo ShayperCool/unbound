@@ -55,6 +55,25 @@ pub enum Upload {
     ReleaseMaterial(u64),
 }
 
+/// What multiplies a draw's vertex colors: its color, or for a renderer's color of the vertices
+/// that color as vertex color bytes (each channel clamped to 0..1, times 255, rounded half up;
+/// matches the Unity 6000.0.71f1 Editor, tests/projects/vertexcolors), or nothing for a
+/// renderer's color of the constants alone.
+fn vertex_tint(tint: commands::DrawTint, color: [f32; 4]) -> [f32; 4] {
+    match tint {
+        commands::DrawTint::None => color,
+        // NaN gives byte 0, as the managed side's conversion does.
+        commands::DrawTint::Vertices => color.map(|c| {
+            if c.is_nan() {
+                0.0
+            } else {
+                (c.clamp(0.0, 1.0) * 255.0 + 0.5).floor() / 255.0
+            }
+        }),
+        commands::DrawTint::Constant => [1.0; 4],
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct DrawUniform {
@@ -4505,15 +4524,20 @@ impl UnityRenderer {
             1.0 + 1.0 / tw as f32,
             1.0 + 1.0 / th as f32,
         ];
-        let offset = self.push_uniform(DrawUniform {
+        let uniform = DrawUniform {
             model: draw.model,
             view,
             proj: gpu_projection,
-            color: draw.color,
+            color: vertex_tint(draw.tint, draw.color),
             screen,
             misc: [time, space as f32, if alpha_only { 1.0 } else { 0.0 }, 0.0],
             pad: [0.0; 4],
-        });
+        };
+        let offset = self.push_uniform(uniform);
+        // A renderer's color for the vertices goes to a program reading `unity_SpriteColor`
+        // there instead: its vertex colors are left alone (the draw's uniform with a white color,
+        // made for the first such pass).
+        let mut untinted_offset = None;
         let linear = space == 1;
         let mesh_replay = mesh_instance.is_some()
             || overrides
@@ -4838,6 +4862,10 @@ impl UnityRenderer {
             let values = compiled::DrawValues {
                 gizmo_draw: self.state.gizmo_draw,
                 color: draw.color,
+                sprite_color: match draw.tint {
+                    commands::DrawTint::None => [1.0; 4],
+                    _ => draw.color,
+                },
                 model: draw.model,
                 view,
                 proj: projection,
@@ -4927,7 +4955,18 @@ impl UnityRenderer {
                 material: material_bg,
                 texture: texture_bg.clone(),
                 buffers: buffers_bg,
-                offset,
+                offset: if draw.tint == commands::DrawTint::Vertices
+                    && self.compiled.reads_sprite_color(id)
+                {
+                    *untinted_offset.get_or_insert_with(|| {
+                        self.push_uniform(DrawUniform {
+                            color: [1.0; 4],
+                            ..uniform
+                        })
+                    })
+                } else {
+                    offset
+                },
                 stencil_ref,
                 viewport,
                 scissor,
@@ -6316,6 +6355,22 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_renderers_color_of_the_vertices_multiplies_them_as_bytes() {
+        let color = [0.657, -0.1, 1.25, 0.5];
+        assert_eq!(
+            vertex_tint(commands::DrawTint::Vertices, color),
+            [168.0 / 255.0, 0.0, 1.0, 128.0 / 255.0]
+        );
+        // 0.7 * 255 is 178.5 in single precision: rounded up.
+        assert_eq!(
+            vertex_tint(commands::DrawTint::Vertices, [0.7, f32::NAN, 0.0, 1.0]),
+            [179.0 / 255.0, 0.0, 0.0, 1.0]
+        );
+        assert_eq!(vertex_tint(commands::DrawTint::None, color), color);
+        assert_eq!(vertex_tint(commands::DrawTint::Constant, color), [1.0; 4]);
+    }
 
     #[test]
     fn raw_copies_keep_borrowed_storage_boundaries() {

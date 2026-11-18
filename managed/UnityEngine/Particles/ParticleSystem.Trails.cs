@@ -153,9 +153,7 @@ namespace UnityEngine
             return state.NextValue();
         }
 
-        internal static Color32 TrailColor(Color color) => new Color32(
-            (byte)(Mathf.Clamp01(color.r) * 255f + .5f), (byte)(Mathf.Clamp01(color.g) * 255f + .5f),
-            (byte)(Mathf.Clamp01(color.b) * 255f + .5f), (byte)(Mathf.Clamp01(color.a) * 255f + .5f));
+        internal static Color32 TrailColor(Color color) => VertexColors.Bytes(color);
 
         // Native trail gradients are RGBA32 before their asymmetric byte tint multiply.
         internal static Color32 TrailTint(Color32 particle, Color32 gradient) => new Color32(

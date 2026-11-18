@@ -7,7 +7,9 @@ namespace UnityEngine.Tilemaps
     /// <summary>
     /// Draws a tilemap's sprites with the renderer's material: each cell's sprite mesh at the cell
     /// center (the tile anchor), under the tilemap's orientation and the cell's transform, colored
-    /// by the cell's and the tilemap's colors. Chunk mode draws the whole tilemap as one sorted
+    /// by the cell's and the tilemap's colors (their product, in the project's color space: in the
+    /// vertices as bytes in Chunk mode; each cell's draw's own color in Individual mode, which a
+    /// program reading `unity_SpriteColor` takes as it is; tests/projects/vertexcolors tilemap.*). Chunk mode draws the whole tilemap as one sorted
     /// unit (a mesh per texture), its cells ordered by the sort order; Individual mode sorts each
     /// cell on its own at its center.
     /// </summary>
@@ -24,9 +26,10 @@ namespace UnityEngine.Tilemaps
         DetectChunkCullingBounds m_DetectChunkCullingBounds;
         SpriteMaskInteraction m_MaskInteraction;
 
-        /// <summary>The meshes drawn, rebuilt when the tilemap, its grid or the settings change.</summary>
-        readonly List<(Mesh Mesh, Texture Texture, Vector3 Center)> m_Batches = new List<(Mesh, Texture, Vector3)>();
-        (int Tilemap, int Grid, SortOrder Order, Mode Mode) m_BuiltFor = (-1, -1, default, default);
+        /// <summary>The meshes drawn, rebuilt when the tilemap, its grid or the settings change, with the
+        /// color each one's draw carries (white in Chunk mode, whose vertices carry the colors).</summary>
+        readonly List<(Mesh Mesh, Texture Texture, Vector3 Center, Color Tint)> m_Batches = new List<(Mesh, Texture, Vector3, Color)>();
+        (int Tilemap, int Grid, SortOrder Order, Mode Mode, ColorSpace Space) m_BuiltFor = (-1, -1, default, default, default);
 
         public TilemapRenderer() { InitializeBillboardDefaults(); }
 
@@ -79,7 +82,8 @@ namespace UnityEngine.Tilemaps
             m_Batches.Clear();
             var tint = tilemap.color;
             var orientation = tilemap.orientationMatrix;
-            var groups = new List<(Texture Texture, List<Vector3> Vertices, List<Vector2> Uvs, List<Color> Colors, List<int> Triangles, Vector3 Center)>();
+            bool individual = m_Mode == Mode.Individual;
+            var groups = new List<(Texture Texture, List<Vector3> Vertices, List<Vector2> Uvs, List<Color32> Colors, List<int> Triangles, Vector3 Center, Color Tint)>();
             foreach (var pair in OrderedCells(tilemap))
             {
                 var cell = pair.Value;
@@ -87,13 +91,14 @@ namespace UnityEngine.Tilemaps
                 if (sprite == null || sprite.texture == null) continue;
                 var center = tilemap.TileCenterLocal(pair.Key);
                 var model = Matrix4x4.Translate(center) * orientation * cell.Transform;
-                var color = cell.Color * tint;
+                var color = VertexColors.InColorSpace(cell.Color * tint);
                 int g = groups.Count - 1;
                 // Chunk mode batches consecutive cells of one texture; Individual mode draws each
                 // cell on its own.
-                if (m_Mode == Mode.Individual || g < 0 || groups[g].Texture != sprite.texture)
+                if (individual || g < 0 || groups[g].Texture != sprite.texture)
                 {
-                    groups.Add((sprite.texture, new List<Vector3>(), new List<Vector2>(), new List<Color>(), new List<int>(), center));
+                    groups.Add((sprite.texture, new List<Vector3>(), new List<Vector2>(), individual ? null : new List<Color32>(), new List<int>(), center,
+                        individual ? color : Color.white));
                     g++;
                 }
                 var group = groups[g];
@@ -104,7 +109,7 @@ namespace UnityEngine.Tilemaps
                 {
                     group.Vertices.Add(model.MultiplyPoint3x4(vertices[i]));
                     group.Uvs.Add(uvs[i]);
-                    group.Colors.Add(color);
+                    group.Colors?.Add(VertexColors.Bytes(color));
                 }
                 foreach (var t in sprite.m_Triangles) group.Triangles.Add(start + t);
             }
@@ -114,9 +119,9 @@ namespace UnityEngine.Tilemaps
                 if (group.Vertices.Count > 65535) mesh.indexFormat = Rendering.IndexFormat.UInt32;
                 mesh.SetVertices(group.Vertices);
                 mesh.SetUVs(0, group.Uvs);
-                mesh.SetColors(group.Colors);
+                if (group.Colors != null) mesh.SetColors(group.Colors);
                 mesh.SetTriangles(group.Triangles, 0);
-                m_Batches.Add((mesh, group.Texture, group.Center));
+                m_Batches.Add((mesh, group.Texture, group.Center, group.Tint));
             }
         }
 
@@ -125,7 +130,7 @@ namespace UnityEngine.Tilemaps
             var tilemap = m_GameObject.GetComponent<Tilemap>();
             if (tilemap == null) return;
             var grid = tilemap.layoutGrid;
-            var key = (tilemap.m_RenderVersion, grid != null ? grid.m_LayoutVersion : 0, m_SortOrder, m_Mode);
+            var key = (tilemap.m_RenderVersion, grid != null ? grid.m_LayoutVersion : 0, m_SortOrder, m_Mode, QualitySettings.activeColorSpace);
             if (!key.Equals(m_BuiltFor))
             {
                 Rebuild(tilemap);
@@ -136,6 +141,7 @@ namespace UnityEngine.Tilemaps
             float chunkDistance = FrameBuilder.Distance(camera, bounds.center);
             var groups = FrameBuilder.GroupsOf(this, camera);
             int layer = SortingLayer.GetLayerValueFromID(m_SortingLayerID);
+            bool individual = m_Mode == Mode.Individual;
             foreach (var batch in m_Batches)
             {
                 ulong mesh = batch.Mesh.Sync();
@@ -151,7 +157,8 @@ namespace UnityEngine.Tilemaps
                         Submesh = 0,
                         Material = material,
                         Model = model,
-                        Color = Color.white,
+                        Color = batch.Tint,
+                        Tint = individual ? DrawTint.Vertices : DrawTint.None,
                         MainTexture = texture,
                         Queue = material.renderQueue,
                         SortingLayer = layer,

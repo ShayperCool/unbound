@@ -773,7 +773,8 @@ namespace Unbound.Runtime
         /// else that pass of the shader. <paramref name="properties"/> override the material's for
         /// this draw (a MaterialPropertyBlock's values).</summary>
         internal static void Draw(ulong mesh, int submesh, ulong material, int pass, in Matrix4x4 model, Color color,
-            ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null, bool rawWinding = false, bool flipWinding = false)
+            ulong mainTexture = 0, Rect? clip = null, Dictionary<int, object> properties = null, bool rawWinding = false, bool flipWinding = false,
+            DrawTint tint = DrawTint.None)
         {
             if (s_State.Scissor is Rect scissor) clip = clip.HasValue ? Intersect(clip.Value, scissor) : scissor;
             Resolve(properties);
@@ -788,7 +789,8 @@ namespace Unbound.Runtime
             Color(color);
             U64(mainTexture);
             // Winding flags also retain a reflection baked into world-space renderer geometry.
-            U8((byte)((clip.HasValue ? 1 : 0) | (rawWinding ? 2 : 0) | (flipWinding ? 4 : 0)));
+            U8((byte)((clip.HasValue ? 1 : 0) | (rawWinding ? 2 : 0) | (flipWinding ? 4 : 0)
+                | (tint == DrawTint.Vertices ? 8 : 0) | (tint == DrawTint.Constant ? 16 : 0)));
             Rect(clip ?? default);
             U32((uint)s_Properties.Count);
             foreach (var p in s_Properties)

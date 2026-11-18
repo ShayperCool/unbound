@@ -447,7 +447,7 @@ namespace UnityEngine
             return new Color32(r, g, b, a);
         }
 
-        static byte ToByte(float value) => (byte)(Mathf.Clamp01(value) * 255f + 0.5f);
+        static byte ToByte(float value) => VertexColors.Byte(value);
 
         /// <summary>Writes the strip into <paramref name="mesh"/>: a baked mesh gets exactly the
         /// strip, through the public setters; a streamed one (drawn every frame) keeps its

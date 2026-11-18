@@ -30,6 +30,8 @@ struct ProgramGpu {
     /// Whether the vertex program reads vertex inputs: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers.
     vertex_inputs: bool,
+    /// Whether the program reads `unity_SpriteColor` (a renderer's own color reaches it there).
+    sprite_color: bool,
     /// Where it takes a BatchRendererGroup draw's DOTS instancing data.
     dots: super::dots::DotsLayout,
 }
@@ -120,6 +122,8 @@ fn uniform_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option
 /// of each, both stages), which the pipeline layout of a program that reads the main texture
 /// there (`Compiled::main_texture`) carries beside its own; another program's leaves it out.
 const MAIN_TEXTURE_BINDINGS: u32 = 1;
+/// The uniform a renderer's own color reaches URP's sprite shaders by (see `DrawValues::sprite_color`).
+const SPRITE_COLOR: &str = "unity_SpriteColor";
 
 /// The bindings of each kind the main texture group adds to a program's layout.
 fn main_texture_bindings(program: &Compiled) -> u32 {
@@ -174,6 +178,8 @@ pub struct DrawValues<'a, 'buffers> {
     pub model: [f32; 16],
     pub gizmo_draw: bool,
     pub color: [f32; 4],
+    /// `unity_SpriteColor`: a renderer's own color (white for other draws).
+    pub sprite_color: [f32; 4],
     pub view: [f32; 16],
     /// The projection as Unity's API has it (OpenGL's convention).
     pub proj: [f32; 16],
@@ -513,6 +519,7 @@ impl CompiledPrograms {
                 .map(|(i, u)| (u.name.clone(), i as u32))
                 .collect(),
             vertex_inputs: program.vertex_inputs,
+            sprite_color: program.uniforms.iter().any(|u| u.name == SPRITE_COLOR),
             dots: super::dots::DotsLayout::of(&program),
             vertex: module(&format!("{shader} (vertex)"), &program.vertex),
             fragment: module(&format!("{shader} (fragment)"), &program.fragment),
@@ -544,6 +551,11 @@ impl CompiledPrograms {
     /// buffers).
     pub fn reads_vertex_inputs(&self, id: u32) -> bool {
         self.programs[id as usize].vertex_inputs
+    }
+
+    /// Whether program `id` reads `unity_SpriteColor`.
+    pub fn reads_sprite_color(&self, id: u32) -> bool {
+        self.programs[id as usize].sprite_color
     }
 
     pub fn texture_layout(&self, id: u32) -> &wgpu::BindGroupLayout {
@@ -1254,10 +1266,12 @@ fn derived_value(name: &str, v: &DrawValues, textures: &[String]) -> Option<Valu
         "_ClipRect" => vec([-2e10, -2e10, 2e10, 2e10]),
         // Alpha-only textures (UI text) sample white with the texture's alpha.
         "_TextureSampleAdd" if v.main_alpha_only => vec([1.0, 1.0, 1.0, 0.0]),
-        // A sprite's renderer color and flips, which URP's sprite shaders apply in the
-        // vertex program (positions scaled by the flips): Unbound's sprite meshes carry
-        // both already, so they are neutral (no skinning offset: z -1).
-        "unity_SpriteColor" => vec([1.0, 1.0, 1.0, 1.0]),
+        // A sprite's renderer color, which URP's sprite shaders apply in the vertex program
+        // (the draw's own renderer color, white for other draws).
+        SPRITE_COLOR => vec(v.sprite_color),
+        // A sprite's flips, which URP's sprite shaders apply in the vertex program (positions
+        // scaled by them): Unbound's sprite meshes carry them already, so they are neutral (no
+        // skinning offset: z -1).
         "unity_SpriteProps" => vec([1.0, 1.0, -1.0, 0.0]),
         _ => None,
     }
@@ -2005,6 +2019,7 @@ mod tests {
             let values = DrawValues {
                 gizmo_draw: false,
                 color: [1.0; 4],
+                sprite_color: [1.0; 4],
                 globals_index: &globals_index,
                 overrides,
                 model,
@@ -2146,6 +2161,7 @@ mod tests {
         let values = DrawValues {
             gizmo_draw: false,
             color: [1.0; 4],
+            sprite_color: [1.0; 4],
             globals_index: &globals_index,
             overrides: &[],
             model,
