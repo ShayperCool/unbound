@@ -316,33 +316,74 @@ namespace UnityEditor
 
         public static void SetGenericData(string type, object data) => s_Data[type] = data;
 
-        // Drop handlers by the destination view's id. No view takes a drop in Unbound, so none is
-        // called; the Editor also registers its own handlers for the project browser, the
-        // hierarchy and the inspector, which Unbound has no views for (tests/projects/editorload
-        // drop.handlers_*, recorded residuals).
-        static readonly Dictionary<int, List<Delegate>> s_DropHandlers = new Dictionary<int, List<Delegate>>();
+        // Drop handlers by the destination view's id. The table starts with the Editor's own
+        // handlers for the project browser, the inspector and the hierarchy (in that order) when it
+        // is first used, and again after ClearDropHandlers (matches the Unity 6000.0.71f1 Editor,
+        // tests/projects/editorload drop.handlers_*). No view takes a drop in Unbound, so no
+        // handler is called.
+        static Dictionary<int, List<Delegate>> s_DropHandlers;
 
-        internal static Dictionary<int, List<Delegate>> dropHandlers => s_DropHandlers;
+        internal static ProjectBrowserDropHandler DefaultProjectBrowserDropHandler = DefaultProjectBrowserDropHandlerImpl;
+        internal static InspectorDropHandler DefaultInspectorDropHandler = DropOnEditorInspector;
+        internal static HierarchyDropHandler DefaultHierarchyDropHandler = DropOnEditorHierarchy;
+
+        // The Editor's own handlers drop into its project browser, inspector and hierarchy views,
+        // which Unbound does not have: a call reports that instead of approximating a drop.
+        internal static DragAndDropVisualMode DefaultProjectBrowserDropHandlerImpl(int dragUponInstanceId, string dummy, bool perform) =>
+            NoView("UnityEditor.DragAndDrop.DefaultProjectBrowserDropHandlerImpl");
+
+        static DragAndDropVisualMode DropOnEditorInspector(Object[] targets, bool perform) =>
+            NoView("UnityEditorInternal.InternalEditorUtility.InspectorWindowDrag");
+
+        static DragAndDropVisualMode DropOnEditorHierarchy(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) =>
+            NoView("UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID");
+
+        static DragAndDropVisualMode NoView(string member)
+        {
+            Unbound.Runtime.Stubs.NotImplemented(member);
+            return DragAndDropVisualMode.None;
+        }
+
+        internal static Dictionary<int, List<Delegate>> dropHandlers
+        {
+            get
+            {
+                if (s_DropHandlers == null)
+                {
+                    s_DropHandlers = new Dictionary<int, List<Delegate>>();
+                    AddDropHandler(DefaultProjectBrowserDropHandler);
+                    AddDropHandler(DefaultInspectorDropHandler);
+                    AddDropHandler(DefaultHierarchyDropHandler);
+                }
+                return s_DropHandlers;
+            }
+        }
+
+        internal static void ClearDropHandlers()
+        {
+            s_DropHandlers?.Clear();
+            s_DropHandlers = null;
+        }
 
         /// <summary>Adds a handler for a view; one already added throws (null is a handler too)
         /// (measured: tests/projects/editorload drop.*).</summary>
         internal static void AddDropHandler(int dropDstId, Delegate handler)
         {
-            if (!s_DropHandlers.TryGetValue(dropDstId, out var handlers))
-                s_DropHandlers[dropDstId] = handlers = new List<Delegate>();
-            if (handlers.Contains(handler))
+            if (HasHandler(dropDstId, handler))
                 throw new Exception("Delegate already registered for dropDestinationId:" + dropDstId);
+            if (!dropHandlers.TryGetValue(dropDstId, out var handlers))
+                dropHandlers[dropDstId] = handlers = new List<Delegate>();
             handlers.Add(handler);
         }
 
         internal static void RemoveDropHandler(int dropDstId, Delegate handler)
         {
-            if (s_DropHandlers.TryGetValue(dropDstId, out var handlers)) handlers.Remove(handler);
+            if (dropHandlers.TryGetValue(dropDstId, out var handlers)) handlers.Remove(handler);
         }
 
-        internal static bool HasHandler(int dropDstId) => s_DropHandlers.ContainsKey(dropDstId);
+        internal static bool HasHandler(int dropDstId) => dropHandlers.ContainsKey(dropDstId);
 
-        public static bool HasHandler(int dropDstId, Delegate handler) => s_DropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Contains(handler);
+        public static bool HasHandler(int dropDstId, Delegate handler) => dropHandlers.TryGetValue(dropDstId, out var handlers) && handlers.Contains(handler);
 
         public static void AddDropHandler(ProjectBrowserDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.projectBrowser, handler);
         public static void AddDropHandler(SceneDropHandler handler) => AddDropHandler(DragAndDropWindowTarget.sceneView, handler);

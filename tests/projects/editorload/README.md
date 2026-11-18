@@ -21,5 +21,5 @@ returns or throws, the events it raises (`.events`) and the log messages it writ
 Measured in the Unity 6000.0.71f1 Editor on Linux with an NVIDIA GPU, windowed (two
 byte-identical captures). `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
-Recorded residuals (`residuals.json`): the Editor registers drop handlers of its own for the
-project browser, the hierarchy and the inspector, which Unbound has no views for.
+The handler table starts with the Editor's own handlers for the project browser, the inspector and
+the hierarchy when it is first used; Unbound's table does too (no view calls them). No residuals.

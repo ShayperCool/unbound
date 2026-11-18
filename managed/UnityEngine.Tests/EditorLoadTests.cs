@@ -47,6 +47,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheHandlerTableStartsWithTheEditorsOwnHandlers()
+        {
+            // The Editor's project browser, inspector and hierarchy handlers are in the table from its
+            // first use, and again after it is cleared (tests/projects/editorload drop.handlers_*).
+            DragAndDrop.ClearDropHandlers();
+            try
+            {
+                var table = DragAndDrop.dropHandlers;
+                Assert.Equal(new[] { DragAndDropWindowTarget.projectBrowser, DragAndDropWindowTarget.inspector, DragAndDropWindowTarget.hierarchy }, table.Keys);
+                Assert.Same(DragAndDrop.DefaultProjectBrowserDropHandler, Assert.Single(table[DragAndDropWindowTarget.projectBrowser]));
+                Assert.Same(DragAndDrop.DefaultInspectorDropHandler, Assert.Single(table[DragAndDropWindowTarget.inspector]));
+                Assert.Same(DragAndDrop.DefaultHierarchyDropHandler, Assert.Single(table[DragAndDropWindowTarget.hierarchy]));
+                Assert.True(DragAndDrop.HasHandler(DragAndDropWindowTarget.hierarchy, DragAndDrop.DefaultHierarchyDropHandler));
+                // Control: the scene view has none of its own.
+                Assert.False(DragAndDrop.HasHandler(DragAndDropWindowTarget.sceneView));
+                DragAndDrop.RemoveDropHandler(DragAndDrop.DefaultInspectorDropHandler);
+                Assert.Empty(DragAndDrop.dropHandlers[DragAndDropWindowTarget.inspector]);
+                DragAndDrop.ClearDropHandlers();
+                Assert.Single(DragAndDrop.dropHandlers[DragAndDropWindowTarget.inspector]);
+            }
+            finally { DragAndDrop.ClearDropHandlers(); }
+        }
+
+        [Fact]
         public void ToolChangesRaiseTheirEventsOnlyWhenTheValueChanges()
         {
             var events = new List<string>();

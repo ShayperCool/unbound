@@ -7351,16 +7351,11 @@ namespace UnityEditor
     }
     unsafe partial class DragAndDrop
     {
-        [global::Unbound.Stub] internal static global::UnityEditor.DragAndDrop.ProjectBrowserDropHandler DefaultProjectBrowserDropHandler;
-        [global::Unbound.Stub] internal static global::UnityEditor.DragAndDrop.InspectorDropHandler DefaultInspectorDropHandler;
-        [global::Unbound.Stub] internal static global::UnityEditor.DragAndDrop.HierarchyDropHandler DefaultHierarchyDropHandler;
-        [global::Unbound.Stub] internal static void ClearDropHandlers() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.ClearDropHandlers"); }
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode DropOnProjectBrowserWindow(int dragUponInstanceId, string dropUponPath, bool perform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.DropOnProjectBrowserWindow"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode DropOnSceneWindow(global::UnityEngine.Object dropUpon, global::UnityEngine.Vector3 worldPosition, global::UnityEngine.Vector2 viewportPosition, global::UnityEngine.Transform parentForDraggedObjects, bool perform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.DropOnSceneWindow"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode DropOnInspectorWindow(global::UnityEngine.Object[] targets, bool perform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.DropOnInspectorWindow"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode DropOnHierarchyWindow(int dropTargetInstanceID, global::UnityEditor.HierarchyDropFlags dropMode, global::UnityEngine.Transform parentForDraggedObjects, bool perform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.DropOnHierarchyWindow"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode Drop(int dropDstId, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.Drop"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode DefaultProjectBrowserDropHandlerImpl(int dragUponInstanceId, string dummy, bool perform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.DefaultProjectBrowserDropHandlerImpl"); return default; }
         [global::Unbound.Stub] internal static bool HandleDelayedDrag(global::UnityEngine.Rect position, int id, global::UnityEngine.Object objectToDrag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.HandleDelayedDrag"); return default; }
         [global::Unbound.Stub] internal static void Cleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.Cleanup"); }
     }
