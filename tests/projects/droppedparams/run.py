@@ -8,11 +8,12 @@
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings in the
-validation cache; nothing is written here except by `create`. Editors run through the shared
-heavy-job launcher, on the GPU (a private Xvfb and VirtualGL).
+validation cache; nothing is written here except by `create`. Editors run through
+tests/editor_runner.py on the GPU (a private Xvfb and VirtualGL; on macOS arm64 the macOS Editor,
+which draws with Metal and publishes Reference/unity-R/metal.jsonl, see tests/probe_paths.py
+device_reference).
 """
 import argparse
-import filecmp
 import os
 from pathlib import Path
 import shutil
@@ -20,12 +21,14 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import device_reference, editor_path, reference_file, run_root
+import editor_runner
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'DROPPED_PARAMS_PROBE_OUT'
+CAPTURE = 'capture.jsonl'
 
 
 def copy_project(dest):
@@ -38,36 +41,21 @@ def copy_project(dest):
     return dest
 
 
-def display():
-    """A private X server for the Editors, which draw with the GPU through VirtualGL."""
-    for number in range(120, 161):
-        if not Path(f'/tmp/.X{number}-lock').exists():
-            server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1280x720x24', '-nolisten', 'tcp'],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return f':{number}', server
-    sys.exit('no free X display')
-
-
 def editor(work):
-    name, server = display()
-    try:
-        jobs = []
-        for repeat in ('native1', 'native2'):
-            project = copy_project(work/'projects'/repeat)
-            out = work/repeat/'capture.jsonl'
-            out.parent.mkdir(parents=True, exist_ok=True)
-            if out.exists():
-                sys.exit(f'refusing to overwrite capture: {out}')
-            env = dict(os.environ, DISPLAY=name, **{OUT: str(out)})
-            jobs.append(subprocess.Popen(
-                [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
-                 '-batchmode', '-buildTarget', 'Standalone', '-projectPath', str(project),
-                 '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work/repeat/'editor.log')], env=env))
-        codes = [job.wait() for job in jobs]
-        print('editor exits', codes)
-        return int(any(codes))
-    finally:
-        server.terminate()
+    jobs = []
+    for repeat in ('native1', 'native2'):
+        project = copy_project(work/'projects'/repeat)
+        out = work/repeat
+        if (out/CAPTURE).exists():
+            sys.exit(f'refusing to overwrite capture: {out/CAPTURE}')
+        jobs.append(editor_runner.EditorJob(project, out/'editor.log', out,
+                                            ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
+                                            batch=True, env={OUT: str(out/CAPTURE)}, timeout=900,
+                                            label='droppedparams-'+repeat))
+    results = editor_runner.run_parallel(jobs)
+    for result in results:
+        print(editor_runner.summary(result))
+    return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
 
 
 def create(work):
@@ -87,17 +75,14 @@ def create(work):
 
 
 def publish(work):
-    a, b = work/'native1'/'capture.jsonl', work/'native2'/'capture.jsonl'
-    if not filecmp.cmp(a, b, shallow=False):
-        sys.exit('the two Editor captures differ; not publishing')
-    for log in (work/'native1'/'editor.log', work/'native2'/'editor.log'):
-        if 'NVIDIA' not in next((l for l in open(log, errors='replace') if 'Renderer:' in l), ''):
-            sys.exit(f'{log}: the Editor did not render on the NVIDIA GPU; not publishing')
-    target = reference_file(PROBE, 'jsonl')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(a, target)
-    print('published', target)
-    return 0
+    def write(target, first):
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(first/CAPTURE, target)
+        print('published', target)
+    return editor_runner.publish([work/'native1', work/'native2'],
+                                 device_reference(reference_file(PROBE, 'jsonl'), PROBE, publishing=True),
+                                 lambda d: [CAPTURE], write, gpu=True,
+                                 complete=[lambda d: None if (d/CAPTURE).is_file() else f'{CAPTURE} is missing'])
 
 
 def unbound(work):

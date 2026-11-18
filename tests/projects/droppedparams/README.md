@@ -78,3 +78,10 @@ Remaining scope:
   unmeasured. Other asset kinds and materials or ScriptableObjects sharing a
   file remain unsupported by this unload path.
 * Draws into slice -1 go into the first layer; shaders that pick a layer are not supported.
+
+## Metal
+
+On macOS arm64 the Editor records with Metal into `Reference/unity-6000.0.71f1/metal.jsonl` (two
+identical captures of the macOS Editor, Apple M2 Pro), which the suite's comparison reads there: the
+GPU projections are reversed-Z with render textures flipped (`gpuproj.*`). Unbound there: 0
+differences (against the Linux reference 4).
