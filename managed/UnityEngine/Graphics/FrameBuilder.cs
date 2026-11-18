@@ -842,6 +842,9 @@ namespace Unbound.Runtime
             return info != null && !info.HasPassFor(lightModes);
         }
 
+        /// <summary>The LightModes of the renderer list collecting draws; null outside one.</summary>
+        internal static List<string> CollectingLightModes => s_CollectingList.HasValue ? s_PassTagScratch : null;
+
         /// <summary>While a renderer list collects draws: whether it leaves out a draw of this
         /// material at the material's queue, so a renderer can skip building its geometry for a
         /// draw the list discards.</summary>

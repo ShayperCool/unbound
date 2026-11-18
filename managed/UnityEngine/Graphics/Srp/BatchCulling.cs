@@ -390,6 +390,68 @@ namespace Unbound.Runtime
                 + $"Shader pass: <unknown>, BatchDrawCommand index: {command}, (index in range: {inRange}), BatchDrawRange index: {range} MaterialID: {materialId.value} (\"{(material != null ? material.name : "<null>")}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
         }
 
+        /// <summary>The missing-variant errors logged so far: each distinct message once.</summary>
+        static readonly HashSet<(string Pass, int Shader, uint Material, uint Mesh, uint Batch)> s_NoDotsLogged = new HashSet<(string, int, uint, uint, uint)>();
+        /// <summary>Per shader, pass name and pipeline tag, whether the pass is known to declare no
+        /// DOTS_INSTANCING_ON variant (answers that may still change are not kept).</summary>
+        static readonly Dictionary<(int Shader, string Pass, string Pipeline), bool> s_NoDotsPass = new Dictionary<(int, string, string), bool>();
+
+        /// <summary>The Editor's error for a command whose material draws, in a list of
+        /// <paramref name="lightModes"/> (the collecting list's; null: none), a pass that defines no DOTS_INSTANCING_ON variant (measured: tests/projects/brg
+        /// errors, Probe/NoDots, in the Editor's log; the pass is not drawn, which the renderer
+        /// decides). Logged when the commands are read, each distinct message once (the Editor
+        /// delivers it after the frame); a pass whose variants are not known logs nothing.
+        /// Procedural commands have no mesh to name (unmeasured): none for them.</summary>
+        internal static void LogMissingDotsPasses(List<string> lightModes, Material material, BatchMaterialID materialId, Mesh mesh, BatchMeshID meshId, BatchID batchId)
+        {
+            var shader = material.shader;
+            if (lightModes == null || shader == null) return;
+            var info = ShaderPassInfo.Of(shader);
+            if (info == null || !info.Known) return;
+            for (int i = 0; i < info.Passes.Count; i++)
+            {
+                if (!info.CanDraw(i) || !lightModes.Contains(info.LightMode(i))) continue;
+                string pass = info.Passes[i].Name;
+                var key = (shader.GetInstanceID(), pass, Shader.globalRenderPipeline);
+                if (!s_NoDotsPass.TryGetValue(key, out bool missing))
+                {
+                    missing = DeclaresNoDots(shader, pass, key.Item3, out bool lasting);
+                    if (lasting) s_NoDotsPass[key] = missing;
+                }
+                if (!missing) continue;
+                if (!s_NoDotsLogged.Add((pass, key.Item1, materialId.value, meshId.value, batchId.value))) continue;
+                Debug.LogError($"A BatchDrawCommand is using the pass \"{pass}\" from the shader \"{shader.name}\" which does not define a DOTS_INSTANCING_ON variant. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
+                    + $"MaterialID: {materialId.value} (\"{material.name}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
+            }
+        }
+
+        /// <summary>Whether the pass named <paramref name="pass"/> of the first SubShader for the
+        /// active pipeline that has it (own SubShaders, then the Fallback chain's) is known to
+        /// declare no DOTS_INSTANCING_ON variant under pipeline tag <paramref name="pipeline"/>;
+        /// <paramref name="lasting"/> false when the answer may still change.</summary>
+        internal static bool DeclaresNoDots(Shader shader, string pass, string pipeline, out bool lasting)
+        {
+            var declarations = ShaderDeclarations.Of(shader);
+            lasting = !declarations.Transient;
+            if (!declarations.SubShadersKnown || pass == null) return false;
+            foreach (var sub in declarations.SubShaders)
+            {
+                if (sub.Tags.TryGetValue("RenderPipeline", out var tag) && tag != pipeline) continue;
+                for (int j = 0; j < sub.PassNames.Count; j++)
+                {
+                    if (!string.Equals(sub.PassNames[j], pass, StringComparison.OrdinalIgnoreCase)) continue;
+                    var sets = j < sub.KeywordSets.Count ? sub.KeywordSets[j] : null;
+                    if (sets == null) return false;
+                    foreach (var set in sets)
+                        if (Array.IndexOf(set, DotsInstancingKeyword) >= 0) return false;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        const string DotsInstancingKeyword = "DOTS_INSTANCING_ON";
+
         static void WarnOnce(int what)
         {
             if ((s_Warned & (1u << what)) != 0) return;
@@ -498,6 +560,7 @@ namespace Unbound.Runtime
                     LogInvalidId(c, c - range.drawCommandsBegin, r, command.materialID, material, command.meshID, mesh, command.batchID);
                     continue;
                 }
+                LogMissingDotsPasses(FrameBuilder.CollectingLightModes, material, command.materialID, mesh, command.meshID, command.batchID);
                 if (command.visibleCount == 0) continue;
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
@@ -714,6 +777,7 @@ namespace Unbound.Runtime
                 var mesh = group.GetRegisteredMesh(command.meshID);
                 var material = group.GetRegisteredMaterial(command.materialID);
                 if (batch == null || mesh == null || material == null) continue;
+                LogMissingDotsPasses(FrameBuilder.CollectingLightModes, material, command.materialID, mesh, command.meshID, command.batchID);
                 // A shadow split's list (splitBit set) draws the commands visible in the split.
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if (IndirectTopology(command.topology) is null)
