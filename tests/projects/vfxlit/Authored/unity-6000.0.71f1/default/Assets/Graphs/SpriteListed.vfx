@@ -733,17 +733,17 @@ MonoBehaviour:
   needsOwnSort: 0
   needsOwnAabbBuffer: 0
   m_Topology:
-    rid: 3006166367881396259
+    rid: 3006166370133213193
   m_Shading:
-    rid: 3006166367881396260
+    rid: 3006166370133213194
   references:
     version: 2
     RefIds:
-    - rid: 3006166367881396259
+    - rid: 3006166370133213193
       type: {class: ParticleTopologyPlanarPrimitive, ns: UnityEditor.VFX, asm: Unity.VisualEffectGraph.Editor}
       data:
         primitiveType: 1
-    - rid: 3006166367881396260
+    - rid: 3006166370133213194
       type: {class: ParticleShadingShaderGraph, ns: UnityEditor.VFX, asm: Unity.VisualEffectGraph.Editor}
       data:
         shaderGraph: {fileID: 4333940904281232215, guid: 24a73dccd7b6fad4798be282f96a21f4, type: 3}
@@ -794,7 +794,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"c7893912296c09ee69382d0945b4bfee","type":3}}'
+      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"9cacad9cee6e6f1bb93a0f5f9b41e189","type":3}}'
     m_Space: -1
   m_Property:
     name: _Texture2D

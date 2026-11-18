@@ -72,9 +72,13 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
 - `GraphLegacy`: quads of `Output Particle Quad` drawn by `Assets/Graphs/Legacy.shadergraph`, a
   graph of the Visual Effect target Shader Graph keeps for older graphs (shown as deprecated),
   written through Shader Graph's own model: unlit, its colour the probe's image sampled through
-  a texture property of its own.
+  a texture property of its own. `GraphLegacyMesh`: wedges of `Output Particle Mesh` drawn by
+  `Assets/Graphs/LegacyDefault.shadergraph`, the same graph sampling the image as its sampling
+  node's default texture (a texture slot nothing feeds).
 
-`Assets/Objects/Spike.asset` is a second mesh, of one submesh. The pipeline asset
+`Assets/Objects/Spike.asset` is a second mesh, of one submesh. The project names its own URP
+global settings (`Assets/UniversalRenderPipelineGlobalSettings.asset`, with its default volume
+profile, mapped in `ProjectSettings/GraphicsSettings.asset`), so the Editor makes none of its own. The pipeline asset
 (`Assets/Settings/ProbeURP.asset`) has three renderers: a forward one, a deferred one
 (`ProbeDeferred.asset`) and a 2D one (`Probe2DRenderer.asset`, the 2D renderer's defaults); main light shadows are on (one cascade, hard), additional lights are
 per pixel and cast no shadows. The scene has one flat ambient colour and no reflection, and 2D
@@ -158,7 +162,8 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   each particle into the list of its mesh, and each mesh's task draws its own list. `mesh lod`:
   its renderer's row alone; which mesh the Editor draws differs from one run to the next (two
   captures differed), so no image of it is kept, and Unbound does not draw such an output.
-- `graph legacy`: the older target's graph, through the forward renderer.
+- `graph legacy`: the older target's graph, through the forward renderer. `graph legacy mesh`:
+  the older target's graph of a default texture on meshes.
 - `lit 2d`, `mesh 2d`: `LitMatte` and `MeshUnlit` through the 2D renderer: the lit quads draw
   nothing there (no pass of theirs is one the 2D renderer draws), the meshes are drawn.
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays

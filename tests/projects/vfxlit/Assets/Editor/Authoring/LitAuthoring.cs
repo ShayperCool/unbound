@@ -36,6 +36,7 @@ public static class LitAuthoring
         SortedAndCurves();
         ShaderGraphs();
         ListsMeshesAndLegacyGraphs();
+        LegacyDefaultTexture();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -421,30 +422,36 @@ public static class LitAuthoring
         Save(plain);
     }
 
-    /// <summary>A Shader Graph of the Visual Effect target the graph package keeps for older
-    /// graphs (shown as deprecated): unlit, its colour the probe's image sampled through a
-    /// texture property of its own.</summary>
+    /// <summary>Shader Graphs of the Visual Effect target the graph package keeps for older
+    /// graphs (shown as deprecated): unlit, their colour the probe's image, sampled through a
+    /// texture property of the graph's own (`Legacy`) or as the default texture of a sampling
+    /// node whose texture slot nothing feeds (`LegacyDefault`).</summary>
     const string LegacyGraph = GraphFolder + "/Legacy.shadergraph";
+    const string LegacyDefaultGraph = GraphFolder + "/LegacyDefault.shadergraph";
 
-    static void WriteLegacyGraph()
+    static void WriteLegacyGraph(string path, bool property)
     {
         var graph = new GraphData();
         graph.AddContexts();
         graph.InitializeOutputs(new Target[] { new VFXTarget() }, new[] { BlockFields.SurfaceDescription.BaseColor, BlockFields.SurfaceDescription.Alpha });
         graph.AddCategory(CategoryData.DefaultCategory());
         graph.path = "Shader Graphs";
-        var texture = new Texture2DShaderProperty { displayName = "Image" };
-        graph.AddGraphInput(texture);
-        var read = new PropertyNode();
-        graph.AddNode(read);
-        read.property = texture;
         var sample = new SampleTexture2DNode();
         graph.AddNode(sample);
-        graph.Connect(read.GetSlotReference(PropertyNode.OutputSlotId), sample.GetSlotReference(SampleTexture2DNode.TextureInputId));
+        if (property)
+        {
+            var texture = new Texture2DShaderProperty { displayName = "Image" };
+            graph.AddGraphInput(texture);
+            var read = new PropertyNode();
+            graph.AddNode(read);
+            read.property = texture;
+            graph.Connect(read.GetSlotReference(PropertyNode.OutputSlotId), sample.GetSlotReference(SampleTexture2DNode.TextureInputId));
+        }
+        else sample.FindInputSlot<Texture2DInputMaterialSlot>(SampleTexture2DNode.TextureInputId).texture = Quarters;
         var baseColor = graph.fragmentContext.blocks.Select(b => b.value).First(b => b.descriptor == BlockFields.SurfaceDescription.BaseColor);
         graph.Connect(sample.GetSlotReference(SampleTexture2DNode.OutputSlotRGBAId), baseColor.GetSlotReference(0));
-        FileUtilities.WriteShaderGraphToDisk(LegacyGraph, graph);
-        AssetDatabase.ImportAsset(LegacyGraph, ImportAssetOptions.ForceUpdate);
+        FileUtilities.WriteShaderGraphToDisk(path, graph);
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
     }
 
     /// <summary>The follow-ups of the outputs above: lit outputs drawn from a list that is not
@@ -526,7 +533,7 @@ public static class LitAuthoring
         sizes.inputSlots[1].value = 1.2f;
         Save(lodded);
 
-        WriteLegacyGraph();
+        WriteLegacyGraph(LegacyGraph, true);
         var legacy = NewGraph("GraphLegacy");
         var (legacySpawn, legacyInit, _, legacyOutput) = System<VFXPlanarPrimitiveOutput>(legacy, 16);
         legacyOutput.SetSettingValue("shaderGraph", ShaderGraph(LegacyGraph));
@@ -538,6 +545,24 @@ public static class LitAuthoring
         SetRandom(legacyInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
         Set(legacyInit, "size", 0.7f);
         Save(legacy);
+    }
+
+    /// <summary>Wedges of `Output Particle Mesh` drawn by a graph of the older Visual Effect
+    /// target whose sampling node reads its slot's default texture (LitProbe.cs: `graph legacy
+    /// mesh`).</summary>
+    static void LegacyDefaultTexture()
+    {
+        WriteLegacyGraph(LegacyDefaultGraph, false);
+        var graph = NewGraph("GraphLegacyMesh");
+        var (spawn, init, _, output) = System<VFXMeshOutput>(graph, 16);
+        output.SetSettingValue("shaderGraph", ShaderGraph(LegacyDefaultGraph));
+        output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        Input(output, "mesh").value = Wedge;
+        Burst(spawn, 9f);
+        SetRandom(init, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(360f, 360f, 360f));
+        Set(init, "size", 0.6f);
+        Save(graph);
     }
 
     // ---------------------------------------------------------------------------- helpers

@@ -177,6 +177,9 @@ public sealed class LitProbe : MonoBehaviour
             Draw("graph legacy", "GraphLegacy", 5);
             Draw2D("lit 2d", "LitMatte", 8, 5);
             Draw2D("mesh 2d", "MeshUnlit", 9, 5);
+            // Meshes drawn by a graph of the older target that samples its node's default
+            // texture.
+            Draw("graph legacy mesh", "GraphLegacyMesh", 5);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
