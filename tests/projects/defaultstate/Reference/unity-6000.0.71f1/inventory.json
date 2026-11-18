@@ -4669,6 +4669,48 @@
       "type": "UnityEngine.ParticleSystemForceField"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "static",
+      "type": "UnityEngine.ParticleSystemJobs.IJobParticleSystemExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "static",
+      "type": "UnityEngine.ParticleSystemJobs.IJobParticleSystemParallelForBatchExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "static",
+      "type": "UnityEngine.ParticleSystemJobs.IJobParticleSystemParallelForExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "static",
+      "type": "UnityEngine.ParticleSystemJobs.IParticleSystemJobExtensions"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "candidate",
+      "type": "UnityEngine.ParticleSystemJobs.ParticleSystemJobData"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "candidate",
+      "type": "UnityEngine.ParticleSystemJobs.ParticleSystemNativeArray3"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.ParticleSystemModule",
+      "status": "candidate",
+      "type": "UnityEngine.ParticleSystemJobs.ParticleSystemNativeArray4"
+    },
+    {
       "category": "component",
       "module": "UnityEngine.ParticleSystemModule",
       "status": "candidate",
