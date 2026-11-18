@@ -286,6 +286,9 @@ public static class PostprocessorProbe
             if (t.gameObject.layer != 0)
                 parts.Add("layer=" + t.gameObject.layer);
             Put(key, string.Join(" ", parts));
+            // The children's order (a model's hierarchy is sorted by name on import).
+            if (t.childCount > 0)
+                Put(key + ".children", string.Join(",", t.Cast<Transform>().Select(c => c.name)));
         }
     }
 

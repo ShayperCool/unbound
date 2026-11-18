@@ -14,10 +14,13 @@
 {"k":"assets.Assets/Audio/ToneFloat.wav","v":"AudioClip:ToneFloat"}
 {"k":"scene.Animated","v":"pos=(10,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer mesh=Moving vertices=24 bounds=(0.01,0.01,0.01) readable=False materials=M_Move:RGBA(0.900, 0.900, 0.500, 1.000)"}
 {"k":"scene.Box","v":"pos=(30,0,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider box=(0,0,0) (2,2,2) sphere=3"}
+{"k":"scene.Box.children","v":"Child"}
 {"k":"scene.Box/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"scene.BoxVariant","v":"pos=(50,0,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider,CapsuleCollider box=(0,1,0) (2,2,2) sphere=3 capsule=4,1"}
+{"k":"scene.BoxVariant.children","v":"Child"}
 {"k":"scene.BoxVariant/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"scene.Materials","v":"pos=(0,0,0) scale=(1,1,1) components=Transform"}
+{"k":"scene.Materials.children","v":"Added,Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex"}
 {"k":"scene.Materials/Added","v":"pos=(1,2,3) scale=(1,1,1) components=Transform,BoxCollider box=(0,0,0) (4,5,6)"}
 {"k":"scene.Materials/Cube_Alpha","v":"pos=(-12,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Alpha vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Alpha:RGBA(0.000, 1.000, 0.000, 1.000) meshCollider=Cube_Alpha"}
 {"k":"scene.Materials/Cube_Emit","v":"pos=(-16,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Emit vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Emit:RGBA(0.100, 0.100, 0.100, 1.000) meshCollider=Cube_Emit"}
@@ -29,12 +32,16 @@
 {"k":"scene.Materials/Cube_Shared","v":"pos=(-4,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Shared vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Red:RGBA(0.800, 0.100, 0.100, 1.000) meshCollider=Cube_Shared"}
 {"k":"scene.Materials/Cube_Tex","v":"pos=(-8,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Tex vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Tex:RGBA(0.800, 0.800, 0.800, 1.000) meshCollider=Cube_Tex"}
 {"k":"scene.Nest","v":"pos=(40,0,0) scale=(1,1,1) components=Transform"}
+{"k":"scene.Nest.children","v":"Box,Own"}
 {"k":"scene.Nest/Box","v":"pos=(0,1,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider box=(0,0,0) (2,2,2) sphere=3"}
+{"k":"scene.Nest/Box.children","v":"Child"}
 {"k":"scene.Nest/Box/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"scene.Nest/Own","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,BoxCollider box=(0,0,0) (3,3,3)"}
 {"k":"scene.UserProps","v":"pos=(20,0,0) scale=(1,1,1) components=Transform"}
+{"k":"scene.UserProps.children","v":"BareRenamed,Group,Tagged"}
 {"k":"scene.UserProps/BareRenamed","v":"pos=(-2,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer,CapsuleCollider mesh=Bare vertices=24 bounds=(1,1,1) readable=False materials=Default-Material:RGBA(1.000, 1.000, 1.000, 1.000) capsule=0.5,7"}
 {"k":"scene.UserProps/Group","v":"pos=(-4,0,0) scale=(1,1,1) components=Transform"}
+{"k":"scene.UserProps/Group.children","v":"Inner"}
 {"k":"scene.UserProps/Group/Inner","v":"pos=(-6,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer mesh=Inner vertices=24 bounds=(1,1,1) readable=False materials=Override:RGBA(1.000, 0.000, 0.000, 1.000)"}
 {"k":"scene.UserProps/Tagged","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer,SphereCollider mesh=Tagged vertices=24 bounds=(1,1,1) readable=False materials=Override:RGBA(1.000, 0.000, 0.000, 1.000) sphere=0.25"}
 {"k":"texture.Assets/Tex/Plain.png","v":"Plain 16x16 format=10 mips=5 filter=1 wrap=0 readable=0 graphicsFormat=97"}
@@ -50,6 +57,7 @@
 {"k":"texture.Assets/Tex/Sprite.png","v":"Sprite 32x32 format=12 mips=1 filter=1 wrap=1 readable=0 graphicsFormat=101"}
 {"k":"texture.Assets/Tex/Sprite.png.sprite.Sprite","v":"ppu=50 rect=(x:0.00, y:0.00, width:32.00, height:32.00) bounds=(0.64,0.64,0.2)"}
 {"k":"model.Assets/Models/Materials.fbx.Materials","v":"pos=(0,0,0) scale=(1,1,1) components=Transform"}
+{"k":"model.Assets/Models/Materials.fbx.Materials.children","v":"Added,Cube_Alpha,Cube_Emit,Cube_EmitTex,Cube_Metal,Cube_Multi,Cube_NoMat,Cube_Red,Cube_Shared,Cube_Tex"}
 {"k":"model.Assets/Models/Materials.fbx.Materials/Added","v":"pos=(1,2,3) scale=(1,1,1) components=Transform,BoxCollider box=(0,0,0) (4,5,6)"}
 {"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Alpha","v":"pos=(-12,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Alpha vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Alpha:RGBA(0.000, 1.000, 0.000, 1.000) meshCollider=Cube_Alpha"}
 {"k":"model.Assets/Models/Materials.fbx.Materials/Cube_Emit","v":"pos=(-16,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer,MeshCollider mesh=Cube_Emit vertices=24 bounds=(0.02,0.02,0.02) readable=True materials=M_Emit:RGBA(0.100, 0.100, 0.100, 1.000) meshCollider=Cube_Emit"}
@@ -63,17 +71,23 @@
 {"k":"model.Assets/Models/Animated.fbx.Animated","v":"pos=(0,0,0) scale=(100,100,100) components=Transform,MeshFilter,MeshRenderer mesh=Moving vertices=24 bounds=(0.01,0.01,0.01) readable=False materials=M_Move:RGBA(0.900, 0.900, 0.500, 1.000)"}
 {"k":"model.Assets/Models/Animated.fbx.clip.Moving|MovingAction","v":"length=0.7916667 events=0"}
 {"k":"model.Assets/Models/UserProps.fbx.UserProps","v":"pos=(0,0,0) scale=(1,1,1) components=Transform"}
+{"k":"model.Assets/Models/UserProps.fbx.UserProps.children","v":"BareRenamed,Group,Tagged"}
 {"k":"model.Assets/Models/UserProps.fbx.UserProps/BareRenamed","v":"pos=(-2,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer,CapsuleCollider mesh=Bare vertices=24 bounds=(1,1,1) readable=False materials=Default-Material:RGBA(1.000, 1.000, 1.000, 1.000) capsule=0.5,7"}
 {"k":"model.Assets/Models/UserProps.fbx.UserProps/Group","v":"pos=(-4,0,0) scale=(1,1,1) components=Transform"}
+{"k":"model.Assets/Models/UserProps.fbx.UserProps/Group.children","v":"Inner"}
 {"k":"model.Assets/Models/UserProps.fbx.UserProps/Group/Inner","v":"pos=(-6,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer mesh=Inner vertices=24 bounds=(1,1,1) readable=False materials=Override:RGBA(1.000, 0.000, 0.000, 1.000)"}
 {"k":"model.Assets/Models/UserProps.fbx.UserProps/Tagged","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,MeshFilter,MeshRenderer,SphereCollider mesh=Tagged vertices=24 bounds=(1,1,1) readable=False materials=Override:RGBA(1.000, 0.000, 0.000, 1.000) sphere=0.25"}
 {"k":"prefab.Assets/Prefabs/Box.prefab.Box","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider box=(0,0,0) (2,2,2) sphere=3"}
+{"k":"prefab.Assets/Prefabs/Box.prefab.Box.children","v":"Child"}
 {"k":"prefab.Assets/Prefabs/Box.prefab.Box/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"prefab.Assets/Prefabs/Nest.prefab.Nest","v":"pos=(0,0,0) scale=(1,1,1) components=Transform"}
+{"k":"prefab.Assets/Prefabs/Nest.prefab.Nest.children","v":"Box,Own"}
 {"k":"prefab.Assets/Prefabs/Nest.prefab.Nest/Box","v":"pos=(0,1,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider box=(0,0,0) (2,2,2) sphere=3"}
+{"k":"prefab.Assets/Prefabs/Nest.prefab.Nest/Box.children","v":"Child"}
 {"k":"prefab.Assets/Prefabs/Nest.prefab.Nest/Box/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"prefab.Assets/Prefabs/Nest.prefab.Nest/Own","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,BoxCollider box=(0,0,0) (3,3,3)"}
 {"k":"prefab.Assets/Prefabs/BoxVariant.prefab.BoxVariant","v":"pos=(0,0,0) scale=(1,1,1) components=Transform,BoxCollider,SphereCollider,CapsuleCollider box=(0,1,0) (2,2,2) sphere=3 capsule=4,1"}
+{"k":"prefab.Assets/Prefabs/BoxVariant.prefab.BoxVariant.children","v":"Child"}
 {"k":"prefab.Assets/Prefabs/BoxVariant.prefab.BoxVariant/Child","v":"pos=(0,0,0) scale=(1,1,1) components=Transform layer=5"}
 {"k":"fileid.Assets/Models/Materials.fbx.Materials/Added.Transform","v":"-3417797058481558627"}
 {"k":"fileid.Assets/Models/Materials.fbx.Materials/Added.GameObject","v":"1242677757073471498"}
