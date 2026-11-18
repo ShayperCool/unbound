@@ -224,6 +224,9 @@ struct PlannedDraw {
     index_format: wgpu::IndexFormat,
     range: Range<u32>,
     base_vertex: i32,
+    /// The vertex the vertex buffers are bound from, in place of a positive base vertex where
+    /// `SV_VertexID` leaves the base vertex out (`DeviceConventions::vertex_id_from_draw_start`).
+    first_bound_vertex: u32,
     material: wgpu::BindGroup,
     texture: wgpu::BindGroup,
     /// The program's buffers (group 3), when it reads any.
@@ -493,7 +496,10 @@ enum Op {
 /// base instance; measured: tests/projects/cmdbuffers `render.indexed.startinstance.*` and
 /// `render.indexed.indirect.rawids`), while wgpu's instance index includes it. The caller's
 /// buffer keeps its arguments for the shader's `unity_IndirectDrawArgs` reads
-/// (UnityIndirect.cginc's `GetIndirectInstanceID_Base` adds the start instance itself).
+/// (UnityIndirect.cginc's `GetIndirectInstanceID_Base` adds the start instance itself). Where
+/// `SV_VertexID` counts from the draw's first vertex
+/// (`DeviceConventions::vertex_id_from_draw_start`) the base vertex (indexed) or start vertex is
+/// zeroed too for programs that read no vertex inputs, which it then moves nothing else for.
 struct ArgsCopy {
     source: wgpu::Buffer,
     source_offset: u64,
@@ -515,6 +521,7 @@ impl ArgsCopy {
             counts,
         );
         encoder.clear_buffer(
+    zero_first_vertex: bool,
             &self.destination,
             self.destination_offset + counts,
             Some(INDIRECT_START_INSTANCE_SIZE),
@@ -534,9 +541,35 @@ struct IndirectArgsPool {
     buffer: Option<wgpu::Buffer>,
     used: u64,
 }
+        if self.zero_first_vertex {
+            // The base vertex (indexed) or start vertex is the word before the start instance.
+            encoder.clear_buffer(
+                &self.destination,
+                self.destination_offset + counts - INDIRECT_FIRST_VERTEX_SIZE,
+                Some(INDIRECT_FIRST_VERTEX_SIZE),
+            );
+        }
 
 impl IndirectArgsPool {
     /// The next slot: its buffer and byte offset.
+/// The base vertex and first bound vertex of a direct draw whose `SV_VertexID` must read the
+/// index alone (`DeviceConventions::vertex_id_from_draw_start`; a non-indexed draw's start vertex
+/// is its shape's base vertex here): a program that reads no vertex inputs draws without the
+/// base vertex, which moves nothing else for it; one that does binds its vertex buffers from a
+/// positive base vertex inside them (`vertices`), the same vertices with ids from the index. A
+/// negative base vertex, or one past the buffers, stays added to the id (unmeasured).
+fn first_vertex_binding(base_vertex: i32, vertex_inputs: bool, vertices: u64) -> (i32, u32) {
+    match base_vertex {
+        0 => (0, 0),
+        _ if !vertex_inputs => (0, 0),
+        b if b > 0 && (b as u64) < vertices => (0, b as u32),
+        b => (b, 0),
+    }
+}
+
+/// The bytes of an indirect draw's base vertex (indexed) or start vertex argument.
+const INDIRECT_FIRST_VERTEX_SIZE: u64 = 4;
+
     fn slot(&mut self, device: &wgpu::Device) -> (wgpu::Buffer, u64) {
         let offset = self.used * INDIRECT_ARGS_SLOT;
         if self
@@ -2256,6 +2289,27 @@ impl UnityRenderer {
         let kind = match (multisampled, normalized) {
             (false, false) => CopyKind::Depth,
             (true, false) => CopyKind::DepthMultisampled,
+    /// A direct draw where `SV_VertexID` counts from the draw's first vertex
+    /// ([`first_vertex_binding`]).
+    fn draw_from_first_vertex(&self, d: &mut PlannedDraw) {
+        if !self.conventions.vertex_id_from_draw_start || d.indirect.is_some() {
+            return;
+        }
+        let vertices = [
+            Some(d.vertex.size() / size_of::<resources::Vertex>() as u64),
+            d.extra
+                .as_ref()
+                .map(|e| e.size() / size_of::<resources::ExtraVertex>() as u64),
+        ]
+        .into_iter()
+        .flatten()
+        .min()
+        .unwrap_or(0);
+        let inputs = self.compiled.program(d.program.0).vertex_inputs;
+        (d.base_vertex, d.first_bound_vertex) =
+            first_vertex_binding(d.base_vertex, inputs, vertices);
+    }
+
             (false, true) => CopyKind::Depth16,
             (true, true) => CopyKind::Depth16Multisampled,
         };
@@ -3937,12 +3991,22 @@ impl UnityRenderer {
                                 }
                             }
                             buffer = Some(destination);
+                            // One copy serves the call's passes: zeroed only when none reads
+                            // vertex inputs (whose vertices the first vertex moves).
+                            let zero_first_vertex = self.conventions.vertex_id_from_draw_start
+                                && planned.iter().all(|p| match p {
+                                    Planned::Draw(d) => {
+                                        !self.compiled.program(d.program.0).vertex_inputs
+                                    }
+                                    _ => true,
+                                });
                             draw_offset = at;
                         }
                         for p in &mut planned {
                             if let Planned::Draw(p) = p {
                                 p.instances = instances.max(1);
                                 p.indirect = buffer.clone().map(|b| (b, draw_offset, indexed));
+                                zero_first_vertex,
                             }
                         }
                     }
@@ -3990,6 +4054,7 @@ impl UnityRenderer {
                                     .iter()
                                     .find(|(name, _)| name == "<MeshInstanceBatchLimits>")
                                     .map(|(_, value)| value)
+                                self.draw_from_first_vertex(&mut d);
                                     && limits[0] > 0.0
                                 {
                                     let program = self.compiled.program(d.program.0);
@@ -5016,6 +5081,7 @@ impl UnityRenderer {
             None => globals.push((name.to_string(), value)),
         }
     }
+                first_bound_vertex: 0,
 
     /// A `GrabPass` into `name`: the texture (the target's size and format, made or remade as
     /// needed) and its `_TexelSize` set as globals, and the copy of the target into it; none
@@ -5753,9 +5819,17 @@ impl UnityRenderer {
                         if let Some(buffers) = &d.buffers {
                             rp.set_bind_group(3, buffers, &[]);
                         }
-                        rp.set_vertex_buffer(0, d.vertex.slice(..));
+                        let first = u64::from(d.first_bound_vertex);
+                        rp.set_vertex_buffer(
+                            0,
+                            d.vertex
+                                .slice(first * size_of::<resources::Vertex>() as u64..),
+                        );
                         if let Some(extra) = &d.extra {
-                            rp.set_vertex_buffer(1, extra.slice(..));
+                            rp.set_vertex_buffer(
+                                1,
+                                extra.slice(first * size_of::<resources::ExtraVertex>() as u64..),
+                            );
                         }
                         rp.set_index_buffer(d.index.slice(..), d.index_format);
                         rp.set_stencil_reference(d.stencil_ref);

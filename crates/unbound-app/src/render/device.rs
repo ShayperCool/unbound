@@ -140,6 +140,9 @@ pub struct DeviceConventions {
     pub packed_writes_round: bool,
     /// A counter no dispatch has used is copied too (`GraphicsDevice::copies_unused_counters`).
     pub copies_unused_counters: bool,
+    /// `SV_VertexID` counts from the draw's first vertex
+    /// (`GraphicsDevice::vertex_id_from_draw_start`).
+    pub vertex_id_from_draw_start: bool,
 }
 
 impl DeviceConventions {
@@ -160,6 +163,7 @@ impl DeviceConventions {
             packed_clears_round: device.packed_clears_round(),
             packed_writes_round: device.packed_writes_round(),
             copies_unused_counters: device.copies_unused_counters(),
+            vertex_id_from_draw_start: device.vertex_id_from_draw_start(),
         }
     }
 

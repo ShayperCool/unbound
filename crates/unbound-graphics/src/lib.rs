@@ -203,6 +203,17 @@ impl GraphicsDevice {
         matches!(self, Self::Metal)
     }
 
+    /// Whether `SV_VertexID` counts from the draw's first vertex: it reads the index without the
+    /// base vertex in an indexed draw and leaves out the start vertex in a non-indexed one, also in
+    /// a program that reads vertex inputs, direct and indirect (the macOS Editor's Metal device,
+    /// tests/projects/cmdbuffers `metal.jsonl` `metal.vertexid.*`, `render.indexed.indirect.*`,
+    /// `cmd.indirect.indexed*`; UnityIndirect.cginc's Metal `GetIndirectVertexID_Base` adds the
+    /// start vertex itself). OpenGL Core adds both, as wgpu's vertex index does
+    /// (`render.indexed.indirect.basevertex`); Vulkan is taken alike (unmeasured).
+    pub fn vertex_id_from_draw_start(self) -> bool {
+        matches!(self, Self::Metal)
+    }
+
     /// Whether a draw into a packed render target (4-4-4-4 included) keeps each channel's nearest
     /// level, read back as exactly `level / (2^bits - 1)`: the macOS Editor's Metal device
     /// stores the formats themselves (0.5 reads 16/31 in a 5-bit channel, 0.7 11/15 in a 4-bit
