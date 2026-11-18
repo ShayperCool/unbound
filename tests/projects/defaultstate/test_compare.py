@@ -133,6 +133,25 @@ class ComparisonTests(unittest.TestCase):
             with self.assertRaises(ValueError): host_decided(document, 'other', {'x': value('enum:1')}, source)
             with self.assertRaises(ValueError):
                 host_decided({'release': 'r', 'entries': [dict(entry, reason=' ')]}, 'r', {'x': value('enum:1')}, source)
+            with self.assertRaisesRegex(ValueError, 'duplicate'):
+                host_decided({'release': 'r', 'entries': [entry, entry]}, 'r', {'x': value('enum:1')}, linux)
+            with self.assertRaisesRegex(ValueError, 'no field'):
+                host_decided({'release': 'r', 'entries': [dict(entry, field=['settings', 'other'])]}, 'r',
+                             {'x': value('enum:1')}, linux)
+
+    def test_a_missing_macos_reference_fails_the_host_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'tests/projects/p/Reference/unity-6000.0.71f1').mkdir(parents=True)
+            with mock.patch.object(capture_runner, 'REPO', root), mock.patch.object(probe_paths, 'MACOS_ARM64', True), \
+                    mock.patch.object(capture_runner, 'MACOS_ARM64', True):
+                linux = capture_runner.host_source('p', 'values.jsonl', False)
+                self.assertEqual(linux, root/'tests/projects/p/Reference/unity-6000.0.71f1/values.jsonl')
+                with self.assertRaisesRegex(ValueError, 'no macOS Editor reference'):
+                    capture_runner.host_source('p', 'values.jsonl', True)
+                (root/'tests/projects/p/Reference/unity-6000.0.71f1/metal').mkdir()
+                (root/'tests/projects/p/Reference/unity-6000.0.71f1/metal/values.jsonl').write_text('')
+                self.assertEqual(capture_runner.host_source('p', 'values.jsonl', True).parent.name, 'metal')
 
     def test_the_lightmapper_row_follows_the_host_editor(self):
         # Linux reads ProgressiveCPU (1); the macOS Editor ProgressiveGPU (2), from lightingassets.

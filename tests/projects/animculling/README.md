@@ -136,10 +136,12 @@ On macOS arm64 the same threshold falls on `h/always/35.arm` instead (the humano
 case, AlwaysAnimate), recorded, not chased (AGENTS.md Platforms: arithmetic artefacts are not
 emulated per OS). A macOS run of 2026-11-18 matched 33652/33653 records, every `ph/` record
 included; `h/always/35` alone differs, `arm` true where the Linux reference is false. Its lower-arm
-rotations at frames 34 and 35 differ from the Linux engine's by at most 4e-7 per component, so the frame-35
-consecutive dot is 0.999999 (`1f - 1e-6f` itself, not above it) on macOS and 0.999999166 on Linux
-(Unbound with a debug copy of the probe; the `h/` cases have no pose records, so the Editor's
-dot is unrecorded). `run.py gate`, which admits only the `ph/` keys, fails there on macOS; the
+rotations at frames 34 and 35 differ from the Linux engine's by at most 4.1e-7 per component, so
+the frame-35 consecutive dot is 0.999999 (`1f - 1e-6f` itself, not above it) on macOS and
+0.999999166 on Linux (Unbound with a debug copy of the probe; the `h/` cases have no pose records,
+so the Editor's dot is unrecorded). Which operation rounds differently is not measured: the
+humanoid solve's reciprocal (the processor's estimate refined on x86_64, an exact division
+elsewhere) and the platform's trigonometry are the candidates. `run.py gate`, which admits only the `ph/` keys, fails there on macOS; the
 landing gate runs on Linux.
 
 The combined movement dispatch preserves the attached controller's state movement

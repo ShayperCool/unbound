@@ -69,6 +69,8 @@ def host_decided(document, release, reference, source):
                 raise ValueError(f'{key}: {len(found)} records match {entry["record"]} in {path}')
             value = found[0]
             for part in entry['field']:
+                if not isinstance(value, dict) or part not in value:
+                    raise ValueError(f'{key}: no field {entry["field"]} in {path}')
                 value = value[part]
             return {'status': 'value', 'value': entry['value'].format(value)}
 
