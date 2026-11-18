@@ -91,7 +91,7 @@ public class TransparentCullProbe : MonoBehaviour
         // The vertex byte times the renderer alpha: the product's byte rounds to 1 or to 0.
         foreach (var (b, a) in new[] { (128, 4e-3f), (128, 3e-3f), (1, 0.6f), (1, 0.4f), (2, 0.5f), (255, 1.96e-3f), (255, 1.97e-3f) })
             m_RendererAlphas.Add((SolidImage("vertexRenderer." + b + "." + F(a), m_Root, new Color32(255, 255, 255, (byte)b)).canvasRenderer, a));
-        // Controls without the flag: drawn at any alpha.
+        // The flag off: renderer alpha 0 against 1e-3, and transparent vertices.
         foreach (var a in new[] { 0f, 1e-3f })
         {
             var image = SolidImage("noCull." + F(a), m_Root, Color.white);
