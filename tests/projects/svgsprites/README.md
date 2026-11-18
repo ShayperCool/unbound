@@ -32,7 +32,8 @@ UNBOUND=/path/to/unbound python3 tests/projects/svgsprites/run.py check
 The gate assembles the committed `Authored/` set and runs only the engine. Numbers compare within
 1e-5 relative to max(1, |reference|); a NaN the Editor records matches only a NaN; image and texel
 channels within 2/255. `residuals.json` (on Metal `residuals-metal.json`) lists the only pixels
-allowed to differ beyond that (four pixels at the focus of a radial gradient, by at most 5/255);
+allowed to differ beyond that (at the focus of a radial gradient: on Linux four pixels by at most 5/255, on Metal pixel 11888 by
+at most 3/255);
 they stay printed in every report.
 
 | Source | Contract or observation | Engine decision |
