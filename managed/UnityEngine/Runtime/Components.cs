@@ -376,14 +376,17 @@ namespace Unbound.Runtime
 
             // Renderers that changed canvas lose their depth at once (tests/projects/uidepth).
             Unbound.Runtime.CanvasSystem.ReleaseDepths(t);
-            Messaging.SendToHierarchy(t, "OnTransformParentChanged");
-            if (oldParent != null) Messaging.SendFast(oldParent.m_GameObject, "OnTransformChildrenChanged");
-            if (parent != null) Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
-            t.OnHierarchyChanged();
-
+            // The subtree's activity follows its new parent before the parent messages: OnDisable
+            // comes before OnTransformParentChanged under an inactive parent, in the new scene
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/localphysics reparent.*).
             bool isActive = go.ActiveInHierarchyNoThrow;
             if (wasActive != isActive)
                 Lifecycle.OnHierarchyActiveChanged(go, isActive);
+            // A script there may have destroyed the subtree: its parents still hear of it.
+            if (!t.m_Destroyed) Messaging.SendToHierarchy(t, "OnTransformParentChanged");
+            if (oldParent != null && !oldParent.m_Destroyed) Messaging.SendFast(oldParent.m_GameObject, "OnTransformChildrenChanged");
+            if (parent != null && !parent.m_Destroyed) Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
+            if (!t.m_Destroyed) t.OnHierarchyChanged();
         }
 
         internal static List<Transform> Siblings(Transform t)
