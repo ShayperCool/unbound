@@ -56,8 +56,9 @@ Cases (`<pipeline>.<case>.<quad>.<channel>`; pipelines `builtin`, `universal`, `
   than materials the last submesh is drawn again with each further material, so the probe gives
   each sprite shape one material.
 
-Not measured: a shader reading `unity_SpriteColor` in the built-in pipeline, a URP shader reading
-`_RendererColor` of a sprite shape, colors of a SpriteRenderer drawn through GPU instancing.
+Not measured: a shader declaring `unity_SpriteColor` in the built-in pipeline, a URP shader reading
+`_RendererColor` of a sprite shape, colors of a SpriteRenderer drawn through GPU instancing,
+tilemaps in `TilemapRenderer.Mode.SRPBatch` (drawn as Chunk).
 
 ## Reproduce
 

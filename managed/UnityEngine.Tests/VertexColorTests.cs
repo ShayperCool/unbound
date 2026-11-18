@@ -199,6 +199,8 @@ namespace UnityEngine.Tests
             shape.color = Negative;
             var changed = Assert.Single(Draws(shape, camera));
             Assert.Equal((Color)VertexColors.Bytes(Negative.linear), changed.Properties[Shader.PropertyToID("_RendererColor")]);
+            // A draw collected before the change keeps its color.
+            Assert.Equal((Color)VertexColors.Bytes(Tint.linear), draw.Properties[Shader.PropertyToID("_RendererColor")]);
             // The vertices keep no color channel of the renderer's.
             Assert.Empty(((Mesh)typeof(SpriteShapeRenderer).GetField("m_Mesh", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 .GetValue(shape)).colors32);

@@ -393,10 +393,10 @@ namespace UnityEngine.U2D
             // (tests/projects/vertexcolors spriteshape.*).
             var tint = VertexColors.InColorSpace(m_Color);
             var bytes = VertexColors.Bytes(tint);
+            // A new set when the bytes change: draws already collected keep the color they had.
             if (m_TintProperties == null || !m_TintPropertiesFor.Equals(bytes))
             {
-                m_TintProperties ??= new Dictionary<int, object>(1);
-                m_TintProperties[s_RendererColor] = (Color)bytes;
+                m_TintProperties = new Dictionary<int, object>(1) { [s_RendererColor] = (Color)bytes };
                 m_TintPropertiesFor = bytes;
             }
             float distance = FrameBuilder.Distance(camera, bounds.center);
