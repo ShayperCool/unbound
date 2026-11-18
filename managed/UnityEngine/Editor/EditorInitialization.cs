@@ -38,7 +38,8 @@ namespace UnityEditor
 
         /// <summary>The editor domain loads: the main window, then [InitializeOnLoad] classes,
         /// (entering Play mode) [InitializeOnEnterPlayMode] methods, [InitializeOnLoadMethod]
-        /// methods, (entering Play mode) ExitingEditMode, and [DidReloadScripts] methods.</summary>
+        /// methods, (entering Play mode) ExitingEditMode, [DidReloadScripts] methods, and
+        /// afterAssemblyReload.</summary>
         internal static void LoadEditorDomain(bool enteringPlayMode = false)
         {
             MainView.Open();
@@ -56,10 +57,6 @@ namespace UnityEditor
                 ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
             }
             finally { PlayModeDomainLoading = false; }
-            // Every load of the editor domain ends with afterAssemblyReload, after its load callbacks:
-            // the Editor's start, its Play mode entry, and a session an edit restarted (matches the
-            // Unity 6000.0.71f1 Editor, tests/projects/compileevents start.end and round*.order).
-            UnityEditor.AssemblyReloadEvents.RaiseAfter();
             // The Editor sends it before the domain reloads, in Edit mode.
             if (enteringPlayMode) EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
             try
@@ -68,6 +65,12 @@ namespace UnityEditor
                 DidReloadScriptsMethods();
             }
             finally { PlayModeDomainLoading = false; }
+            // Every load of the editor domain ends with afterAssemblyReload, after its load callbacks,
+            // [DidReloadScripts] included (and so after Play mode entry's ExitingEditMode, which the
+            // Editor sends before the reload): the Editor's start, its Play mode entry, and a session
+            // an edit restarted (matches the Unity 6000.0.71f1 Editor, tests/projects/compileevents
+            // start.load and round*.order).
+            UnityEditor.AssemblyReloadEvents.RaiseAfter();
         }
 
         /// <summary>The editor domain's load callbacks run as Play mode is entered (in the Editor,

@@ -162,10 +162,10 @@ public sealed partial class CompilerService
             var warnings = Path.Combine(dir, key + ".warnings.json");
             result.Dll = dll;
             result.Pdb = pdb;
-            if (File.Exists(dll) && File.Exists(pdb) && File.Exists(refDll) && File.Exists(warnings))
+            if (File.Exists(dll) && File.Exists(pdb) && File.Exists(refDll) && ReadWarnings(warnings) is { } stored)
             {
-                result.WarningList = System.Text.Json.JsonSerializer.Deserialize<List<DiagnosticInfo>>(File.ReadAllBytes(warnings)) ?? new();
-                result.Warnings = result.WarningList.Count;
+                result.WarningList = stored;
+                result.Warnings = stored.Count;
                 var image = File.ReadAllBytes(refDll);
                 state.Interface = MetadataReference.CreateFromImage(image);
                 result.InterfaceHash = Hash(image);
@@ -551,6 +551,14 @@ public sealed partial class CompilerService
         var ordered = spec.Sources.Where(state.Sources.ContainsKey).Select(p => (p, state.Sources[p])).ToList();
         var compilation = state.Compilation ?? UpdateCompilation(state, spec, request, ordered, references);
         return (WithGenerators(state, spec, request, compilation, new List<Diagnostic>()), references);
+    }
+
+    /// <summary>A cached output's warnings, or null when they cannot be read (a cache miss).</summary>
+    static List<DiagnosticInfo>? ReadWarnings(string path)
+    {
+        if (!File.Exists(path)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<DiagnosticInfo>>(File.ReadAllBytes(path)); }
+        catch (Exception e) when (e is System.Text.Json.JsonException || e is IOException) { return null; }
     }
 
     static void WriteAtomically(string path, MemoryStream stream)
