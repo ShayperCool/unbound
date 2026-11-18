@@ -242,6 +242,11 @@ color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its a
 2); then, the environment back to the flat ambient color, `RoomDirectional`:
 `roomdirectional-base`, `roomdirectional-moved` and `roomdirectional-dim` (directional
 lightmaps under the pipeline). That set is its own reference, `Reference/unity-<version>/urp`.
+With both `--pipeline urp --color-space gamma` the pipeline's sequence runs in the gamma-space
+project; its own reference is `Reference/unity-<version>/urp-gamma` (two byte-identical
+captures). It is recorded but not part of gate.json: Unbound's run has one value outside the
+comparator's bounds there, the corner texel (16,41) of `pipeline-directional`
+(docs/REALTIME_GI.md, Open).
 The directional cases of both sets come from two captures each that agree in them; the gamma
 pair's earlier cases differ from each other and from the reference by up to 0.002
 (`room-base`, `room-moved`, `room-sky-only`, `room-sky-only-intensity`, `room-envdata`; no

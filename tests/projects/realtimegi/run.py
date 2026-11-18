@@ -13,6 +13,7 @@
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
     run.py record|publish|gate --pipeline urp # the same project drawn by URP: its own reference set, Reference/unity-<version>/urp
     run.py record|publish|gate --color-space gamma # the same project in the gamma color space: Reference/unity-<version>/gamma
+    run.py record|publish|gate --pipeline urp --color-space gamma # URP's sequence in a gamma-space project: Reference/unity-<version>/urp-gamma
     run.py setup-bake                         # Editor: add the RoomBake and RoomBakeLoaded scenes (no lighting data, bake on load)
     run.py record|publish|gate --bake         # RoomBake opened (baked when it opens), then RoomBakeLoaded loaded: Reference/unity-<version>/bake
 
@@ -59,10 +60,18 @@ BAKE = 'bake'
 
 
 def variant(pipeline=None, color_space=None, bake=False):
-    """The one way a run's project or sequence differs from the committed one, if any."""
-    if sum(bool(v) for v in (pipeline, color_space, bake)) > 1:
-        raise SystemExit('--pipeline, --color-space and --bake together are not recorded')
-    return pipeline or color_space or (BAKE if bake else None)
+    """How a run's project or sequence differs from the committed one, if it does: a pipeline, a
+    color space, both ('urp-gamma': the pipeline's sequence in that color space), or the bake."""
+    if bake and (pipeline or color_space):
+        raise SystemExit('--bake with --pipeline or --color-space is not recorded')
+    return '-'.join(part for part in (pipeline, color_space) if part) or (BAKE if bake else None)
+
+
+def parts(variant):
+    """The pipeline and color space of a variant (None for what it does not change)."""
+    names = variant.split('-') if variant and variant != BAKE else []
+    return (next((name for name in names if name in PIPELINES), None),
+            next((name for name in names if name in COLOR_SPACES), None))
 
 
 def copy_project(target, variant=None):
@@ -71,17 +80,18 @@ def copy_project(target, variant=None):
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/folder, target/folder)
     (target/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
-    if variant in COLOR_SPACES:
+    pipeline, color_space = parts(variant)
+    if color_space:
         settings = target/'ProjectSettings/ProjectSettings.asset'
         text = settings.read_text()
         linear = '  m_ActiveColorSpace: 1\n'
         if text.count(linear) != 1:
             raise SystemExit(f'{settings}: expected one linear m_ActiveColorSpace')
-        settings.write_text(text.replace(linear, f'  m_ActiveColorSpace: {COLOR_SPACES[variant]}\n'))
-    if variant in PIPELINES:
+        settings.write_text(text.replace(linear, f'  m_ActiveColorSpace: {COLOR_SPACES[color_space]}\n'))
+    if pipeline:
         # The same project drawn by the pipeline: its package, its assets (with their GUIDs) and
         # the graphics settings that name them.
-        made = PIPELINES[variant]
+        made = PIPELINES[pipeline]
         manifest = json.loads((target/'Packages/manifest.json').read_text())
         manifest['dependencies'][made['package'][0]] = made['package'][1]
         manifest['dependencies'].update({module: '1.0.0' for module in made['modules']})
