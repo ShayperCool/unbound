@@ -149,13 +149,19 @@ namespace UnityEditor
             /// folder, Library, Library/Unbound or below it, or in a package kept elsewhere.</summary>
             internal bool Refuses(string full)
             {
+                // Spelled into Library/Unbound (through the view's Library link or by the project's
+                // own path): whatever it reaches there, it goes through Unbound's own folder.
+                string inView = Below(full, m_View) ?? Below(full, m_PhysicalView);
+                if (InUnbound(inView) || (inView == null && InUnbound(Below(full, m_Project) ?? Below(full, m_PhysicalProject))))
+                    return true;
                 // Where the entry itself lands: its folder's links followed, not its own.
                 string parent = Path.GetDirectoryName(full);
                 string landing = parent == null ? full : Path.Combine(ConsoleLogPath.Resolve(parent), Path.GetFileName(full));
                 if (Same(landing, m_PhysicalProject) || Same(landing, m_PhysicalLibrary)) return true;
                 // Library/Unbound and what is in it, except the view's own entries (links, handled
                 // above, and what a script wrote in its working directory).
-                if (Below(landing, m_PhysicalUnbound) != null && Below(landing, m_PhysicalView) is not { Length: > 0 }) return true;
+                if (Below(landing, m_PhysicalUnbound) != null && !(inView is { Length: > 0 } && Below(landing, m_PhysicalView) is { Length: > 0 }))
+                    return true;
                 // A folder that holds one of those goes with it.
                 if (Below(m_PhysicalProject, landing) != null) return true;
                 // A package kept elsewhere: what is in it, a folder holding it, and the view's link to it.
@@ -167,6 +173,13 @@ namespace UnityEditor
             }
 
             bool Same(string a, string b) => string.Equals(a, b, m_Case);
+
+            bool InUnbound(string relative)
+            {
+                if (string.IsNullOrEmpty(relative)) return false;
+                string[] parts = relative.Split('/');
+                return parts.Length >= 2 && string.Equals(parts[0], "Library", m_Case) && string.Equals(parts[1], "Unbound", m_Case);
+            }
 
             /// <summary><paramref name="path"/> relative to <paramref name="root"/> ("" for the root
             /// itself), or null outside it.</summary>

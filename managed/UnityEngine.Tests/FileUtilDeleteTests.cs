@@ -174,6 +174,14 @@ namespace UnityEngine.Tests
                 Assert.True(File.Exists(unboundFile));
                 Assert.True(Directory.Exists(view));
                 Assert.Equal(reported + 6 + (ignoresCase ? 3 : 0), Hits());
+                // Into Unbound's folder through the view's own Library link: refused, whatever it reaches.
+                File.WriteAllText(asset, "again");
+                int throughLibrary = Hits();
+                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/ProjectView/Assets/x.txt"));
+                Assert.False(FileUtil.DeleteFileOrDirectory("Library/Unbound/ProjectView/Assets"));
+                Assert.True(File.Exists(asset));
+                Assert.True(Directory.Exists(Path.Combine(view, "Assets")));
+                Assert.Equal(throughLibrary + 2, Hits());
                 // Control: a file a script wrote in its working directory (the view) is its to delete.
                 File.WriteAllText(Path.Combine(view, "written.txt"), "w");
                 Assert.True(FileUtil.DeleteFileOrDirectory("written.txt"));
