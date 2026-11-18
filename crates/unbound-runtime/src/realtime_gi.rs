@@ -144,22 +144,67 @@ fn with_scene<T>(handle: u64, f: impl FnOnce(&mut Scene) -> Result<T>) -> Result
 /// (`directionality.error`: why the scene has none; `copies`: whether a system copies texels).
 pub fn load(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = crate::lighting::serialized_file(db, unity_data, guid)?;
-    let bytes = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
+    let read = if crate::lighting::is_builtin_file(guid) {
+        // The built-in files do not change while the engine runs: the built-in lighting data
+        // scenes without a bake use is read once, not at every scene load.
+        let key = (file, file_id);
+        let known = BUILTIN_PRECOMPUTED
+            .lock()
+            .unwrap()
+            .as_ref()
+            .and_then(|known| known.get(&key).cloned());
+        match known {
+            Some(read) => read,
+            None => {
+                let read = read_precomputed(&key.0, file_id)?;
+                BUILTIN_PRECOMPUTED
+                    .lock()
+                    .unwrap()
+                    .get_or_insert_with(HashMap::new)
+                    .insert(key, read.clone());
+                read
+            }
+        }
+    } else {
+        read_precomputed(&file, file_id)?
+    };
+    match read {
+        Some((data, ranges)) => register(data, &ranges),
+        None => Ok(Json::Null),
+    }
+}
+
+/// The light probe sets' `(hash, first probe, probe count)`, as [`light_probe_ranges`] gives them.
+type ProbeRanges = Vec<([u8; 16], usize, usize)>;
+
+/// What [`read_precomputed`] read from built-in lighting data, by file and object.
+static BUILTIN_PRECOMPUTED: Mutex<
+    Option<
+        HashMap<(std::path::PathBuf, i64), Option<(unbound_gi::data::Precomputed, ProbeRanges)>>,
+    >,
+> = Mutex::new(None);
+
+/// The precomputed realtime GI of lighting data `file_id` in `file`, with its light probes'
+/// probe sets; `None` without any.
+fn read_precomputed(
+    file: &Path,
+    file_id: i64,
+) -> Result<Option<(unbound_gi::data::Precomputed, ProbeRanges)>> {
+    let bytes = std::fs::read(file).with_context(|| format!("reading {}", file.display()))?;
     let serialized = SerializedFile::parse(&bytes)?;
     let object = serialized
         .read(file_id)
         .with_context(|| format!("reading lighting data {file_id} of {}", file.display()))?;
-    let Some(data) = unbound_gi::data::read_precomputed(&object)? else {
-        return Ok(Json::Null);
+    let Some(mut data) = unbound_gi::data::read_precomputed(&object)? else {
+        return Ok(None);
     };
     // Light probes that cannot be placed light nothing; the lightmaps are unaffected.
     let (ranges, error) = match light_probe_ranges(&serialized, &object) {
         Ok(ranges) => (ranges, None),
         Err(e) => (Vec::new(), Some(format!("{e:#}"))),
     };
-    let mut data = data;
     data.probe_errors.extend(error);
-    register(data, &ranges)
+    Ok(Some((data, ranges)))
 }
 
 /// The probe sets of a LightingData's light probes: `(hash, first probe, probe count)` in
@@ -167,7 +212,7 @@ pub fn load(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result
 fn light_probe_ranges(
     serialized: &SerializedFile,
     lighting_data: &unbound_yaml::Value,
-) -> Result<Vec<([u8; 16], usize, usize)>> {
+) -> Result<ProbeRanges> {
     let Some(reference) = lighting_data.get("m_LightProbes") else {
         return Ok(Vec::new());
     };

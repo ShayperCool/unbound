@@ -3,7 +3,9 @@
 //! by their type trees, cached by content.
 use anyhow::{Context, Result};
 use serde_json::{Value as Json, json};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use unbound_assets::{
     AssetCache,
     lighting::{BuiltinLightingImporter, ObjectPtr},
@@ -34,6 +36,22 @@ pub(crate) fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Re
     })
 }
 
+/// Whether `{guid}` names one of the install's built-in resource files. They do not change while
+/// the engine runs, so replies read from them are kept for the session instead of hashing the
+/// file again for the content cache at every scene load.
+pub(crate) fn is_builtin_file(guid: &str) -> bool {
+    [
+        BUILTIN_EXTRA,
+        crate::editor_resources::EDITOR_GUID,
+        crate::editor_resources::DEFAULT_GUID,
+    ]
+    .iter()
+    .any(|builtin| guid.eq_ignore_ascii_case(builtin))
+}
+
+/// [`lighting_data`] replies of built-in files, by file and object.
+static BUILTIN_LIGHTING: Mutex<Option<HashMap<(PathBuf, i64), Json>>> = Mutex::new(None);
+
 fn meta_of(file: &Path) -> PathBuf {
     PathBuf::from(format!("{}.meta", file.display()))
 }
@@ -49,10 +67,32 @@ fn meta_of(file: &Path) -> PathBuf {
 /// has no literal for them; bakes hold them, see [`float`]).
 pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = serialized_file(db, unity_data, guid)?;
+    if !is_builtin_file(guid) {
+        return read_lighting_data(&file, guid, file_id);
+    }
+    let key = (file, file_id);
+    if let Some(reply) = BUILTIN_LIGHTING
+        .lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|replies| replies.get(&key))
+    {
+        return Ok(reply.clone());
+    }
+    let reply = read_lighting_data(&key.0, guid, file_id)?;
+    BUILTIN_LIGHTING
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert(key, reply.clone());
+    Ok(reply)
+}
+
+fn read_lighting_data(file: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
     let importer = BuiltinLightingImporter { path_id: file_id };
     let data = cache
-        .get_or_import(&importer, &file, &meta_of(&file))
+        .get_or_import(&importer, file, &meta_of(file))
         .with_context(|| format!("reading lighting data {file_id} of {}", file.display()))?;
     if let Err(e) = cache.save() {
         tracing::debug!("saving the built-in cache index: {e:#}");
