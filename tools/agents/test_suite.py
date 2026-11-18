@@ -362,14 +362,16 @@ class ImageTests(unittest.TestCase):
         """run_probe on one compare step per (comparator, reference, printed text)."""
         self.runs += 1
         recipe = []
+        # Comparators and references live in the repository's tests/ tree, as in the suite.
+        tests = self.root/'tests/projects'
         for index, (comparator, reference, text) in enumerate(outputs):
-            script = self.root/f'run{self.runs}-{index}'/comparator
+            script = tests/f'run{self.runs}-{index}'/comparator
             script.parent.mkdir(parents=True, exist_ok=True)
             script.write_text(f'print({text!r}, end="")\n')
-            recipe.append(suite.Step('compare', ['{python}', str(script), str(self.root/reference), '{work}/out'],
+            recipe.append(suite.Step('compare', ['{python}', str(script), str(tests/reference), '{work}/out'],
                                      verdict=verdict))
         context = {'work_root': self.root/f'work{self.runs}', 'env': dict(os.environ),
-                   'values': {'python': sys.executable, 'label': 'test'}}
+                   'values': {'python': sys.executable, 'label': 'suite-test'}}
         result = suite.run_probe('p', recipe, context)
         self.assertNotIn('suite error', result['summary'])
         return result
@@ -429,7 +431,10 @@ class ImageTests(unittest.TestCase):
     def test_older_summaries_give_their_stored_measurements(self):
         old = self.probe([('terrain/compare.py', 'terrain/Reference', '214/216 records match\n'),
                           ('particles/compare_images.py', 'Reference/images', self.PARTICLES)])
+        # Written before images were recorded: no measurements and no identities in the records.
         del old['images']
+        for step in old['steps']:
+            step.pop('images', None), step.pop('step', None)
         self.assertEqual(old['summary'], '214/216 records match || worst mean 1.46')
         self.assertEqual(suite.recorded_images(old), {'particles/compare_images.py Reference/images': {
             'worst mean': {'mean': 1.46, 'worst': None, 'over': None}}})
@@ -445,6 +450,90 @@ class ImageTests(unittest.TestCase):
         cut = {'summary': ' || '.join(parts)[:1000], 'steps': steps}
         self.assertTrue(cut['summary'].endswith('worst mean 9.9'))
         self.assertEqual(suite.recorded_images(cut), {})
+
+    def declared(self, profiles):
+        """run_probe on a gate.json recipe of one command per (profile, printed text), each running
+        the same script with its own --profile, as tests/projects/residentdrawer/gate.json does."""
+        self.runs += 1
+        projects = self.root/'tests/projects'
+        script = projects/'p/run.py'
+        script.parent.mkdir(parents=True, exist_ok=True)
+        (projects/'p/outputs.json').write_text(json.dumps(dict(profiles)))
+        script.write_text('import json, pathlib, sys\n'
+                          'profile = sys.argv[sys.argv.index("--profile") + 1] if "--profile" in sys.argv else ""\n'
+                          'print(json.loads((pathlib.Path(__file__).parent/"outputs.json").read_text())[profile], end="")\n')
+        commands = [f'{shlex.quote(sys.executable)} {script} check' + (f' --profile {profile}' if profile else '')
+                    for profile, _ in profiles]
+        (projects/'p/gate.json').write_text(json.dumps({'commands': commands}))
+        recipe = suite.declared('p', '6000.0.71f1', projects)
+        context = {'work_root': self.root/f'work{self.runs}', 'env': dict(os.environ),
+                   'values': {'python': sys.executable, 'label': f'suite-run{self.runs}',
+                              'cli': '/x/unbound', 'managed': '/x/managed'}}
+        return suite.run_probe('p', recipe, context)
+
+    def test_declared_steps_are_matched_by_their_command(self):
+        line = self.URP.format('0.00', 3)
+        old = self.declared([('', line), ('motion', self.URP.format('0.00', 0)), ('controls', line)])
+        self.assertEqual(sorted(old['images']), ['p/run.py check', 'p/run.py check --profile controls',
+                                                 'p/run.py check --profile motion'])
+        # A profile inserted before the others shifts every later step by one position: with
+        # positions, motion's 0 pixels over 8 would be compared with the inserted step's 3.
+        inserted = self.declared([('', line), ('occlusion', line), ('motion', self.URP.format('0.00', 0)),
+                                  ('controls', line)])
+        self.assertEqual(suite.images_worse(old, inserted), [])
+        lines, regressed = suite.compare_runs({'label': 'b', 'probes': {'p': inserted}},
+                                              {'label': 'a', 'probes': {'p': old}})
+        self.assertFalse(regressed, lines)
+        self.assertEqual(lines[-1], 'unmatched p: step p/run.py check --profile occlusion has no baseline')
+        # The shifted step getting worse is still found, under its own command.
+        worse = self.declared([('', line), ('occlusion', line), ('motion', self.URP.format('0.00', 1)),
+                               ('controls', line)])
+        self.assertEqual(suite.images_worse(old, worse),
+                         ['p/run.py check --profile motion: pixels over 8 0 -> 1'])
+        # A removed profile is listed, not judged; the remaining steps are still compared.
+        removed = self.declared([('', line), ('controls', self.URP.format('0.00', 4))])
+        self.assertEqual(suite.images_worse(old, removed),
+                         ['p/run.py check --profile controls: pixels over 8 3 -> 4'])
+        self.assertEqual(suite.images_unmatched(old, removed), (['p/run.py check --profile motion'], []))
+
+    def test_step_identity_is_its_command_without_run_paths(self):
+        label = 'suite-sheriff-20261118-090834'
+        work = f'/home/u/.cache/unbound/validation/suite/{label[6:]}/urp'
+        argv = ['/usr/bin/python3', '/slots/slot-10/tests/projects/urp/compare.py',
+                '/slots/slot-10/tests/projects/urp/Reference/unity-6000.0.71f1/scenarios/lit.png',
+                f'{work}/out/lit.png', '--gate', '/slots/slot-10/tests/projects/urp/image-residuals.json']
+        self.assertEqual(suite.step_id(argv, label),
+                         'urp/compare.py scenarios/lit.png --gate urp/image-residuals.json')
+        # Another checkout, run label and runtime give the same identity.
+        other = [a.replace('/slots/slot-10', '/data/integration').replace(label[6:], 'r2') for a in argv]
+        self.assertEqual(suite.step_id(other, 'suite-r2'), suite.step_id(argv, label))
+        self.assertEqual(suite.step_id(shlex.join(argv), label), suite.step_id(argv, label))
+        # gate.json commands: the shell command unwrapped; a label argument read as {label}.
+        self.assertEqual(suite.step_id(['bash', '-c', 'python3 tests/projects/p/run.py check --label '
+                                        f'{label}-quit --out={work}/x.json --leave'], label),
+                         'p/run.py check --label {label}-quit --out= --leave')
+        self.assertEqual(suite.step_id([f'/runtimes/snapshots/ab12/unbound', 'check']), 'check')
+
+    def test_cut_commands_of_older_records_match_by_prefix(self):
+        reference = '/slots/slot-10/tests/projects/urp/Reference/unity-6000.0.71f1/scenarios/'
+        def step(name, mean, cut):
+            argv = ['/usr/bin/python3', '/slots/slot-10/tests/projects/urp/compare.py', reference + name + '.png',
+                    '/home/u/.cache/unbound/validation/suite/' + 'x' * 260 + '/urp/out/' + name + '.png',
+                    '--gate', '/slots/slot-10/tests/projects/urp/image-residuals.json']
+            command = shlex.join(argv)
+            record = {'kind': 'compare', 'command': command[:suite.COMMAND_LIMIT] if cut else command,
+                      'images': {'': {'mean': mean, 'worst': 3, 'over': 0}}}
+            if not cut:
+                record['step'] = suite.step_id(argv)
+            return record
+        old = {'steps': [step('lit', 0.0, True), step('unlit', 0.5, True)]}
+        self.assertTrue(all(len(s['command']) == suite.COMMAND_LIMIT for s in old['steps']))
+        self.assertEqual([c for _, _, c in suite.step_ids(old['steps'])], [False, False])
+        new = {'steps': [step('extra', 0.4, False), step('lit', 0.01, False), step('unlit', 0.5, False)]}
+        self.assertEqual(suite.images_worse(old, new),
+                         ['urp/compare.py scenarios/lit.png --gate urp/image-residuals.json: mean 0.00 -> 0.01'])
+        self.assertEqual(suite.images_unmatched(old, new),
+                         ([], ['urp/compare.py scenarios/extra.png --gate urp/image-residuals.json']))
 
 class ContinuationTests(unittest.TestCase):
     def probe(self, tail_code=0, tail_text='9 nodes compared, 0 differences'):

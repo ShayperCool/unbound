@@ -75,11 +75,14 @@ comparison keeps recorded residuals pass their comparator the probe's residual l
 (tests/residuals.py: each listed key with its bounds and reason; any other difference fails):
 cameramsaa, flares, indirectspec, lightprobes, lines and terrain. Each run records them (`images` in the
 summary: every printed image mean, worst channel difference and count of pixels over 8, by
-comparator step (its script and first argument) and image); a probe with any status regresses when
-one of them gets worse against the baseline: a higher mean as printed (two decimals), more pixels
-over the comparator's own bound of 8, or a measurement its step ran but no longer printed. There
-is no other tolerance. Summaries written before images were recorded give the
-measurements their stored summary still shows.
+comparator step and image). A step is identified by its command (step_id: the script and its
+arguments, a gate.json command unwrapped, run output paths left out), never by its position, so a
+recipe that gains or loses a step compares every other step with itself. A probe with any status
+regresses when one of them gets worse against the baseline: a higher mean as printed (two
+decimals), more pixels over the comparator's own bound of 8, or a measurement its step ran but no
+longer printed. There is no other tolerance. A baseline step that did not run again and a step
+measured for the first time are listed as `unmatched`, not judged. Summaries written before
+images were recorded give the measurements their stored summary still shows.
 
 Exit codes: 0 when no probe has a new failure against the baseline, no failing probe got worse
 (fewer passing or more failing checks or counted failures, or an earlier failing step) and no image
@@ -918,61 +921,130 @@ def image_measures(text):
     return found
 
 
-def step_id(command):
-    """A compare step's identity across runs and checkouts: its script and first argument, each as
-    their last two path parts ('urp/compare.py scenarios/lit.png')."""
-    tokens = command.split()
-    for index, token in enumerate(tokens[:3]):
-        if token.endswith('.py'):
-            argument = next((t for t in tokens[index+1:] if not t.startswith('-')), '')
-            return ' '.join(part for part in ('/'.join(Path(token).parts[-2:]),
-                                              '/'.join(Path(argument).parts[-2:]) if argument else '') if part)
-    return ' '.join('/'.join(Path(token).parts[-2:]) for token in tokens[:1])
+COMMAND_LIMIT = 400  # characters of a step's command kept in its record
+INTERPRETERS = re.compile(r'(python3?(\.\d+)?|bash|sh|env)$')
 
 
-def step_ids(steps):
-    """(step record, identity) of each compare step that ran, a repeated identity numbered."""
+def step_id(argv, label=None):
+    """A compare step's identity across runs and checkouts, from its command alone (its argv, or
+    the recorded command line): the script and every argument in order, with a `bash -c`/`sh -c`
+    command unwrapped and the interpreter left out. A repository path (a script, a reference, a
+    residual list: under tests/) keeps its last two parts; any other path (the run's outputs,
+    which name the run label, the checkout or a runtime snapshot) is left out, so identities do
+    not change with the run, and inserting or removing a step changes no other step's identity
+    ('urp/compare.py scenarios/lit.png --gate urp/image-residuals.json',
+    'residentdrawer/run.py check --profile motion'). label is the run's {label} value
+    ('suite-<run label>'), which some recipes pass as an argument: it reads '{label}'."""
+    if isinstance(argv, str):
+        try:
+            argv = shlex.split(argv)
+        except ValueError:  # a recorded command cut inside a quoted argument
+            argv = argv.split()
+    tokens = [token.replace(label, '{label}') for token in argv] if label else list(argv)
+    if len(tokens) >= 3 and Path(tokens[0]).name in ('bash', 'sh') and tokens[1] == '-c':
+        return step_id(tokens[2])
+    while len(tokens) > 1 and INTERPRETERS.fullmatch(Path(tokens[0]).name):
+        tokens = tokens[1:]
+    return ' '.join(part for part in (identity_token(token) for token in tokens) if part)
+
+
+def identity_token(token):
+    option, separator, value = token.partition('=') if token.startswith('-') else ('', '', token)
+    if '/' not in value:
+        return token
+    path = value.replace('\\', '/')
+    if not (path.startswith('tests/') or '/tests/' in path):
+        return option + separator if option else ''
+    return option + separator + '/'.join(Path(path).parts[-2:])
+
+
+def step_ids(steps, label=None):
+    """(step record, identity, complete) of each compare step that ran, a repeated identity
+    numbered in order. The identity is the one the step recorded ('step'); records written before
+    that are identified by their recorded command, which may be cut at COMMAND_LIMIT: such a cut
+    command loses its last (partial) argument and its identity is incomplete, a prefix of the
+    full identity. label: the run's {label} value, for those records."""
     seen, out = {}, []
     for step in steps or []:
         if step.get('kind') in ('compare', 'identical'):
-            base = step_id(step.get('command', ''))
+            command = step.get('command', '')
+            complete = 'step' in step or len(command) < COMMAND_LIMIT
+            if 'step' in step:
+                base = step['step']
+            elif complete:
+                base = step_id(command, label)
+            else:
+                try:
+                    tokens = shlex.split(command)
+                except ValueError:
+                    tokens = command.split()
+                base = step_id(tokens[:-1], label)
             seen[base] = seen.get(base, 0) + 1
-            out.append((step, base if seen[base] == 1 else f'{base} #{seen[base]}'))
+            out.append((step, base if seen[base] == 1 else f'{base} #{seen[base]}', complete))
     return out
 
 
-def collect_images(steps):
+def collect_images(steps, label=None):
     """{step identity: {image name: measures}} from the steps' recorded measurements."""
-    return {sid: step['images'] for step, sid in step_ids(steps) if step.get('images')}
+    return {sid: step['images'] for step, sid, _ in step_ids(steps, label) if step.get('images')}
 
 
-def recorded_images(result):
-    """A result's image measurements. Summaries written before they were recorded: read from each
-    compare step's part of the stored summary, leaving out parts the truncation may have cut."""
+def recorded_images(result, label=None):
+    """A result's image measurements by step identity, from each step's own record. Summaries
+    written before steps recorded them: read from each compare step's part of the stored summary,
+    leaving out parts the truncation may have cut."""
+    steps = result.get('steps')
+    if any('images' in step for step in steps or []):
+        return collect_images(steps, label)
     if 'images' in result:
-        return result['images']
+        return result['images'] if not steps else {}
     summary = result.get('summary') or ''
     parts = summary.split(' || ')
     if len(summary) >= 1000:
         parts = parts[:-1]
     images = {}
-    for (step, sid), part in zip(step_ids(result.get('steps')), parts):
+    for (step, sid, _), part in zip(step_ids(steps, label), parts):
         measures = image_measures(part) if len(part) < 300 else {}
         if measures:
             images[sid] = measures
     return images
 
 
-def images_worse(old, new):
-    """What got worse in the baseline's image measurements, for each compare step that ran again:
-    a higher printed mean, more pixels over the comparator's own bound of 8, or a measurement the
-    step no longer prints. No tolerance: the numbers as printed."""
-    before, after = recorded_images(old), recorded_images(new)
-    ran = {sid for _, sid in step_ids(new.get('steps'))}
+def matched_steps(old, new, labels=(None, None)):
+    """{baseline step identity: this run's step identity} for the compare steps of both runs, by
+    their commands, not their positions. An incomplete baseline identity (a cut command) matches
+    the first unmatched step of this run whose identity extends it. A result without step records
+    is identified by its recorded measurements. labels: each run's {label} value (run_label)."""
+    after = [sid for _, sid, _ in step_ids(new.get('steps'), labels[1])] or list(recorded_images(new, labels[1]))
+    before = ([(sid, complete) for _, sid, complete in step_ids(old.get('steps'), labels[0])]
+              or [(sid, True) for sid in recorded_images(old, labels[0])])
+    matched, pending = {}, []
+    for sid, complete in before:
+        if sid in after:
+            matched[sid] = sid
+        elif not complete:
+            pending.append(sid)
+    used = set(matched.values())
+    for sid in pending:
+        base = sid.partition(' #')[0]
+        candidates = [other for other in after if other not in used
+                      and (other == base or other.startswith(base + ' '))]
+        if candidates:
+            matched[sid] = candidates[0]
+            used.add(candidates[0])
+    return matched
+
+
+def images_worse(old, new, labels=(None, None)):
+    """What got worse in the baseline's image measurements, for each compare step that ran again
+    (matched_steps): a higher printed mean, more pixels over the comparator's own bound of 8, or a
+    measurement the step no longer prints. No tolerance: the numbers as printed."""
+    before, after = recorded_images(old, labels[0]), recorded_images(new, labels[1])
+    matched = matched_steps(old, new, labels)
     changes = []
-    for sid in sorted(set(before) & ran):
+    for sid in sorted(set(before) & set(matched)):
         for name, a in sorted(before[sid].items()):
-            b, label = after.get(sid, {}).get(name), f'{sid} {name}'.rstrip()
+            b, label = after.get(matched[sid], {}).get(name), f'{matched[sid]} {name}'.rstrip()
             if b is None:
                 changes.append(f'{label}: no longer measured (mean was {a["mean"]:.2f})')
             elif b['mean'] > a['mean']:
@@ -980,6 +1052,17 @@ def images_worse(old, new):
             elif a.get('over') is not None and b.get('over') is not None and b['over'] > a['over']:
                 changes.append(f'{label}: pixels over 8 {a["over"]} -> {b["over"]}')
     return changes
+
+
+def images_unmatched(old, new, labels=(None, None)):
+    """Image measurements on only one side: the baseline's steps that did not run again (an
+    earlier failure, a removed or changed command) and this run's steps the baseline did not
+    measure. Listed, not judged: images_worse judges the steps of both runs."""
+    before, after = recorded_images(old, labels[0]), recorded_images(new, labels[1])
+    matched = matched_steps(old, new, labels)
+    gone = sorted(sid for sid in before if sid not in matched)
+    added = sorted(sid for sid in after if sid not in set(matched.values()))
+    return gone, added
 
 
 def matched_summary(text, pattern):
@@ -1190,8 +1273,11 @@ def run_probe(name, recipe, context):
         step_summaries, step_verdicts = [], []
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
+        argv = step_argv(step, values)
         record = {'kind': step.kind, 'exit': code, 'log': str(log),
-                  'command': shlex.join(step_argv(step, values))[:400]}
+                  'command': shlex.join(argv)[:COMMAND_LIMIT]}
+        if step.kind in ('compare', 'identical'):
+            record['step'] = step_id(argv, values['label'])
         steps.append(record)
         if code == EDITOR_EXIT and EDITOR_MARK in text:
             status, stopped = 'fail', stopped or index
@@ -1382,6 +1468,11 @@ def worse(old, new, accepted=()):
     return None
 
 
+def run_label(summary):
+    """The {label} value of a summary's run, which its recipes received ('suite-<label>')."""
+    return 'suite-' + summary['label'] if summary.get('label') else None
+
+
 def compare_runs(current, previous, accepted=None):
     """Lines describing what changed since the previous summary; and whether a failure is new or
     an earlier failure got worse. `accepted` is accepted_counts() of the probes: a rise that the
@@ -1422,11 +1513,19 @@ def compare_runs(current, previous, accepted=None):
             if entry not in applying:
                 lines.append(f'stale     {name}: the {ACCEPTED_FILE} entry against {entry["against"]} does not '
                              f'apply to this baseline ({previous.get("label")}); withdraw it')
-        images = images_worse(old, result) if old is not None else []
+        labels = (run_label(previous), run_label(current))
+        images = images_worse(old, result, labels) if old is not None else []
         if images:
             lines.append(f'images    {name}: ' + '; '.join(images[:8])
                          + (f'; and {len(images) - 8} more' if len(images) > 8 else ''))
             regressed = True
+        gone, added = images_unmatched(old, result, labels) if old is not None else ([], [])
+        if gone or added:
+            # Not judged: a baseline step that did not run again (its failure is listed above) or
+            # whose command changed, and a step that measures images for the first time.
+            lines.append(f'unmatched {name}: ' + '; '.join(
+                [f'baseline step {sid} did not run' for sid in gone]
+                + [f'step {sid} has no baseline' for sid in added]))
     for name in sorted(set(before) - set(current['probes'])):
         lines.append(f'gone      {name} (was {before[name]["status"]})')
     return lines, regressed
@@ -1517,7 +1616,7 @@ def main():
     env.setdefault('DISPLAY', ':0')
     context = {'work_root': work_root, 'env': env,
                'values': {'cli': str(cli), 'managed': str(managed), 'runtime': str(runtime), 'repo': str(REPO),
-                          'projects': str(PROJECTS), 'label': 'suite-'+label,
+                          'projects': str(PROJECTS), 'label': run_label({'label': label}),
                           'python': python_with_pil()}}
 
     for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
