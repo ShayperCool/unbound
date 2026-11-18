@@ -86,10 +86,10 @@ namespace UnityEngine
         int m_WaveFrame = -1;
         /// <summary>The detail shaders' constants, the draws' own values: one set for each time the
         /// details are collected in a frame (a camera rendering twice in a frame from two places
-        /// needs two), reused from frame to frame with their values boxed again only when they change.</summary>
+        /// needs two), reused from frame to frame: each holds its vectors in boxes of its own, written
+        /// in place (the command stream reads a draw's values as the draw is written, within the
+        /// frame, and every collection in a frame has its own set).</summary>
         readonly List<Dictionary<int, object>> m_DetailValues = new List<Dictionary<int, object>>();
-        readonly List<BoxedVectors> m_DetailBoxes = new List<BoxedVectors>();
-        const int DetailValueCount = 5;
         int m_DetailValuesUsed, m_DetailValuesFrame = -1;
 
         void CollectDetails(Terrain terrain, TerrainData data, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
@@ -124,7 +124,7 @@ namespace UnityEngine
 
         /// <summary>The detail shaders' constants for one collection of the details in this frame
         /// (the waving phase, the detail distance squared, the camera's place and axes, the tint):
-        /// the frame's next set, its values boxed again only when they change.</summary>
+        /// the frame's next set, its values written into its own boxes.</summary>
         internal Dictionary<int, object> DetailValues(int frame, TerrainData data, Vector3 origin, FrameBuilder.CameraContext camera, float phase, float squared)
         {
             var cam = camera.Camera;
@@ -137,22 +137,27 @@ namespace UnityEngine
             }
             if (m_DetailValuesUsed == m_DetailValues.Count)
             {
-                m_DetailValues.Add(new Dictionary<int, object>());
-                m_DetailBoxes.Add(new BoxedVectors(DetailValueCount));
+                var added = new Dictionary<int, object>();
+                foreach (int id in s_DetailValueIds) added[id] = Vector4.zero;
+                m_DetailValues.Add(added);
             }
-            var boxes = m_DetailBoxes[m_DetailValuesUsed];
             var values = m_DetailValues[m_DetailValuesUsed++];
             // (phase, wavingGrassSpeed × 0.4, wavingGrassAmount × 6, the detail distance squared)
             // (matches the Unity 6000.0.71f1 Editor, tests/projects/grass `Waving`).
-            values[s_WaveAndDistanceId] = boxes.Box(0, new Vector4(phase, data.wavingGrassSpeed * WaveSizeScale, data.wavingGrassAmount * WaveAmountScale, squared));
+            Write(values, s_WaveAndDistanceId, new Vector4(phase, data.wavingGrassSpeed * WaveSizeScale, data.wavingGrassAmount * WaveAmountScale, squared));
             var relative = camera.Position - origin;
-            values[s_CameraPositionId] = boxes.Box(1, new Vector4(relative.x, relative.y, relative.z, 1f / squared));
-            values[s_CameraRightId] = boxes.Box(2, right);
-            values[s_CameraUpId] = boxes.Box(3, up);
+            Write(values, s_CameraPositionId, new Vector4(relative.x, relative.y, relative.z, 1f / squared));
+            Write(values, s_CameraRightId, right);
+            Write(values, s_CameraUpId, up);
             // The tint is a colour: linear in a linear-space project.
-            values[s_WavingTintId] = boxes.Box(4, QualitySettings.activeColorSpace == ColorSpace.Linear ? data.wavingGrassTint.linear : data.wavingGrassTint);
+            Write(values, s_WavingTintId, QualitySettings.activeColorSpace == ColorSpace.Linear ? data.wavingGrassTint.linear : data.wavingGrassTint);
             return values;
         }
+
+        static readonly int[] s_DetailValueIds = { s_WaveAndDistanceId, s_CameraPositionId, s_CameraRightId, s_CameraUpId, s_WavingTintId };
+
+        static void Write(Dictionary<int, object> values, int id, Vector4 value) =>
+            System.Runtime.CompilerServices.Unsafe.Unbox<Vector4>(values[id]) = value;
 
         const float WavePhaseRate = 0.05f, WaveSizeScale = 0.4f, WaveAmountScale = 6f;
 

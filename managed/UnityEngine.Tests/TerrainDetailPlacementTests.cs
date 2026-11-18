@@ -532,9 +532,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The detail shaders' constants are reused from frame to frame: a frame whose
-        /// values are those of the frame before allocates nothing, a changed value is boxed anew
-        /// (the box given to the frame before keeps its value), and a second collection in one
-        /// frame gets a set of its own.</summary>
+        /// phase and camera have moved allocates nothing and its draws read the new values, and a
+        /// second collection in one frame gets a set of its own, the first keeping its values.</summary>
         [Fact]
         public void DetailConstantsAllocateNothingFromFrameToFrame()
         {
@@ -548,23 +547,19 @@ namespace UnityEngine.Tests
             int wave = Shader.PropertyToID("_WaveAndDistance"), position = Shader.PropertyToID("_CameraPosition");
             var camera = new Unbound.Runtime.FrameBuilder.CameraContext { Position = new Vector3(1f, 2f, 3f) };
             var first = renderer.DetailValues(1, data, Vector3.zero, camera, 0.25f, 100f);
-            var firstWave = first[wave];
-            var again = renderer.DetailValues(2, data, Vector3.zero, camera, 0.25f, 100f);
-            Assert.Same(first, again);
+            Assert.Same(first, renderer.DetailValues(2, data, Vector3.zero, camera, 0.3f, 100f));
+            camera.Position = new Vector3(4f, 5f, 6f);
             long before = System.GC.GetAllocatedBytesForCurrentThread();
-            renderer.DetailValues(3, data, Vector3.zero, camera, 0.25f, 100f);
+            var moved = renderer.DetailValues(3, data, new Vector3(1f, 1f, 1f), camera, 0.5f, 400f);
             Assert.Equal(0, System.GC.GetAllocatedBytesForCurrentThread() - before);
-            Assert.Same(firstWave, again[wave]);
+            Assert.Same(first, moved);
+            Assert.Equal(new Vector4(0.5f, data.wavingGrassSpeed * 0.4f, data.wavingGrassAmount * 6f, 400f), (Vector4)moved[wave]);
+            Assert.Equal(new Vector4(3f, 4f, 5f, 1f / 400f), (Vector4)moved[position]);
 
-            var moved = renderer.DetailValues(4, data, Vector3.zero, camera, 0.5f, 100f);
-            Assert.Equal(new Vector4(0.5f, data.wavingGrassSpeed * 0.4f, data.wavingGrassAmount * 6f, 100f), (Vector4)moved[wave]);
-            Assert.Equal(new Vector4(0.25f, data.wavingGrassSpeed * 0.4f, data.wavingGrassAmount * 6f, 100f), (Vector4)firstWave);
-            Assert.Equal(new Vector4(1f, 2f, 3f, 0.01f), (Vector4)moved[position]);
-
-            var second = renderer.DetailValues(4, data, Vector3.zero, new Unbound.Runtime.FrameBuilder.CameraContext { Position = Vector3.one }, 0.5f, 100f);
+            var second = renderer.DetailValues(3, data, Vector3.zero, new Unbound.Runtime.FrameBuilder.CameraContext { Position = Vector3.one }, 0.5f, 400f);
             Assert.NotSame(moved, second);
-            Assert.Equal(new Vector4(1f, 2f, 3f, 0.01f), (Vector4)moved[position]);
-            Assert.Equal(new Vector4(1f, 1f, 1f, 0.01f), (Vector4)second[position]);
+            Assert.Equal(new Vector4(3f, 4f, 5f, 1f / 400f), (Vector4)moved[position]);
+            Assert.Equal(new Vector4(1f, 1f, 1f, 1f / 400f), (Vector4)second[position]);
         }
 
         /// <summary>Meshes in the Grass render mode drawn without instancing are part of the grass
