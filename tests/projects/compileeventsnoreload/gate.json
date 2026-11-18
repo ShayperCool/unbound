@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/compileeventsnoreload/run.py gate"
+  ],
+  "summary": "compileeventsnoreload: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/CompilationPipeline.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/Unbound.Host/HotReload.cs",
+    "managed/Unbound.Compiler/CompilerService.cs",
+    "managed/Unbound.Compiler/Protocol.cs",
+    "crates/unbound/src/commands.rs",
+    "crates/unbound-runtime/src/game.rs",
+    "crates/unbound-runtime/src/watch.rs"
+  ]
+}
