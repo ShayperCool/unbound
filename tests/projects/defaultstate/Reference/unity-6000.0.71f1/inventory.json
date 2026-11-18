@@ -1021,6 +1021,36 @@
       "type": "UnityEditor.AssetImporters.ScriptedImporterAttribute"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporters.SourceTextureInformation"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporters.SpriteImportData"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporters.TextureGenerationOutput"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AssetImporters.TextureGenerationSettings"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.AssetImporters.TextureGenerator"
+    },
+    {
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -1883,6 +1913,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.TextureImporter"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.TextureImporterPlatformSettings"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.TextureImporterSettings"
     },
     {
       "category": "scriptable",
