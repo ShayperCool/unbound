@@ -1110,7 +1110,6 @@ impl UnityRenderer {
     /// skipped.
     fn external_indices(
         &mut self,
-        draw: &commands::Draw,
         (handle, size, first, count): (u64, u8, u32, u32),
         shape: DrawShape,
         planned: &[Planned],
@@ -1119,13 +1118,6 @@ impl UnityRenderer {
             .buffers
             .get(&handle)
             .map(|b| (b.buffer.clone(), b.size));
-        // The topology the indices are read as: a `DrawShape`'s (a list one), else the submesh's.
-        let strip = shape.topology.is_none()
-            && self
-                .meshes
-                .get(&draw.mesh)
-                .and_then(|m| m.submeshes.get(draw.submesh.max(0) as usize))
-                .is_some_and(|s| s.topology == resources::Topology::LineStrip);
         let draws: Vec<DrawInputs> = planned
             .iter()
             .filter_map(|p| match p {
@@ -1141,13 +1133,9 @@ impl UnityRenderer {
         let source = buffer
             .as_ref()
             .map(|(b, size)| (*size, b.usage().contains(wgpu::BufferUsages::INDEX)));
-        if let Some(why) = external_index_refusal(
-            source,
-            (size, first, count),
-            shape.base_vertex,
-            strip,
-            &draws,
-        ) {
+        if let Some(why) =
+            external_index_refusal(source, (size, first, count), shape.base_vertex, &draws)
+        {
             self.warn_once(format!("indices{handle}:{why}"), || {
                 format!(
                     "a draw's {}-bit indices from buffer {handle}: {why}; skipped",
@@ -3618,6 +3606,7 @@ impl UnityRenderer {
                         topology: shape_topology(topology),
                         base_vertex,
                         count,
+                        index16: false,
                     });
                 }
                 Command::Camera {
@@ -3854,7 +3843,10 @@ impl UnityRenderer {
                     let dots = self.state.dots.take();
                     // Taken first: a draw's indices and shape never pass to a later draw.
                     let indices = self.state.draw_indices.take();
-                    let shape = self.state.draw_shape.take().unwrap_or_default();
+                    let shape = DrawShape {
+                        index16: indices.is_some_and(|i| i.1 != commands::DRAW_INDEX32_SIZE),
+                        ..self.state.draw_shape.take().unwrap_or_default()
+                    };
                     let Some(target) = self.state.target.clone() else {
                         if self.target_handles.0 != commands::NO_TEXTURE {
                             self.warn_once("draw-no-target".into(), || {
@@ -3955,12 +3947,9 @@ impl UnityRenderer {
                         }
                     }
                     if let Some((handle, size, first, count)) = indices {
-                        let Some(index) = self.external_indices(
-                            &draw,
-                            (handle, size, first, count),
-                            shape,
-                            &planned,
-                        ) else {
+                        let Some(index) =
+                            self.external_indices((handle, size, first, count), shape, &planned)
+                        else {
                             continue;
                         };
                         for p in &mut planned {
@@ -4717,6 +4706,7 @@ impl UnityRenderer {
             let key = PipelineKey {
                 state,
                 topology: sub.topology,
+                strip_index: strip_index(sub.topology, shape.index16),
                 format: target.format,
                 depth: target.depth_format,
                 samples: target.samples,
@@ -6393,14 +6383,30 @@ struct DrawShape {
     base_vertex: i32,
     /// At most this many of the submesh's indices (0: all).
     count: u32,
+    /// The indices are a buffer's 16-bit ones (`DrawIndices`), not the mesh's 32-bit ones.
+    index16: bool,
+}
+
+/// The index format a draw of `topology` names in its pipeline: a strip's (16-bit for a buffer's
+/// 16-bit indices, else 32-bit, as a mesh's are), none for a list.
+pub(crate) fn strip_index(
+    topology: resources::Topology,
+    index16: bool,
+) -> Option<wgpu::IndexFormat> {
+    (topology == resources::Topology::LineStrip).then_some(if index16 {
+        wgpu::IndexFormat::Uint16
+    } else {
+        wgpu::IndexFormat::Uint32
+    })
 }
 
 /// The topology a `DrawShape` reads a draw's indices as (none: its submesh's own; the decoder
-/// admits only the list topologies and that).
+/// admits only these and that).
 fn shape_topology(topology: u8) -> Option<resources::Topology> {
     match topology {
         commands::DRAW_SHAPE_TRIANGLES => Some(resources::Topology::Triangles),
         commands::DRAW_SHAPE_LINES => Some(resources::Topology::Lines),
+        commands::DRAW_SHAPE_LINE_STRIP => Some(resources::Topology::LineStrip),
         commands::DRAW_SHAPE_POINTS => Some(resources::Topology::Points),
         _ => None,
     }
@@ -6412,8 +6418,8 @@ const INDEXED_VERTICES: u64 = 1 << 16;
 
 /// Why draws cannot read `count` indices of `size` bytes from index `first` of a buffer (its size
 /// in bytes and whether it can be read as indices; none: it does not exist), if they cannot. They
-/// can when the buffer holds the range, the topology is a list one (the pipelines set no strip
-/// index format, which an indexed strip draw needs), and each draw either reads no vertex inputs
+/// can when the buffer holds the range (a strip's pipeline names its index format, so any
+/// topology a draw reads indices as is drawn), and each draw either reads no vertex inputs
 /// (its pipeline binds no vertex buffer: "a draw call on the GPU, without a vertex buffer", the
 /// indexed DrawProcedural 6000.0, so any index, base vertex or indirect count is safe) or is a
 /// direct draw of 16-bit indices whose every vertex buffer holds a vertex for each of the 2^16
@@ -6423,7 +6429,6 @@ fn external_index_refusal(
     buffer: Option<(u64, bool)>,
     (size, first, count): (u8, u32, u32),
     base_vertex: i32,
-    strip: bool,
     draws: &[DrawInputs],
 ) -> Option<&'static str> {
     let Some((bytes, index_usage)) = buffer else {
@@ -6434,9 +6439,6 @@ fn external_index_refusal(
     }
     if (u64::from(first) + u64::from(count)) * u64::from(size) > bytes {
         return Some("the indices pass the end of the buffer");
-    }
-    if strip {
-        return Some("strip topologies are not drawn from a buffer's indices");
     }
     let vertex = size_of::<resources::Vertex>() as u64;
     let extra = size_of::<resources::ExtraVertex>() as u64;
@@ -6717,27 +6719,21 @@ mod tests {
         let index = Some((12, true));
         assert_eq!(INDEXED_VERTICES, u64::from(u16::MAX) + 1);
         assert_eq!(
-            external_index_refusal(index, (2, 0, 6), 0, false, &[stand_in(false)]),
+            external_index_refusal(index, (2, 0, 6), 0, &[stand_in(false)]),
             None
         );
         assert_eq!(
-            external_index_refusal(index, (2, 3, 3), 0, false, &[stand_in(true)]),
+            external_index_refusal(index, (2, 3, 3), 0, &[stand_in(true)]),
             None
         );
         assert_eq!(
-            external_index_refusal(
-                index,
-                (2, 0, 6),
-                0,
-                false,
-                &[stand_in(false), stand_in(true)]
-            ),
+            external_index_refusal(index, (2, 0, 6), 0, &[stand_in(false), stand_in(true)]),
             None
         );
     }
 
-    /// Anything else is refused: a vertex short in either buffer, an indirect draw, a strip, a
-    /// missing buffer or one without index usage, a range past its end.
+    /// Anything else is refused: a vertex short in either buffer, an indirect draw, a missing
+    /// buffer or one without index usage, a range past its end.
     #[test]
     fn uncovered_or_unsafe_index_draws_are_refused() {
         let index = Some((12, true));
@@ -6754,16 +6750,34 @@ mod tests {
             vec![short_extra],
             vec![stand_in(false), indirect],
         ] {
-            assert!(external_index_refusal(index, (2, 0, 6), 0, false, &draws).is_some());
+            assert!(external_index_refusal(index, (2, 0, 6), 0, &draws).is_some());
         }
         let covered = [stand_in(false)];
-        assert!(external_index_refusal(index, (2, 0, 6), 0, true, &covered).is_some());
-        assert!(external_index_refusal(None, (2, 0, 6), 0, false, &covered).is_some());
-        assert!(external_index_refusal(Some((12, false)), (2, 0, 6), 0, false, &covered).is_some());
-        assert!(external_index_refusal(index, (2, 4, 3), 0, false, &covered).is_some());
-        assert!(external_index_refusal(index, (2, 0, 7), 0, false, &covered).is_some());
+        assert!(external_index_refusal(None, (2, 0, 6), 0, &covered).is_some());
+        assert!(external_index_refusal(Some((12, false)), (2, 0, 6), 0, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 4, 3), 0, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 0, 7), 0, &covered).is_some());
         // A base vertex can move a 16-bit index past the stand-in's vertices.
-        assert!(external_index_refusal(index, (2, 0, 6), 1, false, &covered).is_some());
+        assert!(external_index_refusal(index, (2, 0, 6), 1, &covered).is_some());
+    }
+
+    /// A strip's pipeline names the index format of what it reads: a buffer's 16-bit indices, or
+    /// 32-bit ones (a mesh's, or a buffer's); lists name none.
+    #[test]
+    fn strip_pipelines_name_the_index_format_they_read() {
+        use resources::Topology;
+        assert_eq!(
+            strip_index(Topology::LineStrip, true),
+            Some(wgpu::IndexFormat::Uint16)
+        );
+        assert_eq!(
+            strip_index(Topology::LineStrip, false),
+            Some(wgpu::IndexFormat::Uint32)
+        );
+        for list in [Topology::Triangles, Topology::Lines, Topology::Points] {
+            assert_eq!(strip_index(list, true), None);
+            assert_eq!(strip_index(list, false), None);
+        }
     }
 
     /// A draw whose program reads no vertex inputs binds no vertex buffer: it reads 32-bit
@@ -6781,7 +6795,7 @@ mod tests {
             for size in [2, 4] {
                 for base_vertex in [0, 4, -2] {
                     assert_eq!(
-                        external_index_refusal(index, (size, 0, 6), base_vertex, false, &draws),
+                        external_index_refusal(index, (size, 0, 6), base_vertex, &draws),
                         None
                     );
                 }
@@ -6789,8 +6803,7 @@ mod tests {
         }
         let mut procedural = stand_in(false);
         procedural.vertex_inputs = false;
-        assert!(external_index_refusal(index, (4, 1, 6), 0, false, &[procedural]).is_some());
-        assert!(external_index_refusal(index, (4, 0, 6), 0, true, &[stand_in(false)]).is_some());
-        assert!(external_index_refusal(index, (4, 0, 6), 0, false, &[stand_in(false)]).is_some());
+        assert!(external_index_refusal(index, (4, 1, 6), 0, &[procedural]).is_some());
+        assert!(external_index_refusal(index, (4, 0, 6), 0, &[stand_in(false)]).is_some());
     }
 }

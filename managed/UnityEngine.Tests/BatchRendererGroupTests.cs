@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -1285,11 +1286,18 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>An indirect command reads its mesh's indices as its topology, whatever the
-        /// submesh's (tests/projects/brg procedural: the cube's triangles as lines and points); a
-        /// line strip or quads are warned about and not drawn (unmeasured).</summary>
-        [Fact]
-        public void IndirectCommandsReadTheirMeshAsTheirTopology()
+        /// submesh's (tests/projects/brg procedural and procedural_topologies: the cube's
+        /// triangles as lines, points and a line strip); quads as the device draws them (points on
+        /// OpenGL Core, a triangle list on Vulkan); on Metal, unmeasured, they are warned about and
+        /// not drawn.</summary>
+        [Theory]
+        [InlineData("OpenGLCore", (int)MeshTopology.Points)]
+        [InlineData("Vulkan", (int)MeshTopology.Triangles)]
+        [InlineData("Metal", -1)]
+        public void IndirectCommandsReadTheirMeshAsTheirTopology(string device, int quads)
         {
+            var previousDevice = GraphicsDeviceProfile.Current;
+            GraphicsDeviceProfile.Select(device);
             uint warned = BatchCulling.s_Warned;
             BatchCulling.s_Warned = 0;
             var visible = new GraphicsBuffer(GraphicsBuffer.Target.Raw, 4, 4);
@@ -1317,20 +1325,23 @@ namespace UnityEngine.Tests
             try
             {
                 var items = Collect(Cull(), s_All);
-                Assert.Equal(2, items.Count);
-                Assert.Single(logged, m => m.Contains("line strip or quads"));
-                GfxStream.Flush();
-                BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
-                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Lines, 0, 0u)));
-                GfxStream.Flush();
-                BatchCulling.Draw(items[1], items[1].Dots.Value, 1, 0, null);
-                Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)MeshTopology.Points, 0, 0u)));
+                Assert.Equal(quads < 0 ? 3 : 4, items.Count);
+                Assert.Equal(quads < 0 ? 1 : 0, logged.Count(m => m.Contains("read as quads")));
+                var read = new List<int> { (int)MeshTopology.Lines, (int)MeshTopology.Points, (int)MeshTopology.LineStrip };
+                if (quads >= 0) read.Add(quads);
+                for (int i = 0; i < items.Count; i++)
+                {
+                    GfxStream.Flush();
+                    BatchCulling.Draw(items[i], items[i].Dots.Value, 1, 0, null);
+                    Assert.True(Holds(GfxStream.Recorded, Bytes(DrawShapeOp, (byte)read[i], 0, 0u)), $"item {i}");
+                }
                 GfxStream.Flush();
             }
             finally
             {
                 Debug.unityLogger.logHandler = previous;
                 BatchCulling.s_Warned = warned;
+                GraphicsDeviceProfile.Select(previousDevice.Type.ToString());
             }
         }
     }

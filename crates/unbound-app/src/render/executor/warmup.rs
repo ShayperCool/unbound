@@ -123,6 +123,7 @@ impl UnityRenderer {
                                     PipelineKey {
                                         state,
                                         topology,
+                                        strip_index: strip_index(topology, false),
                                         format: target.format,
                                         depth: target.depth_format,
                                         samples: target.samples,

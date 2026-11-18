@@ -218,10 +218,11 @@ pub const DOTS_FLAG_FLIP_WINDING: u32 = 1;
 
 /// [`Command::DrawShape`]'s topology: the drawn submesh's own.
 pub const DRAW_SHAPE_MESH_TOPOLOGY: u8 = 0xFF;
-/// [`Command::DrawShape`]'s topologies (`MeshTopology` values): the list topologies a mesh's
-/// indices can be read as.
+/// [`Command::DrawShape`]'s topologies (`MeshTopology` values): the topologies a mesh's indices
+/// can be read as (quads are not among them: no device draws them).
 pub const DRAW_SHAPE_TRIANGLES: u8 = 0;
 pub const DRAW_SHAPE_LINES: u8 = 3;
+pub const DRAW_SHAPE_LINE_STRIP: u8 = 4;
 pub const DRAW_SHAPE_POINTS: u8 = 5;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -294,7 +295,8 @@ pub enum Command {
         count: u32,
     },
     /// How the next `Draw` reads its indices (NativeApi 85): as `topology` (a `MeshTopology`
-    /// value, [`DRAW_SHAPE_TRIANGLES`], [`DRAW_SHAPE_LINES`] or [`DRAW_SHAPE_POINTS`];
+    /// value, [`DRAW_SHAPE_TRIANGLES`], [`DRAW_SHAPE_LINES`], [`DRAW_SHAPE_LINE_STRIP`] or
+    /// [`DRAW_SHAPE_POINTS`];
     /// [`DRAW_SHAPE_MESH_TOPOLOGY`]: its submesh's own), with `base_vertex` added to the indices a
     /// `DrawIndices` gives it (else 0), and at most the first `count` of its submesh's indices (0:
     /// all of them). BatchRendererGroup's indirect commands of a mesh read as lines or points,
@@ -753,6 +755,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     topology,
                     DRAW_SHAPE_TRIANGLES
                         | DRAW_SHAPE_LINES
+                        | DRAW_SHAPE_LINE_STRIP
                         | DRAW_SHAPE_POINTS
                         | DRAW_SHAPE_MESH_TOPOLOGY
                 ) {
@@ -2004,9 +2007,11 @@ mod tests {
             bytes.extend_from_slice(&9u32.to_le_bytes());
             bytes
         };
-        for topology in [1u8, 2, 4, 6, 0xFE] {
+        for topology in [1u8, 2, 6, 0xFE] {
             assert!(parse(&shape(topology)).is_err(), "topology {topology}");
         }
+        // A line strip is read from a mesh's or a buffer's indices too.
+        assert!(parse(&shape(DRAW_SHAPE_LINE_STRIP)).is_ok());
         let good = shape(DRAW_SHAPE_POINTS);
         assert_eq!(
             parse(&good).unwrap(),

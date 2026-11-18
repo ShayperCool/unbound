@@ -53,9 +53,9 @@ namespace Unbound.Runtime
         internal static Mesh StandIn(MeshTopology topology) => ProceduralMeshes.Get(topology, StandInVertices);
 
         /// <summary>Whether Unbound draws <paramref name="indexBuffer"/>'s indices as
-        /// <paramref name="topology"/>: indices of 2 or 4 bytes, as triangles, lines or points
-        /// (the pipelines set no strip index format; quads are not drawn). Others are counted and
-        /// warned once under <paramref name="method"/>.</summary>
+        /// <paramref name="topology"/>: indices of 2 or 4 bytes, as triangles, lines, a line strip
+        /// or points (quads are not drawn). Others are counted and warned once under
+        /// <paramref name="method"/>.</summary>
         internal static bool Supported(GraphicsBuffer indexBuffer, MeshTopology topology, string method) => Supported(indexBuffer.stride, topology, method);
 
         /// <summary><see cref="Supported(GraphicsBuffer, MeshTopology, string)"/> for indices of
@@ -67,9 +67,9 @@ namespace Unbound.Runtime
                 Stubs.Ignored(method + " index stride", "other than 2 or 4 bytes is not drawn");
                 return false;
             }
-            if (topology != MeshTopology.Triangles && topology != MeshTopology.Lines && topology != MeshTopology.Points)
+            if (topology != MeshTopology.Triangles && topology != MeshTopology.Lines && topology != MeshTopology.LineStrip && topology != MeshTopology.Points)
             {
-                string name = topology == MeshTopology.Quads || topology == MeshTopology.LineStrip ? topology.ToString() : "other";
+                string name = topology == MeshTopology.Quads ? topology.ToString() : "other";
                 Stubs.Ignored(method + " MeshTopology." + name, "is not drawn yet from an index buffer");
                 return false;
             }

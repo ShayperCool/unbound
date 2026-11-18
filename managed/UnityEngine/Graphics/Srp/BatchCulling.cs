@@ -358,7 +358,7 @@ namespace Unbound.Runtime
 
         static readonly string[] s_Unsupported =
         {
-            "BatchRendererGroup indirect draw commands of a mesh read as a line strip or quads are not supported yet; they are not drawn.",
+            "BatchRendererGroup indirect draw commands of a mesh read as quads are not supported on this graphics device yet; they are not drawn.",
             "BatchRendererGroup procedural draw commands of quads are not supported on this graphics device yet; they are not drawn.",
             "a BatchRendererGroup procedural draw command's index buffer is not a live index buffer, or its byte offset is not a multiple of its index size; it is not drawn.",
             "BatchRendererGroup draw commands flagged LODCrossFadeKeyword draw without LOD_FADE_CROSSFADE (not enabled yet).",
@@ -765,7 +765,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A range's indirect commands: each draws its mesh's indices, read as its
-        /// topology (triangles, lines or points: measured, tests/projects/brg procedural), with the
+        /// topology (triangles, lines, a line strip, points, and quads as the device draws them:
+        /// measured, tests/projects/brg procedural and procedural_topologies), with the
         /// counts its arguments buffer holds at its offset (IndirectDrawIndexedArgs), the instances'
         /// batch indices read from its visible instance buffer from its visible offset on.</summary>
         static void CollectIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter, Light main,
@@ -805,11 +806,14 @@ namespace Unbound.Runtime
         }
 
         /// <summary>What an indirect command's mesh indices are read as (<see cref="GfxStream.DrawShape"/>,
-        /// whatever the submesh's own topology): triangles, lines or points; null for the
-        /// topologies not drawn yet (a line strip and quads, unmeasured).</summary>
+        /// whatever the submesh's own topology): its topology, quads as the device draws them
+        /// (<see cref="GraphicsDeviceProfile.ProceduralQuads"/>, as a procedural command's: matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/brg procedural_topologies); null where the
+        /// device's quads are unmeasured.</summary>
         static MeshTopology? IndirectTopology(MeshTopology topology) => topology switch
         {
-            MeshTopology.Triangles or MeshTopology.Lines or MeshTopology.Points => topology,
+            MeshTopology.Triangles or MeshTopology.Lines or MeshTopology.LineStrip or MeshTopology.Points => topology,
+            MeshTopology.Quads => GraphicsDeviceProfile.Current.ProceduralQuads,
             _ => null,
         };
 

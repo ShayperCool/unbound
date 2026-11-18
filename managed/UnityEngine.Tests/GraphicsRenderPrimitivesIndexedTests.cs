@@ -299,18 +299,32 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void QuadsLineStripsAndOtherStridesAreCountedAndNothingIsQueued()
+        public void QuadsAndOtherStridesAreCountedAndNothingIsQueued()
         {
             var index = NewBuffer(GraphicsBuffer.Target.Index, 8, 2);
             var wide = NewBuffer(GraphicsBuffer.Target.Structured, 8, 8);
             var rp = new RenderParams(NewMaterial());
-            string quads = Indexed + " MeshTopology.Quads", strips = Indexed + " MeshTopology.LineStrip", stride = Indexed + " index stride";
-            int q0 = Hits(quads), s0 = Hits(strips), w0 = Hits(stride), all = Hits(Indexed);
+            string quads = Indexed + " MeshTopology.Quads", stride = Indexed + " index stride";
+            int q0 = Hits(quads), w0 = Hits(stride), all = Hits(Indexed);
             Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Quads, index, 8)));
-            Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.LineStrip, index, 4)));
             Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, wide, 3)));
             Assert.Empty(TakeQueued());
-            Assert.Equal((q0 + 1, s0 + 1, w0 + 1, all), (Hits(quads), Hits(strips), Hits(stride), Hits(Indexed)));
+            Assert.Equal((q0 + 1, w0 + 1, all), (Hits(quads), Hits(stride), Hits(Indexed)));
+        }
+
+        /// <summary>A buffer's indices are drawn as a line strip too (the strip's pipeline names the
+        /// buffer's index format).</summary>
+        [Fact]
+        public void LineStripsOfABuffersIndicesAreQueued()
+        {
+            var index = NewBuffer(GraphicsBuffer.Target.Index, 8, 2);
+            var rp = new RenderParams(NewMaterial());
+            Graphics.RenderPrimitivesIndexed(rp, MeshTopology.LineStrip, index, 4);
+            var q = Assert.Single(TakeQueued());
+            Assert.Same(ProceduralMeshes.Get(MeshTopology.LineStrip, ProceduralMeshes.IndirectVertices), q.Mesh);
+            var setup = Assert.IsType<DrawSetup>(q.Setup);
+            Assert.Equal(4u, setup.IndexCount);
+            Assert.Equal((byte)2, setup.IndexSize);
         }
 
         // ---------------------------------------------------------------- guards (green before and after)
