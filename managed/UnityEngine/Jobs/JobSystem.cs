@@ -315,7 +315,10 @@ namespace Unbound.Runtime.Jobs
             return Schedule(ref parameters, Kind.ParallelFor, 0, innerloopBatchCount, default, listData, safety);
         }
 
-        internal static JobHandle Schedule(ref JobsUtility.JobScheduleParameters parameters, Kind kind, int arrayLength, int innerloopBatchCount, IntPtr transforms = default, void* deferredList = null, AtomicSafetyHandle deferredListSafety = default)
+        /// <summary>Schedules a job. Its Execute gets as additional data the transforms' job data
+        /// (transform jobs), the deferred list (deferred parallel-for jobs, as Unity passes it) or
+        /// <paramref name="additionalData"/>, which the caller owns.</summary>
+        internal static JobHandle Schedule(ref JobsUtility.JobScheduleParameters parameters, Kind kind, int arrayLength, int innerloopBatchCount, IntPtr transforms = default, void* deferredList = null, AtomicSafetyHandle deferredListSafety = default, void* additionalData = null)
         {
             var reflection = Reflection(parameters.ReflectionData);
             if (reflection.Invoke == null)
@@ -415,11 +418,13 @@ namespace Unbound.Runtime.Jobs
                 record.DeferredList = deferredList;
                 record.DeferredBatchSize = innerloopBatchCount;
                 record.Parallel = true;
+                record.AdditionalData = (IntPtr)deferredList;
             }
             else
             {
                 PrepareRanges(record, kind, mode, arrayLength, innerloopBatchCount, transforms);
             }
+            if (additionalData != null) record.AdditionalData = (IntPtr)additionalData;
 
             if (mode == ScheduleMode.Run)
             {
@@ -760,6 +765,14 @@ namespace Unbound.Runtime.Jobs
             Sync(record);
         }
 
+        /// <summary>Whether the job has run, without sending out the waiting batch (IsCompleted sends
+        /// it): a job still in the batch has not.</summary>
+        internal static bool HasRun(JobHandle handle)
+        {
+            var record = Find(handle);
+            return record == null || record.Done;
+        }
+
         internal static bool IsCompleted(JobHandle handle)
         {
             Flush();
@@ -787,9 +800,10 @@ namespace Unbound.Runtime.Jobs
             record.Ranges = null;
             if (record.BufferRangePatchData != IntPtr.Zero) NativeMemory.Free((void*)record.BufferRangePatchData);
             record.BufferRangePatchData = IntPtr.Zero;
-            if (record.AdditionalData != IntPtr.Zero)
+            // Only a transform job's additional data is the job's own; other jobs borrow theirs.
+            if (record.AdditionalData != IntPtr.Zero && record.Transform)
             {
-                if (record.Transform) TransformAccessArrayData.ReleaseJobData(record.AdditionalData);
+                TransformAccessArrayData.ReleaseJobData(record.AdditionalData);
                 NativeMemory.Free((void*)record.AdditionalData);
             }
             record.AdditionalData = IntPtr.Zero;
