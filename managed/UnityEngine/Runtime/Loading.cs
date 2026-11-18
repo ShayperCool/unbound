@@ -577,6 +577,8 @@ namespace Unbound.Runtime
         internal static void LoadPrepared(SceneData scene, List<YDocument> documents, Action beforeAwake = null)
         {
             if (documents == null) return;
+            scene.MissingPrefabErrors = MissingPrefabErrors(documents);
+            LogMissingPrefabs(scene);
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);
             foreach (var doc in documents)
                 if (!doc.Stripped) SceneSettings.Apply(doc, file, scene);
@@ -587,6 +589,35 @@ namespace Unbound.Runtime
             // BeforeSceneLoad, but its scripts have not awakened. Runtime-created objects
             // now belong to that scene rather than an outgoing bootstrap scene.
             ActivateRoots(file.Roots, beforeAwake);
+        }
+
+        /// <summary>The Editor's errors for a scene's instances of missing prefabs: one per missing
+        /// prefab, in GUID order, naming its first instance (Unity 6000.0.71f1,
+        /// tests/projects/missingprefab).</summary>
+        static List<string> MissingPrefabErrors(List<YDocument> documents)
+        {
+            SortedDictionary<string, (string Name, int Count)> missing = null;
+            foreach (var doc in documents)
+            {
+                if (doc.Stripped || doc.ClassId != EngineTypes.PrefabInstanceId || !doc.Body.TryGet(PrefabLinks.MissingPrefabName, out var name)) continue;
+                var guid = doc.Body.Ref("m_SourcePrefab").Guid ?? "";
+                missing ??= new SortedDictionary<string, (string, int)>(StringComparer.Ordinal);
+                missing[guid] = missing.TryGetValue(guid, out var seen) ? (seen.Name, seen.Count + 1) : (name.Scalar, 1);
+            }
+            if (missing == null) return null;
+            var errors = new List<string>(missing.Count);
+            foreach (var pair in missing)
+                errors.Add(pair.Value.Count == 1
+                    ? $"Prefab instance problem. Missing Prefab Asset: '{pair.Value.Name}'"
+                    : $"Prefab instance problem: '{pair.Value.Name}'. {pair.Value.Count} instances are missing the same Prefab Asset with guid {pair.Key}.");
+            return errors;
+        }
+
+        /// <summary>Logs a scene's missing-prefab errors, as the Editor does each time it loads it.</summary>
+        internal static void LogMissingPrefabs(SceneData scene)
+        {
+            if (scene.MissingPrefabErrors == null) return;
+            foreach (var error in scene.MissingPrefabErrors) Debug.LogError(error);
         }
 
         internal static void ActivateRoots(IReadOnlyList<GameObject> roots, Action beforeAwake = null)

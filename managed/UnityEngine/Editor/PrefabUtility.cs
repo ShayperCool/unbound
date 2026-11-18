@@ -64,7 +64,7 @@ namespace UnityEditor
         {
             var link = PrefabLinks.Of(o);
             if (link == null) return false;
-            return !Exists(link.Instance.SourceGuid ?? link.SourceGuid);
+            return link.Instance.SourceMissing || !Exists(link.Instance.SourceGuid ?? link.SourceGuid);
         }
 
         public static bool IsPartOfPrefabAsset(Object componentOrGameObject) => InPrefabAsset(componentOrGameObject);
@@ -161,6 +161,12 @@ namespace UnityEditor
         public static bool IsAnyPrefabInstanceRoot(GameObject gameObject)
         {
             if (!InInstance(gameObject)) return false;
+            // A missing prefab's instance has no source chain: its root is its topmost object.
+            if (Missing(gameObject))
+            {
+                var parent = gameObject.transform.parent;
+                return parent == null || PrefabLinks.Of(parent.m_GameObject)?.Instance != PrefabLinks.Of(gameObject).Instance;
+            }
             Object current = gameObject;
             for (int depth = 0; depth < 64 && (current = Source(current)) is GameObject source; depth++)
                 if (source.transform.parent == null) return true;

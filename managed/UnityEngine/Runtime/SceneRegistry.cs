@@ -29,6 +29,9 @@ namespace Unbound.Runtime
         internal bool IsDirty;
         internal Scene.LoadingState LoadingState;
         internal readonly List<GameObject> Roots = new List<GameObject>();
+        /// <summary>The Editor's errors for the scene's instances of missing prefabs, which it logs
+        /// whenever it loads the scene (null: none).</summary>
+        internal List<string> MissingPrefabErrors;
         /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
         /// objects by them).</summary>
         internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);

@@ -12,6 +12,9 @@ namespace Unbound.Runtime
     {
         internal string SourceGuid;
         internal bool InAsset;
+        /// <summary>The engine made the instance's objects as placeholders: its prefab is missing or
+        /// could not load (a variant whose parent is missing).</summary>
+        internal bool SourceMissing;
         /// <summary>The modified properties: the source object they target and the property path.</summary>
         internal readonly List<(string Guid, long FileId, string Path)> Modifications = new List<(string, long, string)>();
         Object m_Handle;
@@ -61,6 +64,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class PrefabLinks
     {
+        /// <summary>The PrefabInstance field the engine sets on an instance of a missing prefab: the
+        /// name its root shows.</summary>
+        internal const string MissingPrefabName = "m_UnboundMissingPrefabName";
+
         static readonly ConditionalWeakTable<Object, PrefabLink> s_Links = new ConditionalWeakTable<Object, PrefabLink>();
 
         internal static PrefabLink Of(Object o) => o is not null && s_Links.TryGetValue(o, out var link) ? link : null;
@@ -88,7 +95,12 @@ namespace Unbound.Runtime
 
         internal static PrefabInstanceData ReadInstance(YNode body, bool inAsset)
         {
-            var data = new PrefabInstanceData { SourceGuid = body.Ref("m_SourcePrefab").Guid, InAsset = inAsset };
+            var data = new PrefabInstanceData
+            {
+                SourceGuid = body.Ref("m_SourcePrefab").Guid,
+                InAsset = inAsset,
+                SourceMissing = body.TryGet(MissingPrefabName, out _),
+            };
             foreach (var m in body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
             {
                 var target = m.Ref("target");
