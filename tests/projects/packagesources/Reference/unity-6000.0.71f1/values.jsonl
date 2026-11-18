@@ -1,0 +1,46 @@
+{"k":"names","v":"com.probe.eight com.probe.five com.probe.four com.probe.git com.probe.nine com.probe.one com.probe.seven com.probe.six com.probe.tarball com.probe.ten com.probe.three com.probe.two"}
+{"k":"package.com.probe.eight","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.eight","v":"registry com.probe.eight"}
+{"k":"package.com.probe.five","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.five","v":"registry com.probe.five"}
+{"k":"package.com.probe.four","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.four","v":"registry com.probe.four"}
+{"k":"package.com.probe.git","v":"1.0.0 source Git"}
+{"k":"marker.com.probe.git","v":"git v1"}
+{"k":"package.com.probe.nine","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.nine","v":"registry com.probe.nine"}
+{"k":"package.com.probe.one","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.one","v":"registry com.probe.one"}
+{"k":"package.com.probe.seven","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.seven","v":"registry com.probe.seven"}
+{"k":"package.com.probe.six","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.six","v":"registry com.probe.six"}
+{"k":"package.com.probe.tarball","v":"1.0.0 source LocalTarball"}
+{"k":"marker.com.probe.tarball","v":"tarball"}
+{"k":"package.com.probe.ten","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.ten","v":"registry com.probe.ten"}
+{"k":"package.com.probe.three","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.three","v":"registry com.probe.three"}
+{"k":"package.com.probe.two","v":"1.0.0 source Registry"}
+{"k":"marker.com.probe.two","v":"registry com.probe.two"}
+{"k": "request.other/t5/five.tgz", "v": "<none>"}
+{"k": "request.other/t6/six.tgz", "v": "Bearer token-six"}
+{"k": "request.port/t10/ten.tgz", "v": "<none>"}
+{"k": "request.registry/r1/-/one.tgz", "v": "Bearer token-one"}
+{"k": "request.registry/r1/com.probe.one", "v": "Bearer token-one"}
+{"k": "request.registry/r10/com.probe.ten", "v": "Bearer token-ten"}
+{"k": "request.registry/r2/-/two.tgz", "v": "Basic dHdvOnNlY3JldA=="}
+{"k": "request.registry/r2/com.probe.two", "v": "Basic dHdvOnNlY3JldA=="}
+{"k": "request.registry/r3/deep/-/three.tgz", "v": "Bearer token-three-deep"}
+{"k": "request.registry/r3/deep/com.probe.three", "v": "Bearer token-three-deep"}
+{"k": "request.registry/r3/other/-/four.tgz", "v": "<none>"}
+{"k": "request.registry/r3/other/com.probe.four", "v": "<none>"}
+{"k": "request.registry/r5/com.probe.five", "v": "Bearer token-five"}
+{"k": "request.registry/r6/com.probe.six", "v": "Bearer token-six"}
+{"k": "request.registry/r7/com.probe.seven", "v": "Bearer token-seven"}
+{"k": "request.registry/r8/-/eight.tgz", "v": "<none>"}
+{"k": "request.registry/r8/com.probe.eight", "v": "<none>"}
+{"k": "request.registry/r9/-/nine.tgz", "v": "Bearer token-nine"}
+{"k": "request.registry/r9/com.probe.nine", "v": "Bearer token-nine"}
+{"k": "request.registry/t7/seven.tgz", "v": "Bearer token-seven"}
+{"k": "complete", "v": true}

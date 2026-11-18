@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/packagesources/run.py gate"
+  ],
+  "summary": "packagesources: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/packages.rs",
+    "crates/unbound-project/src/upm_config.rs",
+    "crates/unbound-project/src/git_packages.rs",
+    "crates/unbound-project/src/net.rs",
+    "crates/unbound-runtime/src/view.rs"
+  ]
+}
