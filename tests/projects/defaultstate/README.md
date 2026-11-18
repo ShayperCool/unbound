@@ -23,6 +23,11 @@ them; they were added beside the existing rows, which remain byte-identical and 
 captures differed in an existing row, `ParticleSystem.colorBySpeed`, uninitialized in the
 Editor and kept as the existing Q411 exact row, so the whole reference was not re-published).
 
+The build handler slice adds 31 rows for BuildPlayerOptions and BuildPlayerWindow from two
+independent GPU captures that agree on them; earlier rows are unchanged. The window's title, size
+and place match; its data-mode controller, overlay canvas and UI root are queued as for the other
+windows, and the two text-asset identity rows record their shifted implementation values.
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.
