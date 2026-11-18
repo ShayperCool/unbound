@@ -268,6 +268,12 @@ namespace UnityEngine
                 {
                     KeepDefaultsOf(m_Shader);
                     ResetRenderQueue(value);
+                    // The names set from script stop counting: the material then has the new
+                    // shader's names, as it has for saved values (measured:
+                    // tests/projects/materials scripted.*: a value set for a name the new shader
+                    // lacks is unseen, also back under a shader without it, and seen with its
+                    // value under one declaring it).
+                    m_ScriptSet.Clear();
                 }
                 m_Shader = value;
                 AddTextureNames();

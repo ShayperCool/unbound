@@ -59,19 +59,19 @@ queue or GI flag and no ShaderGUI validation.
 What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
 Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
 mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported. URP (7670/7687 values match): four description-made Shader Graph
+curves are not imported. URP (7681/7687 values match): four description-made Shader Graph
 materials read gi `RealtimeEmissive` in the Editor and `RealtimeEmissive, EmissiveIsBlack` in
 Unbound; the legacy importer's two Autodesk Interactive materials read `_QueueControl` 0 in the
 Editor and the shader's -1 in Unbound (no validation runs on them; what sets 0 is not
-established); the description-made Arnold Maya, Autodesk Interactive, Physical and Autodesk
-Interactive cutout materials keep the shader's queue in the Editor (rawRenderQueue -1, queue 3000,
-2450 for the cutout, RenderType "Transparent" for the three transparent ones) while Unbound gives
-them an explicit queue 2000 and reads "Opaque" (11 values). Their rawRenderQueue -1 matched before
-the configured pipeline's tag was made active as the scene loads (their queue then read 2000 in
-Unbound, as without the tag); with the tag active, the validation URP's import postprocessing runs
-on them in Unbound stores its computed opaque queue 2000 against the shader's 3000/2450. Whether
-and with which tag the Editor validates these materials is not established (as for the
-validation on load in tests/projects/graphqueue). These are the probe's only URP differences.
+established). These are the probe's only URP differences. The description-made Arnold Maya,
+Autodesk Interactive, Physical and Autodesk Interactive cutout materials keep the shader's queue
+(rawRenderQueue -1, queue 3000, 2450 for the cutout, RenderType "Transparent" for the three
+transparent ones), in Unbound too since a shader change leaves a material only the new shader's
+names, values set from script included (tests/projects/materials `scripted.*`): URP's own
+description preprocessor sets Lit's `_Surface`, then the Arnold, Physical and Autodesk
+Interactive preprocessors give the material a Shader Graph without it, whose editor reads no
+surface type and keeps the shader's queue (before, it read the stale opaque `_Surface` and stored
+queue 2000 and RenderType "Opaque": 11 values).
 
 The URP reference is recorded as an Editor that has drawn its views before Play mode: the runner
 renders one camera before entering Play mode, so the configured pipeline's shader tag is active

@@ -80,6 +80,40 @@ public class MaterialsProbe : MonoBehaviour
         if (keywords) Add($"{prefix}.shaderKeywords", m.shaderKeywords);
     }
 
+    /// <summary>Recorded last: values set from script, then a shader change. `_BaseColor` is
+    /// declared by the first shader and not by the second, `_New` by neither, `_Gloss` by
+    /// both: which names the material has under the second shader and back under the first.</summary>
+    void ScriptedThenSwitched(Material saved, Shader plain)
+    {
+        var scripted = new Material(saved);
+        scripted.SetColor("_BaseColor", new Color(0.25f, 0.5f, 0.75f, 1f));
+        scripted.SetFloat("_New", 3f);
+        scripted.SetFloat("_Gloss", 0.375f);
+        scripted.shader = plain;
+        foreach (var n in new[] { "_BaseColor", "_New", "_Gloss" })
+        {
+            Add($"scripted.switched.HasProperty({n})", scripted.HasProperty(n));
+            Add($"scripted.switched.HasFloat({n})", scripted.HasFloat(n));
+            Add($"scripted.switched.HasColor({n})", scripted.HasColor(n));
+            Add($"scripted.switched.GetFloat({n})", scripted.GetFloat(n));
+            Add($"scripted.switched.GetColor({n})", scripted.GetColor(n));
+        }
+        Add("scripted.switched.GetPropertyNames(Float)", scripted.GetPropertyNames(MaterialPropertyType.Float));
+        Add("scripted.switched.GetPropertyNames(Vector)", scripted.GetPropertyNames(MaterialPropertyType.Vector));
+        scripted.shader = saved.shader;
+        foreach (var n in new[] { "_BaseColor", "_New", "_Gloss" })
+        {
+            Add($"scripted.back.HasProperty({n})", scripted.HasProperty(n));
+            Add($"scripted.back.GetFloat({n})", scripted.GetFloat(n));
+            Add($"scripted.back.GetColor({n})", scripted.GetColor(n));
+        }
+        // Set again under the second shader: a name it does not declare.
+        scripted.shader = plain;
+        scripted.SetFloat("_New", 5f);
+        Add("scripted.setAfter.HasProperty(_New)", scripted.HasProperty("_New"));
+        Add("scripted.setAfter.GetFloat(_New)", scripted.GetFloat("_New"));
+    }
+
     void Start()
     {
         int logged = 0;
@@ -141,6 +175,7 @@ public class MaterialsProbe : MonoBehaviour
         Add("conflictInvalid.shaderKeywords", Resources.Load<Material>("ConflictInvalid").shaderKeywords);
         Add("copy.name", copy.name);
         Add("fresh.name", fresh.name);
+        ScriptedThenSwitched(saved, plain);
         var json = new StringBuilder("{\n");
         for (int i = 0; i < m_Results.Count; i++)
             json.Append("  \"").Append(m_Results[i].key).Append("\": \"").Append(m_Results[i].value.Replace("\"", "\\\""))

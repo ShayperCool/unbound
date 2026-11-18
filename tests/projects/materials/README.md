@@ -21,7 +21,10 @@ Run Unbound and compare:
 
 What Unity 6 does (the reference): a material has the properties its shader declares plus the
 ones set from script; the values saved for other names stay in the material, unseen by the getters,
-and come back when a shader declaring them is set. Texture getters read every texture slot the
+and come back when a shader declaring them is set. A shader change ends what setting from script
+added (`scripted.*`, recorded last): a value set under the first shader for a name the second
+lacks is unseen under the second, seen again with that value under a shader declaring it, and a
+name neither declares stays unseen until it is set again. Texture getters read every texture slot the
 material has (saved ones, those of shaders it had). A getter for a name the material lacks logs
 "Material '…' with Shader '…' doesn't have a … property '…'" and returns the default. Legacy `Int`
 properties are floats. `new Material(shader)` is named after the shader and starts with the
