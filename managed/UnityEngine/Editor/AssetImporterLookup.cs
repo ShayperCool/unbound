@@ -12,12 +12,46 @@ namespace UnityEditor
     {
         static readonly Dictionary<string, AssetImporter> s_ByPath = new Dictionary<string, AssetImporter>(StringComparer.Ordinal);
 
+        /// <summary>The importers importing their assets now, by path.</summary>
+        static readonly Dictionary<string, AssetImporter> s_Importing = new Dictionary<string, AssetImporter>(StringComparer.Ordinal);
+
+        /// <summary>While the scope lasts, <see cref="GetAtPath"/> gives this importer for its asset:
+        /// during an import the Editor gives the importing instance, afterwards another one with
+        /// the .meta's settings (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis
+        /// importer.during and importer.after).</summary>
+        internal static ImportingScope Importing(string path, AssetImporter importer)
+        {
+            path = path.Replace('\\', '/');
+            s_Importing.TryGetValue(path, out var outer);
+            s_Importing[path] = importer;
+            return new ImportingScope(path, outer);
+        }
+
+        internal readonly struct ImportingScope : IDisposable
+        {
+            readonly string m_Path;
+            readonly AssetImporter m_Outer;
+
+            internal ImportingScope(string path, AssetImporter outer)
+            {
+                m_Path = path;
+                m_Outer = outer;
+            }
+
+            public void Dispose()
+            {
+                if (m_Outer != null) s_Importing[m_Path] = m_Outer;
+                else s_Importing.Remove(m_Path);
+            }
+        }
+
         /// <summary>The importer of an asset, with its settings from the .meta (one instance per
         /// path, as in the Editor). Changes made to it stay in memory: Unbound does not write .meta files.</summary>
         public static AssetImporter GetAtPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
             path = path.Replace('\\', '/');
+            if (s_Importing.TryGetValue(path, out var importing)) return importing;
             if (s_ByPath.TryGetValue(path, out var cached)) return cached;
             var guid = AssetDatabase.AssetPathToGUID(path);
             AssetImporter importer = null;

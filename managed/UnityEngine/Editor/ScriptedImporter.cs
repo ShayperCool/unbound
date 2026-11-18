@@ -323,6 +323,7 @@ namespace Unbound.Runtime
             var importer = CreateImporter(info.Importer, info.ImporterFileId, info.Path, info.Guid, settings.Count > 0 ? settings[0].Body : null);
             var ctx = new AssetImportContext(info.Path);
             using (Scope())
+            using (UnityEditor.AssetImporter.Importing(info.Path, importer))
             using (ObjectRegistry.AsAssets())
                 importer.OnImportAsset(ctx);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
