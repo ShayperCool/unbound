@@ -117,6 +117,13 @@ struct Scene {
     /// Why the scene has no directionality (a system's blocks could not be read): it is then
     /// drawn as a non-directional one, whatever the frames' mode.
     directionality_error: Option<String>,
+    /// Whether the scene has had its first frame. That frame, the first after the scene's load,
+    /// takes its inputs but solves nothing: what the next frame's scripts set is the first state
+    /// solved, and nothing of the first frame's is kept (matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/realtimegi `room-delegate-*`, whose light a script changes in the frame
+    /// after the load: solved once before, the update threshold keeps part of the earlier
+    /// light; how many frames the Editor leaves unsolved is not measured, docs/REALTIME_GI.md).
+    had_first_frame: bool,
 }
 
 static SCENES: Mutex<Option<HashMap<u64, Scene>>> = Mutex::new(None);
@@ -303,6 +310,7 @@ fn register(
                 frame: None,
                 cursor: 0,
                 stable: 0,
+                had_first_frame: false,
                 changed: true,
                 directionality_copied: vec![false; system_count],
                 directional: false,
@@ -595,6 +603,9 @@ fn copy_rows<T: Copy + PartialEq>(
 pub fn update(handle: u64, frame: &GiFrame, lights: &[GiLight]) -> Result<i32> {
     with_scene(handle, |scene| {
         scene.set_inputs(frame, lights)?;
+        if !std::mem::replace(&mut scene.had_first_frame, true) {
+            return Ok(0);
+        }
         Ok(scene.update())
     })
 }
@@ -1300,6 +1311,58 @@ mod tests {
     }
 
     #[test]
+    fn a_scene_is_first_solved_with_what_its_second_frame_sets() {
+        // The frame after a scene's load takes its inputs but solves nothing: a light's range
+        // changed in the next frame converges to the lightmaps of a scene lit at that range from
+        // its first frame on. Solved once at the first range (two frames of it), the update
+        // threshold keeps part of that light.
+        let frame = GiFrame {
+            indirect_scale: 1.0,
+            synchronous: 1,
+            budget_ms: 2.0,
+            update_threshold: 1.0,
+            directional: 0,
+        };
+        let at = |range: f32| GiLight {
+            range,
+            ..point([-1.0, 3.0, -0.5])
+        };
+        let lit = |ranges: &[f32]| -> Vec<u16> {
+            let handle = register(room(), &[]).unwrap()["handle"].as_u64().unwrap();
+            set_material(handle, 0, 0, &vec![200u8; 4 * 52 * 52]).unwrap();
+            set_environment(handle, &[0.01f32, 0.01, 0.02].repeat(FACE_VALUES)).unwrap();
+            let first = update(handle, &frame, &[at(ranges[0])]).unwrap();
+            assert_eq!(first, 0, "the first frame solves nothing");
+            for &range in &ranges[1..] {
+                update(handle, &frame, &[at(range)]).unwrap();
+            }
+            let last = at(*ranges.last().unwrap());
+            assert!(
+                (0..1000).any(|_| update(handle, &frame, &[last]).unwrap() & UPDATE_CONVERGED != 0)
+            );
+            let mut texels = vec![0u16; 4 * 64 * 64];
+            read_atlas(handle, 0, &mut texels).unwrap();
+            texels
+        };
+        let changed = lit(&[10.0, 4.0]);
+        assert_eq!(changed, lit(&[4.0]));
+        let solved_before = lit(&[10.0, 10.0, 4.0]);
+        let sum = |t: &[u16]| -> f64 {
+            t.iter()
+                .enumerate()
+                .filter(|(i, _)| i % 4 != 3)
+                .map(|(_, &h)| half::f16::from_bits(h).to_f64())
+                .sum()
+        };
+        assert!(
+            sum(&solved_before) > sum(&changed) * 1.001,
+            "{} {}",
+            sum(&solved_before),
+            sum(&changed)
+        );
+    }
+
+    #[test]
     fn a_scene_updates_until_converged_and_again_after_a_change() {
         let reply = register(room(), &[]).unwrap();
         let handle = reply["handle"].as_u64().unwrap();
@@ -1489,6 +1552,8 @@ mod tests {
             directional: 0,
         };
         let lights = [point([0.0, 2.0, 0.0])];
+        // The frame after the load solves nothing, its probes neither.
+        assert_eq!(update(handle, &frame, &lights).unwrap(), 0);
         let converge = |frame: &GiFrame| {
             // An update solves the probes: the first after a change reports them.
             assert_ne!(update(handle, frame, &lights).unwrap() & UPDATE_PROBES, 0);

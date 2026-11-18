@@ -621,10 +621,16 @@ fn replays_the_probes_cases() {
 
 /// The Room as the probe's light delegate cases load it again (its materials as the cases before
 /// left them: the left wall blue, the panel's material emission (3, 0, 3)), its point light of
-/// `range` and `falloff` solved until converged; with `before`, after one update at the light's
-/// own range of 10. Returns the values outside the comparator's tolerance and our sum over the
-/// Editor's.
-fn delegate_room(case: &str, falloff: Falloff, range: f32, before: bool) -> (usize, f64) {
+/// `range` and `falloff` (at `height`, else its own) solved until converged; with `before`, after
+/// one update at the light's own range of 10 and place. Returns the values outside the
+/// comparator's tolerance and our sum over the Editor's.
+fn delegate_room(
+    case: &str,
+    falloff: Falloff,
+    range: f32,
+    height: Option<f32>,
+    before: bool,
+) -> (usize, f64) {
     let room = Room {
         left: [0.1, 0.1, 0.8],
         left_rendered: [0.1, 0.1, 0.8],
@@ -633,19 +639,23 @@ fn delegate_room(case: &str, falloff: Falloff, range: f32, before: bool) -> (usi
     };
     let mut r = Replay::new();
     r.set(room);
-    let light = |range: f32| Light {
+    let light = |range: f32, position: [f32; 3]| Light {
         color: [1.0, 0.95, 0.85].map(|c: f32| gamma_to_linear(c * room.intensity * room.bounce)),
         kind: LightKind::Point {
-            position: room.light,
+            position,
             range,
             falloff: FalloffTable::of(falloff, range),
         },
     };
     if before {
-        r.solver.set_lights(&[light(10.0)]).unwrap();
+        r.solver.set_lights(&[light(10.0, room.light)]).unwrap();
         r.solver.update();
     }
-    r.solver.set_lights(&[light(range)]).unwrap();
+    let mut position = room.light;
+    if let Some(h) = height {
+        position[1] = h;
+    }
+    r.solver.set_lights(&[light(range, position)]).unwrap();
     r.converge();
     let (width, texels) = reference(case);
     let t = &r.solver.system().transport;
@@ -669,29 +679,38 @@ fn delegate_room(case: &str, falloff: Falloff, range: f32, before: bool) -> (usi
 
 #[test]
 fn a_loaded_room_is_solved_first_with_what_the_next_frame_sets() {
-    // The light delegate cases change the point light's range in the frame after the Room
-    // loads. Solved from that state the Editor's lightmaps are met as in its other cases (a
-    // few isolated values, 0.3 to 0.5% below in sum); solved once before at the light's own
-    // range, the update threshold keeps part of that brighter light (the engine's lightmaps
-    // before it left a loaded scene's first update unsolved).
+    // The light delegate cases change the point light's range, or move it, in the frame after
+    // the Room loads. Solved from that state the Editor's lightmaps are met as in its other
+    // cases (a few isolated values, 0.3 to 0.7% below in sum); solved once before with the
+    // light as it loaded, the update threshold keeps part of that light (the engine's lightmaps
+    // while a loaded scene's first frame solved it).
     let cases = [
         (
             "room-delegate-inversesquared",
             Falloff::InverseSquared,
             4.0,
+            None,
             3,
         ),
         (
             "room-delegate-norange",
             Falloff::InverseSquaredNoRangeAttenuation,
             4.0,
+            None,
             2,
         ),
-        ("room-delegate-linear-range6", Falloff::Linear, 6.0, 0),
+        ("room-delegate-linear-range6", Falloff::Linear, 6.0, None, 0),
+        (
+            "room-delegate-linear-near",
+            Falloff::Linear,
+            10.0,
+            Some(3.6),
+            2,
+        ),
     ];
-    for (case, falloff, range, measured) in cases {
-        let (fails, sum) = delegate_room(case, falloff, range, false);
-        let (fails_before, sum_before) = delegate_room(case, falloff, range, true);
+    for (case, falloff, range, height, measured) in cases {
+        let (fails, sum) = delegate_room(case, falloff, range, height, false);
+        let (fails_before, sum_before) = delegate_room(case, falloff, range, height, true);
         eprintln!(
             "{case}: {fails} values off, sum {sum}; solved before: {fails_before}, {sum_before}"
         );
@@ -699,10 +718,19 @@ fn a_loaded_room_is_solved_first_with_what_the_next_frame_sets() {
             fails <= measured && (0.99..1.0).contains(&sum),
             "{case}: {fails} {sum}"
         );
-        assert!(sum_before > sum + 0.001, "{case}: {sum_before} {sum}");
+        assert!(
+            fails_before != fails || (sum_before - sum).abs() > 1e-4,
+            "{case}: {fails_before} {sum_before}"
+        );
     }
     // Measured: the range-6 case 1.2% brighter than the Editor's, 6 isolated values.
-    let (fails, sum) = delegate_room("room-delegate-linear-range6", Falloff::Linear, 6.0, true);
+    let (fails, sum) = delegate_room(
+        "room-delegate-linear-range6",
+        Falloff::Linear,
+        6.0,
+        None,
+        true,
+    );
     assert!(fails >= 5 && sum > 1.01, "{fails} {sum}");
 }
 
