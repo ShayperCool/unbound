@@ -155,13 +155,6 @@
   },
   {
     "Release": "6000.0.71f1",
-    "Category": "interfaces",
-    "Type": "UnityEngine.UIElements.VisualElement",
-    "Message": "type interfaces is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler, Unity's is UnityEngine.UIElements.Experimental.ITransitionAnimations,UnityEngine.UIElements.IExperimentalFeatures,UnityEngine.UIElements.IResolvedStyle,UnityEngine.UIElements.IStylePropertyAnimations,UnityEngine.UIElements.ITransform,UnityEngine.UIElements.IVisualElementScheduler",
-    "Reason": "Q410-UI-interfaces: the release's internal IStylePropertyAnimations (typed starts, running/completed counts, cancellation) is internal plumbing no game code can reach. Transition behaviour (value kinds, unit conversion, usage hints, events, cancellation) runs on Unbound's own transition engine, covered by uitransitions, uitransitioncallbacks, uitransitioninline and uitransitionkinds."
-  },
-  {
-    "Release": "6000.0.71f1",
     "Category": "layout",
     "Type": "UnityEditor.AnimationClipSettings",
     "Message": "storage layout is NotPublic,pack=0,size=0, Unity's is SequentialLayout,pack=0,size=0",

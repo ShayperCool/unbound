@@ -6,6 +6,18 @@ namespace Unbound.UIElements
 {
     internal static class TransitionEasing
     {
+        static readonly Func<float, float>[] curves = CreateCurves();
+        static Func<float, float>[] CreateCurves()
+        {
+            var modes = (EasingMode[])Enum.GetValues(typeof(EasingMode));
+            var result = new Func<float, float>[modes.Length];
+            foreach (var mode in modes) result[(int)mode] = t => Evaluate(mode, t);
+            return result;
+        }
+
+        /// <summary>The easing curve of <paramref name="mode"/>, cached: a transition samples it every update.</summary>
+        internal static Func<float, float> Curve(EasingMode mode) => curves[(int)mode];
+
         internal static float Evaluate(EasingMode mode, float t)
         {
             switch (mode)
