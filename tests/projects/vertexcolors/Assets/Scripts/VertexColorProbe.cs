@@ -63,7 +63,7 @@ public sealed class VertexColorProbe : MonoBehaviour
     readonly List<UnityEngine.Object> m_Made = new List<UnityEngine.Object>();
     Texture2D m_White;
     Sprite m_Sprite;
-    Material m_Raw, m_UrpRaw;
+    Material m_Raw, m_UrpRaw, m_RendererColor, m_UrpRendererColor;
     string m_Pipeline;
     bool m_Urp;
     int m_Renderer;
@@ -89,6 +89,8 @@ public sealed class VertexColorProbe : MonoBehaviour
         m_Sprite = Sprite.Create(m_White, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 5f);
         m_Raw = new Material(Shader.Find("Probe/VertexColor")) { name = "raw" };
         m_UrpRaw = new Material(Shader.Find("Probe/UrpVertexColor")) { name = "urpraw" };
+        m_RendererColor = new Material(Shader.Find("Probe/RendererColor")) { name = "renderercolor" };
+        m_UrpRendererColor = new Material(Shader.Find("Probe/UrpRendererColor")) { name = "urprenderercolor" };
         Rec("colorspace", "\"" + QualitySettings.activeColorSpace + "\"");
         var urp = Resources.Load<UniversalRenderPipelineAsset>("Settings/ProbeURP");
         bool batcher = urp.useSRPBatcher;
@@ -205,6 +207,25 @@ public sealed class VertexColorProbe : MonoBehaviour
         Case("mesh.colors", root => Meshes(root, false));
         Case("mesh.colors32", root => Meshes(root, true));
         Case("ui.image", root => Images(root));
+        // What a renderer sets in `_RendererColor` (a shader's own global): sprites and sprite
+        // shapes, by a CG shader and by one on URP's include.
+        Case("sprite.renderercolor", root => Sprites(root, m_RendererColor));
+        Case("spriteshape.renderercolor", root => Shapes(root, m_RendererColor, false));
+        if (m_Urp) Case("sprite.urprenderercolor", root => Sprites(root, m_UrpRendererColor));
+        if (m_Urp) Case("spriteshape.urprenderercolor", root => Shapes(root, m_UrpRendererColor, false));
+        // Sprites of one material with GPU instancing on.
+        Case("sprite.instanced", root =>
+        {
+            var material = Stock();
+            material.name = "instanced";
+            material.enableInstancing = true;
+            Sprites(root, material);
+        });
+        // Tilemaps in SRPBatch mode.
+        Case("tilemap.srpbatch", root => Tiles(root, Stock(), TilemapRenderer.Mode.SRPBatch, Color.white));
+        Case("tilemap.srpbatchtinted", root => Tiles(root, Stock(), TilemapRenderer.Mode.SRPBatch, TilemapColor));
+        Case("tilemap.rawsrpbatch", root => Tiles(root, m_Raw, TilemapRenderer.Mode.SRPBatch, Color.white));
+        if (m_Urp) Case("tilemap.urprawsrpbatch", root => Tiles(root, m_UrpRaw, TilemapRenderer.Mode.SRPBatch, Color.white));
     }
 
     GameObject Child(Transform root, string name, int i)

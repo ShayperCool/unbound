@@ -31,6 +31,13 @@ Cases (`<pipeline>.<case>.<quad>.<channel>`; pipelines `builtin`, `universal`, `
 - `ui.image`: uGUI images on a world-space canvas with the default UI material (control).
 - `<pipeline>.{sprite,tilemap,spriteshape}.defaultmaterials`: the materials of a renderer a
   script adds.
+- `sprite.renderercolor`, `spriteshape.renderercolor`: sprites and sprite shapes drawn by
+  `Probe/RendererColor` (a CG shader that writes a `_RendererColor` of its own);
+  `sprite.urprenderercolor`, `spriteshape.urprenderercolor` (URP only): the same on URP's include
+  (`Probe/UrpRendererColor`).
+- `sprite.instanced`: the sprite shader with GPU instancing enabled on its material.
+- `tilemap.srpbatch`, `tilemap.srpbatchtinted`, `tilemap.rawsrpbatch`, `tilemap.urprawsrpbatch` (URP
+  only): tilemaps in `TilemapRenderer.Mode.SRPBatch`.
 
 ## Measured (Unity 6000.0.71f1, Linux, NVIDIA OpenGL; two identical captures per color space)
 
@@ -45,8 +52,14 @@ Cases (`<pipeline>.<case>.<quad>.<channel>`; pipelines `builtin`, `universal`, `
   declares it for every program, so `Probe/UrpVertexColor` (URP's include, the vertex color
   written unchanged) draws white (`*.urpraw*`), with the SRP Batcher on or off.
 - A sprite shape's color never reaches its vertices: a shader that declares neither constant
-  draws it white. The built-in sprite shader takes it from `_RendererColor` as bytes. The vertex
-  colors a script writes into its color channel are not converted.
+  draws it white. A shader that does not declare `unity_SpriteColor` takes it from
+  `_RendererColor` as bytes (the built-in sprite shader, `Probe/RendererColor` in either pipeline);
+  for one that declares it, `_RendererColor` stays white. A sprite's `_RendererColor` is white.
+  The vertex colors a script writes into the color channel are not converted.
+- Through the built-in pipeline's GPU instancing (an instancing material of the sprite shader),
+  a sprite's color is its instance's `_RendererColor` as it is: neither converted to linear nor
+  clamped, the vertices white. URP's sprites read `unity_SpriteColor` alike, instanced or not.
+- Tilemaps in `SRPBatch` mode draw as in `Chunk` mode, in every pipeline and color space.
 - A mesh's own vertex colors are never converted. Lines, trails and particles convert their 8-bit
   colors (each by its own rounding: `tests/projects/lines`, `tests/projects/particlestreams`);
   uGUI converts as `tests/projects/uicolors` records.
@@ -56,9 +69,8 @@ Cases (`<pipeline>.<case>.<quad>.<channel>`; pipelines `builtin`, `universal`, `
   than materials the last submesh is drawn again with each further material, so the probe gives
   each sprite shape one material.
 
-Not measured: a shader declaring `unity_SpriteColor` in the built-in pipeline, a URP shader reading
-`_RendererColor` of a sprite shape, colors of a SpriteRenderer drawn through GPU instancing,
-tilemaps in `TilemapRenderer.Mode.SRPBatch` (drawn as Chunk).
+Not measured: a shader declaring `unity_SpriteColor` in the built-in pipeline, GPU instancing of
+a custom sprite shader, and how instanced sprites batch (each case's sprites share one material).
 
 ## Reproduce
 
