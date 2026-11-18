@@ -17,16 +17,17 @@ orders, one on Display 2, a disabled one, Screen Space Camera canvases with and 
 camera, world canvases in front of, behind and culled by the camera and one without a camera;
 nested canvases with and without `overrideSorting`, disabled, inactive, empty, holding only an
 empty or overriding canvas, with a renderer on their own object; renderers that are culled
-(`cull`, RectMask2D), transparent (colour, `SetAlpha`, CanvasGroup), disabled, inactive, empty or
-without a Graphic. Each key `<phase>.<renderer>` is `[absoluteDepth, relativeDepth,
+(`cull`, RectMask2D), transparent (colour, `SetAlpha`, CanvasGroup), disabled, inactive, empty
+or without a Graphic. Each key `<phase>.<renderer>` is `[absoluteDepth, relativeDepth,
 Graphic.depth]` (`null` without a Graphic); `<phase>.raycast.<canvas>` lists `name:depth` in
 RaycastAll's order for the hits of one canvas's GraphicRaycaster, which its depths decide; the
 order between raycasters (their canvases' `sortingOrder` and `renderOrder`) is not recorded
 here, except in `<phase>.raycastRoot.OR`: the hits under one root raycaster, a root and an
-overriding canvas at the same sorting order, which RaycastAll orders by depth. Phases: `made` (same frame as built), `initial`, then reparenting, enabling and
-disabling, `overrideSorting` changes, a canvas made late, roots made nested and nested made
-roots, a canvas added and one removed, and `Canvas.ForceUpdateCanvases`. `<phase>.now` keys are
-read right after the change, `reparent.next` one frame later, the others two frames later.
+overriding canvas at the same sorting order, which RaycastAll orders by depth. Phases: `made`
+(same frame as built), `initial`, then reparenting, enabling and disabling, `overrideSorting`
+changes, a canvas made late, roots made nested and nested made roots, a canvas added and one
+removed, and `Canvas.ForceUpdateCanvases`. `<phase>.now` keys are read right after the change,
+`reparent.next` one frame later, the others two frames later.
 
 ## Measured behaviour
 

@@ -284,7 +284,8 @@ public class UiDepthProbe : MonoBehaviour
 
     // RaycastAll at the screen's centre, as one list per GraphicRaycaster in RaycastAll's order:
     // a raycaster's own hits sort by depth. The order between raycasters (their canvases'
-    // sortingOrder and renderOrder) is not this probe's question and is not recorded.
+    // sortingOrder and renderOrder) is not this probe's question and is not recorded, except
+    // under one root raycaster (raycastRoot.OR), where the depths decide it.
     void Raycasts(string phase)
     {
         var data = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width / 2f, Screen.height / 2f) };
