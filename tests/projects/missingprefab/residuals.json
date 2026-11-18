@@ -1,0 +1,9 @@
+{
+  "On leaving Play mode the Editor reloads the open scene, logging its missing prefabs again; Unbound's Edit mode starts from an empty scene after Play mode (EditorSession.ExitPlayMode), so nothing loads there": [
+    "missing:log/play#0",
+    "missing:log/play#1"
+  ],
+  "The Editor logs a prefab's import problems when it imports the prefab (every prefab, in this fresh-Library capture); Unbound imports no prefab at start-up, like an Editor whose Library is already imported": [
+    "missing:log/startup"
+  ]
+}

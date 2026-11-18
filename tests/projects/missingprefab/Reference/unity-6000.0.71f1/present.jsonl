@@ -1,0 +1,255 @@
+{"k": "log/startup", "v": ""}
+{"k": "edit-scene/rootCount", "v": "5"}
+{"k": "edit-scene/0:OuterS", "v": "OuterS active=1 pos=0,0,-3 components=Transform,Holder"}
+{"k": "edit-scene/0:OuterS/0:InnerA", "v": "InnerA active=1 pos=2,0,0 components=Transform,Marker,SphereCollider marker=5"}
+{"k": "edit-scene/0:OuterS/0:InnerA/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/0:OuterS/0:InnerA/0:Wheel/0:Added", "v": "Added active=1 pos=0,0,1 components=Transform"}
+{"k": "edit-scene/0:OuterS/0:InnerA/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/0:OuterS/0:InnerA/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider,CapsuleCollider"}
+{"k": "edit-scene/0:OuterS/0:InnerA/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/0:OuterS/0:InnerA/4:AddedRoot", "v": "AddedRoot active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-scene/0:OuterS/1:After", "v": "After active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-scene/1:InnerS", "v": "InnerS active=1 pos=0,0,3 components=Transform,Marker marker=1"}
+{"k": "edit-scene/1:InnerS/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/1:InnerS/0:Wheel/0:SceneChild", "v": "SceneChild active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-scene/1:InnerS/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/1:InnerS/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/1:InnerS/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/2:InnerS2", "v": "InnerS2 active=1 pos=0,0,0 components=Transform,Marker marker=1"}
+{"k": "edit-scene/2:InnerS2/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/2:InnerS2/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/2:InnerS2/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/2:InnerS2/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/3:VariantS", "v": "VariantS active=1 pos=1,0,0 components=Transform,Marker marker=7"}
+{"k": "edit-scene/3:VariantS/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/3:VariantS/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/3:VariantS/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/3:VariantS/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-scene/4:SceneHolder", "v": "SceneHolder active=1 pos=0,0,0 components=Transform,Holder"}
+{"k": "edit-scene/SceneHolder/objects.Length", "v": "5"}
+{"k": "edit-scene/SceneHolder/objects[0]", "v": "GameObject 1:InnerS"}
+{"k": "edit-scene/SceneHolder/objects[1]", "v": "GameObject 1:InnerS/0:Wheel"}
+{"k": "edit-scene/SceneHolder/objects[2]", "v": "GameObject 1:InnerS/0:Wheel/0:SceneChild"}
+{"k": "edit-scene/SceneHolder/objects[3]", "v": "GameObject 0:OuterS/0:InnerA"}
+{"k": "edit-scene/SceneHolder/objects[4]", "v": "GameObject 0:OuterS/0:InnerA/0:Wheel/0:Added"}
+{"k": "edit-scene/SceneHolder/childTransform", "v": "Transform 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "edit-scene/SceneHolder/marker", "v": "Marker 1:InnerS"}
+{"k": "edit-scene/SceneHolder/box", "v": "BoxCollider 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "edit-scene/SceneHolder/sphere", "v": "SphereCollider 0:OuterS/0:InnerA"}
+{"k": "edit-scene/SceneHolder/parts.Length", "v": "0"}
+{"k": "edit-scene/SceneHolder/spawn", "v": "GameObject Outer"}
+{"k": "edit-prefab/0:OuterS", "v": "missing=0 status=Connected part=1 root=1"}
+{"k": "edit-prefab/0:OuterS/0:InnerA", "v": "missing=0 status=Connected part=1 root=1"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/0:Wheel", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/0:Wheel/0:Added", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/1:Wheel1", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/2:Wheel2", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/3:Wheel3", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/0:InnerA/4:AddedRoot", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/0:OuterS/1:After", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/1:InnerS", "v": "missing=0 status=Connected part=1 root=1"}
+{"k": "edit-prefab/1:InnerS/0:Wheel", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/1:InnerS/0:Wheel/0:SceneChild", "v": "missing=0 status=NotAPrefab part=0 root=0"}
+{"k": "edit-prefab/1:InnerS/1:Wheel1", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/1:InnerS/2:Wheel2", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/1:InnerS/3:Wheel3", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/2:InnerS2", "v": "missing=0 status=Connected part=1 root=1"}
+{"k": "edit-prefab/2:InnerS2/0:Wheel", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/2:InnerS2/1:Wheel1", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/2:InnerS2/2:Wheel2", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/2:InnerS2/3:Wheel3", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/3:VariantS", "v": "missing=0 status=Connected part=1 root=1"}
+{"k": "edit-prefab/3:VariantS/0:Wheel", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/3:VariantS/1:Wheel1", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/3:VariantS/2:Wheel2", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/3:VariantS/3:Wheel3", "v": "missing=0 status=Connected part=1 root=0"}
+{"k": "edit-prefab/4:SceneHolder", "v": "missing=0 status=NotAPrefab part=0 root=0"}
+{"k": "edit-asset/0:Outer", "v": "Outer active=1 pos=0,0,0 components=Transform,Holder"}
+{"k": "edit-asset/0:Outer/0:InnerA", "v": "InnerA active=1 pos=2,0,0 components=Transform,Marker,SphereCollider marker=5"}
+{"k": "edit-asset/0:Outer/0:InnerA/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-asset/0:Outer/0:InnerA/0:Wheel/0:Added", "v": "Added active=1 pos=0,0,1 components=Transform"}
+{"k": "edit-asset/0:Outer/0:InnerA/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-asset/0:Outer/0:InnerA/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider,CapsuleCollider"}
+{"k": "edit-asset/0:Outer/0:InnerA/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-asset/0:Outer/0:InnerA/4:AddedRoot", "v": "AddedRoot active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-asset/0:Outer/1:After", "v": "After active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-asset/Holder/objects.Length", "v": "7"}
+{"k": "edit-asset/Holder/objects[0]", "v": "GameObject 0:Outer/0:InnerA"}
+{"k": "edit-asset/Holder/objects[1]", "v": "GameObject 0:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-asset/Holder/objects[2]", "v": "GameObject 0:Outer/0:InnerA/0:Wheel/0:Added"}
+{"k": "edit-asset/Holder/objects[3]", "v": "GameObject 0:Outer/1:After"}
+{"k": "edit-asset/Holder/objects[4]", "v": "GameObject 0:Outer/0:InnerA/4:AddedRoot"}
+{"k": "edit-asset/Holder/objects[5]", "v": "GameObject 0:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-asset/Holder/objects[6]", "v": "GameObject 0:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-asset/Holder/childTransform", "v": "Transform 0:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-asset/Holder/marker", "v": "Marker 0:Outer/0:InnerA"}
+{"k": "edit-asset/Holder/box", "v": "BoxCollider 0:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-asset/Holder/sphere", "v": "SphereCollider 0:Outer/0:InnerA"}
+{"k": "edit-asset/Holder/parts.Length", "v": "6"}
+{"k": "edit-asset/Holder/parts[0]", "v": "Transform 0:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-asset/Holder/parts[1]", "v": "BoxCollider 0:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-asset/Holder/parts[2]", "v": "Transform 0:Outer/0:InnerA/2:Wheel2"}
+{"k": "edit-asset/Holder/parts[3]", "v": "BoxCollider 0:Outer/0:InnerA/2:Wheel2"}
+{"k": "edit-asset/Holder/parts[4]", "v": "Transform 0:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-asset/Holder/parts[5]", "v": "BoxCollider 0:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-asset/Holder/spawn", "v": "destroyed-or-missing"}
+{"k": "edit-variant/0:InnerVariant", "v": "InnerVariant active=1 pos=0,0,0 components=Transform,Marker marker=7"}
+{"k": "edit-variant/0:InnerVariant/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-variant/0:InnerVariant/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-variant/0:InnerVariant/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "edit-variant/0:InnerVariant/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-instantiate/5:Outer", "v": "Outer active=1 pos=0,0,0 components=Transform,Holder"}
+{"k": "edit-instantiate/5:Outer/0:InnerA", "v": "InnerA active=1 pos=2,0,0 components=Transform,Marker,SphereCollider marker=5"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/0:Wheel/0:Added", "v": "Added active=1 pos=0,0,1 components=Transform"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider,CapsuleCollider"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "edit-instantiate/5:Outer/0:InnerA/4:AddedRoot", "v": "AddedRoot active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-instantiate/5:Outer/1:After", "v": "After active=1 pos=0,0,0 components=Transform"}
+{"k": "edit-instantiate/Holder/objects.Length", "v": "7"}
+{"k": "edit-instantiate/Holder/objects[0]", "v": "GameObject 5:Outer/0:InnerA"}
+{"k": "edit-instantiate/Holder/objects[1]", "v": "GameObject 5:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-instantiate/Holder/objects[2]", "v": "GameObject 5:Outer/0:InnerA/0:Wheel/0:Added"}
+{"k": "edit-instantiate/Holder/objects[3]", "v": "GameObject 5:Outer/1:After"}
+{"k": "edit-instantiate/Holder/objects[4]", "v": "GameObject 5:Outer/0:InnerA/4:AddedRoot"}
+{"k": "edit-instantiate/Holder/objects[5]", "v": "GameObject 5:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-instantiate/Holder/objects[6]", "v": "GameObject 5:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-instantiate/Holder/childTransform", "v": "Transform 5:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-instantiate/Holder/marker", "v": "Marker 5:Outer/0:InnerA"}
+{"k": "edit-instantiate/Holder/box", "v": "BoxCollider 5:Outer/0:InnerA/0:Wheel"}
+{"k": "edit-instantiate/Holder/sphere", "v": "SphereCollider 5:Outer/0:InnerA"}
+{"k": "edit-instantiate/Holder/parts.Length", "v": "6"}
+{"k": "edit-instantiate/Holder/parts[0]", "v": "Transform 5:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-instantiate/Holder/parts[1]", "v": "BoxCollider 5:Outer/0:InnerA/3:Wheel3"}
+{"k": "edit-instantiate/Holder/parts[2]", "v": "Transform 5:Outer/0:InnerA/2:Wheel2"}
+{"k": "edit-instantiate/Holder/parts[3]", "v": "BoxCollider 5:Outer/0:InnerA/2:Wheel2"}
+{"k": "edit-instantiate/Holder/parts[4]", "v": "Transform 5:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-instantiate/Holder/parts[5]", "v": "BoxCollider 5:Outer/0:InnerA/1:Wheel1"}
+{"k": "edit-instantiate/Holder/spawn", "v": "destroyed-or-missing"}
+{"k": "awake/OuterS#0/objects.Length", "v": "7"}
+{"k": "awake/OuterS#0/objects[0]", "v": "GameObject 0:OuterS/0:InnerA"}
+{"k": "awake/OuterS#0/objects[1]", "v": "GameObject 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "awake/OuterS#0/objects[2]", "v": "GameObject 0:OuterS/0:InnerA/0:Wheel/0:Added"}
+{"k": "awake/OuterS#0/objects[3]", "v": "GameObject 0:OuterS/1:After"}
+{"k": "awake/OuterS#0/objects[4]", "v": "GameObject 0:OuterS/0:InnerA/4:AddedRoot"}
+{"k": "awake/OuterS#0/objects[5]", "v": "GameObject 0:OuterS/0:InnerA/3:Wheel3"}
+{"k": "awake/OuterS#0/objects[6]", "v": "GameObject 0:OuterS/0:InnerA/1:Wheel1"}
+{"k": "awake/OuterS#0/childTransform", "v": "Transform 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "awake/OuterS#0/marker", "v": "Marker 0:OuterS/0:InnerA"}
+{"k": "awake/OuterS#0/box", "v": "BoxCollider 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "awake/OuterS#0/sphere", "v": "SphereCollider 0:OuterS/0:InnerA"}
+{"k": "awake/OuterS#0/parts.Length", "v": "6"}
+{"k": "awake/OuterS#0/parts[0]", "v": "Transform 0:OuterS/0:InnerA/3:Wheel3"}
+{"k": "awake/OuterS#0/parts[1]", "v": "BoxCollider 0:OuterS/0:InnerA/3:Wheel3"}
+{"k": "awake/OuterS#0/parts[2]", "v": "Transform 0:OuterS/0:InnerA/2:Wheel2"}
+{"k": "awake/OuterS#0/parts[3]", "v": "BoxCollider 0:OuterS/0:InnerA/2:Wheel2"}
+{"k": "awake/OuterS#0/parts[4]", "v": "Transform 0:OuterS/0:InnerA/1:Wheel1"}
+{"k": "awake/OuterS#0/parts[5]", "v": "BoxCollider 0:OuterS/0:InnerA/1:Wheel1"}
+{"k": "awake/OuterS#0/spawn", "v": "destroyed-or-missing"}
+{"k": "awake/SceneHolder#0/objects.Length", "v": "5"}
+{"k": "awake/SceneHolder#0/objects[0]", "v": "GameObject 1:InnerS"}
+{"k": "awake/SceneHolder#0/objects[1]", "v": "GameObject 1:InnerS/0:Wheel"}
+{"k": "awake/SceneHolder#0/objects[2]", "v": "GameObject 1:InnerS/0:Wheel/0:SceneChild"}
+{"k": "awake/SceneHolder#0/objects[3]", "v": "GameObject 0:OuterS/0:InnerA"}
+{"k": "awake/SceneHolder#0/objects[4]", "v": "GameObject 0:OuterS/0:InnerA/0:Wheel/0:Added"}
+{"k": "awake/SceneHolder#0/childTransform", "v": "Transform 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "awake/SceneHolder#0/marker", "v": "Marker 1:InnerS"}
+{"k": "awake/SceneHolder#0/box", "v": "BoxCollider 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "awake/SceneHolder#0/sphere", "v": "SphereCollider 0:OuterS/0:InnerA"}
+{"k": "awake/SceneHolder#0/parts.Length", "v": "0"}
+{"k": "awake/SceneHolder#0/spawn", "v": "GameObject Outer"}
+{"k": "play-scene/rootCount", "v": "5"}
+{"k": "play-scene/0:OuterS", "v": "OuterS active=1 pos=0,0,-3 components=Transform,Holder"}
+{"k": "play-scene/0:OuterS/0:InnerA", "v": "InnerA active=1 pos=2,0,0 components=Transform,Marker,SphereCollider marker=5"}
+{"k": "play-scene/0:OuterS/0:InnerA/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-scene/0:OuterS/0:InnerA/0:Wheel/0:Added", "v": "Added active=1 pos=0,0,1 components=Transform"}
+{"k": "play-scene/0:OuterS/0:InnerA/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/0:OuterS/0:InnerA/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider,CapsuleCollider"}
+{"k": "play-scene/0:OuterS/0:InnerA/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/0:OuterS/0:InnerA/4:AddedRoot", "v": "AddedRoot active=1 pos=0,0,0 components=Transform"}
+{"k": "play-scene/0:OuterS/1:After", "v": "After active=1 pos=0,0,0 components=Transform"}
+{"k": "play-scene/1:InnerS", "v": "InnerS active=1 pos=0,0,3 components=Transform,Marker marker=1"}
+{"k": "play-scene/1:InnerS/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-scene/1:InnerS/0:Wheel/0:SceneChild", "v": "SceneChild active=1 pos=0,0,0 components=Transform"}
+{"k": "play-scene/1:InnerS/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/1:InnerS/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/1:InnerS/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/2:InnerS2", "v": "InnerS2 active=1 pos=0,0,0 components=Transform,Marker marker=1"}
+{"k": "play-scene/2:InnerS2/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-scene/2:InnerS2/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/2:InnerS2/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/2:InnerS2/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/3:VariantS", "v": "VariantS active=1 pos=1,0,0 components=Transform,Marker marker=7"}
+{"k": "play-scene/3:VariantS/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-scene/3:VariantS/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/3:VariantS/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/3:VariantS/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "play-scene/4:SceneHolder", "v": "SceneHolder active=1 pos=0,0,0 components=Transform,Holder"}
+{"k": "play-scene/SceneHolder/objects.Length", "v": "5"}
+{"k": "play-scene/SceneHolder/objects[0]", "v": "GameObject 1:InnerS"}
+{"k": "play-scene/SceneHolder/objects[1]", "v": "GameObject 1:InnerS/0:Wheel"}
+{"k": "play-scene/SceneHolder/objects[2]", "v": "GameObject 1:InnerS/0:Wheel/0:SceneChild"}
+{"k": "play-scene/SceneHolder/objects[3]", "v": "GameObject 0:OuterS/0:InnerA"}
+{"k": "play-scene/SceneHolder/objects[4]", "v": "GameObject 0:OuterS/0:InnerA/0:Wheel/0:Added"}
+{"k": "play-scene/SceneHolder/childTransform", "v": "Transform 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "play-scene/SceneHolder/marker", "v": "Marker 1:InnerS"}
+{"k": "play-scene/SceneHolder/box", "v": "BoxCollider 0:OuterS/0:InnerA/0:Wheel"}
+{"k": "play-scene/SceneHolder/sphere", "v": "SphereCollider 0:OuterS/0:InnerA"}
+{"k": "play-scene/SceneHolder/parts.Length", "v": "0"}
+{"k": "play-scene/SceneHolder/spawn", "v": "GameObject Outer"}
+{"k": "awake/Outer(Clone)#0/objects.Length", "v": "7"}
+{"k": "awake/Outer(Clone)#0/objects[0]", "v": "GameObject 5:Outer(Clone)/0:InnerA"}
+{"k": "awake/Outer(Clone)#0/objects[1]", "v": "GameObject 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "awake/Outer(Clone)#0/objects[2]", "v": "GameObject 5:Outer(Clone)/0:InnerA/0:Wheel/0:Added"}
+{"k": "awake/Outer(Clone)#0/objects[3]", "v": "GameObject 5:Outer(Clone)/1:After"}
+{"k": "awake/Outer(Clone)#0/objects[4]", "v": "GameObject 5:Outer(Clone)/0:InnerA/4:AddedRoot"}
+{"k": "awake/Outer(Clone)#0/objects[5]", "v": "GameObject 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "awake/Outer(Clone)#0/objects[6]", "v": "GameObject 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "awake/Outer(Clone)#0/childTransform", "v": "Transform 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "awake/Outer(Clone)#0/marker", "v": "Marker 5:Outer(Clone)/0:InnerA"}
+{"k": "awake/Outer(Clone)#0/box", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "awake/Outer(Clone)#0/sphere", "v": "SphereCollider 5:Outer(Clone)/0:InnerA"}
+{"k": "awake/Outer(Clone)#0/parts.Length", "v": "6"}
+{"k": "awake/Outer(Clone)#0/parts[0]", "v": "Transform 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "awake/Outer(Clone)#0/parts[1]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "awake/Outer(Clone)#0/parts[2]", "v": "Transform 5:Outer(Clone)/0:InnerA/2:Wheel2"}
+{"k": "awake/Outer(Clone)#0/parts[3]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/2:Wheel2"}
+{"k": "awake/Outer(Clone)#0/parts[4]", "v": "Transform 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "awake/Outer(Clone)#0/parts[5]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "awake/Outer(Clone)#0/spawn", "v": "destroyed-or-missing"}
+{"k": "play-instantiate/5:Outer(Clone)", "v": "Outer(Clone) active=1 pos=0,0,0 components=Transform,Holder"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA", "v": "InnerA active=1 pos=2,0,0 components=Transform,Marker,SphereCollider marker=5"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/0:Wheel/0:Added", "v": "Added active=1 pos=0,0,1 components=Transform"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider,CapsuleCollider"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "play-instantiate/5:Outer(Clone)/0:InnerA/4:AddedRoot", "v": "AddedRoot active=1 pos=0,0,0 components=Transform"}
+{"k": "play-instantiate/5:Outer(Clone)/1:After", "v": "After active=1 pos=0,0,0 components=Transform"}
+{"k": "play-instantiate/Holder/objects.Length", "v": "7"}
+{"k": "play-instantiate/Holder/objects[0]", "v": "GameObject 5:Outer(Clone)/0:InnerA"}
+{"k": "play-instantiate/Holder/objects[1]", "v": "GameObject 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "play-instantiate/Holder/objects[2]", "v": "GameObject 5:Outer(Clone)/0:InnerA/0:Wheel/0:Added"}
+{"k": "play-instantiate/Holder/objects[3]", "v": "GameObject 5:Outer(Clone)/1:After"}
+{"k": "play-instantiate/Holder/objects[4]", "v": "GameObject 5:Outer(Clone)/0:InnerA/4:AddedRoot"}
+{"k": "play-instantiate/Holder/objects[5]", "v": "GameObject 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "play-instantiate/Holder/objects[6]", "v": "GameObject 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "play-instantiate/Holder/childTransform", "v": "Transform 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "play-instantiate/Holder/marker", "v": "Marker 5:Outer(Clone)/0:InnerA"}
+{"k": "play-instantiate/Holder/box", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/0:Wheel"}
+{"k": "play-instantiate/Holder/sphere", "v": "SphereCollider 5:Outer(Clone)/0:InnerA"}
+{"k": "play-instantiate/Holder/parts.Length", "v": "6"}
+{"k": "play-instantiate/Holder/parts[0]", "v": "Transform 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "play-instantiate/Holder/parts[1]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/3:Wheel3"}
+{"k": "play-instantiate/Holder/parts[2]", "v": "Transform 5:Outer(Clone)/0:InnerA/2:Wheel2"}
+{"k": "play-instantiate/Holder/parts[3]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/2:Wheel2"}
+{"k": "play-instantiate/Holder/parts[4]", "v": "Transform 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "play-instantiate/Holder/parts[5]", "v": "BoxCollider 5:Outer(Clone)/0:InnerA/1:Wheel1"}
+{"k": "play-instantiate/Holder/spawn", "v": "destroyed-or-missing"}
+{"k": "play-variant/6:InnerVariant(Clone)", "v": "InnerVariant(Clone) active=1 pos=0,0,0 components=Transform,Marker marker=7"}
+{"k": "play-variant/6:InnerVariant(Clone)/0:Wheel", "v": "Wheel active=1 pos=0,1,0 components=Transform,BoxCollider"}
+{"k": "play-variant/6:InnerVariant(Clone)/1:Wheel1", "v": "Wheel1 active=1 pos=1,0,0 components=Transform,BoxCollider"}
+{"k": "play-variant/6:InnerVariant(Clone)/2:Wheel2", "v": "Wheel2 active=1 pos=2,0,0 components=Transform,BoxCollider"}
+{"k": "play-variant/6:InnerVariant(Clone)/3:Wheel3", "v": "Wheel3 active=1 pos=3,0,0 components=Transform,BoxCollider"}
+{"k": "complete", "v": "1"}
