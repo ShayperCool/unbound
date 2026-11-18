@@ -43,7 +43,9 @@ namespace UnityEngine
         internal (string Texture, long FileId)? m_AtlasBinding;
         /// <summary>Drawn from a packed atlas's page: its texture rect there.</summary>
         Rect? m_AtlasRect;
-        SpritePackingMode m_PackingMode = SpritePackingMode.Rectangle;
+        /// <summary>Tight outside any atlas, whatever the mesh type (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/toolapis spriteCreate, generated and PSD sprites).</summary>
+        SpritePackingMode m_PackingMode = SpritePackingMode.Tight;
         SpritePackingRotation m_PackingRotation;
         float m_AtlasScale = 1f;
 

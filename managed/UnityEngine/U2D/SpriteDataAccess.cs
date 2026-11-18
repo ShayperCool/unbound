@@ -187,6 +187,8 @@ namespace UnityEngine.U2D
             var buffer = data.EnsureChannel(channel);
             int count = Math.Min(src.Length, data.VertexCount);
             UnsafeUtility.MemCpy(buffer, NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(src), count * (long)SpriteMeshData.ElementSize(channel));
+            if (channel == VertexAttribute.TexCoord0) sprite.m_TexCoordsWritten = true;
+            else if (channel == VertexAttribute.Position && !sprite.m_TexCoordsWritten) sprite.DeriveTexCoords(data);
             sprite.MeshDataChanged();
         }
 
@@ -429,6 +431,30 @@ namespace UnityEngine
         }
 
         /// <summary>Takes what was set through the data access API as the sprite's geometry.</summary>
+        /// <summary>Whether a script wrote the UVs through SetVertexAttribute: from then on they
+        /// stay as written.</summary>
+        internal bool m_TexCoordsWritten;
+
+        /// <summary>
+        /// The UVs of the vertex positions: each position in pixels (times the pixels per unit,
+        /// from the pivot) placed in the sprite's rect, over the texture's size. Writing positions
+        /// re-derives them until the UVs are written themselves (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/toolapis spriteMesh). A sprite drawn from a packed atlas keeps
+        /// its UVs (unmeasured).
+        /// </summary>
+        internal unsafe void DeriveTexCoords(SpriteMeshData data)
+        {
+            var texture = m_Texture;
+            if (texture == null || packed || texture.width <= 0 || texture.height <= 0) return;
+            var positions = (Vector3*)data.Channel(Rendering.VertexAttribute.Position);
+            var uvs = (Vector2*)data.EnsureChannel(Rendering.VertexAttribute.TexCoord0);
+            if (positions == null) return;
+            float ppu = m_PixelsPerUnit;
+            for (int i = 0; i < data.VertexCount; i++)
+                uvs[i] = new Vector2((m_Rect.x + m_Pivot.x + positions[i].x * ppu) / texture.width,
+                    (m_Rect.y + m_Pivot.y + positions[i].y * ppu) / texture.height);
+        }
+
         internal unsafe void MeshDataChanged()
         {
             var data = m_MeshData;
