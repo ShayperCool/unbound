@@ -31,8 +31,9 @@ UNBOUND=/path/to/unbound python3 tests/projects/svgsprites/run.py check
 
 The gate assembles the committed `Authored/` set and runs only the engine. Numbers compare within
 1e-5 relative to max(1, |reference|); a NaN the Editor records matches only a NaN; image and texel
-channels within 2/255. `residuals.json` lists the only pixels allowed to differ beyond that (four
-pixels at the focus of a radial gradient, by at most 5/255); they stay printed in every report.
+channels within 2/255. `residuals.json` (on Metal `residuals-metal.json`) lists the only pixels
+allowed to differ beyond that (four pixels at the focus of a radial gradient, by at most 5/255);
+they stay printed in every report.
 
 | Source | Contract or observation | Engine decision |
 | --- | --- | --- |
@@ -63,7 +64,8 @@ warns as unimplemented, while hyperlink-click listeners are kept).
 byte-identical to the reference.
 
 On macOS arm64 `publish` writes and `check` reads `Reference/unity-<version>/metal.json`, two
-identical captures of the 6000.0.71f1 macOS Editor (Metal, Apple M2 Pro); 12 of its values differ
-from the Linux reference (rendered image pixels). Unbound on Metal: no differences beyond the
-listed residual pixels.
-
+identical captures of the 6000.0.71f1 macOS Editor (Metal, Apple M2 Pro). Under the comparator it
+differs from the Linux reference only in `.image`, in 87 of 23040 pixels (three texture pixel
+strings stay within 2/255). Unbound on Metal: no differences beyond pixel 11888, listed in
+`residuals-metal.json` (the radial gradient's focus, where the engine gives 188 and both Editors
+185).

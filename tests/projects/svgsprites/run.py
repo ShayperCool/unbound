@@ -54,12 +54,13 @@ def publish(labels):
                                  lambda d: [OUT], write, complete=[complete])
 
 
-def compare(reference, candidate, out):
+def compare(reference, candidate, out, residuals=ROOT/'residuals.json'):
     problems = []
     accepted = []
     count = 0
-    # Listed residuals (residuals.json): only these image pixels may differ, by at most `max`.
-    residual = json.loads((ROOT/'residuals.json').read_text()).get('image', {}) if (ROOT/'residuals.json').is_file() else {}
+    # Listed residuals of the reference's device (residuals.json, residuals-metal.json): only these
+    # image pixels may differ, by at most `max`.
+    residual = json.loads(residuals.read_text()).get('image', {}) if residuals.is_file() else {}
     residual_pixels = set(residual.get('pixels', []))
 
     def walk(a, b, key):
@@ -126,7 +127,9 @@ def check():
     if code or not (out/OUT).is_file():
         print(f'engine exit {code}; missing capture: {not (out/OUT).is_file()}; {out}/engine.log')
         return 1
-    return compare(json.loads(device_reference(reference_file(ROOT), ROOT).read_text()), json.loads((out/OUT).read_text()), out)
+    reference = device_reference(reference_file(ROOT), ROOT)
+    residuals = ROOT/('residuals-metal.json' if reference.name.startswith('metal') else 'residuals.json')
+    return compare(json.loads(reference.read_text()), json.loads((out/OUT).read_text()), out, residuals)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,9 @@
+{
+  "image": {
+    "pixels": [
+      11888
+    ],
+    "max": 3,
+    "reason": "The focus pixel of gradients.svg's radial gradient: the macOS Editor (Metal) gives 185 in its first two channels, as the Linux Editor does, and the engine 188, as it does on Linux (the engine's rounding of the package's per-pixel focal gradient, unresolved). Every other pixel and value matches the Metal reference within the comparator's bounds."
+  }
+}

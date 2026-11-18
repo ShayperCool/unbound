@@ -1,7 +1,12 @@
 {
   "image": {
-    "pixels": [11648, 11649, 11888, 12620],
+    "pixels": [
+      11648,
+      11649,
+      11888,
+      12620
+    ],
     "max": 5,
-    "reason": "Four pixels at the focus of gradients.svg's radial gradient differ by 3 to 5/255 (the package's VectorGradient shader evaluates the focal gradient per pixel; the Editor's GL shader on the NVIDIA driver and the engine's compiled shader round it differently). Every other pixel and value matches within the comparator's bounds."
+    "reason": "Four pixels at the focus of gradients.svg's radial gradient differ from the Linux Editor (OpenGL Core, NVIDIA) by 3 to 5/255 (the package's VectorGradient shader evaluates the focal gradient per pixel). At pixel 11888 the Metal Editor gives the same value as the Linux Editor and the engine the same other value on both devices, so that rounding is the engine's (unresolved); the other three pixels also differ between the two Editors. Every other pixel and value matches within the comparator's bounds."
   }
 }
