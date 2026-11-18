@@ -359,16 +359,8 @@ namespace UnityEngine.Rendering
 
         /// <summary>Whether a material's shader has a DOTS instancing variant: a pass of it that
         /// declares <c>DOTS_INSTANCING_ON</c>. A shader whose passes are not known is not.</summary>
-        internal static bool Supported(Material material)
-        {
-            if (material == null || material.shader is not Shader shader) return false;
-            var declarations = ShaderDeclarations.Of(shader);
-            if (!declarations.SubShadersKnown) return false;
-            foreach (var sub in declarations.SubShaders)
-                foreach (var sets in sub.KeywordSets)
-                    if (ShaderDeclarations.Offers(sets, ShaderDeclarations.DotsInstancingKeyword)) return true;
-            return false;
-        }
+        internal static bool Supported(Material material) =>
+            material != null && ShaderDeclarations.AnyPassOffers(material.shader, ShaderDeclarations.DotsInstancingKeyword);
         /// <summary>The render queue past which a material is transparent.</summary>
         const int LastOpaqueQueue = 2500;
 

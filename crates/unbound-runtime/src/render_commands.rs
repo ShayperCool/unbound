@@ -51,7 +51,8 @@ pub enum DrawTint {
     /// bytes (each channel clamped to 0..1, times 255, rounded half up).
     Vertices,
     /// A renderer's color of the constants alone: `unity_SpriteColor` for a program that
-    /// declares it; the vertex color is left alone.
+    /// declares it, and the draw's properties (the renderer's constants: `_RendererColor`) for
+    /// the others; the vertex color is left alone.
     Constant,
 }
 

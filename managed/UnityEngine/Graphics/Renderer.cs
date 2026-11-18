@@ -1103,9 +1103,73 @@ namespace UnityEngine
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             if (!MaskShape(out var mesh, out var model, out var texture)) return;
+            var secondary = m_Sprite.SecondaryProperties();
             // The renderer's color, in the project's color space (tests/projects/vertexcolors sprite.*).
-            FrameBuilder.AddMeshDraws(this, mesh, model, VertexColors.InColorSpace(m_Color), camera, into, texture, m_Sprite.SecondaryProperties(),
-                tint: DrawTint.Vertices);
+            var tint = VertexColors.InColorSpace(m_Color);
+            if (!AnyInstanced())
+            {
+                FrameBuilder.AddMeshDraws(this, mesh, model, tint, camera, into, texture, RendererProperties(secondary), tint: DrawTint.Vertices);
+                return;
+            }
+            for (int i = 0; i < m_Materials.Length; i++)
+            {
+                if (Instanced(m_Materials[i]))
+                    FrameBuilder.AddMeshDraws(this, mesh, model, Color.white, camera, into, texture, InstancedProperties(secondary), i, 1);
+                else
+                    FrameBuilder.AddMeshDraws(this, mesh, model, tint, camera, into, texture, RendererProperties(secondary), i, 1, DrawTint.Vertices);
+            }
+        }
+
+        /// <summary>Whether a material draws the sprite through the built-in pipeline's GPU
+        /// instancing: it enables instancing and its shader's keyword space declares
+        /// INSTANCING_ON. The color is then the instance's `_RendererColor` as it is, neither
+        /// converted to the color space nor clamped, and the vertices stay white (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/vertexcolors builtin.sprite.instanced; URP's
+        /// sprites take `unity_SpriteColor` alike, instanced or not).</summary>
+        static bool Instanced(Material material) =>
+            material != null && material.enableInstancing && GraphicsSettings.currentRenderPipeline == null
+            && material.shader != null && ShaderDeclarations.Of(material.shader).IndexOf(ShaderDeclarations.InstancingKeyword) >= 0;
+
+        bool AnyInstanced()
+        {
+            foreach (var material in m_Materials) if (Instanced(material)) return true;
+            return false;
+        }
+
+        static readonly int s_RendererColorId = Shader.PropertyToID("_RendererColor");
+        /// <summary>The renderer constants of a sprite without properties of its own.</summary>
+        static readonly Dictionary<int, object> s_WhiteRendererColor = new Dictionary<int, object>(1) { [s_RendererColorId] = Color.white };
+        Dictionary<int, object> m_RendererProperties, m_RendererPropertiesOf;
+        Dictionary<int, object> m_InstancedProperties, m_InstancedPropertiesOf;
+        Color m_InstancedPropertiesFor;
+
+        /// <summary>The sprite's own properties with its renderer constants: a sprite drawn
+        /// without instancing sets `_RendererColor` white (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/vertexcolors sprite.renderercolor). A set is made when the sprite's
+        /// properties change.</summary>
+        Dictionary<int, object> RendererProperties(Dictionary<int, object> secondary)
+        {
+            if (secondary == null) return s_WhiteRendererColor;
+            if (!ReferenceEquals(m_RendererPropertiesOf, secondary))
+            {
+                m_RendererProperties = new Dictionary<int, object>(secondary) { [s_RendererColorId] = Color.white };
+                m_RendererPropertiesOf = secondary;
+            }
+            return m_RendererProperties;
+        }
+
+        /// <summary>The sprite's own properties with the renderer's color as `_RendererColor`: a
+        /// new set when either changes, so draws already collected keep what they had.</summary>
+        Dictionary<int, object> InstancedProperties(Dictionary<int, object> secondary)
+        {
+            if (m_InstancedProperties == null || !ReferenceEquals(m_InstancedPropertiesOf, secondary) || !m_InstancedPropertiesFor.Equals(m_Color))
+            {
+                m_InstancedProperties = secondary != null ? new Dictionary<int, object>(secondary) : new Dictionary<int, object>(1);
+                m_InstancedProperties[s_RendererColorId] = m_Color;
+                m_InstancedPropertiesOf = secondary;
+                m_InstancedPropertiesFor = m_Color;
+            }
+            return m_InstancedProperties;
         }
 
         bool m_WarnedTexturelessLayout;

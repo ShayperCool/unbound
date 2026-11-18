@@ -22,6 +22,8 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
+            ShaderDeclarations.s_CallForTests = null;
+            ShaderDeclarations.ResetForTests();
             QualitySettings.s_ColorSpace = m_ColorSpace;
             GraphicsSettings.defaultRenderPipeline = m_Pipeline;
             foreach (var o in m_Made) if (o) Object.DestroyImmediate(o);
@@ -101,6 +103,54 @@ namespace UnityEngine.Tests
                 Assert.Equal(DrawTint.Vertices, draw.Tint);
                 Near(space == ColorSpace.Linear ? Tint.linear : Tint, draw.Color);
             }
+        }
+
+        static readonly int s_RendererColor = Shader.PropertyToID("_RendererColor");
+
+        /// <summary>Shader declarations whose keyword space is <paramref name="keywords"/>.</summary>
+        static string Space(params string[] keywords) =>
+            "{\"found\":true,\"builtin\":false,\"subshaders_known\":true,\"keywords_known\":true,\"transient\":false,\"reason\":\"\",\"subshaders\":[],\"keywords\":["
+            + string.Join(",", Array.ConvertAll(keywords, k => "{\"name\":\"" + k + "\",\"local\":false,\"dynamic\":false}")) + "]}";
+
+        [Fact]
+        public void ASpriteSetsItsRendererColorWhiteUnlessTheBuiltinPipelineInstancesIt()
+        {
+            ShaderDeclarations.ResetForTests();
+            ShaderDeclarations.s_CallForTests = (method, request) => request.Contains("Probe/Instanced") ? Space("INSTANCING_ON") : Space("PIXELSNAP_ON");
+            var camera = Camera();
+            var go = Own(new GameObject("sprite"));
+            var sprite = go.AddComponent<SpriteRenderer>();
+            sprite.sprite = WhiteSprite();
+            var instancing = Own(new Material(Shader.Create("Probe/Instanced", 3000)) { enableInstancing = true });
+            var plain = Own(new Material(Shader.Create("Probe/Plain", 3000)) { enableInstancing = true });
+            sprite.color = Tint;
+            QualitySettings.s_ColorSpace = ColorSpace.Linear;
+            GraphicsSettings.defaultRenderPipeline = null;
+            // Without instancing: the color in the vertices, `_RendererColor` white.
+            sprite.sharedMaterial = Material();
+            var draw = Assert.Single(Draws(sprite, camera));
+            Assert.Equal((DrawTint.Vertices, Color.white), (draw.Tint, (Color)draw.Properties[s_RendererColor]));
+            Near(Tint.linear, draw.Color);
+            // Instanced: the color as it is (neither linear nor clamped) in `_RendererColor`, white vertices.
+            sprite.sharedMaterial = instancing;
+            draw = Assert.Single(Draws(sprite, camera));
+            Assert.Equal((DrawTint.None, Color.white, Tint), (draw.Tint, draw.Color, (Color)draw.Properties[s_RendererColor]));
+            // A draw collected before the color changes keeps its color.
+            sprite.color = Negative;
+            Assert.Equal(Tint, (Color)draw.Properties[s_RendererColor]);
+            Assert.Equal(Negative, (Color)Assert.Single(Draws(sprite, camera)).Properties[s_RendererColor]);
+            // A material that does not enable instancing, a shader without an instancing variant,
+            // or a render pipeline: the color in the vertices.
+            instancing.enableInstancing = false;
+            Assert.Equal(DrawTint.Vertices, Assert.Single(Draws(sprite, camera)).Tint);
+            instancing.enableInstancing = true;
+            sprite.sharedMaterial = plain;
+            Assert.Equal(DrawTint.Vertices, Assert.Single(Draws(sprite, camera)).Tint);
+            sprite.sharedMaterials = new[] { plain, instancing };
+            var both = Draws(sprite, camera);
+            Assert.Equal(new[] { DrawTint.Vertices, DrawTint.None }, both.ConvertAll(d => d.Tint).ToArray());
+            GraphicsSettings.defaultRenderPipeline = Own(ScriptableObject.CreateInstance<Pipeline2D>());
+            Assert.All(Draws(sprite, camera), d => Assert.Equal(DrawTint.Vertices, d.Tint));
         }
 
         Tilemap TilemapOf(TilemapRenderer.Mode mode, out TilemapRenderer renderer)

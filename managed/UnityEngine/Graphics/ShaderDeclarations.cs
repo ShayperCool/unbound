@@ -69,6 +69,22 @@ namespace Unbound.Runtime
         /// <summary>The keyword of a pass's DOTS instancing variant (BatchRendererGroup draws).</summary>
         internal const string DotsInstancingKeyword = "DOTS_INSTANCING_ON";
 
+        /// <summary>The keyword of a GPU instancing variant (`multi_compile_instancing`).</summary>
+        internal const string InstancingKeyword = "INSTANCING_ON";
+
+        /// <summary>Whether a pass of a shader offers <paramref name="keyword"/> (false for a
+        /// shader whose passes are not known).</summary>
+        internal static bool AnyPassOffers(Shader shader, string keyword)
+        {
+            if (shader == null) return false;
+            var declarations = Of(shader);
+            if (!declarations.SubShadersKnown) return false;
+            foreach (var sub in declarations.SubShaders)
+                foreach (var sets in sub.KeywordSets)
+                    if (Offers(sets, keyword)) return true;
+            return false;
+        }
+
         /// <summary>Whether a pass's variant choices offer <paramref name="keyword"/> (false for
         /// unknown choices).</summary>
         internal static bool Offers(string[][] keywordSets, string keyword)

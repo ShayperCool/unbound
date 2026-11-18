@@ -388,9 +388,9 @@ namespace UnityEngine.U2D
             if (m_Parts.Count == 0 || m_Materials.Length == 0 || m_Mesh == null) return;
             ulong mesh = m_Mesh.Sync();
             var model = transform.localToWorldMatrix;
-            // The renderer's color reaches the shader as constants, never in the vertices: URP's
-            // `unity_SpriteColor` as it is, the built-in pipeline's `_RendererColor` as bytes
-            // (tests/projects/vertexcolors spriteshape.*).
+            // The renderer's color reaches the shader as constants, never in the vertices:
+            // `unity_SpriteColor` as it is for a program that declares it (URP's shader library
+            // does), else `_RendererColor` as bytes (tests/projects/vertexcolors spriteshape.*).
             var tint = VertexColors.InColorSpace(m_Color);
             var bytes = VertexColors.Bytes(tint);
             // A new set when the bytes change: draws already collected keep the color they had.

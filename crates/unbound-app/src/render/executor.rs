@@ -4675,6 +4675,18 @@ impl UnityRenderer {
                 );
             }
             let Some(id) = id else { continue };
+            // A renderer's color of the constants alone reaches a program declaring
+            // `unity_SpriteColor` there only: the renderer's constants (`_RendererColor`, all a
+            // draw of that tint carries) are left out for it (matches the Unity 6000.0.71f1
+            // Editor, tests/projects/vertexcolors spriteshape.urprenderercolor).
+            let overrides: &[(String, owned::PropertyValue)] = if draw.tint
+                == commands::DrawTint::Constant
+                && self.compiled.declares_sprite_color(id)
+            {
+                &[]
+            } else {
+                overrides
+            };
             let (mut state, mut stencil_ref) = if errored {
                 (Default::default(), 0)
             } else {
@@ -4809,7 +4821,7 @@ impl UnityRenderer {
                 id,
                 space,
                 &globals,
-                &draw.properties,
+                overrides,
                 draw.main_texture,
             ) else {
                 self.pre_draw.clear();
