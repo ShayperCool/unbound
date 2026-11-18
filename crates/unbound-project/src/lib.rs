@@ -14,6 +14,7 @@ pub mod releases;
 pub mod script_class;
 pub mod semver;
 pub mod settings;
+pub mod upm_config;
 
 use anyhow::{Context, Result};
 use rayon::prelude::*;

@@ -6619,6 +6619,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tar",
+ "toml",
  "tracing",
  "unbound-compat",
  "unbound-yaml",

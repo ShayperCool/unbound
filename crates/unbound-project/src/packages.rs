@@ -424,16 +424,33 @@ fn download_package(
         return Ok(None);
     }
     let url = format!("{}/{name}", registry.trim_end_matches('/'));
-    let text = match crate::net::get(&url, |mut response| {
-        Ok(response
-            .body_mut()
-            .with_config()
-            .limit(64 << 20)
-            .read_to_string()?)
-    }) {
+    let credentials = crate::upm_config::user();
+    let text = match crate::net::get_authorized(
+        &url,
+        credentials.document_authorization(registry),
+        |mut response| {
+            Ok(response
+                .body_mut()
+                .with_config()
+                .limit(64 << 20)
+                .read_to_string()?)
+        },
+    ) {
         Ok(text) => text,
         Err(e) if crate::net::is_not_found(&e) => return Ok(None),
-        Err(e) => return Err(e).with_context(|| format!("querying {url}")),
+        Err(e) => {
+            let hint = if crate::net::is_unauthorized(&e)
+                && credentials.document_authorization(registry).is_none()
+            {
+                format!(
+                    " (the Package Manager's user configuration, {}, has no [npmAuth.\"{registry}\"] section)",
+                    crate::upm_config::user_config_path().display()
+                )
+            } else {
+                String::new()
+            };
+            return Err(e).with_context(|| format!("querying {url}{hint}"));
+        }
     };
     let document: serde_json::Value =
         serde_json::from_str(&text).with_context(|| format!("reading {url}"))?;
@@ -441,13 +458,17 @@ fn download_package(
         return Ok(None);
     };
     tracing::info!("package {name}@{version}: downloading {tarball}");
-    let bytes = crate::net::get(tarball, |mut response| {
-        Ok(response
-            .body_mut()
-            .with_config()
-            .limit(1 << 30)
-            .read_to_vec()?)
-    })
+    let bytes = crate::net::get_authorized(
+        tarball,
+        credentials.tarball_authorization(registry, tarball),
+        |mut response| {
+            Ok(response
+                .body_mut()
+                .with_config()
+                .limit(1 << 30)
+                .read_to_vec()?)
+        },
+    )
     .with_context(|| format!("downloading {tarball}"))?;
     unpack_tarball(&bytes, store, name, version, registry).map(Some)
 }

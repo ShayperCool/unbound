@@ -21,12 +21,24 @@ pub fn agent() -> &'static ureq::Agent {
 /// (404, ...) are returned at once.
 pub fn get<T>(
     url: &str,
+    read: impl FnMut(ureq::http::Response<ureq::Body>) -> Result<T>,
+) -> Result<T> {
+    get_authorized(url, None, read)
+}
+
+/// [`get`] with an `Authorization` header, which is never logged.
+pub fn get_authorized<T>(
+    url: &str,
+    authorization: Option<&str>,
     mut read: impl FnMut(ureq::http::Response<ureq::Body>) -> Result<T>,
 ) -> Result<T> {
     let mut attempt = 1;
     loop {
-        let result = agent()
-            .get(url)
+        let mut request = agent().get(url);
+        if let Some(value) = authorization {
+            request = request.header("Authorization", value);
+        }
+        let result = request
             .call()
             .map_err(anyhow::Error::from)
             .and_then(&mut read);
@@ -47,6 +59,14 @@ fn retryable(error: &anyhow::Error) -> bool {
         Some(ureq::Error::StatusCode(code)) => *code >= 500,
         _ => true,
     }
+}
+
+/// Whether `error` is the server's 401 or 403.
+pub fn is_unauthorized(error: &anyhow::Error) -> bool {
+    matches!(
+        error.downcast_ref::<ureq::Error>(),
+        Some(ureq::Error::StatusCode(401 | 403))
+    )
 }
 
 /// Whether `error` is the server's 404.
