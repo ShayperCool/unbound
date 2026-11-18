@@ -70,12 +70,16 @@ namespace Unbound.Tests
             return errors;
         }
 
-        /// <summary>Resources.UnloadUnusedAssets and the preloading pass that completes it in
-        /// Play mode (a queued operation, measured: tests/projects/editorcallbacks --queue-budget).</summary>
+        /// <summary>Resources.UnloadUnusedAssets, complete when it returns. These cases check the
+        /// unload itself, so they run under a release that does not queue it: the scene-operation
+        /// queue is shared by test classes running in parallel. The queued completion of the
+        /// measured release is SceneOperationQueueTests' and tests/projects/editorcallbacks
+        /// --queue-budget's.</summary>
         static AsyncOperation UnloadUnused()
         {
-            var operation = Resources.UnloadUnusedAssets();
-            UnityEngine.SceneManagement.SceneManagerInternal.ProcessPending();
+            AsyncOperation operation;
+            using (UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Unmeasured))
+                operation = Resources.UnloadUnusedAssets();
             Assert.True(operation.isDone);
             return operation;
         }
@@ -309,8 +313,6 @@ Mesh:
         [Fact]
         public void UnloadUnusedAssetsUnloadsWhatNothingReferencesAndKeepsTheRest()
         {
-            // The queued completion is the measured release's (Compat.SceneAsyncPreparationMeasured).
-            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             const string heldGuid = "c0de0000000000000000000000000006";
             const string unusedGuid = "c0de0000000000000000000000000007";
             const string flaggedGuid = "c0de0000000000000000000000000008";
@@ -335,14 +337,7 @@ Mesh:
                 File.WriteAllText(unusedPath, "unused 1");
                 File.WriteAllText(flaggedPath, "flagged 1");
 
-                AsyncOperation operation = null;
-                Assert.Empty(Errors(() => operation = Resources.UnloadUnusedAssets()));
-
-                // Queued in Play mode: nothing is unloaded before the preloading pass completes it.
-                Assert.False(operation.isDone);
-                Assert.Equal("unused 0", unused.text);
-                UnityEngine.SceneManagement.SceneManagerInternal.ProcessPending();
-                Assert.True(operation.isDone);
+                Assert.Empty(Errors(() => UnloadUnused()));
                 // Referenced from a scene object's component: still loaded.
                 Assert.Equal("held 0", held.text);
                 // Referenced only from this method's stack: unloaded, read again at its next use.
