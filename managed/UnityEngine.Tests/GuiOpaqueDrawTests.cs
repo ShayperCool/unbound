@@ -395,9 +395,11 @@ namespace UnityEngine.Tests
                     UiMaterial = Material(3000, 801);
                     UiMaterialQueue = UiMaterial.renderQueue;
                     // The IMGUI shaders' materials stand in as the UI material.
-                    Save(typeof(GuiRender), "s_TextureMaterial", "s_TextMaterial");
+                    Save(typeof(GuiRender), "s_TextureMaterial", "s_TextMaterial", "s_TextureToGamma", "s_TextToGamma");
                     Field(typeof(GuiRender), "s_TextureMaterial").SetValue(null, UiMaterial);
                     Field(typeof(GuiRender), "s_TextMaterial").SetValue(null, UiMaterial);
+                    Field(typeof(GuiRender), "s_TextureToGamma").SetValue(null, -1f);
+                    Field(typeof(GuiRender), "s_TextToGamma").SetValue(null, -1f);
                     GfxStream.SetTarget(901, 902);
                     GfxStream.Scissor(null);
                     GfxStream.StateOverride(null);
