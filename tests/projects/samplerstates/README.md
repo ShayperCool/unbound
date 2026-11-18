@@ -198,8 +198,10 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
   `InlineMirrorOnce`; Metal has no mirror-once mode), `Cmp*` and `Compute.Compare*`, and the
   16-bit depth with stencil made as `D32_SFloat_S8_UInt`.
 
-Unbound on Metal: 578/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`);
-the depth channels and the pipeline failure are open (`residuals-metal.json`).
+Unbound on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
+the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
+the pipeline failure the program's (`GraphicsDevice::draws_depth_output_without_depth_buffer`: the pass
+is not drawn, with a warning).
 
 The Unity 6000.0 [RenderTexture.depth contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderTexture-depth.html)
 lists 16-bit depth precision; the existing Stencil controls check the absence of stencil.

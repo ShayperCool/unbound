@@ -582,12 +582,13 @@ impl CompiledPrograms {
             return Ok(p.clone());
         }
         // A target without a depth buffer has nowhere to write a program's depth output: it is
-        // drawn with the program's colors alone.
+        // drawn with the program's colors alone, or not at all on a device that refuses it.
         if key.depth.is_none()
             && gpu.depthless.is_none()
             && super::pipelines::writes_depth(&gpu.program.fragment)
         {
-            gpu.depthless = Some(
+            let device_type = unbound_runtime::graphics_device::get();
+            gpu.depthless = Some(if device_type.draws_depth_output_without_depth_buffer() {
                 unbound_shaders::without_depth_output(&gpu.program.fragment)
                     .map_err(|e| format!("its depth output cannot be left out: {e:#}"))
                     .and_then(|found| found.ok_or_else(|| "it has no depth output".to_string()))
@@ -598,8 +599,12 @@ impl CompiledPrograms {
                         }),
                         entry,
                         wgsl,
-                    }),
-            );
+                    })
+            } else {
+                Err(format!(
+                    "it writes depth into a target without a depth buffer, for which the {device_type} device makes no pipeline"
+                ))
+            });
         }
         let (fragment, entry, wgsl) = match (&gpu.depthless, key.depth) {
             (Some(depthless), None) => {

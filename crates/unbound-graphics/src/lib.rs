@@ -66,6 +66,23 @@ impl GraphicsDevice {
         matches!(self, Self::Vulkan)
     }
 
+    /// Sampling a depth texture reads its depth in red, green and blue and 1 in alpha, where
+    /// OpenGL Core and Vulkan read it in red alone (green and blue 0). Measured on the Unity
+    /// 6000.0.71f1 macOS Editor, Metal on Apple M2 Pro (tests/projects/samplerstates
+    /// DepthChannels.*, DepthOnly.depth); OpenGL Core and Vulkan on NVIDIA.
+    pub fn depth_sample_fills_color(self) -> bool {
+        matches!(self, Self::Metal)
+    }
+
+    /// Whether a program writing depth draws (its colors alone) into a target without a depth
+    /// buffer. The Metal device makes no pipeline for it ("depthAttachmentPixelFormat is not
+    /// valid and shader writes to depth"), so the target keeps what it held. Measured on the Unity
+    /// 6000.0.71f1 macOS Editor, Metal on Apple M2 Pro (tests/projects/samplerstates Fill.color);
+    /// OpenGL Core and Vulkan draw it on NVIDIA.
+    pub fn draws_depth_output_without_depth_buffer(self) -> bool {
+        !matches!(self, Self::Metal)
+    }
+
     /// Depth resolves on the measured Unity 6000.0.71f1 NVIDIA device. The OpenGL
     /// selection depends on the sample count (tests/projects/nativegfx device.sampleResolve);
     /// Vulkan uses sample zero (tests/projects/rtdepth). Other drivers remain unmeasured.
@@ -372,6 +389,15 @@ pub fn parse_api_list(hex: &str) -> Option<Vec<i32>> {
 mod tests {
     use super::*;
     use GraphicsDevice::*;
+
+    #[test]
+    fn metal_fills_depth_samples_and_refuses_depth_output_without_depth() {
+        for device in GraphicsDevice::ALL {
+            let metal = device == GraphicsDevice::Metal;
+            assert_eq!(device.depth_sample_fills_color(), metal, "{device}");
+            assert_eq!(device.draws_depth_output_without_depth_buffer(), !metal, "{device}");
+        }
+    }
 
     #[test]
     fn options_force_the_editor_devices() {

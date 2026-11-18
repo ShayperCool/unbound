@@ -2212,7 +2212,10 @@ impl UnityRenderer {
             (None, Some(depth)) => (depth, true),
             _ => return None,
         };
-        let normalized = target.texture().format() == wgpu::TextureFormat::R16Unorm;
+        let normalized = matches!(
+            target.texture().format(),
+            wgpu::TextureFormat::R16Unorm | wgpu::TextureFormat::Rgba16Unorm
+        );
         let kind = match (multisampled, normalized) {
             (false, false) => CopyKind::Depth,
             (true, false) => CopyKind::DepthMultisampled,
@@ -2457,7 +2460,7 @@ impl UnityRenderer {
             ),
             CopyKind::Depth16 | CopyKind::Depth16Multisampled => (
                 wgpu::TextureSampleType::Float { filterable: false },
-                wgpu::TextureFormat::R16Unorm,
+                resources::normalized_depth_copy_format().0,
             ),
             CopyKind::UintBits => (
                 wgpu::TextureSampleType::Float { filterable: false },
@@ -5858,7 +5861,8 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 
 @fragment
 fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
-    return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0).x, 0.0, 0.0, 1.0);
+    // The depth in red, green and blue: a one-channel copy keeps red alone.
+    return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0).xxx, 1.0);
 }
 "#;
 

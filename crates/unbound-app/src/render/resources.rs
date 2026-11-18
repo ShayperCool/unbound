@@ -393,16 +393,39 @@ pub fn compare_function(f: i32) -> Option<wgpu::CompareFunction> {
     })
 }
 
+/// Whether a depth copy holds the depth in red, green and blue (alpha 1) rather than in red
+/// alone: what sampling a depth texture reads on the run's graphics device
+/// (`GraphicsDevice::depth_sample_fills_color`). The copy's own channels give it, since wgpu
+/// views have no channel swizzle.
+pub fn depth_copy_fills_color() -> bool {
+    unbound_runtime::graphics_device::get().depth_sample_fills_color()
+}
+
 /// The format of a depth-only render target's depth copy: filterable 32-bit floats where the
-/// device filters them, else half floats.
+/// device filters them, else half floats; four channels where the depth fills them
+/// ([`depth_copy_fills_color`]).
 pub fn float_depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
-    if device
+    use wgpu::TextureFormat as F;
+    let full = device
         .features()
-        .contains(wgpu::Features::FLOAT32_FILTERABLE)
-    {
-        wgpu::TextureFormat::R32Float
+        .contains(wgpu::Features::FLOAT32_FILTERABLE);
+    match (full, depth_copy_fills_color()) {
+        (true, false) => F::R32Float,
+        (false, false) => F::R16Float,
+        (true, true) => F::Rgba32Float,
+        (false, true) => F::Rgba16Float,
+    }
+}
+
+/// The normalized 16-bit format of a D16 depth copy ([`depth_copy_fills_color`] decides its
+/// channels) and what the device can do with it.
+pub fn normalized_depth_copy_format() -> (wgpu::TextureFormat, Option<wgpu::TextureFormatFeatures>)
+{
+    let caps = norm_format_caps();
+    if depth_copy_fills_color() {
+        (wgpu::TextureFormat::Rgba16Unorm, caps.rgba16)
     } else {
-        wgpu::TextureFormat::R16Float
+        (wgpu::TextureFormat::R16Unorm, caps.r16)
     }
 }
 
@@ -416,8 +439,9 @@ pub fn depth_copy_view(
 ) -> wgpu::TextureView {
     // Normalized 16-bit filtering retains the depth format's interpolation precision.
     // Measured on Unity 6000.0.71f1 OpenGL Core and Vulkan, NVIDIA: samplerstates D16Filter.*.
+    let (normalized_format, normalized_caps) = normalized_depth_copy_format();
     let normalized = depth_format == wgpu::TextureFormat::Depth16Unorm
-        && norm_format_caps().r16.is_some_and(|caps| {
+        && normalized_caps.is_some_and(|caps| {
             caps.allowed_usages.contains(
                 wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             ) && caps
@@ -428,7 +452,7 @@ pub fn depth_copy_view(
             .features()
             .contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM);
     let format = if normalized {
-        wgpu::TextureFormat::R16Unorm
+        normalized_format
     } else {
         float_depth_copy_format(device)
     };
