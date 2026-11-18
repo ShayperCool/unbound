@@ -588,7 +588,7 @@ namespace Unbound.Runtime.Jobs
                 {
                     // Engine jobs can validate ownership before preparing their native inputs.
                     // A flush during that preparation must leave them queued.
-                    if (record.Held) { s_Batch.Add(record); continue; }
+                    if (record.Held || record.BeforeStart != null) { s_Batch.Add(record); continue; }
                     record.Flushed = true;
                     if (record.PendingDependencies == 0) EnqueueLocked(record);
                 }
@@ -597,9 +597,11 @@ namespace Unbound.Runtime.Jobs
 
         [ThreadStatic] static List<JobRecord> t_BeforeStart;
 
-        /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work, outside the lock.</summary>
+        /// <summary>The batched jobs' <see cref="JobRecord.BeforeStart"/> work, outside the lock. It
+        /// is main-thread work: a flush from another thread leaves such jobs batched (see Flush).</summary>
         static void RunBatchBeforeStart()
         {
+            if (!PlayerLoopDriver.IsMainThread) return;
             var due = t_BeforeStart ??= new List<JobRecord>();
             lock (s_Lock)
                 foreach (var record in s_Batch)

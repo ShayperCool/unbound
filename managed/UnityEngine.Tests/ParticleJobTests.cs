@@ -323,6 +323,62 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AParallelJobCoversTheCountItSeesWhenItStarts()
+        {
+            // The ranges come from the copy made when the job starts: an Emit and a Clear after
+            // Schedule change how many indices run.
+            var (grown, _) = Make(3);
+            var (cleared, _) = Make(3);
+            using var grownHits = new NativeArray<int>(8, Allocator.Persistent);
+            using var clearedHits = new NativeArray<int>(8, Allocator.Persistent);
+            using var covered = new NativeArray<int>(8, Allocator.Persistent);
+            JobScript.OnMessage = s =>
+            {
+                if (s.gameObject == grown.gameObject)
+                {
+                    var first = new HitJob { Hits = grownHits }.Schedule(grown, 1);
+                    new BatchJob { Covered = covered }.ScheduleBatch(grown, 2, first);
+                    grown.Emit(2);
+                }
+                else if (s.gameObject == cleared.gameObject)
+                {
+                    new HitJob { Hits = clearedHits }.Schedule(cleared, 1);
+                    cleared.Clear();
+                }
+            };
+            Frame();
+            Assert.Equal(new[] { 1, 1, 1, 1, 1, 0, 0, 0 }, grownHits.ToArray());
+            Assert.Equal(new[] { 1, 1, 1, 1, 1, 0, 0, 0 }, covered.ToArray());
+            Assert.Equal(new int[8], clearedHits.ToArray());
+        }
+
+        [Fact]
+        public void AParentsClearFinishesAChildsStartedJobFirst()
+        {
+            // Control outside the probe: a child job already handed to the workers finishes before
+            // its parent's Clear(true) empties it, so nothing of its copy comes back over particles
+            // emitted afterwards.
+            var (parent, _) = Make(1);
+            var (child, _) = Make(3);
+            child.transform.SetParent(parent.transform, false);
+            bool finishedByClear = false;
+            JobScript.OnMessage = s =>
+            {
+                if (s.gameObject != parent.gameObject) return;
+                var handle = new WriteIndexJob().Schedule(child);
+                JobHandle.ScheduleBatchedJobs();
+                parent.Clear(true);
+                finishedByClear = !child.m_JobsPending && handle.IsCompleted;
+                child.Emit(new ParticleSystem.EmitParams { position = new Vector3(9f, 9f, 9f), applyShapeToPosition = false }, 1);
+            };
+            Frame();
+            Assert.True(finishedByClear);
+            var particles = ParticlesOf(child);
+            Assert.Single(particles);
+            Assert.Equal(new Vector3(9f, 9f, 9f), particles[0].position);
+        }
+
+        [Fact]
         public void AJobThatHasRunIsTakenInBeforeAWriteInTheMessage()
         {
             // Control: completed in the message, the job saw the particles before the Clear, and its

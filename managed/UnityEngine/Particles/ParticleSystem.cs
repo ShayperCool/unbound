@@ -341,6 +341,7 @@ namespace UnityEngine
             if (stopBehavior == ParticleSystemStopBehavior.StopEmittingAndClear)
                 foreach (var ps in ClearedSystems(withChildren))
                 {
+                    ps.FinishStartedJobs();
                     ps.ClearParticles();
                     // Linked-only systems receive Clear's playback transition, but
                     // selected systems retain StopSelf's callback eligibility.
@@ -359,6 +360,7 @@ namespace UnityEngine
             SyncForWrite();
             foreach (var ps in ClearedSystems(withChildren))
             {
+                ps.FinishStartedJobs();
                 ps.ClearParticles();
                 if (ps.m_StopEmitting) ps.m_IsPlaying = false;
             }

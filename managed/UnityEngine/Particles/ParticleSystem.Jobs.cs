@@ -85,8 +85,14 @@ namespace UnityEngine
         internal void SyncForWrite()
         {
             ParticleSystemManager.Sync();
-            if (m_JobFillDue) return;
-            CompleteManagedJobs();
+            FinishStartedJobs();
+        }
+
+        /// <summary>A started job finishes and its writes are taken in before a change to the
+        /// system; one that has not started is left to see the change.</summary>
+        internal void FinishStartedJobs()
+        {
+            if (!m_JobFillDue) CompleteManagedJobs();
         }
 
         /// <summary>The system has collision or trigger messages to send from its update.</summary>
