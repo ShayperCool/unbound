@@ -321,26 +321,20 @@ namespace UnityEditor
         // is first used, and again after ClearDropHandlers (matches the Unity 6000.0.71f1 Editor,
         // tests/projects/editorload drop.handlers_*). No view takes a drop in Unbound, so no
         // handler is called.
-        static Dictionary<int, List<Delegate>> s_DropHandlers;
+        static Dictionary<int, List<Delegate>> m_DropHandlers;
 
         internal static ProjectBrowserDropHandler DefaultProjectBrowserDropHandler = DefaultProjectBrowserDropHandlerImpl;
-        internal static InspectorDropHandler DefaultInspectorDropHandler = DropOnEditorInspector;
-        internal static HierarchyDropHandler DefaultHierarchyDropHandler = DropOnEditorHierarchy;
+        internal static InspectorDropHandler DefaultInspectorDropHandler = UnityEditorInternal.InternalEditorUtility.InspectorWindowDrag;
+        internal static HierarchyDropHandler DefaultHierarchyDropHandler = UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID;
 
-        // The Editor's own handlers drop into its project browser, inspector and hierarchy views,
-        // which Unbound does not have: a call reports that instead of approximating a drop.
+        /// <summary>The Editor's own handlers drop into its project browser, inspector and hierarchy
+        /// views, which Unbound does not have: a call reports that instead of approximating a drop.</summary>
         internal static DragAndDropVisualMode DefaultProjectBrowserDropHandlerImpl(int dragUponInstanceId, string dummy, bool perform) =>
             NoView("UnityEditor.DragAndDrop.DefaultProjectBrowserDropHandlerImpl");
 
-        static DragAndDropVisualMode DropOnEditorInspector(Object[] targets, bool perform) =>
-            NoView("UnityEditorInternal.InternalEditorUtility.InspectorWindowDrag");
-
-        static DragAndDropVisualMode DropOnEditorHierarchy(int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) =>
-            NoView("UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID");
-
-        static DragAndDropVisualMode NoView(string member)
+        internal static DragAndDropVisualMode NoView(string member)
         {
-            Unbound.Runtime.Stubs.NotImplemented(member);
+            Stubs.NotImplemented(member);
             return DragAndDropVisualMode.None;
         }
 
@@ -348,21 +342,21 @@ namespace UnityEditor
         {
             get
             {
-                if (s_DropHandlers == null)
+                if (m_DropHandlers == null)
                 {
-                    s_DropHandlers = new Dictionary<int, List<Delegate>>();
+                    m_DropHandlers = new Dictionary<int, List<Delegate>>();
                     AddDropHandler(DefaultProjectBrowserDropHandler);
                     AddDropHandler(DefaultInspectorDropHandler);
                     AddDropHandler(DefaultHierarchyDropHandler);
                 }
-                return s_DropHandlers;
+                return m_DropHandlers;
             }
         }
 
         internal static void ClearDropHandlers()
         {
-            s_DropHandlers?.Clear();
-            s_DropHandlers = null;
+            m_DropHandlers?.Clear();
+            m_DropHandlers = null;
         }
 
         /// <summary>Adds a handler for a view; one already added throws (null is a handler too)
@@ -500,5 +494,19 @@ namespace UnityEditor
 
         [Unbound.EditorFaithful("without a scene camera (measured: tests/projects/editorui HandleUtility.WorldToGUIPoint)")]
         public static Vector2 WorldToGUIPoint(Vector3 world) => Vector2.zero;
+    }
+}
+
+namespace UnityEditorInternal
+{
+    public partial class InternalEditorUtility
+    {
+        /// <summary>A drop into the Editor's hierarchy view (the default hierarchy drop handler).</summary>
+        public static UnityEditor.DragAndDropVisualMode HierarchyWindowDragByID(int dropTargetInstanceID, UnityEditor.HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) =>
+            UnityEditor.DragAndDrop.NoView("UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID");
+
+        /// <summary>A drop into the Editor's inspector (the default inspector drop handler).</summary>
+        internal static UnityEditor.DragAndDropVisualMode InspectorWindowDrag(Object[] targets, bool perform) =>
+            UnityEditor.DragAndDrop.NoView("UnityEditorInternal.InternalEditorUtility.InspectorWindowDrag");
     }
 }

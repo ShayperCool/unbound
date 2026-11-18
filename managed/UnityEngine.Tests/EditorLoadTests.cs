@@ -60,6 +60,13 @@ namespace UnityEngine.Tests
                 Assert.Same(DragAndDrop.DefaultInspectorDropHandler, Assert.Single(table[DragAndDropWindowTarget.inspector]));
                 Assert.Same(DragAndDrop.DefaultHierarchyDropHandler, Assert.Single(table[DragAndDropWindowTarget.hierarchy]));
                 Assert.True(DragAndDrop.HasHandler(DragAndDropWindowTarget.hierarchy, DragAndDrop.DefaultHierarchyDropHandler));
+                // The defaults are the release's own methods: a delegate made from one is the same handler.
+                DragAndDrop.HierarchyDropHandler hierarchy = UnityEditorInternal.InternalEditorUtility.HierarchyWindowDragByID;
+                Assert.True(DragAndDrop.HasHandler(DragAndDropWindowTarget.hierarchy, hierarchy));
+                Assert.Equal("Delegate already registered for dropDestinationId:1486780135",
+                    Assert.Throws<Exception>(() => DragAndDrop.AddDropHandler(hierarchy)).Message);
+                DragAndDrop.RemoveDropHandler(hierarchy);
+                Assert.Empty(DragAndDrop.dropHandlers[DragAndDropWindowTarget.hierarchy]);
                 // Control: the scene view has none of its own.
                 Assert.False(DragAndDrop.HasHandler(DragAndDropWindowTarget.sceneView));
                 DragAndDrop.RemoveDropHandler(DragAndDrop.DefaultInspectorDropHandler);
