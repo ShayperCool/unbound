@@ -5,12 +5,13 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
-using System.Runtime.Loader;
 using Unbound.Runtime;
 using Xunit;
 
 namespace Unbound.Tests
 {
+    /// <summary>Loads unload their contexts (see <see cref="UnityEngine.Tests.CollectibleContexts"/>).</summary>
+    [Collection(UnityEngine.Tests.CollectibleContexts.Name)]
     public class PeImageTests
     {
         /// <summary>An IL-only PE32+ assembly built for one 64-bit CPU (PlatformTarget x64 or ARM64).</summary>
@@ -27,17 +28,13 @@ namespace Unbound.Tests
             return image.ToArray();
         }
 
-        static Assembly Load(byte[] image)
+        /// <summary>Whether the image loads in a collectible context, which is collected again.</summary>
+        static bool Loads(byte[] image)
         {
-            var context = new AssemblyLoadContext("PeImageTests", isCollectible: true);
-            try
-            {
-                return context.LoadFromStream(new MemoryStream(image));
-            }
-            finally
-            {
-                context.Unload();
-            }
+            bool loaded = false;
+            UnityEngine.Tests.CollectibleContexts.Use("PeImageTests",
+                context => loaded = context.LoadFromStream(new MemoryStream(image)) != null);
+            return loaded;
         }
 
         [Fact]
@@ -45,8 +42,8 @@ namespace Unbound.Tests
         {
             var other = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? Machine.Amd64 : Machine.Arm64;
             var image = IlOnlyImage(other);
-            Assert.Throws<FileLoadException>(() => Load(image));
-            Assert.NotNull(Load(PeImage.MakePortable(image)));
+            Assert.Throws<FileLoadException>(() => Loads(image));
+            Assert.True(Loads(PeImage.MakePortable(image)));
         }
 
         [Fact]

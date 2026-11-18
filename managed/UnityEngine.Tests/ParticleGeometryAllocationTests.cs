@@ -3,13 +3,14 @@ using static UnityEngine.Tests.AllocationMeasurement;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.Loader;
 using Xunit;
 
 namespace UnityEngine.Tests
 {
     /// <summary>Building particle and trail geometry runs per camera every frame: once its buffers
-    /// have grown, a build allocates nothing.</summary>
+    /// have grown, a build allocates nothing. Its unload controls unload a context
+    /// (<see cref="CollectibleContexts"/>).</summary>
+    [Collection(CollectibleContexts.Name)]
     public class ParticleGeometryAllocationTests
     {
         static readonly List<ParticleSystemVertexStream> s_Streams = new List<ParticleSystemVertexStream>
@@ -34,28 +35,21 @@ namespace UnityEngine.Tests
             return ps;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        static WeakReference UnloadAssembly()
-        {
-            var context = new AssemblyLoadContext("particle allocation control", isCollectible: true);
-            using var image = File.OpenRead(typeof(ParticleGeometryAllocationTests).Assembly.Location);
-            context.LoadFromStream(image);
-            var weak = new WeakReference(context);
-            context.Unload();
-            return weak;
-        }
-
         static void PrepareWindow(Action warm, bool unloadAssembly)
         {
-            var context = unloadAssembly ? UnloadAssembly() : null;
-            // Collections can finish collectible assembly unloads and clear CoreCLR's shared
-            // type-cast cache. Finish that cleanup before warming the measured operation.
+            if (unloadAssembly)
+                CollectibleContexts.Use("particle allocation control", context =>
+                {
+                    using var image = File.OpenRead(typeof(ParticleGeometryAllocationTests).Assembly.Location);
+                    context.LoadFromStream(image);
+                });
+            // Collections can finish other pending cleanup; finish it before warming the measured
+            // operation.
             for (int i = 0; i < 2; i++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
-            if (context != null) Assert.False(context.IsAlive);
             warm();
             warm();
             EmptyAllocationContext();
