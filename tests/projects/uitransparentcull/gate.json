@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/uitransparentcull/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+  ],
+  "summary": "uitransparentcull: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UI/CanvasSystem.cs",
+    "managed/UnityEngine/UI/CanvasRenderer.Colors.cs"
+  ]
+}
