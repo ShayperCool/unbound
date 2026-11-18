@@ -10533,7 +10533,6 @@ namespace UnityEditor
     }
     unsafe partial class FileUtil
     {
-        [global::Unbound.Stub] public static bool DeleteFileOrDirectory(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.DeleteFileOrDirectory"); return default; }
         [global::Unbound.Stub] public static void CopyFileOrDirectory(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyFileOrDirectory"); }
         [global::Unbound.Stub] public static void CopyFileOrDirectoryFollowSymlinks(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.CopyFileOrDirectoryFollowSymlinks"); }
         [global::Unbound.Stub] public static void MoveFileOrDirectory(string source, string dest) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.FileUtil.MoveFileOrDirectory"); }
