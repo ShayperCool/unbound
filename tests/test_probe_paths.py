@@ -49,6 +49,17 @@ class DeviceReferenceTests(unittest.TestCase):
         for path in (self.root, self.probe/'Reference', self.probe/'Reference/unity-S.png', self.probe/'residuals.json'):
             self.assertEqual(self.read(path, publishing=True), path)
 
+    def test_a_whole_reference_set(self):
+        with patch.object(probe_paths, 'MACOS_ARM64', True):
+            self.assertEqual(probe_paths.device_reference_root(self.probe), self.root/'metal')
+            (self.root/'metal/a.png').unlink()
+            (self.root/'metal.png').unlink()
+            (self.root/'metal').rmdir()
+            self.assertEqual(probe_paths.device_reference_root(self.probe), self.root)
+            self.assertEqual(probe_paths.device_reference_root(self.probe, publishing=True), self.root/'metal')
+        with patch.object(probe_paths, 'MACOS_ARM64', False):
+            self.assertEqual(probe_paths.device_reference_root(self.probe, publishing=True), self.root)
+
 
 if __name__ == '__main__':
     unittest.main()

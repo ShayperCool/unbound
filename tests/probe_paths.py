@@ -51,6 +51,13 @@ def device_reference(path, probe, publishing=False):
     return Path(metal) if metal is not None and (publishing or metal.exists()) else Path(path)
 
 
+def device_reference_root(probe, publishing=False):
+    """device_reference for a probe whose whole reference_root is one reference set: on macOS
+    arm64 Reference/unity-R/metal (to read: where it exists)."""
+    root = reference_root(probe)
+    return root/'metal' if MACOS_ARM64 and (publishing or (root/'metal').is_dir()) else root
+
+
 def validation_cache():
     return Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound/validation'
 

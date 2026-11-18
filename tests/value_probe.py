@@ -9,14 +9,14 @@ A probe's script writes `values.jsonl` into the directory named by its output va
     run.py record --label L     one Editor capture on the GPU display (run cache); on macOS,
                                 for a probe that declares `macos_batch` (values that depend
                                 on neither the OS nor the graphics device), a batch-mode
-                                capture with the Hub's Editor (the caller holds the machine's
-                                heavy-job lock)
+                                capture with the Hub's Editor (tests/editor_runner.py; the
+                                caller holds the machine's heavy-job lock)
     run.py publish A B          two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]     the engine on a fresh copy, compared with Reference/
 
 A probe that declares `metal` has values the graphics device decides (its rounding, formats and
 answers: AGENTS.md Platforms). On macOS arm64, where the Editor and Unbound draw with Metal, it
-records with the macOS Editor in batch mode (which draws with Metal), publishes to
+records with the macOS Editor (which draws with Metal; windowed for a probe that is), publishes to
 Reference/unity-<release>/metal/ and gates against that, with `residuals-metal.json` and
 `image_limits-metal.json` in place of the files below (a probe that has one of those files
 needs its Metal counterpart, `{}` where nothing applies); elsewhere it is unchanged.
@@ -38,7 +38,6 @@ import json
 import math
 import os
 from pathlib import Path
-import platform
 import shutil
 import struct
 import subprocess
@@ -48,7 +47,7 @@ import zlib
 
 TESTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TESTS))
-from probe_paths import run_root, reference_root, unity_version  # noqa: E402
+from probe_paths import MACOS_ARM64, run_root, reference_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
 import authored_project  # noqa: E402
 
@@ -58,7 +57,6 @@ VALUES = 'values.jsonl'
 COMPLETE = {'k': 'complete', 'v': True}
 # Set by main for a probe that declares `metal` on macOS arm64: its Metal reference and files.
 METAL = False
-MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
 
 
 def reference_dir(probe):
@@ -241,43 +239,14 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
-MACOS_RESULT = 'macos-batch.json'
-
-
-def macos_editor():
-    return Path('/Applications/Unity/Hub/Editor')/unity_version()/'Unity.app/Contents/MacOS/Unity'
-
-
-def record_macos(out, project, capture, method, variable, timeout):
-    """A batch-mode capture with the macOS Editor: no display and no GPU check, so only for
-    values that depend on neither the OS nor the graphics device, or for a Metal reference."""
-    env = {**os.environ, variable: str(capture)}
-    with (out/'editor.out').open('w') as log:
-        try:
-            code = subprocess.run([str(macos_editor()), '-batchmode', '-projectPath', str(project), '-executeMethod', method,
-                                   '-logFile', str(out/'editor.log')], env=env, stdout=log, stderr=subprocess.STDOUT,
-                                  timeout=timeout).returncode
-        except subprocess.TimeoutExpired:
-            code = 'timeout'
-    (out/MACOS_RESULT).write_text(json.dumps({'exit_code': code, 'editor': str(macos_editor())}) + '\n')
-    try:
-        read_values(capture/VALUES)
-    except (OSError, ValueError) as error:
-        raise SystemExit(f'{out}: Editor exit {code}, no complete capture ({error})')
-    if code:
-        raise SystemExit(f'{out}: Editor exit {code}')
-    print('captured', capture)
-
-
 def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False):
-    if sys.platform == 'darwin' and not ((macos_batch or METAL) and batch):
+    if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
     project = assemble(probe, out, base)
     capture = out/'capture'
     capture.mkdir(parents=True)
-    if sys.platform == 'darwin':
-        return record_macos(out, project, capture, method, variable, timeout)
+    # On macOS arm64 editor_runner runs the macOS Editor, which draws with Metal.
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
         graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label)
     print(editor_runner.summary(editor_runner.run(job)))
@@ -287,34 +256,8 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     print('captured', capture)
 
 
-def publish_macos(probe, roots):
-    """macOS batch-mode captures: at least two, each complete and with exit 0, byte-identical."""
-    if len(roots) < 2:
-        raise SystemExit('publishing needs two independent repeats')
-    for root in roots:
-        if json.loads((root/MACOS_RESULT).read_text()).get('exit_code') != 0:
-            raise SystemExit(f'{root.name}: the Editor did not exit 0; not publishing')
-        read_values(root/'capture'/VALUES)
-    first = roots[0]/'capture'
-    names = [VALUES, *images(first)]
-    for root in roots[1:]:
-        if [VALUES, *images(root/'capture')] != names or any(
-                (root/'capture'/name).read_bytes() != (first/name).read_bytes() for name in names):
-            raise SystemExit(f'{root.name} differs from {roots[0].name}; not publishing')
-    target = reference_dir(probe)
-    if target.exists():
-        raise SystemExit(f'refusing to overwrite {target}')
-    target.mkdir(parents=True)
-    for name in names:
-        shutil.copyfile(first/name, target/name)
-    print('published', target)
-    return 0
-
-
 def publish(probe, labels):
     roots = [run_root(probe, label) for label in labels]
-    if roots and all((root/MACOS_RESULT).is_file() for root in roots):
-        return publish_macos(probe, roots)
     for root in roots:
         problem = editor_runner.result_problem(root, gpu=True)
         if problem:
@@ -332,7 +275,7 @@ def publish(probe, labels):
     # Editor results live one level above the captures; publish() checks the capture files.
     for capture, root in zip(captures, roots):
         shutil.copyfile(root/editor_runner.RESULT, capture/editor_runner.RESULT)
-    return editor_runner.publish(captures, reference_root(probe), names, write,
+    return editor_runner.publish(captures, reference_dir(probe), names, write,
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 

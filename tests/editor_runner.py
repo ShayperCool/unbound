@@ -573,7 +573,7 @@ def write_launch_inputs(spec, env):
             key = label+'/'+str(path.relative_to(root)) if root.is_dir() else label
             files[key] = {'path': str(path), 'sha256': hashlib.sha256(data).hexdigest(),
                           'bytes_base64': base64.b64encode(data).decode()}
-    executable = next(Path(arg) for arg in spec['command'] if arg.endswith('/Editor/Unity'))
+    executable = next(Path(arg) for arg in spec['command'] if arg.endswith(('/Editor/Unity', '/MacOS/Unity')))
     environment = {k: v for k, v in env.items() if k in ('PATH', 'PWD', 'HOME', 'DISPLAY',
                    'BROWSER', 'LD_LIBRARY_PATH') or k.startswith(('APPFACTS_', 'UNBOUND_PROBE_'))}
     receipt = {'recorded': time.time(), 'supervisor_pid': os.getpid(), 'spec': spec,
@@ -611,15 +611,20 @@ def run_macos(job):
     import macos_editor
     if job.vulkan:
         raise SystemExit(f'{job.label}: the Vulkan Editor runs on Linux; on macOS the Editor draws with Metal')
+    env = {**job.env, 'PWD': str(job.project)}
+    command = [str(job.editor), *job.args]
+    if job.launch_inputs is not None:
+        write_launch_inputs({'label': job.label, 'kind': job.kind, 'command': command, 'project': str(job.project),
+                             'out': str(job.out), 'launch_inputs': job.launch_inputs}, {**os.environ, **env})
     started = time.time()
-    code = macos_editor.capture(job.project, job.out, job.args, {**job.env, 'PWD': str(job.project)},
+    code = macos_editor.capture(job.project, job.out, job.args, env,
                                 timeout=job.timeout, windowed=not job.batch, log=job.log,
                                 editor_binary=job.editor, nographics=not job.graphics, cwd=job.cwd)
     log = job.log.read_text(errors='replace') if job.log.exists() else ''
     renderer = metal_renderer(log)
     forced = code == KILLED_BY_TIMEOUT
     result = {'format': 1, 'label': job.label, 'kind': job.kind, 'device': 'metal',
-              'command': [str(job.editor), *job.args], 'project': str(job.project), 'log': str(job.log),
+              'command': command, 'project': str(job.project), 'log': str(job.log),
               'exit_code': code, 'forced_exit': 'watchdog' if forced else None,
               'forced_detail': f'killed after {job.timeout} s' if forced else None,
               'renderer': renderer, 'renderer_ok': None if renderer is None else True,
