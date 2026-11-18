@@ -350,7 +350,7 @@ namespace UnityEditor.Compilation
 
         /// <summary>A response file's options as the Editor reads them (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/gameinterop rsp.parse.*): arguments separated by spaces, quoted
-        /// parts kept whole, <c>#</c> ending a line; <c>-define</c>/<c>-d</c> symbols, <c>-r</c>/<c>-reference</c>
+        /// parts kept whole, <c>#</c> ending a line; <c>-define</c>/<c>-d</c> defines, <c>-r</c>/<c>-reference</c>
         /// paths resolved against the system directories then the project directory (which wins),
         /// <c>-unsafe</c>, and every other argument with a <c>/</c> prefix. Unbound's compile reads
         /// project response files in the same way (crates/unbound-project/src/response_files.rs).</summary>

@@ -393,19 +393,9 @@ public static unsafe class Game
                 var filtered = NumberFormatShims.TryRedirect(FrameworkShims.Redirect(NativeCallbacks.KeepAlive(AccessChecks.Relax(image))));
                 if (Unbound.Runtime.Compat.ScriptFloatsWide) filtered = WideFloats.TryWiden(filtered);
                 filtered = LifetimeChecks.TryInstrument(filtered);
+                // A precompiled plugin's classes that miss implementations fail at their first use.
+                if (GameDomain.AdaptingPlugin) filtered = MissingImplementations.Repair(filtered);
                 return (filtered, AccessChecks.Symbols);
-            }
-            finally
-            {
-                AccessChecks.Symbols = null;
-            }
-        };
-        GameDomain.PluginImageFilter = (image, symbols) =>
-        {
-            AccessChecks.Symbols = symbols;
-            try
-            {
-                return (MissingImplementations.Repair(image), AccessChecks.Symbols);
             }
             finally
             {

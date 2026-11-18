@@ -5,7 +5,7 @@
 //! predefined assemblies take the project's. A package's assembly falls back to the project's
 //! file too. The file's arguments follow the Editor's own on the compiler's command line, so a
 //! later option (`-langversion`, `-nullable`, `-warnaserror`) wins; `-r`/`-reference` options
-//! become references, and `-define`/`-d` symbols count for define constraints although
+//! become references, and `-define`/`-d` defines count for define constraints although
 //! `CompilationPipeline` does not list them among an assembly's defines (Unity 6000.0.71f1,
 //! tests/projects/gameinterop `rsp.*`). A `#` ends a line's arguments as in the Editor's reading of
 //! the file for define constraints; its compile passes such text to the compiler and fails.
@@ -20,7 +20,7 @@ pub const OBSOLETE_RESPONSE_FILE: &str = "mcs.rsp";
 pub struct ResponseFile {
     /// The file, as the Editor names it in `ScriptCompilerOptions.ResponseFiles`.
     pub path: PathBuf,
-    /// `-define`/`-d` symbols, for define constraints.
+    /// `-define`/`-d` defines, for define constraints.
     pub defines: Vec<String>,
     /// `-r`/`-reference` assemblies, resolved.
     pub references: Vec<PathBuf>,

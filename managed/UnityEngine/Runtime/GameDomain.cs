@@ -75,10 +75,10 @@ namespace Unbound.Runtime
         /// <summary>Identifies what <see cref="ImageFilter"/> does: adapted images are cached under
         /// their input's hash plus this (set by the host with the filter).</summary>
         internal static string ImageFilterVersion = "";
-        /// <summary>Applied after <see cref="ImageFilter"/> to the images of precompiled plugins only
-        /// (set by the host): its outcome depends on the other game assemblies the plugin references,
-        /// so a plugin's cached image is keyed by theirs too.</summary>
-        internal static Func<byte[], byte[], (byte[] Image, byte[] Symbols)> PluginImageFilter;
+        /// <summary>Whether <see cref="ImageFilter"/> is adapting a precompiled plugin (per thread): its
+        /// outcome for a plugin also depends on the other game assemblies the plugin references, so a
+        /// plugin's cached image is keyed by theirs too.</summary>
+        [ThreadStatic] internal static bool AdaptingPlugin;
         /// <summary>Assemblies Unbound generates for adapted game assemblies to reference, by name, with
         /// what builds each image (set by the host with <see cref="ImageFilter"/>). An image is
         /// built once per <see cref="ImageFilterVersion"/> and cached as adapted images are.</summary>
@@ -406,8 +406,9 @@ namespace Unbound.Runtime
                 {
                     var image = PeImage.MakePortable(original);
                     var symbols = game.Pdb != null && File.Exists(game.Pdb) ? File.ReadAllBytes(game.Pdb) : null;
+                    AdaptingPlugin = game.PluginGuid != null;
                     if (ImageFilter != null) (image, symbols) = ImageFilter(image, symbols);
-                    if (game.PluginGuid != null && PluginImageFilter != null) (image, symbols) = PluginImageFilter(image, symbols);
+                    AdaptingPlugin = false;
                     // Script assemblies load from a file named as Unity names it (the Test Framework
                     // matches Assembly.Location's file name with the compiled assemblies').
                     var fileName = game.PluginGuid == null ? game.Name + ".dll" : Path.GetFileName(game.Dll);
