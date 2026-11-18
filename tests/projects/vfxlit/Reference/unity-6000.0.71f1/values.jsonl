@@ -20,6 +20,14 @@
 {"k":"renderer/mesh dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshDying/System (1)/Output Particle|Unlit Mesh"}
 {"k":"renderer/lit sorted","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LitSorted/System (1)/Output Particle|URP Lit|Quad"}
 {"k":"renderer/curve output","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/CurveOutput/System (1)/Output Particle|Unlit Quad"}
+{"k":"renderer/sprite","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteLit/System (1)/Output Particle|Shader Graph Quad - Sprite Lit"}
+{"k":"renderer/sprite point","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteLit/System (1)/Output Particle|Shader Graph Quad - Sprite Lit"}
+{"k":"renderer/sprite normals","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteLit/System (1)/Output Particle|Shader Graph Quad - Sprite Lit"}
+{"k":"renderer/sprite unlit","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteUnlit/System (1)/Output Particle|Shader Graph Quad - Sprite Unlit"}
+{"k":"renderer/sprite classic","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials="}
+{"k":"renderer/plain 2d","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/PlainUnlit/System (1)/Output Particle|Unlit Quad"}
+{"k":"renderer/sprite sorting","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteUnlit/System (1)/Output Particle|Shader Graph Quad - Sprite Unlit"}
+{"k":"renderer/graph unlit","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/GraphUnlit/System (1)/Output Particle|Shader Graph Quad - Unlit"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -54,10 +62,20 @@
 {"k":"draw/mesh exposed/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh none/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/lit sorted/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite point/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite normals/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite unlit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite classic/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/plain 2d/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/sprite sorting/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/graph unlit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f006","v":"Mask=1 -> Shape=Wedge Mask=1"}
 {"k":"draw/curve output/f006","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"act/sprite sorting/f008","v":"sortingOrder=2 -> sortingLayer=Default sortingOrder=2"}
 {"k":"draw/mesh exposed/f008","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f009","v":"Mask=2 -> Shape=Wedge Mask=2"}
+{"k":"draw/sprite sorting/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
 {"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
