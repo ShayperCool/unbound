@@ -6,6 +6,26 @@ using UnityEngine.Rendering;
 
 public partial class CmdBuffersProbe
 {
+    // On Metal the instances a multiplier adds read outside the instance data their call
+    // uploads: a call before them that writes visible colors and placements there is not read,
+    // and two captures differed in what they drew (6000.0.71f1 macOS Editor). There only what a
+    // call's own instances draw is recorded: the added columns of an ID-placed call are masked,
+    // and a matrix-placed call with added instances is not drawn.
+    static readonly bool s_AddedInstancesUndefined = SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal;
+
+    /// <summary>A one-layer read (Read) of `image` with the columns of raw instance IDs from
+    /// `count` on masked where added instances read undefined data.</summary>
+    static string OwnColumns(string read, RenderTexture image, int count)
+    {
+        int pixels = image.width * image.height;
+        if (!s_AddedInstancesUndefined || read.Length != 4 + pixels * 8) return read;
+        var chars = read.ToCharArray();
+        for (int p = 0; p < pixels; p++)
+            if (p % image.width >= count)
+                for (int c = 0; c < 8; c++) chars[2 + p * 8 + c] = '-';
+        return new string(chars);
+    }
+
     void MeshMultiplier(RenderTexture image)
     {
         var quad = Keep(new Mesh());
@@ -21,8 +41,15 @@ public partial class CmdBuffersProbe
         foreach (bool raw in new[] { false, true })
         {
             string key = "device.multiplier.mesh." + multiplier + (raw ? ".ids" : ".colors");
+            if (s_AddedInstancesUndefined && multiplier > 1)
+            {
+                Value(key + ".skipped", Q("added instances read undefined placements"));
+                continue;
+            }
             using var cmd = new CommandBuffer();
             cmd.SetRenderTarget(image);
+            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            ClearInstanceData(cmd, quad, raw ? ids : mat);
             cmd.ClearRenderTarget(false, true, Color.clear);
             cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
             cmd.SetInstanceMultiplier(multiplier);
@@ -36,9 +63,36 @@ public partial class CmdBuffersProbe
         MeshMultiplierPlaced(image, quad, matrices);
     }
 
+    // On the Linux Editor's OpenGL Core device the instances a multiplier adds read the call's
+    // instance data past its own instances, which holds what an earlier call left there
+    // (device.multiplier.stale): a full run read earlier sections' colors. A call of six
+    // instances placed off the target, with clear colors, first makes that data defined. (On
+    // Metal they do not read it: see s_AddedInstancesUndefined.)
+    static readonly Matrix4x4[] s_OffTarget = Enumerable.Repeat(Matrix4x4.Translate(new Vector3(100, 100, 0)), 6).ToArray();
+    static MaterialPropertyBlock s_ClearColors;
+
+    static void ClearInstanceData(CommandBuffer cmd, Mesh quad, Material material)
+    {
+        if (s_ClearColors == null)
+        {
+            s_ClearColors = new MaterialPropertyBlock();
+            s_ClearColors.SetVectorArray("_Color", Enumerable.Repeat(Vector4.zero, s_OffTarget.Length).ToArray());
+        }
+        cmd.DrawMeshInstanced(quad, 0, material, 0, s_OffTarget, s_OffTarget.Length, s_ClearColors);
+    }
+
+    static void ClearInstanceData(RenderTexture image, Mesh quad, Material material)
+    {
+        using var cmd = new CommandBuffer();
+        cmd.SetRenderTarget(image);
+        cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+        ClearInstanceData(cmd, quad, material);
+        Graphics.ExecuteCommandBuffer(cmd);
+    }
+
     /// <summary>Mesh instances placed by their raw instance IDs under a multiplier: which IDs a
     /// call of two instances (and of one) draws, and what the added instances read of the call's
-    /// instanced colors (no earlier draw of this section wrote past two instances). Through a
+    /// instanced colors (each case first clears the data past them). Through a
     /// command buffer and through a camera's queued draws of the persistent multiplier.</summary>
     void MeshMultiplierPlaced(RenderTexture image, Mesh quad, Matrix4x4[] matrices)
     {
@@ -56,11 +110,12 @@ public partial class CmdBuffersProbe
         {
             using var cmd = new CommandBuffer();
             cmd.SetRenderTarget(image);
+            ClearInstanceData(cmd, quad, mat);
             cmd.ClearRenderTarget(false, true, Color.clear);
             cmd.SetInstanceMultiplier(multiplier);
             cmd.DrawMeshInstanced(quad, 0, mat, 0, matrices, count, block);
             Try(key, () => { Graphics.ExecuteCommandBuffer(cmd); Value(key + ".ok", "true"); });
-            Value(key + ".pixels", Read(image));
+            Value(key + ".pixels", block == null ? Read(image) : OwnColumns(Read(image), image, count));
             using var reset = new CommandBuffer();
             reset.SetInstanceMultiplier(1);
             Graphics.ExecuteCommandBuffer(reset);
@@ -85,9 +140,10 @@ public partial class CmdBuffersProbe
             Graphics.RenderMeshInstanced(new RenderParams(byId) { camera = camera, worldBounds = bounds }, quad, 0, matrices, 2);
             camera.Render();
             Value("device.multiplier.camera.ids." + multiplier + ".pixels", Read(image));
+            ClearInstanceData(image, quad, byColor);
             Graphics.RenderMeshInstanced(new RenderParams(byColor) { camera = camera, worldBounds = bounds, matProps = two }, quad, 0, matrices, 2);
             camera.Render();
-            Value("device.multiplier.camera.colors." + multiplier + ".pixels", Read(image));
+            Value("device.multiplier.camera.colors." + multiplier + ".pixels", OwnColumns(Read(image), image, 2));
         }
         using (var set = new CommandBuffer()) { set.SetInstanceMultiplier(2); Graphics.ExecuteCommandBuffer(set); }
         Graphics.DrawMeshInstanced(quad, 0, byId, matrices, 2, null, ShadowCastingMode.Off, false, 0, camera);
@@ -109,7 +165,7 @@ public partial class CmdBuffersProbe
             stale.SetInstanceMultiplier(1);
             Graphics.ExecuteCommandBuffer(stale);
         }
-        Value("device.multiplier.stale.colors.2.pixels", Read(image));
+        Value("device.multiplier.stale.colors.2.pixels", OwnColumns(Read(image), image, 2));
     }
 
     void DeviceCommands()
