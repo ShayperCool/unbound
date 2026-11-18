@@ -42,7 +42,8 @@ resolutions, distances and camera settings), `conservative-shadow-matrices.jsonl
 spheres with conservative enclosing spheres, as URP's asset asks for, over cameras, distances,
 cascades and iteration counts: Unbound computes the same iterative sphere, within 2e-4 of every
 record, managed/UnityEngine.Tests/CascadeCullingTests), `slice-shares.jsonl` (the culling spheres and near planes of one and four cascades over orthographic cameras, fields of view 20, 60 and 170, far planes 50, 200 and 1000 and culling parameters' shadowNearPlaneOffset of 5 and -2, with and without conservative spheres: Unbound's slices match every record, the same tests), `local-shadow-matrices.jsonl` (the same for point
-light cube faces and spot lights) and `sky-mesh.jsonl` (the
+light cube faces and spot lights; recorded before the records named their culling matrices, which
+tests/projects/brg `local_shadow_matrices` records and gates on OpenGL Core and Vulkan) and `sky-mesh.jsonl` (the
 sky mesh's vertices, read through a flat-shading probe shader). The Editor's are in
 `Reference/scenarios/`:
 
