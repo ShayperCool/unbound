@@ -1,0 +1,15 @@
+.tw {
+    transition-property: width;
+    transition-duration: 1s;
+    transition-timing-function: linear;
+}
+
+.th {
+    transition-property: height;
+    transition-duration: 1s;
+    transition-timing-function: linear;
+}
+
+.shade {
+    border-left-width: 3px;
+}

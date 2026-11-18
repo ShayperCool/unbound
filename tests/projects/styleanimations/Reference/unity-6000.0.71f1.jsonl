@@ -1,0 +1,189 @@
+{"key":"float.start","value":"true opacity 1 | run 1 done 0 has true all [Opacity] []"}
+{"key":"float.update","value":"ok opacity 0.5"}
+{"key":"float.0","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"float.250","value":"opacity 0.475 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"float.500","value":"opacity 0.4 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"float.1000","value":"opacity 0.1 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"float.1100","value":"opacity 0.1 | run 0 done 1 has false all [Opacity] hints 0 []"}
+{"key":"float.sameEndAfterEnd","value":"false | run 0 done 1 has false all [Opacity]"}
+{"key":"float.newEndAfterEnd","value":"true | run 1 done 0 has true all [Opacity]"}
+{"key":"float.newEnd.1100","value":"opacity 0.1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"float.cancel","value":"ok opacity 0.9 | run 0 done 0 has false all [] []"}
+{"key":"float.afterCancel.1100","value":"opacity 0.9 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0]"}
+{"key":"length.before","value":"width 200"}
+{"key":"length.start","value":"true width 200 | run 1 done 0 has true all [Width] []"}
+{"key":"length.0","value":"width 200 | run 1 done 0 has true all [Width] hints 0 [run:width@0 start:width@0]"}
+{"key":"length.250","value":"width 175 | run 1 done 0 has true all [Width] hints 0 []"}
+{"key":"length.500","value":"width 150 | run 1 done 0 has true all [Width] hints 0 []"}
+{"key":"length.1000","value":"width 100 | run 0 done 1 has false all [Width] hints 0 [end:width@1]"}
+{"key":"color.before","value":"color 0,0,0,0"}
+{"key":"color.start","value":"true color 0,0,0,0 | run 1 done 0 has true all [BackgroundColor] []"}
+{"key":"color.0","value":"color 1,0,0,1 | run 1 done 0 has true all [BackgroundColor] hints 0 [run:background-color@0 start:background-color@0]"}
+{"key":"color.250","value":"color 0.75,0,0.25,1 | run 1 done 0 has true all [BackgroundColor] hints 0 []"}
+{"key":"color.500","value":"color 0.5,0,0.5,1 | run 1 done 0 has true all [BackgroundColor] hints 0 []"}
+{"key":"color.1000","value":"color 0,0,1,1 | run 0 done 1 has false all [BackgroundColor] hints 0 [end:background-color@1]"}
+{"key":"int.before","value":"slice 0"}
+{"key":"int.start","value":"true slice 0 | run 1 done 0 has true all [UnitySliceLeft] []"}
+{"key":"int.0","value":"slice 0 | run 1 done 0 has true all [UnitySliceLeft] hints 0 [run:-unity-slice-left@0 start:-unity-slice-left@0]"}
+{"key":"int.250","value":"slice 1 | run 1 done 0 has true all [UnitySliceLeft] hints 0 []"}
+{"key":"int.500","value":"slice 2 | run 1 done 0 has true all [UnitySliceLeft] hints 0 []"}
+{"key":"int.1000","value":"slice 5 | run 0 done 1 has false all [UnitySliceLeft] hints 0 [end:-unity-slice-left@1]"}
+{"key":"enum.before","value":"direction Column"}
+{"key":"enum.start","value":"true direction Column | run 1 done 0 has true all [FlexDirection] []"}
+{"key":"enum.0","value":"direction Column | run 1 done 0 has true all [FlexDirection] hints 0 [run:flex-direction@0 start:flex-direction@0]"}
+{"key":"enum.250","value":"direction Column | run 1 done 0 has true all [FlexDirection] hints 0 []"}
+{"key":"enum.500","value":"direction Row | run 1 done 0 has true all [FlexDirection] hints 0 []"}
+{"key":"enum.1000","value":"direction Row | run 0 done 1 has false all [FlexDirection] hints 0 [end:flex-direction@1]"}
+{"key":"intOnEnum.before","value":"align Stretch"}
+{"key":"intOnEnum.start","value":"true align Stretch | run 1 done 0 has true all [AlignItems] []"}
+{"key":"intOnEnum.0","value":"align Auto | run 1 done 0 has true all [AlignItems] hints 0 [run:align-items@0 start:align-items@0]"}
+{"key":"intOnEnum.250","value":"align FlexStart | run 1 done 0 has true all [AlignItems] hints 0 []"}
+{"key":"intOnEnum.500","value":"align Center | run 1 done 0 has true all [AlignItems] hints 0 []"}
+{"key":"intOnEnum.1000","value":"align Stretch | run 0 done 1 has false all [AlignItems] hints 0 [end:align-items@1]"}
+{"key":"scale.before","value":"scale (1.00, 1.00, 1.00)"}
+{"key":"scale.start","value":"true scale (1.00, 1.00, 1.00) | run 1 done 0 has true all [Scale] []"}
+{"key":"scale.0","value":"scale (1.00, 1.00, 1.00) | run 1 done 0 has true all [Scale] hints 0 [run:scale@0 start:scale@0]"}
+{"key":"scale.250","value":"scale (1.25, 1.50, 1.00) | run 1 done 0 has true all [Scale] hints 0 []"}
+{"key":"scale.500","value":"scale (1.50, 2.00, 1.00) | run 1 done 0 has true all [Scale] hints 0 []"}
+{"key":"scale.1000","value":"scale (2.00, 3.00, 1.00) | run 0 done 1 has false all [Scale] hints 0 [end:scale@1]"}
+{"key":"rotate.before","value":"rotate 0"}
+{"key":"rotate.start","value":"true rotate 0 | run 1 done 0 has true all [Rotate] []"}
+{"key":"rotate.0","value":"rotate 0 | run 1 done 0 has true all [Rotate] hints 0 [run:rotate@0 start:rotate@0]"}
+{"key":"rotate.250","value":"rotate 22.5 | run 1 done 0 has true all [Rotate] hints 0 []"}
+{"key":"rotate.500","value":"rotate 45 | run 1 done 0 has true all [Rotate] hints 0 []"}
+{"key":"rotate.1000","value":"rotate 90 | run 0 done 1 has false all [Rotate] hints 0 [end:rotate@1]"}
+{"key":"translate.before","value":"translate 0,0"}
+{"key":"translate.start","value":"true translate 0,0 | run 1 done 0 has true all [Translate] []"}
+{"key":"translate.0","value":"translate 0,0 | run 1 done 0 has true all [Translate] hints 0 [run:translate@0 start:translate@0]"}
+{"key":"translate.250","value":"translate 25,12.5 | run 1 done 0 has true all [Translate] hints 0 []"}
+{"key":"translate.500","value":"translate 50,25 | run 1 done 0 has true all [Translate] hints 0 []"}
+{"key":"translate.1000","value":"translate 100,50 | run 0 done 1 has false all [Translate] hints 0 [end:translate@1]"}
+{"key":"origin.before","value":"origin 100,50"}
+{"key":"origin.start","value":"true origin 100,50 | run 1 done 0 has true all [TransformOrigin] []"}
+{"key":"origin.0","value":"origin 0,0 | run 1 done 0 has true all [TransformOrigin] hints 0 [run:transform-origin@0 start:transform-origin@0]"}
+{"key":"origin.250","value":"origin 25,12.5 | run 1 done 0 has true all [TransformOrigin] hints 0 []"}
+{"key":"origin.500","value":"origin 50,25 | run 1 done 0 has true all [TransformOrigin] hints 0 []"}
+{"key":"origin.1000","value":"origin 100,50 | run 0 done 1 has false all [TransformOrigin] hints 0 [end:transform-origin@1]"}
+{"key":"bgPosition.before","value":"bgpos Center 0px"}
+{"key":"bgPosition.start","value":"true bgpos Center 0px | run 1 done 0 has true all [BackgroundPositionX] []"}
+{"key":"bgPosition.0","value":"bgpos Left 0px | run 1 done 0 has true all [BackgroundPositionX] hints 0 [run:background-position-x@0 start:background-position-x@0]"}
+{"key":"bgPosition.250","value":"bgpos Left 0px | run 1 done 0 has true all [BackgroundPositionX] hints 0 []"}
+{"key":"bgPosition.500","value":"bgpos Right 10px | run 1 done 0 has true all [BackgroundPositionX] hints 0 []"}
+{"key":"bgPosition.1000","value":"bgpos Right 10px | run 0 done 1 has false all [BackgroundPositionX] hints 0 [end:background-position-x@1]"}
+{"key":"bgRepeat.before","value":"repeat NoRepeat,NoRepeat"}
+{"key":"bgRepeat.start","value":"true repeat NoRepeat,NoRepeat | run 1 done 0 has true all [BackgroundRepeat] []"}
+{"key":"bgRepeat.0","value":"repeat Repeat,Repeat | run 1 done 0 has true all [BackgroundRepeat] hints 0 [run:background-repeat@0 start:background-repeat@0]"}
+{"key":"bgRepeat.250","value":"repeat Repeat,Repeat | run 1 done 0 has true all [BackgroundRepeat] hints 0 []"}
+{"key":"bgRepeat.500","value":"repeat Space,Round | run 1 done 0 has true all [BackgroundRepeat] hints 0 []"}
+{"key":"bgRepeat.1000","value":"repeat Space,Round | run 0 done 1 has false all [BackgroundRepeat] hints 0 [end:background-repeat@1]"}
+{"key":"bgSize.before","value":"bgsize 100% 100%"}
+{"key":"bgSize.start","value":"true bgsize 100% 100% | run 1 done 0 has true all [BackgroundSize] []"}
+{"key":"bgSize.0","value":"bgsize 10px 20px | run 1 done 0 has true all [BackgroundSize] hints 0 [run:background-size@0 start:background-size@0]"}
+{"key":"bgSize.250","value":"bgsize 15px 30px | run 1 done 0 has true all [BackgroundSize] hints 0 []"}
+{"key":"bgSize.500","value":"bgsize 20px 40px | run 1 done 0 has true all [BackgroundSize] hints 0 []"}
+{"key":"bgSize.1000","value":"bgsize 30px 60px | run 0 done 1 has false all [BackgroundSize] hints 0 [end:background-size@1]"}
+{"key":"background.before","value":"image none"}
+{"key":"background.start","value":"true image none | run 1 done 0 has true all [BackgroundImage] []"}
+{"key":"background.0","value":"image none | run 1 done 0 has true all [BackgroundImage] hints 0 [run:background-image@0 start:background-image@0]"}
+{"key":"background.250","value":"image none | run 1 done 0 has true all [BackgroundImage] hints 0 []"}
+{"key":"background.500","value":"image UnityWhite | run 1 done 0 has true all [BackgroundImage] hints 0 []"}
+{"key":"background.1000","value":"image UnityWhite | run 0 done 1 has false all [BackgroundImage] hints 0 [end:background-image@1]"}
+{"key":"refuse.sameValue","value":"false | run 0 done 0 has false all []"}
+{"key":"refuse.zeroDuration","value":"false | run 0 done 0 has false all []"}
+{"key":"refuse.delayAtLeastDuration","value":"false | run 0 done 0 has false all []"}
+{"key":"refuse.nan","value":"false | run 0 done 0 has false all []"}
+{"key":"refuse.fontSizeUnit","value":"false | run 0 done 0 has false all []"}
+{"key":"refuse.0","value":"opacity 1 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"delayOnly.start","value":"true | run 1 done 0 has true all [Opacity]"}
+{"key":"delayOnly.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0]"}
+{"key":"delayOnly.50","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"delayOnly.100","value":"opacity 0 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@0]"}
+{"key":"delayOnly.150","value":"opacity 0 | run 0 done 1 has false all [Opacity] hints 0 []"}
+{"key":"negativeDelay.start","value":"true | run 1 done 0 has true all [Opacity]"}
+{"key":"negativeDelay.0","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0.5 start:opacity@0.5]"}
+{"key":"negativeDelay.250","value":"opacity 0.25 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"negativeDelay.500","value":"opacity 0 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"running.sameEnd.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"running.sameEnd.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.sameEnd.restart","value":"false opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.sameEnd.after.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.sameEnd.after.750","value":"opacity 0.25 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.sameEnd.after.1000","value":"opacity 0 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"running.sameEnd.after.1500","value":"opacity 0 | run 0 done 1 has false all [Opacity] hints 0 []"}
+{"key":"running.toCurrent.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"running.toCurrent.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.toCurrent.restart","value":"false opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.toCurrent.after.500","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.5]"}
+{"key":"running.toCurrent.after.750","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.toCurrent.after.1000","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.toCurrent.after.1500","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.zero.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"running.zero.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.zero.restart","value":"false opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.zero.after.500","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.5]"}
+{"key":"running.zero.after.750","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.zero.after.1000","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.zero.after.1500","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"running.reverse.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"running.reverse.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.reverse.restart","value":"true opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.reverse.after.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 [cancel:opacity@0 run:opacity@0 start:opacity@0]"}
+{"key":"running.reverse.after.750","value":"opacity 0.75 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.reverse.after.1000","value":"opacity 1 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@0.5]"}
+{"key":"running.reverse.after.1500","value":"opacity 1 | run 0 done 1 has false all [Opacity] hints 0 []"}
+{"key":"running.other.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"running.other.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.other.restart","value":"true opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.other.after.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 [cancel:opacity@0 run:opacity@0 start:opacity@0]"}
+{"key":"running.other.after.750","value":"opacity 0.575 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.other.after.1000","value":"opacity 0.65 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"running.other.after.1500","value":"opacity 0.8 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"cancel.0","value":"opacity 1 | run 3 done 0 has true all [BackgroundColor,Opacity,Width] hints 0 [run:opacity@0 start:opacity@0 run:width@0 start:width@0 run:background-color@0 start:background-color@0]"}
+{"key":"cancel.250","value":"opacity 0.75 width 175 | run 2 done 1 has true all [BackgroundColor,Opacity,Width] hints 0 [end:background-color@0.1]"}
+{"key":"cancel.one","value":"ok opacity 0 width 175 | run 1 done 1 has false all [BackgroundColor,Width] hints 0 []"}
+{"key":"cancel.unknown","value":"ok | run 1 done 1 has false all [BackgroundColor,Width] hints 0 []"}
+{"key":"cancel.all","value":"ok opacity 0 width 175 | run 0 done 0 has false all [] hints 0 [cancel:width@0.25]"}
+{"key":"cancel.after.250","value":"opacity 0 width 100 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.25]"}
+{"key":"uss.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"uss.500","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"uss.cancel","value":"ok opacity 0 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"uss.afterCancel.500","value":"opacity 0 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.5]"}
+{"key":"uss.again.500","value":"opacity 0 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"uss.again.1500","value":"opacity 1 | run 0 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"uss.instant.1500","value":"opacity 0 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"uss.backToCompleted.1500","value":"opacity 0 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"uss.backToCompleted.2000","value":"opacity 0.5 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"uss.otherEnd.2000","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.5]"}
+{"key":"uss.otherEnd.2500","value":"opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"uss.cancelAll","value":"ok opacity 0.5 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"restyle.none.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"restyle.none.500","value":"opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.none.styled","value":"opacity 1 border 0 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.none.updateAnimation","value":"ok opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.none.after.500","value":"opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.none.after.750","value":"opacity 0.4 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listed.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"restyle.listed.500","value":"opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listed.styled","value":"opacity 0.6 border 0 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listed.updateAnimation","value":"ok opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listed.after.500","value":"opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listed.after.750","value":"opacity 0.4 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listChanged.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"restyle.listChanged.500","value":"opacity 0.6 | run 1 done 0 has true all [Opacity] hints 0 []"}
+{"key":"restyle.listChanged.styled","value":"opacity 1 border 0 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"restyle.listChanged.updateAnimation","value":"ok opacity 1 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"restyle.listChanged.after.500","value":"opacity 1 | run 0 done 0 has false all [] hints 0 [cancel:opacity@0.5]"}
+{"key":"restyle.listChanged.after.750","value":"opacity 1 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"counts.setIdle","value":"set | run 3 done 0 has false all [] hints 0 []"}
+{"key":"counts.0","value":"opacity 1 | run 1 done 0 has true all [Opacity] hints 0 [run:opacity@0 start:opacity@0]"}
+{"key":"counts.zeroedWhileRunning","value":"zeroed | run 0 done 0 has false all [] hints 0 []"}
+{"key":"counts.cancelAllWhileZeroed","value":"ok opacity 1 | run 0 done 0 has false all [] hints 0 []"}
+{"key":"counts.afterZeroed.1000","value":"opacity 0 | run -1 done 1 has false all [Opacity] hints 0 [end:opacity@1]"}
+{"key":"detached.start","value":"NullReferenceException"}
+{"key":"detached.has","value":"false"}
+{"key":"detached.update","value":"NullReferenceException"}
+{"key":"detached.cancel","value":"ok"}
+{"key":"detached.cancelAll","value":"ok"}
+{"key":"detached.all","value":""}
+{"key":"detached.counts","value":"0 0"}
+{"key":"complete","value":"1"}
