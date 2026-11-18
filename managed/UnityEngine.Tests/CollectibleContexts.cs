@@ -37,8 +37,11 @@ namespace UnityEngine.Tests
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
-            failure?.Throw(); // an exception from code of the context keeps the context alive
-            Assert.False(context.IsAlive, $"the load context '{name}' is alive after {MaxCollections} collections");
+            // A context left alive would finish its unload, and flush the cache, in a later test.
+            if (context.IsAlive)
+                throw new InvalidOperationException($"the load context '{name}' is alive after {MaxCollections} collections"
+                    + (failure != null ? " (use threw; see the inner exception)" : ""), failure?.SourceException);
+            failure?.Throw();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
