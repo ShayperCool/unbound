@@ -546,6 +546,9 @@ struct DepthBlit {
     /// The destination depth buffer's format.
     format: wgpu::TextureFormat,
     samples: u32,
+    /// The rows are read mirrored: exactly one end is stored as the screen, whose rows a
+    /// top-down device stores the other way (as `CopyTexture` copies between them).
+    flip: bool,
 }
 
 /// A render pass being built: consecutive commands on one target.
@@ -717,9 +720,10 @@ pub struct UnityRenderer {
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
         CopyKind::COUNT * COPY_SAMPLE_CLASSES],
-    /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
+    /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample,
+    /// format, resolve sample, rows mirrored).
     depth_blit_pipelines: HashMap<
-        (bool, u32, bool, wgpu::TextureFormat, u32),
+        (bool, u32, bool, wgpu::TextureFormat, u32, bool),
         (wgpu::RenderPipeline, wgpu::BindGroupLayout),
     >,
     /// Integer copies of float textures that integer slots read, by texture and signedness.
@@ -1034,6 +1038,7 @@ impl UnityRenderer {
                     false,
                     resolve.view.texture().format(),
                     self.conventions.depth_resolve_sample(gpu.samples),
+                    false,
                 );
                 resolve.group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("unbound native depth resolve"),
@@ -2557,6 +2562,9 @@ impl UnityRenderer {
             .vulkan_plugins
             .as_mut()
             .and_then(|p| p.depth_resolve(destination, self.frame_number + 1));
+        // A screen stored top-down counts its rows from the top, as CopyTexture reads them.
+        let flip = self.conventions.top_down(true)
+            && self.stored_as_screen(source) != self.stored_as_screen(destination);
         match (from, to, to_view) {
             (
                 Some((source, source_samples, size)),
@@ -2574,6 +2582,7 @@ impl UnityRenderer {
                 destination,
                 format,
                 samples,
+                flip,
             }),
             _ => {
                 self.warn_once(format!("copy-depth{source}/{destination}"), || {
@@ -2613,6 +2622,7 @@ impl UnityRenderer {
             destination: resolve.view.clone(),
             samples: 1,
             format: resolve.view.texture().format(),
+            flip: false,
         })
     }
 
@@ -2624,8 +2634,16 @@ impl UnityRenderer {
         per_sample: bool,
         format: wgpu::TextureFormat,
         resolve_sample: u32,
+        flip: bool,
     ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
-        let key = (multisampled, samples, per_sample, format, resolve_sample);
+        let key = (
+            multisampled,
+            samples,
+            per_sample,
+            format,
+            resolve_sample,
+            flip,
+        );
         if let Some(p) = self.depth_blit_pipelines.get(&key) {
             return p.clone();
         }
@@ -2640,6 +2658,13 @@ impl UnityRenderer {
                 )
         } else {
             DEPTH_BLIT_WGSL.to_string()
+        };
+        let source = match flip {
+            true => source.replace(
+                "vec2<i32>(p.xy)",
+                "vec2<i32>(i32(p.x), i32(textureDimensions(depth).y) - 1 - i32(p.y))",
+            ),
+            false => source,
         };
         let device = &self.device;
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -5188,6 +5213,7 @@ impl UnityRenderer {
                         b.samples > 1 && b.samples == b.source_samples,
                         b.format,
                         b.resolve_sample,
+                        b.flip,
                     );
                     let group = b.group.clone().unwrap_or_else(|| {
                         device.create_bind_group(&wgpu::BindGroupDescriptor {
