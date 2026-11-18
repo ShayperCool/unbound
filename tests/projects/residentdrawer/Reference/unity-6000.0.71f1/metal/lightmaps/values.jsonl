@@ -1,0 +1,31 @@
+{"k":"device","v":"Metal"}
+{"k":"drawer.enabled.start","v":false}
+{"k":"scene.Baked Lit Sphere.lightmap","v":"-1 (1.0000, 1.0000, 0.0000, 0.0000)"}
+{"k":"scene.Block.lightmap","v":"0 (0.1889, 0.1889, 0.6399, 0.2102)"}
+{"k":"scene.Dynamic Cube.lightmap","v":"-1 (1.0000, 1.0000, 0.0000, 0.0000)"}
+{"k":"scene.Ground.lightmap","v":"0 (0.6250, 0.6250, 0.0000, 0.0000)"}
+{"k":"scene.Lit Sphere.lightmap","v":"-1 (1.0000, 1.0000, 0.0000, 0.0000)"}
+{"k":"scene.Proxy Sphere.lightmap","v":"-1 (1.0000, 1.0000, 0.0000, 0.0000)"}
+{"k":"scene.Simple Lit Sphere.lightmap","v":"-1 (1.0000, 1.0000, 0.0000, 0.0000)"}
+{"k":"scene.Wall.lightmap","v":"0 (0.2991, 0.2991, 0.6394, -0.0012)"}
+{"k":"f8.drawer.enabled","v":true}
+{"k":"f8.visible.Baked Lit Sphere","v":true}
+{"k":"f8.visible.Block","v":true}
+{"k":"f8.visible.Dynamic Cube","v":true}
+{"k":"f8.visible.Ground","v":true}
+{"k":"f8.visible.Lit Sphere","v":true}
+{"k":"f8.visible.Proxy Sphere","v":true}
+{"k":"f8.visible.Simple Lit Sphere","v":true}
+{"k":"f8.visible.Wall","v":true}
+{"k":"f8.drawer.renderers","v":"Baked Lit Sphere,Block,Dynamic Cube,Ground,Lit Sphere,Simple Lit Sphere,Wall"}
+{"k":"f14.drawer.enabled","v":true}
+{"k":"f14.visible.Baked Lit Sphere","v":true}
+{"k":"f14.visible.Block","v":true}
+{"k":"f14.visible.Dynamic Cube","v":true}
+{"k":"f14.visible.Ground","v":true}
+{"k":"f14.visible.Lit Sphere","v":true}
+{"k":"f14.visible.Proxy Sphere","v":true}
+{"k":"f14.visible.Simple Lit Sphere","v":true}
+{"k":"f14.visible.Wall","v":true}
+{"k":"f14.drawer.renderers","v":"Baked Lit Sphere,Block,Dynamic Cube,Ground,Lit Sphere,Simple Lit Sphere,Wall"}
+{"k":"complete","v":true}

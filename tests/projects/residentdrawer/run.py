@@ -16,7 +16,10 @@ camera's commands are indirect ones the drawer's compute shaders fill). Both sid
 device: the Editor windowed with -force-vulkan on the GPU-backed display :0 (the drawer dispatches
 its changes from the player loop, which a batch-mode Editor does not run between frames), Unbound
 with --force-vulkan; the reference is Reference/unity-R/<profile>. On the OpenGL Core device the
-drawer refuses (it needs raw buffers), which tests/projects/brg records.
+drawer refuses (it needs raw buffers), which tests/projects/brg records. On macOS arm64 both sides
+use Metal, the device's own: the macOS Editor windowed (tests/macos_editor.py), Unbound with its
+default device; the reference is Reference/unity-R/metal/<profile>, since Metal's rounding and
+answers are the device's (AGENTS.md Platforms), and every macOS check compares with it.
 
 The probe's scripts are staged over a fresh copy of the shader graph probe's URP project
 (tests/projects/shadergraph: its scene, pipeline asset and renderer; its own script is left out)
@@ -39,6 +42,7 @@ import fnmatch
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import struct
 import subprocess
@@ -51,11 +55,14 @@ REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import reference_root, run_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
+import macos_editor  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 CAPTURE = 'capture'
 VALUES = 'values.jsonl'
 PROFILE = 'direct'
+# Metal is the macOS Editor's device and Unbound's there: macOS records and checks Metal.
+MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 FRAMES = 600
 # The speedtree profile ends itself after its warm-up and 470 frames.
 SPEEDTREE_FRAMES = 5000
@@ -67,11 +74,11 @@ SCENES = {'lightmaps': 'Subtractive', 'shadowmask': 'Shadowmask'}
 
 
 def reference():
-    return reference_root(ROOT)/PROFILE
+    return reference_root(ROOT)/'metal'/PROFILE if MACOS else reference_root(ROOT)/PROFILE
 
 
 def residuals():
-    path = ROOT/f'residuals-{PROFILE}.json'
+    path = ROOT/(f'residuals-metal-{PROFILE}.json' if MACOS else f'residuals-{PROFILE}.json')
     return json.loads(path.read_text()) if path.exists() else {}
 
 
@@ -142,6 +149,14 @@ def probe_env(work):
 
 
 def native(label):
+    if MACOS:
+        codes = []
+        for repeat in (f'{label}-1', f'{label}-2'):
+            work, project = stage(repeat)
+            codes.append(macos_editor.capture(project, work, ['-executeMethod', 'ResidentDrawerRunner.Record'],
+                                              probe_env(work), timeout=1800, windowed=True))
+            print(repeat, 'exit', codes[-1])
+        return 0 if not any(codes) and all((run_root(ROOT, f'{label}-{n}')/CAPTURE/VALUES).is_file() for n in (1, 2)) else 1
     jobs = []
     for repeat in (f'{label}-1', f'{label}-2'):
         work, project = stage(repeat)
@@ -160,7 +175,8 @@ def engine(label):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **probe_env(work))
     command = [str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '-s', 'KILL', '1500', cli, 'run', '-p', str(project),
-               '--no-watch', '--frames', str(SPEEDTREE_FRAMES if PROFILE == 'speedtree' else FRAMES), '--size', '320x180', '--force-vulkan']
+               '--no-watch', '--frames', str(SPEEDTREE_FRAMES if PROFILE == 'speedtree' else FRAMES), '--size', '320x180',
+               *([] if MACOS else ['--force-vulkan'])]
     if PROFILE in SCENES:
         command += ['--scene', f'Assets/Scenes/{SCENES[PROFILE]}.unity']
     with (work/'process.log').open('w') as log:
@@ -196,9 +212,14 @@ def publish(labels):
         path.mkdir(parents=True)
         for name in capture_names(first/CAPTURE):
             shutil.copyfile(first/CAPTURE/name, path/name)
-    editor_runner.publish([run_root(ROOT, label) for label in labels], fresh,
-                          lambda d: [f'{CAPTURE}/{n}' for n in capture_names(Path(d)/CAPTURE)], write,
-                          complete=[editor_runner.jsonl_complete(f'{CAPTURE}/{VALUES}')], gpu=True)
+    if MACOS:
+        fresh.parent.mkdir(parents=True, exist_ok=True)
+        write(fresh, macos_editor.agreeing([run_root(ROOT, label) for label in labels], f'{CAPTURE}/{VALUES}',
+                                           lambda d: [f'{CAPTURE}/{n}' for n in capture_names(d/CAPTURE)]))
+    else:
+        editor_runner.publish([run_root(ROOT, label) for label in labels], fresh,
+                              lambda d: [f'{CAPTURE}/{n}' for n in capture_names(Path(d)/CAPTURE)], write,
+                              complete=[editor_runner.jsonl_complete(f'{CAPTURE}/{VALUES}')], gpu=True)
     if target.exists():
         if not kept(target, fresh):
             shutil.rmtree(fresh)

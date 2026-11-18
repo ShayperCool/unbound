@@ -103,6 +103,19 @@ drawer's types (in the Editor, one of the probe's read every frame left the draw
 the renderers made before it; why is not studied). The references are two identical captures
 each, measured on the NVIDIA driver only.
 
+On macOS arm64 the runner records and checks Metal, the device of the macOS Editor and of Unbound
+there (AGENTS.md Platforms: the graphics device's answers and rounding follow the macOS Editor):
+`native` runs the macOS Editor windowed (tests/macos_editor.py) and `publish` writes
+`Reference/unity-R/metal/<profile>` from two byte-identical captures; every macOS check compares
+with it, with the same bounds, and reads `residuals-metal-<profile>.json` where one exists. The
+Metal references of all seven profiles were recorded on an Apple M2 Pro (macOS 26). Their values
+are the Vulkan references' but for the `device` row (the drawer holds the same renderers with the
+same visibility); their images differ from them by the device's rounding (per profile a largest
+image mean of 0.38 to 0.92), and `direct` and `controls` also in 83 pixels of each frame by up to
+64/255. Those 83 pixels are why `occlusion` keeps `direct`'s values on Metal but not its images
+(82 pixels differ, mean 0.05; on Vulkan the two are identical): its images are within 2 pixels over
+8 of Vulkan's. Where those pixels are and why is not studied.
+
 Every renderer the drawer holds is visible in the Editor, wherever it is (behind the camera, on
 a layer the camera does not draw, casting no shadows).
 
