@@ -66,8 +66,7 @@ namespace UnityEngine
         {
             get
             {
-                ParticleSystemManager.Sync();
-                if (m_JobsPending && Unbound.Runtime.Jobs.JobSystem.HasRun(m_ManagedJobHandle)) CompleteManagedJobs();
+                SyncForRead();
                 return this;
             }
         }
@@ -314,7 +313,7 @@ namespace UnityEngine
         public void Play([Internal.DefaultValue("true")] bool withChildren)
         {
             ThrowIfDestroyed();
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             foreach (var ps in Systems(withChildren, includeSubEmitters: false))
             {
                 ps.PlaySelf();
@@ -325,7 +324,7 @@ namespace UnityEngine
 
         public void Pause([Internal.DefaultValue("true")] bool withChildren)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             foreach (var ps in Systems(withChildren, includeSubEmitters: true)) ps.m_IsPaused = true;
         }
 
@@ -335,7 +334,7 @@ namespace UnityEngine
 
         public void Stop([Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("ParticleSystemStopBehavior.StopEmitting")] ParticleSystemStopBehavior stopBehavior)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             var systems = Systems(withChildren, includeSubEmitters: true);
             // Finish clearing linked buffers before StopSelf dispatches stop actions.
             // A stop callback may emit again; those new particles must survive.
@@ -357,7 +356,7 @@ namespace UnityEngine
         /// the child systems too (6000.0 Scripting API, ParticleSystem.Clear remarks).</summary>
         public void Clear([Internal.DefaultValue("true")] bool withChildren)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             foreach (var ps in ClearedSystems(withChildren))
             {
                 ps.ClearParticles();
@@ -392,7 +391,7 @@ namespace UnityEngine
 
         public bool IsAlive([Internal.DefaultValue("true")] bool withChildren)
         {
-            ParticleSystemManager.Sync();
+            SyncForRead();
             // A paused system counts as alive even with nothing left (measured after Simulate).
             foreach (var ps in Systems(withChildren, includeSubEmitters: true))
                 if (ps.m_Count > 0 || (ps.m_IsPlaying && !ps.m_StopEmitting) || ps.m_IsPaused) return true;
@@ -581,7 +580,7 @@ namespace UnityEngine
         /// emitting more (measured: isPlaying true, isEmitting false).</summary>
         void EmitNow(int count, EmitParams emitParams, bool hasOverrides)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (count == 0) return;
             RefreshParticleStorage();
             // Only the 3D values the parameters still apply count (a Reset* call drops them).
@@ -625,7 +624,7 @@ namespace UnityEngine
         [Obsolete("Emit with a single particle structure is deprecated. Pass a ParticleSystem.EmitParams parameter instead, which allows you to override some/all of the emission properties", false)]
         public void Emit(Particle particle)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             int index = Allocate();
             if (index >= 0)
             {
@@ -636,20 +635,20 @@ namespace UnityEngine
 
         public void TriggerSubEmitter(int subEmitterIndex)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (!ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < m_Count; i++) TriggerSubEmitterAt(sub, ref m_Particles[i], fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, ref Particle particle)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (ScriptSubEmitter(subEmitterIndex, out var sub)) TriggerSubEmitterAt(sub, ref particle, fromScript: true);
         }
 
         public void TriggerSubEmitter(int subEmitterIndex, List<Particle> particles)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (particles == null || !ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < particles.Count; i++)
             {
@@ -678,8 +677,9 @@ namespace UnityEngine
 
         public void AllocateAxisOfRotationAttribute() => MaterializeAxisOfRotation();
 
-        [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its mesh index")]
-        public void AllocateMeshIndexAttribute() { }
+        /// <summary>Every particle stores its mesh index; the allocation gives particle jobs the
+        /// array (see ParticleJobBuffers).</summary>
+        public void AllocateMeshIndexAttribute() => m_MeshIndexAllocated = true;
 
         public void AllocateCustomDataAttribute(ParticleSystemCustomData stream) => EnsureCustom((int)stream);
 
@@ -687,7 +687,7 @@ namespace UnityEngine
 
         public void SetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size, int offset)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
             if (size < 0 || size > particles.Length) size = particles.Length;
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
@@ -926,7 +926,7 @@ namespace UnityEngine
 
         public int GetParticles([global::System.Runtime.InteropServices.Out] Particle[] particles, int size, int offset)
         {
-            ParticleSystemManager.Sync();
+            SyncForRead();
             if (particles == null) throw new ArgumentNullException(nameof(particles));
             if (size < 0) size = particles.Length;
             offset = Math.Max(0, offset);
@@ -955,7 +955,7 @@ namespace UnityEngine
 
         public void SetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (customData == null) throw new ArgumentNullException(nameof(customData));
             var data = EnsureCustom((int)streamIndex);
             int n = Math.Min(customData.Count, m_Count);
@@ -964,7 +964,7 @@ namespace UnityEngine
 
         public int GetCustomParticleData(List<Vector4> customData, ParticleSystemCustomData streamIndex)
         {
-            ParticleSystemManager.Sync();
+            SyncForRead();
             if (customData == null) throw new ArgumentNullException(nameof(customData));
             customData.Clear();
             int stream = (int)streamIndex;
@@ -1042,7 +1042,7 @@ namespace UnityEngine
 
         public void SetPlaybackState(PlaybackState playbackState)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             m_Time = playbackState.m_PlaybackTime;
             m_DelayRemaining = playbackState.m_StartDelay;
             m_RateAccumulator = playbackState.m_AccumulatedDt;
@@ -1085,7 +1085,7 @@ namespace UnityEngine
         /// (tests/projects/particletrails api/*, see <see cref="TrailStorageSize"/>).</summary>
         public int GetTrails(ref Trails trailData)
         {
-            ParticleSystemManager.Sync();
+            SyncForRead();
             trailData.positions ??= new List<Vector4>();
             trailData.frontPositions ??= new List<int>();
             trailData.backPositions ??= new List<int>();
@@ -1106,7 +1106,7 @@ namespace UnityEngine
         /// filled is refused with an error and changes nothing (unmeasured).</summary>
         public void SetTrails(Trails trailData)
         {
-            ParticleSystemManager.Sync();
+            SyncForWrite();
             if (trailData.positions == null || CaptureOf(trailData) == null)
             {
                 Debug.LogError("Unbound: ParticleSystem.SetTrails was given a Trails value that ParticleSystem.GetTrails never filled; the trails were left unchanged", this);
@@ -1858,6 +1858,11 @@ namespace Unbound.Runtime
                 ps.m_StoppedThisFrame = false;
                 if (ps.m_Registered) SendJobMessage(ps);
             }
+            // The messages' jobs run once they return, alongside the frame in Unity; Unbound finishes
+            // them here, so the frame's scripts see their writes (6000.0.71f1, tests/projects/particlejobs
+            // sync.*, pending.*: a read in a message sees the particles before its job, a read or a
+            // SetParticles after the job has run sees its writes).
+            CompleteJobs();
             Array.Clear(s_Snapshot, 0, n);
             s_CompletionPending = true;
         }
@@ -1916,6 +1921,8 @@ namespace Unbound.Runtime
                 if (ps == null || !ps.m_Registered) continue;
                 try
                 {
+                    // Messages a script's read brings forward still follow the system's jobs.
+                    if (ps.m_JobsPending && ps.HasEventMessages) ps.CompleteManagedJobs();
                     ps.SendCollisionMessages();
                     ps.SendTriggerMessage();
                 }
@@ -1963,8 +1970,8 @@ namespace Unbound.Runtime
 
         internal const string JobMessage = "OnParticleUpdateJobScheduled";
 
-        /// <summary>The particle jobs finish and their writes reach the particles when the frame's
-        /// particle update ends, before its messages (and before the next update begins).</summary>
+        /// <summary>The particle jobs finish and their writes reach the particles: after the frame's
+        /// job messages (and, for a job scheduled later in the frame, when the update ends).</summary>
         internal static void CompleteJobs()
         {
             for (int i = 0; i < s_JobSystems.Count; i++)

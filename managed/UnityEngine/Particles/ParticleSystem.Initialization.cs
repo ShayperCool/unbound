@@ -8,7 +8,7 @@ namespace UnityEngine
         // to four lanes. Unused lanes advance too; they are not reused by the next call.
         readonly Random.State[] m_InitialRandom = new Random.State[4];
         bool m_InitialRandomReady;
-        bool m_AxisOfRotationAllocated;
+        internal bool m_AxisOfRotationAllocated;
         public partial struct PlaybackState
         {
             internal Random.State m_InitialRandom0, m_InitialRandom1, m_InitialRandom2, m_InitialRandom3;

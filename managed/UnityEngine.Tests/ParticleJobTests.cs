@@ -192,18 +192,100 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AReadSeesTheJobsWritesOnlyOnceTheyHaveRun()
+        public void AReadInTheMessageSeesTheParticlesBeforeTheJobAndAfterTheUpdateItsWrites()
         {
             var (ps, _) = Make(2);
-            JobHandle handle = default;
-            JobScript.OnMessage = s => handle = new WriteIndexJob().Schedule(ps);
+            Vector3 inMessage = default;
+            JobScript.OnMessage = s =>
+            {
+                new WriteIndexJob().Schedule(ps);
+                inMessage = ParticlesOf(ps)[1].position;
+            };
             ParticleSystemManager.UpdateAll();
-            Vector3 before = ParticlesOf(ps)[1].position;
-            Assert.NotEqual(new Vector3(1f, 2f, 0f), before);
-            handle.Complete();
+            Assert.Equal(Vector3.zero, inMessage);
             Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(ps)[1].position);
             ParticleSystemManager.EndUpdateAll();
             Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(ps)[1].position);
+        }
+
+        struct MeshIndexJob : IJobParticleSystem
+        {
+            public NativeArray<int> Created;
+
+            public void Execute(ParticleSystemJobData d)
+            {
+                Created[0] = d.meshIndices.IsCreated ? 1 : 0;
+                if (!d.meshIndices.IsCreated) return;
+                var meshes = d.meshIndices;
+                for (int i = 0; i < d.count; i++) meshes[i] = 1;
+            }
+        }
+
+        struct VelocityJob : IJobParticleSystem
+        {
+            public void Execute(ParticleSystemJobData d)
+            {
+                var velocities = d.velocities;
+                for (int i = 0; i < d.count; i++) velocities[i] = new Vector3(0f, 0f, 7f);
+            }
+        }
+
+        [Fact]
+        public void EveryReaderTakesInAJobThatHasRun()
+        {
+            // GetParticles in the message, after the job has run, without another read before it.
+            var (ps, _) = Make(2);
+            ps.AllocateCustomDataAttribute(ParticleSystemCustomData.Custom1);
+            var particles = new ParticleSystem.Particle[2];
+            JobScript.OnMessage = s =>
+            {
+                new WriteIndexJob().Schedule(ps).Complete();
+                ps.GetParticles(particles);
+            };
+            ParticleSystemManager.UpdateAll();
+            Assert.Equal(new Vector3(1f, 2f, 0f), particles[1].position);
+            ParticleSystemManager.EndUpdateAll();
+        }
+
+        [Fact]
+        public void AScriptsWriteWhileAJobIsPendingIsKept()
+        {
+            // In the message, with the job not run: the job finishes first, then the write (Unbound's
+            // choice; in Unity the job's later run would win for what it writes, unmeasured).
+            var (ps, _) = Make(2);
+            var particles = new ParticleSystem.Particle[2];
+            JobScript.OnMessage = s =>
+            {
+                new VelocityJob().Schedule(ps);
+                ps.GetParticles(particles);
+                particles[0].position = new Vector3(5f, 5f, 5f);
+                ps.SetParticles(particles, 2);
+            };
+            Frame();
+            ps.GetParticles(particles);
+            Assert.Equal(new Vector3(5f, 5f, 5f), particles[0].position);
+        }
+
+        [Fact]
+        public void AllocatedMeshIndicesReachAJobOfABillboardSystem()
+        {
+            var (plain, _) = Make(2);
+            var (allocated, _) = Make(2);
+            allocated.AllocateMeshIndexAttribute();
+            using var plainCreated = new NativeArray<int>(1, Allocator.Persistent);
+            using var allocatedCreated = new NativeArray<int>(1, Allocator.Persistent);
+            JobScript.OnMessage = s =>
+            {
+                if (s.gameObject == plain.gameObject) new MeshIndexJob { Created = plainCreated }.Schedule(plain);
+                else new MeshIndexJob { Created = allocatedCreated }.Schedule(allocated);
+            };
+            Frame();
+            Assert.Equal(0, plainCreated[0]);
+            Assert.Equal(1, allocatedCreated[0]);
+            var particles = new ParticleSystem.Particle[2];
+            allocated.GetParticles(particles);
+            Assert.Equal(1, particles[1].m_MeshIndex);
+            Assert.NotEqual(0u, particles[1].m_Flags & ParticleSystem.Particle.FlagMeshIndexSet);
         }
 
         [Fact]
@@ -242,10 +324,13 @@ namespace UnityEngine.Tests
         {
             var (ps, _) = Make(5);
             JobHandle handle = default;
-            JobScript.OnMessage = s => handle = new WriteIndexJob().Schedule(ps);
+            JobScript.OnMessage = s =>
+            {
+                handle = new WriteIndexJob().Schedule(ps);
+                ps.gameObject.SetActive(false);
+                Assert.True(handle.IsCompleted);
+            };
             ParticleSystemManager.UpdateAll();
-            ps.gameObject.SetActive(false);
-            Assert.True(handle.IsCompleted);
             ParticleSystemManager.EndUpdateAll();
             Assert.Equal(0, ps.particleCount);
         }
@@ -266,14 +351,21 @@ namespace UnityEngine.Tests
         {
             var (ps, _) = Make(2);
             var (other, _) = Make(2);
-            JobScript.OnMessage = s => new WriteIndexJob().Schedule(s.gameObject == ps.gameObject ? ps : other);
+            bool otherPendingAfterSimulate = false;
+            JobScript.OnMessage = s =>
+            {
+                if (s.gameObject != other.gameObject) return;
+                // Other's message runs with both systems' jobs scheduled (ps updated first or not).
+                new WriteIndexJob().Schedule(other);
+                new WriteIndexJob().Schedule(ps);
+                JobScript.OnMessage = null;
+                ps.Simulate(0.1f, true, false, true);
+                otherPendingAfterSimulate = other.m_JobsPending;
+            };
             ParticleSystemManager.UpdateAll();
-            JobScript.OnMessage = null;
-            ps.Simulate(0.1f, true, false, true);
             // The simulated system's job wrote before the call stepped it (no velocity: positions stay).
             Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(ps)[1].position);
-            Assert.True(other.m_JobsPending);
-            ParticleSystemManager.EndUpdateAll();
+            Assert.True(otherPendingAfterSimulate);
             Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(other)[1].position);
         }
     }

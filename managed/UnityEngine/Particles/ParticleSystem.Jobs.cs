@@ -21,6 +21,8 @@ namespace UnityEngine
         internal bool m_SteppedThisFrame, m_SteppedBySimulate;
         /// <summary>A script stopped the playing system since its last update.</summary>
         internal bool m_StoppedThisFrame;
+        /// <summary>AllocateMeshIndexAttribute was called: jobs get the mesh indices.</summary>
+        internal bool m_MeshIndexAllocated;
 
         internal unsafe void* GetManagedJobData()
         {
@@ -46,6 +48,36 @@ namespace UnityEngine
             particleData = *(NativeParticleData*)systemPtr;
 
         internal static bool UserJobCanBeScheduled() => ParticleSystemManager.SendingJobMessages;
+
+        /// <summary>A script reads the system: the frame's update completes (see
+        /// ParticleSystemManager.Sync), and a particle job that has run has its writes taken in; one
+        /// that has not run is not waited for (6000.0.71f1, tests/projects/particlejobs sync.*).</summary>
+        internal void SyncForRead()
+        {
+            ParticleSystemManager.Sync();
+            if (m_JobsPending && JobSystem.HasRun(m_ManagedJobHandle)) CompleteManagedJobs();
+        }
+
+        /// <summary>A script changes the system: its pending particle jobs finish and their writes are
+        /// taken in first, so the change is not undone when the update ends (tests/projects/particlejobs
+        /// pending.*).</summary>
+        internal void SyncForWrite()
+        {
+            ParticleSystemManager.Sync();
+            CompleteManagedJobs();
+        }
+
+        /// <summary>The system has collision or trigger messages to send from its update.</summary>
+        internal bool HasEventMessages
+        {
+            get
+            {
+                if (m_CollisionEvents.Count > 0) return true;
+                foreach (var list in m_TriggerParticles)
+                    if (list.Count > 0) return true;
+                return false;
+            }
+        }
 
         /// <summary>Waits for the system's jobs and takes their writes into the particles.</summary>
         internal void CompleteManagedJobs()
@@ -92,6 +124,7 @@ namespace Unbound.Runtime
         int m_Capacity;
         /// <summary>The arrays of the streams a system may not have (null in the job when it does not).</summary>
         NativeParticleData.Array4 m_Custom1, m_Custom2;
+        NativeParticleData.Array3 m_Axes;
         void* m_MeshIndices;
         /// <summary>Per custom data stream: a job wrote it after this module run (see <see cref="HoldsCustom"/>).</summary>
         uint m_CustomRun0, m_CustomRun1;
@@ -137,7 +170,7 @@ namespace Unbound.Runtime
             NativeParticleData.Array4 Take4() => new NativeParticleData.Array4 { x = Take(), y = Take(), z = Take(), w = Take() };
             m_Data->positions = Take3();
             m_Data->velocities = Take3();
-            m_Data->axisOfRotations = Take3();
+            m_Axes = Take3();
             m_Data->rotations = Take3();
             m_Data->rotationalSpeeds = Take3();
             m_Data->sizes = Take3();
@@ -161,10 +194,18 @@ namespace Unbound.Runtime
         static bool HasCustom(ParticleSystem ps, int stream) =>
             ps.m_Custom[stream] != null || (ps.m_CustomData.enabled && ps.m_CustomData.modes[stream] != ParticleSystemCustomDataMode.Disabled);
 
-        /// <summary>Mesh indices exist for a renderer drawing meshes (a billboard renderer's are a null
-        /// array, measured; Mesh mode's array is Unbound's choice, unmeasured).</summary>
-        static bool HasMeshIndices(ParticleSystem ps) =>
+        /// <summary>Mesh indices exist once AllocateMeshIndexAttribute was called, and for a renderer
+        /// drawing meshes (a billboard renderer's are a null array otherwise, measured; Mesh mode's
+        /// array is Unbound's choice, unmeasured).</summary>
+        static bool HasMeshIndices(ParticleSystem ps) => ps.m_MeshIndexAllocated || IsMeshMode(ps);
+
+        static bool IsMeshMode(ParticleSystem ps) =>
             ps.CullingRenderer is ParticleSystemRenderer renderer && renderer.renderMode == ParticleSystemRenderMode.Mesh;
+
+        /// <summary>The mesh index a job sees: one set on the particle, in Mesh mode the one it draws
+        /// with, and -1 for a particle given none (billboards, measured).</summary>
+        static int MeshIndexOf(ParticleSystem ps, ref ParticleSystem.Particle p, bool meshMode) =>
+            (p.m_Flags & ParticleSystem.Particle.FlagMeshIndexSet) != 0 ? p.m_MeshIndex : meshMode ? ps.MeshIndexOf(ref p) : -1;
 
         static void Put(ref NativeParticleData.Array3 a, int i, Vector3 v)
         {
@@ -189,6 +230,10 @@ namespace Unbound.Runtime
             var inverse = (float*)m_Data->inverseStartLifetimes;
             var seeds = (uint*)m_Data->randomSeeds;
             bool custom1 = HasCustom(ps, 0), custom2 = HasCustom(ps, 1), meshIndices = HasMeshIndices(ps);
+            // The axes exist once the system has the attribute (a null array before: measured).
+            bool axes = ps.m_AxisOfRotationAllocated;
+            m_Data->axisOfRotations = axes ? m_Axes : default;
+            bool meshMode = IsMeshMode(ps);
             m_Data->customData1 = custom1 ? m_Custom1 : default;
             m_Data->customData2 = custom2 ? m_Custom2 : default;
             m_Data->meshIndices = meshIndices ? m_MeshIndices : null;
@@ -198,7 +243,7 @@ namespace Unbound.Runtime
                 ref var p = ref particles[i];
                 Put(ref m_Data->positions, i, p.m_Position);
                 Put(ref m_Data->velocities, i, p.m_Velocity);
-                Put(ref m_Data->axisOfRotations, i, p.m_AxisOfRotation);
+                if (axes) Put(ref m_Axes, i, p.m_AxisOfRotation);
                 Put(ref m_Data->rotations, i, p.m_Rotation);
                 Put(ref m_Data->rotationalSpeeds, i, p.m_AngularVelocity);
                 Put(ref m_Data->sizes, i, p.m_StartSize);
@@ -207,7 +252,7 @@ namespace Unbound.Runtime
                 alive[i] = p.m_AgePercent;
                 inverse[i] = p.m_InvStartLifetime;
                 seeds[i] = p.m_RandomSeed;
-                if (meshIndices) meshes[i] = p.m_MeshIndex;
+                if (meshIndices) meshes[i] = MeshIndexOf(ps, ref p, meshMode);
             }
             if (custom1) FillCustom(ps, 0, ref m_Custom1, count);
             if (custom2) FillCustom(ps, 1, ref m_Custom2, count);
@@ -236,12 +281,13 @@ namespace Unbound.Runtime
             var inverse = (float*)m_Data->inverseStartLifetimes;
             var seeds = (uint*)m_Data->randomSeeds;
             var meshes = (int*)m_Data->meshIndices;
+            bool meshMode = IsMeshMode(ps);
             for (int i = 0; i < count; i++)
             {
                 ref var p = ref particles[i];
                 p.m_Position = Get(ref m_Data->positions, i);
                 p.m_Velocity = Get(ref m_Data->velocities, i);
-                p.m_AxisOfRotation = Get(ref m_Data->axisOfRotations, i);
+                if (m_Data->axisOfRotations.x != null) p.m_AxisOfRotation = Get(ref m_Axes, i);
                 p.m_Rotation = Get(ref m_Data->rotations, i);
                 p.m_AngularVelocity = Get(ref m_Data->rotationalSpeeds, i);
                 p.m_StartSize = Get(ref m_Data->sizes, i);
@@ -253,7 +299,11 @@ namespace Unbound.Runtime
                     p.ExportLifetime();
                 }
                 p.m_RandomSeed = seeds[i];
-                if (meshes != null) p.m_MeshIndex = meshes[i];
+                if (meshes != null && meshes[i] != MeshIndexOf(ps, ref p, meshMode))
+                {
+                    p.m_MeshIndex = meshes[i];
+                    p.m_Flags |= ParticleSystem.Particle.FlagMeshIndexSet;
+                }
             }
             if (m_Data->customData1.x != null)
             {

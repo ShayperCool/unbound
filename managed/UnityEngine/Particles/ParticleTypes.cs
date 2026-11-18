@@ -469,7 +469,7 @@ namespace UnityEngine
         static void WriteBackTriggerParticlesSynced(this ParticleSystem ps, ParticleSystemTriggerEventType type,
             List<ParticleSystem.Particle> particles, int offset, int count, bool whole)
         {
-            Unbound.Runtime.ParticleSystemManager.Sync();
+            ps.SyncForWrite();
             ps.WriteBackTriggerParticles(type, particles, offset, count, whole);
         }
 
@@ -515,7 +515,7 @@ namespace UnityEngine
 
         public static int GetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles)
         {
-            Unbound.Runtime.ParticleSystemManager.Sync();
+            ps.SyncForRead();
             return ps.ReadTriggerParticles(type, particles);
         }
 
