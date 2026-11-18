@@ -3140,6 +3140,8 @@ float4 frag(float4 position : SV_POSITION) : SV_Target {
             ("sampler_PointClampRepeat", state(0, 1)),
             ("sampler_PointClampMirror", state(0, 1)),
             ("sampler_PointMirrorClamp", state(0, 1)),
+            // Filtered, as measured; trilinear rather than linear follows the strict reading's
+            // precedence (without mips the capture does not tell them apart).
             ("sampler_TrilinearPointClamp", state(2, 1)),
             ("sampler_PointClampAniso3", state(0, 1)),
             ("my_point_clamp_aniso3_sampler", state(0, 1)),

@@ -184,7 +184,7 @@ are Vulkan's), with these differences (70 rows differ from Vulkan's):
   `Mirror` clamps; an invalid anisotropic level is taken as none, unmeasured), whatever the
   texture's own state. Every `Bad*` program
   draws `_B`'s bilinear sample, which does not tell this from `_B`'s own state; a separate macOS
-  Editor capture (two identical) of a point-filtered repeating texture through such names does
+  Editor capture (two identical) of a two-texel texture of three own states through such names does
   (`InlineSampler::read_leniently`); rows of it here would need the Linux references recorded
   again, a follow-up;
 - a depth texture's sample reads the depth in red, green and blue and 1 in alpha (`DepthChannels`,
