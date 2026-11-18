@@ -100,14 +100,16 @@ namespace Unbound.Runtime
                 new[] { typeof(MaterialDescription), typeof(Material), typeof(AnimationClip[]) },
                 typeof(FBXMaterialDescriptionPreprocessor));
 
-        /// <summary>Runs the preprocessors. Each time one sets the material's shader, that shader's
-        /// editor validates the material at once (render pipelines' and projects' editors,
-        /// <see cref="MaterialValidation"/>), as the Editor does when a material's shader changes
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/modelimport <c>stages.*</c> with
-        /// URP: Lit's validation, made as URP's FBX preprocessor sets Lit, sees the emission and
-        /// GI flags the Editor's own FBX preprocessor gave the material before, and not the base
-        /// colour the URP preprocessor sets after it; a Shader Graph shader set next has its queue
-        /// control validated before the next preprocessor runs).</summary>
+        /// <summary>Runs the preprocessors, then validates the material with its shader's editor
+        /// (render pipelines' and projects' editors, <see cref="MaterialValidation"/>). Each time a
+        /// preprocessor sets the material's shader, the new shader's editor validates it at once
+        /// too, as the Editor does when a material's shader changes (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/modelimport with URP, <c>stages.*</c>: Lit's validation as URP's
+        /// FBX preprocessor sets Lit sees the emission and GI flags the Editor's own FBX
+        /// preprocessor set before, a Shader Graph shader set next has its queue control before
+        /// the next preprocessor runs, and a material whose shader changes again keeps the colour
+        /// Lit's first validation gave it; the last validation gives the others Lit's
+        /// <c>_Color</c> from the base colour the URP preprocessor set).</summary>
         static void Preprocess(string assetPath, MaterialDescription description, Material material)
         {
             material.m_ValidateOnShaderChange = true;
@@ -120,6 +122,7 @@ namespace Unbound.Runtime
             {
                 material.m_ValidateOnShaderChange = false;
             }
+            MaterialValidation.Validate(material, editorsOfTheEditor: false);
         }
 
         /// <summary>

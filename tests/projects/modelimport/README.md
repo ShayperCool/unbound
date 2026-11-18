@@ -62,16 +62,19 @@ only a diffuse texture is unmeasured, as is a pipeline without Autodesk Interact
 whose Autodesk Interactive materials Unbound converts like the others), and gives Autodesk Interactive materials URP's Autodesk Interactive shaders with the
 file's values (base colour, emission, roughness and metallic zero when absent; opacity, mask
 threshold, UV offset with V negated and UV scale when present), with no blend mode, keyword,
-queue or GI flag and no ShaderGUI validation.
+queue or GI flag, validated by the shader's editor as the material is made (before those values;
+`_QueueControl` 0).
 
 What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
 Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
 mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported. URP (7681/7687 values match): four description-made Shader Graph
-materials read gi `RealtimeEmissive` in the Editor and `RealtimeEmissive, EmissiveIsBlack` in
-Unbound; the legacy importer's two Autodesk Interactive materials read `_QueueControl` 0 in the
-Editor and the shader's -1 in Unbound (no validation runs on them; what sets 0 is not
-established). These are the probe's only URP differences. The description-made Arnold Maya,
+curves are not imported. URP: every value matches (7807/7807). The Editor validates a material
+each time a preprocessor sets its shader and once more after the last one: the description-made
+Shader Graph materials keep Lit's GI flags (Lit's validation, as URP's FBX preprocessor sets Lit,
+keeps `RealtimeEmissive` without `EmissiveIsBlack`) and the Autodesk Interactive cutout the
+`_Color` Lit's first validation gave it, while the materials that stay Lit take `_Color` from the
+base colour; the legacy importer's Autodesk Interactive materials have `_QueueControl` 0 from the
+validation as they are made (`stages.*`). The description-made Arnold Maya,
 Autodesk Interactive, Physical and Autodesk Interactive cutout materials keep the shader's queue
 (rawRenderQueue -1, queue 3000, 2450 for the cutout, RenderType "Transparent" for the three
 transparent ones), in Unbound too since a shader change leaves a material only the new shader's
