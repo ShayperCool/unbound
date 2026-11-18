@@ -905,8 +905,11 @@ namespace UnityEngine.SceneManagement
             }
             // Its local physics scene goes with it, once its objects have gone (when within the
             // unload is not documented or measured).
-            Unbound.Runtime.PhysicsWorld.ReleaseLocal(data.Handle.Value);
-            Unbound.Runtime.Physics2DWorld.ReleaseLocal(data.Handle.Value);
+            // A scene loaded from a scene asset keeps them, valid and empty, in the measured
+            // release; a created scene (no path) does not (tests/projects/localphysics).
+            bool orphan = Compat.LoadedScenePhysicsOutlivesUnload && !string.IsNullOrEmpty(data.Path);
+            Unbound.Runtime.PhysicsWorld.ReleaseLocal(data.Handle.Value, orphan);
+            Unbound.Runtime.Physics2DWorld.ReleaseLocal(data.Handle.Value, orphan);
             // So does its baked NavMesh (measured after the unload completes: tests/projects/navbaked).
             Unbound.Runtime.SceneNavMesh.SceneUnloaded(data.Handle.Value);
             data.IsLoaded = false;

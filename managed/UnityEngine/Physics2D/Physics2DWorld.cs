@@ -99,6 +99,9 @@ namespace Unbound.Runtime
             /// Unbound's own (Unity's are not measured).</summary>
             internal readonly int Handle;
             internal bool Released;
+            /// <summary>Its scene was unloaded, yet it stays valid and empty: nothing joins it, its
+            /// Simulate does nothing and its queries find nothing (<see cref="ReleaseLocal"/>).</summary>
+            internal bool Orphaned;
 
             internal Space(int scene, int handle)
             {
@@ -171,8 +174,13 @@ namespace Unbound.Runtime
             if (handle == 0) return s_Default;
             foreach (var space in s_Locals)
                 if (space.Handle == handle) return space;
+            foreach (var space in s_Orphaned)
+                if (space.Handle == handle) return space;
             return null;
         }
+
+        /// <summary>Local physics scenes that stay valid after their scene's unload.</summary>
+        static readonly List<Space> s_Orphaned = new List<Space>();
 
         /// <summary>A scene made with LocalPhysicsMode.Physics2D gets its own physics scene. Its
         /// Box2D world is created with the first component that joins it.</summary>
@@ -189,7 +197,7 @@ namespace Unbound.Runtime
         /// same as the Scene"; a created scene's is invalid afterwards, tests/projects/localphysics).
         /// Objects moved out of the scene first join their new physics scene; what is left leaves
         /// the simulation without callbacks.</summary>
-        internal static void ReleaseLocal(int sceneHandle)
+        internal static void ReleaseLocal(int sceneHandle, bool orphan = false)
         {
             if (!s_ByScene.TryGetValue(sceneHandle, out var space)) return;
             SceneMembershipChanged();
@@ -210,7 +218,12 @@ namespace Unbound.Runtime
                 space.Ground = null;
                 space.StructureDirty = space.AttachmentDirty = false;
             }
-            space.Released = true;
+            if (orphan)
+            {
+                space.Orphaned = true;
+                s_Orphaned.Add(space);
+            }
+            else space.Released = true;
             s_Locals.Remove(space);
             s_ByScene.Remove(sceneHandle);
         }
@@ -356,7 +369,9 @@ namespace Unbound.Runtime
             Physics2DEffectors.Reset();
             s_IgnoredPairs.Clear();
             foreach (var space in s_Locals) space.Released = true;
+            foreach (var space in s_Orphaned) space.Released = true;
             s_Locals.Clear();
+            s_Orphaned.Clear();
             s_ByScene.Clear();
             s_Space = s_Default;
             s_MembershipPending = false;

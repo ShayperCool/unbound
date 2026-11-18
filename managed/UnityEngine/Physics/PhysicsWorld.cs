@@ -90,6 +90,9 @@ namespace Unbound.Runtime
             /// contactevents3d); local identities are Unbound's own (Unity's are not measured).</summary>
             internal readonly int Index, Version;
             internal bool Released;
+            /// <summary>Its scene was unloaded, yet it stays valid and empty: nothing joins it, its
+            /// Simulate does nothing and its queries find nothing (<see cref="ReleaseLocal"/>).</summary>
+            internal bool Orphaned;
 
             internal Space(int scene, int index, int version)
             {
@@ -158,12 +161,16 @@ namespace Unbound.Runtime
 
         /// <summary>Released local physics scenes by the scene that owned them.</summary>
         static readonly Dictionary<int, Space> s_Released = new Dictionary<int, Space>();
+        /// <summary>Local physics scenes that stay valid after their scene's unload.</summary>
+        static readonly List<Space> s_Orphaned = new List<Space>();
 
         /// <summary>A valid physics scene by its PhysicsScene identity; null when there is none.</summary>
         internal static Space Find(int index, int version)
         {
             if (index == 0 && version == 0) return s_Default;
             foreach (var space in s_Locals)
+                if (space.Index == index && space.Version == version) return space;
+            foreach (var space in s_Orphaned)
                 if (space.Index == index && space.Version == version) return space;
             return null;
         }
@@ -184,9 +191,10 @@ namespace Unbound.Runtime
 
         /// <summary>The scene that owns a local physics scene is unloaded: the physics scene goes with
         /// it (6000.0 Scripting API, LocalPhysicsMode: "the lifetime of the physics Scene(s) is the
-        /// same as the Scene"). Objects moved out of the scene first join their new physics scene;
-        /// what is left leaves the simulation.</summary>
-        internal static void ReleaseLocal(int sceneHandle)
+        /// same as the Scene"), or, with <paramref name="orphan"/>, stays valid and empty
+        /// (<see cref="Space.Orphaned"/>; Compat.LoadedScenePhysicsOutlivesUnload). Objects moved
+        /// out of the scene first join their new physics scene; what is left leaves the simulation.</summary>
+        internal static void ReleaseLocal(int sceneHandle, bool orphan = false)
         {
             CompleteQueryJobs();
             if (!s_ByScene.TryGetValue(sceneHandle, out var space)) return;
@@ -210,7 +218,12 @@ namespace Unbound.Runtime
                 s_StructureDirty = false;
                 s_AttachmentDirty = false;
             }
-            space.Released = true;
+            if (orphan)
+            {
+                space.Orphaned = true;
+                s_Orphaned.Add(space);
+            }
+            else space.Released = true;
             s_Locals.Remove(space);
             s_ByScene.Remove(sceneHandle);
             s_Released[sceneHandle] = space;
@@ -398,7 +411,9 @@ namespace Unbound.Runtime
                 space.World = 0;
                 space.Released = true;
             }
+            foreach (var space in s_Orphaned) space.Released = true;
             s_Locals.Clear();
+            s_Orphaned.Clear();
             s_ByScene.Clear();
             s_Released.Clear();
             foreach (var world in s_PendingDestroy) B3.ua3_world_destroy(world);

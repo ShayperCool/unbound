@@ -73,6 +73,11 @@ namespace Unbound.Runtime
         /// <summary>Invalid 3D callback payload access measured by defaultstate on 6000.0.71f1.
         /// Other releases retain the previous, unmeasured null fallback.</summary>
         internal static bool PhysicsCallbackPayloadsMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>A scene loaded from a scene asset keeps its local physics scenes valid and
+        /// empty after its unload (Simulate does nothing, queries find nothing), where a created
+        /// scene's become invalid: measured by localphysics on 6000.0.71f1 (loaded.*, stale.*).
+        /// Other releases follow the documented lifetime ("the same as the Scene") for both.</summary>
+        internal static bool LoadedScenePhysicsOutlivesUnload => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Joint-drive input ranges measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous, unmeasured stored drive values.</summary>
         internal static bool PhysicsJointDrivesMeasured => Family == ReleaseFamily.Unity6000_0;

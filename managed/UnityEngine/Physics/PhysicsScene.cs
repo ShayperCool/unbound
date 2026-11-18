@@ -14,7 +14,9 @@ namespace UnityEngine
     /// unloaded; the default one is always valid.
     /// What Unity does with an invalid physics scene is not documented; measured for a created scene
     /// after its unload (tests/projects/localphysics `p3.unload.*`): IsEmpty and Simulate throw
-    /// InvalidOperationException, and its queries find nothing.
+    /// InvalidOperationException, and its queries find nothing. A scene loaded from a scene asset
+    /// keeps its physics scene valid and empty instead, Simulate doing nothing (Unity 6000.0.71f1,
+    /// `loaded.*`, `stale.*`; Compat.LoadedScenePhysicsOutlivesUnload).
     /// </summary>
     public partial struct PhysicsScene
     {
@@ -42,6 +44,9 @@ namespace UnityEngine
             if (!IsValid())
                 throw new InvalidOperationException($"PhysicsScene.Simulate: {this} is not valid (the Scene that owned it was unloaded or destroyed).");
             var space = Live();
+            // A loaded scene's physics scene after its unload: nothing to step (measured:
+            // tests/projects/localphysics stale.simulate3d).
+            if (space.Orphaned) return;
             // The default physics scene steps as Physics.Simulate steps it, with that method's
             // simulation-mode requirement; a local one steps in any mode (measured:
             // tests/projects/localphysics `p3.sim.*`, `p3.defaultSim.*`).

@@ -781,7 +781,9 @@ namespace UnityEngine
     /// its own colliders and its Simulate steps only its own components. A local physics scene is
     /// never simulated automatically, and a created scene's is no longer valid once the scene is
     /// unloaded, IsEmpty and Simulate then throwing InvalidOperationException and its queries finding
-    /// nothing; the default one is always valid (measured: tests/projects/localphysics).
+    /// nothing, while a scene loaded from a scene asset keeps its valid and empty, Simulate doing
+    /// nothing (Unity 6000.0.71f1; Compat.LoadedScenePhysicsOutlivesUnload); the default one is
+    /// always valid (measured: tests/projects/localphysics).
     /// </summary>
     public partial struct PhysicsScene2D : IEquatable<PhysicsScene2D>
     {
@@ -819,6 +821,9 @@ namespace UnityEngine
         public bool Simulate(float deltaTime, int simulationLayers = -1)
         {
             var space = Valid("Simulate");
+            // A loaded scene's physics scene after its unload: nothing to step, as a step that ran
+            // (measured: tests/projects/localphysics stale.simulate2d).
+            if (space.Orphaned) return true;
             W.EnsureRegistered();
             return W.Simulate(space, deltaTime, simulationLayers);
         }

@@ -124,6 +124,60 @@ namespace UnityEngine.Tests
             Assert.True(Physics.defaultPhysicsScene.IsValid());
         }
 
+        /// <summary>A scene loaded from a scene asset, as a load leaves it (its path; nothing read).</summary>
+        Scene LoadedScene(LocalPhysicsMode mode)
+        {
+            var data = Unbound.Runtime.SceneRegistry.Create("LoadedPhysics" + s_Created++, "Assets/LoadedPhysics.unity", -1);
+            SceneManagerInternal.CreateLocalPhysics(data, mode);
+            data.IsLoaded = true;
+            data.LoadingState = Scene.LoadingState.Loaded;
+            Unbound.Runtime.SceneRegistry.Loaded.Add(data);
+            var scene = new Scene(data.Handle);
+            m_Scenes.Add(scene);
+            return scene;
+        }
+
+        /// <summary>The measured release keeps a loaded scene's physics scenes valid and empty
+        /// after its unload: stepping them does nothing (Unbound threw), queries find nothing
+        /// (tests/projects/localphysics stale.*; 2D answers its Simulate with true). Other
+        /// releases follow the documented lifetime.</summary>
+        [Fact]
+        public void ALoadedScenesPhysicsScenesStayValidAndInertAfterItsUnload()
+        {
+            var loaded = LoadedScene(LocalPhysicsMode.Physics3D | LocalPhysicsMode.Physics2D);
+            var physics = loaded.GetPhysicsScene();
+            var physics2D = loaded.GetPhysicsScene2D();
+            In(loaded, () => Floor("LoadedFloor", Vector3.zero));
+            In(loaded, () => Ball("LoadedBall", new Vector3(0f, 3f, 0f)));
+            Assert.False(physics.IsEmpty());
+            SceneOperations.Unload(loaded);
+
+            Assert.True(physics.IsValid());
+            Assert.True(physics2D.IsValid());
+            Assert.True(physics.IsEmpty());
+            Assert.True(physics2D.IsEmpty());
+            physics.Simulate(Dt);
+            Assert.True(physics2D.Simulate(Dt));
+            Assert.False(physics.Raycast(new Vector3(0f, 10f, 0f), Vector3.down, 100f));
+            Assert.Null(physics2D.Raycast(new Vector2(0f, 10f), Vector2.down, 100f).collider);
+            // A created scene's do not stay (the control).
+            var created = LocalScene();
+            var createdPhysics = created.GetPhysicsScene();
+            SceneOperations.Unload(created);
+            Assert.False(createdPhysics.IsValid());
+            Assert.Throws<InvalidOperationException>(() => createdPhysics.Simulate(Dt));
+        }
+
+        [Fact]
+        public void OtherReleasesEndALoadedScenesPhysicsSceneWithIt()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var loaded = LoadedScene(LocalPhysicsMode.Physics3D);
+            var physics = loaded.GetPhysicsScene();
+            SceneOperations.Unload(loaded);
+            Assert.False(physics.IsValid());
+        }
+
         [Fact]
         public void LocalBodiesIgnoreTheDefaultSimulation()
         {
