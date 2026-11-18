@@ -107,7 +107,7 @@ public static class Game
             var texts = new LogTexts();
             var logger = new Logger(texts);
             logger.Log((1f / 3f, 2.5f));
-            logger.Log(new ArgumentOutOfRangeException("p", (1f / 3f, 2.5f), "Too big.").ActualValue);
+            logger.Log(System.Tuple.Create(1f / 3f, (2.5f, 1f / 3f)));
             WithCulture("de-DE", () =>
             {
                 logger.Log((1f / 3f, 2.5f));
@@ -116,7 +116,7 @@ public static class Game
             // Control: a tuple without floats and a game's own ITuple keep their own text.
             logger.Log((1, "x"));
             logger.Log(new OwnTuple());
-            Assert.Equal(new[] { "(0.3333333, 2.5)", "(0.3333333, 2.5)", "(0,3333333, 2,5)", "0.3333333", "(1, x)", "own" }, texts.Texts);
+            Assert.Equal(new[] { "(0.3333333, 2.5)", "(0.3333333, (2.5, 0.3333333))", "(0,3333333, 2,5)", "0.3333333", "(1, x)", "own" }, texts.Texts);
         }
 
         /// <summary>A hot-reload edit's calls that format a float or read a message go through the
