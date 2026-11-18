@@ -319,7 +319,16 @@ namespace UnityEditor
 
             public override bool Concerns(Object o) => m_Target == o;
 
-            public override void NoteChanges(bool undone) => ObjectChangeEvents.NoteProperties(m_Target);
+            /// <summary>A recording publishes a change only when the object changed by the time the
+            /// changes are published, an undo or redo only when the states it swaps differ (not
+            /// measured: every measured recording changed its object).</summary>
+            public override void NoteChanges(bool undone)
+            {
+                if (!s_Processing)
+                    ObjectChangeEvents.NoteProperties(m_Target, () => m_Target != null && !m_Before.SameAs(ObjectState.Capture(m_Target)));
+                else if (m_After == null || !m_Before.SameAs(m_After))
+                    ObjectChangeEvents.NoteProperties(m_Target);
+            }
         }
 
         sealed class CreatedOperation : Operation
@@ -459,6 +468,21 @@ namespace Unbound.Runtime
             }
             if (SerializedTree.IsScript(target)) state.m_Json = JsonUtility.ToJson(target);
             return state;
+        }
+
+        /// <summary>Whether two captures of an object hold the same state.</summary>
+        internal bool SameAs(ObjectState other)
+        {
+            if (other == null || m_Json != other.m_Json || m_Native.Count != other.m_Native.Count) return false;
+            for (int i = 0; i < m_Native.Count; i++)
+            {
+                object a = m_Native[i].Value, b = other.m_Native[i].Value;
+                if (Equals(a, b)) continue;
+                if (a is System.Collections.IEnumerable x && b is System.Collections.IEnumerable y && !(a is string)
+                    && System.Linq.Enumerable.SequenceEqual(System.Linq.Enumerable.Cast<object>(x), System.Linq.Enumerable.Cast<object>(y))) continue;
+                return false;
+            }
+            return true;
         }
 
         internal void Restore(Object target)

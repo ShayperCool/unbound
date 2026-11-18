@@ -161,14 +161,14 @@ namespace UnityEngine.Tests
                 published.Add(string.Join("; ", parts));
             };
             GameObject target = null, child = null, doomed = null;
-            ScriptableObject data = null;
+            ChangeData data = null;
             try
             {
                 Undo.ClearAll();
                 target = new GameObject("Target");
                 child = new GameObject("Child");
                 doomed = new GameObject("Doomed");
-                data = ScriptableObject.CreateInstance<ScriptableObject>();
+                data = ScriptableObject.CreateInstance<ChangeData>();
                 data.name = "Data";
                 // Without a handler nothing is kept for later.
                 Undo.RecordObject(target.transform, "unsubscribed");
@@ -191,6 +191,9 @@ namespace UnityEngine.Tests
                 Undo.SetTransformParent(child.transform, target.transform, "parent");
                 Undo.DestroyObjectImmediate(doomed);
                 Undo.RecordObject(data, "data");
+                data.number = 5;
+                // A recording whose object did not change publishes nothing (not measured).
+                Undo.RecordObject(child.transform, "unchanged");
                 ObjectChangeEvents.Publish();
                 Assert.Equal(new[] { "ChangeGameObjectParent Child 0>Target; DestroyGameObjectHierarchy missing parent=0; ChangeAssetObjectProperties Data" }, published);
                 published.Clear();
@@ -200,6 +203,7 @@ namespace UnityEngine.Tests
                 // The whole group, the unsubscribed recording too, in reverse order.
                 Assert.Equal("ChangeAssetObjectProperties Data; ChangeGameObjectParent Child Target>0; ChangeGameObjectStructure Target; "
                     + "ChangeGameObjectOrComponentProperties Target; ChangeGameObjectOrComponentProperties Target", Assert.Single(published));
+                Assert.Equal(0, data.number);
                 Assert.Equal(Vector3.zero, target.transform.position);
 
                 // A stream outlives the call only as a clone; a disposed one is empty.
@@ -229,5 +233,9 @@ namespace UnityEngine.Tests
                 current.SetValue(null, savedCurrent);
             }
         }
+    }
+    public sealed class ChangeData : ScriptableObject
+    {
+        public int number;
     }
 }

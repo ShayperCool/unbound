@@ -559,6 +559,38 @@ namespace UnityEngine.Tests
             Assert.Equal((true, false), (a.IsKeywordEnabled("KW_A"), b.IsKeywordEnabled("KW_A")));
         }
 
+        /// <summary>Targets whose saved lists differ in length (one keeps a property an earlier
+        /// shader had) still take only the edited value, at the same index.</summary>
+        [Fact]
+        public void UnmeasuredAMultiObjectEditOfListsOfDifferentLengthsWritesTheEditedIndex()
+        {
+            var shader = Make("Geometry");
+            var a = Own(new Material(shader));
+            a.SetFloat("_Value", 0.25f); a.SetFloat("_Other", 1.25f);
+            var b = Read(@"Material:
+  m_Name: Longer
+  m_Shader: {fileID: 4800000, guid: " + ShaderGuid + @", type: 3}
+  m_SavedProperties:
+    m_Floats:
+    - _Aaa: 7
+    - _Other: 1.75
+    - _Value: 0.75
+", new Dictionary<string, Object> { [ShaderGuid] = shader });
+            var so = new SerializedObject(new Object[] { a, b });
+            var floats = so.FindProperty("m_SavedProperties.m_Floats");
+            Assert.NotEqual(floats.arraySize, new SerializedObject(b).FindProperty("m_SavedProperties.m_Floats").arraySize);
+            // The first float of the first target's list: _Other (the lists are sorted by name).
+            var first = floats.GetArrayElementAtIndex(0);
+            Assert.Equal("_Other", first.FindPropertyRelative("first").stringValue);
+            first.FindPropertyRelative("second").floatValue = 1.5f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Assert.Equal(1.5f, a.GetFloat("_Other"));
+            // The second target's element 0 is _Aaa (a name its shader does not declare, so only its
+            // data shows it): the edit lands there, its other values stay.
+            Assert.Equal(1.5f, Saved(new SerializedObject(b), "m_Floats", "_Aaa").floatValue);
+            Assert.Equal((1.75f, 0.75f), (b.GetFloat("_Other"), b.GetFloat("_Value")));
+        }
+
         /// <summary>A variant that takes its parent's queue keeps its own stored queue: its
         /// SerializedObject reads and applies that value while renderQueue stays the parent's
         /// (Unity 6000.0.71f1, tests/projects/gameinterop mat.variant.*).</summary>

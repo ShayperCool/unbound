@@ -1053,8 +1053,9 @@ namespace Unbound.Runtime
         /// <summary>A multi-object edit for another target: the values that changed in
         /// <paramref name="source"/> (the first target's tree) set at the same paths of
         /// <paramref name="target"/>, that target's own tree, which keeps the rest (Unity 6000.0.71f1,
-        /// tests/projects/gameinterop mat.multi.*). A replaced subtree, or an array whose size
-        /// changed, is copied whole (not measured).</summary>
+        /// tests/projects/gameinterop mat.multi.*). A replaced subtree, or an array whose size the
+        /// edit changed, is copied whole (not measured); otherwise an array's elements are matched
+        /// by index, as far as both have them.</summary>
         internal static void CopyChanged(SerializedNode source, SerializedNode target)
         {
             if (!source.Dirty || target == null || target.Kind != source.Kind) return;
@@ -1066,7 +1067,9 @@ namespace Unbound.Runtime
                     if (target.ClrType == source.ClrType && !target.ReadOnly) SetValue(target, GetValue(source));
                     return;
             }
-            if (source.Replaced || (source.Kind == SerializedNodeKind.Array && source.ArrayCount != target.ArrayCount))
+            bool resized = source.Kind == SerializedNodeKind.Array && source.Children.Count > 0 && source.Children[0].Children.Count > 0
+                && source.Children[0].Children[0].Kind == SerializedNodeKind.ArraySize && source.Children[0].Children[0].Dirty;
+            if (source.Replaced || resized)
             {
                 CopyData(target, source);
                 return;

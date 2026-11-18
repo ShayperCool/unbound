@@ -31,7 +31,7 @@ namespace UnityEditor
     /// of the frame they happen in, in the order they happen; an undo or redo publishes the changes
     /// it makes, the undone operations in reverse order (Unity 6000.0.71f1, tests/projects/gameinterop
     /// objectchange.*). Unbound produces them for Undo.RecordObject (properties of a GameObject or
-    /// component, or of another object), RegisterCreatedObjectUndo of a GameObject, Undo.AddComponent,
+    /// component, or of another object; only when it changed by then, not measured), RegisterCreatedObjectUndo of a GameObject, Undo.AddComponent,
     /// SetTransformParent and DestroyObjectImmediate of a GameObject; other operations publish nothing
     /// and say so.
     /// </summary>
@@ -40,13 +40,14 @@ namespace UnityEditor
         public delegate void ObjectChangeEventsHandler(ref ObjectChangeEventStream stream);
         public static event ObjectChangeEventsHandler changesPublished;
 
-        static readonly List<(ObjectChangeKind Kind, object Payload)> s_Pending = new List<(ObjectChangeKind, object)>();
+        /// <summary>The frame's changes; one with a condition is published only if it still holds then.</summary>
+        static readonly List<(ObjectChangeKind Kind, object Payload, Func<bool> Holds)> s_Pending = new List<(ObjectChangeKind, object, Func<bool>)>();
 
         internal static bool Listening => changesPublished != null;
 
-        internal static void Note(ObjectChangeKind kind, object payload)
+        internal static void Note(ObjectChangeKind kind, object payload, Func<bool> holds = null)
         {
-            if (changesPublished != null) s_Pending.Add((kind, payload));
+            if (changesPublished != null) s_Pending.Add((kind, payload, holds));
         }
 
         internal static int Id(Object o) => o == null ? 0 : o.GetInstanceID();
@@ -56,14 +57,15 @@ namespace UnityEditor
         /// <summary>The parent GameObject's instance ID, 0 for a root.</summary>
         internal static int ParentId(Transform parent) => parent == null ? 0 : parent.gameObject.GetInstanceID();
 
-        /// <summary>A change of an object's properties: a GameObject's or component's, or an asset's.</summary>
-        internal static void NoteProperties(Object o)
+        /// <summary>A change of an object's properties: a GameObject's or component's, or an asset's;
+        /// with <paramref name="changed"/>, only if it says so when the changes are published.</summary>
+        internal static void NoteProperties(Object o, Func<bool> changed = null)
         {
             if (changesPublished == null || o == null) return;
             if (o is GameObject || o is Component)
-                Note(ObjectChangeKind.ChangeGameObjectOrComponentProperties, new ChangeGameObjectOrComponentPropertiesEventArgs(Id(o), SceneOf(o)));
+                Note(ObjectChangeKind.ChangeGameObjectOrComponentProperties, new ChangeGameObjectOrComponentPropertiesEventArgs(Id(o), SceneOf(o)), changed);
             else
-                Note(ObjectChangeKind.ChangeAssetObjectProperties, new ChangeAssetObjectPropertiesEventArgs(AssetGuid(o), Id(o), default));
+                Note(ObjectChangeKind.ChangeAssetObjectProperties, new ChangeAssetObjectPropertiesEventArgs(AssetGuid(o), Id(o), default), changed);
         }
 
         static GUID AssetGuid(Object o)
@@ -76,10 +78,14 @@ namespace UnityEditor
         internal static void Publish()
         {
             if (s_Pending.Count == 0) return;
-            var events = new List<(ObjectChangeKind, object)>(s_Pending);
+            var pending = s_Pending.ToArray();
             s_Pending.Clear();
             var handlers = changesPublished;
             if (handlers == null) return;
+            var events = new List<(ObjectChangeKind, object)>(pending.Length);
+            foreach (var (kind, payload, holds) in pending)
+                if (holds == null || holds()) events.Add((kind, payload));
+            if (events.Count == 0) return;
             var stream = ObjectChangeEventStream.Over(events);
             try
             {
