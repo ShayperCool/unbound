@@ -1,0 +1,11 @@
+{
+  "commands": ["python3 tests/projects/particlejobs/run.py gate"],
+  "summary": "particlejobs: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Particles/ParticleSystemJobs.cs",
+    "managed/UnityEngine/Particles/ParticleSystem.Jobs.cs",
+    "managed/UnityEngine/Particles/ParticleSystem.cs",
+    "managed/UnityEngine/Jobs/JobSystem.cs",
+    "managed/UnityEngine/Runtime/Messages.cs"
+  ]
+}

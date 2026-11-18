@@ -1,0 +1,131 @@
+{"k":"schedule.inUpdate","v":"InvalidOperationException: Particle System jobs can only be scheduled in MonoBehaviour.OnParticleUpdateJobScheduled()"}
+{"k":"scheduleParallel.inUpdate","v":"InvalidOperationException: Particle System jobs can only be scheduled in MonoBehaviour.OnParticleUpdateJobScheduled()"}
+{"k":"scheduleBatch.inUpdate","v":"InvalidOperationException: Particle System jobs can only be scheduled in MonoBehaviour.OnParticleUpdateJobScheduled()"}
+{"k":"frame.order","v":"Update, message A, message A2, LateUpdate"}
+{"k":"read.count","v":"3"}
+{"k":"read.custom1.created","v":"1"}
+{"k":"read.custom1.length","v":"3"}
+{"k":"read.custom2.created","v":"0"}
+{"k":"read.custom2.length","v":"3"}
+{"k":"read.positions.length","v":"3"}
+{"k":"read.meshIndices.created","v":"0"}
+{"k":"read.startColors.length","v":"3"}
+{"k":"read.p0.positionMatchesParticle","v":true}
+{"k":"read.p0.position","v":"1 2 3"}
+{"k":"read.p0.velocity","v":"0 0 0"}
+{"k":"read.p0.axisOfRotation","v":"0 1 0"}
+{"k":"read.p0.rotationMatchesRadians","v":true}
+{"k":"read.p0.rotation","v":"1.57079637 0 0.7853982"}
+{"k":"read.p0.rotationalSpeed","v":"0 0 0"}
+{"k":"read.p0.size","v":"0.5 0.75 1.5"}
+{"k":"read.p0.startColor","v":"10 20 30 40"}
+{"k":"read.p0.aliveTimePercentNearParticleAge","v":true}
+{"k":"read.p0.aliveTimePercentInRange","v":true}
+{"k":"read.p0.inverseStartLifetime","v":"0.25"}
+{"k":"read.p0.custom1","v":"1 2 3 4"}
+{"k":"read.p0.custom2","v":"0 0 0 0"}
+{"k":"read.p0.randomSeed","v":"1234"}
+{"k":"read.p0.meshIndex","v":"-1"}
+{"k":"read.p1.positionMatchesParticle","v":true}
+{"k":"read.p1.velocity","v":"1 0 0"}
+{"k":"read.p1.axisOfRotation","v":"0 1 0"}
+{"k":"read.p1.rotationMatchesRadians","v":true}
+{"k":"read.p1.rotationalSpeed","v":"0 0 0.5235988"}
+{"k":"read.p1.size","v":"1 1 1"}
+{"k":"read.p1.startColor","v":"255 255 255 255"}
+{"k":"read.p1.aliveTimePercentNearParticleAge","v":true}
+{"k":"read.p1.aliveTimePercentInRange","v":true}
+{"k":"read.p1.inverseStartLifetime","v":"0.25"}
+{"k":"read.p1.custom1","v":"1 2 3 4"}
+{"k":"read.p1.custom2","v":"0 0 0 0"}
+{"k":"read.p1.randomSeed","v":"5678"}
+{"k":"read.p1.meshIndex","v":"-1"}
+{"k":"read.p2.positionMatchesParticle","v":true}
+{"k":"read.p2.position","v":"-1 0 0"}
+{"k":"read.p2.velocity","v":"0 0 0"}
+{"k":"read.p2.axisOfRotation","v":"0 1 0"}
+{"k":"read.p2.rotationMatchesRadians","v":true}
+{"k":"read.p2.rotation","v":"0 0 0"}
+{"k":"read.p2.rotationalSpeed","v":"0 0 0"}
+{"k":"read.p2.size","v":"1 1 1"}
+{"k":"read.p2.startColor","v":"1 2 3 4"}
+{"k":"read.p2.aliveTimePercentNearParticleAge","v":true}
+{"k":"read.p2.aliveTimePercentInRange","v":true}
+{"k":"read.p2.inverseStartLifetime","v":"0.5"}
+{"k":"read.p2.custom1","v":"1 2 3 4"}
+{"k":"read.p2.custom2","v":"0 0 0 0"}
+{"k":"read.p2.randomSeed","v":"77"}
+{"k":"read.p2.meshIndex","v":"-1"}
+{"k":"sync.inMessage.position0","v":"1 2 3"}
+{"k":"sync.lateUpdate.position0","v":"1 2 3"}
+{"k":"sync.lateUpdate.jobDone","v":true}
+{"k":"sync.lateUpdate.jobDone.position0","v":"10 20 30"}
+{"k":"write.count","v":"3"}
+{"k":"write.p0.position","v":"10 20 30"}
+{"k":"write.p0.velocity","v":"0 -1 0.5"}
+{"k":"write.p0.axisOfRotation","v":"1 0 0"}
+{"k":"write.p0.rotation3D","v":"14.323945 28.64789 57.29578"}
+{"k":"write.p0.angularVelocity3D","v":"0 0 114.59156"}
+{"k":"write.p0.startSize3D","v":"2 3 4"}
+{"k":"write.p0.startColor","v":"200 100 50 25"}
+{"k":"write.p0.remainingLifetime","v":"3"}
+{"k":"write.p0.startLifetime","v":"4"}
+{"k":"write.p0.randomSeed","v":"999"}
+{"k":"write.p1.position","v":"11 21 31"}
+{"k":"write.p1.velocity","v":"1 -1 0.5"}
+{"k":"write.p1.axisOfRotation","v":"1 0 0"}
+{"k":"write.p1.rotation3D","v":"14.323945 28.64789 57.29578"}
+{"k":"write.p1.angularVelocity3D","v":"0 0 114.59156"}
+{"k":"write.p1.startSize3D","v":"2 3 5"}
+{"k":"write.p1.startColor","v":"200 100 50 26"}
+{"k":"write.p1.remainingLifetime","v":"2.6"}
+{"k":"write.p1.startLifetime","v":"4"}
+{"k":"write.p1.randomSeed","v":"1000"}
+{"k":"write.p2.position","v":"12 22 32"}
+{"k":"write.p2.velocity","v":"2 -1 0.5"}
+{"k":"write.p2.axisOfRotation","v":"1 0 0"}
+{"k":"write.p2.rotation3D","v":"14.323945 28.64789 57.29578"}
+{"k":"write.p2.angularVelocity3D","v":"0 0 114.59156"}
+{"k":"write.p2.startSize3D","v":"2 3 6"}
+{"k":"write.p2.startColor","v":"200 100 50 27"}
+{"k":"write.p2.remainingLifetime","v":"4.4"}
+{"k":"write.p2.startLifetime","v":"8"}
+{"k":"write.p2.randomSeed","v":"1001"}
+{"k":"write.custom1","v":"9 8 7 6 | 9 8 7 7 | 9 8 7 8"}
+{"k":"chain.secondSaw","v":"5"}
+{"k":"stopLater.isPlaying","v":"False False"}
+{"k":"chain.position0x","v":"6"}
+{"k":"parallel.hits","v":"1 1 1 0 0 0 0 0"}
+{"k":"parallel.counts","v":"3 3 3 0 0 0 0 0"}
+{"k":"batch.starts","v":"2 0 1 0 0 0 0 0"}
+{"k":"kill.countBeforeNextUpdate","v":"3"}
+{"k":"kill.p0.remainingLifetime","v":"0"}
+{"k":"kill.p1.remainingLifetime","v":"-2"}
+{"k":"kill.countAfterNextUpdate","v":"1"}
+{"k":"simulate.messages","v":"Simulated"}
+{"k":"schedule.otherSystemInMessage","v":"ok"}
+{"k":"schedule.otherSystemInMessage.count","v":"1"}
+{"k":"messages.A","v":"7"}
+{"k":"messages.A2","v":"7"}
+{"k":"messages.Adisabled","v":"7"}
+{"k":"messages.Other","v":"7"}
+{"k":"messages.Empty","v":"7"}
+{"k":"messages.Stopped","v":"1"}
+{"k":"messages.Paused","v":"0"}
+{"k":"messages.Simulated","v":"7"}
+{"k":"messages.StopClearLater","v":"4"}
+{"k":"messages.StopLater","v":"4"}
+{"k":"messages.NeverPlayed","v":"0"}
+{"k":"messagePhases.A","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.A2","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.Adisabled","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.Other","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.Empty","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.Stopped","v":"1"}
+{"k":"messagePhases.StopLater","v":"1 2 3 4"}
+{"k":"messagePhases.Simulated","v":"1 2 3 4 5 6 7"}
+{"k":"messagePhases.StopClearLater","v":"1 2 3 4"}
+{"k":"messages.parameter","v":"0"}
+{"k":"messages.parameter.count","v":"-1"}
+{"k":"logs","v":"Error: Script error: OnParticleUpdateJobScheduled\u000aThe message may not have any parameters.\u000aThe message will be ignored."}
+{"k":"complete","v":true}
