@@ -718,10 +718,10 @@ fn a_loaded_room_is_solved_first_with_what_the_next_frame_sets() {
             fails <= measured && (0.99..1.0).contains(&sum),
             "{case}: {fails} {sum}"
         );
-        assert!(
-            fails_before != fails || (sum_before - sum).abs() > 1e-4,
-            "{case}: {fails_before} {sum_before}"
-        );
+        // The light moved (`linear-near`) changes less than a changed range: brighter all the
+        // same, by 0.02%; each range case by 0.15% or more.
+        let margin = if height.is_some() { 0.0 } else { 0.001 };
+        assert!(sum_before > sum + margin, "{case}: {sum_before} {sum}");
     }
     // Measured: the range-6 case 1.2% brighter than the Editor's, 6 isolated values.
     let (fails, sum) = delegate_room(
