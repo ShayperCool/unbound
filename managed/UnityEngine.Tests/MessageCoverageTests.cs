@@ -50,6 +50,18 @@ namespace UnityEngine.Tests
             void OnParticleUpdateJobScheduled() { }
         }
 
+        public class ParticleJobParameterScript : MonoBehaviour
+        {
+            internal int Calls;
+            void OnParticleUpdateJobScheduled(UnityEngine.ParticleSystemJobs.ParticleSystemJobData data) => Calls++;
+        }
+
+        public class ParticleJobBothScript : MonoBehaviour
+        {
+            void OnParticleUpdateJobScheduled() { }
+            void OnParticleUpdateJobScheduled(UnityEngine.ParticleSystemJobs.ParticleSystemJobData data) { }
+        }
+
         public class SentOnlyScript : MonoBehaviour
         {
             void Awake() { }
@@ -124,14 +136,54 @@ namespace UnityEngine.Tests
             Assert.Empty(KeysFor("ChildDimensionsScript"));
         }
 
-        /// <summary>Control for the already listed entry. GREEN at 747e3f23; red recipe: remove
-        /// OnParticleUpdateJobScheduled from s_NotSent.</summary>
+        /// <summary>OnParticleUpdateJobScheduled is sent (tests/projects/particlejobs): a script
+        /// implementing it warns nothing.</summary>
         [Fact]
-        public void ListedParticleJobMessageStillWarns()
+        public void ParticleJobMessageIsSentAndWarnsNothing()
         {
             ScriptMessages.For(typeof(ParticleJobScript));
-            Assert.Equal(new[] { Prefix + "ParticleJobScript.OnParticleUpdateJobScheduled" },
-                KeysFor("ParticleJobScript"));
+            Assert.Empty(KeysFor("ParticleJobScript"));
+        }
+
+        sealed class ErrorLogs : ILogHandler
+        {
+            readonly ILogHandler m_Next;
+            internal readonly List<string> Errors = new List<string>();
+            internal ErrorLogs(ILogHandler next) => m_Next = next;
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error) Errors.Add(args != null && args.Length > 0 ? string.Format(format, args) : format);
+                m_Next.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception error, UnityEngine.Object context) => m_Next.LogException(error, context);
+        }
+
+        /// <summary>The message declared only with a parameter (UniTask's trigger) is ignored with a
+        /// script error, once per class (6000.0.71f1, tests/projects/particlejobs logs); declared
+        /// without one, or with both, there is no error.</summary>
+        [Fact]
+        public void ParticleJobMessageWithAParameterIsAScriptError()
+        {
+            var logs = new ErrorLogs(Debug.unityLogger.logHandler);
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                ScriptMessages.For(typeof(ParticleJobParameterScript));
+                ScriptMessages.For(typeof(ParticleJobParameterScript));
+                ScriptMessages.For(typeof(ParticleJobBothScript));
+                ScriptMessages.For(typeof(ParticleJobScript));
+            }
+            finally { Debug.unityLogger.logHandler = previous; }
+            Assert.Equal(new[] { "Script error: OnParticleUpdateJobScheduled\nThe message may not have any parameters.\nThe message will be ignored." },
+                logs.Errors);
+            var instance = new GameObject("parameter").AddComponent<ParticleJobParameterScript>();
+            try
+            {
+                Messaging.SendFast(instance.gameObject, "OnParticleUpdateJobScheduled");
+                Assert.Equal(0, instance.Calls);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(instance.gameObject); }
         }
 
         /// <summary>Guard. GREEN at 747e3f23; red recipes: add Reset, OnDrawGizmos, Update or
@@ -154,15 +206,14 @@ namespace UnityEngine.Tests
             Assert.Empty(KeysFor("ChildDimensionsBase", "ChildDimensionsLeft", "ChildDimensionsRight"));
         }
 
-        /// <summary>RED at 747e3f23: each closed base type gets its own key
-        /// (ParticleJobGenericBase`1[[System.Int32, ...]] and [[System.String, ...]]).</summary>
+        /// <summary>A generic script base implementing the sent message warns nothing for any
+        /// closed type.</summary>
         [Fact]
-        public void GenericBaseWarnsOnceForAllClosedTypes()
+        public void GenericBaseOfASentMessageWarnsNothing()
         {
             ScriptMessages.For(typeof(ParticleJobIntScript));
             ScriptMessages.For(typeof(ParticleJobTextScript));
-            Assert.Equal(new[] { Prefix + "ParticleJobGenericBase`1.OnParticleUpdateJobScheduled" },
-                KeysFor("ParticleJobGenericBase", "ParticleJobIntScript", "ParticleJobTextScript"));
+            Assert.Empty(KeysFor("ParticleJobGenericBase", "ParticleJobIntScript", "ParticleJobTextScript"));
         }
 
         /// <summary>OnStateIK is sent (IK passes, tests/projects/animcallbacks): neither a state
@@ -189,7 +240,7 @@ namespace UnityEngine.Tests
         sealed class Warnings : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();
-            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args)
             {
                 if (type == LogType.Warning) Messages.Add(string.Format(format, args));
             }
@@ -286,7 +337,7 @@ namespace UnityEngine.Tests
             (MonoBehaviourPage, "OnParticleCollision", Delivery.Sent),
             (MonoBehaviourPage, "OnParticleSystemStopped", Delivery.Sent),
             (MonoBehaviourPage, "OnParticleTrigger", Delivery.Sent),
-            (MonoBehaviourPage, "OnParticleUpdateJobScheduled", Delivery.NotSent),
+            (MonoBehaviourPage, "OnParticleUpdateJobScheduled", Delivery.Sent),
             (MonoBehaviourPage, "OnPostRender", Delivery.Sent),
             (MonoBehaviourPage, "OnPreCull", Delivery.Sent),
             (MonoBehaviourPage, "OnPreRender", Delivery.Sent),
@@ -346,7 +397,7 @@ namespace UnityEngine.Tests
         {
             Assert.Equal(74, s_Documented.Length);
             Assert.Equal(s_Documented.Length, s_Documented.Select(d => (d.Page, d.Name)).Distinct().Count());
-            Assert.Equal(69, s_Documented.Count(d => d.Class == Delivery.Sent));
+            Assert.Equal(70, s_Documented.Count(d => d.Class == Delivery.Sent));
             Assert.Equal(4, s_Documented.Count(d => d.Class == Delivery.EditorAbsent));
 
             var listed = ListedNames();
