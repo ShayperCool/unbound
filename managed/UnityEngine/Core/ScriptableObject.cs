@@ -77,7 +77,7 @@ namespace UnityEngine
             try
             {
                 using var construction = MainThreadCheck.Construct(type);
-                return (ScriptableObject)Activator.CreateInstance(type, nonPublic: true);
+                return (ScriptableObject)Unbound.Runtime.ObjectConstruction.Create(type);
             }
             catch (TargetInvocationException e)
             {
