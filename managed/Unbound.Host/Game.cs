@@ -400,6 +400,18 @@ public static unsafe class Game
                 AccessChecks.Symbols = null;
             }
         };
+        GameDomain.PluginImageFilter = (image, symbols) =>
+        {
+            AccessChecks.Symbols = symbols;
+            try
+            {
+                return (MissingImplementations.Repair(image), AccessChecks.Symbols);
+            }
+            finally
+            {
+                AccessChecks.Symbols = null;
+            }
+        };
         // The filters' code and the engine they redirect to: a rebuild of either adapts again.
         LifetimeChecks.Load(c.FacadeDir);
         GameDomain.ImageFilterVersion = typeof(Game).Assembly.ManifestModule.ModuleVersionId + "|"

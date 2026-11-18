@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
@@ -74,6 +75,10 @@ namespace Unbound.Runtime
         /// <summary>Identifies what <see cref="ImageFilter"/> does: adapted images are cached under
         /// their input's hash plus this (set by the host with the filter).</summary>
         internal static string ImageFilterVersion = "";
+        /// <summary>Applied after <see cref="ImageFilter"/> to the images of precompiled plugins only
+        /// (set by the host): its outcome depends on the other game assemblies the plugin references,
+        /// so a plugin's cached image is keyed by theirs too.</summary>
+        internal static Func<byte[], byte[], (byte[] Image, byte[] Symbols)> PluginImageFilter;
         /// <summary>Assemblies Unbound generates for adapted game assemblies to reference, by name, with
         /// what builds each image (set by the host with <see cref="ImageFilter"/>). An image is
         /// built once per <see cref="ImageFilterVersion"/> and cached as adapted images are.</summary>
@@ -393,7 +398,8 @@ namespace Unbound.Runtime
                 // Adapting is slow (most assemblies are read and rewritten): the outcome is cached
                 // under the input's hash plus the filters' version.
                 var adapted = Path.Combine(ProjectInfo.ProjectPath, "Library", "Unbound", "AdaptedAssemblies");
-                var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion + "|" + PeImage.Version);
+                var key = Hash(original, Path.GetFileName(game.Dll) + "|" + ImageFilterVersion + "|" + PeImage.Version
+                    + (game.PluginGuid != null ? "|" + Dependencies(original) : ""));
                 var record = Path.Combine(adapted, "inputs", key);
                 string path = File.Exists(record) ? File.ReadAllText(record) : null;
                 if (path == null || (path.Length > 0 && !File.Exists(path)))
@@ -401,6 +407,7 @@ namespace Unbound.Runtime
                     var image = PeImage.MakePortable(original);
                     var symbols = game.Pdb != null && File.Exists(game.Pdb) ? File.ReadAllBytes(game.Pdb) : null;
                     if (ImageFilter != null) (image, symbols) = ImageFilter(image, symbols);
+                    if (game.PluginGuid != null && PluginImageFilter != null) (image, symbols) = PluginImageFilter(image, symbols);
                     // Script assemblies load from a file named as Unity names it (the Test Framework
                     // matches Assembly.Location's file name with the compiled assemblies').
                     var fileName = game.PluginGuid == null ? game.Name + ".dll" : Path.GetFileName(game.Dll);
@@ -434,6 +441,44 @@ namespace Unbound.Runtime
                     WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }
                 return LoadFromAssemblyPath(path);
+            }
+
+            readonly Dictionary<string, string> m_DependencyHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            /// <summary>The game assemblies an image references, directly or not, with their contents'
+            /// hashes: what a plugin's adapted image also depends on.</summary>
+            string Dependencies(byte[] image)
+            {
+                var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+                var pending = new Stack<byte[]>();
+                pending.Push(image);
+                while (pending.Count > 0)
+                    foreach (var name in ReferencedNames(pending.Pop()))
+                        if (m_ByName.TryGetValue(name, out var dependency) && dependency.Dll != null && File.Exists(dependency.Dll) && names.Add(name))
+                            pending.Push(File.ReadAllBytes(dependency.Dll));
+                var text = new StringBuilder();
+                foreach (var name in names)
+                {
+                    if (!m_DependencyHashes.TryGetValue(name, out var hash))
+                        m_DependencyHashes[name] = hash = Hash(File.ReadAllBytes(m_ByName[name].Dll), "");
+                    text.Append(name).Append('=').Append(hash).Append(';');
+                }
+                return text.ToString();
+            }
+
+            static IEnumerable<string> ReferencedNames(byte[] image)
+            {
+                try
+                {
+                    using var pe = new System.Reflection.PortableExecutable.PEReader(new MemoryStream(image));
+                    if (!pe.HasMetadata) return Array.Empty<string>();
+                    var reader = System.Reflection.Metadata.PEReaderExtensions.GetMetadataReader(pe);
+                    return reader.AssemblyReferences.Select(h => reader.GetString(reader.GetAssemblyReference(h).Name)).ToList();
+                }
+                catch (BadImageFormatException)
+                {
+                    return Array.Empty<string>();
+                }
             }
 
             static string Hash(byte[] data, string salt)
