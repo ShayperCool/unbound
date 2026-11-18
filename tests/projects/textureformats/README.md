@@ -201,8 +201,14 @@ RGBA32 and with AsyncGPUReadback (its own format and RGBAFloat), with the errors
   RGBA32 reads alpha 0.
 
 Unbound refuses, with its own message, a target format the rule does not name (unmeasured).
-`residuals-metal.json` lists its remaining differences: requests in a packed target's own format
-(no raw packed encoding; the request fails, logged), 4444, 565, B8G8R8A8_SNorm and
-R10G10B10_XR targets, which Unbound stores as plain 8-bit channels, and B10G11R11's alpha.
+A request in a packed target's own format reads one packed word per texel (`readback.*.async`):
+R4G4B4A4 as R4G4B4A4 and B4G4R4A4 as A4R4G4B4 from the highest bits down, B5G6R5 as R5G6B5,
+A2B10G10R10 as itself, B10G11R11 as 10- and 11-bit unsigned floats with R lowest, E5B9G9R9 as
+three 9-bit mantissas and a shared 5-bit exponent with R lowest; Unbound packs them from what it
+stores (`TargetReadbackRule.PackedWords`, the Metal profile's; the other devices' are unmeasured).
+`residuals-metal.json` lists its remaining differences: R10G10B10_XR's request in its own format
+(its words are not decoded yet; the request fails, logged), 4444, 565, B8G8R8A8_SNorm and
+R10G10B10_XR targets, which Unbound stores as plain 8-bit channels (wgpu has no render format of
+those layouts; quantizing what a draw writes there is open), and B10G11R11's alpha.
 Whether the Vulkan Editor's ReadPixels reads a B8G8R8A8
 target is unmeasured; Unbound keeps refusing every target without ReadPixels usage there.

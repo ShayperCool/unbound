@@ -261,7 +261,15 @@ namespace Unbound.Runtime
             || (Compat.RenderingMeasured && GraphicsFormatUtility.GetComponentCount(format) > 0
                 && !GraphicsFormatUtility.IsDepthStencilFormat(format));
 
-        internal static ReadbackFormat Own(Texture src) => src == null ? null : ReadbackFormat.Of(src.graphicsFormat);
+        /// <summary>A request in the texture's own format: that format's layout, or the packed
+        /// words of a packed format where the device reads them (TargetReadbackRule.PackedWords).</summary>
+        internal static ReadbackFormat Own(Texture src)
+        {
+            if (src == null) return null;
+            var format = src.graphicsFormat;
+            return ReadbackFormat.Of(format)
+                ?? (GraphicsDeviceProfile.Current.TargetReadback?.PackedWords?.Contains(format) == true ? ReadbackFormat.Packed(format) : null);
+        }
 
         internal static Result Texture(Texture src, int mipIndex, ReadbackFormat format, Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false, bool validateSource = true)
         {
@@ -410,9 +418,89 @@ namespace Unbound.Runtime
         /// <summary>Normalized 16-bit channels (with <see cref="m_Size"/> 2).</summary>
         readonly int m_Normalized16;
 
+        /// <summary>The packed word layout, None for per-channel layouts.</summary>
+        readonly PackedLayout m_Packed;
+
         internal bool IsAlpha8 => ReferenceEquals(this, A8);
 
         ReadbackFormat(int size, params int[] channels) { m_Size = size; m_Channels = channels; }
+        ReadbackFormat(PackedLayout packed) : this(packed is PackedLayout.R4G4B4A4 or PackedLayout.A4R4G4B4 or PackedLayout.R5G6B5 ? 2 : 4, 0, 1, 2, 3) { m_Packed = packed; }
+
+        /// <summary>A packed word per texel, little-endian, from the texel's RGBA (fields named
+        /// from the word's highest bits down). Measured with the macOS Editor's Metal device
+        /// (tests/projects/textureformats metal.jsonl readback.*.async, a target cleared to
+        /// 0.25, 0.5, 0.75, 0.6): R4G4B4A4 reads R4G4B4A4 (0x48b9), B4G4R4A4 reads A4R4G4B4
+        /// (0x948b), B5G6R5 reads R5G6B5 (0x4417), A2B10G10R10 reads A2B10G10R10 (0xaff80100),
+        /// B10G11R11 the 10- and 11-bit unsigned floats B, G, R (0x741c0340), E5B9G9R9 the shared
+        /// exponent and B, G, R (0x7e020080).</summary>
+        internal enum PackedLayout { None, R4G4B4A4, A4R4G4B4, R5G6B5, A2B10G10R10, B10G11R11, E5B9G9R9 }
+
+        static readonly ReadbackFormat PackedR4G4B4A4 = new ReadbackFormat(PackedLayout.R4G4B4A4),
+            PackedA4R4G4B4 = new ReadbackFormat(PackedLayout.A4R4G4B4), PackedR5G6B5 = new ReadbackFormat(PackedLayout.R5G6B5),
+            PackedA2B10G10R10 = new ReadbackFormat(PackedLayout.A2B10G10R10), PackedB10G11R11 = new ReadbackFormat(PackedLayout.B10G11R11),
+            PackedE5B9G9R9 = new ReadbackFormat(PackedLayout.E5B9G9R9);
+
+        /// <summary>The packed words a request in a packed target's own format reads.</summary>
+        internal static ReadbackFormat Packed(GraphicsFormat format) => format switch
+        {
+            GraphicsFormat.R4G4B4A4_UNormPack16 => PackedR4G4B4A4,
+            GraphicsFormat.B4G4R4A4_UNormPack16 => PackedA4R4G4B4,
+            GraphicsFormat.B5G6R5_UNormPack16 => PackedR5G6B5,
+            GraphicsFormat.A2B10G10R10_UNormPack32 => PackedA2B10G10R10,
+            GraphicsFormat.B10G11R11_UFloatPack32 => PackedB10G11R11,
+            GraphicsFormat.E5B9G9R9_UFloatPack32 => PackedE5B9G9R9,
+            _ => null,
+        };
+
+        static uint Unorm(float value, int bits) => (uint)Math.Round(Math.Clamp(value, 0f, 1f) * ((1 << bits) - 1), MidpointRounding.AwayFromZero);
+
+        /// <summary>An unsigned float of 5 exponent bits (bias 15) and <paramref name="mantissaBits"/>,
+        /// rounded to the nearest (the 10- and 11-bit floats of B10G11R11); its largest finite
+        /// value for larger ones, 0 for negative ones and NaN.</summary>
+        internal static uint UnsignedFloat(float value, int mantissaBits)
+        {
+            if (!(value > 0f)) return 0;
+            uint largest = (30u << mantissaBits) | ((1u << mantissaBits) - 1);
+            uint bits = BitConverter.SingleToUInt32Bits(value);
+            int exponent = (int)((bits >> 23) & 0xff) - 127 + 15;
+            uint mantissa = (bits & 0x7fffff) | 0x800000;
+            // The mantissa with its leading one, shifted to the field's precision (further for
+            // values below the smallest normal one), rounded to the nearest.
+            int drop = 23 - mantissaBits + Math.Max(0, 1 - exponent);
+            if (drop > 24) return 0;
+            uint rounded = (mantissa + (1u << (drop - 1))) >> drop;
+            uint word = exponent <= 0 ? rounded : ((uint)exponent << mantissaBits) + (rounded - (1u << mantissaBits));
+            return Math.Min(word, largest);
+        }
+
+        /// <summary>E5B9G9R9: three 9-bit mantissas sharing a 5-bit exponent (bias 15), R in the
+        /// lowest bits, the exponent the largest component's.</summary>
+        internal static uint SharedExponent(float r, float g, float b)
+        {
+            const int Mantissa = 9, Bias = 15, MaxExponent = 31;
+            float largest = (float)((1 << Mantissa) - 1) / (1 << Mantissa) * (1 << (MaxExponent - Bias));
+            r = float.IsNaN(r) ? 0f : Math.Clamp(r, 0f, largest);
+            g = float.IsNaN(g) ? 0f : Math.Clamp(g, 0f, largest);
+            b = float.IsNaN(b) ? 0f : Math.Clamp(b, 0f, largest);
+            float max = Math.Max(r, Math.Max(g, b));
+            int exponent = max > 0f ? Math.Max(-Bias - 1, (int)Math.Floor(Math.Log2(max))) + 1 + Bias : 0;
+            double scale = Math.Pow(2, exponent - Bias - Mantissa);
+            if (Math.Round(max / scale, MidpointRounding.AwayFromZero) >= 1 << Mantissa) { exponent++; scale *= 2; }
+            uint R = (uint)Math.Round(r / scale, MidpointRounding.AwayFromZero), G = (uint)Math.Round(g / scale, MidpointRounding.AwayFromZero),
+                B = (uint)Math.Round(b / scale, MidpointRounding.AwayFromZero);
+            return R | (G << 9) | (B << 18) | ((uint)exponent << 27);
+        }
+
+        uint PackWord(float r, float g, float b, float a) => m_Packed switch
+        {
+            PackedLayout.R4G4B4A4 => Unorm(r, 4) << 12 | Unorm(g, 4) << 8 | Unorm(b, 4) << 4 | Unorm(a, 4),
+            PackedLayout.A4R4G4B4 => Unorm(a, 4) << 12 | Unorm(r, 4) << 8 | Unorm(g, 4) << 4 | Unorm(b, 4),
+            PackedLayout.R5G6B5 => Unorm(r, 5) << 11 | Unorm(g, 6) << 5 | Unorm(b, 5),
+            PackedLayout.A2B10G10R10 => Unorm(a, 2) << 30 | Unorm(b, 10) << 20 | Unorm(g, 10) << 10 | Unorm(r, 10),
+            PackedLayout.B10G11R11 => UnsignedFloat(b, 5) << 22 | UnsignedFloat(g, 6) << 11 | UnsignedFloat(r, 6),
+            PackedLayout.E5B9G9R9 => SharedExponent(r, g, b),
+            _ => throw new InvalidOperationException(),
+        };
         ReadbackFormat(bool signed, params int[] channels) : this(2, channels) { m_Normalized16 = signed ? -1 : 1; }
 
         static readonly ReadbackFormat Rgba8 = new ReadbackFormat(1, 0, 1, 2, 3), Bgra8 = new ReadbackFormat(1, 2, 1, 0, 3),
@@ -474,6 +562,7 @@ namespace Unbound.Runtime
         internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false, int sourceChannels = 4, bool clampNegative = false, int redSourceChannel = 0)
         {
             int inChannels = floats ? 4 : Math.Max(1, texels.Length / Math.Max(1, count));
+            if (m_Packed != PackedLayout.None) return EncodePacked(texels, count, floats, inChannels, sourceChannels);
             var output = new byte[count * m_Channels.Length * m_Size];
             int o = 0;
             for (int i = 0; i < count; i++)
@@ -512,6 +601,24 @@ namespace Unbound.Runtime
                     }
                     o += m_Size;
                 }
+            }
+            return output;
+        }
+
+        /// <summary>One packed word per texel from the stored texels (floats, or 8-bit channels as
+        /// b / 255); channels the source lacks read as 1.</summary>
+        byte[] EncodePacked(byte[] texels, int count, bool floats, int inChannels, int sourceChannels)
+        {
+            var output = new byte[count * m_Size];
+            Span<float> c = stackalloc float[4];
+            for (int i = 0; i < count; i++)
+            {
+                for (int k = 0; k < 4; k++)
+                    c[k] = k >= sourceChannels || (!floats && k >= inChannels) ? 1f
+                        : floats ? BitConverter.ToSingle(texels, (i * 4 + k) * 4) : texels[i * inChannels + k] * (1f / 255f);
+                uint word = PackWord(c[0], c[1], c[2], c[3]);
+                if (m_Size == 2) BitConverter.TryWriteBytes(new Span<byte>(output, i * 2, 2), (ushort)word);
+                else BitConverter.TryWriteBytes(new Span<byte>(output, i * 4, 4), word);
             }
             return output;
         }

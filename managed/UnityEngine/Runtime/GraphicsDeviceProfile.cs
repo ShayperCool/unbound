@@ -126,6 +126,10 @@ namespace Unbound.Runtime
             /// <summary>AsyncGPUReadback reads a target whose format answers GetPixels usage and
             /// refuses the others, naming the format as these names do.</summary>
             internal System.Collections.Generic.Dictionary<GraphicsFormat, string> RefusedSourceNames { get; init; }
+            /// <summary>Packed formats whose targets AsyncGPUReadback reads in their own format as
+            /// the packed words (ReadbackFormat.Packed has each layout); null or absent: such a
+            /// request fails (unmeasured).</summary>
+            internal System.Collections.Generic.HashSet<GraphicsFormat> PackedWords { get; init; }
         }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
@@ -247,6 +251,13 @@ namespace Unbound.Runtime
                     [GraphicsFormat.B5G5R5A1_UNormPack16] = (int)GraphicsFormat.R5G5B5A1_UNormPack16,
                     [GraphicsFormat.A2R10G10B10_UNormPack32] = (int)GraphicsFormat.A2R10G10B10_UNormPack32,
                     [GraphicsFormat.A10R10G10B10_XRUNormPack32] = (int)GraphicsFormat.A10R10G10B10_XRUNormPack32,
+                },
+                // tests/projects/textureformats metal.jsonl readback.*.async: the packed words of a
+                // target cleared to (0.25, 0.5, 0.75, 0.6); R10G10B10_XR's are not decoded yet.
+                PackedWords = new System.Collections.Generic.HashSet<GraphicsFormat>
+                {
+                    GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormat.B5G6R5_UNormPack16,
+                    GraphicsFormat.A2B10G10R10_UNormPack32, GraphicsFormat.B10G11R11_UFloatPack32, GraphicsFormat.E5B9G9R9_UFloatPack32,
                 },
                 RefusedSourceNames = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
                 {
