@@ -20,6 +20,9 @@ namespace Unbound.Runtime
         {
             Owner = owner;
             if (Kind == ConstraintKind.LookAt) return;
+            // A loaded constraint can come before its GameObject's Transform (a file's documents
+            // are in file id order); its serialized rest values replace these.
+            if (owner.gameObject.m_Transform is null) return;
             TranslationRest = owner.transform.localPosition;
             RotationRest = owner.transform.localEulerAngles;
             ScaleRest = owner.transform.localScale;
