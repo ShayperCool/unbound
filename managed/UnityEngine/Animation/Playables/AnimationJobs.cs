@@ -962,7 +962,7 @@ namespace Unbound.Runtime.Playables
                 }
                 entry = context.Motion;
                 ran = true;
-                if (Job != null && Dispatch != null)
+                if (Job != null)
                 {
                     var stream = context.ToStream();
                     using var jobScope = Unbound.Runtime.Jobs.JobSystem.AnimationJob();
