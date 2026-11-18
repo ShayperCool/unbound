@@ -1123,6 +1123,13 @@ class PartialRecipeTests(unittest.TestCase):
             self.assertTrue(complete)
             self.assertEqual(values, {('main', 'get'): 'ok'})
 
+    def test_rtdepth_runs_on_vulkan_too_on_linux_only(self):
+        for macos, expected in ((False, True), (True, False)):
+            with unittest.mock.patch.object(suite, 'MACOS_ARM64', macos):
+                steps = suite.recipes('6000.0.71f1')['rtdepth']
+            self.assertEqual(any('--device' in step.argv for step in steps), expected and
+                             (suite.PROJECTS/'rtdepth/Reference/unity-6000.0.71f1/vulkan').is_dir())
+
     def test_uncommitted_probe_fonts_go_to_the_staged_project_only(self):
         fonts, engine, compare = suite.recipes('6000.0.71f1')['textcore']
         self.assertEqual(fonts.kind, 'driver')

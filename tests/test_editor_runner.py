@@ -418,6 +418,26 @@ class MacosRunTest(unittest.TestCase):
         self.assertIn('exit with 0', er.result_problem(self.root/'e'))
         with self.assertRaises(SystemExit):
             self.run_job(self.job('e', batch=True))
+
+    def test_windowed_capture_records_its_exit_and_runs_on_macos_only(self):
+        out = self.root/'x'
+        env = {'FAKE_ARGS': str(self.root/'x.args'), 'FAKE_DEVICE': 'Apple M2 Pro', 'FAKE_EXIT': '3'}
+        with patch.object(er, 'MACOS_ARM64', True), patch.object(er, 'editor_path', return_value=self.editor):
+            self.assertEqual(er.windowed_capture_macos(self.root/'project', out, env, 60, 'x'), 3)
+        self.assertEqual((out/'exit.txt').read_text(), '3\n')
+        self.assertNotIn('-batchmode', json.loads((self.root/'x.args').read_text())['args'])
+        with patch.object(er, 'MACOS_ARM64', False), self.assertRaises(SystemExit):
+            er.windowed_capture_macos(self.root/'project', self.root/'y', env, 60, 'y')
+
+    def test_log_gpu_problem_names_the_device_of_each_platform(self):
+        metal, nvidia = 'Initializing Metal device caps: Apple M2 Pro\n', 'Renderer: NVIDIA GeForce RTX 4060/PCIe/SSE2\n'
+        with patch.object(er, 'MACOS_ARM64', True):
+            self.assertIsNone(er.log_gpu_problem(metal))
+            self.assertIn('Metal', er.log_gpu_problem(nvidia))
+        with patch.object(er, 'MACOS_ARM64', False):
+            self.assertIsNone(er.log_gpu_problem(nvidia))
+            self.assertIn('NVIDIA', er.log_gpu_problem(metal))
+            self.assertIn('NVIDIA', er.log_gpu_problem('Renderer: llvmpipe\n'))
         with self.assertRaises(SystemExit):
             self.run_job(self.job('v', vulkan=True))
 

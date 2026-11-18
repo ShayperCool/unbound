@@ -639,6 +639,8 @@ def windowed_capture_macos(project, out, env, timeout, label):
     its own InitializeOnLoad runner (on Linux those runners start the Editor on a private Xvfb
     through VirtualGL; macOS needs neither): started directly with `env`, its exit code, also
     written to out/exit.txt as those runners record it."""
+    if not MACOS_ARM64:
+        raise SystemExit(f'{label}: the windowed macOS Editor capture runs on macOS arm64 only')
     result = run(EditorJob(project, Path(out)/'editor.log', out, batch=False, env=env, timeout=timeout, label=label))
     code = result['exit_code']
     (Path(out)/'exit.txt').write_text(f'{code}\n')

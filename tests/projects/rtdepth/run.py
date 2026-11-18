@@ -253,7 +253,9 @@ def main():
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     parser.add_argument('--mode', dest='probe_mode', choices=('probe', 'controls'), default='probe')
-    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='metal' if MACOS_ARM64 else 'opengl')
+    # The device of this machine's Editor: Metal on macOS arm64, OpenGL Core or Vulkan on Linux.
+    devices = ('metal',) if MACOS_ARM64 else ('opengl', 'vulkan')
+    parser.add_argument('--device', choices=devices, default=devices[0])
     args = parser.parse_args()
     global MODE, DEVICE
     MODE = args.probe_mode
