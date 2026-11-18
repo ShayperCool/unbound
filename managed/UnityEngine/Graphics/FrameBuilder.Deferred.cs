@@ -28,6 +28,31 @@ namespace Unbound.Runtime
         static readonly int s_LightTextureB0Id = Shader.PropertyToID("_LightTextureB0");
         static readonly string[] s_DeferredLightKeywords = { "DIRECTIONAL", "DIRECTIONAL_COOKIE", "POINT", "POINT_COOKIE", "SPOT" };
 
+        /// <summary>The stencil bit the G-buffer pass marks the scene's pixels with, which the
+        /// light passes test (Unity's own bit and the stencil a camera's later passes see are
+        /// unmeasured).</summary>
+        const byte SceneStencilBit = 0x80;
+
+        /// <summary>"During [the base and lighting] stages stencil state defined in the shader
+        /// will be ignored" (Unity 6000.0 Manual, ShaderLab command: Stencil): the engine's own
+        /// stencil marks the pixels the G-buffer pass draws, and the lights draw over those only
+        /// (measured with a custom deferred shading shader: tests/projects/builtinfx
+        /// settings_deferred_custom, the light pass leaves the background as it is).</summary>
+        static readonly RenderStateBlock s_GBufferStencil = new RenderStateBlock(RenderStateMask.Stencil)
+        {
+            stencilReference = SceneStencilBit,
+            stencilState = new StencilState(true, 0, SceneStencilBit, CompareFunction.Always, StencilOp.Replace, StencilOp.Keep, StencilOp.Keep),
+        };
+
+        /// <summary>The light passes: over the marked pixels, with no depth test (their quads
+        /// cover the view, as before they had a depth buffer).</summary>
+        static readonly RenderStateBlock s_LightStencil = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth)
+        {
+            depthState = new DepthState(false, CompareFunction.Always),
+            stencilReference = SceneStencilBit,
+            stencilState = new StencilState(true, SceneStencilBit, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
+        };
+
         /// <summary>The pass a material fills the G-buffer with (-1: it draws forward).</summary>
         internal static int DeferredPass(Material material)
         {
@@ -90,12 +115,14 @@ namespace Unbound.Runtime
             GfxStream.SetTargets(new[] { g0, g1, g2, lightHandle }, depthHandle);
             GfxStream.Viewport(viewport);
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
+            GfxStream.StateOverride(s_GBufferStencil);
             for (int i = 0; i < deferred.Count; i++)
             {
                 var (item, pass) = deferred[i];
                 if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
                 EmitDraw(item, item.Material.Sync(), pass);
             }
+            GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);
             GfxStream.GlobalTexture("_CameraGBufferTexture0", g0);
             GfxStream.GlobalTexture("_CameraGBufferTexture1", g1);
@@ -133,8 +160,8 @@ namespace Unbound.Runtime
             if (reflectionsShading != null) GfxStream.Draw(quadMesh, 0, reflectionsShading.Sync(), 1, quadModel, Color.white);
             RunEvent(camera, CameraEvent.AfterReflections, light);
 
-            // Lighting: each light over the whole view (outside its range it adds nothing), with
-            // the project's deferred shading shader (none: no light is drawn).
+            // Lighting: each light over the scene's pixels (outside its range it adds nothing),
+            // with the project's deferred shading shader (none: no light is drawn).
             RunEvent(camera, CameraEvent.BeforeLighting, light);
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
@@ -142,12 +169,11 @@ namespace Unbound.Runtime
             if (shading != null && !s_CustomShadingReported
                 && shading.shader != (s_OwnShading ??= Shader.Find("Hidden/Internal-DeferredShading")))
             {
-                // Measured differences (tests/projects/builtinfx settings_deferred*_custom): the
-                // Editor draws a custom shader's light pass over the scene's pixels only, and an
-                // LDR camera's light buffer decode with its second pass; Unbound's light buffer is
-                // linear and its light quads cover the view.
+                // Measured difference (tests/projects/builtinfx settings_deferredLdr_custom): the
+                // Editor decodes an LDR camera's light buffer with the shader's second pass;
+                // Unbound's light buffer is linear.
                 s_CustomShadingReported = true;
-                Debug.LogWarning("Unbound: a custom deferred shading shader draws its light pass over the background too, and not its final pass (an LDR camera's light buffer decode): Unbound's light buffer is linear and not masked to the scene");
+                Debug.LogWarning("Unbound: a custom deferred shading shader's final pass (an LDR camera's light buffer decode) is not drawn: Unbound's light buffer is linear");
             }
             var lights = new List<Light>();
             if (shading != null)
@@ -156,6 +182,17 @@ namespace Unbound.Runtime
                 lights.AddRange(ForwardLights.Lights);
             }
             ulong shadingMaterial = shading != null ? shading.Sync() : 0;
+            if (lights.Count > 0)
+            {
+                // The lights test the G-buffer's stencil, bound as their depth buffer, and read
+                // its depth from a copy (a texture is not sampled while it is drawn into).
+                var sampledDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+                GfxStream.CopyDepth(depthHandle, TextureHandles.Of(sampledDepth));
+                GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(sampledDepth));
+                GfxStream.SetTarget(lightHandle, depthHandle);
+                GfxStream.Viewport(viewport);
+                GfxStream.StateOverride(s_LightStencil);
+            }
             int mask = camera.cullingMask;
             foreach (var l in lights)
             {
@@ -187,6 +224,7 @@ namespace Unbound.Runtime
                 if (shadowKeyword != null) GfxStream.Keyword(shadowKeyword, false);
                 if (softKeyword != null) GfxStream.Keyword(softKeyword, false);
             }
+            if (lights.Count > 0) GfxStream.StateOverride(null);
             foreach (var k in s_DeferredLightKeywords) GfxStream.Keyword(k, false);
             GfxStream.GlobalFloat("_LightAsQuad", 0f);
             RunEvent(camera, CameraEvent.AfterLighting, light);

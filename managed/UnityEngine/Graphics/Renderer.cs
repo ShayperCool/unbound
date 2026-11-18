@@ -51,9 +51,13 @@ namespace UnityEngine
         }
 
         /// <summary>The object-to-world matrix of the last frame a player-loop camera drew motion
-        /// vectors; until then the one of its first motion vector draw (it has not moved).</summary>
+        /// vectors; until then the one of its first motion vector draw (it has not moved), kept
+        /// through the rest of that frame (<see cref="m_FirstDrawnFrame"/>).</summary>
         internal Matrix4x4 m_PreviousModel;
         internal bool m_HasPreviousModel;
+        /// <summary>The frame <see cref="m_PreviousModel"/> was taken from the renderer's first
+        /// motion vector draw in, -1 once a frame's end has kept it.</summary>
+        internal int m_FirstDrawnFrame = -1;
 
         /// <summary>The object matrix the renderer's object motion follows (what
         /// <see cref="m_PreviousModel"/> keeps).</summary>

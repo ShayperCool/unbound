@@ -32,7 +32,6 @@ EXPECTED_IMAGES = [
     r"^settings_deferredReflections_(builtin|custom|customNull|disabled)$",
     r"^settings_deferred_(custom|customNull|disabled)$",
     r"^settings_deferredLdr_(builtin|custom|customNull|disabled)$",
-    r"^settings_motionVectors_custom$",
     r"^settings_lensFlare_builtin$",
 ]
 

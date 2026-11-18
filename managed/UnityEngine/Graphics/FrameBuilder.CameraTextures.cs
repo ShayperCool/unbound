@@ -225,7 +225,7 @@ namespace Unbound.Runtime
         /// without active cloth, not a draw set up by a script, whose motion is not the camera's),
         /// with its previous matrix and whether it moved since the matrices were last kept
         /// (<see cref="EndFrameMotion"/>) or forces no motion. A renderer is taken to be still the
-        /// first time it is drawn. On the Editor's OpenGL Core device (the one Unbound reports) a
+        /// first time it is drawn and through the rest of that frame. On the Editor's OpenGL Core device (the one Unbound reports) a
         /// bone-skinned mesh moves as its object matrix (<see cref="Renderer.MotionMatrix"/>, its
         /// root bone's) does and its bones' deformation adds no motion, with or without
         /// skinnedMotionVectors and with CPU or GPU mesh deformation (Unity 6000.0.71f1,
@@ -252,10 +252,14 @@ namespace Unbound.Runtime
             if (skin != null) skin.m_MotionEpoch = SkinnedMeshRenderer.SkinPass;
             bool boned = skin != null && skin.IsBoneSkinned;
             var model = boned ? skin.MotionMatrix : item.Model;
-            if (!renderer.m_HasPreviousModel)
+            // The first draw's matrix, and the later ones' in the frame of that draw: an object
+            // moved between two renders of that frame is still in the second (measured:
+            // tests/projects/builtinfx settings_motionVectors_custom, two Camera.Render calls).
+            if (!renderer.m_HasPreviousModel || renderer.m_FirstDrawnFrame == Time.frameCount)
             {
                 renderer.m_PreviousModel = model;
                 renderer.m_HasPreviousModel = true;
+                renderer.m_FirstDrawnFrame = Time.frameCount;
             }
             forceNoMotion = mode == MotionVectorGenerationMode.ForceNoMotion;
             moving = forceNoMotion || renderer.m_PreviousModel != model;
@@ -329,6 +333,7 @@ namespace Unbound.Runtime
                 if (!renderer) continue;
                 renderer.m_PreviousModel = renderer.MotionMatrix;
                 renderer.m_HasPreviousModel = true;
+                renderer.m_FirstDrawnFrame = -1;
             }
         }
 

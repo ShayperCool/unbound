@@ -40,19 +40,30 @@ namespace UnityEngine.Tests
         static FrameBuilder.DrawItem Item(Renderer renderer) =>
             new FrameBuilder.DrawItem { Renderer = renderer, Model = renderer.transform.localToWorldMatrix };
 
+        /// <summary>A moved object moves from where it was in the frame it was first drawn; moved
+        /// between two draws of that frame it is still in the second (tests/projects/builtinfx
+        /// settings_motionVectors_custom: two Camera.Render calls).</summary>
         [Fact]
-        public void AMovedObjectMovesFromWhereItWasFirstDrawn()
+        public void AMovedObjectMovesFromWhereItWasInTheFrameItWasFirstDrawn()
         {
             var renderer = Cube(MotionVectorGenerationMode.Object);
-            var first = renderer.transform.localToWorldMatrix;
             Assert.True(FrameBuilder.ObjectMotion(Item(renderer), out var previous, out bool moving, out bool force));
             Assert.False(moving);
             Assert.False(force);
-            Assert.Equal(first, previous);
+            Assert.Equal(renderer.transform.localToWorldMatrix, previous);
+            renderer.transform.position = new Vector3(0.1f, 0f, 0f);
+            Assert.False(FrameBuilder.MovingObject(Item(renderer)));
+            var first = renderer.transform.localToWorldMatrix;
+            Time.s_FrameCount++;
             renderer.transform.position = new Vector3(0.3f, 0.1f, 0f);
             Assert.True(FrameBuilder.MovingObject(Item(renderer)));
             FrameBuilder.ObjectMotion(Item(renderer), out previous, out _, out _);
             Assert.Equal(first, previous);
+            // A later frame keeps the matrix of the first one.
+            Time.s_FrameCount++;
+            FrameBuilder.ObjectMotion(Item(renderer), out previous, out moving, out _);
+            Assert.Equal(first, previous);
+            Assert.True(moving);
         }
 
         /// <summary>A render pipeline that draws one opaque renderer list with per-object motion
@@ -130,6 +141,7 @@ namespace UnityEngine.Tests
                 RenderPipelineManager.Render(cameras);
                 FrameBuilder.EndFrameMotion();
                 var first = drawn.transform.localToWorldMatrix;
+                Time.s_FrameCount++;
                 drawn.transform.position = new Vector3(-0.5f, 0f, 0f);
                 FrameBuilder.ObjectMotion(Item(drawn), out previous, out moving, out _);
                 Assert.Equal(first, previous);
