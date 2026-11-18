@@ -89,6 +89,11 @@ Editor's at blade edges, more than on Linux, in 10 of 11 images (pixels differin
 Coloured 943/193, Counts 2919/168, Coverage 8870/141, DensityCounts 3461/177, DensityCoverage
 3954/159, Instanced 365/75, Textured 1087/188, Tilted 4361/147, Waving1 5093/156, Waving30 5000/165
 (on Linux, for example, Coloured 382/48 and Counts 599/47); `Refusals` passes on its Linux
-residual. These are unresolved and not declared: the suite's image gate still applies
+residual. Of the pixels differing by more than 8 (Coloured 402, Coverage 154, Tilted 222,
+Waving1 244), 75 to 80% hold, within one pixel, the colour Unbound drew there: a blade edge or two
+blades' crossing one pixel apart, sub-pixel geometry and not a colour, order or coverage rule; the
+rest are blades' shading one level apart, as on Linux. Consistent with arithmetic differences in the
+blades' vertex positions (a hypothesis: Unity's Metal shader compiler against Unbound's shader
+translation, arm64 floating point); recorded, not chased. They are not declared: the suite's image gate still applies
 `image-residuals.json`, the Linux list, to the Metal comparison. Against the Linux reference on the
 Mac about 44000 pixels per image differ.

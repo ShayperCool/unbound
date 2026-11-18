@@ -225,8 +225,14 @@ Core and Vulkan give (d, 0, 0, 1) and the bits of (d, 0, 0, 1.0) (OpenGL Core re
 0x3E800001, 0.25000003). So what a kernel or an integer slot reads does not depend on whether a
 draw sampled the target first.
 
-Unbound on Metal: 632/645; the 13 `Packed.*` rows (declared in `residuals-metal.json`) of the 16-bit targets (ARGB4444, RGB565,
-ARGB1555) differ because Unbound stores them with 8 bits per channel there (unresolved). Before the
+Packed targets on Metal: the macOS Editor stores 4444, 5-6-5 and 1-5-5-5 targets in their own
+formats; a draw or clear keeps each channel's nearest level (from about half precision: 0.7 clears
+and draws to 11/15) and a program reads exactly level / (2^bits - 1) (8/31, 0.2580645, for 0.25 in a
+5-bit channel); a blend of the second of two consecutive Blits reads the unrounded first draw.
+Unbound on Metal keeps the nearest levels in its 8-bit store (`GraphicsDevice::packed_writes_round`,
+4444 targets included): 633/645; the 12 `Packed.*` rows declared in `residuals-metal.json` differ
+because a 5- or 6-bit level has no exact 8-bit value (within 1/510), Unbound's single-precision draw
+keeps 0.7 at 10/15, and Unbound packs between the two Blits of the blend. Before the
 `Lenient*`, `Packed.*` and `DepthReads.*` rows were recorded on Metal: 588/588. The first two rules are the compiler's (`GraphicsDevice::named_samplers`),
 the depth channels the depth copy's (four channels on Metal, `GraphicsDevice::depth_sample_fills_color`),
 the pipeline failure the program's (`GraphicsDevice::draws_depth_output_without_depth_buffer`: the pass

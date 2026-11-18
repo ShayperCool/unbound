@@ -92,8 +92,16 @@ out there (`*.skipped`): a command buffer's indirect dispatch (`indirect.cmd`: t
 adds to the output cleared just before, and once the groups it dispatched), a dispatch whose
 arguments lie past the buffer's end (`indirect.beyond`, undefined on any device), and whether the
 section's first readback, polled and read frames later, completes with an error (`rb.buffer`);
-four captures then agree. Unbound on Metal matches 373 of 387 values: the hidden Append/Counter
-counts the Metal Editor reports (`append.*`, `counter.*`, `cmddata.counter.*`,
-`indirect.copycount`), an unaligned indirect dispatch, and an assertion Unbound logs for
-`append.cb.copybeyond`; 12 of 52 readbacks complete in the Metal Editor's frames (52 of 53 against
-the Linux reference's frames). Unresolved.
+four captures then agree. The Metal Editor's hidden counters differ from OpenGL Core's in three
+ways, which Unbound follows there: `CopyCount` and `CopyCounterValue` copy a counter no dispatch has
+bound yet (0 when the buffer is made, else the value `SetCounterValue` gave: `append.boundonly`,
+`append.plainbind`, `counter.created`, `counter.cbtype`, `indirect.copycount`, `cmddata.counter.*`),
+`SetData` sets the counter to 0 (`append.cb.setdata.count`) and a copy past the destination's end
+copies nothing without the assertion (`append.cb.copybeyond`). Unbound on Metal matches 382 to 384
+of 386 values. Open: an indirect dispatch at an offset that is not a multiple of 4
+(`indirect.unaligned`: undefined, the Metal Editor dispatches groups there, Unbound none), and the
+slots appended values take (`append.cb.reset.data`, `append.cb.start10.data`,
+`append.gb.start5.data`, where a later append overwrites some of them): append order across threads
+is undefined, Unbound's on Metal changes from run to run and matches the Metal Editor's in some runs;
+12 of 52 readbacks complete in the Metal Editor's frames (52 of 53 against the Linux reference's
+frames).

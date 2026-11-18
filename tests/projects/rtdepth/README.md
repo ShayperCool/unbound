@@ -151,4 +151,9 @@ one capture after the other, Unbound on its Metal device, and the references are
 `Reference/unity-<version>/metal` (and `metal/controls`). Recorded with the 6000.0.71f1 macOS
 Editor on an Apple M2 Pro (the main set; the controls are not recorded on Metal). Unbound on Metal
 matches its 1071 values and 365 of 368 images (965 values and 272 images of the Linux reference);
-the three `fmt.msaa2.*depth*` images differ in every pixel, unresolved.
+the three `fmt.msaa2.*depth*` images differ in every pixel. Through the probe's single-sample
+texture slot the Metal Editor reads the 2-sample target's depth as values a multisampled texture in
+a single-sample slot leaves undefined on Metal: NaN in red, green and blue with alpha 1 when sampled (`depth.tex`, `globalDepth.tex`),
+all bits set when loaded (`depth.load`), the same in four captures on an Apple M2 Pro. Unbound reads
+the resolved depth, as the Linux Editor does; not emulated (a Metal driver artefact of an undefined
+read, measured only in this probe).

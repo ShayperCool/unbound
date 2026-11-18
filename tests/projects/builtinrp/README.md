@@ -58,7 +58,7 @@ view-projection follows the screen it was made on) and compare:
   point sampled. Motion vectors: the camera's motion from the depth texture against its previous
   view-projection, then the objects that moved, tested against the depth.
 * `previousViewProjectionMatrix` is the view-projection of the camera's last player-loop render
-  (OpenGL clip space); a new camera starts with its own at creation (with the screen's aspect and
+  (OpenGL clip space on OpenGL Core; the device's render-texture projection elsewhere, see Metal); a new camera starts with its own at creation (with the screen's aspect and
   the default field of view); `Camera.Render` changes nothing, nor the objects' previous matrices.
   `nonJitteredProjectionMatrix` follows the projection until it is set; then it stays, even across
   `ResetProjectionMatrix`. `useJitteredProjectionMatrixForTransparentRendering` is true.
@@ -87,8 +87,9 @@ view-projection follows the screen it was made on) and compare:
 
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record builtinrp
---variable BUILTIN_PROBE_OUT` and `publish`. Unbound on Metal matches 819 of 954 values (124
-expected, as on Linux) and 37 of 38 images within a mean of 2 (626 values and 35 images of the Linux
-reference). Open: every `previousViewProjection` is the Metal device's (its second row negated and
-its third row the [0, 1] depth one) where Unbound gives the OpenGL-style matrix, and so
-`motion_auto_frame3`'s motion vectors differ in y.
+--variable BUILTIN_PROBE_OUT` and `publish`. Every `previousViewProjection` there is the OpenGL
+Core one with the device's render-texture projection (`GL.GetGPUProjectionMatrix(p, true)`: its
+second row negated, its third row the [0, 1] reversed depth one), as the built-in motion vector
+shader takes it (it flips y where UV starts at the top); Unbound does the same on every device
+(unmeasured on Vulkan). Unbound on Metal matches 830 of 954 values (the 124 expected, as on Linux)
+and all 38 images within a mean of 2 (worst 1.25; 626 values and 35 images of the Linux reference).

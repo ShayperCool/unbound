@@ -67,9 +67,13 @@ On macOS arm64 `native` records the macOS Editor (Metal, Apple M2 Pro) and `publ
 `check` use `Reference/unity-<version>/metal.jsonl`. Unbound on Metal differs from it, unresolved,
 in: the random write target against a material's buffer of the same name (`uav.material`,
 `uav.after`: the Metal Editor writes neither), the Append buffer without a counter (as on Linux),
-red and blue swapped in temporary array slices (`tarray.slices`, `tarray.blit`), indexed procedural
-and indirect draws one grid row off (`cmd.indirect.indexed*`, `graphics.indirect.indexed.now`,
-`render.indexed.*`), an extra cell in `indirect.pool.writer.True`, a CPU fence that has passed one
+red and blue swapped in temporary array slices (`tarray.slices`, `tarray.blit`: the Metal Editor's
+temporary array is B8G8R8A8_SRGB and `CopyTexture` into an RGBA32 Texture2DArray copies its stored
+bytes, blue first, where Unbound copies the channels), indexed procedural and indirect draws a grid
+cell off (`cmd.indirect.indexed*`, `graphics.indirect.indexed.now`, `render.indexed.*`: where the
+draw starts at instance 1 the Metal Editor's cell is one row further, as if the instance ID counted
+from the start instance, and with a base vertex one cell back; non-indexed draws with a start
+instance match), an extra cell in `indirect.pool.writer.True`, a CPU fence that has passed one
 frame later (`fence.frame1.cpu.passed`), `foveatedRenderingCaps` (2 on Metal, 0 in Unbound) and
 side-by-side stereo (`device.stereo.1`, `device.stereo.2`: the Metal Editor draws both eyes'
 instances; Unbound refuses stereo clipping, as on Linux, and draws one), and the targets stored with
