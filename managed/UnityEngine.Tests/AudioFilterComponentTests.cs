@@ -315,7 +315,9 @@ namespace UnityEngine.Tests
             var echo = go.AddComponent<AudioEchoFilter>();
             var legacyLow = typeof(AudioLowPassFilter).GetProperty("lowpassResonaceQ");
             var legacyHigh = typeof(AudioHighPassFilter).GetProperty("highpassResonaceQ");
-            Assert.Equal((5000f, 1f, 1f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ, (float)legacyLow.GetValue(lowPass)));
+            // A new low-pass filter's key is 5000 / 22000, read back over the span 10..22000
+            // (tests/projects/audiolowpass low_default).
+            Assert.Equal((5007.72754f, 1f, 1f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ, (float)legacyLow.GetValue(lowPass)));
             Assert.Equal((5000f, 1f, 1f), (highPass.cutoffFrequency, highPass.highpassResonanceQ, (float)legacyHigh.GetValue(highPass)));
             Assert.Equal((500f, 0.5f, 1f, 1f), (echo.delay, echo.decayRatio, echo.dryMix, echo.wetMix));
             legacyLow.SetValue(lowPass, 4f);
@@ -350,8 +352,9 @@ namespace UnityEngine.Tests
             Assert.Equal(0.5f, lowPass.lowpassResonanceQ);
             lowPass.cutoffFrequency = float.PositiveInfinity;
             Assert.Equal(22000f, lowPass.cutoffFrequency);
+            // Read back through the curve's key: (4000 - 10) / 21990 * 21990 + 10 in single precision.
             lowPass.cutoffFrequency = 4000f;
-            Assert.Equal(4000f, lowPass.cutoffFrequency);
+            Assert.Equal(3999.99976f, lowPass.cutoffFrequency);
         }
 
         [Fact]
@@ -691,13 +694,67 @@ namespace UnityEngine.Tests
             Assert.Empty(Errors("on a 3D AudioSource is not supported"));
         }
 
+        /// <summary>The low-pass cutoff is a curve over the listener's distance (tests/projects/audiolowpass):
+        /// keys of (cutoff - 10) / 21990, times of distance over maxDistance.</summary>
         [Fact]
-        public void CustomCutoffCurveFailsLoudly()
+        public void TheLowPassCutoffIsItsCurvesKeyAndASetterGivesACurveOfOneKey()
+        {
+            var lowPass = Source("cutoff").gameObject.AddComponent<AudioLowPassFilter>();
+            foreach (var (set, key, read) in new[] { (300f, 290f / 21990f, 300f), (5f, 0f, 10f), (30000f, 1f, 22000f), (float.NaN, 1f, 22000f) })
+            {
+                lowPass.cutoffFrequency = set;
+                var keys = lowPass.customCutoffCurve.keys;
+                Assert.Equal((0f, key), (Assert.Single(keys).time, keys[0].value));
+                Assert.Equal(read, lowPass.cutoffFrequency);
+            }
+            lowPass.customCutoffCurve = new AnimationCurve(new Keyframe(0f, 0.5f), new Keyframe(1f, 0f));
+            Assert.Equal(11005f, lowPass.cutoffFrequency);
+            // A set cutoff replaces the curve (tests/projects/audiolowpass curve_cutoff).
+            lowPass.cutoffFrequency = 2000f;
+            Assert.Equal(1, lowPass.customCutoffCurve.length);
+            Assert.Equal(2000.00012f, lowPass.cutoffFrequency);
+        }
+
+        [Fact]
+        public void ACustomCutoffCurveIsCopiedScaledToEndAtOneAndOneWithoutKeysIsRefused()
         {
             var lowPass = Source("curve").gameObject.AddComponent<AudioLowPassFilter>();
-            Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve);
-            Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f));
-            Assert.Equal(5000f, lowPass.cutoffFrequency);
+            var curve = new AnimationCurve(new Keyframe(0f, 0.5f, -0.225f, -0.225f), new Keyframe(2f, 0.05f, -0.225f, -0.225f));
+            lowPass.customCutoffCurve = curve;
+            curve.MoveKey(0, new Keyframe(0f, 0.9f));
+            var keys = lowPass.customCutoffCurve.keys;
+            Assert.Equal(new[] { (0f, 0.5f, -0.45f), (1f, 0.05f, -0.45f) }, Array.ConvertAll(keys, k => (k.time, k.value, k.inTangent)));
+            // A copy each time: changing it changes nothing.
+            lowPass.customCutoffCurve.MoveKey(0, new Keyframe(0f, 0.1f));
+            Assert.Equal(11005f, lowPass.cutoffFrequency);
+            // Without keys: an error, the curve kept (curve_empty); none at all throws.
+            lowPass.customCutoffCurve = new AnimationCurve();
+            Assert.Single(Errors("customCutoffCurve must be passed an AnimationCurve with at least 1 element"));
+            Assert.Equal(2, lowPass.customCutoffCurve.length);
+            Assert.Throws<ArgumentNullException>(() => lowPass.customCutoffCurve = null);
+        }
+
+        [Fact]
+        public void ACurveOfMoreThanOneKeySetsTheCutoffAtTheListenersDistanceOverMaxDistance()
+        {
+            var source = Source("distance");
+            source.maxDistance = 10f;
+            source.transform.position = new Vector3(5f, 0f, 0f);
+            var lowPass = source.gameObject.AddComponent<AudioLowPassFilter>();
+            lowPass.customCutoffCurve = AnimationCurve.Linear(0f, 0.5f, 1f, 0f);
+            float Cutoff() => Assert.Single(Collected(source)).Cutoff;
+            Assert.Equal(0.25f * 21990f + 10f, Cutoff(), 2);
+            // Past maxDistance the curve holds its last key; a 2D source reads it alike.
+            source.transform.position = new Vector3(15f, 0f, 0f);
+            Assert.Equal(10f, Cutoff());
+            source.spatialBlend = 1f;
+            source.transform.position = Vector3.zero;
+            Assert.Equal(11005f, Cutoff());
+            // A curve of one key is its value wherever the source is (curve_one).
+            lowPass.customCutoffCurve = new AnimationCurve(new Keyframe(0.5f, 0.1f));
+            source.transform.position = new Vector3(5f, 0f, 0f);
+            Assert.Equal(2209f, Cutoff());
+            Assert.Equal(2209f, lowPass.cutoffFrequency);
         }
 
         [Fact]
@@ -770,7 +827,8 @@ namespace UnityEngine.Tests
             var source = Source("nan");
             var lowPass = source.gameObject.AddComponent<AudioLowPassFilter>();
             var echo = source.gameObject.AddComponent<AudioEchoFilter>();
-            lowPass.cutoffFrequency = float.NaN;
+            // A cutoff of NaN is the curve's highest key (22000); a resonance is kept as set.
+            lowPass.lowpassResonanceQ = float.NaN;
             Assert.Equal(new[] { Id(echo) }, Array.ConvertAll(Collected(source), f => f.Id));
             Assert.Equal(new[] { Id(echo) }, Array.ConvertAll(Collected(source), f => f.Id));
             Assert.Single(Errors("AudioLowPassFilter on 'nan'"));
@@ -1491,12 +1549,24 @@ namespace UnityEngine.Tests
             Assert.Equal((250f, 0.25f, 1f, 1f), (echo.delay, echo.decayRatio, echo.dryMix, echo.wetMix));
             Assert.Contains("'m_Unknown'", Assert.Single(Errors("of AudioEchoFilter")));
 
+            // The low-pass filter's serialized curve is its cutoff; an older version's key times are
+            // in world units, read back over the source's maxDistance (serialized_legacy).
+            YNode Key(string time, string value) => YNode.MakeMap(("time", YNode.MakeScalar(time)), ("value", YNode.MakeScalar(value)),
+                ("inSlope", YNode.MakeScalar("0")), ("outSlope", YNode.MakeScalar("0")));
+            YNode Curve(params YNode[] keys) => YNode.MakeMap(("m_Curve", new YNode { Kind = YKind.Seq, Items = keys }));
             var lowPass = echo.gameObject.AddComponent<AudioLowPassFilter>();
-            var key = YNode.MakeMap(("time", YNode.MakeScalar("0")), ("value", YNode.MakeScalar("0.5")));
-            var curve = YNode.MakeMap(("m_Curve", new YNode { Kind = YKind.Seq, Items = new[] { key } }));
-            lowPass.ReadSerialized(YNode.MakeMap(("m_LowpassResonanceQ", YNode.MakeScalar("2")), ("lowpassLevelCustomCurve", curve)), null);
-            Assert.Equal((5000f, 2f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ));
-            Assert.Contains("custom cutoff curve is not supported", Assert.Single(Errors("AudioLowPassFilter's serialized")));
+            lowPass.ReadSerialized(YNode.MakeMap(("serializedVersion", YNode.MakeScalar("3")), ("m_LowpassResonanceQ", YNode.MakeScalar("2")),
+                ("lowpassLevelCustomCurve", Curve(Key("0", "0.5"), Key("1", "0.05")))), null);
+            Assert.Equal((11005f, 2f), (lowPass.cutoffFrequency, lowPass.lowpassResonanceQ));
+            Assert.Equal(1f, lowPass.customCutoffCurve[1].time);
+            Assert.Empty(Errors("AudioLowPassFilter"));
+            echo.GetComponent<AudioSource>().maxDistance = 20f;
+            lowPass.ReadSerialized(YNode.MakeMap(("serializedVersion", YNode.MakeScalar("2")),
+                ("lowpassLevelCustomCurve", Curve(Key("0", "0.5"), Key("10", "0.05")))), null);
+            Assert.Equal(new[] { 0f, 0.5f }, Array.ConvertAll(lowPass.customCutoffCurve.keys, k => k.time));
+            // A curve without keys is the default one.
+            lowPass.ReadSerialized(YNode.MakeMap(("serializedVersion", YNode.MakeScalar("3")), ("lowpassLevelCustomCurve", Curve())), null);
+            Assert.Equal(5007.72754f, lowPass.cutoffFrequency);
         }
     }
 }

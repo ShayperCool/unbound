@@ -10,31 +10,57 @@ namespace UnityEngine
     // applied to the source audio", and an effect "is applied only when its component is enabled"
     // (Manual, Use audio filters); an OnAudioFilterRead script "is inserted in the same order as the
     // MonoBehaviour script is shown in the Inspector" (Scripting API). The DSP reuses the AudioMixer
-    // Lowpass, Highpass and Echo kernels measured on mixer groups; no capture measures them as
-    // AudioSource components. Defaults and ranges are the 6000.0 Scripting API's. The descriptor
-    // clamps to those ranges. AudioLowPassFilter.cutoffFrequency clamps on set, as its Scripting
-    // API page documents ("Values outside this range are clamped"); the other property pages do not
-    // say, so whether Unity clamps them on set is unmeasured and they return what was set.
-    // Serialized values are read as stored. Parameters reach the mixer with the source's next packet (at the latest the
-    // next audio update).
+    // Lowpass, Highpass and Echo kernels measured on mixer groups; the low-pass and high-pass
+    // components on an AudioSource are measured in tests/projects/audiolowpass (Unity 6000.0.71f1).
+    // The descriptor clamps to the Scripting API's ranges (cutoff 10 to 22000, resonance 1 to 10),
+    // as the Editor's DSP does with what its setters keep: the high-pass setters and both resonance
+    // setters return what was set; the low-pass cutoff is a curve (AudioLowPassFilter). Serialized
+    // values are read as stored. Parameters reach the mixer with the source's next packet (at the
+    // latest the next audio update).
 
-    /// <summary>Passes the low frequencies of an AudioSource. Cutoff 10 to 22000 Hz (default 5000;
-    /// the 6000.0 Manual gives 0.0 to 22000.0, the Scripting API 10.0 to 22000.0), resonance Q 1 to
-    /// 10 (default 1). The custom cutoff curve is unsupported and fails loudly.</summary>
+    /// <summary>Passes the low frequencies of an AudioSource. The cutoff is a curve over the
+    /// listener's distance (matches the Unity 6000.0.71f1 Editor, tests/projects/audiolowpass):
+    /// each key a cutoff stored as (cutoff - 10) / 21990, clamped to 0..1, each key time a
+    /// distance over the source's maxDistance. <see cref="cutoffFrequency"/> reads the first key
+    /// and sets a curve of one key; a curve of more than one key sets the cutoff at the
+    /// listener's distance every source update (<see cref="AudioSource.DistanceCurveValue"/>).
+    /// A new filter's key is 5000 / 22000, so its cutoff reads 5007.7 Hz. Resonance Q is kept
+    /// as set (default 1).</summary>
     [ClassId(169)]
     [RequireComponent(typeof(AudioBehaviour))]
     public sealed partial class AudioLowPassFilter : Behaviour
     {
-        internal float m_CutoffFrequency = 5000f;
+        /// <summary>The lowest cutoff, and the span of cutoffs above it the curve's 0..1 covers.</summary>
+        const float MinCutoff = 10f, CutoffSpan = 21990f;
+        /// <summary>A new filter's key: 5000 Hz over 22000 (not over the span the cutoff reads).</summary>
+        const float DefaultKey = 5000f / 22000f;
+        /// <summary>The newest serialized version whose curve keys are in world units (times
+        /// maxDistance, read back over the source's maxDistance).</summary>
+        const int WorldUnitsVersion = 2;
+
+        internal AnimationCurve m_Curve = DefaultCurve();
         internal float m_LowpassResonanceQ = 1f;
+        /// <summary>The serialized curve's key times are still in world units.</summary>
+        bool m_KeysInWorldUnits;
         bool m_ReportedInvalid;
 
-        /// <summary>Clamped to 10 to 22000 on set (6000.0 Scripting API,
-        /// AudioLowPassFilter.cutoffFrequency).</summary>
+        static AnimationCurve DefaultCurve() => new AnimationCurve(new Keyframe(0f, DefaultKey));
+
+        /// <summary>The cutoff of a key: 10 below zero, else up to 22000.</summary>
+        static float Cutoff(float key) => key < 0f ? MinCutoff : MathF.Min(1f, key) * CutoffSpan + MinCutoff;
+
+        float FirstKey => m_Curve.length > 0 ? m_Curve[0].value : DefaultKey;
+
         public float cutoffFrequency
         {
-            get => m_CutoffFrequency;
-            set => m_CutoffFrequency = Mathf.Clamp(value, 10f, 22000f);
+            get { Normalize(); return Cutoff(FirstKey); }
+            set
+            {
+                float key = (value - MinCutoff) / CutoffSpan;
+                float clamped = key <= 1f ? key : 1f;
+                m_Curve = new AnimationCurve(new Keyframe(0f, key < 0f ? 0f : clamped));
+                m_KeysInWorldUnits = false;
+            }
         }
 
         public float lowpassResonanceQ
@@ -50,44 +76,78 @@ namespace UnityEngine
             set => lowpassResonanceQ = value;
         }
 
-        /// <summary>The distance-driven cutoff curve is not implemented: reading or setting it
-        /// throws rather than leaving the cutoff silently fixed.</summary>
+        /// <summary>A copy of the cutoff curve. Setting one copies it, its times scaled to end
+        /// at one when it ends past one; a curve without keys is refused with an error.</summary>
         public AnimationCurve customCutoffCurve
         {
-            get => throw AudioFilterChain.CustomCutoffCurve();
-            set => throw AudioFilterChain.CustomCutoffCurve();
+            get
+            {
+                Normalize();
+                return new AnimationCurve(m_Curve.keys) { preWrapMode = m_Curve.preWrapMode, postWrapMode = m_Curve.postWrapMode };
+            }
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                if (value.length == 0)
+                {
+                    Debug.LogError("AudioLowPassFilter.customCutoffCurve must be passed an AnimationCurve with at least 1 element.");
+                    return;
+                }
+                m_Curve = AudioSource.NormalizedDistanceCurve(value);
+                m_KeysInWorldUnits = false;
+            }
         }
 
-        internal bool Describe(out AudioFilterDescriptor d)
+        /// <summary>The curve of an older serialized version in the normalized distances: its
+        /// times over the source's maxDistance, as when it was loaded.</summary>
+        void Normalize()
         {
+            if (!m_KeysInWorldUnits) return;
+            var source = m_GameObject != null ? m_GameObject.GetComponent<AudioSource>() : null;
+            if (source == null) return;
+            m_KeysInWorldUnits = false;
+            AudioSource.ScaleTimes(m_Curve, 1f / source.m_MaxDistance);
+        }
+
+        /// <summary>The filter's DSP values: the cutoff of its curve at the listener's distance
+        /// from <paramref name="source"/> (none: the AudioListener's filter, which reads the
+        /// first key).</summary>
+        internal bool Describe(AudioSource source, out AudioFilterDescriptor d)
+        {
+            Normalize();
+            float cutoff = Cutoff(source != null ? source.DistanceCurveValue(m_Curve) : FirstKey);
             d = new AudioFilterDescriptor
             {
                 Kind = AudioFilterKind.LowPass,
-                Cutoff = Mathf.Clamp(m_CutoffFrequency, 10f, 22000f),
+                Cutoff = cutoff,
                 Resonance = Mathf.Clamp(m_LowpassResonanceQ, 1f, 10f),
             };
-            return AudioFilterChain.Finite(this, ref m_ReportedInvalid, m_CutoffFrequency, m_LowpassResonanceQ);
+            return AudioFilterChain.Finite(this, ref m_ReportedInvalid, cutoff, m_LowpassResonanceQ);
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (AudioLowPassFilter)source;
-            m_CutoffFrequency = s.m_CutoffFrequency;
+            s.Normalize();
+            m_Curve = new AnimationCurve(s.m_Curve.keys) { preWrapMode = s.m_Curve.preWrapMode, postWrapMode = s.m_Curve.postWrapMode };
+            m_KeysInWorldUnits = s.m_KeysInWorldUnits;
             m_LowpassResonanceQ = s.m_LowpassResonanceQ;
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
-            m_CutoffFrequency = body.Float("m_CutoffFrequency", 5000f);
             m_LowpassResonanceQ = body.Float("m_LowpassResonanceQ", 1f);
-            if (body.Get("lowpassLevelCustomCurve") is YNode curve && curve.Kind == YKind.Map && (curve.Get("m_Curve")?.Count ?? 0) > 0)
-                Debug.LogError("Unbound: AudioLowPassFilter's serialized custom cutoff curve is not supported; '" + m_GameObject?.m_Name + "' runs at a fixed cutoff of " + m_CutoffFrequency + " Hz", this);
-            AudioFilterChain.CheckSerialized(this, body, "m_CutoffFrequency", "m_LowpassResonanceQ", "lowpassLevelCustomCurve");
+            // A curve without keys is the default one (a loaded filter's consistency check).
+            m_Curve = body.Get("lowpassLevelCustomCurve") is YNode curve && curve.Kind == YKind.Map && (curve.Get("m_Curve")?.Count ?? 0) > 0
+                ? BuiltinReaders.AnimationCurve(curve) : DefaultCurve();
+            m_KeysInWorldUnits = body.Int("serializedVersion", 1) <= WorldUnitsVersion;
+            AudioFilterChain.CheckSerialized(this, body, "m_LowpassResonanceQ", "lowpassLevelCustomCurve");
         }
     }
 
     /// <summary>Passes the high frequencies of an AudioSource. Cutoff 10 to 22000 Hz (default
-    /// 5000), resonance Q 1 to 10 (default 1).</summary>
+    /// 5000), resonance Q 1 to 10 (default 1), each kept as set and clamped by the DSP (matches the
+    /// Unity 6000.0.71f1 Editor, tests/projects/audiolowpass high_*).</summary>
     [ClassId(165)]
     [RequireComponent(typeof(AudioBehaviour))]
     public sealed partial class AudioHighPassFilter : Behaviour
@@ -433,9 +493,6 @@ namespace Unbound.Runtime
         static readonly HashSet<string> s_ReportedFields = new HashSet<string>();
         static readonly HashSet<int> s_ReportedListeners = new HashSet<int>();
 
-        internal static NotSupportedException CustomCutoffCurve() =>
-            new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
-
         // Unity 6000.0.71f1, tests/projects/audiodistortion live bypass controls: a changed list
         // of filter components and scripts reconnects the chain; the reconnection completes at
         // the next audio update and activates every component, overriding bypass changes made
@@ -559,9 +616,11 @@ namespace Unbound.Runtime
             }
         }
 
-        static bool Describe(Component component, out AudioFilterDescriptor descriptor)
+        /// <summary>A component's DSP values; <paramref name="source"/> is the AudioSource it
+        /// filters (none on the AudioListener).</summary>
+        static bool Describe(Component component, AudioSource source, out AudioFilterDescriptor descriptor)
         {
-            if (component is AudioLowPassFilter lowPass) return lowPass.Describe(out descriptor);
+            if (component is AudioLowPassFilter lowPass) return lowPass.Describe(source, out descriptor);
             if (component is AudioHighPassFilter highPass) return highPass.Describe(out descriptor);
             if (component is AudioDistortionFilter distortion) return distortion.Describe(out descriptor);
             if (component is AudioChorusFilter chorus) return chorus.Describe(out descriptor);
@@ -581,9 +640,9 @@ namespace Unbound.Runtime
         }
 
         // Disabled edits are validated when the unit can actually process them.
-        static bool DescribeRetained(Component component, bool active, Dictionary<ulong, AudioFilterDescriptor> retained, out AudioFilterDescriptor descriptor)
+        static bool DescribeRetained(Component component, AudioSource source, bool active, Dictionary<ulong, AudioFilterDescriptor> retained, out AudioFilterDescriptor descriptor)
         {
-            if (active) return Describe(component, out descriptor);
+            if (active) return Describe(component, source, out descriptor);
             ulong id = unchecked((ulong)(long)component.GetInstanceID());
             if (retained != null && retained.TryGetValue(id, out descriptor)) return true;
             descriptor = default;
@@ -631,7 +690,7 @@ namespace Unbound.Runtime
                 identity = AppendIdentity(identity, c);
                 bool active = behaviour.isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
-                bool ok = DescribeRetained(c, active, source.m_FilterDescriptors, out var d);
+                bool ok = DescribeRetained(c, source, active, source.m_FilterDescriptors, out var d);
                 if (!ok) continue;
                 if (Unmeasured(c) is string unmeasured) error ??= unmeasured;
                 if (spatial && (c is AudioDistortionFilter || c is AudioChorusFilter))
@@ -689,7 +748,7 @@ namespace Unbound.Runtime
                 addedMember |= TrackMember(previousMembers, ref nextMembers, c);
                 bool active = ((Behaviour)c).isActiveAndEnabled;
                 if (!active && !Compat.AudioComponentActivationMeasured) continue;
-                if (!DescribeRetained(c, active, listener.m_FilterDescriptors, out var d)) continue;
+                if (!DescribeRetained(c, null, active, listener.m_FilterDescriptors, out var d)) continue;
                 if (!Compat.AudioListenerChainMeasured && !(c is AudioReverbFilter))
                 {
                     error ??= c.GetType().Name + " on the AudioListener '" + go.m_Name + "' is not supported; it is not applied";

@@ -372,14 +372,44 @@ namespace UnityEngine
         internal float ReverbZoneSend()
         {
             if (m_BypassReverbZones) return 0f;
-            var curve = m_ReverbZoneMixCurve;
-            float mix = curve.length == 1 || !(m_MaxDistance > 0f) || m_GameObject == null
-                ? ConstantOf(curve)
-                : curve.Evaluate(CurveTimeAtListener());
+            float mix = DistanceCurveValue(m_ReverbZoneMixCurve);
             mix = Math.Min(1.1f, mix);
             if (mix < 0f) mix = 0f;
             int mB = mix > 1f ? (int)((mix - 1f) * 10000f) : mix > 0f ? (int)(MathF.Log10(mix) * 2000f) : -10000;
             return MathF.Pow(10f, mB / 2000f);
+        }
+
+        /// <summary>A distance curve's value for this source: a curve of more than one key at the
+        /// listener's distance over maxDistance, else its first key (also without a positive
+        /// maxDistance). <c>reverbZoneMix</c> (tests/projects/audioreverb) and
+        /// AudioLowPassFilter's cutoff curve (tests/projects/audiolowpass) are read so.</summary>
+        internal float DistanceCurveValue(AnimationCurve curve) =>
+            curve.length == 1 || !(m_MaxDistance > 0f) || m_GameObject == null
+                ? ConstantOf(curve)
+                : curve.Evaluate(CurveTimeAtListener());
+
+        /// <summary>A copy of a distance curve as a setter keeps it: a curve ending past one
+        /// scales its times and tangents to end at one (negative keys keep their relative
+        /// positions; tests/projects/audioreverb and tests/projects/audiolowpass, 6000.0.71f1).</summary>
+        internal static AnimationCurve NormalizedDistanceCurve(AnimationCurve curve)
+        {
+            var copy = new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+            if (copy.length > 0 && copy[copy.length - 1].time > 1f) ScaleTimes(copy, 1f / copy[copy.length - 1].time);
+            return copy;
+        }
+
+        /// <summary>Scales a curve's key times by <paramref name="scale"/> and its tangents by its
+        /// inverse, so it keeps its shape over the scaled times.</summary>
+        internal static void ScaleTimes(AnimationCurve curve, float scale)
+        {
+            var keys = curve.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                keys[i].time *= scale;
+                keys[i].inTangent /= scale;
+                keys[i].outTangent /= scale;
+            }
+            curve.keys = keys;
         }
 
         void SetConstant(ref AnimationCurve curve, float value)
@@ -391,21 +421,9 @@ namespace UnityEngine
 
         public void SetCustomCurve(AudioSourceCurveType type, AnimationCurve curve)
         {
-            var copy = curve == null ? new AnimationCurve() : new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
-            if (Compat.AudioSpatialStereoMeasured && copy.length > 0 && copy[copy.length - 1].time > 1f)
-            {
-                // Distance curves ending past one scale time and tangents together. Negative
-                // keys keep their relative positions (tests/projects/audioreverb, 6000.0.71f1).
-                float scale = 1f / copy[copy.length - 1].time;
-                var keys = copy.keys;
-                for (int i = 0; i < keys.Length; i++)
-                {
-                    keys[i].time *= scale;
-                    keys[i].inTangent /= scale;
-                    keys[i].outTangent /= scale;
-                }
-                copy.keys = keys;
-            }
+            var copy = curve == null ? new AnimationCurve()
+                : Compat.AudioSpatialStereoMeasured ? NormalizedDistanceCurve(curve)
+                : new AnimationCurve(curve.keys) { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
             switch (type)
             {
                 case AudioSourceCurveType.CustomRolloff:
