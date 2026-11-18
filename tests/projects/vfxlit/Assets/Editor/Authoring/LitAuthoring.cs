@@ -321,6 +321,35 @@ public static class LitAuthoring
         Set(dyingInit, "lifetime", 0.4f);
         Set(dyingInit, "size", 0.5f);
         Save(dying);
+
+        // Through an indirect buffer: meshes blended over what is behind them, half transparent,
+        // which such an output sorts by default (unlit, its mesh exposed as `Shape`, and lit);
+        // and opaque meshes of an output told to draw through one, from the list the system's
+        // update makes, not sorted. Spread over a depth of three units: the order shows.
+        var (sorted, sortedInit, sortedOutput) = Shapes<VFXMeshOutput>("MeshSorted");
+        sortedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        SetRandom(sortedInit, "position", new Vector3(-1.1f, -1.1f, -1.5f), new Vector3(1.1f, 1.1f, 1.5f));
+        SetRandom(sortedInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Set(sortedInit, "alpha", 0.6f);
+        Input(sortedOutput, "mainTexture").value = Quarters;
+        Link(Parameter(sorted, typeof(Mesh), "Shape", Wedge).outputSlots[0], Input(sortedOutput, "mesh"));
+        Save(sorted);
+
+        var (litSorted, litSortedInit, litSortedOutput) = Shapes<VFXURPLitMeshOutput>("MeshLitSorted");
+        litSortedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        litSortedOutput.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+        SetRandom(litSortedInit, "position", new Vector3(-1.1f, -1.1f, -1.5f), new Vector3(1.1f, 1.1f, 1.5f));
+        SetRandom(litSortedInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Set(litSortedInit, "alpha", 0.6f);
+        Input(litSortedOutput, "smoothness").value = 0.5f;
+        Input(litSortedOutput, "metallic").value = 0f;
+        Save(litSorted);
+
+        var (listed, listedInit, listedOutput) = Shapes<VFXMeshOutput>("MeshListed");
+        listedOutput.SetSettingValue("indirectDraw", true);
+        SetRandom(listedInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Input(listedOutput, "mainTexture").value = Quarters;
+        Save(listed);
     }
 
     /// <summary>Where the stages drawn through the 2D renderer stand: one row of their own,

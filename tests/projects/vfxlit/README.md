@@ -57,6 +57,11 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   output's own Shader Graph setting.
 - `PlainUnlit`: such quads drawn by `Output Particle Quad` without a Shader Graph, blended over
   what is behind.
+- `MeshSorted`, `MeshLitSorted`: the wedges of `MeshUnlit` and `MeshLit` blended over what is
+  behind them, half transparent, spread over a depth of three units: such an output sorts its
+  particles by default and draws them through a sorted indirect buffer. `MeshSorted`'s mesh is
+  the exposed `Shape`. `MeshListed`: opaque wedges of an output told to draw through an indirect
+  buffer, from the list its system's update makes (not sorted).
 
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The pipeline asset
 (`Assets/Settings/ProbeURP.asset`) has three renderers: a forward one, a deferred one
@@ -128,6 +133,10 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   (frame 10). "Unity renders sublayers in numerical order, so lower values render behind
   higher values", and only "within a sorting layer, a sublayer, and a render queue" by the
   distance to the camera (Unity 6000.0 manual, 2D renderer sorting).
+- `mesh sorted` (frames 5 and 10: at frame 8 `Shape` is set to the spike, of one submesh,
+  `act/mesh sorted/f008`), `mesh lit sorted` (with a point light), `mesh listed`: meshes drawn
+  through an indirect buffer, one draw of each submesh the mask names, of as many instances as
+  the list counts.
 - `graph unlit`: `GraphUnlit` through the forward renderer; its renderer casts shadows
   (`renderer/graph unlit`).
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays
@@ -146,9 +155,8 @@ adds to that is not separated.
 ## Not covered
 
 - Outputs with motion vectors (they keep buffers of the frame before), lit strips, several meshes per output or a mesh chosen by distance, lit
-  outputs drawn through an indirect buffer that is not sorted and mesh outputs through any
-  indirect buffer (unlit quads through an unsorted one are `tests/projects/vfxoutputs`): not
-  drawn; each says so once for its asset.
+  outputs drawn through an indirect buffer that is not sorted (unlit quads through an unsorted
+  one are `tests/projects/vfxoutputs`): not drawn; each says so once for its asset.
 - A sorted lit output with another sort criterion than the default, of quads that cut
   through each other, of other primitives than quads, that casts shadows, or that is not
   blended over what is behind it (an opaque or additive one made to sort: its depth and

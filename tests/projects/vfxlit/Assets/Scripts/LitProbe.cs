@@ -43,6 +43,7 @@ public sealed class LitProbe : MonoBehaviour
 
     Stage m_Exposed;
     Stage m_Sorting;
+    Stage m_MeshSorted;
     int m_Staged;
     Material m_Lit;
 
@@ -150,6 +151,12 @@ public sealed class LitProbe : MonoBehaviour
             // A Shader Graph output (the graph package's default graph) through the forward
             // renderer.
             Draw("graph unlit", "GraphUnlit", 5);
+            // Meshes through an indirect buffer: sorted (unlit, its mesh changed at frame 8 to
+            // one of a single submesh; and lit, with a point light), and from a list that is not
+            // sorted.
+            m_MeshSorted = Draw("mesh sorted", "MeshSorted", 5, 10);
+            Lamp(Draw("mesh lit sorted", "MeshLitSorted", 5), LightType.Point);
+            Draw("mesh listed", "MeshListed", 5);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
@@ -347,6 +354,9 @@ public sealed class LitProbe : MonoBehaviour
             var renderer = m_Sorting.Effect.GetComponent<Renderer>();
             renderer.sortingOrder = 2;
             Rec("act/sprite sorting/f008", "sortingOrder=2 -> sortingLayer=" + renderer.sortingLayerName + " sortingOrder=" + renderer.sortingOrder);
+            m_MeshSorted.Effect.SetMesh("Shape", LoadMesh("Spike"));
+            var now = m_MeshSorted.Effect.GetMesh("Shape");
+            Rec("act/mesh sorted/f008", "Shape=Spike -> Shape=" + (now == null ? "<null>" : now.name));
         }
         var effect = m_Exposed.Effect;
         string what = null;
