@@ -27,19 +27,14 @@ def main():
         if result.returncode:
             return result.returncode
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
+    # Every control declares a message Unbound sends, so doctor must report none of them:
     # StateMachineBehaviour.OnStateIK is sent since the animation update runs IK passes
-    # (tests/projects/animcallbacks), so UnsentIK and InheritedIK are now controls that doctor
-    # must not report.
-    # The child-dimension declaration is a supported-message control (rectmessages).
-    expected = {
-        ('DoctorCoverageControls.UnsentComponent', 'OnParticleUpdateJobScheduled'),
-        ('DoctorCoverageControls.InheritedUnsentComponent', 'OnParticleUpdateJobScheduled'),
-    }
-    # A message below a user-defined MonoBehaviour base must be found, and inherited uses
-    # must report its declaration once rather than adding a diagnostic for every leaf type.
-    source_lines = (ROOT/'Assets/Scripts/MessageCoverageControls.cs').read_text().splitlines()
-    inherited_line = next(i for i, line in enumerate(source_lines, 1)
-                          if 'protected void OnParticleUpdateJobScheduled' in line)
+    # (tests/projects/animcallbacks), the child-dimension declaration is a supported-message
+    # control (rectmessages), and OnParticleUpdateJobScheduled goes to every script of a system
+    # its update steps (tests/projects/particlejobs), inherited declarations included.
+    # Reporting, source locations and inherited declarations of an unsent message are covered by
+    # Unbound.ApiTools.Tests' MessageCoverageTests with an injected rule list.
+    expected = set()
     for repeat in range(2):
         run = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'doctor', '-p', str(ROOT), '--json'],
                              cwd=REPO, capture_output=True, text=True)
@@ -49,14 +44,11 @@ def main():
         report = json.loads(run.stdout)
         found = report['unsupportedMessages']
         actual = {(m['type'], m['message']) for m in found}
-        bad_locations = [m for m in found if m['file'] != 'Assets/Scripts/MessageCoverageControls.cs' or m['line'] <= 0]
-        inherited = [m for m in found if m['type'] == 'DoctorCoverageControls.InheritedUnsentComponent']
-        bad_inheritance = len(inherited) != 1 or inherited[0]['line'] != inherited_line
-        if actual != expected or len(found) != len(expected) or bad_locations or bad_inheritance or report['messageAnalysisFailedAssemblies']:
+        if actual != expected or len(found) != len(expected) or report['messageAnalysisFailedAssemblies']:
             print(json.dumps(report, indent=2))
             print('missing:', sorted(expected - actual), 'extra:', sorted(actual - expected))
             return 1
-        print(f'doctor pass {repeat + 1}: {len(found)} messages with source locations; no controls misclassified')
+        print(f'doctor pass {repeat + 1}: {len(found)} messages reported; no controls misclassified')
     return 0
 
 
