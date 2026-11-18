@@ -221,21 +221,28 @@ pub fn fetch(
         } else {
             spec.path.as_str()
         };
-        git(
-            repo,
-            &[
-                &work_tree,
+        // The whole commit in the index first, so the attributes above the folder (the root
+        // `.gitattributes` with git-lfs's rules, line endings) apply to its files.
+        let checkout = |args: &[&str]| {
+            let mut all = vec![
+                "--literal-pathspecs",
+                work_tree.as_str(),
                 "-c",
                 "core.bare=false",
-                "checkout",
-                "-q",
-                &hash,
-                "--",
-                folder,
-            ],
-        )
-        .with_context(|| format!("the repository has no folder `{folder}` at {hash}"))?;
+            ];
+            all.extend_from_slice(args);
+            git(repo, &all)
+        };
+        checkout(&["read-tree", &hash])?;
+        checkout(&["checkout", "-q", &hash, "--", folder])
+            .with_context(|| format!("checking out `{folder}` at {hash}"))?;
         let package = tree.join(&spec.path);
+        // A folder of the checkout, not a link out of it.
+        anyhow::ensure!(
+            std::fs::symlink_metadata(&package).is_ok_and(|m| m.is_dir()),
+            "`/{}` at {hash} is not a folder",
+            spec.path
+        );
         anyhow::ensure!(
             crate::packages::package_name(&package).as_deref() == Some(name),
             "`/{}` at {hash} holds no package.json naming {name}",
@@ -341,11 +348,13 @@ mod tests {
             // Export attributes apply to archives, not to the checkout the Editor makes.
             std::fs::create_dir_all(work.join("pkgs/thing/Tests")).unwrap();
             std::fs::write(work.join("pkgs/thing/Tests/T.cs"), "class T {}").unwrap();
+            // The root's attributes apply inside the package folder.
             std::fs::write(
                 work.join(".gitattributes"),
-                "/pkgs/thing/Tests export-ignore\n",
+                "/pkgs/thing/Tests export-ignore\n*.txt text eol=crlf\n",
             )
             .unwrap();
+            std::fs::write(work.join("pkgs/thing/Notes.txt"), "a\nb\n").unwrap();
             run(&work, &["add", "-A"]);
             run(&work, &["commit", "-q", "-m", version]);
             commits.push(run(&work, &["rev-parse", "HEAD"]));
@@ -395,6 +404,10 @@ mod tests {
             root.join("Tests/T.cs").is_file(),
             "export-ignore does not apply"
         );
+        assert_eq!(
+            std::fs::read(root.join("Notes.txt")).unwrap(),
+            b"a\r\nb\r\n"
+        );
         // Without a lock the revision is resolved: the branch's head, an annotated tag's commit.
         let head = fetch(&store, "com.test.thing", &spec, None, false).unwrap();
         assert_eq!(version(&head), "1.0.1");
@@ -432,6 +445,8 @@ mod tests {
         assert!(fetch(&store, "com.test.thing", &wrong_folder, Some(&v1), false).is_err());
         let wrong_name = parse_spec(&format!("{url}?path=/pkgs/thing"));
         assert!(fetch(&store, "com.test.other", &wrong_name, Some(&v1), false).is_err());
+        let glob = parse_spec(&format!("{url}?path=/pkgs/*"));
+        assert!(fetch(&store, "com.test.thing", &glob, Some(&v1), false).is_err());
         let escaping = parse_spec(&format!("{url}?path=/../pkgs/thing"));
         assert!(fetch(&store, "com.test.thing", &escaping, Some(&v1), false).is_err());
         let option = parse_spec("--upload-pack=touch /tmp/x");
@@ -441,6 +456,37 @@ mod tests {
             .flatten()
             .collect();
         assert!(left.is_empty(), "{left:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_package_at_the_repository_root() {
+        let dir = scratch("root");
+        let work = dir.join("work");
+        std::fs::create_dir_all(work.join("Runtime")).unwrap();
+        std::fs::write(
+            work.join("package.json"),
+            r#"{"name": "com.test.root", "version": "2.0.0"}"#,
+        )
+        .unwrap();
+        std::fs::write(work.join("Runtime/A.cs"), "class A {}").unwrap();
+        run(&work, &["init", "-q", "-b", "main"]);
+        run(&work, &["add", "-A"]);
+        run(&work, &["commit", "-q", "-m", "root"]);
+        let commit = run(&work, &["rev-parse", "HEAD"]);
+        let url = format!("file://{}", work.display());
+        let spec = parse_spec(&format!("{url}#main"));
+        let root = fetch(
+            &dir.join("store"),
+            "com.test.root",
+            &spec,
+            Some(&commit),
+            false,
+        )
+        .unwrap();
+        assert_eq!(version(&root), "2.0.0");
+        assert!(root.join("Runtime/A.cs").is_file());
+        assert!(!root.join(".git").exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
