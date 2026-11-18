@@ -42,7 +42,7 @@
 {"key":"p3.query.mainSweep","value":"wallMain@3.9975"}
 {"key":"p3.query.logs","value":"0"}
 {"key":"p3.contact.dropper","value":"20.0000,1.0000,0.0000"}
-{"key":"p3.contact.events","value":"p3.contact.10:TriggerEnter:dropper<zone;p3.contact.17:CollisionEnter:dropper<floorLocal"}
+{"key":"p3.contact.events","value":"p3.contact.10:TriggerEnter:dropper<zone;p3.contact.17:CollisionEnter:dropper<floorLocal|static:floorMain"}
 {"key":"p3.contact.logs","value":"0"}
 {"key":"p3.active.scene","value":"Local3D"}
 {"key":"p3.active.copyScene","value":"Local3D"}
@@ -108,6 +108,10 @@
 {"key":"p2.defaultSim.mainMoved","value":"false"}
 {"key":"p2.defaultSim.logs","value":"1"}
 {"key":"p2.defaultSim.log0","value":"Warning: Physics2D.Simulate(...) was called but simulation mode was not set to 'Script'. You should set the simulation mode to 'Script' before calling this function therefore the simulation was not run."}
+{"key":"p2.defaultScene.result","value":"false"}
+{"key":"p2.defaultScene.mainMoved","value":"false"}
+{"key":"p2.defaultScene.logs","value":"1"}
+{"key":"p2.defaultScene.log0","value":"Warning: Physics2D.Simulate(...) was called but simulation mode was not set to 'Script'. You should set the simulation mode to 'Script' before calling this function therefore the simulation was not run."}
 {"key":"p2.query.staticOverLocal","value":"none"}
 {"key":"p2.query.staticOverMain","value":"floorMain2@9.5000"}
 {"key":"p2.query.sceneOverLocal","value":"floorLocal2@9.5000"}
@@ -118,12 +122,12 @@
 {"key":"p2.query.bodyCast","value":"wallLocal2@8.9950"}
 {"key":"p2.query.colliderCast","value":"wallLocal2@8.9950"}
 {"key":"p2.query.mainCast","value":"wallMain2@3.9950"}
-{"key":"p2.query.overlapCollider","value":"0"}
+{"key":"p2.query.overlapCollider","value":"overlapPartner2"}
 {"key":"p2.query.logs","value":"0"}
 {"key":"p2.contact.dropper","value":"20.0000,1.0139"}
 {"key":"p2.contact.touching","value":"true"}
 {"key":"p2.contact.contacts","value":"2"}
-{"key":"p2.contact.events","value":"p2.contact.9:TriggerEnter2D:dropper2<zone2;p2.contact.17:CollisionEnter2D:dropper2<floorLocal2"}
+{"key":"p2.contact.events","value":"p2.contact.9:TriggerEnter2D:dropper2<zone2;p2.contact.17:CollisionEnter2D:dropper2<floorLocal2|static:floorMain2"}
 {"key":"p2.contact.logs","value":"0"}
 {"key":"p2.active.scene","value":"Local2D"}
 {"key":"p2.active.copyScene","value":"Local2D"}

@@ -57,11 +57,12 @@ namespace Unbound.Runtime
         {
             foreach (var joint in s_Joints) Sync(joint);
         }
-        internal static void SetSimulationLayers(int layers)
+        /// <summary>The joints of the world about to be stepped take part when their bodies' layers do.</summary>
+        internal static void SetSimulationLayers(World world, int layers)
         {
             foreach (var joint in s_Joints)
             {
-                if (joint.m_Joint == null) continue;
+                if (joint.m_Joint == null || joint.m_Joint.BodyA.World != world) continue;
                 joint.m_Joint.SimulationEnabled = (layers & (1 << joint.m_GameObject.m_Layer)) != 0
                     && (joint.m_ConnectedBody == null || (layers & (1 << joint.m_ConnectedBody.m_GameObject.m_Layer)) != 0);
             }

@@ -16,11 +16,13 @@ records, for 3D (`p3.*`) and 2D (`p2.*`) scenes made with `SceneManager.CreateSc
 - `auto.*`: a local body overlapping a default body at the same place is not simulated by the
   automatic simulation, and the two do not touch (the default body falls straight down).
 - `sim.*`: the local scene's `Simulate` steps its body, also in FixedUpdate mode, and leaves the
-  default body where it was; `defaultSim.*`: the default scene's Simulate in FixedUpdate mode warns
-  and does not run.
+  default body where it was; `defaultSim.*`, `defaultScene.*`: the default scene's Simulate in
+  FixedUpdate mode (Physics2D.Simulate, the default PhysicsScene(2D)'s) warns and does not run.
 - `query.*`: the static queries do not see local colliders; the scene's own queries see only its
-  colliders; a body's sweep or cast hits a farther local wall, not a nearer default wall.
-- `contact.*`: trigger and collision enter messages during the local steps, by step.
+  colliders; a body's sweep or cast hits a farther local wall, not a nearer default wall; a local
+  collider's Overlap finds its local partner, not the default collider at the same place.
+- `contact.*`: trigger and collision enter messages during the local steps, by step, and what a
+  static raycast finds from inside the collision callback (the default scene's floor).
 - `active.*`: objects made or instantiated while the local scene is active join it.
 - `back.*`, `into.*`: moving a body between physics scenes keeps its velocity in 3D and zeroes its
   linear and angular velocity in 2D.

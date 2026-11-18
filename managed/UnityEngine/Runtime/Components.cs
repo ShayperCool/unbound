@@ -323,7 +323,12 @@ namespace Unbound.Runtime
                 if (siblingIndex >= 0 && siblingIndex < parent.m_Children.Count) parent.m_Children.Insert(siblingIndex, t);
                 else parent.m_Children.Add(t);
                 if (parent.m_GameObject.m_Scene != go.m_Scene)
+                {
                     SceneRegistry.SetSceneRecursive(t, parent.m_GameObject.m_Scene);
+                    // Its 2D bodies and colliders go to that scene's physics scene (the 3D ones
+                    // move at the next physics access).
+                    Unbound.Runtime.Physics2DWorld.SceneMembershipChanged();
+                }
             }
 
             if (worldPositionStays) t.KeepWorldPose(worldPosition, worldRotation, worldScale, parent);

@@ -562,14 +562,18 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The Rigidbody2D a collider attaches to: the nearest one on its GameObject or a parent.</summary>
+        /// <summary>The Rigidbody2D a collider attaches to: the nearest one on its GameObject or a parent,
+        /// in the collider's physics scene (a body another physics scene holds, while a scene move is
+        /// pending, is not one to attach to).</summary>
         internal static Rigidbody2D FindRigidbody(Collider2D c)
         {
+            var space = SpaceOf(c);
             for (var t = c.m_GameObject.m_Transform; t != null; t = t.m_Parent)
             {
                 var components = t.m_GameObject.m_Components;
                 for (int i = 0; i < components.Count; i++)
-                    if (components[i] is Rigidbody2D rb && rb.m_Registered && !rb.m_Destroyed) return rb;
+                    if (components[i] is Rigidbody2D rb && rb.m_Registered && !rb.m_Destroyed)
+                        return ReferenceEquals(rb.m_Space ?? s_Default, space) ? rb : null;
             }
             return null;
         }
@@ -948,7 +952,7 @@ namespace Unbound.Runtime
             Physics2D.ApplyTuning();
             SyncCurrent();
             Physics2DJoints.Sync();
-            Physics2DJoints.SetSimulationLayers(s_MeasuredSimulation ? layers : Physics2D.AllLayers);
+            Physics2DJoints.SetSimulationLayers(s_World, s_MeasuredSimulation ? layers : Physics2D.AllLayers);
             s_World.Gravity = ToB2(Physics2D.s_Gravity);
             if (layers != s_ContactLayers)
             {
@@ -1012,8 +1016,17 @@ namespace Unbound.Runtime
             // Reaction forces come from the impulses of the last (sub-)step.
             Physics2DJoints.AfterStep(s_World, subStepTime);
             s_Listener.Dispatch();
+            // Removals in other physics scenes made by these callbacks waited for this dispatch to end.
+            if (s_Locals.Count > 0) DispatchRemovalsElsewhere();
             Flush();
             return true;
+        }
+
+        static void DispatchRemovalsElsewhere()
+        {
+            if (!ReferenceEquals(s_Space, s_Default)) s_Default.Listener.DispatchRemovals();
+            for (int i = 0; i < s_Locals.Count; i++)
+                if (!ReferenceEquals(s_Locals[i], s_Space)) s_Locals[i].Listener.DispatchRemovals();
         }
 
         // ------------------------------------------------------------------ sub-stepping

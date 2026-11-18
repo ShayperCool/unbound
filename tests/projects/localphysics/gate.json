@@ -6,8 +6,17 @@
   "engine_paths": [
     "managed/UnityEngine/Physics/PhysicsWorld.cs",
     "managed/UnityEngine/Physics/PhysicsScene.cs",
+    "managed/UnityEngine/Physics/Physics.cs",
+    "managed/UnityEngine/Physics/Joints.cs",
     "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
     "managed/UnityEngine/Physics2D/Physics2D.cs",
-    "managed/UnityEngine/Core/SceneManagement.cs"
+    "managed/UnityEngine/Physics2D/Physics2DQueries.cs",
+    "managed/UnityEngine/Physics2D/Physics2DJoints.cs",
+    "managed/UnityEngine/Physics2D/Physics2DEffectors.cs",
+    "managed/UnityEngine/Physics2D/Joints2D.cs",
+    "managed/UnityEngine/Physics2D/Rigidbody2D.cs",
+    "managed/UnityEngine/Physics2D/Collider2D.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Runtime/Components.cs"
   ]
 }

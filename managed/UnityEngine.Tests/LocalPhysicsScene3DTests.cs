@@ -294,5 +294,58 @@ namespace UnityEngine.Tests
                 return trace;
             }
         }
+
+        sealed class WarningCapture : ILogHandler, IDisposable
+        {
+            readonly ILogHandler m_Inner = Debug.unityLogger.logHandler;
+            internal readonly List<string> Warnings = new List<string>();
+            internal WarningCapture() { Debug.unityLogger.logHandler = this; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+            }
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
+            public void Dispose() => Debug.unityLogger.logHandler = m_Inner;
+        }
+
+        [Fact]
+        public void AJointRefusesABodyOfAnotherPhysicsScene()
+        {
+            // Measured: tests/projects/localphysics p3.joint.* (Unity 6000.0.71f1).
+            var local = LocalScene();
+            var held = In(local, () => Ball("Held", new Vector3(80f, 5f, 0f)));
+            var other = Ball("Other", new Vector3(82f, 5f, 0f)).GetComponent<Rigidbody>();
+            var sameScene = In(local, () => Ball("SameScene", new Vector3(84f, 5f, 0f))).GetComponent<Rigidbody>();
+            var joint = held.AddComponent<FixedJoint>();
+            using (var logs = new WarningCapture())
+            {
+                joint.connectedBody = other;
+                Assert.Contains("Rigidbody cannot be connected to FixedJoint as they belong to a different physics scenes. Joint's GameObject name: 'Held', Rigidbody component's GameObject name: 'Other'.", logs.Warnings);
+            }
+            Assert.Null(joint.connectedBody);
+            // Control: a body of the same physics scene connects.
+            joint.connectedBody = sameScene;
+            Assert.Same(sameScene, joint.connectedBody);
+        }
+
+        [Fact]
+        public void TheDefaultSceneStepOutsideScriptModeWarnsUnderItsCallersName()
+        {
+            // Measured: tests/projects/localphysics p3.defaultSim.log0 (PhysicsScene) and
+            // Physics.Simulate's own warning.
+            Physics.simulationMode = SimulationMode.FixedUpdate;
+            try
+            {
+                using var logs = new WarningCapture();
+                Physics.defaultPhysicsScene.Simulate(Dt);
+                Physics.Simulate(Dt);
+                Assert.Equal(new[]
+                {
+                    "PhysicsScene.Simulate(...) was called but simulation mode is not set to Script. You should set simulation mode to Script first before calling this function therefore the simulation was not run.",
+                    "Physics.Simulate(...) was called but simulation mode is not set to Script. You should set simulation mode to Script first before calling this function therefore the simulation was not run.",
+                }, logs.Warnings);
+            }
+            finally { Physics.simulationMode = SimulationMode.Script; }
+        }
     }
 }

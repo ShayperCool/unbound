@@ -401,6 +401,9 @@ public class LocalPhysicsProbe : MonoBehaviour
         Put("p2.defaultSim.localUnchanged", local.position == before);
         Put("p2.defaultSim.mainMoved", mainBody.position.y != mainY);
         Logs("p2.defaultSim");
+        Put("p2.defaultScene.result", Physics2D.defaultPhysicsScene.Simulate(0.02f));
+        Put("p2.defaultScene.mainMoved", mainBody.position.y != mainY);
+        Logs("p2.defaultScene");
 
         var floorLocal = Static2("floorLocal2", new Vector2(20, 0), new Vector2(4, 1));
         SceneManager.MoveGameObjectToScene(floorLocal, scene);
@@ -424,8 +427,17 @@ public class LocalPhysicsProbe : MonoBehaviour
         Put("p2.query.colliderCast", local.GetComponent<Collider2D>().Cast(Vector2.right, hits, 100) > 0 ? Hit(hits[0]) : "none");
         hits = new RaycastHit2D[4];
         Put("p2.query.mainCast", mainBody.Cast(Vector2.right, hits, 100) > 0 ? Hit(hits[0]) : "none");
+        // A local collider overlapped by a local partner and by a default collider at the same place.
+        var overlapLocal = Static2("overlapLocal2", new Vector2(30, 0), Vector2.one);
+        SceneManager.MoveGameObjectToScene(overlapLocal, scene);
+        var partner = Static2("overlapPartner2", new Vector2(30.5f, 0), Vector2.one);
+        SceneManager.MoveGameObjectToScene(partner, scene);
+        Static2("overlapMain2", new Vector2(30, 0), Vector2.one);
+        Physics2D.SyncTransforms();
         var overlaps = new List<Collider2D>();
-        Put("p2.query.overlapCollider", floorLocal.GetComponent<Collider2D>().Overlap(new ContactFilter2D().NoFilter(), overlaps));
+        overlapLocal.GetComponent<Collider2D>().Overlap(new ContactFilter2D().NoFilter(), overlaps);
+        overlaps.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
+        Put("p2.query.overlapCollider", overlaps.Count == 0 ? "none" : string.Join(",", overlaps.ConvertAll(x => x.name)));
         Logs("p2.query");
 
         var dropper = Body2("dropper2", new Vector2(20, 1.6f));
@@ -517,7 +529,7 @@ public class LocalPhysicsProbe : MonoBehaviour
         Logs("p2.unload");
         var unloadLone = SceneManager.UnloadSceneAsync(lone);
         while (!unloadLone.isDone) yield return null;
-        foreach (var name in new[] { "main2", "floorMain2", "wallMain2", "local2", "jointMain2" })
+        foreach (var name in new[] { "main2", "floorMain2", "wallMain2", "local2", "jointMain2", "overlapMain2" })
             Destroy(GameObject.Find(name));
         yield return null;
         Logs("p2.end");
