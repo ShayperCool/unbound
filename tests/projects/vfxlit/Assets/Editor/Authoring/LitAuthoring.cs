@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.VFX;
 using UnityEditor.VFX.Block;
+using UnityEditor.ShaderGraph;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEditor.VFX.URP;
 using UnityEngine;
@@ -34,6 +35,7 @@ public static class LitAuthoring
         Meshes();
         SortedAndCurves();
         ShaderGraphs();
+        ListsMeshesAndLegacyGraphs();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -120,6 +122,7 @@ public static class LitAuthoring
 
     static Texture2D Quarters => AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectFolder + "/Quarters.png");
     static Mesh Wedge => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Wedge.asset");
+    static Mesh Spike => AssetDatabase.LoadAssetAtPath<Mesh>(ObjectFolder + "/Spike.asset");
 
     // ----------------------------------------------------------------------------- graphs
 
@@ -418,6 +421,123 @@ public static class LitAuthoring
         Save(plain);
     }
 
+    /// <summary>A Shader Graph of the Visual Effect target the graph package keeps for older
+    /// graphs (shown as deprecated): unlit, its colour the probe's image sampled through a
+    /// texture property of its own.</summary>
+    const string LegacyGraph = GraphFolder + "/Legacy.shadergraph";
+
+    static void WriteLegacyGraph()
+    {
+        var graph = new GraphData();
+        graph.AddContexts();
+        graph.InitializeOutputs(new Target[] { new VFXTarget() }, new[] { BlockFields.SurfaceDescription.BaseColor, BlockFields.SurfaceDescription.Alpha });
+        graph.AddCategory(CategoryData.DefaultCategory());
+        graph.path = "Shader Graphs";
+        var texture = new Texture2DShaderProperty { displayName = "Image" };
+        graph.AddGraphInput(texture);
+        var read = new PropertyNode();
+        graph.AddNode(read);
+        read.property = texture;
+        var sample = new SampleTexture2DNode();
+        graph.AddNode(sample);
+        graph.Connect(read.GetSlotReference(PropertyNode.OutputSlotId), sample.GetSlotReference(SampleTexture2DNode.TextureInputId));
+        var baseColor = graph.fragmentContext.blocks.Select(b => b.value).First(b => b.descriptor == BlockFields.SurfaceDescription.BaseColor);
+        graph.Connect(sample.GetSlotReference(SampleTexture2DNode.OutputSlotRGBAId), baseColor.GetSlotReference(0));
+        FileUtilities.WriteShaderGraphToDisk(LegacyGraph, graph);
+        AssetDatabase.ImportAsset(LegacyGraph, ImportAssetOptions.ForceUpdate);
+    }
+
+    /// <summary>The follow-ups of the outputs above: lit outputs drawn from a list that is not
+    /// sorted, by the pipeline's lights (opaque quads told to draw through an indirect buffer)
+    /// and by 2D lights (the sprite graph's quads blended over what is behind them, their sort
+    /// turned off); meshes of an output of two meshes, chosen per particle by its mesh index or
+    /// by the size it takes on screen; a quad output drawn by a graph of the older Visual
+    /// Effect target; and outputs of the forward renderer's kinds (lit quads, meshes) drawn
+    /// through the 2D renderer (LitProbe.cs: `lit listed` .. `mesh 2d`).</summary>
+    static void ListsMeshesAndLegacyGraphs()
+    {
+        var listed = NewGraph("LitListed");
+        var (listedSpawn, listedInit, _, listedOutput) = System<VFXURPLitPlanarPrimitiveOutput>(listed, 16);
+        listedOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+        listedOutput.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+        listedOutput.SetSettingValue("indirectDraw", true);
+        Burst(listedSpawn, 9f);
+        SetRandom(listedInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(listedInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+        Set(listedInit, "size", 0.7f);
+        SetRandom(listedInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Input(listedOutput, "smoothness").value = 0.4f;
+        Input(listedOutput, "metallic").value = 0f;
+        Save(listed);
+
+        var sprites = NewGraph("SpriteListed");
+        var (spritesSpawn, spritesInit, _, spritesOutput) = System<VFXComposedParticleOutput>(sprites, 16);
+        spritesOutput.SetSettingValue("m_Topology", new ParticleTopologyPlanarPrimitive(VFXPrimitiveType.Quad));
+        spritesOutput.SetSettingValue("shaderGraph", ShaderGraph(SpriteLitGraph));
+        spritesOutput.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+        spritesOutput.SetSettingValue("sort", VFXAbstractParticleOutput.SortActivationMode.Off);
+        ((IVFXSlotContainer)spritesOutput).inputSlots.First(s => s.property.type == typeof(Texture2D)).value = Quarters;
+        Burst(spritesSpawn, 9f);
+        SetRandom(spritesInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(spritesInit, "angle", new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 90f));
+        SetRandom(spritesInit, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+        Set(spritesInit, "alpha", 0.7f);
+        Set(spritesInit, "size", 0.7f);
+        Save(sprites);
+
+        (VFXGraph, VFXBasicInitialize, VFXMeshOutput) Pair(string name, bool lod)
+        {
+            var graph = NewGraph(name);
+            var (spawn, init, _, output) = System<VFXMeshOutput>(graph, 16);
+            output.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Opaque);
+            output.SetSettingValue("MeshCount", 2u);
+            output.SetSettingValue("lod", lod);
+            Input(output, "mesh0").value = Wedge;
+            Input(output, "mesh1").value = Spike;
+            Input(output, "mainTexture").value = Quarters;
+            Burst(spawn, 9f);
+            SetRandom(init, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+            SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(360f, 360f, 360f));
+            SetRandom(init, "color", new Vector3(0.5f, 0.5f, 0.5f), new Vector3(1f, 1f, 1f));
+            return (graph, init, output);
+        }
+        // Each particle's mesh by its index, drawn between 0 and 2 (0 or 1); the second mesh
+        // shows only its first submesh. Then the same meshes chosen by the size each particle
+        // takes on screen, the sizes on both sides of the first threshold.
+        var (pair, pairInit, pairOutput) = Pair("MeshPair", false);
+        var index = Make<SetAttribute>();
+        index.SetSettingValue("attribute", "meshIndex");
+        index.SetSettingValue("Random", RandomMode.Uniform);
+        pairInit.AddChild(index);
+        index.inputSlots[0].value = 0u;
+        index.inputSlots[1].value = 2u;
+        Set(pairInit, "size", 0.6f);
+        Input(pairOutput, "subMeshMask0").value = 1u;
+        Save(pair);
+        var (lodded, loddedInit, loddedOutput) = Pair("MeshLod", true);
+        Input(loddedOutput, "lodValues").value = new Vector4(30f, 0f, 0f, 0f);
+        var sizes = Make<SetAttribute>();
+        sizes.SetSettingValue("attribute", "size");
+        sizes.SetSettingValue("Random", RandomMode.Uniform);
+        loddedInit.AddChild(sizes);
+        sizes.inputSlots[0].value = 0.3f;
+        sizes.inputSlots[1].value = 1.2f;
+        Save(lodded);
+
+        WriteLegacyGraph();
+        var legacy = NewGraph("GraphLegacy");
+        var (legacySpawn, legacyInit, _, legacyOutput) = System<VFXPlanarPrimitiveOutput>(legacy, 16);
+        legacyOutput.SetSettingValue("shaderGraph", ShaderGraph(LegacyGraph));
+        var image = ((IVFXSlotContainer)legacyOutput).inputSlots.FirstOrDefault(s => s.property.type == typeof(Texture2D))
+            ?? throw new InvalidOperationException("GraphLegacy: the output of " + LegacyGraph + " takes no texture");
+        image.value = Quarters;
+        Burst(legacySpawn, 9f);
+        SetRandom(legacyInit, "position", new Vector3(-1.1f, -1.1f, -0.5f), new Vector3(1.1f, 1.1f, 0.5f));
+        SetRandom(legacyInit, "angle", new Vector3(-50f, -50f, 0f), new Vector3(50f, 50f, 90f));
+        Set(legacyInit, "size", 0.7f);
+        Save(legacy);
+    }
+
     // ---------------------------------------------------------------------------- helpers
 
     static T Make<T>() where T : VFXModel => ScriptableObject.CreateInstance<T>();
@@ -615,6 +735,8 @@ public static class LitAuthoring
         AddLight2D("point", Light2D.LightType.Point, Place2D(1) + new Vector3(0.6f, 0.5f, 0f), new Color(1f, 0.6f, 0.3f), 1.5f, false);
         AddLight2D("normals", Light2D.LightType.Point, Place2D(2) + new Vector3(0.6f, 0.5f, 0f), new Color(1f, 0.6f, 0.3f), 1.5f, true);
         AddLight2D("classic", Light2D.LightType.Point, Place2D(4) + new Vector3(0.6f, 0.5f, 0f), new Color(0.3f, 0.6f, 1f), 1.5f, false);
+        // And one at the eighth (`sprite listed`).
+        AddLight2D("listed", Light2D.LightType.Point, Place2D(7) + new Vector3(0.6f, 0.5f, 0f), new Color(1f, 0.6f, 0.3f), 1.5f, false);
         EditorSceneManager.SaveScene(scene, Scene);
     }
 

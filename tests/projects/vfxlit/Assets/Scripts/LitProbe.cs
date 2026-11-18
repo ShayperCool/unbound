@@ -161,6 +161,22 @@ public sealed class LitProbe : MonoBehaviour
             // The sorted meshes paused at frame 6, their mesh changed at frame 8, drawn at frame
             // 10.
             m_MeshPaused = Draw("mesh paused", "MeshSorted", 5, 10);
+            // Lit quads from a list that is not sorted (opaque, told to draw through an indirect
+            // buffer), under a point light; the sprite graph's quads blended over what is behind
+            // them with their sort off, through the 2D renderer under a 2D point light; meshes
+            // of an output of two by the particles' mesh index (and by their size on screen); a
+            // quad output drawn by a graph of the older Visual Effect target; and lit quads and
+            // meshes through the 2D renderer.
+            Lamp(Draw("lit listed", "LitListed", 5, 12), LightType.Point);
+            Draw2D("sprite listed", "SpriteListed", 7, 5, 12);
+            Draw("mesh pair", "MeshPair", 5);
+            // Meshes chosen by their size on screen: which the Editor draws differs from one run
+            // to the next (two captures disagree), so no image of them is kept; the stage keeps
+            // its place and its renderer's row.
+            Draw("mesh lod", "MeshLod");
+            Draw("graph legacy", "GraphLegacy", 5);
+            Draw2D("lit 2d", "LitMatte", 8, 5);
+            Draw2D("mesh 2d", "MeshUnlit", 9, 5);
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
