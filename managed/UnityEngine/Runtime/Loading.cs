@@ -774,6 +774,9 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>Whether the asset's file was loaded (imported) already.</summary>
+        internal static bool IsLoaded(string guid) => s_Files.ContainsKey(guid);
+
         internal static string PathOf(string guid) => s_Files.TryGetValue(guid, out var f) && f != null ? f.Path : null;
 
         /// <summary>Whether the asset's file has been read and its main object is still alive (not

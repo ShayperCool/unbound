@@ -57,7 +57,9 @@ namespace Unbound.Runtime
         {
             TextAsset asset;
             using (ObjectRegistry.AsAssets())
-                asset = new TextAsset(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length) { IsPersistentAsset = true };
+                // Imported, so not editable (matches the Unity 6000.0.71f1 Editor, tests/projects/toolapis imported.text).
+                asset = new TextAsset(info.File, System.IO.Path.GetFileNameWithoutExtension(info.Path), new System.IO.FileInfo(info.File).Length)
+                    { IsPersistentAsset = true, hideFlags = HideFlags.NotEditable };
             var file = new LoadedFile { MainObject = asset };
             file.Objects[TextAssetFileId] = asset;
             return file;

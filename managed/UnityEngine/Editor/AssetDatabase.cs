@@ -343,10 +343,21 @@ namespace UnityEditor
 
         /// <summary>Assets are read from the project as they load, so there is nothing to bring
         /// up to date; a forced import of a loaded Visual Effect Graph compiles it again
-        /// (<see cref="VisualEffectImports.Reimport"/>).</summary>
+        /// (<see cref="VisualEffectImports.Reimport"/>), and a forced import of an asset not loaded
+        /// yet imports it now, as the Editor runs the importer during the call (tests/projects/toolapis
+        /// imported.during). A loaded asset is not imported again.</summary>
         public static void ImportAsset(string path, ImportAssetOptions options)
         {
-            if ((options & ImportAssetOptions.ForceUpdate) != 0 && VisualEffectImports.Reimport(path)) return;
+            if ((options & ImportAssetOptions.ForceUpdate) != 0)
+            {
+                if (VisualEffectImports.Reimport(path)) return;
+                var guid = AssetPathToGUID(path);
+                if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path) && !AssetDatabaseRuntime.IsLoaded(guid))
+                {
+                    AssetDatabaseRuntime.LoadFile(guid);
+                    return;
+                }
+            }
             Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
         }
 

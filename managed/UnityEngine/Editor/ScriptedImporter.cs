@@ -326,6 +326,7 @@ namespace Unbound.Runtime
             using (UnityEditor.AssetImporter.Importing(info.Path, importer))
             using (ObjectRegistry.AsAssets())
                 importer.OnImportAsset(ctx);
+            foreach (var (_, obj) in ctx.m_Objects) MarkImported(obj);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;
             var repeated = new List<(string Key, string Type)>();
@@ -341,6 +342,26 @@ namespace Unbound.Runtime
             if (ctx.mainObject != null && !(ctx.mainObject is Shader))
                 ctx.mainObject.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             return file;
+        }
+
+        /// <summary>The flags an imported object has once its importer returns (not while it runs):
+        /// NotEditable added to each object, and to a GameObject's hierarchy, whose components are
+        /// also HideInHierarchy; flags the importer set stay (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/toolapis imported.*).</summary>
+        static void MarkImported(Object obj)
+        {
+            if (obj == null) return;
+            if (!(obj is GameObject go))
+            {
+                obj.hideFlags |= HideFlags.NotEditable;
+                return;
+            }
+            foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.hideFlags |= HideFlags.NotEditable;
+                foreach (var component in t.gameObject.GetComponents<Component>())
+                    if (component != null) component.hideFlags |= HideFlags.HideInHierarchy | HideFlags.NotEditable;
+            }
         }
 
         /// <summary>
