@@ -59,12 +59,23 @@ queue or GI flag and no ShaderGUI validation.
 What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
 Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
 mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported. URP (7650/7687 values match): `GetTag("RenderType", false)` reads ""
-for the Editor's validated Lit materials, "Opaque" in Unbound (31 values); four description-made
-Shader Graph materials read gi `RealtimeEmissive` in the Editor and `RealtimeEmissive,
-EmissiveIsBlack` in Unbound; the legacy importer's two Autodesk Interactive materials read
-`_QueueControl` 0 in the Editor and the shader's -1 in Unbound (no validation runs on them; what
-sets 0 is not established). These are the probe's only URP differences.
+curves are not imported. URP (7670/7687 values match): four description-made Shader Graph
+materials read gi `RealtimeEmissive` in the Editor and `RealtimeEmissive, EmissiveIsBlack` in
+Unbound; the legacy importer's two Autodesk Interactive materials read `_QueueControl` 0 in the
+Editor and the shader's -1 in Unbound (no validation runs on them; what sets 0 is not
+established); the description-made Arnold Maya, Autodesk Interactive, Physical and Autodesk
+Interactive cutout materials keep the shader's queue in the Editor (rawRenderQueue -1, queue 3000,
+2450 for the cutout, RenderType "Transparent" for the three transparent ones) while Unbound gives
+them an explicit queue 2000 and reads "Opaque" (11 values, cause not established). These are the
+probe's only URP differences.
+
+The URP reference is recorded as an Editor that has drawn its views before Play mode: the runner
+renders one camera before entering Play mode, so the configured pipeline's shader tag is active
+as the scene loads (as in tests/projects/graphqueue, the case Unbound plays). A batch-mode Editor
+that enters Play mode without a render validates the materials without that tag
+(`GetTag("RenderType", false)` then reads "" for the validated Lit materials, and the transparent
+description-made materials read queue 2000); the Gamma and Linear captures are the same either
+way.
 
 ## Smoothing and take ranges
 

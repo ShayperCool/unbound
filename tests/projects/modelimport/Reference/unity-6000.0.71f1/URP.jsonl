@@ -6,7 +6,7 @@
 {"k":"Animated/..mat0.asset","v":"Assets/Models/Animated.fbx"}
 {"k":"Animated/..mat0.renderQueue","v":2000}
 {"k":"Animated/..mat0.rawRenderQueue","v":-1}
-{"k":"Animated/..mat0.RenderType","v":""}
+{"k":"Animated/..mat0.RenderType","v":"Opaque"}
 {"k":"Animated/..mat0.keywords","v":[]}
 {"k":"Animated/..mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Animated/..mat0.doubleSided","v":false}
@@ -95,7 +95,7 @@
 {"k":"AnimatedAvatar/..mat0.asset","v":"Assets/Models/AnimatedAvatar.fbx"}
 {"k":"AnimatedAvatar/..mat0.renderQueue","v":2000}
 {"k":"AnimatedAvatar/..mat0.rawRenderQueue","v":-1}
-{"k":"AnimatedAvatar/..mat0.RenderType","v":""}
+{"k":"AnimatedAvatar/..mat0.RenderType","v":"Opaque"}
 {"k":"AnimatedAvatar/..mat0.keywords","v":[]}
 {"k":"AnimatedAvatar/..mat0.gi","v":"EmissiveIsBlack"}
 {"k":"AnimatedAvatar/..mat0.doubleSided","v":false}
@@ -203,7 +203,7 @@
 {"k":"CrateAvatar/Crate_LOD0.mat0.asset","v":"Assets/Models/CrateAvatar.fbx"}
 {"k":"CrateAvatar/Crate_LOD0.mat0.renderQueue","v":2000}
 {"k":"CrateAvatar/Crate_LOD0.mat0.rawRenderQueue","v":-1}
-{"k":"CrateAvatar/Crate_LOD0.mat0.RenderType","v":""}
+{"k":"CrateAvatar/Crate_LOD0.mat0.RenderType","v":"Opaque"}
 {"k":"CrateAvatar/Crate_LOD0.mat0.keywords","v":[]}
 {"k":"CrateAvatar/Crate_LOD0.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"CrateAvatar/Crate_LOD0.mat0.doubleSided","v":false}
@@ -308,7 +308,7 @@
 {"k":"CrateLods/Crate_LOD0.mat0.asset","v":"Assets/Models/CrateLods.fbx"}
 {"k":"CrateLods/Crate_LOD0.mat0.renderQueue","v":2000}
 {"k":"CrateLods/Crate_LOD0.mat0.rawRenderQueue","v":-1}
-{"k":"CrateLods/Crate_LOD0.mat0.RenderType","v":""}
+{"k":"CrateLods/Crate_LOD0.mat0.RenderType","v":"Opaque"}
 {"k":"CrateLods/Crate_LOD0.mat0.keywords","v":[]}
 {"k":"CrateLods/Crate_LOD0.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"CrateLods/Crate_LOD0.mat0.doubleSided","v":false}
@@ -400,7 +400,7 @@
 {"k":"Embedded/..mat0.asset","v":"Assets/Models/Embedded.fbx"}
 {"k":"Embedded/..mat0.renderQueue","v":2000}
 {"k":"Embedded/..mat0.rawRenderQueue","v":-1}
-{"k":"Embedded/..mat0.RenderType","v":""}
+{"k":"Embedded/..mat0.RenderType","v":"Opaque"}
 {"k":"Embedded/..mat0.keywords","v":[]}
 {"k":"Embedded/..mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Embedded/..mat0.doubleSided","v":false}
@@ -490,7 +490,7 @@
 {"k":"Exotic/Cube_ArnoldMax.mat0.asset","v":"Assets/Models/Exotic.fbx"}
 {"k":"Exotic/Cube_ArnoldMax.mat0.renderQueue","v":2000}
 {"k":"Exotic/Cube_ArnoldMax.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_ArnoldMax.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_ArnoldMax.mat0.RenderType","v":"Opaque"}
 {"k":"Exotic/Cube_ArnoldMax.mat0.keywords","v":["_EMISSION"]}
 {"k":"Exotic/Cube_ArnoldMax.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Exotic/Cube_ArnoldMax.mat0.doubleSided","v":false}
@@ -538,9 +538,9 @@
 {"k":"Exotic/Cube_ArnoldMaya.mat0.name","v":"M_ArnoldMaya"}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.shader","v":"Shader Graphs/ArnoldStandardSurfaceTransparent"}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.asset","v":"Assets/Models/Exotic.fbx"}
-{"k":"Exotic/Cube_ArnoldMaya.mat0.renderQueue","v":2000}
+{"k":"Exotic/Cube_ArnoldMaya.mat0.renderQueue","v":3000}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_ArnoldMaya.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_ArnoldMaya.mat0.RenderType","v":"Transparent"}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.keywords","v":["_EMISSION"]}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Exotic/Cube_ArnoldMaya.mat0.doubleSided","v":false}
@@ -594,7 +594,7 @@
 {"k":"Exotic/Cube_Bump.mat0.asset","v":"Assets/Models/Exotic.fbx"}
 {"k":"Exotic/Cube_Bump.mat0.renderQueue","v":2000}
 {"k":"Exotic/Cube_Bump.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_Bump.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_Bump.mat0.RenderType","v":"Opaque"}
 {"k":"Exotic/Cube_Bump.mat0.keywords","v":["_NORMALMAP"]}
 {"k":"Exotic/Cube_Bump.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Exotic/Cube_Bump.mat0.doubleSided","v":false}
@@ -681,9 +681,9 @@
 {"k":"Exotic/Cube_Interactive.mat0.name","v":"M_Interactive"}
 {"k":"Exotic/Cube_Interactive.mat0.shader","v":"Universal Render Pipeline/Autodesk Interactive/AutodeskInteractiveTransparent"}
 {"k":"Exotic/Cube_Interactive.mat0.asset","v":"Assets/Models/Exotic.fbx"}
-{"k":"Exotic/Cube_Interactive.mat0.renderQueue","v":2000}
+{"k":"Exotic/Cube_Interactive.mat0.renderQueue","v":3000}
 {"k":"Exotic/Cube_Interactive.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_Interactive.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_Interactive.mat0.RenderType","v":"Transparent"}
 {"k":"Exotic/Cube_Interactive.mat0.keywords","v":["_EMISSION"]}
 {"k":"Exotic/Cube_Interactive.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Exotic/Cube_Interactive.mat0.doubleSided","v":false}
@@ -732,9 +732,9 @@
 {"k":"Exotic/Cube_InteractiveCutout.mat0.name","v":"M_InteractiveCutout"}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.shader","v":"Universal Render Pipeline/Autodesk Interactive/AutodeskInteractiveMasked"}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.asset","v":"Assets/Models/Exotic.fbx"}
-{"k":"Exotic/Cube_InteractiveCutout.mat0.renderQueue","v":2000}
+{"k":"Exotic/Cube_InteractiveCutout.mat0.renderQueue","v":2450}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_InteractiveCutout.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_InteractiveCutout.mat0.RenderType","v":"Opaque"}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.keywords","v":[]}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Exotic/Cube_InteractiveCutout.mat0.doubleSided","v":false}
@@ -788,7 +788,7 @@
 {"k":"Exotic/Cube_LambertBare.mat0.asset","v":"Assets/Models/Exotic.fbx"}
 {"k":"Exotic/Cube_LambertBare.mat0.renderQueue","v":2000}
 {"k":"Exotic/Cube_LambertBare.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_LambertBare.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_LambertBare.mat0.RenderType","v":"Opaque"}
 {"k":"Exotic/Cube_LambertBare.mat0.keywords","v":[]}
 {"k":"Exotic/Cube_LambertBare.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Exotic/Cube_LambertBare.mat0.doubleSided","v":false}
@@ -875,9 +875,9 @@
 {"k":"Exotic/Cube_Physical.mat0.name","v":"M_Physical"}
 {"k":"Exotic/Cube_Physical.mat0.shader","v":"Shader Graphs/PhysicalMaterial3DsMaxTransparent"}
 {"k":"Exotic/Cube_Physical.mat0.asset","v":"Assets/Models/Exotic.fbx"}
-{"k":"Exotic/Cube_Physical.mat0.renderQueue","v":2000}
+{"k":"Exotic/Cube_Physical.mat0.renderQueue","v":3000}
 {"k":"Exotic/Cube_Physical.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_Physical.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_Physical.mat0.RenderType","v":"Transparent"}
 {"k":"Exotic/Cube_Physical.mat0.keywords","v":["_EMISSION"]}
 {"k":"Exotic/Cube_Physical.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Exotic/Cube_Physical.mat0.doubleSided","v":false}
@@ -935,7 +935,7 @@
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.asset","v":"Assets/Models/Exotic.fbx"}
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.renderQueue","v":2000}
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.rawRenderQueue","v":-1}
-{"k":"Exotic/Cube_SimplifiedPhysical.mat0.RenderType","v":""}
+{"k":"Exotic/Cube_SimplifiedPhysical.mat0.RenderType","v":"Opaque"}
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.keywords","v":["_EMISSION"]}
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Exotic/Cube_SimplifiedPhysical.mat0.doubleSided","v":false}
@@ -1203,7 +1203,7 @@
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.renderQueue","v":2000}
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_ArnoldMax.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_ArnoldMax.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_ArnoldMax.mat0.doubleSided","v":false}
@@ -1292,7 +1292,7 @@
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.renderQueue","v":2000}
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_ArnoldMaya.mat0.doubleSided","v":false}
@@ -1468,9 +1468,9 @@
 {"k":"ExoticLegacy/Cube_Interactive.mat0.name","v":"M_Interactive"}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.shader","v":"Universal Render Pipeline/Autodesk Interactive/AutodeskInteractiveTransparent"}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
-{"k":"ExoticLegacy/Cube_Interactive.mat0.renderQueue","v":2000}
+{"k":"ExoticLegacy/Cube_Interactive.mat0.renderQueue","v":3000}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_Interactive.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_Interactive.mat0.RenderType","v":"Transparent"}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_Interactive.mat0.doubleSided","v":false}
@@ -1519,9 +1519,9 @@
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.name","v":"M_InteractiveCutout"}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.shader","v":"Universal Render Pipeline/Autodesk Interactive/AutodeskInteractiveMasked"}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
-{"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.renderQueue","v":2000}
+{"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.renderQueue","v":2450}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_InteractiveCutout.mat0.doubleSided","v":false}
@@ -1575,7 +1575,7 @@
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.renderQueue","v":2000}
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_LambertBare.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_LambertBare.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_LambertBare.mat0.doubleSided","v":false}
@@ -1664,7 +1664,7 @@
 {"k":"ExoticLegacy/Cube_Physical.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
 {"k":"ExoticLegacy/Cube_Physical.mat0.renderQueue","v":2000}
 {"k":"ExoticLegacy/Cube_Physical.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_Physical.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_Physical.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_Physical.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_Physical.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_Physical.mat0.doubleSided","v":false}
@@ -1753,7 +1753,7 @@
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.asset","v":"Assets/Models/ExoticLegacy.fbx"}
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.renderQueue","v":2000}
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.rawRenderQueue","v":-1}
-{"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.RenderType","v":""}
+{"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.RenderType","v":"Opaque"}
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.keywords","v":[]}
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ExoticLegacy/Cube_SimplifiedPhysical.mat0.doubleSided","v":false}
@@ -4464,7 +4464,7 @@
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.asset","v":"Assets/Models/GroupedLods.fbx"}
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.renderQueue","v":2000}
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.rawRenderQueue","v":-1}
-{"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.RenderType","v":""}
+{"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.RenderType","v":"Opaque"}
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.keywords","v":[]}
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"GroupedLods/Bundle_LOD0/Part_A.mat0.doubleSided","v":false}
@@ -4983,7 +4983,7 @@
 {"k":"Lods/Bush_LOD1.mat0.asset","v":"Assets/Models/Lods.fbx"}
 {"k":"Lods/Bush_LOD1.mat0.renderQueue","v":2000}
 {"k":"Lods/Bush_LOD1.mat0.rawRenderQueue","v":-1}
-{"k":"Lods/Bush_LOD1.mat0.RenderType","v":""}
+{"k":"Lods/Bush_LOD1.mat0.RenderType","v":"Opaque"}
 {"k":"Lods/Bush_LOD1.mat0.keywords","v":[]}
 {"k":"Lods/Bush_LOD1.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Lods/Bush_LOD1.mat0.doubleSided","v":false}
@@ -5125,7 +5125,7 @@
 {"k":"ManyLods/Gap_LOD0.mat0.asset","v":"Assets/Models/ManyLods.fbx"}
 {"k":"ManyLods/Gap_LOD0.mat0.renderQueue","v":2000}
 {"k":"ManyLods/Gap_LOD0.mat0.rawRenderQueue","v":-1}
-{"k":"ManyLods/Gap_LOD0.mat0.RenderType","v":""}
+{"k":"ManyLods/Gap_LOD0.mat0.RenderType","v":"Opaque"}
 {"k":"ManyLods/Gap_LOD0.mat0.keywords","v":[]}
 {"k":"ManyLods/Gap_LOD0.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"ManyLods/Gap_LOD0.mat0.doubleSided","v":false}
@@ -5325,7 +5325,7 @@
 {"k":"Materials/Cube_Emit.mat0.asset","v":"Assets/Models/Materials.fbx"}
 {"k":"Materials/Cube_Emit.mat0.renderQueue","v":2000}
 {"k":"Materials/Cube_Emit.mat0.rawRenderQueue","v":-1}
-{"k":"Materials/Cube_Emit.mat0.RenderType","v":""}
+{"k":"Materials/Cube_Emit.mat0.RenderType","v":"Opaque"}
 {"k":"Materials/Cube_Emit.mat0.keywords","v":["_EMISSION"]}
 {"k":"Materials/Cube_Emit.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Materials/Cube_Emit.mat0.doubleSided","v":false}
@@ -5414,7 +5414,7 @@
 {"k":"Materials/Cube_EmitTex.mat0.asset","v":"Assets/Models/Materials.fbx"}
 {"k":"Materials/Cube_EmitTex.mat0.renderQueue","v":2000}
 {"k":"Materials/Cube_EmitTex.mat0.rawRenderQueue","v":-1}
-{"k":"Materials/Cube_EmitTex.mat0.RenderType","v":""}
+{"k":"Materials/Cube_EmitTex.mat0.RenderType","v":"Opaque"}
 {"k":"Materials/Cube_EmitTex.mat0.keywords","v":["_EMISSION"]}
 {"k":"Materials/Cube_EmitTex.mat0.gi","v":"RealtimeEmissive"}
 {"k":"Materials/Cube_EmitTex.mat0.doubleSided","v":false}
@@ -5503,7 +5503,7 @@
 {"k":"Materials/Cube_Metal.mat0.asset","v":"Assets/Models/Materials.fbx"}
 {"k":"Materials/Cube_Metal.mat0.renderQueue","v":2000}
 {"k":"Materials/Cube_Metal.mat0.rawRenderQueue","v":-1}
-{"k":"Materials/Cube_Metal.mat0.RenderType","v":""}
+{"k":"Materials/Cube_Metal.mat0.RenderType","v":"Opaque"}
 {"k":"Materials/Cube_Metal.mat0.keywords","v":[]}
 {"k":"Materials/Cube_Metal.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Materials/Cube_Metal.mat0.doubleSided","v":false}
@@ -5592,7 +5592,7 @@
 {"k":"Materials/Cube_Multi.mat0.asset","v":"Assets/Models/Materials.fbx"}
 {"k":"Materials/Cube_Multi.mat0.renderQueue","v":2000}
 {"k":"Materials/Cube_Multi.mat0.rawRenderQueue","v":-1}
-{"k":"Materials/Cube_Multi.mat0.RenderType","v":""}
+{"k":"Materials/Cube_Multi.mat0.RenderType","v":"Opaque"}
 {"k":"Materials/Cube_Multi.mat0.keywords","v":[]}
 {"k":"Materials/Cube_Multi.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Materials/Cube_Multi.mat0.doubleSided","v":false}
@@ -5777,7 +5777,7 @@
 {"k":"Materials/Cube_Tex.mat0.asset","v":"Assets/Models/Materials.fbx"}
 {"k":"Materials/Cube_Tex.mat0.renderQueue","v":2000}
 {"k":"Materials/Cube_Tex.mat0.rawRenderQueue","v":-1}
-{"k":"Materials/Cube_Tex.mat0.RenderType","v":""}
+{"k":"Materials/Cube_Tex.mat0.RenderType","v":"Opaque"}
 {"k":"Materials/Cube_Tex.mat0.keywords","v":["_NORMALMAP"]}
 {"k":"Materials/Cube_Tex.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Materials/Cube_Tex.mat0.doubleSided","v":false}
@@ -5956,7 +5956,7 @@
 {"k":"MaterialsLegacy/Cube_Emit.mat0.asset","v":"Assets/Models/MaterialsLegacy.fbx"}
 {"k":"MaterialsLegacy/Cube_Emit.mat0.renderQueue","v":2000}
 {"k":"MaterialsLegacy/Cube_Emit.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsLegacy/Cube_Emit.mat0.RenderType","v":""}
+{"k":"MaterialsLegacy/Cube_Emit.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsLegacy/Cube_Emit.mat0.keywords","v":[]}
 {"k":"MaterialsLegacy/Cube_Emit.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsLegacy/Cube_Emit.mat0.doubleSided","v":false}
@@ -6134,7 +6134,7 @@
 {"k":"MaterialsLegacy/Cube_Metal.mat0.asset","v":"Assets/Models/MaterialsLegacy.fbx"}
 {"k":"MaterialsLegacy/Cube_Metal.mat0.renderQueue","v":2000}
 {"k":"MaterialsLegacy/Cube_Metal.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsLegacy/Cube_Metal.mat0.RenderType","v":""}
+{"k":"MaterialsLegacy/Cube_Metal.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsLegacy/Cube_Metal.mat0.keywords","v":[]}
 {"k":"MaterialsLegacy/Cube_Metal.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsLegacy/Cube_Metal.mat0.doubleSided","v":false}
@@ -6223,7 +6223,7 @@
 {"k":"MaterialsLegacy/Cube_Multi.mat0.asset","v":"Assets/Models/MaterialsLegacy.fbx"}
 {"k":"MaterialsLegacy/Cube_Multi.mat0.renderQueue","v":2000}
 {"k":"MaterialsLegacy/Cube_Multi.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsLegacy/Cube_Multi.mat0.RenderType","v":""}
+{"k":"MaterialsLegacy/Cube_Multi.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsLegacy/Cube_Multi.mat0.keywords","v":[]}
 {"k":"MaterialsLegacy/Cube_Multi.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsLegacy/Cube_Multi.mat0.doubleSided","v":false}
@@ -6313,7 +6313,7 @@
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.asset","v":"Assets/Models/MaterialsLegacy.fbx"}
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.renderQueue","v":2000}
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsLegacy/Cube_NoMat.mat0.RenderType","v":""}
+{"k":"MaterialsLegacy/Cube_NoMat.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.keywords","v":[]}
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsLegacy/Cube_NoMat.mat0.doubleSided","v":false}
@@ -6702,7 +6702,7 @@
 {"k":"MaterialsMoved/Cube_Emit.mat0.asset","v":"Assets/Models/Moved/MaterialsMoved.fbx"}
 {"k":"MaterialsMoved/Cube_Emit.mat0.renderQueue","v":2000}
 {"k":"MaterialsMoved/Cube_Emit.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsMoved/Cube_Emit.mat0.RenderType","v":""}
+{"k":"MaterialsMoved/Cube_Emit.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsMoved/Cube_Emit.mat0.keywords","v":["_EMISSION"]}
 {"k":"MaterialsMoved/Cube_Emit.mat0.gi","v":"RealtimeEmissive"}
 {"k":"MaterialsMoved/Cube_Emit.mat0.doubleSided","v":false}
@@ -6791,7 +6791,7 @@
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.asset","v":"Assets/Models/Moved/MaterialsMoved.fbx"}
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.renderQueue","v":2000}
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsMoved/Cube_EmitTex.mat0.RenderType","v":""}
+{"k":"MaterialsMoved/Cube_EmitTex.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.keywords","v":["_EMISSION"]}
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.gi","v":"RealtimeEmissive"}
 {"k":"MaterialsMoved/Cube_EmitTex.mat0.doubleSided","v":false}
@@ -6880,7 +6880,7 @@
 {"k":"MaterialsMoved/Cube_Metal.mat0.asset","v":"Assets/Models/Moved/MaterialsMoved.fbx"}
 {"k":"MaterialsMoved/Cube_Metal.mat0.renderQueue","v":2000}
 {"k":"MaterialsMoved/Cube_Metal.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsMoved/Cube_Metal.mat0.RenderType","v":""}
+{"k":"MaterialsMoved/Cube_Metal.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsMoved/Cube_Metal.mat0.keywords","v":[]}
 {"k":"MaterialsMoved/Cube_Metal.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsMoved/Cube_Metal.mat0.doubleSided","v":false}
@@ -6969,7 +6969,7 @@
 {"k":"MaterialsMoved/Cube_Multi.mat0.asset","v":"Assets/Models/Moved/MaterialsMoved.fbx"}
 {"k":"MaterialsMoved/Cube_Multi.mat0.renderQueue","v":2000}
 {"k":"MaterialsMoved/Cube_Multi.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsMoved/Cube_Multi.mat0.RenderType","v":""}
+{"k":"MaterialsMoved/Cube_Multi.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsMoved/Cube_Multi.mat0.keywords","v":[]}
 {"k":"MaterialsMoved/Cube_Multi.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsMoved/Cube_Multi.mat0.doubleSided","v":false}
@@ -7154,7 +7154,7 @@
 {"k":"MaterialsMoved/Cube_Tex.mat0.asset","v":"Assets/Models/Moved/MaterialsMoved.fbx"}
 {"k":"MaterialsMoved/Cube_Tex.mat0.renderQueue","v":2000}
 {"k":"MaterialsMoved/Cube_Tex.mat0.rawRenderQueue","v":-1}
-{"k":"MaterialsMoved/Cube_Tex.mat0.RenderType","v":""}
+{"k":"MaterialsMoved/Cube_Tex.mat0.RenderType","v":"Opaque"}
 {"k":"MaterialsMoved/Cube_Tex.mat0.keywords","v":["_NORMALMAP"]}
 {"k":"MaterialsMoved/Cube_Tex.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"MaterialsMoved/Cube_Tex.mat0.doubleSided","v":false}
@@ -7244,7 +7244,7 @@
 {"k":"Search/Cube_Faraway.mat0.asset","v":"Assets/Models/Search/Search.fbx"}
 {"k":"Search/Cube_Faraway.mat0.renderQueue","v":2000}
 {"k":"Search/Cube_Faraway.mat0.rawRenderQueue","v":-1}
-{"k":"Search/Cube_Faraway.mat0.RenderType","v":""}
+{"k":"Search/Cube_Faraway.mat0.RenderType","v":"Opaque"}
 {"k":"Search/Cube_Faraway.mat0.keywords","v":[]}
 {"k":"Search/Cube_Faraway.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Search/Cube_Faraway.mat0.doubleSided","v":false}
@@ -7333,7 +7333,7 @@
 {"k":"Search/Cube_Local.mat0.asset","v":"Assets/Models/Search/Search.fbx"}
 {"k":"Search/Cube_Local.mat0.renderQueue","v":2000}
 {"k":"Search/Cube_Local.mat0.rawRenderQueue","v":-1}
-{"k":"Search/Cube_Local.mat0.RenderType","v":""}
+{"k":"Search/Cube_Local.mat0.RenderType","v":"Opaque"}
 {"k":"Search/Cube_Local.mat0.keywords","v":[]}
 {"k":"Search/Cube_Local.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Search/Cube_Local.mat0.doubleSided","v":false}
@@ -7422,7 +7422,7 @@
 {"k":"Search/Cube_Twin.mat0.asset","v":"Assets/Models/Search/Search.fbx"}
 {"k":"Search/Cube_Twin.mat0.renderQueue","v":2000}
 {"k":"Search/Cube_Twin.mat0.rawRenderQueue","v":-1}
-{"k":"Search/Cube_Twin.mat0.RenderType","v":""}
+{"k":"Search/Cube_Twin.mat0.RenderType","v":"Opaque"}
 {"k":"Search/Cube_Twin.mat0.keywords","v":[]}
 {"k":"Search/Cube_Twin.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Search/Cube_Twin.mat0.doubleSided","v":false}
@@ -7511,7 +7511,7 @@
 {"k":"Search/Cube_Up.mat0.asset","v":"Assets/Models/Search/Search.fbx"}
 {"k":"Search/Cube_Up.mat0.renderQueue","v":2000}
 {"k":"Search/Cube_Up.mat0.rawRenderQueue","v":-1}
-{"k":"Search/Cube_Up.mat0.RenderType","v":""}
+{"k":"Search/Cube_Up.mat0.RenderType","v":"Opaque"}
 {"k":"Search/Cube_Up.mat0.keywords","v":[]}
 {"k":"Search/Cube_Up.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Search/Cube_Up.mat0.doubleSided","v":false}
@@ -7604,7 +7604,7 @@
 {"k":"Skinned/Skinned.mat0.asset","v":"Assets/Models/Skinned.fbx"}
 {"k":"Skinned/Skinned.mat0.renderQueue","v":2000}
 {"k":"Skinned/Skinned.mat0.rawRenderQueue","v":-1}
-{"k":"Skinned/Skinned.mat0.RenderType","v":""}
+{"k":"Skinned/Skinned.mat0.RenderType","v":"Opaque"}
 {"k":"Skinned/Skinned.mat0.keywords","v":[]}
 {"k":"Skinned/Skinned.mat0.gi","v":"EmissiveIsBlack"}
 {"k":"Skinned/Skinned.mat0.doubleSided","v":false}
