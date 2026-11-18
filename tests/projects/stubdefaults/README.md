@@ -25,9 +25,10 @@ python3 tests/projects/stubdefaults/run.py check                    # the land g
 `check` runs the engine (`UNBOUND_CLI`, else `$UNBOUND`, else `target/release/unbound`) and
 compares the run with the reference. `check_tooling.py` also runs the generator unit tests and
 checks doctor twice against uninstantiated message-control scripts, including warm-cache analysis.
-Every control declares a message Unbound now sends (OnStateIK, OnChildRectTransformDimensionsChange,
-OnParticleUpdateJobScheduled, directly and below a user-defined MonoBehaviour base), so doctor must
-report none of them. Reporting an unsent message with its declaration and source line, once for an
+Doctor must report none of the controls: each listed-message control declares a message Unbound now
+sends (OnStateIK, OnChildRectTransformDimensionsChange, OnParticleUpdateJobScheduled, directly and
+below a user-defined MonoBehaviour base); the others declare another host class's message name or
+are not scripts. Reporting an unsent message with its declaration and source line, once for an
 inherited declaration, is covered by `Unbound.ApiTools.Tests`' MessageCoverageTests.
 Both commands are declared in `gate.json`. Run output goes to
 `$XDG_CACHE_HOME/unbound/validation/runs/stubdefaults/runs/<label>/`.

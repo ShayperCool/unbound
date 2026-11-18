@@ -27,11 +27,12 @@ def main():
         if result.returncode:
             return result.returncode
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
-    # Every control declares a message Unbound sends, so doctor must report none of them:
-    # StateMachineBehaviour.OnStateIK is sent since the animation update runs IK passes
-    # (tests/projects/animcallbacks), the child-dimension declaration is a supported-message
-    # control (rectmessages), and OnParticleUpdateJobScheduled goes to every script of a system
-    # its update steps (tests/projects/particlejobs), inherited declarations included.
+    # Doctor must report none of the controls. Each listed-message control declares a message
+    # Unbound sends: StateMachineBehaviour.OnStateIK since the animation update runs IK passes
+    # (tests/projects/animcallbacks), the child-dimension declaration (rectmessages), and
+    # OnParticleUpdateJobScheduled, which goes to every script of a system its update steps
+    # (tests/projects/particlejobs) and is found through the ordinary base-class message lookup.
+    # The others declare a name of another host class or are not scripts.
     # Reporting, source locations and inherited declarations of an unsent message are covered by
     # Unbound.ApiTools.Tests' MessageCoverageTests with an injected rule list.
     expected = set()
