@@ -235,6 +235,7 @@ public class UitkProbe : MonoBehaviour
             FrontFaces(rows);
             LenientNames(rows);
             PackedTargets(rows);
+            DepthTargetReads(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -766,6 +767,64 @@ public class UitkProbe : MonoBehaviour
             DestroyImmediate(packed);
         }
         DestroyImmediate(fill); DestroyImmediate(read); DestroyImmediate(readback); DestroyImmediate(target);
+    }
+
+    /// <summary>Recorded last: a depth-only target (0.25, 0.75 drawn) that no draw has sampled,
+    /// read first by a kernel as four floats per texel (`DepthReads.kernel.first.t0/t1`) and
+    /// through an integer slot (`DepthReads.uint.first.high/.low`: the 16-bit halves of its four
+    /// words), then sampled by a draw as floats
+    /// (`DepthReads.float`), then read by both again (`.after`).</summary>
+    static void DepthTargetReads(StringBuilder rows)
+    {
+#if UNITY_EDITOR
+        var shader = UnityEditor.AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/Shaders/DepthReadsCompute.compute");
+#else
+        ComputeShader shader = null;
+#endif
+        if (shader == null)
+        {
+            rows.Append("{\"k\":\"DepthReads\",\"v\":\"missing\"}\n");
+            return;
+        }
+        var depth = new RenderTexture(2, 1, 24, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
+        depth.filterMode = FilterMode.Point;
+        depth.Create();
+        var only = new Material(Shader.Find("Probe/SamplerStates/DepthOnly"));
+        Graphics.Blit(Texture2D.whiteTexture, depth, only);
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create();
+        var readback = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var output = new ComputeBuffer(2, 16);
+        var data = new Vector4[2];
+        int kernel = shader.FindKernel("Channels");
+        void Kernel(string key)
+        {
+            output.SetData(new[] { -Vector4.one, -Vector4.one });
+            shader.SetTexture(kernel, "_Depth", depth);
+            shader.SetBuffer(kernel, "_Out", output);
+            shader.Dispatch(kernel, 1, 1, 1);
+            output.GetData(data);
+            for (int t = 0; t < 2; t++) Row(rows, key + ".t" + t, new Color(data[t].x, data[t].y, data[t].z, data[t].w));
+        }
+        void Draw(string key, string program, float high = 1)
+        {
+            var material = new Material(Shader.Find(program));
+            material.SetTexture("_Shadow", depth);
+            material.SetFloat("_High", high);
+            Graphics.Blit(Texture2D.whiteTexture, target, material);
+            Row(rows, key, Read(target, readback));
+            DestroyImmediate(material);
+        }
+        Kernel("DepthReads.kernel.first");
+        Draw("DepthReads.uint.first.high", "Probe/SamplerStates/DepthUint");
+        Draw("DepthReads.uint.first.low", "Probe/SamplerStates/DepthUint", 0);
+        Draw("DepthReads.float", "Probe/SamplerStates/DepthChannels");
+        Kernel("DepthReads.kernel.after");
+        Draw("DepthReads.uint.after.high", "Probe/SamplerStates/DepthUint");
+        Draw("DepthReads.uint.after.low", "Probe/SamplerStates/DepthUint", 0);
+        output.Release();
+        DestroyImmediate(only); DestroyImmediate(readback);
+        target.Release(); DestroyImmediate(target);
+        depth.Release(); DestroyImmediate(depth);
     }
 
     static Color Read(RenderTexture texture, Texture2D readback)
