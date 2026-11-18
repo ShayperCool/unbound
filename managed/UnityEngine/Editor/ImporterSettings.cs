@@ -190,19 +190,24 @@ namespace UnityEditor
                 Debug.LogWarning($"Unbound: {assetPath}'s .meta has no DefaultTexturePlatform settings; {path.Substring(Default.Length)} set by a script is not kept");
         }
 
-        /// <summary>Setting a type sets what the type implies, as
+        /// <summary>Changing the type sets what the type implies, as
         /// <see cref="TextureImporterSettings.ApplyTextureType"/> does (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/assetpostprocessors Sprite.png: a Sprite type turns mip maps,
-        /// non-power-of-two scaling and repeating off and alpha is transparency on).</summary>
+        /// Editor, tests/projects/assetpostprocessors Sprite.png: a Default texture made a Sprite turns
+        /// mip maps, non-power-of-two scaling and repeating off and alpha is transparency on). The
+        /// sprite mode stays (a Sprite type without one gets Single), and setting the type a texture
+        /// has changes nothing (both unmeasured).</summary>
         public TextureImporterType textureType
         {
             get { CheckImporterState("get_textureType"); return (TextureImporterType)I("textureType"); }
             set
             {
                 CheckImporterState("set_textureType");
+                if (value == (TextureImporterType)I("textureType")) return;
+                int spriteMode = I("spriteMode");
                 var settings = new TextureImporterSettings();
                 ReadTextureSettings(settings);
                 settings.ApplyTextureType(value);
+                settings.spriteMode = value == TextureImporterType.Sprite && spriteMode == 0 ? (int)SpriteImportMode.Single : spriteMode;
                 SetTextureSettings(settings);
             }
         }
@@ -282,7 +287,7 @@ namespace UnityEditor
 
         public bool mipmapEnabled
         {
-            get { CheckImporterState("get_mipmapEnabled"); return B("mipmaps.enableMipMap"); }
+            get { CheckImporterState("get_mipmapEnabled"); return MetaSettings.Bool(m_Settings, "mipmaps.enableMipMap", true); }
             set { CheckImporterState("set_mipmapEnabled"); SetB("mipmaps.enableMipMap", value); }
         }
 
@@ -294,7 +299,7 @@ namespace UnityEditor
 
         public bool sRGBTexture
         {
-            get { CheckImporterState("get_sRGBTexture"); return B("mipmaps.sRGBTexture"); }
+            get { CheckImporterState("get_sRGBTexture"); return MetaSettings.Bool(m_Settings, "mipmaps.sRGBTexture", true); }
             set { CheckImporterState("set_sRGBTexture"); SetB("mipmaps.sRGBTexture", value); }
         }
 
@@ -353,10 +358,22 @@ namespace UnityEditor
             foreach (var (path, read, _) in s_SettingsFields) read(dest, m_Settings, path);
         }
 
+        /// <summary>Writes the settings that differ from the importer's own (a sparse .meta keeps
+        /// the keys it leaves out).</summary>
         public void SetTextureSettings(TextureImporterSettings src)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
-            foreach (var (path, _, write) in s_SettingsFields) write(src, m_Settings, path);
+            var current = new TextureImporterSettings();
+            ReadTextureSettings(current);
+            var before = new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() };
+            var after = new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() };
+            foreach (var (path, _, write) in s_SettingsFields)
+            {
+                write(current, before, path);
+                write(src, after, path);
+                if (MetaSettings.Find(before, path)?.AsString() != MetaSettings.Find(after, path)?.AsString())
+                    write(src, m_Settings, path);
+            }
             Changed();
         }
 

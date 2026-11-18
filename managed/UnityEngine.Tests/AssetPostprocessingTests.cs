@@ -62,9 +62,41 @@ namespace UnityEngine.Tests
             Assert.Equal(TextureImporterNPOTScale.None, importer.npotScale);
             Assert.Equal(TextureWrapMode.Clamp, importer.wrapMode);
             Assert.True(importer.alphaIsTransparency);
-            // Settings the type does not imply are kept.
+            // Settings the type does not imply are kept; a sprite without a mode gets Single.
             Assert.Equal(FilterMode.Bilinear, importer.filterMode);
             Assert.Equal(100, importer.spritePixelsPerUnit);
+            Assert.Equal(SpriteImportMode.Single, importer.spriteImportMode);
+        }
+
+        [Fact]
+        public void SettingTheTypeATextureHasChangesNothing()
+        {
+            // A Unity-written sprite: a preprocessor that sets the Sprite type again keeps its mode,
+            // its mip maps and the file's import.
+            var importer = (TextureImporter)AssetImporter.FromMeta("Assets/S.png", "4123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody(TextureMeta.Replace("  spriteMode: 0\n", "  spriteMode: 1\n").Replace("  textureType: 0\n", "  textureType: 8\n")));
+            var before = MetaSettings.ToJson(importer.m_Settings);
+            importer.textureType = TextureImporterType.Sprite;
+            Assert.Equal(before, MetaSettings.ToJson(importer.m_Settings));
+            Assert.True(importer.mipmapEnabled);
+            Assert.Equal(SpriteImportMode.Single, importer.spriteImportMode);
+        }
+
+        [Fact]
+        public void SetTextureSettingsWritesOnlyWhatChangedIntoASparseMeta()
+        {
+            var importer = (TextureImporter)AssetImporter.FromMeta("Assets/P.png", "5123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  textureType: 0\n  userData: \n"));
+            // Missing keys answer the importer's defaults.
+            Assert.True(importer.mipmapEnabled);
+            Assert.True(importer.sRGBTexture);
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.filterMode = FilterMode.Trilinear;
+            importer.SetTextureSettings(settings);
+            Assert.Equal(2, MetaSettings.Int(importer.m_Settings, "textureSettings.filterMode"));
+            Assert.Null(MetaSettings.Find(importer.m_Settings, "mipmaps.sRGBTexture"));
+            Assert.Null(MetaSettings.Find(importer.m_Settings, "nPOTScale"));
         }
 
         [Fact]

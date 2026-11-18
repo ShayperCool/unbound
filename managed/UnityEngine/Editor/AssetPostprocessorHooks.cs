@@ -11,7 +11,7 @@ namespace Unbound.Runtime
     {
         /// <summary>The postprocessor types (<paramref name="first"/>, then the game's assemblies')
         /// declaring the instance method <paramref name="name"/> with these parameters, by
-        /// increasing <c>GetPostprocessOrder</c> (ties by type name). Unbound's stand-ins for
+        /// increasing <c>GetPostprocessOrder</c> (ties by class name). Unbound's stand-ins for
         /// Editor classes it does not implement are left out; a postprocessor that cannot be made
         /// is logged and left out.</summary>
         internal static List<(int Order, Type Type, MethodInfo Method)> Find(string name, Type[] parameters, params Type[] first)
@@ -42,7 +42,9 @@ namespace Unbound.Runtime
                 foreach (var type in types)
                     if (Array.IndexOf(first, type) < 0) Consider(type);
             }
+            // Ties by class name (tests/projects/assetpostprocessors), then by full name.
             found.Sort((a, b) => a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1)
+                : string.CompareOrdinal(a.Item2.Name, b.Item2.Name) != 0 ? string.CompareOrdinal(a.Item2.Name, b.Item2.Name)
                 : string.CompareOrdinal(a.Item2.FullName, b.Item2.FullName));
             return found;
         }

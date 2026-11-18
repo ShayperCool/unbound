@@ -29,15 +29,16 @@ namespace UnityEditor
 
         /// <summary>The callbacks Unbound does not run yet (<see cref="ScriptMessages.NotSent"/>,
         /// which <c>unbound doctor</c> lists too): model postprocessors (Unbound's model prefabs, which
-        /// scenes expand natively, run no managed postprocessor), OnPostprocessPrefab and the 2D array
-        /// and 3D texture postprocessors. Each postprocessor declaring one is reported once as the
+        /// scenes expand natively, run no managed postprocessor), OnPostprocessPrefab, the 2D array
+        /// and 3D texture postprocessors, the SpeedTree 7/8 ones and asset bundle name changes. Each postprocessor declaring one is reported once as the
         /// editor domain loads.</summary>
         internal static readonly string[] Unsupported =
         {
             "OnPostprocessMeshHierarchy", "OnAssignMaterialModel", "OnPostprocessMaterial", "OnPostprocessAnimation",
             "OnPostprocessModel", "OnPostprocessGameObjectWithUserProperties", "OnPostprocessGameObjectWithAnimatedUserProperties",
             "OnPreprocessCameraDescription", "OnPreprocessLightDescription", "OnPostprocessPrefab",
-            "OnPostprocessTexture2DArray", "OnPostprocessTexture3D",
+            "OnPostprocessTexture2DArray", "OnPostprocessTexture3D", "OnPreprocessSpeedTree", "OnPostprocessSpeedTree",
+            "OnPostprocessAssetbundleNameChanged",
         };
 
         static void ReportUnsupported()
@@ -244,6 +245,12 @@ namespace UnityEditor
         internal static void Preprocess(string path, string kind)
         {
             var importer = AssetImporter.GetAtPath(path);
+            // What scripts changed before (without SaveAndReimport) is not the preprocessors'.
+            if (importer != null && importer.m_SettingsChanged)
+            {
+                importer.m_SettingsChanged = false;
+                importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
+            }
             var context = new AssetImportContext(path);
             AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), path, context, Array.Empty<object>(), importer);
             switch (kind)
@@ -268,8 +275,15 @@ namespace UnityEditor
             var guid = AssetDatabase.AssetPathToGUID(path);
             if (AssetDatabaseRuntime.IsMainLoaded(guid))
                 Debug.LogWarning($"Unbound: {path} loaded before its preprocessors ran; it keeps the import of its .meta's settings for this session");
-            Native.Call("import-settings", "{\"guid\":" + JsonSerializer.Serialize(guid) + ",\"importer\":" + JsonSerializer.Serialize(importer.m_SettingsType)
-                + ",\"settings\":" + settings + "}");
+            try
+            {
+                Native.Call("import-settings", "{\"guid\":" + JsonSerializer.Serialize(guid) + ",\"importer\":" + JsonSerializer.Serialize(importer.m_SettingsType)
+                    + ",\"settings\":" + settings + "}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: {path} imports with its .meta's settings: the settings its preprocessors set were refused ({e.Message})");
+            }
         }
 
         // ------------------------------------------------------------------ postprocessing at load

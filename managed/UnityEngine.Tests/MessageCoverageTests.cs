@@ -313,6 +313,9 @@ namespace UnityEngine.Tests
             (AssetPostprocessorPage, "OnPostprocessPrefab", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPostprocessTexture2DArray", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPostprocessTexture3D", Delivery.NotSent),
+            (AssetPostprocessorPage, "OnPreprocessSpeedTree", Delivery.NotSent),
+            (AssetPostprocessorPage, "OnPostprocessSpeedTree", Delivery.NotSent),
+            (AssetPostprocessorPage, "OnPostprocessAssetbundleNameChanged", Delivery.NotSent),
             (MonoBehaviourPage, "Awake", Delivery.Sent),
             (MonoBehaviourPage, "FixedUpdate", Delivery.Sent),
             (MonoBehaviourPage, "LateUpdate", Delivery.Sent),
@@ -408,7 +411,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void NotSentListMatchesTheClassification()
         {
-            Assert.Equal(86, s_Documented.Length);
+            Assert.Equal(89, s_Documented.Length);
             Assert.Equal(s_Documented.Length, s_Documented.Select(d => (d.Page, d.Name)).Distinct().Count());
             Assert.Equal(70, s_Documented.Count(d => d.Class == Delivery.Sent));
             Assert.Equal(4, s_Documented.Count(d => d.Class == Delivery.EditorAbsent));

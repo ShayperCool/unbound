@@ -145,9 +145,9 @@ namespace Unbound.Runtime
         /// Reset is not listed because it is only called in Edit mode. Gizmo callbacks require
         /// a Scene or Game view repaint with gizmos enabled (renderapi). Game-view callbacks run
         /// only when that view enables gizmos. Interface callbacks
-        /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
-        /// <summary>Unity messages Unbound does not send yet: the AssetPostprocessor callbacks
-        /// <see cref="UnityEditor.AssetPostprocessing.Unsupported"/> names.</summary>
+        /// (ISerializationCallbackReceiver, ...) are not messages and are never listed. The listed
+        /// ones are the AssetPostprocessor callbacks <see cref="UnityEditor.AssetPostprocessing.Unsupported"/>
+        /// names.</summary>
         static readonly (Type Host, string Name)[] s_NotSent =
             Array.ConvertAll(UnityEditor.AssetPostprocessing.Unsupported, name => (typeof(UnityEditor.AssetPostprocessor), name));
 
