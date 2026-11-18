@@ -106,7 +106,27 @@ namespace Unbound.Runtime
             }
             m.ExecutionOrder = OrderOf(type);
             WarnNotSent(type);
+            RejectParameters(type, "OnParticleUpdateJobScheduled");
             return m;
+        }
+
+        /// <summary>A message Unity sends without arguments, declared by the script only with
+        /// parameters (as UniTask's job trigger declares OnParticleUpdateJobScheduled), is ignored
+        /// with a script error, once per script class (6000.0.71f1, tests/projects/particlejobs
+        /// messages.parameter, logs).</summary>
+        static void RejectParameters(Type type, string name)
+        {
+            if (Find(type, name, Type.EmptyTypes) != null) return;
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Behaviour); t = t.BaseType)
+            {
+                foreach (var method in t.GetMethods(flags))
+                {
+                    if (method.Name != name || method.GetParameters().Length == 0) continue;
+                    Debug.LogError("Script error: " + name + "\nThe message may not have any parameters.\nThe message will be ignored.");
+                    return;
+                }
+            }
         }
 
         /// <summary>Unity 6000.0 script messages Unbound does not send yet, each with the engine
@@ -116,10 +136,7 @@ namespace Unbound.Runtime
         /// a Scene or Game view repaint with gizmos enabled (renderapi). Game-view callbacks run
         /// only when that view enables gizmos. Interface callbacks
         /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
-        static readonly (Type Host, string Name)[] s_NotSent =
-        {
-            (typeof(MonoBehaviour), "OnParticleUpdateJobScheduled"),
-        };
+        static readonly (Type Host, string Name)[] s_NotSent = Array.Empty<(Type, string)>();
 
         internal static System.Collections.Generic.IReadOnlyList<(Type Host, string Name)> NotSent => s_NotSent;
 

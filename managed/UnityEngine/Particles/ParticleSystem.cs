@@ -59,12 +59,15 @@ namespace UnityEngine
         // ------------------------------------------------------------------ state
 
         /// <summary>This system, after the frame's particle update completed: what a script
-        /// reads or changes first waits for that (see <see cref="ParticleSystemManager.Sync"/>).</summary>
+        /// reads or changes first waits for that (see <see cref="ParticleSystemManager.Sync"/>),
+        /// and sees what its particle jobs wrote once they have run, not waiting for jobs that have
+        /// not (6000.0.71f1, tests/projects/particlejobs sync.*).</summary>
         ParticleSystem Completed
         {
             get
             {
                 ParticleSystemManager.Sync();
+                if (m_JobsPending && Unbound.Runtime.Jobs.JobSystem.HasRun(m_ManagedJobHandle)) CompleteManagedJobs();
                 return this;
             }
         }
@@ -500,6 +503,7 @@ namespace UnityEngine
                         else ps.Advance(total, ps.m_FrameDistance, false);
                     }
                     ps.m_IsPaused = true;
+                    ps.m_SteppedBySimulate = true;
                 }
             }
             finally
@@ -510,6 +514,15 @@ namespace UnityEngine
                     ps.m_BirthDelayClock = false;
                 }
             }
+            // Each system the call stepped gets its job message, in the call's system order; their
+            // jobs finish before the call returns.
+            foreach (var ps in systems)
+            {
+                if (!ps.m_SteppedBySimulate) continue;
+                ps.m_SteppedBySimulate = false;
+                ParticleSystemManager.SendJobMessage(ps);
+            }
+            ParticleSystemManager.CompleteJobs();
         }
 
         // Measured Simulate histories: Birth children advance their existing particles
@@ -954,7 +967,7 @@ namespace UnityEngine
             customData.Clear();
             int stream = (int)streamIndex;
             var data = m_Custom[stream];
-            var mode = m_CustomData.enabled ? m_CustomData.modes[stream] : ParticleSystemCustomDataMode.Disabled;
+            var mode = CustomModeOf(stream);
             for (int i = 0; i < m_Count; i++)
             {
                 var value = data != null && i < data.Length ? data[i] : Vector4.zero;
@@ -970,9 +983,14 @@ namespace UnityEngine
         {
             var data = m_Custom[stream];
             var stored = data != null && index < data.Length ? data[index] : Vector4.zero;
-            var mode = m_CustomData.enabled ? m_CustomData.modes[stream] : ParticleSystemCustomDataMode.Disabled;
+            var mode = CustomModeOf(stream);
             return mode == ParticleSystemCustomDataMode.Disabled ? stored : CustomDataOf(ref p, stream, mode, stored);
         }
+
+        /// <summary>The module's mode for a stream; Disabled while a particle job's writes hold the stream.</summary>
+        ParticleSystemCustomDataMode CustomModeOf(int stream) =>
+            !m_CustomData.enabled || (m_JobBuffers != null && m_JobBuffers.HoldsCustom(stream, m_CustomRun))
+                ? ParticleSystemCustomDataMode.Disabled : m_CustomData.modes[stream];
 
         Vector4 CustomDataOf(ref Particle p, int stream, ParticleSystemCustomDataMode mode, Vector4 stored)
         {
@@ -1145,6 +1163,9 @@ namespace UnityEngine
         void PlaySelf()
         {
             m_StopPending = false;
+            // Played again: the stop no longer earns the frame's job message (a system stopped,
+            // played and paused in one frame gets none: tests/projects/particlejobs messages.Paused).
+            m_StoppedThisFrame = false;
             // Any Play drops the time a PauseAndCatchup system missed while culled before it
             // (6000.0.71f1, tests/projects/particlerender cull/catchup_loop and catchup_replay).
             m_CullingMissed = 0f;
@@ -1378,21 +1399,22 @@ namespace UnityEngine
         {
             m_StartedByParent = false;
             m_StopEmitting = true;
+            bool wasPlaying = m_IsPlaying;
             if (behavior == ParticleSystemStopBehavior.StopEmittingAndClear)
             {
-                bool wasPlaying = m_IsPlaying;
                 ClearParticles();
                 m_IsPlaying = false;
                 m_IsPaused = false;
                 m_CullingMissed = 0f;
                 if (wasPlaying) OnStopped();
-                return;
             }
-            if (m_Count == 0)
+            else if (m_Count == 0)
             {
                 m_IsPlaying = false;
                 m_IsPaused = false;
             }
+            // The frame's update still counts a system that played until now (its job message).
+            if (wasPlaying && !m_IsPlaying) m_StoppedThisFrame = true;
         }
 
         /// <summary>The system stopped playing (emission over and no particle left): the stop action.</summary>
@@ -1461,6 +1483,7 @@ namespace UnityEngine
         internal override void OnEngineDisable()
         {
             DestroyModuleLights();
+            DisposeManagedJobs();
             if (!m_Registered) return;
             m_Registered = false;
             ParticleSystemManager.Remove(this);
@@ -1587,7 +1610,9 @@ namespace UnityEngine
             {
                 float catchUp = mode == ParticleSystemCullingMode.PauseAndCatchup && m_TotalTime == m_CullingMissedFrom ? m_CullingMissed : 0f;
                 // Missed time a frame cannot simulate yet (a zero time scale) waits for the next.
-                if (FrameUpdate(catchUp) || catchUp == 0f) m_CullingMissed = 0f;
+                bool stepped = FrameUpdate(catchUp);
+                m_SteppedThisFrame = stepped;
+                if (stepped || catchUp == 0f) m_CullingMissed = 0f;
                 // The second update of a playback simulates offscreen too, and its time is caught
                 // up again once the system is seen (6000.0.71f1, particlerender cull/catchup_*: the
                 // first visible update steps the culled frames and that one).
@@ -1655,7 +1680,7 @@ namespace UnityEngine
         /// belongs to another object.</summary>
         ParticleSystemRenderer m_CullingRenderer;
 
-        ParticleSystemRenderer CullingRenderer
+        internal ParticleSystemRenderer CullingRenderer
         {
             get
             {
@@ -1687,7 +1712,7 @@ namespace UnityEngine
                 if (m_Custom[s] != null) Array.Resize(ref m_Custom[s], size);
         }
 
-        Vector4[] EnsureCustom(int stream)
+        internal Vector4[] EnsureCustom(int stream)
         {
             if (m_Custom[stream] == null || m_Custom[stream].Length < m_Particles.Length)
                 Array.Resize(ref m_Custom[stream], Math.Max(m_Particles.Length, 16));
@@ -1795,6 +1820,7 @@ namespace Unbound.Runtime
         internal static void UpdateAll()
         {
             // A loop without the end-of-update system completes the previous frame here.
+            CompleteJobs();
             CompleteUpdate();
             StopIdleSubEmitters();
             int n = s_Systems.Count;
@@ -1822,6 +1848,14 @@ namespace Unbound.Runtime
                 catch (Exception e) { Debug.LogException(e, ps); }
                 s_Updated.Add(ps);
             }
+            for (int i = 0; i < n; i++)
+            {
+                var ps = s_Snapshot[i];
+                if (ps == null || !(ps.m_SteppedThisFrame || ps.m_StoppedThisFrame)) continue;
+                ps.m_SteppedThisFrame = false;
+                ps.m_StoppedThisFrame = false;
+                if (ps.m_Registered) SendJobMessage(ps);
+            }
             Array.Clear(s_Snapshot, 0, n);
             s_CompletionPending = true;
         }
@@ -1830,6 +1864,7 @@ namespace Unbound.Runtime
         /// and the sub-emitters their parents started without giving them particles stop.</summary>
         internal static void EndUpdateAll()
         {
+            CompleteJobs();
             CompleteUpdate();
             StopIdleSubEmitters();
         }
@@ -1900,6 +1935,45 @@ namespace Unbound.Runtime
 
         static bool s_Deferring;
         static readonly List<ParticleSystem> s_Stopped = new List<ParticleSystem>();
+
+        /// <summary>The systems with particle jobs scheduled since their update.</summary>
+        static readonly List<ParticleSystem> s_JobSystems = new List<ParticleSystem>();
+        static int s_JobMessageDepth;
+
+        /// <summary>Particle jobs may be scheduled: an OnParticleUpdateJobScheduled message runs
+        /// (on any system, measured for a system other than the message's).</summary>
+        internal static bool SendingJobMessages => s_JobMessageDepth > 0;
+
+        internal static void NoteJobs(ParticleSystem ps) => s_JobSystems.Add(ps);
+
+        /// <summary>OnParticleUpdateJobScheduled to every script of a system that its update or a
+        /// Simulate call stepped, or that a script stopped since the last update, disabled scripts
+        /// included, in component order; a paused system, a stopped one after its stopping frame and
+        /// one that never played get none (6000.0.71f1, tests/projects/particlejobs messages.*,
+        /// messagePhases.*).</summary>
+        internal static void SendJobMessage(ParticleSystem ps)
+        {
+            if (ps.m_GameObject == null || ps.m_Destroyed) return;
+            s_JobMessageDepth++;
+            try { Messaging.SendFast(ps.m_GameObject, JobMessage); }
+            finally { s_JobMessageDepth--; }
+        }
+
+        internal const string JobMessage = "OnParticleUpdateJobScheduled";
+
+        /// <summary>The particle jobs finish and their writes reach the particles: when the frame's
+        /// particle update ends, before its messages, and when a Simulate call ends (Unbound's
+        /// choice, unmeasured).</summary>
+        internal static void CompleteJobs()
+        {
+            for (int i = 0; i < s_JobSystems.Count; i++)
+            {
+                var ps = s_JobSystems[i];
+                try { ps.CompleteManagedJobs(); }
+                catch (Exception e) { Debug.LogException(e, ps); }
+            }
+            s_JobSystems.Clear();
+        }
 
         /// <summary>Whether the frame's particle update is running (Simulate and script calls are
         /// outside it).</summary>
