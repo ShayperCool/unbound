@@ -745,9 +745,12 @@ namespace Unbound.Runtime
         /// <see cref="ReleaseFamily.Unmeasured"/>.</summary>
         internal static string MeasuredRelease(ReleaseFamily family) => family switch
         {
-            ReleaseFamily.Unity6000_0 => "6000.0.71f1",
+            ReleaseFamily.Unity6000_0 => Measured6000_0,
             _ => null,
         };
+
+        /// <summary>The release the 6000.0 family's answers were measured on.</summary>
+        internal const string Measured6000_0 = "6000.0.71f1";
 
         /// <summary>Names the measured families in messages of the paths other families lack.</summary>
         internal const string MeasuredFamilies = "the Unity 6000.0 release family (measured on 6000.0.71f1)";

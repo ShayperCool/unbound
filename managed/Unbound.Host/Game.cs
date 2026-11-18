@@ -356,6 +356,8 @@ public static unsafe class Game
             p.Name, p.Version, (UnityEditor.PackageManager.PackageSource)p.Source, p.ResolvedPath, p.DisplayName,
             p.Description, p.Category, p.Type, p.Keywords.ToArray(), p.IsDirectDependency)));
         ProjectInfo.AssetsPath = System.IO.Path.Combine(c.ProjectPath, "Assets");
+        if (string.IsNullOrEmpty(c.UnityVersion))
+            throw new InvalidOperationException("the host named no Unity release for the project");
         ProjectInfo.UnityVersion = c.UnityVersion;
         Unbound.Runtime.GraphicsDeviceProfile.Select(c.GraphicsDevice);
         ProjectInfo.Features.Clear();

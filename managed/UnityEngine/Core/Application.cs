@@ -303,7 +303,10 @@ namespace UnityEngine
     /// <summary>Facts about the project being played, set by the host at start.</summary>
     internal static class ProjectInfo
     {
-        internal static string UnityVersion = "6000.0.0f1";
+        /// <summary>The project's release (its ProjectSettings/ProjectVersion.txt), which the host
+        /// always sets: Unbound opens no project without one. Until then, in the tools that run
+        /// without a game, the release the 6000.0 family's answers were measured on.</summary>
+        internal static string UnityVersion = Unbound.Runtime.Compat.Measured6000_0;
         /// <summary>The compatibility profile's behaviour switches this release has (unbound-compat's
         /// Feature names); empty when the host did not say, as in unit tests.</summary>
         internal static readonly HashSet<string> Features = new HashSet<string>(StringComparer.Ordinal);
