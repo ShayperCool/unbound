@@ -406,7 +406,11 @@ def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=Fa
             pending_sheriff = (reference.name == 'runtime' and reference.parent.parent.name == 'suite'
                                and reference.parent.name.startswith('sheriff-') and not record.get('explicit_release'))
             if (record.get('release_requested') and not pending_sheriff and not record.get('retained')
-                    and not live and record['snapshot'] not in protected):
+                    and not live and record['snapshot'] not in held):
+        # A released reference goes unless a live process or a baseline holds its snapshot: what
+        # the loop below adds for kept references protects snapshots, not other released links
+        # (else whether a link goes depends on the order the references are listed in).
+        held = set(protected)
                 if reference.is_symlink() and reference.resolve() == (cache/'snapshots'/record['snapshot']).resolve():
                     if not discard(reference):
                         protected.add(record['snapshot'])
