@@ -283,9 +283,10 @@ namespace UnityEngine.Tests
         static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
 
         /// <summary>The built-in renderer draws a setting's effect with the setting's shader
-        /// whatever the mode, keeps the last one through SetCustomShader(null), has none while the
-        /// setting never had one, and falls back to Unity's own for a setting the project does not
-        /// list (tests/projects/builtinfx settings.*).</summary>
+        /// whatever the mode and keeps the last one through SetCustomShader(null); a listed
+        /// depth-normals or motion vector setting that never had a shader has none (measured,
+        /// tests/projects/builtinfx settings.*), the other listed ones Unity's own with a warning,
+        /// and a setting the project does not list Unity's own quietly.</summary>
         [Fact]
         public void TheRendererDrawsWithTheSettingsShaderAndKeepsTheLastOne()
         {
@@ -319,12 +320,17 @@ namespace UnityEngine.Tests
                 var second = GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref cached);
                 Assert.Same(other, second.shader);
                 Assert.NotSame(first, second);
-                // Control: a setting the project does not list draws with Unity's own shader, quietly.
+                // Control: a setting the project does not list draws with Unity's own shader, quietly,
+                // depth-normals too (projects without graphics settings list none).
+                Assert.NotNull(Shader.Find("Hidden/Internal-DepthNormalsTexture"));
                 using (var logs = new RecordedLogs())
                 {
                     Assert.Same(Shader.Find("Hidden/Internal-DeferredReflections"), GraphicsSettings.RendererShader(BuiltinShaderType.DeferredReflections));
+                    Assert.Same(Shader.Find("Hidden/Internal-DepthNormalsTexture"), GraphicsSettings.RendererShader(BuiltinShaderType.DepthNormals));
                     Assert.Empty(logs.Logged);
                 }
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+                Assert.Same(Shader.Find("Hidden/Internal-MotionVectors"), GraphicsSettings.RendererShader(BuiltinShaderType.MotionVectors));
             }
             finally
             {

@@ -659,8 +659,10 @@ namespace UnityEngine.Rendering
             int slot = (int)type;
             var shader = GetCustomShader(type);
             if (shader != null) s_RendererShaders[slot] = shader;
-            else if (s_RendererShaders[slot] == null && type != BuiltinShaderType.DepthNormals && type != BuiltinShaderType.MotionVectors
-                && s_BuiltinShaderNames[slot] != null)
+            // Unlisted: Unity's own. Listed without a shader: none for depth-normals and motion
+            // vectors (measured), Unity's own for the others (unmeasured).
+            else if (s_RendererShaders[slot] == null && s_BuiltinShaderNames[slot] != null
+                && (!s_ShaderListed[slot] || (type != BuiltinShaderType.DepthNormals && type != BuiltinShaderType.MotionVectors)))
             {
                 s_RendererShaders[slot] = Shader.Find(s_BuiltinShaderNames[slot]);
                 if (s_ShaderListed[slot])
