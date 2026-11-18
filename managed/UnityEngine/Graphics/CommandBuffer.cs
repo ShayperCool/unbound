@@ -147,9 +147,9 @@ namespace UnityEngine.Rendering
         // tests/projects/runtimeapis size.*).
         int m_Size;
         const int UnmeasuredCommandSize = 64;
-        /// <summary>A compute parameter array's size before its values (4 bytes each component;
-        /// measured: size.compute_floats2, compute_floats4, compute_vector_array2,
-        /// compute_matrix_array2).</summary>
+        /// <summary>A compute parameter's size before its values, 4 bytes each component (measured:
+        /// size.compute_float, compute_vector, compute_matrix, compute_floats2 and 4,
+        /// compute_vector_array2, compute_matrix_array2).</summary>
         const int ComputeParamSize = 20;
         /// <summary>SetBufferData's size before its data (measured: size.set_buffer_data4 and 16).</summary>
         const int BufferDataSize = 32;
@@ -739,13 +739,13 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ compute
 
-        public void SetComputeFloatParam(ComputeShader computeShader, int nameID, float val) => Add(c => computeShader.SetFloat(nameID, val), 24);
+        public void SetComputeFloatParam(ComputeShader computeShader, int nameID, float val) => Add(c => computeShader.SetFloat(nameID, val), ComputeParamSize + 4);
         public void SetComputeFloatParam(ComputeShader computeShader, string name, float val) => SetComputeFloatParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeIntParam(ComputeShader computeShader, int nameID, int val) => Add(c => computeShader.SetInt(nameID, val), 24);
+        public void SetComputeIntParam(ComputeShader computeShader, int nameID, int val) => Add(c => computeShader.SetInt(nameID, val), ComputeParamSize + 4);
         public void SetComputeIntParam(ComputeShader computeShader, string name, int val) => SetComputeIntParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeVectorParam(ComputeShader computeShader, int nameID, Vector4 val) => Add(c => computeShader.SetVector(nameID, val), 36);
+        public void SetComputeVectorParam(ComputeShader computeShader, int nameID, Vector4 val) => Add(c => computeShader.SetVector(nameID, val), ComputeParamSize + 16);
         public void SetComputeVectorParam(ComputeShader computeShader, string name, Vector4 val) => SetComputeVectorParam(computeShader, Shader.PropertyToID(name), val);
-        public void SetComputeMatrixParam(ComputeShader computeShader, int nameID, Matrix4x4 val) => Add(c => computeShader.SetMatrix(nameID, val), 84);
+        public void SetComputeMatrixParam(ComputeShader computeShader, int nameID, Matrix4x4 val) => Add(c => computeShader.SetMatrix(nameID, val), ComputeParamSize + 64);
         public void SetComputeMatrixParam(ComputeShader computeShader, string name, Matrix4x4 val) => SetComputeMatrixParam(computeShader, Shader.PropertyToID(name), val);
         public void SetComputeFloatParams(ComputeShader computeShader, int nameID, params float[] values)
         {

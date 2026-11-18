@@ -353,6 +353,10 @@ namespace UnityEngine.Tests
                 Assert.True(project.UsesBuiltinRenderer);
                 project.Default = (Custom, 11400000);
                 Assert.False(project.UsesBuiltinRenderer);
+                // A level without its own pipeline uses the default one.
+                project.QualityLevels.Add(null);
+                Assert.False(project.UsesBuiltinRenderer);
+                project.QualityLevels.Clear();
                 project.Default = null;
                 project.QualityLevels.Add((Custom, 11400000));
                 Assert.False(project.UsesBuiltinRenderer);
