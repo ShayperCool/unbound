@@ -61,7 +61,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"d1a6a7cc688b7ceb191adbafa3c5a7b8","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"18e73a0148227b452818ce50b3fa7a74","type":2}}'
     min: -Infinity
     max: Infinity
     enumValues: []
@@ -799,7 +799,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"d1a6a7cc688b7ceb191adbafa3c5a7b8","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"18e73a0148227b452818ce50b3fa7a74","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh
@@ -869,7 +869,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"c5e1581364d744bec94348af696bfaef","type":3}}'
+      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"a51daa64143f2e7cd8d4a92967f03ba0","type":3}}'
     m_Space: -1
   m_Property:
     name: mainTexture
@@ -2257,7 +2257,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"d1a6a7cc688b7ceb191adbafa3c5a7b8","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"18e73a0148227b452818ce50b3fa7a74","type":2}}'
     m_Space: -1
   m_Property:
     name: o

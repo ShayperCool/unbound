@@ -28,6 +28,9 @@
 {"k":"renderer/plain 2d","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/PlainUnlit/System (1)/Output Particle|Unlit Quad"}
 {"k":"renderer/sprite sorting","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/SpriteUnlit/System (1)/Output Particle|Shader Graph Quad - Sprite Unlit"}
 {"k":"renderer/graph unlit","v":"cast=On receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/GraphUnlit/System (1)/Output Particle|Shader Graph Quad - Unlit"}
+{"k":"renderer/mesh sorted","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshSorted/System (1)/Output Particle|Unlit Mesh"}
+{"k":"renderer/mesh lit sorted","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshLitSorted/System (1)/Output Particle|URP Lit|Mesh"}
+{"k":"renderer/mesh listed","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MeshListed/System (1)/Output Particle|Unlit Mesh"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -70,12 +73,17 @@
 {"k":"draw/plain 2d/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/sprite sorting/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/graph unlit/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh sorted/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh lit sorted/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh listed/f005","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f006","v":"Mask=1 -> Shape=Wedge Mask=1"}
 {"k":"draw/curve output/f006","v":"alive=2 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/sprite sorting/f008","v":"sortingOrder=2 -> sortingLayer=Default sortingOrder=2"}
+{"k":"act/mesh sorted/f008","v":"Shape=Spike -> Shape=Spike"}
 {"k":"draw/mesh exposed/f008","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f009","v":"Mask=2 -> Shape=Wedge Mask=2"}
 {"k":"draw/sprite sorting/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/mesh sorted/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
 {"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
