@@ -34,6 +34,8 @@ namespace Core
     public interface IMeasured { int Measure(int scale); }
     public abstract class Plug<T> { public abstract T Apply(T value, float time); }
     public abstract class Figure : Shape { public override float Area(float scale) => scale; }
+    public interface IBase { int Size(); }
+    public interface IDefaulted : IBase { int IBase.Size() => 3; }
 }";
 
         const string Extras = @"
@@ -52,6 +54,8 @@ namespace Later
     public sealed class Triangle : Core.Shape { public override float Area(float scale) => 0.5f * scale; }
     public sealed class Ring : Core.Figure { }
     public class Meter : Core.IMeasured { int Core.IMeasured.Measure(int scale) => scale; }
+    // Complete through a default implementation another interface gives.
+    public class Box : Core.IDefaulted { }
 }";
 
         static byte[] Build(string name, string source, params byte[][] references)
@@ -123,6 +127,8 @@ namespace Later
                     var shape = Activator.CreateInstance(complete.GetType(name, true));
                     Assert.Equal(area, shape.GetType().GetMethod("Area", new[] { typeof(float) }).Invoke(shape, new object[] { 2f }));
                 }
+                var box = Activator.CreateInstance(complete.GetType("Later.Box", true));
+                Assert.Equal(3, box.GetType().GetInterfaces().First(i => i.Name == "IBase").GetMethod("Size").Invoke(box, null));
             }
             finally
             {

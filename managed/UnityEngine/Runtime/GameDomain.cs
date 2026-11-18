@@ -79,6 +79,13 @@ namespace Unbound.Runtime
         /// outcome for a plugin also depends on the other game assemblies the plugin references, so a
         /// plugin's cached image is keyed by theirs too.</summary>
         [ThreadStatic] internal static bool AdaptingPlugin;
+
+        /// <summary>Sets <see cref="AdaptingPlugin"/> for a scope, cleared when it ends.</summary>
+        readonly struct PluginScope : IDisposable
+        {
+            internal PluginScope(bool plugin) => AdaptingPlugin = plugin;
+            public void Dispose() => AdaptingPlugin = false;
+        }
         /// <summary>Assemblies Unbound generates for adapted game assemblies to reference, by name, with
         /// what builds each image (set by the host with <see cref="ImageFilter"/>). An image is
         /// built once per <see cref="ImageFilterVersion"/> and cached as adapted images are.</summary>
@@ -406,9 +413,8 @@ namespace Unbound.Runtime
                 {
                     var image = PeImage.MakePortable(original);
                     var symbols = game.Pdb != null && File.Exists(game.Pdb) ? File.ReadAllBytes(game.Pdb) : null;
-                    AdaptingPlugin = game.PluginGuid != null;
+                    using var adapting = new PluginScope(game.PluginGuid != null);
                     if (ImageFilter != null) (image, symbols) = ImageFilter(image, symbols);
-                    AdaptingPlugin = false;
                     // Script assemblies load from a file named as Unity names it (the Test Framework
                     // matches Assembly.Location's file name with the compiled assemblies').
                     var fileName = game.PluginGuid == null ? game.Name + ".dll" : Path.GetFileName(game.Dll);

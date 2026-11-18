@@ -19,7 +19,8 @@ namespace Unbound.Host;
 ///
 /// The check is conservative: a member counts as implemented when the class or a base below the
 /// member's declaration has a method of that name and parameter count, or an explicit
-/// implementation of a member of that name; a type whose bases do not resolve is left as it is.
+/// implementation of a member of that name (an interface's default implementation too); a type
+/// whose bases or interfaces do not resolve is left as it is.
 /// </summary>
 static class MissingImplementations
 {
@@ -60,13 +61,22 @@ static class MissingImplementations
         TypeReference reference = type;
         while (reference != null)
         {
-            var definition = reference.Resolve();
+            var definition = Resolve(reference);
             if (definition == null) return null;
             chain.Add((definition, reference));
             reference = definition.BaseType == null ? null : Substitute(definition.BaseType, reference);
         }
+        // Default implementations that interfaces give for other interfaces' members (an
+        // interface's explicit implementation of a member it inherits).
+        var defaults = new List<MethodDefinition>();
+        var faces = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (definition, _) in chain)
+            foreach (var implemented in definition.Interfaces)
+                if (!CollectDefaults(implemented.InterfaceType, faces, defaults)) return null;
         bool Implemented(string name, int parameters, int below)
         {
+            foreach (var d in defaults)
+                if (d.Overrides.Any(o => o.Name == name && o.Parameters.Count == parameters)) return true;
             for (int i = 0; i < below; i++)
                 foreach (var m in chain[i].Definition.Methods)
                 {
@@ -99,13 +109,33 @@ static class MissingImplementations
         Func<string, int, int, bool> implemented, int below)
     {
         if (!seen.Add(face.FullName)) return true;
-        var definition = face.Resolve();
+        var definition = Resolve(face);
         if (definition == null) return false;
         foreach (var m in definition.Methods)
             if (m.IsAbstract && !m.IsStatic && !implemented(m.Name, m.Parameters.Count, below))
                 missing.Add(Member(m, face));
         foreach (var inherited in definition.Interfaces)
             if (!AddInterface(Substitute(inherited.InterfaceType, face), seen, missing, implemented, below)) return false;
+        return true;
+    }
+
+    static TypeDefinition Resolve(TypeReference reference)
+    {
+        try { return reference.Resolve(); }
+        catch (AssemblyResolutionException) { return null; }
+    }
+
+    /// <summary>The non-abstract methods with explicit implementations (default implementations)
+    /// of an interface and the interfaces it inherits; false when one does not resolve.</summary>
+    static bool CollectDefaults(TypeReference face, HashSet<string> seen, List<MethodDefinition> into)
+    {
+        if (!seen.Add(face.FullName)) return true;
+        var definition = Resolve(face);
+        if (definition == null) return false;
+        foreach (var m in definition.Methods)
+            if (!m.IsAbstract && m.HasOverrides) into.Add(m);
+        foreach (var inherited in definition.Interfaces)
+            if (!CollectDefaults(inherited.InterfaceType, seen, into)) return false;
         return true;
     }
 
