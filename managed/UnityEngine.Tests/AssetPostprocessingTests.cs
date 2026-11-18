@@ -109,6 +109,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ATypeChangeOnASparseMetaKeepsTheWrapModeAsked()
+        {
+            // A sprite without wrap keys clamps; made Default it keeps clamping (the type change
+            // does not set wrap), and a Default texture made a Sprite repeats when asked to.
+            var sprite = (TextureImporter)AssetImporter.FromMeta("Assets/W.png", "7123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  textureType: 8\n  spriteMode: 1\n  userData: \n"));
+            Assert.Equal(TextureWrapMode.Clamp, sprite.wrapModeU);
+            sprite.textureType = TextureImporterType.Default;
+            Assert.Equal(TextureWrapMode.Clamp, sprite.wrapModeU);
+            Assert.Equal(1, MetaSettings.Int(sprite.m_Settings, "textureSettings.wrapU", -1));
+
+            var plain = (TextureImporter)AssetImporter.FromMeta("Assets/V.png", "8123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  textureType: 0\n  textureSettings:\n    wrapMode: 1\n  userData: \n"));
+            // The older per-texture wrap mode is read for missing axes.
+            Assert.Equal(TextureWrapMode.Clamp, plain.wrapModeV);
+            var settings = new TextureImporterSettings();
+            plain.ReadTextureSettings(settings);
+            settings.textureType = TextureImporterType.Sprite;
+            settings.wrapMode = TextureWrapMode.Repeat;
+            plain.SetTextureSettings(settings);
+            Assert.Equal(TextureWrapMode.Repeat, plain.wrapModeU);
+            Assert.Equal(TextureWrapMode.Repeat, plain.wrapModeW);
+        }
+
+        [Fact]
         public void MissingKeysReadAsTheTypesDefaults()
         {
             // A sprite clamps; an older linear .meta is not sRGB; a -1 wrap is the type's default.

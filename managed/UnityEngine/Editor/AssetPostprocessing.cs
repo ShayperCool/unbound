@@ -241,7 +241,9 @@ namespace UnityEditor
         internal static void Preprocess(string path, string kind)
         {
             // The import takes the importer's settings as the preprocessors leave them: with what a
-            // script changed on it before (Unbound's choice, unmeasured).
+            // script changed on it before (Unbound's choice, unmeasured). Without a preprocessor of
+            // the asset's kind none of this runs: such edits stay in memory, as SaveAndReimport
+            // (a stub) does not import them.
             var importer = AssetImporter.GetAtPath(path);
             var context = new AssetImportContext(path);
             AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), path, context, Array.Empty<object>(), importer);

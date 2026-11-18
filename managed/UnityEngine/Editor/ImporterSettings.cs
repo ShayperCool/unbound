@@ -238,13 +238,13 @@ namespace UnityEditor
 
         public FilterMode filterMode
         {
-            get { CheckImporterState("get_filterMode"); return (FilterMode)I("textureSettings.filterMode", 1); }
+            get { CheckImporterState("get_filterMode"); return (FilterMode)Resolved("textureSettings.filterMode", _ => 1); }
             set { CheckImporterState("set_filterMode"); SetI("textureSettings.filterMode", (int)value); }
         }
 
         public int anisoLevel
         {
-            get { CheckImporterState("get_anisoLevel"); return I("textureSettings.aniso", 1); }
+            get { CheckImporterState("get_anisoLevel"); return Resolved("textureSettings.aniso", _ => 1); }
             set { CheckImporterState("set_anisoLevel"); SetI("textureSettings.aniso", value); }
         }
 
@@ -257,7 +257,7 @@ namespace UnityEditor
         /// <summary>The U wrap mode; setting it sets all three.</summary>
         public TextureWrapMode wrapMode
         {
-            get { CheckImporterState("get_wrapMode"); return (TextureWrapMode)I("textureSettings.wrapU"); }
+            get { CheckImporterState("get_wrapMode"); return (TextureWrapMode)Resolved("textureSettings.wrapU", TypeWrap); }
             set
             {
                 CheckImporterState("set_wrapMode");
@@ -269,19 +269,19 @@ namespace UnityEditor
 
         public TextureWrapMode wrapModeU
         {
-            get { CheckImporterState("get_wrapModeU"); return (TextureWrapMode)I("textureSettings.wrapU"); }
+            get { CheckImporterState("get_wrapModeU"); return (TextureWrapMode)Resolved("textureSettings.wrapU", TypeWrap); }
             set { CheckImporterState("set_wrapModeU"); SetI("textureSettings.wrapU", (int)value); }
         }
 
         public TextureWrapMode wrapModeV
         {
-            get { CheckImporterState("get_wrapModeV"); return (TextureWrapMode)I("textureSettings.wrapV"); }
+            get { CheckImporterState("get_wrapModeV"); return (TextureWrapMode)Resolved("textureSettings.wrapV", TypeWrap); }
             set { CheckImporterState("set_wrapModeV"); SetI("textureSettings.wrapV", (int)value); }
         }
 
         public TextureWrapMode wrapModeW
         {
-            get { CheckImporterState("get_wrapModeW"); return (TextureWrapMode)I("textureSettings.wrapW"); }
+            get { CheckImporterState("get_wrapModeW"); return (TextureWrapMode)Resolved("textureSettings.wrapW", TypeWrap); }
             set { CheckImporterState("set_wrapModeW"); SetI("textureSettings.wrapW", (int)value); }
         }
 
@@ -374,12 +374,24 @@ namespace UnityEditor
                 if (MetaSettings.Find(before, path)?.AsString() != MetaSettings.Find(after, path)?.AsString())
                     write(src, m_Settings, path);
             }
+            // A missing key whose reading the written settings changed (a wrap mode under a new
+            // type) is written as asked.
+            var check = new TextureImporterSettings();
+            ReadTextureSettings(check);
+            var read = new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() };
+            foreach (var (path, _, write) in s_SettingsFields)
+            {
+                write(check, read, path);
+                if (MetaSettings.Find(read, path)?.AsString() != MetaSettings.Find(after, path)?.AsString())
+                    write(src, m_Settings, path);
+            }
             Changed();
         }
 
         /// <summary>The .meta key of each setting <see cref="TextureImporterSettings"/> holds that
         /// the import reads, with what the import takes for a missing key or a -1 ("the type's
-        /// default"), as the native importer does: a .meta without the key reads as that.</summary>
+        /// default"), as Unbound's texture import reads them (crates/unbound-assets/src/texture.rs):
+        /// a .meta without the key reads as that.</summary>
         static readonly (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>)[] s_SettingsFields =
         {
             Int("textureType", 0, s => (int)s.textureType, (s, v) => s.textureType = (TextureImporterType)v),
@@ -407,9 +419,22 @@ namespace UnityEditor
             Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
         };
 
-        /// <summary>The wrap mode of a missing key: Clamp for the UI types (Sprite, GUI, Cursor),
-        /// else Repeat.</summary>
-        static int TypeWrap(YNode root) => MetaSettings.Int(root, "textureType") is 8 or 2 or 7 ? 1 : 0;
+        /// <summary>The wrap mode of a missing key: the older per-texture <c>wrapMode</c>, else Clamp
+        /// for the UI types (Sprite, GUI, Cursor) and Repeat for the others.</summary>
+        static int TypeWrap(YNode root)
+        {
+            int legacy = MetaSettings.Int(root, "textureSettings.wrapMode", -1);
+            if (legacy >= 0) return legacy;
+            return MetaSettings.Int(root, "textureType") is 8 or 2 or 7 ? 1 : 0;
+        }
+
+        /// <summary>A setting as the import reads it: its key, else (missing or -1) the value of
+        /// <see cref="s_SettingsFields"/>'s rule for it.</summary>
+        int Resolved(string path, Func<YNode, int> missing)
+        {
+            int value = MetaSettings.Int(m_Settings, path, -1);
+            return value < 0 ? missing(m_Settings) : value;
+        }
 
         static (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>) Int(
             string path, int missing, Func<TextureImporterSettings, int> get, Action<TextureImporterSettings, int> set) =>
