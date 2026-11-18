@@ -1048,7 +1048,8 @@ namespace UnityEngine.Tests
             Assert.Equal("its system sorts one list for all its outputs, which is not done yet", VFXOutput.Refusal(sorting, Indirect(2, 2), material));
             // A mesh output's task names its mesh and the mask of its submeshes; it draws itself
             // or through an indirect buffer. An output of several meshes compiles to one such
-            // task per mesh, all with the output's shader: not drawn.
+            // task per mesh, all with the output's shader, each drawn; not when its system's
+            // output update chooses the meshes by their size on screen.
             var meshes = new VFXEditorTaskDesc { type = VFXTaskType.ParticleMeshOutput, shaderSourceIndex = 4, parameters = new[] { new VFXMapping("mesh", 1), new VFXMapping("subMeshMask", 2), new VFXMapping("sortPriority", 0) } };
             Assert.Null(VFXOutput.Refusal(system, meshes, material));
             var listed = new VFXEditorTaskDesc
@@ -1063,8 +1064,19 @@ namespace UnityEngine.Tests
             otherMesh.parameters = new[] { new VFXMapping("mesh", 3), new VFXMapping("subMeshMask", 2), new VFXMapping("indirectDraw", 1), new VFXMapping("indirectIndex", 2) };
             otherMesh.buffers = new[] { new VFXMapping("indirectBuffer", 2) };
             var severalMeshes = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
-            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, listed, material));
-            Assert.Equal("it is one of several meshes of an output, which is not measured yet", VFXOutput.Refusal(severalMeshes, otherMesh, material));
+            Assert.Null(VFXOutput.Refusal(severalMeshes, listed, material));
+            Assert.Null(VFXOutput.Refusal(severalMeshes, otherMesh, material));
+            // Chosen by their size on screen (the output update's source says so): not drawn.
+            var update = new VFXEditorTaskDesc { type = VFXTaskType.PerCameraUpdate, shaderSourceIndex = 0 };
+            VFXEditorTaskDesc Mesh(VFXEditorTaskDesc task) { task.shaderSourceIndex = 1; return task; }
+            var bySize = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { update, Mesh(otherMesh), Mesh(listed) } } },
+                new[] { new VFXShaderSourceDesc { compute = true, source = "#define VFX_FEATURE_LOD 1\n#define VFX_FEATURE_SORT 0" }, new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Pair\" {}" } });
+            Assert.Equal(new[] { null, VFXOutput.LodRefusal, VFXOutput.LodRefusal }, bySize[0]);
+            var byIndex = VFXOutput.SourceRefusals(
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { update, Mesh(otherMesh), Mesh(listed) } } },
+                new[] { new VFXShaderSourceDesc { compute = true, source = "#define VFX_FEATURE_SORT 0" }, new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Pair\" {}" } });
+            Assert.Equal(new string[] { null, null, null }, byIndex[0]);
             // Two outputs of meshes, each with its own shader, are each drawn.
             otherMesh.shaderSourceIndex = 5;
             var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
@@ -1151,7 +1163,7 @@ namespace UnityEngine.Tests
             // The reason found in the source is the output's when nothing of its task refuses first.
             Assert.Equal(Moving, VFXOutput.Refusal(system, quads, material, Moving));
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(system, Indirect(2, 3), material, Moving));
-            // A lit output through an indirect buffer that is not sorted: each is measured, the two together are not.
+            // A lit output through an indirect buffer that is not sorted is drawn as an unlit one is.
             VFXEditorTaskDesc From(VFXEditorTaskDesc task, int sourceIndex)
             {
                 task.shaderSourceIndex = sourceIndex;
@@ -1160,7 +1172,7 @@ namespace UnityEngine.Tests
             var litIndirect = VFXOutput.SourceRefusals(
                 new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 2), 0), From(quads, 0), From(Indirect(2, 2), 1) } } },
                 new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
-            Assert.Equal(new[] { VFXOutput.LitIndirectRefusal, null, null }, litIndirect[0]);
+            Assert.Equal(new string[] { null, null, null }, litIndirect[0]);
             // From a sorted list a lit output is drawn (what an alpha blended one does by default).
             var litSorted = VFXOutput.SourceRefusals(
                 new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { From(Indirect(2, 3), 0) } } },
@@ -1177,7 +1189,7 @@ namespace UnityEngine.Tests
                 new[] { new VFXShaderSourceDesc { source = lit }, new VFXShaderSourceDesc { source = unlit } });
             Assert.Equal(new[] { VFXOutput.LitStripRefusal, null }, litStrips[0]);
             // A Shader Graph output lit by 2D lights (no lighting define, a normals pass) is lit
-            // too: drawn from a sorted list, not from one that is not sorted, nor as strips.
+            // too: drawn from a sorted list and from one that is not sorted, not as strips.
             var sprites = VFXOutput.SourceRefusals(
                 new[]
                 {
@@ -1185,7 +1197,7 @@ namespace UnityEngine.Tests
                     new VFXEditorSystemDesc { name = "Strips", type = VFXSystemType.Particle, flags = VFXSystemFlag.SystemHasStrips, tasks = new[] { From(Joined(Indirect(2, 3)), 0) } },
                 },
                 new[] { new VFXShaderSourceDesc { source = sprite }, new VFXShaderSourceDesc { source = sprite.Replace("\"NormalsRendering\"", "\"UniversalForward\"").Replace("Sprite Lit", "Sprite Unlit") } });
-            Assert.Equal(new[] { null, VFXOutput.LitIndirectRefusal, null }, sprites[0]);
+            Assert.Equal(new string[] { null, null, null }, sprites[0]);
             Assert.Equal(new[] { VFXOutput.LitStripRefusal }, sprites[1]);
 
             var asset = WithOutput(VFXTaskType.ParticleQuadOutput, material);

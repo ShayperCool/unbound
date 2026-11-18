@@ -200,17 +200,11 @@ namespace Unbound.Runtime
         const string Lit2DPass = "\"NormalsRendering\"";
 
         /// <summary>Whether an output's generated shader is lit: by the pipeline's lights or by
-        /// 2D lights. Neither is drawn through a list that is not sorted nor as strips. An output
-        /// lit by 2D lights is measured drawing a sorted list (tests/projects/vfxlit, `sprite*`);
-        /// one that draws itself is admitted as other lit outputs are, not measured.</summary>
+        /// 2D lights. Neither is drawn as strips. Both are measured drawing themselves, a sorted
+        /// list and one that is not sorted (tests/projects/vfxlit: `lit sorted`, `lit listed`;
+        /// `sprite*`, `sprite listed`, the latter culled by each camera's frustum).</summary>
         static bool IsLit(string source) =>
             source.Contains(LitDefine, StringComparison.Ordinal) || source.Contains(Lit2DPass, StringComparison.Ordinal);
-
-        /// <summary>A lit output is measured where it draws itself and where it draws a sorted
-        /// list (an alpha blended one sorts by default: tests/projects/vfxlit, `lit sorted`);
-        /// through a list that is not sorted only unlit outputs are (tests/projects/vfxoutputs),
-        /// and a lit one is not drawn until it is.</summary>
-        internal const string LitIndirectRefusal = "it is lit and draws through an indirect buffer that is not sorted, which is not measured yet";
 
         /// <summary>Strips are measured unlit (tests/projects/vfxstrips): a lit strip output is
         /// not drawn until it is.</summary>
@@ -226,15 +220,16 @@ namespace Unbound.Runtime
             {
                 var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
                 refusals[s] = new string[tasks.Length];
+                bool bySize = ChoosesMeshesBySize(systems[s], sources);
                 for (int t = 0; t < tasks.Length; t++)
                 {
                     int index = tasks[t].shaderSourceIndex;
                     if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
+                    if (bySize && tasks[t].type == VFXTaskType.ParticleMeshOutput) refusals[s][t] ??= LodRefusal;
                     if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit(source)) continue;
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
-                    else if (Parameter(tasks[t], IndirectDrawName) != 0 && !ReadsSortedList(tasks[t])) refusals[s][t] = LitIndirectRefusal;
                 }
             }
             // The renderer finds a generated shader by its name: outputs whose shaders share one

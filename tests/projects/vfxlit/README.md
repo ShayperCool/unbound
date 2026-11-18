@@ -62,13 +62,24 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   particles by default and draws them through a sorted indirect buffer. `MeshSorted`'s mesh is
   the exposed `Shape`. `MeshListed`: opaque wedges of an output told to draw through an indirect
   buffer, from the list its system's update makes (not sorted).
+- `LitListed`: opaque lit quads told to draw through an indirect buffer, from a list that is not
+  sorted. `SpriteListed`: the lit sprite graph's quads (`Output Particle ShaderGraph Quad`)
+  blended over what is behind them, their sort turned off and culled by each camera's frustum:
+  each camera draws a list of its own, not sorted.
+- `MeshPair`: an `Output Particle Mesh` of two meshes, the wedge (its first submesh alone) and the
+  spike, each particle's mesh index drawn between 0 and 2. `MeshLod`: the same two meshes chosen
+  by the size each particle takes on screen (`lodValues` 30, 0, 0, 0; sizes between 0.3 and 1.2).
+- `GraphLegacy`: quads of `Output Particle Quad` drawn by `Assets/Graphs/Legacy.shadergraph`, a
+  graph of the Visual Effect target Shader Graph keeps for older graphs (shown as deprecated),
+  written through Shader Graph's own model: unlit, its colour the probe's image sampled through
+  a texture property of its own.
 
 `Assets/Objects/Spike.asset` is a second mesh, of one submesh. The pipeline asset
 (`Assets/Settings/ProbeURP.asset`) has three renderers: a forward one, a deferred one
 (`ProbeDeferred.asset`) and a 2D one (`Probe2DRenderer.asset`, the 2D renderer's defaults); main light shadows are on (one cascade, hard), additional lights are
 per pixel and cast no shadows. The scene has one flat ambient colour and no reflection, and 2D
 lights, which only the 2D renderer draws by: a global one (white, 0.4) and, at the places of
-`sprite point`, `sprite normals` and `sprite classic`, a point light of radius two, the one of
+`sprite point`, `sprite normals`, `sprite classic` and `sprite listed`, a point light of radius two, the one of
 `sprite normals` lighting by normals (accurate, at a distance of one).
 
 ## What is recorded
@@ -141,6 +152,15 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   the list counts.
 - `graph unlit`: `GraphUnlit` through the forward renderer; its renderer casts shadows
   (`renderer/graph unlit`).
+- `lit listed` (frames 5 and 12, with a point light), `sprite listed` (through the 2D renderer,
+  under a 2D point light): lit outputs drawn from a list that is not sorted, pixel for pixel.
+- `mesh pair`: each particle drawn as the mesh its index names; the system's output update puts
+  each particle into the list of its mesh, and each mesh's task draws its own list. `mesh lod`:
+  its renderer's row alone; which mesh the Editor draws differs from one run to the next (two
+  captures differed), so no image of it is kept, and Unbound does not draw such an output.
+- `graph legacy`: the older target's graph, through the forward renderer.
+- `lit 2d`, `mesh 2d`: `LitMatte` and `MeshUnlit` through the 2D renderer: the lit quads draw
+  nothing there (no pass of theirs is one the 2D renderer draws), the meshes are drawn.
 - `capture/graphs imported while playing` must be empty (a capture where it is not stays
   incomplete).
 
@@ -156,9 +176,10 @@ adds to that is not separated.
 
 ## Not covered
 
-- Outputs with motion vectors (they keep buffers of the frame before), lit strips, several meshes per output or a mesh chosen by distance, lit
-  outputs drawn through an indirect buffer that is not sorted (unlit quads through an unsorted
-  one are `tests/projects/vfxoutputs`): not drawn; each says so once for its asset.
+- Outputs with motion vectors (they keep buffers of the frame before), lit strips, meshes chosen
+  by their size on screen: not drawn; each says so once for its asset. Outputs of three or four
+  meshes, several meshes through a sorted list or by a lit output: drawn as `mesh pair`, not
+  measured.
 - A sorted lit output with another sort criterion than the default, of quads that cut
   through each other, of other primitives than quads, that casts shadows, or that is not
   blended over what is behind it (an opaque or additive one made to sort: its depth and
@@ -185,8 +206,8 @@ adds to that is not separated.
 - A script that sets the renderer's shadow casting itself; a mesh destroyed while an effect uses
   it (the Editor then answers with an object that is no longer there).
 - Shader Graph outputs other than the composed quad output with the graphs here: lit Shader
-  Graphs of the forward renderer, other topologies, strips, graphs of the deprecated Visual
-  Effect target given to an output's own setting, material overrides of a graph that allows
+  Graphs of the forward renderer, other topologies, strips, lit graphs of the deprecated Visual
+  Effect target or ones through the 2D renderer, material overrides of a graph that allows
   them; sprites in sorting layers other than the default one, sprite masks, 2D shadows and the
   camera sorting layer texture with effects.
 - Other devices than OpenGL Core in the Editor.

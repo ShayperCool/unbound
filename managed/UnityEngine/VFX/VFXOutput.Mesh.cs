@@ -53,16 +53,35 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Why a mesh output is not drawn, null when it is: a task that names no mesh
-        /// or no mask is not one the graph compiler writes; an output of several meshes, or of
-        /// meshes chosen by distance, compiles to one task per mesh, each with the output's
-        /// shader, which is not measured.</summary>
+        /// or no mask is not one the graph compiler writes. An output of several meshes compiles
+        /// to one task per mesh, each drawing the list of the particles whose mesh index names it
+        /// (tests/projects/vfxlit, `mesh pair`); meshes chosen by the size a particle takes on
+        /// screen are not drawn (<see cref="LodRefusal"/>): which the Editor draws differs from
+        /// one run to the next (`mesh lod` keeps no image), so it is not measured.</summary>
         static string MeshRefusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
         {
             if (Parameter(task, MeshParameter, -1) < 0 || Parameter(task, SubMeshMaskParameter, -1) < 0) return "its task names no mesh or no submesh mask";
-            int sharing = 0;
-            foreach (var other in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
-                if (other.type == VFXTaskType.ParticleMeshOutput && other.shaderSourceIndex == task.shaderSourceIndex) sharing++;
-            return sharing > 1 ? "it is one of several meshes of an output, which is not measured yet" : null;
+            return null;
+        }
+
+        internal const string LodRefusal = "its meshes are chosen by their size on screen, which is not measured yet";
+
+        /// <summary>The define the graph compiler writes into a system's output update when it
+        /// chooses each particle's mesh by its size on screen (the sizes themselves are constants
+        /// it writes into that program).</summary>
+        const string LodDefine = "#define VFX_FEATURE_LOD";
+
+        /// <summary>Whether a system chooses its particles' meshes by their size on screen: its
+        /// output update's source says so.</summary>
+        static bool ChoosesMeshesBySize(in VFXEditorSystemDesc system, VFXShaderSourceDesc[] sources)
+        {
+            foreach (var task in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
+            {
+                int index = task.shaderSourceIndex;
+                if (index >= 0 && index < sources.Length && sources[index].compute
+                    && sources[index].source != null && sources[index].source.Contains(LodDefine, StringComparison.Ordinal)) return true;
+            }
+            return false;
         }
 
         /// <summary>Computes the arguments of each submesh the mask names from the list's count
@@ -103,7 +122,9 @@ namespace Unbound.Runtime
             m_MeshDescribed[at + 2] = baseVertex;
         }
 
-        static (uint First, uint Count, uint BaseVertex) Uploaded(Mesh mesh, int subMesh)
+        /// <summary>The range of a submesh's indices an indirect draw of it reads: as the
+        /// renderer holds them (<see cref="Mesh.UploadedIndexRange"/>).</summary>
+        internal static (uint First, uint Count, uint BaseVertex) Uploaded(Mesh mesh, int subMesh)
         {
             var range = mesh.UploadedIndexRange(subMesh);
             return (range.Start, range.Count, (uint)range.BaseVertex);
