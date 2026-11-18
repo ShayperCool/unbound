@@ -153,6 +153,10 @@ namespace UnityEngine.Rendering
         const int ComputeParamSize = 20;
         /// <summary>SetBufferData's size before its data (measured: size.set_buffer_data4 and 16).</summary>
         const int BufferDataSize = 32;
+        /// <summary>A SetRenderTarget with a depth target or several colors, whatever their count
+        /// and level (measured: tests/projects/cmdbuffers bind.size.*; runtimeapis
+        /// size.set_render_targets2 and 3).</summary>
+        const int TargetsCommandSize = 152;
 
         public int sizeInBytes => m_Size;
 
@@ -316,12 +320,26 @@ namespace UnityEngine.Rendering
 
         void SetTargets(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace, int depthSlice) => Add(c =>
         {
+            if (color.Type == BuiltinRenderTextureType.None || depth.Type == BuiltinRenderTextureType.None)
+            {
+                BindNothing();
+                return;
+            }
             var colorTexture = Resolve(color, c);
             ulong colorHandle = TextureHandles.Of(colorTexture);
             ulong depthHandle = depth == color ? 0 : TextureHandles.Of(Resolve(depth, c));
             RenderTexture.SetActiveQuietly(colorTexture as RenderTexture);
             GfxStream.SetTarget(colorHandle, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(colorTexture));
-        });
+        }, TargetsCommandSize);
+
+        /// <summary>A color or depth target of <see cref="BuiltinRenderTextureType.None"/> binds
+        /// nothing: later draws and clears go nowhere, not into the target bound before (measured
+        /// on the Editor's GL device: tests/projects/cmdbuffers bind.noneDepth.*, bind.noneColor).</summary>
+        static void BindNothing()
+        {
+            RenderTexture.SetActiveQuietly(null);
+            GfxStream.SetTarget(GfxStream.NoTexture, GfxStream.NoTexture);
+        }
 
         public void SetRenderTarget(RenderTargetIdentifier color, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
             RenderTargetIdentifier depth, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
@@ -343,16 +361,32 @@ namespace UnityEngine.Rendering
         {
             CheckThrowOnSetRenderTarget();
             if (colors == null || colors.Length == 0) throw new ArgumentException("colors must not be empty");
-            var copy = (RenderTargetIdentifier[])colors.Clone();
+            SetColorTargets((RenderTargetIdentifier[])colors.Clone(), depth, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+        }
+
+        /// <summary>Records a binding of <paramref name="colors"/> (the command's own copy) and
+        /// <paramref name="depth"/> at one level: a draw writes each fragment output into its
+        /// color (measured, tests/projects/cmdbuffers bind.colors.*). A None color or depth binds
+        /// nothing (<see cref="BindNothing"/>); a depth identifier that is the first color's is
+        /// that color's own depth buffer.</summary>
+        void SetColorTargets(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth, int mipLevel, int slice)
+        {
+            bool none = depth.Type == BuiltinRenderTextureType.None;
+            foreach (var color in colors) none |= color.Type == BuiltinRenderTextureType.None;
+            var handles = new ulong[colors.Length];
             Add(c =>
             {
-                var first = Resolve(copy[0], c);
-                var handles = new ulong[copy.Length];
-                for (int i = 0; i < copy.Length; i++) handles[i] = TextureHandles.Of(Resolve(copy[i], c));
-                ulong depthHandle = depth == copy[0] ? 0 : TextureHandles.Of(Resolve(depth, c));
+                if (none)
+                {
+                    BindNothing();
+                    return;
+                }
+                var first = Resolve(colors[0], c);
+                for (int i = 0; i < colors.Length; i++) handles[i] = TextureHandles.Of(Resolve(colors[i], c));
+                ulong depthHandle = depth == colors[0] ? 0 : TextureHandles.Of(Resolve(depth, c));
                 RenderTexture.SetActiveQuietly(first as RenderTexture);
-                GfxStream.SetTargets(handles, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(first));
-            }, 152);
+                GfxStream.SetTargets(handles, depthHandle, mipLevel, slice, GfxStream.LayersOf(first));
+            }, TargetsCommandSize);
         }
 
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor) => ClearRenderTarget(clearDepth, clearColor, backgroundColor, 1f, 0);

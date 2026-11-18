@@ -4141,10 +4141,6 @@ namespace UnityEngine.Rendering
         Compressed = 1,
         Auto = 2,
     }
-    unsafe partial struct RenderTargetBinding
-    {
-        [global::Unbound.Stub] public RenderTargetBinding(global::UnityEngine.RenderTargetSetup setup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RenderTargetBinding.ctor"); }
-    }
     unsafe partial struct RendererListParams
     {
         internal int numStateBlocks { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.RendererListParams.numStateBlocks"); return default; } }

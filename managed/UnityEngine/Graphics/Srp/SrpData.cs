@@ -1013,6 +1013,20 @@ namespace UnityEngine.Rendering
             RenderTargetIdentifier depthRenderTarget, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
             : this(new[] { colorRenderTarget }, new[] { colorLoadAction }, new[] { colorStoreAction }, depthRenderTarget, depthLoadAction, depthStoreAction) { }
 
+        /// <summary>A setup's colors (each at the setup's level), depth and actions.</summary>
+        public RenderTargetBinding(RenderTargetSetup setup)
+        {
+            m_ColorRenderTargets = new RenderTargetIdentifier[setup.color.Length];
+            for (int i = 0; i < m_ColorRenderTargets.Length; i++)
+                m_ColorRenderTargets[i] = new RenderTargetIdentifier(setup.color[i], setup.mipLevel, setup.cubemapFace, setup.depthSlice);
+            m_DepthRenderTarget = setup.depth;
+            m_ColorLoadActions = (RenderBufferLoadAction[])setup.colorLoad.Clone();
+            m_ColorStoreActions = (RenderBufferStoreAction[])setup.colorStore.Clone();
+            m_DepthLoadAction = setup.depthLoad;
+            m_DepthStoreAction = setup.depthStore;
+            m_Flags = RenderTargetFlags.None;
+        }
+
         public RenderTargetIdentifier[] colorRenderTargets { get => m_ColorRenderTargets; set => m_ColorRenderTargets = value; }
         public RenderTargetIdentifier depthRenderTarget { get => m_DepthRenderTarget; set => m_DepthRenderTarget = value; }
         public RenderBufferLoadAction[] colorLoadActions { get => m_ColorLoadActions; set => m_ColorLoadActions = value; }

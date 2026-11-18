@@ -197,9 +197,10 @@ pub enum Command {
     },
     /// The frame is complete: the screen is shown.
     EndFrame,
-    /// Draws go into `color` (0: the screen) and `depth` (0: the color target's own depth buffer,
-    /// [`NO_TEXTURE`]: none), and into `extra` colors at the next outputs (multiple render
-    /// targets: a fragment program's SV_Target1, ...). The viewport becomes the whole target.
+    /// Draws go into `color` (0: the screen; [`NO_TEXTURE`]: nowhere, as a None target binds
+    /// nothing) and `depth` (0: the color target's own depth buffer, [`NO_TEXTURE`]: none), and
+    /// into `extra` colors at the next outputs (multiple render targets: a fragment program's
+    /// SV_Target1, ...). The viewport becomes the whole target.
     SetTarget {
         color: u64,
         depth: u64,
@@ -518,11 +519,11 @@ impl<'a> Reader<'a> {
         Ok(u64::from_le_bytes(self.take(8)?.try_into().unwrap()))
     }
 
-    /// A target's depth: plain, or [`NO_TEXTURE`] for none.
-    fn target_depth(&mut self) -> Result<u64, String> {
+    /// A target's depth, or a single target's color: plain, or [`NO_TEXTURE`] for none.
+    fn target_handle(&mut self, what: &str) -> Result<u64, String> {
         match self.u64()? {
             NO_TEXTURE => Ok(NO_TEXTURE),
-            h => handle::plain(h, "a target's depth"),
+            h => handle::plain(h, what),
         }
     }
 
@@ -636,8 +637,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             },
             op::END_FRAME => Command::EndFrame,
             op::SET_TARGET => Command::SetTarget {
-                color: r.texture("SetTarget color")?,
-                depth: r.target_depth()?,
+                color: r.target_handle("SetTarget color")?,
+                depth: r.target_handle("a target's depth")?,
                 mip: r.i32()?,
                 slice: r.i32()?,
                 extra: Vec::new(),
@@ -651,7 +652,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 for _ in 0..count {
                     colors.push(r.texture("SetTargets color")?);
                 }
-                let depth = r.target_depth()?;
+                let depth = r.target_handle("a target's depth")?;
                 let mip = r.i32()?;
                 let slice = r.i32()?;
                 let color = colors.remove(0);
@@ -1755,6 +1756,8 @@ mod tests {
             extra: Vec::new(),
         };
         assert!(encode(set_target(7, NO_TEXTURE)).is_ok());
+        // A None target binds nothing.
+        assert!(encode(set_target(NO_TEXTURE, NO_TEXTURE)).is_ok());
         assert!(encode(set_target(depth, 0)).is_err());
         assert!(encode(set_target(7, depth)).is_err());
         assert!(encode(Command::GenerateMips { texture: depth }).is_err());
@@ -1973,10 +1976,10 @@ mod tests {
     /// zone, 22 render protocols 10/11's 32-bit indices and logical instance IDs, 23 the
     /// Distortion filter kind, 28 render protocol 12's shared arrays and 31 the imported texture's
     /// reported format; 35 adds deferred render-target mips, 36 listener pose snapshots and 37 the downloaded audio decoder;
-    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`).
+    /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 85);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 86);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

@@ -3000,7 +3000,10 @@ impl UnityRenderer {
         } else {
             self.color_space
         };
-        let mut target = if color == 0 {
+        let mut target = if color == commands::NO_TEXTURE {
+            // A None target: draws and clears go nowhere.
+            return None;
+        } else if color == 0 {
             self.screen_target(space)
         } else {
             let Some(t) = self.textures.get(&color).filter(|t| t.render_target) else {
@@ -3711,9 +3714,11 @@ impl UnityRenderer {
                     let indices = self.state.draw_indices.take();
                     let shape = self.state.draw_shape.take().unwrap_or_default();
                     let Some(target) = self.state.target.clone() else {
-                        self.warn_once("draw-no-target".into(), || {
-                            "a draw came before any render target was set: skipped".into()
-                        });
+                        if self.target_handles.0 != commands::NO_TEXTURE {
+                            self.warn_once("draw-no-target".into(), || {
+                                "a draw came before any render target was set: skipped".into()
+                            });
+                        }
                         continue;
                     };
                     let next = self.msaa_targets(Some(&target));

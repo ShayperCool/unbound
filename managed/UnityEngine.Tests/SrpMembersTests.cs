@@ -16,6 +16,109 @@ namespace Unbound.Tests
     {
         const string Guarded = "Setrendertarget is not allowed in this context";
 
+        static RenderTargetBinding Binding(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth, int loads = -1, int stores = -1,
+            RenderBufferLoadAction load = RenderBufferLoadAction.Load) =>
+            new RenderTargetBinding(colors, Enumerable.Repeat(load, loads < 0 ? colors.Length : loads).ToArray(),
+                Enumerable.Repeat(RenderBufferStoreAction.Store, stores < 0 ? colors.Length : stores).ToArray(),
+                depth, RenderBufferLoadAction.Load, RenderBufferStoreAction.Store);
+
+        /// <summary>A binding is checked when recorded, with the release's messages, and takes 152
+        /// bytes whatever its count and level, as a color with a depth target does (tests/projects/
+        /// cmdbuffers bind.*); one color with actions, a face or a slice takes 36.</summary>
+        [Fact]
+        public void ARenderTargetBindingIsCheckedWhenRecordedAndTakesItsMeasuredSize()
+        {
+            var rts = Enumerable.Range(0, 3).Select(_ => new RenderTexture(4, 4, 0, GraphicsFormat.R8G8B8A8_UNorm)).ToArray();
+            var depth = new RenderTexture(4, 4, 24, RenderTextureFormat.Depth);
+            try
+            {
+                var ids = rts.Select(r => new RenderTargetIdentifier(r)).ToArray();
+                using var cb = new CommandBuffer();
+                ArgumentException Refused(RenderTargetBinding b) => Assert.Throws<ArgumentException>(() => cb.SetRenderTarget(b));
+                Assert.Equal("The number of color render targets must be at least 1, but was 0",
+                    Refused(Binding(new RenderTargetIdentifier[0], depth)).Message);
+                Assert.Equal("The number of color render targets (9) and exceeds the maximum supported number of render targets (8)",
+                    Refused(Binding(Enumerable.Repeat(ids[0], 9).ToArray(), depth)).Message);
+                Assert.Equal("The number of color load actions provided (1) does not match the number of color render targets (2)",
+                    Refused(Binding(ids.Take(2).ToArray(), depth, loads: 1)).Message);
+                Assert.Equal("The number of color store actions provided (2) does not match the number of color render targets (2)",
+                    Refused(Binding(ids.Take(2).ToArray(), depth, stores: 1)).Message);
+                Assert.Equal("RenderBufferLoadAction.Clear is not supported",
+                    Refused(Binding(ids.Take(2).ToArray(), depth, load: RenderBufferLoadAction.Clear)).Message);
+                var nothing = Assert.Throws<NullReferenceException>(() => cb.SetRenderTarget(default(RenderTargetBinding)));
+                Assert.Equal("Object reference not set to an instance of an object", nothing.Message);
+                Assert.Equal(0, cb.sizeInBytes);
+
+                cb.SetRenderTarget(Binding(ids.Take(1).ToArray(), depth));
+                Assert.Equal(152, cb.sizeInBytes);
+                cb.SetRenderTarget(Binding(ids, depth), 1, CubemapFace.PositiveX, 2);
+                Assert.Equal(304, cb.sizeInBytes);
+                cb.SetRenderTarget(ids[0], depth);
+                Assert.Equal(456, cb.sizeInBytes);
+                cb.SetRenderTarget(ids[0], RenderBufferLoadAction.Load, RenderBufferStoreAction.Store, depth, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare);
+                Assert.Equal(608, cb.sizeInBytes);
+                cb.SetRenderTarget(ids[0], 1, CubemapFace.Unknown, 2);
+                Assert.Equal(644, cb.sizeInBytes);
+            }
+            finally
+            {
+                foreach (var r in rts) UnityEngine.Object.DestroyImmediate(r);
+                UnityEngine.Object.DestroyImmediate(depth);
+            }
+        }
+
+        /// <summary>A binding draws into every color at the call's level (slice -1 is 0); a None
+        /// depth or color target binds nothing, through any overload (tests/projects/cmdbuffers
+        /// bind.colors.*, bind.slice.all, bind.noneDepth.*, bind.noneColor).</summary>
+        [Fact]
+        public void ABindingBindsEveryColorAndANoneTargetBindsNothing()
+        {
+            var rts = Enumerable.Range(0, 3).Select(_ => new RenderTexture(new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
+                { dimension = TextureDimension.Tex2DArray, volumeDepth = 3, useMipMap = true, autoGenerateMips = false })).ToArray();
+            try
+            {
+                foreach (var r in rts) r.Create();
+                var ids = rts.Select(r => new RenderTargetIdentifier(r, 1, CubemapFace.Unknown, 2)).ToArray();
+                var none = new RenderTargetIdentifier(BuiltinRenderTextureType.None);
+                void Run(Action<CommandBuffer> record)
+                {
+                    using var cb = new CommandBuffer();
+                    record(cb);
+                    Graphics.ExecuteCommandBuffer(cb);
+                }
+                Run(cb => cb.SetRenderTarget(Binding(ids, ids[0])));
+                var state = GfxStream.Current;
+                Assert.Equal(rts.Select(r => TextureHandles.Of(r)).ToArray(), state.Colors);
+                // The identifiers' own mip and slice give way to the call's.
+                Assert.Equal((0, 0), (state.Mip, state.Slice));
+                Run(cb => cb.SetRenderTarget(Binding(ids, ids[0]), 1, CubemapFace.Unknown, -1));
+                Assert.Equal((1, 0), (GfxStream.Current.Mip, GfxStream.Current.Slice));
+                // Control: the array overload keeps binding every slice with -1.
+                Run(cb => cb.SetRenderTarget(ids, ids[0], 1, CubemapFace.Unknown, -1));
+                Assert.Equal(-1, GfxStream.Current.Slice);
+
+                foreach (var record in new Action<CommandBuffer>[]
+                {
+                    cb => cb.SetRenderTarget(Binding(ids, none)),
+                    cb => cb.SetRenderTarget(ids, none),
+                    cb => cb.SetRenderTarget(ids[0], none),
+                    cb => cb.SetRenderTarget(none, ids[0]),
+                    cb => cb.SetRenderTarget(ids[0], RenderBufferLoadAction.Load, RenderBufferStoreAction.Store, none, RenderBufferLoadAction.Load, RenderBufferStoreAction.Store),
+                })
+                {
+                    Run(cb => cb.SetRenderTarget(ids[1]));
+                    Run(record);
+                    Assert.Equal(GfxStream.NoTexture, GfxStream.Current.Color);
+                    Assert.Null(RenderTexture.active);
+                }
+            }
+            finally
+            {
+                foreach (var r in rts) UnityEngine.Object.DestroyImmediate(r);
+                RenderTexture.active = null;
+            }
+        }
+
         [Fact]
         public void TheRenderTargetGuardStopsEveryOverloadButTheMipOne()
         {

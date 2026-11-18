@@ -93,7 +93,8 @@ use std::ffi::c_void;
 /// 84: the scripted frame step at the end of `FrameInput`.
 /// 85: the render command `DrawShape` gives the next draw a topology, the base vertex of its
 /// external indices and a cap on the indices it reads.
-pub const NATIVE_API_VERSION: u32 = 85;
+/// 86: `SetTarget`'s color may be `NO_TEXTURE`: a None target binds nothing.
+pub const NATIVE_API_VERSION: u32 = 86;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

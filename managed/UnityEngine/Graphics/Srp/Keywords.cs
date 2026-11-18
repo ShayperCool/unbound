@@ -235,13 +235,33 @@ namespace UnityEngine.Rendering
 
         public void InvokeOnRenderObjectCallbacks() => Add(c => Unbound.Runtime.FrameBuilder.InvokeOnRenderObject());
 
-        /// <summary>Several color targets (only the first is drawn into yet) and a depth target.</summary>
+        /// <summary>The binding's colors and depth target at the given level, whatever level its
+        /// identifiers carry; a negative slice is slice 0 (measured, tests/projects/cmdbuffers
+        /// bind.mip.*, bind.slice.*, bind.face). Its arrays are checked when the command is
+        /// recorded, with the release's messages (bind.empty, bind.nine, bind.mismatch.*,
+        /// bind.load.*); a default binding has no arrays and throws NullReferenceException.
+        /// The load and store actions change nothing a later read sees on the GL device
+        /// (bind.load.dontCare*, bind.store.*).</summary>
         public void SetRenderTarget(RenderTargetBinding binding, int mipLevel, CubemapFace cubemapFace, int depthSlice)
         {
             CheckThrowOnSetRenderTarget();
-            var colors = binding.colorRenderTargets;
-            if (colors == null || colors.Length == 0) SetRenderTarget(binding.depthRenderTarget, mipLevel, cubemapFace, depthSlice);
-            else SetRenderTarget(colors[0], binding.depthRenderTarget, mipLevel, cubemapFace, depthSlice);
+            // A default binding has no arrays: the release's NullReferenceException (Mono's message).
+            var colors = binding.colorRenderTargets ?? throw Unbound.Runtime.MonoExceptions.NullReference();
+            var loads = binding.colorLoadActions ?? throw Unbound.Runtime.MonoExceptions.NullReference();
+            var stores = binding.colorStoreActions ?? throw Unbound.Runtime.MonoExceptions.NullReference();
+            if (colors.Length < 1)
+                throw new ArgumentException($"The number of color render targets must be at least 1, but was {colors.Length}");
+            if (colors.Length > SystemInfo.supportedRenderTargetCount)
+                throw new ArgumentException($"The number of color render targets ({colors.Length}) and exceeds the maximum supported number of render targets ({SystemInfo.supportedRenderTargetCount})");
+            if (loads.Length != colors.Length)
+                throw new ArgumentException($"The number of color load actions provided ({loads.Length}) does not match the number of color render targets ({colors.Length})");
+            // The release's message names the color count twice.
+            if (stores.Length != colors.Length)
+                throw new ArgumentException($"The number of color store actions provided ({colors.Length}) does not match the number of color render targets ({colors.Length})");
+            foreach (var action in loads) RefuseClearLoad(action);
+            RefuseClearLoad(binding.depthLoadAction);
+            SetColorTargets((RenderTargetIdentifier[])colors.Clone(), binding.depthRenderTarget, mipLevel,
+                cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : System.Math.Max(depthSlice, 0));
         }
 
         public void SetRenderTarget(RenderTargetBinding binding)
