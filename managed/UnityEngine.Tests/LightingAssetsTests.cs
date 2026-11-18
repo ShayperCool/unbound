@@ -118,6 +118,11 @@ namespace Unbound.Tests
 
         // ---------------------------------------------------------------- LightingSettings
 
+        /// <summary>The host Editor's default lightmapper: ProgressiveGPU on macOS, ProgressiveCPU on
+        /// Linux (tests/projects/lightingassets metal/values.jsonl, values.jsonl).</summary>
+        static LightingSettings.Lightmapper EditorsLightmapper =>
+            OperatingSystem.IsMacOS() ? LightingSettings.Lightmapper.ProgressiveGPU : LightingSettings.Lightmapper.ProgressiveCPU;
+
         [Fact]
         public void ANewObjectHasTheEditorsDefaults()
         {
@@ -126,7 +131,7 @@ namespace Unbound.Tests
             Assert.False(s.realtimeGI);
             Assert.False(s.realtimeEnvironmentLighting);
             Assert.Equal(MixedLightingMode.Shadowmask, s.mixedBakeMode);
-            Assert.Equal(LightingSettings.Lightmapper.ProgressiveCPU, s.lightmapper);
+            Assert.Equal(EditorsLightmapper, s.lightmapper);
             Assert.Equal((1024, 40f, 2), (s.lightmapMaxSize, s.lightmapResolution, s.lightmapPadding));
             Assert.Equal(LightmapCompression.HighQuality, s.lightmapCompression);
             Assert.Equal(LightmapsMode.CombinedDirectional, s.directionalityMode);
@@ -190,12 +195,13 @@ namespace Unbound.Tests
             s.filteringAtrousPositionSigmaDirect = 9f; Assert.Equal(2f, s.filteringAtrousPositionSigmaDirect);
             s.filteringAtrousPositionSigmaAO = -1f; Assert.Equal(0f, s.filteringAtrousPositionSigmaAO);
             // Enums: an unknown mixed mode is Shadowmask, any directionality but combined is
-            // non-directional, the obsolete backend is the CPU one; the filter kinds keep anything.
+            // non-directional, the obsolete backend is the Editor's default; the filter kinds keep anything.
             s.mixedBakeMode = MixedLightingMode.Subtractive; Assert.Equal(MixedLightingMode.Subtractive, s.mixedBakeMode);
             s.mixedBakeMode = (MixedLightingMode)7; Assert.Equal(MixedLightingMode.Shadowmask, s.mixedBakeMode);
             s.mixedBakeMode = (MixedLightingMode)(-1); Assert.Equal(MixedLightingMode.Shadowmask, s.mixedBakeMode);
             s.directionalityMode = (LightmapsMode)5; Assert.Equal(LightmapsMode.NonDirectional, s.directionalityMode);
-            s.lightmapper = 0; Assert.Equal(LightingSettings.Lightmapper.ProgressiveCPU, s.lightmapper);
+            s.lightmapper = 0; Assert.Equal(EditorsLightmapper, s.lightmapper);
+            s.lightmapper = LightingSettings.Lightmapper.ProgressiveCPU; Assert.Equal(LightingSettings.Lightmapper.ProgressiveCPU, s.lightmapper);
             s.lightmapper = (LightingSettings.Lightmapper)5; Assert.Equal(5, (int)s.lightmapper);
             s.lightmapCompression = (LightmapCompression)9; Assert.Equal(LightmapCompression.HighQuality, s.lightmapCompression);
             s.sampling = (LightingSettings.Sampling)4; Assert.Equal(LightingSettings.Sampling.Fixed, s.sampling);

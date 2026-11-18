@@ -31,7 +31,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_root, run_root  # noqa: E402
+from probe_paths import device_reference_root, run_root  # noqa: E402
 import editor_runner  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gate  # noqa: E402
@@ -113,7 +113,7 @@ def capture_problem(directory, profile, release):
 
 
 def publish(work, release):
-    target_dir = reference_root(PROBE)
+    target_dir = device_reference_root(PROBE, publishing=True)
     failed = 0
     for profile in PROFILES:
         dirs = [work/profile/r for r in REPEATS]

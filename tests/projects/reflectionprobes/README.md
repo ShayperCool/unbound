@@ -69,3 +69,11 @@ renderers or when a probe's changes reach rendering: those below are observation
   `Renderer.GetClosestReflectionProbes` answers with a change at once (`lag.*`); the probe waits a
   frame after each other change. Deferred shading's blending in `deferred_lag_*` does not depend on
   this change.
+
+## Metal
+
+On macOS arm64 the gate reads `Reference/unity-6000.0.71f1/metal/` (two identical captures of the
+macOS Editor, Metal, Apple M2 Pro). Unbound there: 131/131 values, 22/22 images (worst mean 0.34,
+against the Linux reference 1.15), 4/7 cubes: the realtime-rendered `realtime_sky32` and
+`realtime_texels_sky32` mips 1-5 differ from Metal's mip filtering (Unbound filters as the Linux
+Editor does), open.

@@ -5,7 +5,7 @@
 
 A capture passes only if every condition holds; every problem is reported, none is dropped:
 * Editor result: exit 0, no forced stop of any kind (no shutdown-guard exception), no signal,
-  an NVIDIA renderer, and a launch-bound input record of this release whose witness source is
+  the GPU renderer (NVIDIA; the Metal device on macOS), and a launch-bound input record of this release whose witness source is
   this checkout's and whose color space is the profile's;
 * Editor log: no C# compile error, no shader error, no "Scripts have compiler errors", no
   exception through the witness or its entrypoint, and the witness's own "written" line once;
@@ -28,6 +28,9 @@ import math
 from pathlib import Path
 import re
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import editor_runner  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
 OUT = 'indirectspec.jsonl'
@@ -92,8 +95,8 @@ def result_problems(directory, profile, release):
         problems.append(f"forced stop {result.get('forced_exit')}: {result.get('forced_detail')}")
     if result.get('signal') is not None:
         problems.append(f"signal {result.get('signal')}")
-    if 'NVIDIA' not in (result.get('renderer') or '') or result.get('renderer_ok') is not True:
-        problems.append(f"renderer {result.get('renderer')!r} is not the verified NVIDIA GPU")
+    if not editor_runner.gpu_renderer(result) or result.get('renderer_ok') is not True:
+        problems.append(f"renderer {result.get('renderer')!r} is not the verified GPU (NVIDIA; Metal on macOS)")
     inputs = directory/'prelaunch-inputs.json'
     if not inputs.exists():
         return problems+['no launch-bound input record']

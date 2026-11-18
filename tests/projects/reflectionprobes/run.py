@@ -13,7 +13,9 @@ $XDG_CACHE_HOME/unbound/validation/runs/reflectionprobes/<label>; nothing is wri
 publish. Each Editor runs through tests/editor_runner.py (one launcher lease per repeat, a private
 Xvfb, the GPU through VirtualGL, the renderer checked); do not wrap this driver in with-heavy-job.
 Publishing requires each capture to end with `complete: true` and the two repeats to be
-byte-identical.
+byte-identical. On macOS arm64 the macOS Editor records with Metal (one repeat after the other)
+into Reference/unity-R/metal, which the gate there reads (tests/probe_paths.py
+device_reference_root).
 """
 import argparse
 import json
@@ -25,7 +27,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_root, run_root
+from probe_paths import device_reference_root, run_root
 from editor_runner import EditorJob, load_result, publish as publish_repeats, result_problem, \
     run_parallel, summary
 
@@ -111,7 +113,7 @@ def write_reference(target, first):
 
 def publish(work):
     repeats = [work/r for r in REPEATS]
-    return publish_repeats(repeats, reference_root(PROBE), outputs, write_reference,
+    return publish_repeats(repeats, device_reference_root(PROBE, publishing=True), outputs, write_reference,
                            complete=[capture_problem], gpu=True)
 
 
@@ -139,7 +141,7 @@ def main():
         os.environ.setdefault('UNBOUND_CLI', os.environ.get('UNBOUND', str(REPO/'target/release/unbound')))
         work = run_root(PROBE, 'gate-'+str(time.time_ns()))
         status = unbound(work)
-        status |= subprocess.call([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)), str(work/'unbound')])
+        status |= subprocess.call([sys.executable, str(PROBE/'compare.py'), str(device_reference_root(PROBE)), str(work/'unbound')])
         return int(status != 0)
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')

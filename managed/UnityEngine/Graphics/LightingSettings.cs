@@ -83,7 +83,7 @@ namespace UnityEngine
                 AlbedoBoost = 1f,
                 IndirectScale = 1f,
                 BounceScale = 1f,
-                Lightmapper = Lightmapper.ProgressiveCPU,
+                Lightmapper = DefaultLightmapper,
                 LightmapMaxSize = 1024,
                 LightmapResolution = 40f,
                 LightmapPadding = 2,
@@ -167,11 +167,17 @@ namespace UnityEngine
         public float albedoBoost { get => m_State.AlbedoBoost; set => m_State.AlbedoBoost = Mathf.Clamp(value, k_MinAlbedoBoost, k_MaxAlbedoBoost); }
         public float indirectScale { get => m_State.IndirectScale; set => m_State.IndirectScale = Mathf.Clamp(value, 0f, k_MaxIndirectScale); }
 
-        /// <summary>The obsolete Enlighten backend bakes with the CPU lightmapper.</summary>
+        /// <summary>The lightmapper a new LightingSettings has, which the obsolete Enlighten backend
+        /// bakes with too: the Editor's default, ProgressiveGPU on macOS (the Unity 6000.0.71f1 macOS
+        /// Editor, Apple M2 Pro: tests/projects/lightingassets metal/values.jsonl) and ProgressiveCPU
+        /// on Linux (values.jsonl).</summary>
+        static Lightmapper DefaultLightmapper =>
+            Application.platform == RuntimePlatform.OSXEditor ? Lightmapper.ProgressiveGPU : Lightmapper.ProgressiveCPU;
+
         public Lightmapper lightmapper
         {
             get => m_State.Lightmapper;
-            set => m_State.Lightmapper = (int)value == 0 ? Lightmapper.ProgressiveCPU : value;
+            set => m_State.Lightmapper = (int)value == 0 ? DefaultLightmapper : value;
         }
 
         /// <summary>The closest power of two within 32..4096.</summary>

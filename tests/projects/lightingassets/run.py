@@ -6,6 +6,9 @@
     run.py publish native1 native2            # two identical captures become Reference/unity-<version>/
     run.py gate --label gate-1                # engine run compared with Reference/ (the land gate)
 
+On macOS arm64 record/publish/gate use the Metal capture set Reference/unity-<version>/metal/ (values
+and images, tests/probe_paths.py device_reference_root); the warm-up state records stay shared.
+
 The release is $UNBOUND_PROBE_UNITY_VERSION (default 6000.0.71f1). Run output stays under
 $XDG_CACHE_HOME/unbound/validation/runs/lightingassets/<label>/.
 """
@@ -19,7 +22,7 @@ from pathlib import Path
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import cache_artifact_path, reference_root, run_root, unity_version  # noqa: E402
+from probe_paths import cache_artifact_path, device_reference_root, reference_root, run_root, unity_version  # noqa: E402
 import editor_runner  # noqa: E402
 import warmup  # noqa: E402
 
@@ -89,7 +92,7 @@ def record(label):
 
 
 def publish(labels):
-    target = reference_root(PROBE)
+    target = device_reference_root(PROBE, publishing=True)
 
     def write(path, first):
         path.mkdir(parents=True)
@@ -112,7 +115,7 @@ def gate(label, frames):
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(f'engine exit {code}; log {out}/engine.log')
-    code = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_root(PROBE)), str(out/'engine'),
+    code = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(device_reference_root(PROBE)), str(out/'engine'),
                            '--log', str(out/'engine.log')]).returncode
     for mode in warmup.MODES:
         code |= warmup.gate(sys.modules[__name__], label+'-cold-'+mode, mode)

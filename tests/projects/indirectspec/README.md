@@ -131,3 +131,10 @@ reason (docs/COMPATIBILITY_GAPS.md, cause table `indirectspec`), measured on the
 GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
 is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
 (NOW MATCHES) so that its entry can be withdrawn.
+
+## Metal
+
+On macOS arm64 the suite reads `Reference/unity-6000.0.71f1/metal/{linear,gamma}.jsonl` (two
+identical captures each of the macOS Editor, Metal, Apple M2 Pro; gate.py checks the Metal device
+there), with the shared residual lists. Unbound there: linear 18 failed, gamma 9 (against the Linux
+references 17 and 21).
