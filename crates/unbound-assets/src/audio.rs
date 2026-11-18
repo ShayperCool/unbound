@@ -16,7 +16,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use symphonia::core::{
-    codecs::audio::AudioDecoderOptions,
+    codecs::audio::{AudioCodecId, AudioDecoderOptions, well_known::*},
     errors::Error as SymphoniaError,
     formats::{FormatOptions, TrackType, probe::Hint},
     io::MediaSourceStream,
@@ -173,11 +173,14 @@ impl Importer for AudioImporter {
     type Output = ImportedAudio;
     const KIND: &'static str = "audio";
     // 4: converted PCM samples (mono downmix, resampling) are stored as 16-bit samples.
-    const VERSION: u32 = 4;
+    // 5: so are unconverted samples finer than 16 bits (24-bit, float).
+    const VERSION: u32 = 5;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
-        let (channels, mut sample_rate, mut samples) = decode(source, bytes).context("decoding")?;
+        let decoded = decode_source(source, bytes, false).context("decoding")?;
+        let (channels, mut sample_rate, mut samples) =
+            (decoded.channels, decoded.sample_rate, decoded.samples);
         let mut channels = channels;
         let mut converted = false;
         if settings.force_to_mono && channels > 1 {
@@ -191,8 +194,12 @@ impl Importer for AudioImporter {
             sample_rate = target;
             converted = true;
         }
-        if converted && settings.sample.compression_format == PCM {
-            quantize_pcm16(&mut samples);
+        if settings.sample.compression_format == PCM {
+            if converted {
+                quantize_pcm16(&mut samples);
+            } else {
+                store_pcm16(&mut samples, decoded.format);
+            }
         }
         // ADPCM (FMOD's) keeps blocks of 64 frames: the clip is as long as its last block.
         if settings.sample.compression_format == 2 {
@@ -225,6 +232,21 @@ pub fn decode_packets(
     bytes: &[u8],
     untrimmed: bool,
 ) -> Result<(u16, u32, Vec<f32>)> {
+    let decoded = decode_source(source, bytes, untrimmed)?;
+    Ok((decoded.channels, decoded.sample_rate, decoded.samples))
+}
+
+/// A decoded audio track.
+struct Decoded {
+    channels: u16,
+    sample_rate: u32,
+    /// Interleaved.
+    samples: Vec<f32>,
+    /// What the source's samples are, for a PCM source.
+    format: Option<PcmSource>,
+}
+
+fn decode_source(source: &Path, bytes: &[u8], untrimmed: bool) -> Result<Decoded> {
     let cursor = std::io::Cursor::new(bytes.to_vec());
     let stream = MediaSourceStream::new(Box::new(cursor), Default::default());
     let mut hint = Hint::new();
@@ -294,7 +316,12 @@ pub fn decode_packets(
     if channels == 0 {
         bail!("no channels");
     }
-    Ok((channels, sample_rate, samples))
+    Ok(Decoded {
+        channels,
+        sample_rate,
+        samples,
+        format: PcmSource::of(params.codec),
+    })
 }
 
 /// `AudioCompressionFormat.PCM`.
@@ -307,6 +334,74 @@ const PCM: i32 = 0;
 pub fn quantize_pcm16(samples: &mut [f32]) {
     for s in samples {
         *s = (s.clamp(-1.0, 1.0) * 32767.0).trunc() / 32768.0;
+    }
+}
+
+/// Unconverted samples as a PCM import stores them: 16-bit, read back over 32768. Integer samples
+/// finer than 16 bits keep their top 16 bits (a 24-bit sample shifted right by 8, rounding toward
+/// negative infinity), float samples take full scale 32767 truncated toward zero, as converted
+/// samples do ([`quantize_pcm16`]); 8- and 16-bit samples are stored as they are (matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/assetpostprocessors Tone8, Tone24 and ToneFloat;
+/// 32-bit integer and 64-bit float samples take the same rules, unmeasured). Compressed sources'
+/// samples are left as decoded (unmeasured).
+fn store_pcm16(samples: &mut [f32], format: Option<PcmSource>) {
+    match format {
+        Some(PcmSource::FineInteger) => {
+            for s in samples {
+                *s = (*s * 32768.0).floor().clamp(-32768.0, 32767.0) / 32768.0;
+            }
+        }
+        Some(PcmSource::Float) => quantize_pcm16(samples),
+        None => {}
+    }
+}
+
+/// The samples of a PCM source finer than 16 bits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PcmSource {
+    /// 24- or 32-bit integers.
+    FineInteger,
+    /// 32- or 64-bit floats.
+    Float,
+}
+
+impl PcmSource {
+    fn of(codec: AudioCodecId) -> Option<Self> {
+        const FINE_INTEGER: &[AudioCodecId] = &[
+            CODEC_ID_PCM_S24LE,
+            CODEC_ID_PCM_S24LE_PLANAR,
+            CODEC_ID_PCM_S24BE,
+            CODEC_ID_PCM_S24BE_PLANAR,
+            CODEC_ID_PCM_U24LE,
+            CODEC_ID_PCM_U24LE_PLANAR,
+            CODEC_ID_PCM_U24BE,
+            CODEC_ID_PCM_U24BE_PLANAR,
+            CODEC_ID_PCM_S32LE,
+            CODEC_ID_PCM_S32LE_PLANAR,
+            CODEC_ID_PCM_S32BE,
+            CODEC_ID_PCM_S32BE_PLANAR,
+            CODEC_ID_PCM_U32LE,
+            CODEC_ID_PCM_U32LE_PLANAR,
+            CODEC_ID_PCM_U32BE,
+            CODEC_ID_PCM_U32BE_PLANAR,
+        ];
+        const FLOAT: &[AudioCodecId] = &[
+            CODEC_ID_PCM_F32LE,
+            CODEC_ID_PCM_F32LE_PLANAR,
+            CODEC_ID_PCM_F32BE,
+            CODEC_ID_PCM_F32BE_PLANAR,
+            CODEC_ID_PCM_F64LE,
+            CODEC_ID_PCM_F64LE_PLANAR,
+            CODEC_ID_PCM_F64BE,
+            CODEC_ID_PCM_F64BE_PLANAR,
+        ];
+        if FINE_INTEGER.contains(&codec) {
+            Some(Self::FineInteger)
+        } else if FLOAT.contains(&codec) {
+            Some(Self::Float)
+        } else {
+            None
+        }
     }
 }
 
@@ -448,24 +543,74 @@ AudioImporter:
     }
 
     fn wav(channels: u16, rate: u32, samples: &[i16]) -> Vec<u8> {
-        let data_len = samples.len() as u32 * 2;
+        let data: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
+        wav_data(1, 16, channels, rate, &data)
+    }
+
+    /// A WAVE file of `bits`-bit samples in `data` (format 1: integer PCM, 3: IEEE float).
+    fn wav_data(format: u16, bits: u16, channels: u16, rate: u32, data: &[u8]) -> Vec<u8> {
+        let block = channels * bits / 8;
         let mut out = Vec::new();
         out.extend_from_slice(b"RIFF");
-        out.extend_from_slice(&(36 + data_len).to_le_bytes());
+        out.extend_from_slice(&(36 + data.len() as u32).to_le_bytes());
         out.extend_from_slice(b"WAVEfmt ");
         out.extend_from_slice(&16u32.to_le_bytes());
-        out.extend_from_slice(&1u16.to_le_bytes()); // PCM
+        out.extend_from_slice(&format.to_le_bytes());
         out.extend_from_slice(&channels.to_le_bytes());
         out.extend_from_slice(&rate.to_le_bytes());
-        out.extend_from_slice(&(rate * channels as u32 * 2).to_le_bytes());
-        out.extend_from_slice(&(channels * 2).to_le_bytes());
-        out.extend_from_slice(&16u16.to_le_bytes());
+        out.extend_from_slice(&(rate * block as u32).to_le_bytes());
+        out.extend_from_slice(&block.to_le_bytes());
+        out.extend_from_slice(&bits.to_le_bytes());
         out.extend_from_slice(b"data");
-        out.extend_from_slice(&data_len.to_le_bytes());
-        for s in samples {
-            out.extend_from_slice(&s.to_le_bytes());
-        }
+        out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        out.extend_from_slice(data);
         out
+    }
+
+    #[test]
+    fn unconverted_pcm_finer_than_16_bits_is_stored_as_16_bit_samples() {
+        // tests/projects/assetpostprocessors Tone24.wav and ToneFloat.wav: their first samples
+        // and what a PCM import gives back (in units of 2^-15).
+        let ramp = |i: i32| ((i * 7919) % 20000) as f64 / 10000.0 - 1.0 + 1.0 / 3_000_000.0;
+        let int24: Vec<u8> = (0..4)
+            .flat_map(|i| {
+                let q = (ramp(i) * 8_388_608.0) as i32;
+                q.to_le_bytes()[..3].to_vec()
+            })
+            .collect();
+        let float: Vec<u8> = (0..4)
+            .flat_map(|i| (ramp(i) as f32).to_le_bytes())
+            .collect();
+        let pcm = unbound_yaml::parse_value(
+            "AudioImporter:\n  defaultSettings:\n    loadType: 0\n    compressionFormat: 0\n",
+        )
+        .unwrap();
+        let units = |samples: &[f32]| samples.iter().map(|s| s * 32768.0).collect::<Vec<_>>();
+        let import = |bytes: &[u8], meta: &Value| {
+            AudioImporter::default()
+                .import(Path::new("a.wav"), bytes, meta)
+                .unwrap()
+                .samples
+        };
+        let bytes24 = wav_data(1, 24, 1, 22050, &int24);
+        assert_eq!(
+            units(&import(&bytes24, &pcm)),
+            [-32768.0, -6820.0, 19129.0, -20458.0]
+        );
+        let bytes_float = wav_data(3, 32, 1, 22050, &float);
+        assert_eq!(
+            units(&import(&bytes_float, &pcm)),
+            [-32766.0, -6818.0, 19129.0, -20456.0]
+        );
+        // 16-bit samples are stored as they are; another compression format keeps the decoded
+        // samples whole.
+        let bytes16 = wav(1, 22050, &[-32768, 1, 32767]);
+        assert_eq!(units(&import(&bytes16, &pcm)), [-32768.0, 1.0, 32767.0]);
+        let vorbis = Value::Null;
+        assert_eq!(
+            import(&bytes24, &vorbis)[1],
+            (ramp(1) * 8_388_608.0) as i32 as f32 / 8_388_608.0
+        );
     }
 
     #[test]
