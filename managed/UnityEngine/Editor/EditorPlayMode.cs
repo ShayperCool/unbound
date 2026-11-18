@@ -97,7 +97,15 @@ namespace UnityEditor.SceneManagement
 }
 namespace UnityEditor.PackageManager
 {
-    public static partial class Events { public static event Action<PackageRegistrationEventArgs> registeredPackages; }
+    /// <summary>The Package Manager's registration events: raised when a resolution adds, removes
+    /// or changes the project's packages (the Scripting API, 6000.0). A session's packages are
+    /// resolved once, before its scripts load, so nothing raises them while it runs; handlers
+    /// (Burst's and the Input System's, for two) are kept.</summary>
+    public static partial class Events
+    {
+        public static event Action<PackageRegistrationEventArgs> registeringPackages;
+        public static event Action<PackageRegistrationEventArgs> registeredPackages;
+    }
     public partial class PackageRegistrationEventArgs
     {
         private PackageRegistrationEventArgs() { }

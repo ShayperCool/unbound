@@ -36238,7 +36238,6 @@ namespace UnityEditor.PackageManager
     {
         [global::Unbound.Stub] internal static void InvokeRegisteringPackages(global::System.IntPtr nativePackageDiffHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Events.InvokeRegisteringPackages"); }
         [global::Unbound.Stub] internal static void InvokeRegisteredPackages(global::System.IntPtr nativePackageDiffHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Events.InvokeRegisteredPackages"); }
-        public static event global::System.Action<global::UnityEditor.PackageManager.PackageRegistrationEventArgs> registeringPackages { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Events.registeringPackages"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class Folders
