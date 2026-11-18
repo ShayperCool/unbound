@@ -1,0 +1,7 @@
+{
+  "commands": ["python3 tests/projects/buildplayerhandlers/run.py gate"],
+  "summary": "buildplayerhandlers: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/BuildPlayerWindow.cs"
+  ]
+}

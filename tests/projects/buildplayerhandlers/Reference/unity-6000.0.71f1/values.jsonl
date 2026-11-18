@@ -1,0 +1,28 @@
+{"k":"build.first.returns","v":"done"}
+{"k":"build.first.logs","v":""}
+{"k":"build.first.kept","v":"this"}
+{"k":"build.second.returns","v":"done"}
+{"k":"build.second.logs","v":"Warning: The build player handler in BuildPlayerWindow is being reassigned!"}
+{"k":"build.second.kept","v":"this"}
+{"k":"build.same.returns","v":"done"}
+{"k":"build.same.logs","v":"Warning: The build player handler in BuildPlayerWindow is being reassigned!"}
+{"k":"build.same.kept","v":"this"}
+{"k":"build.null.returns","v":"done"}
+{"k":"build.null.logs","v":""}
+{"k":"build.null.kept","v":"null"}
+{"k":"build.afterNull.returns","v":"done"}
+{"k":"build.afterNull.logs","v":""}
+{"k":"build.afterNull.kept","v":"this"}
+{"k":"options.first.returns","v":"done"}
+{"k":"options.first.logs","v":""}
+{"k":"options.first.kept","v":"this"}
+{"k":"options.second.returns","v":"done"}
+{"k":"options.second.logs","v":"Warning: The get build player options handler in BuildPlayerWindow is being reassigned!"}
+{"k":"options.second.kept","v":"this"}
+{"k":"options.null.returns","v":"done"}
+{"k":"options.null.logs","v":""}
+{"k":"options.null.kept","v":"null"}
+{"k":"options.afterNull.returns","v":"done"}
+{"k":"options.afterNull.logs","v":""}
+{"k":"options.afterNull.kept","v":"this"}
+{"k":"complete","v":true}
