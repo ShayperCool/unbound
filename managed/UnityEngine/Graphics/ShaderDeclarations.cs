@@ -66,6 +66,19 @@ namespace Unbound.Runtime
         internal readonly List<DeclaredKeyword> Keywords = new List<DeclaredKeyword>();
         readonly Dictionary<string, int> m_Index = new Dictionary<string, int>(StringComparer.Ordinal);
 
+        /// <summary>The keyword of a pass's DOTS instancing variant (BatchRendererGroup draws).</summary>
+        internal const string DotsInstancingKeyword = "DOTS_INSTANCING_ON";
+
+        /// <summary>Whether a pass's variant choices offer <paramref name="keyword"/> (false for
+        /// unknown choices).</summary>
+        internal static bool Offers(string[][] keywordSets, string keyword)
+        {
+            if (keywordSets == null) return false;
+            foreach (var set in keywordSets)
+                if (set != null && Array.IndexOf(set, keyword) >= 0) return true;
+            return false;
+        }
+
         /// <summary>A keyword's index in the space (-1: not declared, or the space is unknown).</summary>
         internal int IndexOf(string name) => KeywordsKnown && name != null && m_Index.TryGetValue(name, out var i) ? i : -1;
 

@@ -402,7 +402,8 @@ namespace Unbound.Runtime
         static readonly Dictionary<(int Shader, string Pass, string Pipeline), bool> s_NoDotsPass = new Dictionary<(int, string, string), bool>();
 
         /// <summary>The Editor's error for a command the list draws (visible, its material's queue
-        /// in <paramref name="queues"/>) whose material draws, in a list of
+        /// in <paramref name="queues"/>, no override material: these conditions are Unbound's,
+        /// the capture has one visible command of the default queue) whose material draws, in a list of
         /// <paramref name="lightModes"/> (null: none, an override material draws instead), a pass that defines no DOTS_INSTANCING_ON variant (measured: tests/projects/brg
         /// errors, Probe/NoDots, in the Editor's log; the pass is not drawn, which the renderer
         /// decides). Logged when the commands are read, each distinct message once (the Editor
@@ -450,16 +451,11 @@ namespace Unbound.Runtime
                 {
                     if (!string.Equals(sub.PassNames[j], pass, StringComparison.OrdinalIgnoreCase)) continue;
                     var sets = j < sub.KeywordSets.Count ? sub.KeywordSets[j] : null;
-                    if (sets == null) return false;
-                    foreach (var set in sets)
-                        if (Array.IndexOf(set, DotsInstancingKeyword) >= 0) return false;
-                    return true;
+                    return sets != null && !ShaderDeclarations.Offers(sets, ShaderDeclarations.DotsInstancingKeyword);
                 }
             }
             return false;
         }
-
-        const string DotsInstancingKeyword = "DOTS_INSTANCING_ON";
 
         static void WarnOnce(int what)
         {

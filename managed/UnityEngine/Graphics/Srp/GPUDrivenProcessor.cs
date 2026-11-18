@@ -366,15 +366,9 @@ namespace UnityEngine.Rendering
             if (!declarations.SubShadersKnown) return false;
             foreach (var sub in declarations.SubShaders)
                 foreach (var sets in sub.KeywordSets)
-                {
-                    if (sets == null) continue;
-                    foreach (var set in sets)
-                        if (Array.IndexOf(set, DotsInstancingKeyword) >= 0) return true;
-                }
+                    if (ShaderDeclarations.Offers(sets, ShaderDeclarations.DotsInstancingKeyword)) return true;
             return false;
         }
-
-        const string DotsInstancingKeyword = "DOTS_INSTANCING_ON";
         /// <summary>The render queue past which a material is transparent.</summary>
         const int LastOpaqueQueue = 2500;
 

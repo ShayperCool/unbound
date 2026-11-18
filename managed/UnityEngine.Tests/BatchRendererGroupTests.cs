@@ -293,10 +293,10 @@ namespace UnityEngine.Tests
             return items;
         }
 
-        /// <summary>Reading a list's commands logs the Editor's missing DOTS variant error for a
-        /// visible command whose material draws, with the list's LightModes, a pass declaring no
-        /// DOTS_INSTANCING_ON (tests/projects/brg errors); a list whose override material draws
-        /// instead, and a command with no visible instances, log nothing.</summary>
+        /// <summary>A renderer list reading a visible command whose material it draws with a pass
+        /// declaring no DOTS_INSTANCING_ON logs the Editor's missing variant error, once
+        /// (tests/projects/brg errors); a list whose override material draws instead, a list of
+        /// other LightModes and a command with no visible instances log nothing.</summary>
         [Fact]
         public void AListReadingACommandOfAPassWithoutDotsLogsTheEditorsError()
         {
@@ -323,28 +323,35 @@ namespace UnityEngine.Tests
                 subshaders = new[] { new { tags = Array.Empty<string[]>(), passes = new[] { new { name = "Forward", tags = Array.Empty<string[]>(), keyword_sets = new[] { new[] { "_", "FOG_LINEAR" } } } } } },
             });
             var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
-            var forward = new List<string> { "UniversalForward" };
+            var overridden = new Material(m_Shader);
             var logged = new List<string>();
             var previous = Debug.unityLogger.logHandler;
             Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            void Draw(string lightMode, Material overrideMaterial = null)
+            {
+                var tags = new List<ShaderTagId> { new ShaderTagId(lightMode) };
+                var drawing = new DrawingSettings(tags[0], new SortingSettings(m_Camera)) { overrideMaterial = overrideMaterial };
+                FrameBuilder.DrawRendererList(Cull(), drawing, all, tags);
+            }
             try
             {
-                // An override material's list, then a command without visible instances: nothing.
-                Collect(Cull(), all);
+                Draw("UniversalForward", overridden);
+                Draw("SRPDefaultUnlit");
                 visible = 0;
-                Collect(Cull(), all, lightModes: forward);
+                Draw("UniversalForward");
                 Assert.DoesNotContain(logged, m => m.Contains("DOTS_INSTANCING_ON"));
                 visible = 1;
-                Assert.Single(Collect(Cull(), all, lightModes: forward));
+                Draw("UniversalForward");
                 Assert.Single(logged, m => m.Contains("A BatchDrawCommand is using the pass \"Forward\" from the shader \"Tests/Brg\" which does not define a DOTS_INSTANCING_ON variant.")
                     && m.Contains($"MaterialID: {material.value} (\"{m_Material.name}\"), MeshID: {mesh.value} (\"{m_Mesh.name}\"), BatchID: {batch.value}."));
                 // The same message is logged once.
-                Collect(Cull(), all, lightModes: forward);
+                Draw("UniversalForward");
                 Assert.Single(logged, m => m.Contains("DOTS_INSTANCING_ON"));
             }
             finally
             {
                 Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(overridden);
                 ShaderPassInfo.ResetForTests();
                 ShaderDeclarations.s_CallForTests = null;
                 ShaderDeclarations.ResetForTests();
