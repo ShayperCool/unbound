@@ -396,6 +396,7 @@ namespace Unbound.Runtime
             {
                 var texels = handle == 0 ? null : Native.ReadTexture(handle, mip, z + layer, x, y, width, height, floats);
                 if (texels == null) return Unavailable(result);
+                if (floats && src is RenderTexture && !format.IsPacked) RenderTexture.QuantizeReadTexels(src.graphicsFormat, texels);
                 result.Layers[layer] = format.Encode(texels, width * height, floats, alpha, channels,
                     Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.FramebufferReadback
                         && src.graphicsFormat == GraphicsFormat.R16G16B16_SNorm,
@@ -435,13 +436,18 @@ namespace Unbound.Runtime
         /// 0.25, 0.5, 0.75, 0.6): R4G4B4A4 reads R4G4B4A4 (0x48b9), B4G4R4A4 reads A4R4G4B4
         /// (0x948b), B5G6R5 reads R5G6B5 (0x4417), A2B10G10R10 reads A2B10G10R10 (0xaff80100),
         /// B10G11R11 the 10- and 11-bit unsigned floats B, G, R (0x741c0340), E5B9G9R9 the shared
-        /// exponent and B, G, R (0x7e020080).</summary>
-        internal enum PackedLayout { None, R4G4B4A4, A4R4G4B4, R5G6B5, A2B10G10R10, B10G11R11, E5B9G9R9 }
+        /// exponent and B, G, R (0x7e020080), R10G10B10_XR two set bits over the extended-range
+        /// codes R, G, B (0xe009fefe; RenderTexture.ExtendedRangeCode).</summary>
+        internal enum PackedLayout { None, R4G4B4A4, A4R4G4B4, R5G6B5, A2B10G10R10, B10G11R11, E5B9G9R9, X2R10G10B10XR }
 
         static readonly ReadbackFormat PackedR4G4B4A4 = new ReadbackFormat(PackedLayout.R4G4B4A4),
             PackedA4R4G4B4 = new ReadbackFormat(PackedLayout.A4R4G4B4), PackedR5G6B5 = new ReadbackFormat(PackedLayout.R5G6B5),
             PackedA2B10G10R10 = new ReadbackFormat(PackedLayout.A2B10G10R10), PackedB10G11R11 = new ReadbackFormat(PackedLayout.B10G11R11),
-            PackedE5B9G9R9 = new ReadbackFormat(PackedLayout.E5B9G9R9);
+            PackedE5B9G9R9 = new ReadbackFormat(PackedLayout.E5B9G9R9), PackedX2R10G10B10XR = new ReadbackFormat(PackedLayout.X2R10G10B10XR);
+
+        /// <summary>Whether this is a packed target's own word layout (read from the stored values,
+        /// not from what reading the target into another format returns).</summary>
+        internal bool IsPacked => m_Packed != PackedLayout.None;
 
         /// <summary>The packed words a request in a packed target's own format reads.</summary>
         internal static ReadbackFormat Packed(GraphicsFormat format) => format switch
@@ -452,6 +458,7 @@ namespace Unbound.Runtime
             GraphicsFormat.A2B10G10R10_UNormPack32 => PackedA2B10G10R10,
             GraphicsFormat.B10G11R11_UFloatPack32 => PackedB10G11R11,
             GraphicsFormat.E5B9G9R9_UFloatPack32 => PackedE5B9G9R9,
+            GraphicsFormat.R10G10B10_XRUNormPack32 => PackedX2R10G10B10XR,
             _ => null,
         };
 
@@ -506,6 +513,8 @@ namespace Unbound.Runtime
             PackedLayout.A2B10G10R10 => Unorm(a, 2) << 30 | Unorm(b, 10) << 20 | Unorm(g, 10) << 10 | Unorm(r, 10),
             PackedLayout.B10G11R11 => UnsignedFloat(b, 5) << 22 | UnsignedFloat(g, 6) << 11 | UnsignedFloat(r, 6),
             PackedLayout.E5B9G9R9 => SharedExponent(r, g, b),
+            PackedLayout.X2R10G10B10XR => 3u << 30 | RenderTexture.ExtendedRangeCode(r) << 20
+                | RenderTexture.ExtendedRangeCode(g) << 10 | RenderTexture.ExtendedRangeCode(b),
             _ => throw new InvalidOperationException(),
         };
         ReadbackFormat(bool signed, params int[] channels) : this(2, channels) { m_Normalized16 = signed ? -1 : 1; }

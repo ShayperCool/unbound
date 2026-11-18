@@ -500,10 +500,18 @@ namespace UnityEngine
                 Debug.LogWarning("Unbound: Texture2D.ReadPixels has nothing to read (a headless run, or no screen of this size yet); the texture is left unchanged.");
                 return;
             }
+            if (target != null) RenderTexture.QuantizeReadTexels(target.graphicsFormat, bytes);
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
             // of the destination's linear flag; the screen's are its 8-bit (in Linear,
             // sRGB-encoded) bytes.
             bool eightBit = target != null && ReadsAsBytes(target.graphicsFormat);
+            // A signed normalized target read through the device's conversion into 8-bit texels
+            // truncates where that is measured: the macOS Editor's Metal device reads 32/127, 64/127, 95/127, 79/127 as 64,
+            // 128, 190, 158 (Unity 6000.0.71f1, tests/projects/textureformats metal.jsonl
+            // readback.B8G8R8A8_SNorm.read.RGBA32; float texels read the stored values).
+            bool truncateSigned = conversion && GraphicsDeviceProfile.Current.TargetReadback?.SignedToBytesTruncates == true
+                && target != null && GraphicsFormatUtility.IsSNormFormat(target.graphicsFormat)
+                && AsyncReadbacks.EightBit(GraphicsFormatOf());
             unsafe
             {
                 fixed (byte* p = bytes)
@@ -519,6 +527,8 @@ namespace UnityEngine
                             f += 4;
                             if (conversion)
                                 for (int k = channels; k < 4; k++) c[k] = 1f;
+                            if (truncateSigned)
+                                for (int k = 0; k < 4; k++) c[k] = MathF.Floor(Mathf.Clamp01(c[k]) * 255f) * (1f / 255f);
                             if (eightBit)
                                 for (int k = 0; k < 4; k++)
                                 {

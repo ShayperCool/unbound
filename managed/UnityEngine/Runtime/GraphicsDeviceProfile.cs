@@ -130,6 +130,9 @@ namespace Unbound.Runtime
             /// the packed words (ReadbackFormat.Packed has each layout); null or absent: such a
             /// request fails (unmeasured).</summary>
             internal System.Collections.Generic.HashSet<GraphicsFormat> PackedWords { get; init; }
+            /// <summary>ReadPixels of a signed normalized target into 8-bit texels truncates its
+            /// values to bytes (Texture2D.ReadPixels); false: unmeasured, they round.</summary>
+            internal bool SignedToBytesTruncates { get; init; }
         }
 
         /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
@@ -253,12 +256,15 @@ namespace Unbound.Runtime
                     [GraphicsFormat.A10R10G10B10_XRUNormPack32] = (int)GraphicsFormat.A10R10G10B10_XRUNormPack32,
                 },
                 // tests/projects/textureformats metal.jsonl readback.*.async: the packed words of a
-                // target cleared to (0.25, 0.5, 0.75, 0.6); R10G10B10_XR's are not decoded yet.
+                // target cleared to (0.25, 0.5, 0.75, 0.6).
                 PackedWords = new System.Collections.Generic.HashSet<GraphicsFormat>
                 {
                     GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormat.B4G4R4A4_UNormPack16, GraphicsFormat.B5G6R5_UNormPack16,
                     GraphicsFormat.A2B10G10R10_UNormPack32, GraphicsFormat.B10G11R11_UFloatPack32, GraphicsFormat.E5B9G9R9_UFloatPack32,
+                    GraphicsFormat.R10G10B10_XRUNormPack32,
                 },
+                // tests/projects/textureformats metal.jsonl readback.B8G8R8A8_SNorm.read.RGBA32.
+                SignedToBytesTruncates = true,
                 RefusedSourceNames = new System.Collections.Generic.Dictionary<GraphicsFormat, string>
                 {
                     [GraphicsFormat.A1R5G5B5_UNormPack16] = "A1RGB5 UNorm",

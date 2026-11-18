@@ -30,6 +30,8 @@ namespace Unbound.Tests
         [InlineData(GraphicsFormat.A2B10G10R10_UNormPack32, 256 / 1023f, 512 / 1023f, 767 / 1023f, 2 / 3f, 4, "0001f8af")]
         [InlineData(GraphicsFormat.B10G11R11_UFloatPack32, 0.25f, 0.5f, 0.75f, 1f, 3, "40031c74")]
         [InlineData(GraphicsFormat.E5B9G9R9_UFloatPack32, 0.25f, 0.5f, 0.75f, 1f, 3, "8000027e")]
+        // XR targets are stored as half floats: 0.25, 0.5, 0.75 exactly (codes 511.5 and 766.5 round to even).
+        [InlineData(GraphicsFormat.R10G10B10_XRUNormPack32, 0.25f, 0.5f, 0.75f, 1f, 3, "fefe09e0")]
         public void APackedTargetReadsItsWords(GraphicsFormat format, float r, float g, float b, float a, int channels, string word)
         {
             var packed = ReadbackFormat.Packed(format);
@@ -61,14 +63,17 @@ namespace Unbound.Tests
             {
                 GraphicsDeviceProfile.Select("Metal");
                 Assert.NotNull(AsyncReadbacks.Own(rt));
-                // Controls: a texture of a packed format (unmeasured) keeps failing, XR's words are
-                // not decoded, and the other devices are unmeasured.
+                // Controls: a texture of a packed format (unmeasured) keeps failing, another XR
+                // layout (unmeasured) too, and the other devices are unmeasured.
                 var texture = new Texture2D(2, 1, TextureFormat.ARGB4444, false);
                 Assert.Null(AsyncReadbacks.Own(texture));
                 Object.DestroyImmediate(texture);
                 var xr = new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.R10G10B10_XRUNormPack32, 0));
-                Assert.Null(AsyncReadbacks.Own(xr));
+                Assert.NotNull(AsyncReadbacks.Own(xr));
                 Object.DestroyImmediate(xr);
+                var bgraXr = new RenderTexture(new RenderTextureDescriptor(2, 1, GraphicsFormat.A10R10G10B10_XRUNormPack32, 0));
+                Assert.Null(AsyncReadbacks.Own(bgraXr));
+                Object.DestroyImmediate(bgraXr);
                 foreach (var device in new[] { "OpenGLCore", "Vulkan" })
                 {
                     GraphicsDeviceProfile.Select(device);
@@ -79,6 +84,66 @@ namespace Unbound.Tests
             {
                 GraphicsDeviceProfile.Select(previous.Type.ToString());
                 Object.DestroyImmediate(rt);
+            }
+        }
+
+        static float[] Values(byte[] bytes)
+        {
+            var values = new float[bytes.Length / 4];
+            for (int i = 0; i < values.Length; i++) values[i] = BitConverter.ToSingle(bytes, i * 4);
+            return values;
+        }
+
+        [Fact]
+        public void ReadsOfALowPrecisionTargetKeepItsChannelBits()
+        {
+            var previous = GraphicsDeviceProfile.Current;
+            try
+            {
+                GraphicsDeviceProfile.Select("Metal");
+                // The cleared bytes 64, 128, 191, 153 read as the macOS Editor's Metal device reads
+                // the target (textureformats metal.jsonl readback.*.read.RGBAFloat): 4/15, 8/15, 11/15,
+                // 9/15 and 8/31, 32/63, 23/31 (alpha, which 5-6-5 lacks, as it was).
+                var stored = new[] { 64 / 255f, 128 / 255f, 191 / 255f, 153 / 255f };
+                foreach (var format in new[] { GraphicsFormat.R4G4B4A4_UNormPack16, GraphicsFormat.B4G4R4A4_UNormPack16 })
+                {
+                    var texels = Floats(stored);
+                    RenderTexture.QuantizeReadTexels(format, texels);
+                    Assert.Equal(new[] { 4 / 15f, 8 / 15f, 11 / 15f, 9 / 15f }, Values(texels));
+                }
+                foreach (var format in new[] { GraphicsFormat.R5G6B5_UNormPack16, GraphicsFormat.B5G6R5_UNormPack16 })
+                {
+                    var texels = Floats(stored);
+                    RenderTexture.QuantizeReadTexels(format, texels);
+                    Assert.Equal(new[] { 8 / 31f, 32 / 63f, 23 / 31f, 153 / 255f }, Values(texels));
+                }
+                // An XR target reads its codes over 1023 at 8 bits (alpha as it was).
+                var xr = Floats(0.25f, 0.5f, 0.75f, 1f);
+                RenderTexture.QuantizeReadTexels(GraphicsFormat.R10G10B10_XRUNormPack32, xr);
+                Assert.Equal(new[] { 128 / 255f, 159 / 255f, 191 / 255f, 1f }, Values(xr));
+                // Out of range values clamp, XR's within its extended range; an 8-bit format keeps its texels.
+                Assert.Equal(0u, RenderTexture.ExtendedRangeCode(-2f));
+                Assert.Equal(1023u, RenderTexture.ExtendedRangeCode(2f));
+                Assert.Equal(894u, RenderTexture.ExtendedRangeCode(1f));
+                var outside = Floats(-0.5f, 1.5f, 0f, 1f);
+                RenderTexture.QuantizeReadTexels(GraphicsFormat.R4G4B4A4_UNormPack16, outside);
+                Assert.Equal(new[] { 0f, 1f, 0f, 1f }, Values(outside));
+                var plain = Floats(stored);
+                RenderTexture.QuantizeReadTexels(GraphicsFormat.R8G8B8A8_UNorm, plain);
+                Assert.Equal(stored, Values(plain));
+                // A device that does not draw into the format keeps the texels as read.
+                foreach (var device in new[] { "OpenGLCore", "Vulkan" })
+                {
+                    GraphicsDeviceProfile.Select(device);
+                    var texels = Floats(stored);
+                    RenderTexture.QuantizeReadTexels(GraphicsFormat.R5G6B5_UNormPack16, texels);
+                    bool renders = SystemInfo.IsFormatSupported(GraphicsFormat.R5G6B5_UNormPack16, GraphicsFormatUsage.Render);
+                    Assert.Equal(renders ? 8 / 31f : 64 / 255f, Values(texels)[0]);
+                }
+            }
+            finally
+            {
+                GraphicsDeviceProfile.Select(previous.Type.ToString());
             }
         }
     }

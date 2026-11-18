@@ -434,8 +434,8 @@ namespace UnityEngine
         public bool IsCreatedOrPending() => m_Created;
 
         /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
-        /// other HDR formats, normalized 16-bit R/RG/RGBA, packed 10-10-10-2 and signed normalized
-        /// 8-bit R/RG/RGBA as themselves (as linear RGBA8, with a warning, where the device cannot
+        /// other HDR formats and R10G10B10_XR, normalized 16-bit R/RG/RGBA, packed 10-10-10-2 and signed normalized
+        /// 8-bit R/RG/RGBA (BGRA as RGBA) as themselves (as linear RGBA8, with a warning, where the device cannot
         /// keep them), 8/16/32-bit integer formats as themselves, RGBA8 otherwise (an sRGB view for
         /// sRGB ones; other signed normalized formats with a warning: they lose their sign).</summary>
         internal int PacketFormat()
@@ -443,6 +443,8 @@ namespace UnityEngine
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
+            // Extended-range 10-bit codes step by 1/510: half floats keep every value they encode.
+            if (f == GraphicsFormat.R10G10B10_XRUNormPack32) return 2;
             if (f == GraphicsFormat.R32_SFloat) return 6;
             if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
             if (f == GraphicsFormat.R32G32_SFloat) return 10;
@@ -450,6 +452,10 @@ namespace UnityEngine
             if (f == GraphicsFormat.R16G16_SFloat) return 12;
             int norm = PixelFormats.GpuNormFormat(f);
             if (norm >= 0) return norm;
+            // A blue-first signed target keeps signed 8-bit channels: its channel order shows only in
+            // raw reads, which the device refuses (tests/projects/textureformats metal.jsonl
+            // readback.B8G8R8A8_SNorm.*, the Unity 6000.0.71f1 macOS Editor on Metal).
+            if (f == GraphicsFormat.B8G8R8A8_SNorm) return PixelFormats.GpuRGBA8SNorm;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
             int integer = IntegerPacketFormat(f);
             if (integer >= 0) return integer;
@@ -477,6 +483,59 @@ namespace UnityEngine
 
         /// <summary>Integer and signed normalized formats warned about (once each).</summary>
         static readonly HashSet<GraphicsFormat> s_WarnedIntegerFormats = new HashSet<GraphicsFormat>();
+
+        static readonly int[] s_Bits4444 = { 4, 4, 4, 4 }, s_Bits565 = { 5, 6, 5, 0 };
+
+        /// <summary>The bits a target of a packed 4-bit or 5-6-5 format keeps per channel (red, green,
+        /// blue, alpha; 0 where it has none). Unbound stores such a target as 8-bit RGBA; null for
+        /// every other format.</summary>
+        internal static int[] StoredChannelBits(GraphicsFormat format) => format switch
+        {
+            GraphicsFormat.R4G4B4A4_UNormPack16 or GraphicsFormat.B4G4R4A4_UNormPack16 => s_Bits4444,
+            GraphicsFormat.R5G6B5_UNormPack16 or GraphicsFormat.B5G6R5_UNormPack16 => s_Bits565,
+            _ => null,
+        };
+
+        /// <summary>R10G10B10_XR's 10-bit code of a value: round(value * 510 + 384), ties to even,
+        /// within 0..1023 (the extended range -0.75 to 1.25). The macOS Editor's Metal device stores
+        /// 0.25, 0.5, 0.75 as 512, 639, 766 (Unity 6000.0.71f1, tests/projects/textureformats
+        /// metal.jsonl readback.R10G10B10_XRUNormPack32.async).</summary>
+        internal static uint ExtendedRangeCode(float value) =>
+            float.IsNaN(value) ? 0u : (uint)Math.Clamp(Math.Round(value * 510.0 + 384.0, MidpointRounding.ToEven), 0.0, 1023.0);
+
+        /// <summary>Float texels read from a render texture of <paramref name="format"/> as a device
+        /// that draws into that format reads them. A packed 4-bit or 5-6-5 target keeps its channel
+        /// bits (StoredChannelBits): its values round to k / (2^bits - 1) from Unbound's 8-bit store.
+        /// An R10G10B10_XR target reads each color channel's code over 1023, at 8-bit precision, not
+        /// the value it encodes. The macOS Editor's Metal device reads targets cleared to
+        /// (0.25, 0.5, 0.75, 0.6) as 4/15, 8/15, 11/15, 9/15 (4-bit), 8/31, 32/63, 23/31, 1 (5-6-5)
+        /// and 128/255, 159/255, 191/255, 1 (XR) (Unity 6000.0.71f1, tests/projects/textureformats
+        /// metal.jsonl readback.*.read.*, .asyncfloat). No 8-bit value lies halfway between two
+        /// levels of 4, 5 or 6 bits, nor a code over 1023 halfway between two bytes. Shaders
+        /// sampling a 4-bit or 5-6-5 target still read its 8-bit values.</summary>
+        internal static unsafe void QuantizeReadTexels(GraphicsFormat format, byte[] floatTexels)
+        {
+            var bits = StoredChannelBits(format);
+            bool extended = format == GraphicsFormat.R10G10B10_XRUNormPack32;
+            if ((bits == null && !extended) || floatTexels == null || !SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render)) return;
+            fixed (byte* p = floatTexels)
+            {
+                var values = (float*)p;
+                int count = floatTexels.Length / 4;
+                for (int i = 0; i < count; i++)
+                {
+                    if (extended)
+                    {
+                        if ((i & 3) != 3) values[i] = MathF.Round(ExtendedRangeCode(values[i]) * (255f / 1023f)) / 255f;
+                        continue;
+                    }
+                    int b = bits[i & 3];
+                    if (b == 0) continue;
+                    float levels = (1 << b) - 1;
+                    values[i] = MathF.Round(Math.Clamp(values[i], 0f, 1f) * levels, MidpointRounding.AwayFromZero) / levels;
+                }
+            }
+        }
 
         /// <summary>The renderer's image count, or depth for a volume.</summary>
         internal int GpuLayers => m_Descriptor.dimension switch

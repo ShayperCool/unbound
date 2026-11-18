@@ -1,20 +1,3 @@
 {
- "readback.B10G11R11_UFloatPack32.read.RGBA32": "The Editor reads a B10G11R11 target (no alpha) into RGBA32 with alpha 0, into RGBAFloat with alpha 1; Unbound fills alpha with 1 for both",
- "readback.B4G4R4A4_UNormPack16.asyncfloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B4G4R4A4_UNormPack16.read.RGBA32": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B4G4R4A4_UNormPack16.read.RGBAFloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B5G6R5_UNormPack16.asyncfloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B5G6R5_UNormPack16.read.RGBA32": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B5G6R5_UNormPack16.read.RGBAFloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.B8G8R8A8_SNorm.read.RGBA32": "Unbound stores a B8G8R8A8_SNorm target as unsigned 8-bit channels, so its texels keep unsigned 8-bit values",
- "readback.B8G8R8A8_SNorm.read.RGBAFloat": "Unbound stores a B8G8R8A8_SNorm target as unsigned 8-bit channels, so its texels keep unsigned 8-bit values",
- "readback.R10G10B10_XRUNormPack32.async": "Unbound's AsyncGPUReadback has no raw encoding of packed formats: a request in the target's own format fails, logged (Unbound: AsyncGPUReadback into this format is not supported)",
- "readback.R10G10B10_XRUNormPack32.asyncfloat": "Unbound stores an R10G10B10_XR target as RGBA8 without the extended-range encoding, so its texels read as plain 8-bit values",
- "readback.R10G10B10_XRUNormPack32.read.RGBA32": "Unbound stores an R10G10B10_XR target as RGBA8 without the extended-range encoding, so its texels read as plain 8-bit values",
- "readback.R10G10B10_XRUNormPack32.read.RGBAFloat": "Unbound stores an R10G10B10_XR target as RGBA8 without the extended-range encoding, so its texels read as plain 8-bit values",
- "readback.R4G4B4A4_UNormPack16.asyncfloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.R4G4B4A4_UNormPack16.read.RGBA32": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.R4G4B4A4_UNormPack16.read.RGBAFloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.R5G6B5_UNormPack16.read.RGBA32": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision",
- "readback.R5G6B5_UNormPack16.read.RGBAFloat": "Unbound stores this target format at 8 bits per channel (RGBA8: its device has no render format of this layout), so its texels keep 8-bit precision"
+ "readback.B10G11R11_UFloatPack32.read.RGBA32": "The Editor reads a B10G11R11 target (no alpha) into RGBA32 with alpha 0, into RGBAFloat with alpha 1; Unbound fills alpha with 1 for both"
 }
