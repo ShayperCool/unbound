@@ -28,6 +28,7 @@ namespace UnityEngine
         {
             get
             {
+                Unloaded = false;
                 if (m_File != null)
                 {
                     try { m_Data = System.IO.File.ReadAllBytes(m_File); }
@@ -54,6 +55,21 @@ namespace UnityEngine
         /// <summary>An imported text asset whose bytes are in memory (false before their first use
         /// and after <see cref="UnloadData"/>: there is nothing to unload).</summary>
         internal bool DataLoaded => m_SourceFile != null && m_File == null;
+
+        /// <summary>Unloaded as an unused asset: not listed by Resources.FindObjectsOfTypeAll until
+        /// it is loaded or used again (the Editor destroys it then and loads it back with the same
+        /// instance ID; measured: tests/projects/sceneunload `res.text`).</summary>
+        internal bool Unloaded;
+
+        /// <summary>UnloadUnusedAssets of an imported text asset: its bytes are freed and it counts
+        /// as unloaded. False for a text asset no file made, or one already unloaded.</summary>
+        internal bool UnloadUnused()
+        {
+            if (m_SourceFile == null || Unloaded) return false;
+            if (DataLoaded) UnloadData();
+            Unloaded = true;
+            return true;
+        }
 
         /// <summary>
         /// Resources.UnloadAsset (and UnloadUnusedAssets) of an imported text asset: its loaded

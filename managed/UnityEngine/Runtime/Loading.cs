@@ -762,14 +762,16 @@ namespace Unbound.Runtime
                 return Unbound.UIElements.UiResources.LoadObject(fileId);
             if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
                 return BuiltinShaders.Resolve(guid, fileId);
-            if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return cached;
+            if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return Reloaded(cached);
             var file = LoadFile(guid);
             if (file == null) return null;
-            return file.Objects.TryGetValue(fileId, out var obj) ? obj : null;
+            return file.Objects.TryGetValue(fileId, out var obj) ? Reloaded(obj) : null;
         }
 
         /// <summary>The main object of an asset (Resources.Load, AssetDatabase.LoadAssetAtPath).</summary>
-        internal static Object LoadMain(string guid, Type expected)
+        internal static Object LoadMain(string guid, Type expected) => Reloaded(LoadMainObject(guid, expected));
+
+        static Object LoadMainObject(string guid, Type expected)
         {
             var file = LoadFile(guid);
             if (file == null) return null;
@@ -1104,9 +1106,17 @@ namespace Unbound.Runtime
         static bool UnloadUnusedOne(Object asset) => asset switch
         {
             // Not a MonoScript (a TextAsset too): unloading scripts is not covered.
-            TextAsset text when text.GetType() == typeof(TextAsset) && text.DataLoaded => text.UnloadData(),
+            TextAsset text when text.GetType() == typeof(TextAsset) => text.UnloadUnused(),
             _ => false,
         };
+
+        /// <summary>An asset obtained again is loaded again (an unused-unloaded text asset is listed
+        /// once more).</summary>
+        static Object Reloaded(Object asset)
+        {
+            if (asset is TextAsset text) text.Unloaded = false;
+            return asset;
+        }
 
         /// <summary>
         /// The objects the engine can see in use, for UnloadUnusedAssets: everything reachable,
