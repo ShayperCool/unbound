@@ -395,7 +395,11 @@ mod tests {
         for device in GraphicsDevice::ALL {
             let metal = device == GraphicsDevice::Metal;
             assert_eq!(device.depth_sample_fills_color(), metal, "{device}");
-            assert_eq!(device.draws_depth_output_without_depth_buffer(), !metal, "{device}");
+            assert_eq!(
+                device.draws_depth_output_without_depth_buffer(),
+                !metal,
+                "{device}"
+            );
         }
     }
 
