@@ -34,3 +34,10 @@ into colours with Unity's own `Hidden/VideoDecode` shader; the camera planes are
 
 Suite gate (6000.0.71f1, Linux GPU, two identical runs of 2026-11-16): 10 of the 12 images match pixel for pixel; `image-residuals.json` records the two
 camera planes within 4/255, and `compare_images.py --gate` fails any other difference.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record video --variable
+VIDEO_PROBE_OUT` and `publish`. Unbound on Metal: 11/11 records and 45/45 pixels within 4 (worst 0;
+worst 1 against the Linux reference on the Mac).

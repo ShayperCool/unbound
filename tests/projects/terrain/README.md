@@ -42,3 +42,10 @@ reason (docs/COMPATIBILITY_GAPS.md, cause table `terrain`), measured on the Linu
 GPU on 2026-11-16. The strict comparison and its counts are printed as before; a difference that
 is not listed, or goes beyond its bounds, fails, and a listed key that matches again is named
 (NOW MATCHES) so that its entry can be withdrawn.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record terrain --variable
+TERRAIN_PROBE_OUT` and `publish`. Unbound on Metal: 214/216 records, images within a mean of 0.61
+(1.15 against the Linux reference on the Mac).

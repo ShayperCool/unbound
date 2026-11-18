@@ -124,3 +124,11 @@ only the bundle fixture from that directory.
 * `command_late*`: edge antialiasing differs. Without image effects Unbound keeps late camera
   command buffers in the scene's MSAA target so they retain scene depth, then resolves it; the
   Editor's late draws have sharper edges. Mean difference is at most 0.57/255 in these cases.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record resources
+--variable RESOURCES_PROBE_OUT` and `publish`. Unbound on Metal: 513 of 539 values and 62/62 images
+within a mean of 2 (469 values against the Linux reference on the Mac); the 26 differing values are
+unresolved.

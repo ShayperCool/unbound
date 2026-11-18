@@ -49,3 +49,10 @@ also reproduce from the parent HEAD before these trail changes.
 Final evidence for this stage is under ~/.cache/compat/: particle-trails-unity5,
 particle-trails-unbound6, particle-trails-build7.log, particle-trails-api.log,
 particle-trails-regression2*, particle-trails-tests*.log and particle-tests-baseline.log.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record particlestreams
+--variable PARTICLE_STREAMS_OUT` and `publish`. Unbound on Metal: 3/3 GPU images byte for byte (1/3
+against the Linux reference on the Mac).

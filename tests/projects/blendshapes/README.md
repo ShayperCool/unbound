@@ -47,3 +47,10 @@ covering the indices is taken (`shorter covering`; each misuse record gives the 
 Known differences: the clip's samples are within 0.06 of the Editor's (Unity reduces the imported
 keys). The image (`blob.png`) matches the reference pixel for pixel on the Linux GPU (6000.0.71f1,
 two runs, 2026-11-16), and the suite gates it so (`compare_images.py --gate`).
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record blendshapes
+--variable BLEND_PROBE_OUT` and `publish`. Unbound on Metal: 49/49 records and its image within a
+mean of 0.00 (0.91 against the Linux reference on the Mac).

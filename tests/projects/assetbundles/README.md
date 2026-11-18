@@ -28,3 +28,11 @@ Run Unbound and compare:
 
 Everything the probe records matches; the image matches the reference pixel for pixel on the
 Linux GPU (6000.0.71f1, two runs, 2026-11-16), and the suite gates it so (`compare_images.py --gate`).
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record assetbundles
+--variable BUNDLE_PROBE_OUT` and `publish`. Unbound on Metal: 20/20 records; `thing` differs in
+2054 pixels by up to 76 (against the Linux reference on the Mac: 718 pixels by up to 23),
+unresolved.
