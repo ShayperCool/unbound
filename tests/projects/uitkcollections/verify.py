@@ -13,10 +13,13 @@ line for line, with no missing or extra lines. Images are measured and printed.
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import device_reference_root  # noqa: E402
 TOLERANCE = 1e-3
 # Sections reported with their counts, not gated (none at present).
 OPEN = {}
@@ -97,7 +100,8 @@ def main():
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--reference', type=Path)
     a = p.parse_args()
-    reference = a.reference or ROOT/'Reference'/f'unity-{a.release}'
+    os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
+    reference = a.reference or device_reference_root(ROOT)
     ref = load(reference/'collections.jsonl')
     cand = load(a.candidate/'collections.jsonl')
     gated_total = gated_ok = 0

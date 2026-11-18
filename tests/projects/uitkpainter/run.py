@@ -6,6 +6,12 @@ Painter2D controls and run one Editor or engine capture. Wraps its heavy child i
     run.py engine --release R --output DIR --cli C --managed M
     run.py gate --release R                          engine ($UNBOUND_CLI, $UNBOUND_MANAGED_DIR)
                                                      into a fresh cache run, then verify.py
+    run.py publish --release R --captures A B        two byte-identical native captures become
+                                                     Reference/unity-R/ (never overwritten)
+
+The Editor runs through tests/editor_runner.py; on macOS arm64 that is the macOS Editor, which
+draws with Metal, and publish and verify.py use Reference/unity-R/metal (tests/probe_paths.py
+device_reference_root).
 """
 import argparse
 import hashlib
@@ -18,13 +24,15 @@ import sys
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import cache_artifact_path, run_root  # noqa: E402
+from probe_paths import cache_artifact_path, device_reference_root, run_root  # noqa: E402
+import editor_runner  # noqa: E402
 import time  # noqa: E402
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('mode', choices=['native', 'engine', 'gate'])
+    p.add_argument('mode', choices=['native', 'engine', 'gate', 'publish'])
+    p.add_argument('--captures', type=Path, nargs='*', help='publish: the native capture directories')
     p.add_argument('--release', required=True)
     p.add_argument('--output', type=Path, help='fresh directory under the Unbound cache')
     p.add_argument('--cli', type=Path)
@@ -41,6 +49,8 @@ def main():
         verify = subprocess.run([sys.executable, str(ROOT/'verify.py'), '--release', a.release,
                                  '--candidate', str(output/'capture')])
         sys.exit(verify.returncode)
+    if a.mode == 'publish':
+        sys.exit(publish(a.captures or []))
     if a.output is None:
         p.error('--output is required')
     output = a.output.expanduser().resolve()
@@ -64,10 +74,14 @@ def main():
     env = dict(os.environ, UITK_PROBE_OUT=str(output/'capture/record.jsonl'), UITK_PAINTER_OUT=str(output/'capture'))
     env.pop('WT', None)
     if a.mode == 'native':
-        kind = 'editor-gpu'
-        editor = Path.home()/f'Unity/Hub/Editor/{a.release}/Editor/Unity'
-        command = ['xvfb-run', '-a', 'vglrun', '-d', 'egl', str(editor), '-batchmode', '-projectPath', str(project),
-                   '-executeMethod', 'ProbeRunner.Record', '-logFile', str(output/'editor.log')]
+        os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
+        job = editor_runner.EditorJob(project, output/'editor.log', output, ['-executeMethod', 'ProbeRunner.Record'],
+                                      batch=True, env={k: env[k] for k in ('UITK_PROBE_OUT', 'UITK_PAINTER_OUT')},
+                                      timeout=600, label='uitkpainter-'+output.name)
+        print(editor_runner.summary(editor_runner.run(job)))
+        if not (output/'capture/painter.jsonl').is_file():
+            raise SystemExit('missing capture; inspect the editor log in ' + str(output))
+        return
     else:
         if not a.cli or not a.managed:
             p.error('engine requires --cli and --managed')
@@ -88,6 +102,24 @@ def main():
             raise RuntimeError('runtime changed during capture: ' + path)
     if not (output/'capture/painter.jsonl').is_file():
         raise SystemExit('missing capture; inspect the editor/process log in ' + str(output))
+
+
+def publish(captures):
+    """Two or more native captures with clean Editor results, byte-identical in painter.jsonl and
+    their images, become the reference set."""
+    def names(directory):
+        return ['painter.jsonl', *sorted(p.name for p in (directory/'capture').glob('*.png'))]
+
+    def complete(directory):
+        return None if (directory/'capture/painter.jsonl').is_file() else 'no painter.jsonl'
+
+    def write(target, first):
+        target.mkdir(parents=True)
+        for name in names(first):
+            shutil.copyfile(first/'capture'/name, target/name)
+        print('published', target)
+    return editor_runner.publish([Path(c) for c in captures], device_reference_root(ROOT, publishing=True),
+                                 lambda d: ['capture/'+n for n in names(d)], write, complete=[complete], gpu=True)
 
 
 if __name__ == '__main__':

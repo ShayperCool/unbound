@@ -18,12 +18,15 @@ and pixels over 8, and fail beyond the recorded residuals (IMAGE_LIMITS).
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 import struct
 import sys
 import zlib
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import device_reference_root  # noqa: E402
 TOLERANCE = 2e-4
 AREA_TOLERANCE = 1e-2
 # The recorded image residuals (docs/COMPATIBILITY_GAPS.md, Known insignificant residuals): mean,
@@ -205,7 +208,8 @@ def main():
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--reference', type=Path)
     a = p.parse_args()
-    reference = a.reference or ROOT / 'Reference' / f'unity-{a.release}'
+    os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
+    reference = a.reference or device_reference_root(ROOT)
     ref_meshes, ref_other = load(reference / 'painter.jsonl')
     meshes, other = load(a.candidate / 'painter.jsonl')
     failures = 0

@@ -62,3 +62,10 @@ The gate (`gate.json`) runs `run.py gate`, the engine capture into a fresh cache
 bounded by arcs or curves, compared by their anti-aliased vertices and interior area (see its
 docstring), every other line exactly, and prints image measurements. The published reference is one
 of two byte-identical Editor recordings.
+
+## Metal
+
+`run.py publish --release R --captures A B` publishes two identical native captures. On macOS arm64
+the native capture is the macOS Editor's (Metal, Apple M2 Pro) and publish and verify.py use
+`Reference/unity-6000.0.71f1/metal/`. Unbound there: 140/140 (against the Linux reference 138/140,
+edge anti-aliasing).

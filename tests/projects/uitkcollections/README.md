@@ -108,3 +108,10 @@ The gate (`gate.json`) runs `run.py gate`: the engine capture into a fresh cache
 `verify.py`, which compares every line (numbers within 1e-3) and prints image measurements.
 Sections listed in its `OPEN` table (none at present) are reported with their counts but not
 gated. The published reference is one of two byte-identical Editor recordings.
+
+## Metal
+
+`run.py publish --release R --captures A B` publishes two identical native captures. On macOS arm64
+the native capture is the macOS Editor's (Metal, Apple M2 Pro) and publish and verify.py use
+`Reference/unity-6000.0.71f1/metal/`: there the action key is Command, so the probe's Ctrl clicks do
+not extend a selection. Unbound there: 465/465 (against the Linux reference 458/465).
