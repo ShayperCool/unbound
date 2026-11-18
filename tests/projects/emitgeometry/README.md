@@ -23,12 +23,19 @@ whether an emission lasts); then a Reflection camera that emits but whose cullin
 the canvases' layer (`emitMasked`); then, as a Game camera, the pipeline setting no target before
 the clear (`target.none`) or another texture before SetupCameraProperties and none after it
 (`target.otherBeforeSetup`), both textures filled with blue first (`.otherWorld`: the other
-texture). Each render records the bytes at both quads' centres and what was logged (a first
+texture); then, as a Game camera, an emission after the culling (`Game.emitAfterCull`), two
+cullings of one render after one emission, drawing the first's results or the second's
+(`Game.cullTwice.drawn1`, `.drawn2`), a third world space canvas whose red and blue quads overlap,
+without and with an emission (`order.none`, `order.emit`: the colour where they overlap depends on
+the copies' order), and the camera covering the right half of its target (`Camera.rect`) with the
+target filled blue, SetupCameraProperties binding it or SetRenderTarget(CameraTarget) after it
+(`viewport.setup`, `viewport.cameraTarget`: left of the camera's rectangle, the world quad and the
+screen quad). Each render records the bytes at both quads' centres and what was logged (a first
 render that makes the pipeline is not recorded: the Editor warns there that the probe's asset
 declares no pipeline type or shader tag).
 
-Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
-captures):
+Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core and Vulkan, NVIDIA driver; two
+identical captures each, the devices' values the same):
 
 - Game, Reflection and SceneView cameras draw both canvases once without emission (188, a half
   opaque quad over black in linear space); a Preview camera draws neither.
@@ -37,10 +44,15 @@ captures):
   type; nothing carries over to the next render; the emitted copies obey the culling mask.
 - SetupCameraProperties binds the camera's target: the draws after it go into the camera's
   texture, also when the pipeline had set another one before it (left blue).
+- An emission after a culling is not in it; every later culling of the camera in the render has
+  it (both cullings draw the copy).
+- Where the third canvas's quads overlap: 137, 0, 188 drawn once, 152, 0, 208 with an emission.
+- SetupCameraProperties also sets the camera's pixel rectangle as the viewport: the clear and the
+  draws keep to the right half (left stays blue); SetRenderTarget(CameraTarget) after it covers
+  the whole target again (the clear reaches the left half, the canvases draw across the target).
 - Nothing is logged.
 
-Values compare within 2 (bytes of blended draws). Unmeasured: emitting after culling or for a
-camera that culls twice in one render (Unbound gives the emission to the camera's next culling
-only), the order of the copies of one canvas among its elements, the VR camera type, other
-devices, and whether SetupCameraProperties also sets the viewport (Unbound covers the whole
-target, as SetRenderTarget does).
+Values compare within 2 (bytes of blended draws); `run.py gate` checks both devices
+(`Reference/unity-6000.0.71f1` for OpenGL Core, `.../vulkan` for Vulkan; `record` and `publish`
+take `--device vulkan`). Unmeasured: the VR camera type, Metal, and the viewport of a command
+buffer's SetupCameraProperties (Unbound keeps the pipeline's).

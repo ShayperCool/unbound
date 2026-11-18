@@ -8,7 +8,9 @@ using UnityEngine.Rendering;
 /// renderer's untagged passes (SRPDefaultUnlit: UI/Default's) sorted as transparent. The target
 /// is the camera's, set after SetupCameraProperties (<see cref="Target"/> 0); 1 sets none (what
 /// the render starts with, or SetupCameraProperties sets), 2 sets <see cref="Other"/> before
-/// SetupCameraProperties and none after it.
+/// SetupCameraProperties and none after it. <see cref="EmitAfterCull"/> emits after culling
+/// instead; <see cref="CullTwice"/> culls twice and draws the first culling's results (1) or the
+/// second's (2).
 /// </summary>
 public sealed class ProbePipelineAsset : RenderPipelineAsset
 {
@@ -16,6 +18,8 @@ public sealed class ProbePipelineAsset : RenderPipelineAsset
     public static int Emit;
     public static int Target;
     public static RenderTexture Other;
+    public static bool EmitAfterCull;
+    public static int CullTwice;
 
     protected override RenderPipeline CreatePipeline() => new ProbePipeline();
 
@@ -23,14 +27,25 @@ public sealed class ProbePipelineAsset : RenderPipelineAsset
     {
         static readonly ShaderTagId s_Unlit = new ShaderTagId("SRPDefaultUnlit");
 
+        static void Emission(Camera camera)
+        {
+            if ((Emit & 1) != 0) ScriptableRenderContext.EmitGeometryForCamera(camera);
+            if ((Emit & 2) != 0) ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+        }
+
         protected override void Render(ScriptableRenderContext context, Camera[] cameras)
         {
             foreach (var camera in cameras)
             {
-                if ((Emit & 1) != 0) ScriptableRenderContext.EmitGeometryForCamera(camera);
-                if ((Emit & 2) != 0) ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+                if (!EmitAfterCull) Emission(camera);
                 if (!camera.TryGetCullingParameters(out var parameters)) continue;
                 var results = context.Cull(ref parameters);
+                if (EmitAfterCull) Emission(camera);
+                if (CullTwice != 0)
+                {
+                    var second = context.Cull(ref parameters);
+                    if (CullTwice == 2) results = second;
+                }
                 if (Target == 2)
                 {
                     var other = new CommandBuffer { name = "Other" };

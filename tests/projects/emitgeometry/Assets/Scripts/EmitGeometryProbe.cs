@@ -14,9 +14,12 @@ using UnityEngine.Rendering;
 /// Reflection, Preview, SceneView), with no emission, either call or both, then with none again
 /// (whether an emission lasts); and a Reflection camera that emits but whose culling mask leaves
 /// out the canvases' layer; then where a Game camera's render draws when the pipeline sets no
-/// target, or sets another one before SetupCameraProperties. Each render records the colour (bytes) at both quads' centres; one
-/// drawn quad over black is about half its colour, two draws more. Writes values.jsonl into
-/// EMIT_GEOMETRY_OUT and exits.
+/// target, or sets another one before SetupCameraProperties; then a Game camera emitting after
+/// its culling, or culling twice and drawing the first or the second results; the order of the
+/// copies where two quads of a third canvas overlap (above the others: half-transparent red, then
+/// blue); and what SetupCameraProperties leaves of a camera covering the right half of its target.
+/// Each render records the colour (bytes) at both quads' centres; one drawn quad over black is
+/// about half its colour, two draws more. Writes values.jsonl into EMIT_GEOMETRY_OUT and exits.
 /// </summary>
 public sealed class EmitGeometryProbe : MonoBehaviour
 {
@@ -27,7 +30,7 @@ public sealed class EmitGeometryProbe : MonoBehaviour
     Camera m_Camera;
     RenderTexture m_Target;
     Texture2D m_Read;
-    Vector3 m_WorldQuad;
+    Vector3 m_WorldQuad, m_OverlapQuad;
     RenderTexture m_Other;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -82,6 +85,23 @@ public sealed class EmitGeometryProbe : MonoBehaviour
                 ProbePipelineAsset.Other = m_Other;
                 RenderTargets("target.none", 1);
                 RenderTargets("target.otherBeforeSetup", 2);
+                // Emitting after culling, and two cullings of one render.
+                ProbePipelineAsset.EmitAfterCull = true;
+                try { Render("Game.emitAfterCull", CameraType.Game, 1); }
+                finally { ProbePipelineAsset.EmitAfterCull = false; }
+                foreach (var drawn in new[] { 1, 2 })
+                {
+                    ProbePipelineAsset.CullTwice = drawn;
+                    try { Render("Game.cullTwice.drawn" + drawn, CameraType.Game, 1); }
+                    finally { ProbePipelineAsset.CullTwice = 0; }
+                }
+                // The copies' order: red then blue where they overlap, once and with one emission.
+                Overlap("order.none", 0);
+                Overlap("order.emit", 1);
+                // The camera covering the right half of its target, both filled with blue first:
+                // what SetupCameraProperties binds (no target set) or SetRenderTarget(CameraTarget).
+                Viewport("viewport.setup", 1);
+                Viewport("viewport.cameraTarget", 0);
                 Rec("complete", "true");
             }
             catch (Exception e)
@@ -148,6 +168,19 @@ public sealed class EmitGeometryProbe : MonoBehaviour
         screenCanvas.worldCamera = m_Camera;
         screenCanvas.planeDistance = 2f;
         Quad(screen.transform, new Vector2(16f, 0f), 6f, new Color(0f, 1f, 0f, 0.5f));
+
+        // A third, world space canvas above the others: a half-transparent red quad, then a blue
+        // one over its right half.
+        var overlap = new GameObject("OverlapCanvas", typeof(RectTransform));
+        overlap.layer = CanvasLayer;
+        overlap.AddComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+        var overlapRect = (RectTransform)overlap.transform;
+        overlapRect.sizeDelta = new Vector2(100f, 100f);
+        overlapRect.position = new Vector3(0f, 0.8f, 3f);
+        overlapRect.localScale = Vector3.one * 0.01f;
+        Quad(overlap.transform, Vector2.zero, 20f, new Color(1f, 0f, 0f, 0.5f));
+        Quad(overlap.transform, new Vector2(10f, 0f), 20f, new Color(0f, 0f, 1f, 0.5f));
+        m_OverlapQuad = new Vector3(0.1f, 0.8f, 3f);
     }
 
     /// <summary>A canvas element drawing a square of half size <paramref name="half"/> (canvas
@@ -203,6 +236,45 @@ public sealed class EmitGeometryProbe : MonoBehaviour
         finally { ProbePipelineAsset.Target = 0; }
         var world = m_Camera.WorldToViewportPoint(m_WorldQuad);
         Rec(key + ".otherWorld", Bytes(Read(m_Other).GetPixel((int)(world.x * Size), (int)(world.y * Size))));
+    }
+
+    /// <summary>A Game camera's render emitting as <paramref name="emit"/> asks: the colour where
+    /// the third canvas's quads overlap.</summary>
+    void Overlap(string key, int emit)
+    {
+        m_Camera.cameraType = CameraType.Game;
+        ProbePipelineAsset.Emit = emit;
+        m_Camera.Render();
+        ProbePipelineAsset.Emit = 0;
+        var at = m_Camera.WorldToViewportPoint(m_OverlapQuad);
+        Rec(key + ".overlap", Bytes(Read(m_Target).GetPixel((int)(at.x * Size), (int)(at.y * Size))));
+    }
+
+    /// <summary>A Game camera covering the right half of its target (Camera.rect) with the
+    /// pipeline's target mode <paramref name="target"/>, the target filled with blue first: the
+    /// colour left of the camera's rectangle, at the world quad and at the screen quad.</summary>
+    void Viewport(string key, int target)
+    {
+        Fill(m_Target);
+        m_Camera.rect = new Rect(0.5f, 0f, 0.5f, 1f);
+        ProbePipelineAsset.Target = target;
+        try
+        {
+            m_Camera.cameraType = CameraType.Game;
+            m_Log.Clear();
+            m_Camera.Render();
+            Read(m_Target);
+            var world = m_Camera.WorldToScreenPoint(m_WorldQuad);
+            Rec(key + ".left", Bytes(m_Read.GetPixel(Size / 4, Size / 2)));
+            Rec(key + ".world", Bytes(m_Read.GetPixel((int)world.x, (int)world.y)));
+            Rec(key + ".screen", Bytes(m_Read.GetPixel(Size - 3, Size / 2)));
+            Rec(key + ".logs", m_Log.Count.ToString());
+        }
+        finally
+        {
+            ProbePipelineAsset.Target = 0;
+            m_Camera.rect = new Rect(0f, 0f, 1f, 1f);
+        }
     }
 
     static void Fill(RenderTexture target)
