@@ -561,7 +561,8 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   differ by under 1.4e-5.
 - A Send level above 0 dB and Duck Volume values outside the Editor's ranges (through exposed
   parameters) fail loudly as unmeasured.
-- Send, Receive and Duck Volume require `Compat.MixerSidechainMeasured`, exactly 6000.0.71f1.
+- Send, Receive and Duck Volume require `Compat.MixerSidechainMeasured`, the 6000.0 family
+  (measured on 6000.0.71f1).
   Sends to another mixer fail explicitly, including when one mixer outputs into another mixer.
   Q141's separate cross-mixer diagnostic cases connect a Send across the mixer boundary in each
   direction. The 6000.0.71f1 Editor reports an invalid audio handle and delivers no sidechain;
@@ -743,8 +744,8 @@ Pitch Shifter is described below.
 
 # Release gates of the measured effect kernels
 
-Each measured mechanism has one compatibility-profile flag, true on exactly 6000.0.71f1. On
-other releases an active effect or component that uses a DSP flag fails clearly (bypassed ones
+Each measured mechanism has one compatibility-profile flag, true for the 6000.0 family (measured
+on 6000.0.71f1). On other families an active effect or component that uses a DSP flag fails clearly (bypassed ones
 load); the GetFloat flag never fails (see below the table):
 
 | Flag | Mechanism | Users |

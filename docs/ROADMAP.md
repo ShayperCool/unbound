@@ -72,7 +72,7 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] No Unity installation needed: a release's files (reference assemblies, class libraries,
       built-in resources and packages, the Android and iOS modules' editor assemblies) unpack
       from its published downloads into the global cache; profiles per release family
-      (`major.minor`) with optional per-patch tables; `--packages` directories.
+      (`major.minor`; every patch of a family is one version); `--packages` directories.
 
 ### 1. Core runtime
 - [x] Jobs: JobHandle, IJob/IJobFor/IJobParallelFor(Transform), JobsUtility (reflection data,

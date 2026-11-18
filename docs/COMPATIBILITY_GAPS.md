@@ -437,7 +437,7 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       mechanisms are measured only on 6000.0.71f1. Other releases retain their previous
       unmeasured defaults, factory rules and invalid-rate conversion; their parity remains open.
       Physics material ownership, empty callback access, removed query settings and drive input
-      ranges also select exactly 6000.0.71f1. Other releases retain their previous material reuse,
+      ranges also select the 6000.0 family (measured on 6000.0.71f1). Other families retain their previous material reuse,
       null fallbacks, maxHits storage and drive values. Typed GeometryHolder payloads, destroyed
       callback targets, articulation bodies and serialized drive edge controls remain open.
       Audio base-factory requirements reuse the factory mechanism; removed reverb settings select
@@ -840,9 +840,9 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 
 #### Rendering rules measured on one release
 
-These answers of `Runtime/Compat.cs` give the measured behaviour to exactly 6000.0.71f1
-(`Compat.RenderingMeasured`). Every other release, including other 6000.0 patches, takes the
-unmeasured answer in the last column until a probe records it.
+These answers of `Runtime/Compat.cs` give the behaviour measured on 6000.0.71f1 to every release
+of the 6000.0 family (`Compat.RenderingMeasured`). Every other family takes the unmeasured answer
+in the last column until a probe records it.
 
 | Rule (`Compat.`) | Measured by (6000.0.71f1) | Other releases (unmeasured) |
 |---|---|---|

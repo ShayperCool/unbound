@@ -44,10 +44,16 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   `<project>/Library/Unbound/` (per-project cache) or the global cache (`$XDG_CACHE_HOME/unbound`).
 - Every behaviour that differs between Unity releases goes through the compatibility profile
   (`compat` crate / `Unbound.Compat` on the managed side). Never hard-code a single release's behaviour
-  where releases differ.
+  where releases differ. Releases are grouped by family, `MAJOR.MINOR`: every release of a family
+  (6000.0.0f1 ... 6000.0.71f1) is one version and gets the answers measured on the family's measured
+  release (6000.0.71f1 for 6000.0); another family (6000.1, 6000.3) is a different version, with its
+  own measured answers or else the unmeasured behaviour. Gates ask the family
+  (`unbound_compat::MeasuredFamily`, `Compat.Family`), never a patch. What an installation ships
+  (its engine module assemblies) is a fact of that installation, read from it.
   Managed tests run under the measured release (6000.0.71f1, `UnityEngine.Tests/TestRelease.cs`) like
-  the engine; a test of another release's path pins it (`TestRelease.Pin`), and
-  `UNBOUND_TEST_UNITY_RELEASE=6000.0.0f1` runs the whole suite under a release without measured answers.
+  the engine; a test of another family's path pins it (`TestRelease.Pin`, `TestRelease.Unmeasured`),
+  and `UNBOUND_TEST_UNITY_RELEASE=6000.3.0f1` runs the whole suite under a release without measured
+  answers.
 - The cache is ours: it does not need to be Unity-compatible, but every entry is keyed by a content
   hash of its inputs plus a format version, so a stale entry can never be used.
 - Unsupported content fails loudly with a clear message (and is listed by `unbound doctor`) instead

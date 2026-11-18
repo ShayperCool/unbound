@@ -352,8 +352,8 @@ durations; all stay visible as exact comparisons.
 
 Fixed removed-getter exceptions come from the selected release assembly during stub
 generation. Conditional and computed getters retain their existing fallback. Core
-constructor, factory and refresh-rate mechanisms select exactly 6000.0.71f1; other
-profiles keep their previous unmeasured paths, recorded in the compatibility gaps.
+constructor, factory and refresh-rate mechanisms select the 6000.0 family (measured on
+6000.0.71f1); other families keep their previous unmeasured paths, recorded in the compatibility gaps.
 The generator format is version 13 after the declaration tooling-policy change.
 TextElement implements its selected interface set, including rendered-text overrides through
 its existing rendering value, removing one exact interface exception. The atlas configuration

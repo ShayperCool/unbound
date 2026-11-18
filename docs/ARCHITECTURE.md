@@ -436,12 +436,16 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
 (`major.minor`: `6000.0`, `6000.3`, ...): version, define tables, serialization versions, and named
 *behaviour switches* (for example `Rigidbody` velocity naming, `FindObjectsByType` availability,
 default `Physics` settings). Code asks the profile (`profile.has(Feature::X)`) instead of comparing
-versions. A family's tables are captured from one Editor release of it (`release` in
-`data/profiles/unity-<family>.json`), and every patch of the family uses them and that release's
-files; a patch that needs its own gets `unity-<family>.<patch>.json`, which then wins for exactly
-that patch. A family without tables uses the nearest one (the newest older family, else the oldest
-newer one) with a warning. Version defines (`UNITY_6000_0_23`) and behaviour switches still follow
-the project's own release.
+versions. A family is one version for compatibility purposes: its tables are captured from one
+Editor release of it (`release` in `data/profiles/unity-<family>.json`), its measured behaviour
+(`MeasuredFamily` in Rust, `Compat.Family` in C#) is measured on that release, and every release of
+the family gets both; there are no per-patch tables or gates. Another family (`6000.3`) is another
+version with its own answers once measured; until then each gate keeps its unmeasured behaviour. A
+family without tables uses the nearest one (the newest older family, else the oldest newer one)
+with a warning. Version defines (`UNITY_6000_0_23`) and behaviour switches still follow the
+project's own release, and defines that exist only with an engine module
+(`ENABLE_UNITY_CONSENT`, the profile's `module_defines`) follow the modules of the installation the
+project compiles against.
 
 Packages resolve from the user's package directories (`--packages`, `UNBOUND_PACKAGES`) first,
 then the project's `Library/PackageCache` (where the Editor also copies built-in packages), the
