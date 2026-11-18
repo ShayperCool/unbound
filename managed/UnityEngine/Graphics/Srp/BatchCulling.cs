@@ -390,22 +390,31 @@ namespace Unbound.Runtime
                 + $"Shader pass: <unknown>, BatchDrawCommand index: {command}, (index in range: {inRange}), BatchDrawRange index: {range} MaterialID: {materialId.value} (\"{(material != null ? material.name : "<null>")}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
         }
 
+        /// <summary>The LightModes and queue range of the list whose commands are being read (null
+        /// modes: none of the commands' passes are drawn, an override material draws instead).</summary>
+        static List<string> s_ListLightModes;
+        static RenderQueueRange s_ListQueues;
+
         /// <summary>The missing-variant errors logged so far: each distinct message once.</summary>
         static readonly HashSet<(string Pass, int Shader, uint Material, uint Mesh, uint Batch)> s_NoDotsLogged = new HashSet<(string, int, uint, uint, uint)>();
         /// <summary>Per shader, pass name and pipeline tag, whether the pass is known to declare no
         /// DOTS_INSTANCING_ON variant (answers that may still change are not kept).</summary>
         static readonly Dictionary<(int Shader, string Pass, string Pipeline), bool> s_NoDotsPass = new Dictionary<(int, string, string), bool>();
 
-        /// <summary>The Editor's error for a command whose material draws, in a list of
-        /// <paramref name="lightModes"/> (the collecting list's; null: none), a pass that defines no DOTS_INSTANCING_ON variant (measured: tests/projects/brg
+        /// <summary>The Editor's error for a command the list draws (visible, its material's queue
+        /// in <paramref name="queues"/>) whose material draws, in a list of
+        /// <paramref name="lightModes"/> (null: none, an override material draws instead), a pass that defines no DOTS_INSTANCING_ON variant (measured: tests/projects/brg
         /// errors, Probe/NoDots, in the Editor's log; the pass is not drawn, which the renderer
         /// decides). Logged when the commands are read, each distinct message once (the Editor
         /// delivers it after the frame); a pass whose variants are not known logs nothing.
         /// Procedural commands have no mesh to name (unmeasured): none for them.</summary>
-        internal static void LogMissingDotsPasses(List<string> lightModes, Material material, BatchMaterialID materialId, Mesh mesh, BatchMeshID meshId, BatchID batchId)
+        internal static void LogMissingDotsPasses(List<string> lightModes, RenderQueueRange queues, Material material, BatchMaterialID materialId, Mesh mesh, BatchMeshID meshId, BatchID batchId)
         {
             var shader = material.shader;
             if (lightModes == null || shader == null) return;
+            // Only a list that draws the material (its queue in range) uses its passes.
+            int queue = material.renderQueue;
+            if (queue < queues.lowerBound || queue > queues.upperBound) return;
             var info = ShaderPassInfo.Of(shader);
             if (info == null || !info.Known) return;
             for (int i = 0; i < info.Passes.Count; i++)
@@ -466,19 +475,20 @@ namespace Unbound.Runtime
         /// material at the default sorting layer. Commands of removed batches or unregistered
         /// meshes and materials are skipped.
         /// </summary>
-        internal static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, List<FrameBuilder.DrawItem> into, ref long sequence) =>
-            Collect(camera, data, filtering, mainLight, -1, into, ref sequence);
+        internal static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, List<string> lightModes,
+            List<FrameBuilder.DrawItem> into, ref long sequence) =>
+            Collect(camera, data, filtering, mainLight, -1, lightModes, into, ref sequence);
 
         /// <summary>The draw commands a light's shadow caster list for split <paramref name="split"/>
         /// draws: those of the light's culling outputs whose ranges cast shadows (On, TwoSided,
         /// ShadowsOnly) and whose splitVisibilityMask has the split's bit, through the list's
         /// filters as a camera list's.</summary>
-        internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, int split, List<FrameBuilder.DrawItem> into, ref long sequence)
+        internal static void CollectShadows(CullingData data, FilteringSettings filtering, int light, int split, List<string> lightModes, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             if (light < 0) return;
             var bit = SplitBit(split);
             if (bit == 0) WarnOnce(UnsupportedSplit);
-            Collect(null, data, filtering, -1, light, into, ref sequence, bit);
+            Collect(null, data, filtering, -1, light, lightModes, into, ref sequence, bit);
         }
 
         /// <summary>The splitVisibilityMask bit of a shadow split: "the least significant bit
@@ -491,9 +501,11 @@ namespace Unbound.Runtime
         /// light's six cube faces.</summary>
         const int MaxSplits = 6;
 
-        static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<FrameBuilder.DrawItem> into, ref long sequence,
-            ushort splitBit = 0)
+        static void Collect(FrameBuilder.CameraContext camera, CullingData data, FilteringSettings filtering, int mainLight, int shadowLight, List<string> lightModes,
+            List<FrameBuilder.DrawItem> into, ref long sequence, ushort splitBit = 0)
         {
+            s_ListLightModes = lightModes;
+            s_ListQueues = filtering.renderQueueRange;
             var main = mainLight >= 0 && mainLight < data.Lights.Length ? data.Lights[mainLight].light : null;
             bool shadows = shadowLight >= 0;
             foreach (var output in data.Batches)
@@ -560,10 +572,10 @@ namespace Unbound.Runtime
                     LogInvalidId(c, c - range.drawCommandsBegin, r, command.materialID, material, command.meshID, mesh, command.batchID);
                     continue;
                 }
-                LogMissingDotsPasses(FrameBuilder.CollectingLightModes, material, command.materialID, mesh, command.meshID, command.batchID);
                 if (command.visibleCount == 0) continue;
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
+                LogMissingDotsPasses(s_ListLightModes, s_ListQueues, material, command.materialID, mesh, command.meshID, command.batchID);
                 var item = Item(output, (int)c, CommandKind.Direct, mesh, command.submeshIndex, mesh.bounds, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
                 AddSorted(camera, ref d, item, command.flags, command.sortingPosition, command.visibleCount, into, ref sequence);
             }
@@ -777,9 +789,9 @@ namespace Unbound.Runtime
                 var mesh = group.GetRegisteredMesh(command.meshID);
                 var material = group.GetRegisteredMaterial(command.materialID);
                 if (batch == null || mesh == null || material == null) continue;
-                LogMissingDotsPasses(FrameBuilder.CollectingLightModes, material, command.materialID, mesh, command.meshID, command.batchID);
                 // A shadow split's list (splitBit set) draws the commands visible in the split.
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
+                LogMissingDotsPasses(s_ListLightModes, s_ListQueues, material, command.materialID, mesh, command.meshID, command.batchID);
                 if (IndirectTopology(command.topology) is null)
                 {
                     WarnOnce(UnsupportedIndirectTopology);

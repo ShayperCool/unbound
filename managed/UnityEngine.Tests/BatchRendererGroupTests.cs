@@ -285,12 +285,70 @@ namespace UnityEngine.Tests
             return default;
         };
 
-        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1, FrameBuilder.CameraContext camera = null)
+        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1, FrameBuilder.CameraContext camera = null, List<string> lightModes = null)
         {
             var items = new List<FrameBuilder.DrawItem>();
             long sequence = 0;
-            BatchCulling.Collect(camera ?? new FrameBuilder.CameraContext(), data, filtering, mainLight, items, ref sequence);
+            BatchCulling.Collect(camera ?? new FrameBuilder.CameraContext(), data, filtering, mainLight, lightModes, items, ref sequence);
             return items;
+        }
+
+        /// <summary>Reading a list's commands logs the Editor's missing DOTS variant error for a
+        /// visible command whose material draws, with the list's LightModes, a pass declaring no
+        /// DOTS_INSTANCING_ON (tests/projects/brg errors); a list whose override material draws
+        /// instead, and a command with no visible instances, log nothing.</summary>
+        [Fact]
+        public void AListReadingACommandOfAPassWithoutDotsLogsTheEditorsError()
+        {
+            BatchID batch = default;
+            BatchMeshID mesh = default;
+            BatchMaterialID material = default;
+            uint visible = 1;
+            var filter = new BatchFilterSettings { renderingLayerMask = uint.MaxValue };
+            var group = Group((g, c, o, u) => Emit(filter, 1,
+                new BatchDrawCommand { batchID = batch, meshID = mesh, materialID = material, visibleOffset = 0, visibleCount = visible })(g, c, o, u));
+            mesh = group.RegisterMesh(m_Mesh);
+            material = group.RegisterMaterial(m_Material);
+            batch = AddBatch(group, ("_BaseColor", 0x80000040u));
+            ShaderPassInfo.ResetForTests();
+            ShaderDeclarations.ResetForTests();
+            ShaderPassInfo.s_CallForTests = name => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                shader = name, found = true, tags = new Dictionary<string, string>(),
+                passes = new[] { new { name = "Forward", tags = new Dictionary<string, string> { ["LightMode"] = "UniversalForward" } } },
+            });
+            ShaderDeclarations.s_CallForTests = (method, request) => System.Text.Json.JsonSerializer.Serialize(new
+            {
+                found = true, subshaders_known = true, keywords_known = false,
+                subshaders = new[] { new { tags = Array.Empty<string[]>(), passes = new[] { new { name = "Forward", tags = Array.Empty<string[]>(), keyword_sets = new[] { new[] { "_", "FOG_LINEAR" } } } } } },
+            });
+            var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
+            var forward = new List<string> { "UniversalForward" };
+            var logged = new List<string>();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
+            try
+            {
+                // An override material's list, then a command without visible instances: nothing.
+                Collect(Cull(), all);
+                visible = 0;
+                Collect(Cull(), all, lightModes: forward);
+                Assert.DoesNotContain(logged, m => m.Contains("DOTS_INSTANCING_ON"));
+                visible = 1;
+                Assert.Single(Collect(Cull(), all, lightModes: forward));
+                Assert.Single(logged, m => m.Contains("A BatchDrawCommand is using the pass \"Forward\" from the shader \"Tests/Brg\" which does not define a DOTS_INSTANCING_ON variant.")
+                    && m.Contains($"MaterialID: {material.value} (\"{m_Material.name}\"), MeshID: {mesh.value} (\"{m_Mesh.name}\"), BatchID: {batch.value}."));
+                // The same message is logged once.
+                Collect(Cull(), all, lightModes: forward);
+                Assert.Single(logged, m => m.Contains("DOTS_INSTANCING_ON"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                ShaderPassInfo.ResetForTests();
+                ShaderDeclarations.s_CallForTests = null;
+                ShaderDeclarations.ResetForTests();
+            }
         }
 
         /// <summary>A command flagged HasSortingPosition is drawn instance by instance, each sorted
@@ -718,15 +776,15 @@ namespace UnityEngine.Tests
                 var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
                 var items = new List<FrameBuilder.DrawItem>();
                 long sequence = 0;
-                BatchCulling.CollectShadows(data, all, sun, 0, items, ref sequence);
+                BatchCulling.CollectShadows(data, all, sun, 0, null, items, ref sequence);
                 Assert.Single(items);
                 Assert.Equal(ShadowCastingMode.ShadowsOnly, items[0].Lighting.Cast);
                 items.Clear();
-                BatchCulling.CollectShadows(data, all, sun + 1, 0, items, ref sequence);
+                BatchCulling.CollectShadows(data, all, sun + 1, 0, null, items, ref sequence);
                 Assert.Empty(items);
                 // A split's list draws the commands whose splitVisibilityMask has its bit (the
                 // Scripting API; tests/projects/brg split_masks): mask 1 is not in split 1.
-                BatchCulling.CollectShadows(data, all, sun, 1, items, ref sequence);
+                BatchCulling.CollectShadows(data, all, sun, 1, null, items, ref sequence);
                 Assert.Empty(items);
                 // The camera list leaves the shadow-only range out.
                 Assert.Empty(Collect(data, all));
@@ -739,7 +797,7 @@ namespace UnityEngine.Tests
                     var masked = new CullingResults { ptr = Culling.Cull(ref parameters) };
                     new ScriptableRenderContext().CullShadowCasters(masked, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
                     items.Clear();
-                    BatchCulling.CollectShadows(masked.Data, all, sun, 0, items, ref sequence);
+                    BatchCulling.CollectShadows(masked.Data, all, sun, 0, null, items, ref sequence);
                     Assert.Equal(inSplit0 ? 1 : 0, items.Count);
                     Assert.Single(Collect(masked.Data, all));
                 }
@@ -748,7 +806,7 @@ namespace UnityEngine.Tests
                 casting = ShadowCastingMode.Off;
                 var off = new CullingResults { ptr = Culling.Cull(ref parameters) };
                 new ScriptableRenderContext().CullShadowCasters(off, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
-                BatchCulling.CollectShadows(off.Data, all, sun, 0, items, ref sequence);
+                BatchCulling.CollectShadows(off.Data, all, sun, 0, null, items, ref sequence);
                 Assert.Empty(items);
             }
             finally
@@ -812,10 +870,10 @@ namespace UnityEngine.Tests
                     infos.Dispose();
                     var items = new List<FrameBuilder.DrawItem>();
                     long sequence = 0;
-                    BatchCulling.CollectShadows(data, all, sun, 0, items, ref sequence);
+                    BatchCulling.CollectShadows(data, all, sun, 0, null, items, ref sequence);
                     Assert.Equal(split0, items.Count);
                     items.Clear();
-                    BatchCulling.CollectShadows(data, all, sun, 1, items, ref sequence);
+                    BatchCulling.CollectShadows(data, all, sun, 1, null, items, ref sequence);
                     Assert.Equal(split1, items.Count);
                     Assert.Equal(BatchCulling.CommandKind.Indirect, Assert.Single(Collect(data, all)).Dots.Value.Kind);
                 }
@@ -887,7 +945,7 @@ namespace UnityEngine.Tests
                 new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
                 var items = new List<FrameBuilder.DrawItem>();
                 long sequence = 0;
-                BatchCulling.CollectShadows(results.Data, all, sun, 0, items, ref sequence);
+                BatchCulling.CollectShadows(results.Data, all, sun, 0, null, items, ref sequence);
                 Assert.Single(items);
                 // The camera draws it too; a camera culling that leaves the layer out does not, but
                 // its light culling still casts it.
@@ -898,7 +956,7 @@ namespace UnityEngine.Tests
                 new ScriptableRenderContext().CullShadowCasters(results, new ShadowCastersCullingInfos { splitBuffer = splits, perLightInfos = infos });
                 Assert.Empty(Collect(results.Data, all));
                 items.Clear();
-                BatchCulling.CollectShadows(results.Data, all, sun, 0, items, ref sequence);
+                BatchCulling.CollectShadows(results.Data, all, sun, 0, null, items, ref sequence);
                 Assert.Single(items);
             }
             finally

@@ -833,7 +833,7 @@ namespace Unbound.Runtime
         /// <summary>Whether a renderer list leaves out a draw of this material and queue: the queue
         /// is outside its range, the shader is hidden by its LOD, or none of the shader's passes has
         /// one of the list's LightModes.</summary>
-        static bool OutsideList(Material material, int queue, RenderQueueRange range, List<string> lightModes)
+        internal static bool OutsideList(Material material, int queue, RenderQueueRange range, List<string> lightModes)
         {
             if (queue < range.lowerBound || queue > range.upperBound) return true;
             var shader = material.shader;
@@ -841,9 +841,6 @@ namespace Unbound.Runtime
             var info = ShaderPassInfo.Of(shader);
             return info != null && !info.HasPassFor(lightModes);
         }
-
-        /// <summary>The LightModes of the renderer list collecting draws; null outside one.</summary>
-        internal static List<string> CollectingLightModes => s_CollectingList.HasValue ? s_PassTagScratch : null;
 
         /// <summary>While a renderer list collects draws: whether it leaves out a draw of this
         /// material at the material's queue, so a renderer can skip building its geometry for a
@@ -937,8 +934,11 @@ namespace Unbound.Runtime
             }
             // BatchRendererGroup draw commands (default sorting layer): a shadow caster list takes
             // its light culling's.
-            if (shadows.HasValue) BatchCulling.CollectShadows(data, filtering, shadowLight, shadowSplit, s_Items, ref s_Sequence);
-            else if (defaultSortingLayer) BatchCulling.Collect(context, data, filtering, drawing.mainLightIndex, s_Items, ref s_Sequence);
+            // The list's LightModes pick the passes a command's material draws (none with an
+            // override material or shader, which draws instead).
+            var commandPasses = drawing.overrideMaterial == null && drawing.overrideShader == null ? s_PassTagScratch : null;
+            if (shadows.HasValue) BatchCulling.CollectShadows(data, filtering, shadowLight, shadowSplit, commandPasses, s_Items, ref s_Sequence);
+            else if (defaultSortingLayer) BatchCulling.Collect(context, data, filtering, drawing.mainLightIndex, commandPasses, s_Items, ref s_Sequence);
             foreach (var source in Sources)
             {
                 try { source.CollectCameraDraws(context, s_Items); }

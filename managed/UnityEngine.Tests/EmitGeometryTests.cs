@@ -67,6 +67,14 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EmissionsNoRenderTookEndWithTheFrame()
+        {
+            ScriptableRenderContext.EmitGeometryForCamera(m_Camera);
+            Culling.EndFrame();
+            Assert.Equal(1, Copies(m_Camera));
+        }
+
+        [Fact]
         public void SetupCameraPropertiesBindsTheCamerasTarget()
         {
             var target = new RenderTexture(8, 8, 24);
@@ -82,6 +90,15 @@ namespace UnityEngine.Tests
                 RenderTexture.active = other;
                 new ScriptableRenderContext().SetupCameraProperties(m_Camera);
                 Assert.Null(RenderTexture.active);
+                // A command buffer's setup (the render graph runs it inside a pass) keeps the target.
+                m_Camera.targetTexture = target;
+                RenderTexture.active = other;
+                using (var buffer = new CommandBuffer())
+                {
+                    buffer.SetupCameraProperties(m_Camera);
+                    Graphics.ExecuteCommandBuffer(buffer);
+                }
+                Assert.Same(other, RenderTexture.active);
             }
             finally
             {

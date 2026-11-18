@@ -231,7 +231,7 @@ namespace UnityEngine.Rendering
         /// <summary>Draws a renderer list (made by ScriptableRenderContext.CreateRendererList).</summary>
         public void DrawRendererList(RendererList rendererList) => Add(c => Unbound.Runtime.RendererLists.Draw(rendererList));
 
-        public void SetupCameraProperties(Camera camera) => Add(c => new ScriptableRenderContext().SetupCameraProperties(camera));
+        public void SetupCameraProperties(Camera camera) => Add(c => ScriptableRenderContext.SetupCamera(camera, bindTarget: false));
 
         public void InvokeOnRenderObjectCallbacks() => Add(c => Unbound.Runtime.FrameBuilder.InvokeOnRenderObject());
 

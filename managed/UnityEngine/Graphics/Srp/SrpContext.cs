@@ -952,15 +952,20 @@ namespace UnityEngine.Rendering
         /// <summary>The camera's matrices and built-in camera variables for what draws next.</summary>
         public void SetupCameraProperties(Camera camera, [Internal.DefaultValue("false")] bool stereoSetup = false) => SetupCameraProperties(camera, stereoSetup, 0);
 
-        public void SetupCameraProperties(Camera camera, bool stereoSetup, int eye)
+        public void SetupCameraProperties(Camera camera, bool stereoSetup, int eye) => SetupCamera(camera, bindTarget: true);
+
+        /// <summary>The camera's built-in variables for what draws next. The context's call also
+        /// binds the camera's target, whatever the pipeline set before (measured:
+        /// tests/projects/emitgeometry target.otherBeforeSetup), as
+        /// SetRenderTarget(BuiltinRenderTextureType.CameraTarget) binds it; a command buffer's
+        /// (<paramref name="bindTarget"/> false: the render graph runs it inside a pass) keeps the
+        /// target (unmeasured).</summary>
+        internal static void SetupCamera(Camera camera, bool bindTarget)
         {
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             s_Camera = camera;
             Camera.Internal_SetCurrent(camera);
-            // The camera's target becomes the render target, whatever the pipeline set before
-            // (measured: tests/projects/emitgeometry target.otherBeforeSetup), as
-            // SetRenderTarget(BuiltinRenderTextureType.CameraTarget) binds it.
-            CommandBuffer.BindCameraTarget(camera);
+            if (bindTarget) CommandBuffer.BindCameraTarget(camera);
             GfxStream.Camera(camera.worldToCameraMatrix, camera.projectionMatrix, GfxStream.CameraProperties);
         }
 
@@ -1343,6 +1348,8 @@ namespace Unbound.Runtime
         /// (<see cref="Renderer.NotifyInvisible"/>).</summary>
         internal static void EndFrame()
         {
+            // Emissions no scriptable render took (the built-in pipeline renders) end too.
+            EndRender();
             foreach (var data in s_Results.Values)
             {
                 data.Reset();

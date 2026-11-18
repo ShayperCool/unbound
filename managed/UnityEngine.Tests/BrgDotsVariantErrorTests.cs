@@ -73,7 +73,7 @@ namespace UnityEngine.Tests
         }
 
         void Log(string lightMode, uint material = 3, uint mesh = 3) =>
-            BatchCulling.LogMissingDotsPasses(new List<string> { lightMode }, m_Material, new BatchMaterialID { value = material }, m_Mesh,
+            BatchCulling.LogMissingDotsPasses(new List<string> { lightMode }, RenderQueueRange.all, m_Material, new BatchMaterialID { value = material }, m_Mesh,
                 new BatchMeshID { value = mesh }, new BatchID { value = 2 });
 
         [Fact]
