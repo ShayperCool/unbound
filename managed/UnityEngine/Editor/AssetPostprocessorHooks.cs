@@ -42,11 +42,16 @@ namespace Unbound.Runtime
                 foreach (var type in types)
                     if (Array.IndexOf(first, type) < 0) Consider(type);
             }
-            // Ties by class name (tests/projects/assetpostprocessors), then by full name.
-            found.Sort((a, b) => a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1)
-                : string.CompareOrdinal(a.Item2.Name, b.Item2.Name) != 0 ? string.CompareOrdinal(a.Item2.Name, b.Item2.Name)
-                : string.CompareOrdinal(a.Item2.FullName, b.Item2.FullName));
+            found.Sort((a, b) => a.Item1 != b.Item1 ? a.Item1.CompareTo(b.Item1) : ByClassName(a.Item2, b.Item2));
             return found;
+        }
+
+        /// <summary>Postprocessors of an equal order run by class name (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/assetpostprocessors), then full name (unmeasured).</summary>
+        internal static int ByClassName(Type a, Type b)
+        {
+            int byName = string.CompareOrdinal(a.Name, b.Name);
+            return byName != 0 ? byName : string.CompareOrdinal(a.FullName, b.FullName);
         }
 
         /// <summary>Runs each hook on a new postprocessor of its type with this asset path, context

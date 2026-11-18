@@ -165,8 +165,8 @@ namespace UnityEditor
         internal YNode m_Settings;
         internal string m_SettingsType;
         internal bool m_SettingsChanged;
-        /// <summary>The settings the asset imports with, as JSON (the .meta's until a
-        /// preprocessor changes them).</summary>
+        /// <summary>The settings the asset last imported with, as JSON (the .meta's until the
+        /// settings a preprocessor leaves differ).</summary>
         internal string m_ImportedSettings;
 
         internal void Changed() => m_SettingsChanged = true;
@@ -299,7 +299,7 @@ namespace UnityEditor
 
         public bool sRGBTexture
         {
-            get { CheckImporterState("get_sRGBTexture"); return MetaSettings.Bool(m_Settings, "mipmaps.sRGBTexture", true); }
+            get { CheckImporterState("get_sRGBTexture"); return MetaSettings.Bool(m_Settings, "mipmaps.sRGBTexture", !MetaSettings.Bool(m_Settings, "mipmaps.linearTexture")); }
             set { CheckImporterState("set_sRGBTexture"); SetB("mipmaps.sRGBTexture", value); }
         }
 
@@ -378,41 +378,54 @@ namespace UnityEditor
         }
 
         /// <summary>The .meta key of each setting <see cref="TextureImporterSettings"/> holds that
-        /// the import reads.</summary>
+        /// the import reads, with what the import takes for a missing key or a -1 ("the type's
+        /// default"), as the native importer does: a .meta without the key reads as that.</summary>
         static readonly (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>)[] s_SettingsFields =
         {
-            Int("textureType", s => (int)s.textureType, (s, v) => s.textureType = (TextureImporterType)v),
-            Int("textureShape", s => (int)s.textureShape, (s, v) => s.textureShape = (TextureImporterShape)v),
-            Int("mipmaps.enableMipMap", s => s.mipmapEnabled ? 1 : 0, (s, v) => s.mipmapEnabled = v != 0),
-            Int("mipmaps.sRGBTexture", s => s.sRGBTexture ? 1 : 0, (s, v) => s.sRGBTexture = v != 0),
-            Int("mipmaps.mipMapMode", s => (int)s.mipmapFilter, (s, v) => s.mipmapFilter = (TextureImporterMipFilter)v),
-            Int("mipmaps.borderMipMap", s => s.borderMipmap ? 1 : 0, (s, v) => s.borderMipmap = v != 0),
-            Int("mipmaps.fadeOut", s => s.fadeOut ? 1 : 0, (s, v) => s.fadeOut = v != 0),
-            Int("mipmaps.mipMapsPreserveCoverage", s => s.mipMapsPreserveCoverage ? 1 : 0, (s, v) => s.mipMapsPreserveCoverage = v != 0),
-            Int("bumpmap.convertToNormalMap", s => s.convertToNormalMap ? 1 : 0, (s, v) => s.convertToNormalMap = v != 0),
-            Int("isReadable", s => s.readable ? 1 : 0, (s, v) => s.readable = v != 0),
-            Int("nPOTScale", s => (int)s.npotScale, (s, v) => s.npotScale = (TextureImporterNPOTScale)v),
-            Int("alphaUsage", s => (int)s.alphaSource, (s, v) => s.alphaSource = (TextureImporterAlphaSource)v),
-            Int("alphaIsTransparency", s => s.alphaIsTransparency ? 1 : 0, (s, v) => s.alphaIsTransparency = v != 0),
-            Int("spriteMode", s => s.spriteMode, (s, v) => s.spriteMode = v),
-            Int("spriteMeshType", s => (int)s.spriteMeshType, (s, v) => s.spriteMeshType = (SpriteMeshType)v),
-            Int("singleChannelComponent", s => (int)s.singleChannelComponent, (s, v) => s.singleChannelComponent = (TextureImporterSingleChannelComponent)v),
-            Int("textureSettings.filterMode", s => (int)s.filterMode, (s, v) => s.filterMode = (FilterMode)v),
-            Int("textureSettings.aniso", s => s.aniso, (s, v) => s.aniso = v),
-            Int("textureSettings.wrapU", s => (int)s.wrapModeU, (s, v) => s.wrapModeU = (TextureWrapMode)v),
-            Int("textureSettings.wrapV", s => (int)s.wrapModeV, (s, v) => s.wrapModeV = (TextureWrapMode)v),
-            Int("textureSettings.wrapW", s => (int)s.wrapModeW, (s, v) => s.wrapModeW = (TextureWrapMode)v),
-            Int("generateCubemap", s => (int)s.generateCubemap, (s, v) => s.generateCubemap = (TextureImporterGenerateCubemap)v),
-            Float("spritePixelsToUnits", s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
+            Int("textureType", 0, s => (int)s.textureType, (s, v) => s.textureType = (TextureImporterType)v),
+            Int("textureShape", 1, s => (int)s.textureShape, (s, v) => s.textureShape = (TextureImporterShape)v),
+            Int("mipmaps.enableMipMap", 1, s => s.mipmapEnabled ? 1 : 0, (s, v) => s.mipmapEnabled = v != 0),
+            Int("mipmaps.sRGBTexture", root => MetaSettings.Bool(root, "mipmaps.linearTexture") ? 0 : 1, s => s.sRGBTexture ? 1 : 0, (s, v) => s.sRGBTexture = v != 0),
+            Int("mipmaps.mipMapMode", 0, s => (int)s.mipmapFilter, (s, v) => s.mipmapFilter = (TextureImporterMipFilter)v),
+            Int("mipmaps.borderMipMap", 0, s => s.borderMipmap ? 1 : 0, (s, v) => s.borderMipmap = v != 0),
+            Int("mipmaps.fadeOut", 0, s => s.fadeOut ? 1 : 0, (s, v) => s.fadeOut = v != 0),
+            Int("mipmaps.mipMapsPreserveCoverage", 0, s => s.mipMapsPreserveCoverage ? 1 : 0, (s, v) => s.mipMapsPreserveCoverage = v != 0),
+            Int("bumpmap.convertToNormalMap", 0, s => s.convertToNormalMap ? 1 : 0, (s, v) => s.convertToNormalMap = v != 0),
+            Int("isReadable", 0, s => s.readable ? 1 : 0, (s, v) => s.readable = v != 0),
+            Int("nPOTScale", 1, s => (int)s.npotScale, (s, v) => s.npotScale = (TextureImporterNPOTScale)v),
+            Int("alphaUsage", root => MetaSettings.Bool(root, "grayScaleToAlpha") ? 2 : 1, s => (int)s.alphaSource, (s, v) => s.alphaSource = (TextureImporterAlphaSource)v),
+            Int("alphaIsTransparency", 0, s => s.alphaIsTransparency ? 1 : 0, (s, v) => s.alphaIsTransparency = v != 0),
+            Int("spriteMode", 0, s => s.spriteMode, (s, v) => s.spriteMode = v),
+            Int("spriteMeshType", 1, s => (int)s.spriteMeshType, (s, v) => s.spriteMeshType = (SpriteMeshType)v),
+            Int("singleChannelComponent", 0, s => (int)s.singleChannelComponent, (s, v) => s.singleChannelComponent = (TextureImporterSingleChannelComponent)v),
+            Int("textureSettings.filterMode", 1, s => (int)s.filterMode, (s, v) => s.filterMode = (FilterMode)v),
+            Int("textureSettings.aniso", 1, s => s.aniso, (s, v) => s.aniso = v),
+            Int("textureSettings.wrapU", TypeWrap, s => (int)s.wrapModeU, (s, v) => s.wrapModeU = (TextureWrapMode)v),
+            Int("textureSettings.wrapV", TypeWrap, s => (int)s.wrapModeV, (s, v) => s.wrapModeV = (TextureWrapMode)v),
+            Int("textureSettings.wrapW", TypeWrap, s => (int)s.wrapModeW, (s, v) => s.wrapModeW = (TextureWrapMode)v),
+            Int("generateCubemap", 6, s => (int)s.generateCubemap, (s, v) => s.generateCubemap = (TextureImporterGenerateCubemap)v),
+            Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
         };
 
+        /// <summary>The wrap mode of a missing key: Clamp for the UI types (Sprite, GUI, Cursor),
+        /// else Repeat.</summary>
+        static int TypeWrap(YNode root) => MetaSettings.Int(root, "textureType") is 8 or 2 or 7 ? 1 : 0;
+
         static (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>) Int(
-            string path, Func<TextureImporterSettings, int> get, Action<TextureImporterSettings, int> set) =>
-            (path, (s, node, p) => { if (MetaSettings.Find(node, p) is { } v) set(s, v.AsInt()); }, (s, node, p) => MetaSettings.SetInt(node, p, get(s)));
+            string path, int missing, Func<TextureImporterSettings, int> get, Action<TextureImporterSettings, int> set) =>
+            Int(path, _ => missing, get, set);
+
+        static (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>) Int(
+            string path, Func<YNode, int> missing, Func<TextureImporterSettings, int> get, Action<TextureImporterSettings, int> set) =>
+            (path, (s, node, p) =>
+            {
+                int value = MetaSettings.Find(node, p)?.AsInt(-1) ?? -1;
+                set(s, value < 0 ? missing(node) : value);
+            }, (s, node, p) => MetaSettings.SetInt(node, p, get(s)));
 
         static (string, Action<TextureImporterSettings, YNode, string>, Action<TextureImporterSettings, YNode, string>) Float(
-            string path, Func<TextureImporterSettings, float> get, Action<TextureImporterSettings, float> set) =>
-            (path, (s, node, p) => { if (MetaSettings.Find(node, p) is { } v) set(s, (float)v.AsDouble()); }, (s, node, p) => MetaSettings.SetFloat(node, p, get(s)));
+            string path, float missing, Func<TextureImporterSettings, float> get, Action<TextureImporterSettings, float> set) =>
+            (path, (s, node, p) => set(s, MetaSettings.Find(node, p) is { } v ? (float)v.AsDouble(missing) : missing), (s, node, p) => MetaSettings.SetFloat(node, p, get(s)));
     }
 
     /// <summary>The model importer's settings, read from and written to its .meta section.</summary>

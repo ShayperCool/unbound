@@ -131,11 +131,7 @@ namespace UnityEditor
         /// order; a cycle keeps the name order, with a warning).</summary>
         internal static List<MethodInfo> Ordered(List<MethodInfo> callbacks)
         {
-            callbacks.Sort((a, b) =>
-            {
-                int byName = string.CompareOrdinal(a.DeclaringType.Name, b.DeclaringType.Name);
-                return byName != 0 ? byName : string.CompareOrdinal(a.DeclaringType.FullName, b.DeclaringType.FullName);
-            });
+            callbacks.Sort((a, b) => AssetPostprocessorHooks.ByClassName(a.DeclaringType, b.DeclaringType));
             int n = callbacks.Count;
             var after = new List<int>[n];
             for (int i = 0; i < n; i++) after[i] = new List<int>();
@@ -244,13 +240,9 @@ namespace UnityEditor
         /// native import for this session.</summary>
         internal static void Preprocess(string path, string kind)
         {
+            // The import takes the importer's settings as the preprocessors leave them: with what a
+            // script changed on it before (Unbound's choice, unmeasured).
             var importer = AssetImporter.GetAtPath(path);
-            // What scripts changed before (without SaveAndReimport) is not the preprocessors'.
-            if (importer != null && importer.m_SettingsChanged)
-            {
-                importer.m_SettingsChanged = false;
-                importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
-            }
             var context = new AssetImportContext(path);
             AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), path, context, Array.Empty<object>(), importer);
             switch (kind)
@@ -267,7 +259,6 @@ namespace UnityEditor
                     break;
             }
             if (importer == null || !importer.m_SettingsChanged || importer.m_Settings == null) return;
-            importer.m_SettingsChanged = false;
             // Settings set to the values they had are the .meta's: the import stays the file's.
             var settings = MetaSettings.ToJson(importer.m_Settings);
             if (settings == importer.m_ImportedSettings) return;

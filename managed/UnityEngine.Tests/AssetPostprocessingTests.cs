@@ -97,6 +97,31 @@ namespace UnityEngine.Tests
             Assert.Equal(2, MetaSettings.Int(importer.m_Settings, "textureSettings.filterMode"));
             Assert.Null(MetaSettings.Find(importer.m_Settings, "mipmaps.sRGBTexture"));
             Assert.Null(MetaSettings.Find(importer.m_Settings, "nPOTScale"));
+            // A missing key reads as the import takes it, so a value equal to a constructor default
+            // but not to the import's is written: Point filtering, no NPOT scaling.
+            importer.ReadTextureSettings(settings);
+            Assert.Equal(TextureImporterNPOTScale.ToNearest, settings.npotScale);
+            settings.filterMode = FilterMode.Point;
+            settings.npotScale = TextureImporterNPOTScale.None;
+            importer.SetTextureSettings(settings);
+            Assert.Equal(0, MetaSettings.Int(importer.m_Settings, "textureSettings.filterMode", -1));
+            Assert.Equal(0, MetaSettings.Int(importer.m_Settings, "nPOTScale", -1));
+        }
+
+        [Fact]
+        public void MissingKeysReadAsTheTypesDefaults()
+        {
+            // A sprite clamps; an older linear .meta is not sRGB; a -1 wrap is the type's default.
+            var sprite = (TextureImporter)AssetImporter.FromMeta("Assets/Q.png", "6123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  mipmaps:\n    linearTexture: 1\n  textureSettings:\n    wrapV: -1\n  textureType: 8\n  userData: \n"));
+            var settings = new TextureImporterSettings();
+            sprite.ReadTextureSettings(settings);
+            Assert.Equal(TextureWrapMode.Clamp, settings.wrapModeU);
+            Assert.Equal(TextureWrapMode.Clamp, settings.wrapModeV);
+            Assert.False(settings.sRGBTexture);
+            Assert.False(sprite.sRGBTexture);
+            Assert.Equal(FilterMode.Bilinear, settings.filterMode);
+            Assert.Equal(SpriteMeshType.Tight, settings.spriteMeshType);
         }
 
         [Fact]
