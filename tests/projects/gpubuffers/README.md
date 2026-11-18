@@ -97,11 +97,14 @@ ways, which Unbound follows there: `CopyCount` and `CopyCounterValue` copy a cou
 bound yet (0 when the buffer is made, else the value `SetCounterValue` gave: `append.boundonly`,
 `append.plainbind`, `counter.created`, `counter.cbtype`, `indirect.copycount`, `cmddata.counter.*`),
 `SetData` sets the counter to 0 (`append.cb.setdata.count`) and a copy past the destination's end
-copies nothing without the assertion (`append.cb.copybeyond`). Unbound on Metal matches 382 to 385
-of 386 values. Open: an indirect dispatch at an offset that is not a multiple of 4
-(`indirect.unaligned`: undefined, the Metal Editor dispatches groups there, Unbound none), and the
-slots appended values take (`append.cb.reset.data`, `append.cb.start10.data`,
-`append.gb.start5.data`, where a later append overwrites some of them): append order across threads
-is undefined, Unbound's on Metal changes from run to run and matches the Metal Editor's in some runs;
+copies nothing without the assertion (`append.cb.copybeyond`); an indirect dispatch at an offset
+that is not a multiple of 4 reads its arguments at the offset rounded down to 4 bytes
+(`indirect.unaligned`, offset 2 as 0; offset 14 as 12 in tests/projects/cmdbuffers
+`metal.dispatch.offset14`). Unbound on Metal matches 383 to 386 of 386 values. Open: the slots
+appended values take (`append.cb.reset.data`, `append.cb.start10.data`, `append.gb.start5.data`,
+where a later append overwrites some of them): append order across threads is undefined; on the
+Apple GPU it follows the order a dispatch's SIMD groups reach the counter (the first dispatch's
+second group of 32 threads first in the Metal Editor's captures, either group in Unbound's runs:
+one of three runs on one binary matched), which no engine state decides;
 12 of 52 readbacks complete in the Metal Editor's frames (52 of 53 against the Linux reference's
 frames).

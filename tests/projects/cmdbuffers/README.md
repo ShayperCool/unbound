@@ -67,18 +67,28 @@ On macOS arm64 `native` records the macOS Editor (Metal, Apple M2 Pro) and `publ
 `check` use `Reference/unity-<version>/metal.jsonl`. Unbound on Metal differs from it, unresolved,
 in: the random write target against a material's buffer of the same name (`uav.material`,
 `uav.after`: the Metal Editor writes neither), the Append buffer without a counter (as on Linux),
-red and blue swapped in temporary array slices (`tarray.slices`, `tarray.blit`: the Metal Editor's
-temporary array is B8G8R8A8_SRGB and `CopyTexture` into an RGBA32 Texture2DArray copies its stored
-bytes, blue first, where Unbound copies the channels), indexed procedural and indirect draws a grid
-cell off (`cmd.indirect.indexed*`, `graphics.indirect.indexed.now`, `render.indexed.*`: where the
-draw starts at instance 1 the Metal Editor's cell is one row further, as if the instance ID counted
-from the start instance, and with a base vertex one cell back; non-indexed draws with a start
-instance match), an extra cell in `indirect.pool.writer.True`, a CPU fence that has passed one
+an indirect draw of a program with vertex inputs whose id keeps the base vertex
+(`metal.vertexid.mesh.indirect.basevertex`, below), an extra cell in `indirect.pool.writer.True`,
+a CPU fence that has passed one
 frame later (`fence.frame1.cpu.passed`), `foveatedRenderingCaps` (2 on Metal, 0 in Unbound) and
 side-by-side stereo (`device.stereo.1`, `device.stereo.2`: the Metal Editor draws both eyes'
 instances; Unbound refuses stereo clipping, as on Linux, and draws one), and the targets stored with
 `DontCare` (`bind.store.dontCare*`: the Metal Editor discards what the draw wrote there, the same in
-four captures; Unbound keeps it). Unbound matches 967 of 994 values.
+four captures; Unbound keeps it). Unbound matches 992 of 1007 values (967 of 994 before the
+`metal.*` rows and the rules below).
+
+The Metal probe records device answers of its own (`metal.*`, drawn before the frame probes: drawn
+after the later sections, these draws drew nothing in the macOS Editor). `SV_VertexID` counts from
+the draw's first vertex: an indexed draw's id is the index without the base vertex, a non-indexed
+one leaves out its start vertex, also in a program that reads vertex inputs, direct and indirect
+(`metal.vertexid.*`; `SV_InstanceID` counts from 0 as on Linux), which explains every indexed grid
+the Metal Editor draws a cell off the Linux reference (`cmd.indirect.indexed*`,
+`graphics.indirect.indexed.now`, `render.indexed.*`, base vertices of 9, one row, and 1).
+`CopyTexture` between a B8G8R8A8 render texture or BGRA32 texture and an R8G8B8A8 or RGBA32 one
+copies the stored bytes, red and blue traded, in both directions, immediate and in a command
+buffer, and a whole Texture2D level's CPU data too; between one order the channels stay
+(`metal.copy.*`; the B8G8R8A8_SRGB temporary array of `tarray.slices`, `tarray.blit`). An indirect
+dispatch at byte offsets 2 and 14 reads its arguments at 0 and 12 (`metal.dispatch.*`).
 
 ## Recording
 

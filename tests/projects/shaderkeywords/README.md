@@ -241,8 +241,7 @@ messages as Mono writes them (`docs/COMPATIBILITY_GAPS.md` "Argument exception t
 `context.isBatchMode` alone failing: a property of the batch-mode capture. The windowed re-record
 (two byte-identical Linux GPU captures, every other key unchanged) closes it: no key fails on
 Linux (the landing gate of 2026-11-17, 1510/1510). A Mac run of 2026-11-17 failed 12 before the
-message change; against the Metal reference a current Mac run fails the three capability-keyword
-keys (see Metal).
+message change; against the Metal reference a current Mac run fails none (1510/1510, see Metal).
 Anything else is a regression.
 
 ## Metal (macOS)
@@ -262,5 +261,6 @@ Two identical captures of the 6000.0.71f1 macOS Editor on an Apple M2 Pro differ
 reference in 5 keys: the device keys, and the Metal device enables the global keywords
 `UNITY_DEVICE_SUPPORTS_NATIVE_16BIT`, `UNITY_DEVICE_SUPPORTS_WAVE_32` and
 `UNITY_DEVICE_SUPPORTS_WAVE_ANY` from the start (`global.enabled.initial`, `.after`, `.restored`).
-Unbound on Metal fails those 3 keys (it enables no device capability keyword: their variants'
-16-bit and wave code is not translated; open).
+Unbound on Metal enables them alike and matches all 1510 keys; the renderer is not given them, so
+their variants (native 16-bit types and wave operations) compile without them (open: that code is
+not translated).
