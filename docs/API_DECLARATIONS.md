@@ -115,7 +115,7 @@ Editor and collection-validation methods.
 | Category | Before Q410 | Q410 entries retained |
 | --- | ---: | ---: |
 | Attributes | 938 | 11 |
-| Modifiers | 87 | 6 |
+| Modifiers | 87 | 5 |
 | Parameters | 74 | 0 |
 | Accessors | 70 | 2 |
 | Layout | 68 | 60 |
@@ -123,7 +123,7 @@ Editor and collection-validation methods.
 | Accessibility | 18 | 0 |
 | Constraints | 1 | 0 |
 | Lookup policies | 11 | 10 |
-| Total | 1,332 | 97 |
+| Total | 1,332 | 96 |
 
 One unrelated annotation exception entered main between these slices. Each Q410
 slice removes only the exact entries for declarations it fixes. After the declaration
@@ -132,10 +132,11 @@ layout slice ColumnLayout's IDisposable entry, its mixer slice the two mixer sub
 entries, its text command slice TextElement's event-interest entry, its field interface
 slice BaseField's interface entry, its capture event slice PointerCaptureEventBase's interface
 entry, its style-animation slice VisualElement's IStylePropertyAnimations entry and its animation job
-producer slice IAnimationJob's producer-marker entry; Q528's group box slice removes BaseVisualElementPanel's IGroupBox entry and its collection
+producer slice IAnimationJob's producer-marker entry and its identifier slice ObjectIdentifier's
+serializable entry; Q528's group box slice removes BaseVisualElementPanel's IGroupBox entry and its collection
 view slice BaseVerticalCollectionView's serialization-callback entry; Q534 removes ray-tracing
 BuildSettings' layout entry. With the one pipeline-restriction lookup entry outside Q410, the
-allow-list holds 98 entries.
+allow-list holds 97 entries.
 
 Q410's enum slice copies obsolete constructor arguments, messages, error flags and
 accompanying annotations for 190 enum declarations. The attribute probe records
@@ -188,8 +189,9 @@ Q410-Editor-computed-setters retains EditorApplication.isFocused and
 EditorAssemblies.loadedAssemblies. Their current getters derive live state; matching
 private setters requires adapting focus updates and assembly-cache invalidation,
 with diverged-state controls. The accessor slice resolves the AssetPostprocessor
-setter. Q410-ObjectIdentifier-serialization retains the ObjectIdentifier serialization flag
-until the shared empty-payload eligibility rules cover JSON and cloning together.
+setter. Q516's identifier slice applies the ObjectIdentifier serialization flag: its fields are not
+serialized, so JSON writes an empty object and cloning keeps the field initializer
+(tests/projects/objectidentifier).
 The final-shapes slice resolves the five NamedBuildTarget readonly differences.
 Q410-Editor-serialized-payloads retains five Serializable
 flags on EditorBuildSettingsScene, PackageInfo, PackageCollection, ListRequest and
@@ -278,14 +280,12 @@ struct copy, nested scene handles, converter replacement and reversed keys, and
 ScriptableObject cloning with independent source state. All earlier 1,193 raw rows
 remain unchanged.
 
-Q410-ObjectIdentifier-serialization remains a measured coupled change. The selected
-flag is true, and the measured JSON payload is empty. Cloning the measured
-ScriptableObject retains the identifier field initializer of 29 when the source contains 17.
-Enabling the flag in the current composite cloner copies 17, a regression. The flag
-therefore remains unchanged with its exact exception; the clone control remains in
-the canonical probe. The full trial reports retain all three clone regressions and
-the two preexisting metadata/nested-JSON gaps. A shared eligibility model for empty
-composites and built-in structs must precede that flag change.
+Q410-ObjectIdentifier-serialization is done (tests/projects/objectidentifier): the struct is
+serializable and its fields are not serialized, so its JSON is an empty object at the root and
+nested, overwrite and round trips leave it unchanged, and Instantiate keeps the clone's field
+initializer (29) instead of the source's identifier (17). The composite copier starts a struct
+copy from the target's own value and copies only serialized members, so the flag no longer
+copies the source; the attributeinheritance clone controls stay unchanged.
 
 The final declaration-shapes slice resolves 29 entries: 21 annotation, five readonly
 and three interface differences. Six handwritten attribute types retain the selected
@@ -408,7 +408,7 @@ comparison tolerances stay unchanged in this slice.
 | `Q410-Editor-serialized-payloads` | 13 | Window/view/package/request fields and coupled Serializable classification. |
 | `Q410-FrameRate-serialization` | 0 | Done by `framepayloads`: signed scalar root JSON, reconstruction and overwrite preserve the selected payload; the unmarked nested type stays omitted. |
 | `Q410-GUI-serialized-payloads` | 0 | Done for the selected release by `guipayload`, with shared GUIStyle payloads across YAML, JSON and cloning; wrapper field annotations match the selected declarations. |
-| `Q410-ObjectIdentifier-serialization` | 1 | Empty composite eligibility that preserves initializer values during cloning. |
+| `Q410-ObjectIdentifier-serialization` | 0 | Done by `objectidentifier`: an empty serialized payload in JSON and cloning. |
 | `Q410-UI-command-events` | 0 | Done by `textcommands`: text fields take command and IME events; the composition preview is covered by managed tests with a stand-in input method. |
 | `Q410-UI-interfaces` | 0 | Done: the element's internal style-animation interface by `styleanimations` (its starts run on the USS transition animations, covered by `uitransitions`, `uitransitioncallbacks`, `uitransitioninline` and `uitransitionkinds`); the collection views' serialization callbacks are covered by `collectionjson`, the runtime panel interface is covered by `runtimepanels`, column binding notifications by `columnnotify`, hierarchy equality by `declarationextras`, the slider's value-field interface by `sliderdrag`, the column layout's lifetime by `columnlayout`, the base field's mixed-value, prefix-label and editing interfaces by `fieldinterfaces`, the capture events' internal pointer interface by `captureevents` and the panel's group box interface by `radiogroups`. |
 | `Q410-XR-value-payloads` | 0 | Done for value identity, equality, hashing and capability storage by `xrvalues`; physical feature-provider queries remain unsupported and outside this payload slice. |
