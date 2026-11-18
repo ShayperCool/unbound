@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/objectidentifier/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ContentBuildInterface.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs"
+  ]
+}

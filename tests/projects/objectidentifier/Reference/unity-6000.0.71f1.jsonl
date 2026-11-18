@@ -1,0 +1,8 @@
+{"key":"serializable","value":"True"}
+{"key":"json.root","value":"{}"}
+{"key":"json.nested","value":"{\"identifier\":{},\"plain\":{\"value\":5},\"control\":23}"}
+{"key":"json.overwrite","value":"29 initializer.asset plain 7 control 31"}
+{"key":"json.overwriteRoot","value":"17 source.asset"}
+{"key":"json.roundTrip","value":"29 initializer.asset plain 5 control 23"}
+{"key":"clone","value":"29 initializer.asset plain 5 control 23"}
+{"key":"complete","value":"1"}
