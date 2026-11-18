@@ -8,9 +8,12 @@ using Unbound.Runtime;
 namespace Unbound.Runtime
 {
     // Service configuration is read once from the project's settings, without contacting a service.
+    // The first read may come from any thread (event subscriptions have no thread check): it reads
+    // under a lock and publishes the loaded flag after the values.
     internal static class EditorServiceSettings
     {
-        static bool s_Loaded;
+        static volatile bool s_Loaded;
+        static readonly object s_Lock = new object();
         internal static bool Configured;
         internal static bool CaptureExceptions;
         internal static uint LogBufferSize = 10;
@@ -18,7 +21,16 @@ namespace Unbound.Runtime
         internal static void Ensure()
         {
             if (s_Loaded) return;
-            s_Loaded = true;
+            lock (s_Lock)
+            {
+                if (s_Loaded) return;
+                try { Load(); }
+                finally { s_Loaded = true; }
+            }
+        }
+
+        static void Load()
+        {
             string path = Path.Combine(UnityEngine.ProjectInfo.ProjectPath, "ProjectSettings", "UnityConnectSettings.asset");
             if (!Native.IsReady || !File.Exists(path)) return;
             foreach (var doc in Native.LoadDocuments(path))
