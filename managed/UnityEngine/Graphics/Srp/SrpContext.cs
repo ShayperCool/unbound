@@ -1354,6 +1354,7 @@ namespace Unbound.Runtime
         {
             // Emissions no scriptable render took (the built-in pipeline renders) end too.
             EndRender();
+            Unbound.Runtime.BatchCulling.DeliverErrors();
             foreach (var data in s_Results.Values)
             {
                 data.Reset();

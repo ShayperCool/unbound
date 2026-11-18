@@ -72,9 +72,30 @@ namespace UnityEngine.Tests
             if (type == LogType.Error) m_Errors.Add(message);
         }
 
-        void Log(string lightMode, uint material = 3, uint mesh = 3) =>
+        /// <summary>A command's check, then the frame's end, where its errors arrive.</summary>
+        void Log(string lightMode, uint material = 3, uint mesh = 3)
+        {
+            Check(lightMode, material, mesh);
+            BatchCulling.DeliverErrors();
+        }
+
+        void Check(string lightMode, uint material = 3, uint mesh = 3) =>
             BatchCulling.LogMissingDotsPasses(new List<string> { lightMode }, RenderQueueRange.all, m_Material, new BatchMaterialID { value = material }, m_Mesh,
                 new BatchMeshID { value = mesh }, new BatchID { value = 2 });
+
+        /// <summary>The error reaches log handlers at the frame's end, not while the frame renders
+        /// (the Editor delivers it after the frame: tests/projects/brg procedural_ids.logs).</summary>
+        [Fact]
+        public void TheErrorArrivesAtTheFramesEnd()
+        {
+            // Its own IDs: each distinct message is logged once per run.
+            Check("UniversalForward", mesh: 77);
+            Assert.Empty(m_Errors);
+            BatchCulling.DeliverErrors();
+            Assert.Single(m_Errors);
+            BatchCulling.DeliverErrors();
+            Assert.Single(m_Errors);
+        }
 
         [Fact]
         public void APassWithoutTheVariantLogsTheEditorsErrorOncePerMessage()

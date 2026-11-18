@@ -350,7 +350,7 @@ namespace Unbound.Runtime
         // Unsupported parts of draw commands (bits of s_Warned).
         const int UnsupportedIndirectTopology = 0, UnsupportedQuads = 1, UnsupportedIndexBuffer = 2,
             UnsupportedCrossFadeKeyword = 3, UnsupportedMissingArrays = 4, UnsupportedSortingPosition = 5, UnsupportedSplit = 6,
-            UnsupportedVisibilityWindow = 7, UnsupportedProceduralId = 8, UnsupportedVertexCount = 9;
+            UnsupportedVisibilityWindow = 7, UnsupportedVertexCount = 8;
 
         /// <summary>The view slice of a spot or point light's culling (a directional light's is 0):
         /// measured, tests/projects/brg local_shadows.</summary>
@@ -366,7 +366,6 @@ namespace Unbound.Runtime
             "a BatchRendererGroup draw command flagged HasSortingPosition points outside instanceSortingPositions; it sorts by its sortingPosition as an approximate depth.",
             "a shadow caster list's split is not one of the six a BatchRendererGroup splitVisibilityMask covers; its commands are drawn whatever their mask.",
             "a BatchRendererGroup indirect draw command's visible instances start past the 16 KB a constant buffer window reads from the buffer's start; it is not drawn.",
-            "a BatchRendererGroup procedural draw command names an unknown batch or material; it is not drawn (the Editor's message for it is unmeasured).",
             "a BatchRendererGroup procedural draw command draws more vertex ids without an index buffer than Unbound's shared stand-in holds (262144); it is not drawn.",
         };
 
@@ -377,6 +376,21 @@ namespace Unbound.Runtime
 
 
 
+        /// <summary>The draw command errors of this frame, delivered at its end (<see cref="DeliverErrors"/>):
+        /// the Editor reports them after the frame that drew them, so a log handler does not see
+        /// them while the frame renders (tests/projects/brg errors, procedural_ids: none in the
+        /// frame's own log rows, each in the Editor's log).</summary>
+        static readonly List<string> s_FrameErrors = new List<string>();
+
+        /// <summary>Logs the frame's draw command errors (the frame's end).</summary>
+        internal static void DeliverErrors()
+        {
+            if (s_FrameErrors.Count == 0) return;
+            var errors = s_FrameErrors.ToArray();
+            s_FrameErrors.Clear();
+            foreach (var error in errors) Debug.LogError(error);
+        }
+
         /// <summary>The invalid-ID errors logged so far: the Editor logs each distinct message once.</summary>
         internal static readonly HashSet<(long, long, int, uint, uint, uint)> s_InvalidIds = new HashSet<(long, long, int, uint, uint, uint)>();
 
@@ -386,7 +400,7 @@ namespace Unbound.Runtime
         static void LogInvalidId(long command, long inRange, int range, BatchMaterialID materialId, Material material, BatchMeshID meshId, Mesh mesh, BatchID batchId)
         {
             if (!s_InvalidIds.Add((command, inRange, range, materialId.value, meshId.value, batchId.value))) return;
-            Debug.LogError("A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
+            s_FrameErrors.Add("A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
                 + $"Shader pass: <unknown>, BatchDrawCommand index: {command}, (index in range: {inRange}), BatchDrawRange index: {range} MaterialID: {materialId.value} (\"{(material != null ? material.name : "<null>")}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
         }
 
@@ -408,7 +422,8 @@ namespace Unbound.Runtime
         /// errors, Probe/NoDots, in the Editor's log; the pass is not drawn, which the renderer
         /// decides). Logged when the commands are read, each distinct message once (the Editor
         /// delivers it after the frame); a pass whose variants are not known logs nothing.
-        /// Procedural commands have no mesh to name (unmeasured): none for them.</summary>
+        /// Procedural commands name mesh 0 ("&lt;null&gt;"), as the Editor's do
+        /// (tests/projects/brg procedural_ids).</summary>
         internal static void LogMissingDotsPasses(List<string> lightModes, RenderQueueRange queues, Material material, BatchMaterialID materialId, Mesh mesh, BatchMeshID meshId, BatchID batchId)
         {
             var shader = material.shader;
@@ -430,7 +445,7 @@ namespace Unbound.Runtime
                 }
                 if (!missing) continue;
                 if (!s_NoDotsLogged.Add((pass, key.Item1, materialId.value, meshId.value, batchId.value))) continue;
-                Debug.LogError($"A BatchDrawCommand is using the pass \"{pass}\" from the shader \"{shader.name}\" which does not define a DOTS_INSTANCING_ON variant. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
+                s_FrameErrors.Add($"A BatchDrawCommand is using the pass \"{pass}\" from the shader \"{shader.name}\" which does not define a DOTS_INSTANCING_ON variant. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
                     + $"MaterialID: {materialId.value} (\"{material.name}\"), MeshID: {meshId.value} (\"{(mesh != null ? mesh.name : "<null>")}\"), BatchID: {batchId.value}.");
             }
         }
@@ -539,10 +554,10 @@ namespace Unbound.Runtime
                             CollectIndirect(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
                             break;
                         case BatchDrawCommandType.Procedural:
-                            CollectProcedural(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
+                            CollectProcedural(camera, output, ref d, range, r, filter, main, splitBit, into, ref sequence);
                             break;
                         case BatchDrawCommandType.ProceduralIndirect:
-                            CollectProceduralIndirect(camera, output, ref d, range, filter, main, splitBit, into, ref sequence);
+                            CollectProceduralIndirect(camera, output, ref d, range, r, filter, main, splitBit, into, ref sequence);
                             break;
                     }
                 }
@@ -607,7 +622,7 @@ namespace Unbound.Runtime
         /// program builds its vertices; their attributes read zero). A non-indexed command's base
         /// vertex is not a first vertex: its ids start at 0 (measured: tests/projects/brg
         /// procedural.c1, as procedural.c0).</summary>
-        static void CollectProcedural(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter,
+        static void CollectProcedural(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, int r, in BatchFilterSettings filter,
             Light main, ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             if (range.drawCommandsCount > 0 && d.proceduralDrawCommands == null)
@@ -622,20 +637,26 @@ namespace Unbound.Runtime
                 var group = output.Group;
                 var batch = group.GetBatch(command.batchID);
                 var material = group.GetRegisteredMaterial(command.materialID);
-                // An unknown batch or material is not drawn; the Editor's message for it is
-                // unmeasured (its invalid-ID error names a mesh).
-                if (batch == null || material == null)
-                {
-                    WarnOnce(UnsupportedProceduralId);
-                    continue;
-                }
+                if (!ProceduralIdsKnown(c, c - range.drawCommandsBegin, r, batch, command.batchID, material, command.materialID)) continue;
                 if (command.visibleCount == 0 || command.elementCount == 0) continue;
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
                 if ((long)command.visibleOffset + command.visibleCount > d.visibleInstanceCount) continue;
+                LogMissingDotsPasses(s_ListLightModes, s_ListQueues, material, command.materialID, null, default, command.batchID);
                 if (!ProceduralShape(command.topology, command.indexBufferHandle, command.indexOffsetBytes, command.elementCount, false, out var mesh, out _)) continue;
                 var item = Item(output, (int)c, CommandKind.Procedural, mesh, 0, default, material, command.flags, command.lightmapIndex, batch.Properties, filter, main, ref sequence);
                 AddSorted(camera, ref d, item, command.flags, command.sortingPosition, command.visibleCount, into, ref sequence);
             }
+        }
+
+        /// <summary>Whether a procedural or procedural indirect command's batch and material are the
+        /// group's. Neither is drawn otherwise: an unknown batch logs the invalid-ID error, naming
+        /// mesh 0, an unknown material nothing (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/brg procedural_ids; both unknown is unmeasured, logged as an unknown
+        /// batch).</summary>
+        static bool ProceduralIdsKnown(long command, long inRange, int range, BatchRendererGroup.Batch batch, BatchID batchId, Material material, BatchMaterialID materialId)
+        {
+            if (batch == null) LogInvalidId(command, inRange, range, materialId, material, default, null, batchId);
+            return batch != null && material != null;
         }
 
         /// <summary>
@@ -733,7 +754,7 @@ namespace Unbound.Runtime
         /// buffer counts (IndirectDrawArgs, or IndirectDrawIndexedArgs with an index buffer), the
         /// instances' batch indices read from its visible instance buffer as an indirect
         /// command's.</summary>
-        static void CollectProceduralIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, in BatchFilterSettings filter,
+        static void CollectProceduralIndirect(FrameBuilder.CameraContext camera, Output output, ref BatchCullingOutputDrawCommands d, in BatchDrawRange range, int r, in BatchFilterSettings filter,
             Light main, ushort splitBit, List<FrameBuilder.DrawItem> into, ref long sequence)
         {
             if (range.drawCommandsCount > 0 && d.proceduralIndirectDrawCommands == null)
@@ -748,12 +769,9 @@ namespace Unbound.Runtime
                 var group = output.Group;
                 var batch = group.GetBatch(command.batchID);
                 var material = group.GetRegisteredMaterial(command.materialID);
-                if (batch == null || material == null)
-                {
-                    WarnOnce(UnsupportedProceduralId);
-                    continue;
-                }
+                if (!ProceduralIdsKnown(c, c - range.drawCommandsBegin, r, batch, command.batchID, material, command.materialID)) continue;
                 if (splitBit != 0 && (command.splitVisibilityMask & splitBit) == 0) continue;
+                LogMissingDotsPasses(s_ListLightModes, s_ListQueues, material, command.materialID, null, default, command.batchID);
                 if (RefusedWindow(command.visibleInstancesBufferWindowOffset, command.visibleInstancesBufferWindowSizeBytes)) continue;
                 if (!PackedVisibleOffset(command.visibleOffset, command.visibleInstancesBufferWindowOffset, out _)) continue;
                 if (!ProceduralShape(command.topology, command.indexBufferHandle, 0, 0, true, out var mesh, out _)) continue;

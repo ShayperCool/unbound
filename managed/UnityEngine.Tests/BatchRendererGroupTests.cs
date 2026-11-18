@@ -333,6 +333,7 @@ namespace UnityEngine.Tests
                 var tags = new List<ShaderTagId> { new ShaderTagId(lightMode) };
                 var drawing = new DrawingSettings(tags[0], new SortingSettings(m_Camera)) { overrideMaterial = overrideMaterial, overrideShader = overrideShader };
                 FrameBuilder.DrawRendererList(Cull(), drawing, all, tags);
+                BatchCulling.DeliverErrors();
             }
             try
             {
@@ -503,6 +504,7 @@ namespace UnityEngine.Tests
                 var all = new FilteringSettings(RenderQueueRange.all) { renderingLayerMask = uint.MaxValue };
                 Assert.Single(Collect(Cull(), all));
                 Assert.Single(Collect(Cull(), all));
+                BatchCulling.DeliverErrors();
             }
             finally { Debug.unityLogger.logHandler = previous; }
             var message = "A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID. This is not supported when rendering with a BatchRendererGroup or anything based on it like GPU Resident Drawer or Entities Graphics.\n"
@@ -1103,8 +1105,10 @@ namespace UnityEngine.Tests
         /// share (65536 vertex ids, then powers of two up to 262144: past that it is warned about
         /// and not drawn), its base vertex left out (procedural.c1); an indexed one the
         /// 65536-vertex stand-in with its buffer's indices from its byte offset (at most the
-        /// buffer's) plus its base vertex. An index buffer that is not live, an offset inside an
-        /// index, or an unknown batch or material is warned about and not drawn.
+        /// buffer's) plus its base vertex. An index buffer that is not live or an offset inside an
+        /// index is warned about and not drawn; a command of an unknown material is not drawn and
+        /// logs nothing, one of an unknown batch logs the Editor's invalid-ID error naming mesh 0
+        /// at the frame's end (tests/projects/brg procedural_ids).
         /// </summary>
         [Fact]
         public void ProceduralCommandsDrawStandInsWithTheirIndices()
@@ -1131,6 +1135,7 @@ namespace UnityEngine.Tests
                 Command(MeshTopology.Points, 70000, 0, default, 0),
                 Command(MeshTopology.Points, ProceduralMeshes.MaxSharedVertices + 1, 0, default, 0),
                 new BatchDrawCommandProcedural { batchID = batch, materialID = new BatchMaterialID { value = 77 }, visibleCount = 1, topology = MeshTopology.Points, elementCount = 3 },
+                new BatchDrawCommandProcedural { batchID = new BatchID { value = 88 }, materialID = material, visibleCount = 1, topology = MeshTopology.Points, elementCount = 3 },
             })(g, c, o, u));
             material = group.RegisterMaterial(m_Material);
             batch = AddBatch(group);
@@ -1149,7 +1154,11 @@ namespace UnityEngine.Tests
                 Assert.Equal(Vector3.zero, items[0].Dots.Value.Header.Extent);
                 Assert.Single(logged, m => m.Contains("index buffer is not a live index buffer"));
                 Assert.Single(logged, m => m.Contains("shared stand-in holds"));
-                Assert.Single(logged, m => m.Contains("unknown batch or material"));
+                Assert.DoesNotContain(logged, m => m.Contains("invalid Batch"));
+                BatchCulling.DeliverErrors();
+                Assert.Single(logged, m => m.Contains("A BatchDrawCommand was submitted with an invalid Batch, Mesh, or Material ID.")
+                    && m.Contains($"BatchDrawCommand index: 7, (index in range: 7), BatchDrawRange index: 0 MaterialID: {material.value} (\"{m_Material.name}\"), MeshID: 0 (\"<null>\"), BatchID: 88."));
+                Assert.DoesNotContain(logged, m => m.Contains("MaterialID: 77"));
 
                 GfxStream.Flush();
                 BatchCulling.Draw(items[0], items[0].Dots.Value, 1, 0, null);
