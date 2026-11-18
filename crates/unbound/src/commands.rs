@@ -1324,9 +1324,6 @@ pub fn run(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     Ok(())
 }
 
-/// Set for a session that relaunched for a script edit (read by the managed editor domain load).
-const SCRIPT_RELOAD_VARIABLE: &str = "UNBOUND_SCRIPT_RELOAD";
-
 /// Starts this command again in place of the process: an edit stopped the game because it could
 /// not be patched in, and the new session compiles and plays the edited code (the compile cache
 /// keeps the restart short).
@@ -1336,9 +1333,6 @@ fn relaunch() -> Result<()> {
     tracing::info!("restarting the game with the edited code");
     let mut command = std::process::Command::new(exe);
     command.args(args);
-    // The new session is the edited scripts' reload: it raises AssemblyReloadEvents.afterAssemblyReload
-    // (the old one raised beforeAssemblyReload).
-    command.env(SCRIPT_RELOAD_VARIABLE, "1");
     if unbound_runtime::restart_in_debug() {
         command.env("UNBOUND_CODE_OPTIMIZATION", "debug");
     }
