@@ -33,6 +33,13 @@ with its color-space setting replaced (`set_color_space`), and a reference of ea
 Reference/unity-<release>/<space>/. `record` and `publish` then take `--space`; `gate` runs
 every space, or the one `--space` names.
 
+A probe that declares `devices` (Linux: `('opengl', 'vulkan')`) has values the graphics device
+may decide: `record` and `publish` take `--device` (default opengl, the Linux Editor's own
+device; vulkan records the Editor with -force-vulkan on the GPU display :0), the OpenGL Core
+reference stays in Reference/unity-<release>/ and the Vulkan one is Reference/unity-<release>/vulkan/;
+`gate` runs Unbound on every device (vulkan with --force-vulkan), or the one `--device` names.
+On macOS arm64 the gate runs the probe's macOS check alone.
+
 A probe may list known residuals in `residuals.json` next to its run.py: `{reason: [key, ...]}`,
 open differences with a named cause and follow-up. Such a key that differs is printed with its
 reason and does not fail the gate; one that matches again is printed as resolved (remove it).
@@ -65,10 +72,13 @@ COMPLETE = {'k': 'complete', 'v': True}
 METAL = False
 
 
-def reference_dir(probe, space=None):
+def reference_dir(probe, space=None, device=None):
     """The reference the probe records and gates against here (its Metal one on macOS, see METAL),
-    that of a color space for a probe recorded in several."""
+    that of a color space for a probe recorded in several, of the Vulkan device for a probe
+    recorded on several devices (`device` 'vulkan')."""
     root = reference_root(probe)/'metal' if METAL else reference_root(probe)
+    if device == 'vulkan':
+        root = root/'vulkan'
     return root/space if space else root
 
 
@@ -258,7 +268,7 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
-def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None):
+def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None, device=None):
     if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
@@ -269,7 +279,8 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     capture.mkdir(parents=True)
     # On macOS arm64 editor_runner runs the macOS Editor, which draws with Metal.
     job = editor_runner.EditorJob(project, out/'editor.log', out, ['-executeMethod', method], batch=batch,
-        graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label)
+        graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label,
+        vulkan=device == 'vulkan')
     print(editor_runner.summary(editor_runner.run(job)))
     problem = editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
     if problem:
@@ -277,7 +288,7 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     print('captured', capture)
 
 
-def publish(probe, labels, space=None):
+def publish(probe, labels, space=None, device=None):
     roots = [run_root(probe, label) for label in labels]
     for root in roots:
         problem = editor_runner.result_problem(root, gpu=True)
@@ -296,11 +307,11 @@ def publish(probe, labels, space=None):
     # Editor results live one level above the captures; publish() checks the capture files.
     for capture, root in zip(captures, roots):
         shutil.copyfile(root/editor_runner.RESULT, capture/editor_runner.RESULT)
-    return editor_runner.publish(captures, reference_dir(probe, space), names, write,
+    return editor_runner.publish(captures, reference_dir(probe, space, device), names, write,
                                  complete=[editor_runner.jsonl_complete()], gpu=True)
 
 
-def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None):
+def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None):
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
     residuals(probe), image_limits(probe)
     out = run_root(probe, label)
@@ -317,8 +328,9 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     env = {**os.environ, variable: str(capture)}
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-                               '--no-watch', *engine_args], env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-    reference = reference_dir(probe, space)
+                               '--no-watch', *engine_args, *(['--force-vulkan'] if device == 'vulkan' else [])],
+                              env=env, stdout=log, stderr=subprocess.STDOUT).returncode
+    reference = reference_dir(probe, space, device)
     expected = read_values(reference/VALUES)
     try:
         actual = read_values(capture/VALUES)
@@ -352,13 +364,13 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
             if limit and (measured[0] > limit[0] or measured[1] > limit[1] or measured[2] > limit[2]):
                 print(f'{name}: over its recorded limit (mean {limit[0]}, worst {limit[1]}, over 8: {limit[2]}; {limit[3]})')
                 failures.append({'image': name})
-    name = f'{probe.name} {space}' if space else probe.name
+    name = ' '.join([probe.name, *([space] if space else []), *([device] if device else [])])
     print(f'{name}: {matched}/{len(expected)} values match, {len(failures)} failures, {len(residual)} known residuals; engine exit {code}; logs {out}')
     return 1 if failures or code else 0
 
 
 def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None,
-         macos_batch=False, metal=False, color_spaces=None):
+         macos_batch=False, metal=False, color_spaces=None, devices=None):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
@@ -369,8 +381,8 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     probe's values depend on neither the OS nor the graphics device, so it may be recorded with
     the macOS Editor in batch mode. metal: the graphics device decides the probe's values, so on
     macOS arm64 it records, publishes and gates against a Metal reference (see the module's
-    docstring). color_spaces: the color spaces the probe is recorded and gated in (see the
-    module's docstring)."""
+    docstring). color_spaces: the color spaces the probe is recorded and gated in, devices the
+    Linux graphics devices (see the module's docstring)."""
     global METAL
     METAL = metal and MACOS_ARM64
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -379,15 +391,22 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     parser.add_argument('--label', default=None)
     if color_spaces:
         parser.add_argument('--space', choices=color_spaces)
+    if devices:
+        if color_spaces:
+            raise ValueError('a probe declares color spaces or devices, not both')
+        parser.add_argument('--device', choices=devices)
     args = parser.parse_args()
+    device = getattr(args, 'device', None)
+    if device and MACOS_ARM64:
+        parser.error('--device names a Linux graphics device; on macOS the probe runs its macOS check')
     space = getattr(args, 'space', None)
     if color_spaces and args.mode != 'gate' and not space:
         parser.error(f'{args.mode} needs --space ({", ".join(color_spaces)})')
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
-        return record(probe, method, variable, label, batch, record_timeout, base, macos_batch, space)
+        return record(probe, method, variable, label, batch, record_timeout, base, macos_batch, space, device)
     if args.mode == 'publish':
-        code = publish(probe, args.labels, space)
+        code = publish(probe, args.labels, space, device)
         if authored and not code:
             authored_project.record(probe.name, unity_version(), authored, run_root(probe, args.labels[0])/'project',
                                     f'python3 tests/projects/{probe.name}/run.py record')
@@ -395,4 +414,8 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     if color_spaces:
         spaces = [space] if space else color_spaces
         return max(gate(probe, variable, f'{label}-{s}', tolerance, engine_args, authored, base, s) for s in spaces)
+    if devices and not MACOS_ARM64:
+        chosen = [device] if device else devices
+        return max(gate(probe, variable, f'{label}-{d}', tolerance, engine_args, authored, base, device=None if d == 'opengl' else d)
+                   for d in chosen)
     return gate(probe, variable, label, tolerance, engine_args, authored, base)
