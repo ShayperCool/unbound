@@ -70,7 +70,8 @@ Cases (`<pipeline>.<case>.<quad>.<channel>`; pipelines `builtin`, `universal`, `
   each sprite shape one material.
 
 Not measured: a shader declaring `unity_SpriteColor` in the built-in pipeline, GPU instancing of
-a custom sprite shader, and how instanced sprites batch (each case's sprites share one material).
+a custom sprite shader, how instanced sprites batch (each case's sprites share one material), and
+a MaterialPropertyBlock's `_RendererColor` on a sprite (Unbound draws the renderer's own).
 
 ## Reproduce
 
