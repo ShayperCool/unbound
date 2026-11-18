@@ -64,6 +64,8 @@ class DeviceReferenceTests(unittest.TestCase):
         self.assertEqual(read(flat/'Reference/b.png', publishing=True), flat/'Reference/metal/b.png')
         self.assertEqual(read(flat/'Reference/metal/a.png'), flat/'Reference/metal/a.png')
         self.assertEqual(read(flat/'Reference/a.png', macos=False), flat/'Reference/a.png')
+        # A release set not recorded yet under a flat-looking Reference keeps the release layout.
+        self.assertEqual(read(flat/'Reference/unity-R/a.png', publishing=True), flat/'Reference/unity-R/metal/a.png')
         # A probe with release directories is not flat: its Reference stays as it is.
         self.assertEqual(self.read(self.probe/'Reference'), self.probe/'Reference')
 

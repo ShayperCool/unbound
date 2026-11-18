@@ -83,8 +83,12 @@ fails.
 
 On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
 macOS Editor (Metal, Apple M2 Pro), recorded with `tests/flat_reference.py record grass --variable
-GRASS_PROBE_OUT` and `publish`. Unbound on Metal matches all 1224 records; its images differ from
-the Metal Editor's at blade edges more than on Linux (for example `Coloured` 943 pixels up to 193,
-`Counts` 2919 up to 168; on Linux 382 up to 48 and 599 up to 47), unresolved and not declared as
-residuals (`image-residuals.json` is the Linux list). Against the Linux reference on the Mac they
-differ in about 44000 pixels per image.
+GRASS_PROBE_OUT` and `publish --require 'grass.jsonl:"overrides":"ignored"'` (the probe's
+completion row). Unbound on Metal matches all 1224 records. Its images differ from the Metal
+Editor's at blade edges, more than on Linux, in 10 of 11 images (pixels differing, worst channel):
+Coloured 943/193, Counts 2919/168, Coverage 8870/141, DensityCounts 3461/177, DensityCoverage
+3954/159, Instanced 365/75, Textured 1087/188, Tilted 4361/147, Waving1 5093/156, Waving30 5000/165
+(on Linux, for example, Coloured 382/48 and Counts 599/47); `Refusals` passes on its Linux
+residual. These are unresolved and not declared: the suite's image gate still applies
+`image-residuals.json`, the Linux list, to the Metal comparison. Against the Linux reference on the
+Mac about 44000 pixels per image differ.

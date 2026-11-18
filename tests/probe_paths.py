@@ -48,7 +48,8 @@ def metal_counterpart(path, probe, release=None):
     if flat.is_dir() and not any(child.name.startswith('unity-') for child in flat.iterdir()):
         if path == flat:
             return flat/'metal'
-        if path.is_relative_to(flat) and path.relative_to(flat).parts[0] != 'metal':
+        if path.is_relative_to(flat) and path.relative_to(flat).parts[0] != 'metal' \
+                and not path.relative_to(flat).parts[0].startswith('unity-'):
             return flat/'metal'/path.relative_to(flat)
     if path.is_relative_to(root) and path != root and path.relative_to(root).parts[0] != 'metal':
         return root/'metal'/path.relative_to(root)
