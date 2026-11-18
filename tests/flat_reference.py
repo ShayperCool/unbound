@@ -93,7 +93,11 @@ def main():
     p = sub.add_parser('publish')
     p.add_argument('probe')
     p.add_argument('label')
-    p.add_argument('--require', action='append', default=[], metavar='FILE:TEXT',
+    def requirement(value):
+        if ':' not in value:
+            raise argparse.ArgumentTypeError(f'{value!r} is not FILE:TEXT')
+        return value
+    p.add_argument('--require', action='append', default=[], metavar='FILE:TEXT', type=requirement,
                    help="the capture's FILE must contain TEXT (the probe's completion row)")
     args = parser.parse_args()
     if not MACOS_ARM64:
