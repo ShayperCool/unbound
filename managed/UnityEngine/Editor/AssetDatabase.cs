@@ -445,7 +445,8 @@ namespace UnityEditor
         static readonly object s_LoadLock = new object();
         static bool s_EnterPlayModeOptionsEnabled;
         static EnterPlayModeOptions s_EnterPlayModeOptions;
-        // The Editor's default when the asset does not set it.
+        // The Editor's default for a project whose asset does not set it (new projects write 1;
+        // a project without the key is not measured).
         const bool ForceAssetUnloadAndGCOnSceneLoadDefault = true;
         static bool s_ForceAssetUnloadAndGCOnSceneLoad = ForceAssetUnloadAndGCOnSceneLoadDefault;
 

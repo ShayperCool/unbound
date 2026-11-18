@@ -177,8 +177,8 @@ namespace UnityEngine
         /// scene-operation queue. BelowNormal by default (Scripting API 6000.0). The Linux Editor
         /// lowers its loading thread for that default and cannot raise it again: Normal and High,
         /// and any value from Normal up, read back as Low and take Low's limit (measured:
-        /// tests/projects/editorcallbacks --queue-budget). Other platforms keep the value set
-        /// (not measured).</summary>
+        /// tests/projects/editorcallbacks --queue-budget, one machine and user, not allowed to
+        /// raise thread priorities). Other platforms keep the value set (not measured).</summary>
         public static ThreadPriority backgroundLoadingPriority
         {
             get => s_BackgroundLoadingPriority;

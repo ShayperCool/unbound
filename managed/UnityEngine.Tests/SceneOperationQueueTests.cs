@@ -316,6 +316,23 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ALaterRequestWithAHigherPriorityDoesNotOvertakeALoadScene()
+        {
+            // The loader is busy with the first request; the LoadScene request and the held,
+            // higher-priority request behind it wait for its next pass.
+            var first = Load("first", 0);
+            var sync = Load("sync", 0, async: false);
+            var later = Load("later", 0);
+            later.priority = 1;
+            later.allowSceneActivation = false;
+            m_Queue.Prepare(1);
+            m_Queue.Process(1);
+            Assert.True(first.isDone && sync.isDone);
+            Assert.False(later.isDone);
+            Assert.Equal(new[] { "first.objects", "first.completed", "sync.objects", "sync.completed" }, m_Events);
+        }
+
+        [Fact]
         public void AnUnusedAssetUnloadQueuedBehindALoadSceneIsForcedWithIt()
         {
             var sync = Load("sync", 0, async: false);

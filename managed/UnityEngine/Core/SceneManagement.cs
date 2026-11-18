@@ -562,7 +562,7 @@ namespace UnityEngine.SceneManagement
             // --queue-budget, the loads queued after it start once it completes).
             if (parameters.loadSceneMode == LoadSceneMode.Single && Compat.SceneAsyncPreparationMeasured
                 && UnityEditor.EditorSettings.forceAssetUnloadAndGCOnSceneLoad)
-                s_Operations.EnqueueAfterLast(new AsyncOperation(), () => Resources.UnloadUnusedAssetsNow(collectGarbage: true),
+                s_Operations.EnqueueAfterLast(new AsyncOperation(), Resources.UnloadAfterSingleLoad,
                     SceneOperationQueue.Kind.UnloadUnused, Time.frameCount);
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
         }
@@ -572,7 +572,7 @@ namespace UnityEngine.SceneManagement
         internal static AsyncOperation QueueUnloadUnused()
         {
             var operation = new AsyncOperation();
-            s_Operations.EnqueueAfterLast(operation, () => Resources.UnloadUnusedAssetsNow(collectGarbage: false),
+            s_Operations.EnqueueAfterLast(operation, Resources.UnloadUnusedAssetsNow,
                 SceneOperationQueue.Kind.UnloadUnused, Time.frameCount);
             return operation;
         }

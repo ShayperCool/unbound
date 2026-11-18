@@ -309,6 +309,8 @@ Mesh:
         [Fact]
         public void UnloadUnusedAssetsUnloadsWhatNothingReferencesAndKeepsTheRest()
         {
+            // The queued completion is the measured release's (Compat.SceneAsyncPreparationMeasured).
+            using var release = UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured);
             const string heldGuid = "c0de0000000000000000000000000006";
             const string unusedGuid = "c0de0000000000000000000000000007";
             const string flaggedGuid = "c0de0000000000000000000000000008";

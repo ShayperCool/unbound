@@ -148,17 +148,26 @@ namespace UnityEngine
         {
             if (Compat.SceneAsyncPreparationMeasured && Unbound.Runtime.EditorSession.IsPlaying)
                 return UnityEngine.SceneManagement.SceneManagerInternal.QueueUnloadUnused();
-            UnloadUnusedAssetsNow(collectGarbage: false);
+            UnloadUnusedAssetsNow();
             return AsyncOperation.Completed();
         }
 
-        /// <summary>The unused-asset unload itself; a Single load's forced unload also collects
-        /// the managed heap (Scripting API 6000.0, EditorSettings.forceAssetUnloadAndGCOnSceneLoad).</summary>
-        internal static void UnloadUnusedAssetsNow(bool collectGarbage)
+        /// <summary>The unused-asset unload itself.</summary>
+        internal static void UnloadUnusedAssetsNow()
         {
             UnloadUnusedAssetsInternal();
             AssetDatabaseRuntime.UnloadUnused();
-            if (collectGarbage) GC.Collect();
+        }
+
+        /// <summary>The forced unload after a Single load (Scripting API 6000.0,
+        /// EditorSettings.forceAssetUnloadAndGCOnSceneLoad: it unloads unused assets and collects
+        /// the managed heap). Unbound collects the heap and compacts the object registry, as scene
+        /// loads did before; it does not walk the heap for unused assets (the walk an explicit
+        /// UnloadUnusedAssets makes), whose cost on every scene change is not measured.</summary>
+        internal static void UnloadAfterSingleLoad()
+        {
+            UnloadUnusedAssetsInternal();
+            GC.Collect();
         }
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();

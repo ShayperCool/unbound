@@ -113,12 +113,16 @@ the last pending progress before completion; the sidecar keeps every read and pa
 time.
 
 Unbound applies the same rule with its own pass time. With built-in lighting data read
-once per session, its integration of these scenes takes well under a millisecond,
-so `--queue-only` (Editor frames 2/4 at its first, cold queue) and the main profile's
-queue control match. Machine load can still move a below-limit gap, as in the Editor.
-Unmeasured: the macOS priority read-back, other asynchronous operations (Resources
-and AssetBundle loads) sharing the limit, and other releases. Those releases keep the
-previous one-pass timing.
+once per session, a warm integration of these scenes takes well under a millisecond, so
+the main profile's queue control matches. The first integration of a session costs
+several milliseconds more (about 7 ms measured, mostly first-use compilation), beyond
+the 4 ms limit: `--queue-only`, the session's first queue, therefore matches the
+Editor's frames 2/4. A faster first integration would turn that profile's second load
+into frame 3, a raw failure under the same rule. Machine load can still move a
+below-limit gap, as in the Editor. Unmeasured: the macOS priority read-back, the
+read-back of a Linux user allowed to raise thread priorities (one machine and user
+measured), other asynchronous operations (Resources and AssetBundle loads) sharing the
+limit, and other releases. Those releases keep the previous one-pass timing.
 
 The main, cold-single, forced-load, Start, unheld-queue and three-load profiles pass
 their receiver/driver checks. The suite retains every strict result. Runtime frame

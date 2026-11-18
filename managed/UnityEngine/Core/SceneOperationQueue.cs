@@ -144,7 +144,9 @@ namespace UnityEngine.SceneManagement
         }
 
         /// <summary>The untaken request made before this frame with the highest priority, the
-        /// earliest among equals, moved behind the taken ones.</summary>
+        /// earliest among equals, moved behind the taken ones. Nothing is taken past an untaken
+        /// LoadScene request (or work forced with one): it keeps its place, so its next-frame
+        /// load is not delayed by later asynchronous requests.</summary>
         Request Take(int frame)
         {
             int first = -1, best = -1;
@@ -153,6 +155,11 @@ namespace UnityEngine.SceneManagement
                 var request = m_Requests[i];
                 if (request.Started) continue;
                 if (first < 0) first = i;
+                if (request.Forced)
+                {
+                    if (best < 0 && request.Frame < frame) best = i;
+                    break;
+                }
                 if (request.Frame < frame && (best < 0 || request.Operation.priority > m_Requests[best].Operation.priority)) best = i;
             }
             if (best < 0) return null;
