@@ -38,6 +38,8 @@ a second one. The restarted session also enters Play mode again (its Play mode c
 the scene starts over), which the Editor's reload does not.
 
 Recorded residual (`residuals.json`): `start.load`, because Unbound's editor scripts load before
-Play mode entry's pre-reload events, which the Editor sends in its Edit-mode domain. Unmeasured: the order of several messages of one assembly (Unbound
+Play mode entry's pre-reload events, which the Editor sends in its Edit-mode domain (their
+beforeAssemblyReload handlers run in the domain that then plays). Play mode entered from an
+Edit-mode session raises no reload events. Unmeasured: the order of several messages of one assembly (Unbound
 lists errors, then warnings), RequestScriptCompilation, "Recompile After Finished Playing" and
 "Stop Playing And Recompile", other releases.

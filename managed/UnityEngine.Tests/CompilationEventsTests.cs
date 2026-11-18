@@ -113,11 +113,8 @@ namespace UnityEngine.Tests
             }
         }
 
-        [Fact]
-        public void AnEditorDomainLoadEndsWithAfterAssemblyReload()
+        static List<string> LoadEditorDomainForPlayMode()
         {
-            // The domain load ends with afterAssemblyReload, after Play mode entry's ExitingEditMode
-            // and beforeAssemblyReload (compileevents start.load).
             var seen = new List<string>();
             AssemblyReloadEvents.AssemblyReloadCallback after = () => seen.Add("afterAssemblyReload");
             AssemblyReloadEvents.AssemblyReloadCallback beforeReload = () => seen.Add("beforeAssemblyReload");
@@ -139,8 +136,35 @@ namespace UnityEngine.Tests
                 AssemblyReloadEvents.beforeAssemblyReload -= beforeReload;
                 EditorApplication.playModeStateChanged -= state;
             }
-            // Entering Play mode reloads the domain: ExitingEditMode, then beforeAssemblyReload.
-            Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, seen);
+            return seen;
+        }
+
+        [Fact]
+        public void EnteringPlayModeReloadsTheDomainUnlessItsOptionsDisableIt()
+        {
+            // The domain load ends with afterAssemblyReload, after Play mode entry's ExitingEditMode
+            // and, when entering Play mode reloads the domain, beforeAssemblyReload (compileevents
+            // start.load).
+            bool enabled = EditorSettings.enterPlayModeOptionsEnabled;
+            var options = EditorSettings.enterPlayModeOptions;
+            try
+            {
+                EditorSettings.enterPlayModeOptionsEnabled = true;
+                EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.None;
+                Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());
+                // Options that keep the domain: no pre-reload event (the domain's own load still ends
+                // with afterAssemblyReload, standing for the Editor's start).
+                EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload;
+                Assert.Equal(new[] { "ExitingEditMode", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());
+                // Control: the same options while the options are off reload the domain.
+                EditorSettings.enterPlayModeOptionsEnabled = false;
+                Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, LoadEditorDomainForPlayMode());
+            }
+            finally
+            {
+                EditorSettings.enterPlayModeOptionsEnabled = enabled;
+                EditorSettings.enterPlayModeOptions = options;
+            }
         }
 
         [Fact]

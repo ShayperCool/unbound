@@ -430,8 +430,38 @@ namespace UnityEditor
 
     public sealed partial class EditorSettings : Object
     {
-        public static bool enterPlayModeOptionsEnabled { get; set; }
-        public static EnterPlayModeOptions enterPlayModeOptions { get; set; }
+        static bool s_Loaded, s_EnterPlayModeOptionsEnabled;
+        static EnterPlayModeOptions s_EnterPlayModeOptions;
+
+        /// <summary>The project's ProjectSettings/EditorSettings.asset (class 159), read once; a
+        /// project without one keeps the defaults (off, None).</summary>
+        static void Load()
+        {
+            if (s_Loaded) return;
+            s_Loaded = true;
+            string path = System.IO.Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "EditorSettings.asset");
+            if (!Unbound.Runtime.Native.IsReady || !System.IO.File.Exists(path)) return;
+            foreach (var doc in Unbound.Runtime.Native.LoadDocuments(path))
+            {
+                if (doc.ClassId != EditorSettingsClassId) continue;
+                s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
+                s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
+            }
+        }
+
+        const int EditorSettingsClassId = 159;
+
+        public static bool enterPlayModeOptionsEnabled
+        {
+            get { Load(); return s_EnterPlayModeOptionsEnabled; }
+            set { Load(); s_EnterPlayModeOptionsEnabled = value; }
+        }
+
+        public static EnterPlayModeOptions enterPlayModeOptions
+        {
+            get { Load(); return s_EnterPlayModeOptions; }
+            set { Load(); s_EnterPlayModeOptions = value; }
+        }
     }
 
     [Flags]

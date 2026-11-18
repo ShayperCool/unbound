@@ -33,7 +33,8 @@ namespace UnityEditor
         static bool? s_ContinuesScriptReload;
 
         /// <summary>Whether this session was relaunched for a script edit: read once, and the variable
-        /// cleared so that processes the session starts do not inherit it.</summary>
+        /// cleared from the managed environment, so that processes started from managed code do not
+        /// inherit it (native code and the host still see it; nothing else reads it).</summary>
         static bool ContinuesScriptReload()
         {
             if (s_ContinuesScriptReload is bool known) return known;
