@@ -28,3 +28,9 @@ its committed .meta has the defaults (its post-processing of a tree's textures),
     python3 tests/projects/speedtree9urp/run.py record --label A     # windowed Editor capture (GPU)
     python3 tests/projects/speedtree9urp/run.py publish A B          # two identical captures
     python3 tests/projects/speedtree9urp/run.py gate                 # the engine against Reference/
+
+## Metal
+
+On macOS arm64 the probe records (windowed) and gates against `Reference/unity-6000.0.71f1/metal/`,
+two identical captures of the macOS Editor (Metal, Apple M2 Pro), with `residuals-metal.json`
+(none). Unbound there: 311/311 (against the Linux reference 309/311; Metal keeps the GBuffer pass).

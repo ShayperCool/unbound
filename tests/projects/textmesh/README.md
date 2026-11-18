@@ -51,3 +51,11 @@ The `atlas/*` controls (after the images) record the dynamic font texture itself
 character the font lacks (its cell, and whether `characterInfo` lists it). They were
 recorded twice in the Editor (identical) and appended to the reference, whose other rows stayed
 as they were.
+
+## Metal
+
+On macOS arm64 the probe records and gates against `Reference/unity-6000.0.71f1/metal/`, two
+identical captures of the macOS Editor (Metal, Apple M2 Pro), which renders with macOS's own fonts
+(AGENTS.md Platforms). Unbound there: 1346/1355 (against the Linux reference 1228/1355); the nine
+left are font atlas glyph placements (`atlas/*/characters`, `rebuilt`) and the two material images,
+recorded.
