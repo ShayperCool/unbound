@@ -56,6 +56,10 @@ its events from `Update`; each asks for a count of particles at a place and of a
 - `two`: three at frame 5, in both systems.
 - `paused`: `DirectHit` paused from frame 8 to frame 16, sent four at frame 10: they are
   spawned in that frame, and stand still until the pause ends.
+- `shared`: `DirectHit` sent, at frame 5, attributes made by another effect of the same asset
+  (`paused`'s): three white particles; at frame 10, attributes made by an effect of another
+  asset (`keep`'s) through `SendEvent`, `Play` and `Stop`: each throws (rows
+  `shared/*/<method>`, the exception's type and message) and nothing is spawned.
 
 Row 1 is not recorded (the first frame's end of frame: `tests/projects/vfx/README.md`).
 `capture/graphs imported while playing` must be empty.

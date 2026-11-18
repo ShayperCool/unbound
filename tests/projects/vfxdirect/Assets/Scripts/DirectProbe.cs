@@ -24,7 +24,7 @@ public sealed class DirectProbe : MonoBehaviour
     readonly List<Stage> m_Stages = new List<Stage>();
     readonly List<string> m_Names = new List<string>();
     Texture2D m_Shot;
-    Stage m_Hit, m_Keep, m_OnPlay, m_Both, m_Two, m_Paused;
+    Stage m_Hit, m_Keep, m_OnPlay, m_Both, m_Two, m_Paused, m_Shared;
     int m_Frame;
     bool m_Done;
 
@@ -69,6 +69,20 @@ public sealed class DirectProbe : MonoBehaviour
     /// and of a colour.</summary>
     static void Send(Stage stage, float count, Vector3 position, Color color) => stage.Effect.SendEvent("Hit", Attribute(stage, count, position, color));
 
+    /// <summary>Records whether a send went through, or what it threw.</summary>
+    void Sent(string key, Action send)
+    {
+        try
+        {
+            send();
+            Rec(key, "sent");
+        }
+        catch (Exception e)
+        {
+            Rec(key, e.GetType().Name + ": " + e.Message);
+        }
+    }
+
     void Rec(string key, string value) => m_Out.Append("{\"k\":\"").Append(Escape(key)).Append("\",\"v\":\"").Append(Escape(value ?? "<null>")).Append("\"}\n");
 
     void Start()
@@ -82,6 +96,7 @@ public sealed class DirectProbe : MonoBehaviour
             m_Both = Draw("both", "DirectAndSpawner", 6, 11, 13, 17, 20);
             m_Two = Draw("two", "DirectTwo", 6, 11);
             m_Paused = Draw("paused", "DirectHit", 9, 12, 17, 20);
+            m_Shared = Draw("shared", "DirectHit", 6, 11);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();
@@ -184,6 +199,8 @@ public sealed class DirectProbe : MonoBehaviour
                 Send(m_Keep, 3f, new Vector3(-0.8f, 0.6f, 0f), Color.white);
                 Send(m_Both, 4f, new Vector3(0.8f, 0.6f, 0f), Color.red);
                 Send(m_Two, 3f, new Vector3(0.5f, 0.5f, 0f), Color.green);
+                // Attributes made by another effect of the same asset.
+                Sent("shared/same asset/SendEvent", () => m_Shared.Effect.SendEvent("Hit", Attribute(m_Paused, 3f, new Vector3(-0.8f, 0.6f, 0f), Color.white)));
                 break;
             case 8: m_Paused.Effect.pause = true; break;
             case 12:
@@ -197,6 +214,10 @@ public sealed class DirectProbe : MonoBehaviour
                 // The effect's start event again, by its name.
                 m_OnPlay.Effect.SendEvent("OnPlay");
                 Send(m_Paused, 4f, new Vector3(0.8f, 0.6f, 0f), Color.red);
+                // Attributes made by an effect of another asset, by each way of sending them.
+                Sent("shared/other asset/SendEvent", () => m_Shared.Effect.SendEvent("Hit", Attribute(m_Keep, 4f, new Vector3(0.8f, 0.6f, 0f), Color.red)));
+                Sent("shared/other asset/Play", () => m_Shared.Effect.Play(Attribute(m_Keep, 4f, new Vector3(0.8f, -0.6f, 0f), Color.red)));
+                Sent("shared/other asset/Stop", () => m_Shared.Effect.Stop(Attribute(m_Keep, 4f, new Vector3(-0.8f, -0.6f, 0f), Color.red)));
                 break;
             case 15:
                 // Two events in one frame, each with attributes of its own.
