@@ -20,6 +20,14 @@ namespace UnityEditor
     /// player and has no Build Settings window, so neither handler is called.</summary>
     public partial class BuildPlayerWindow : EditorWindow
     {
+        /// <summary>The window's initial size, place and title, as the release's constructor sets them.</summary>
+        public BuildPlayerWindow()
+        {
+            minSize = new Vector2(640f, 580f);
+            position = new Rect(50f, 50f, minSize.x, minSize.y);
+            titleContent = EditorGUIUtility.TrTextContent("Build Settings", null, (Texture)null);
+        }
+
         // The release's names: editor tooling reads them by reflection.
         static Func<BuildPlayerOptions, BuildPlayerOptions> getBuildPlayerOptionsHandler;
         static Action<BuildPlayerOptions> buildPlayerHandler;
