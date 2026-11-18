@@ -285,17 +285,17 @@ namespace UnityEngine.Tests
             return default;
         };
 
-        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1, FrameBuilder.CameraContext camera = null, List<string> lightModes = null)
+        List<FrameBuilder.DrawItem> Collect(CullingData data, FilteringSettings filtering, int mainLight = -1, FrameBuilder.CameraContext camera = null)
         {
             var items = new List<FrameBuilder.DrawItem>();
             long sequence = 0;
-            BatchCulling.Collect(camera ?? new FrameBuilder.CameraContext(), data, filtering, mainLight, lightModes, items, ref sequence);
+            BatchCulling.Collect(camera ?? new FrameBuilder.CameraContext(), data, filtering, mainLight, null, items, ref sequence);
             return items;
         }
 
         /// <summary>A renderer list reading a visible command whose material it draws with a pass
         /// declaring no DOTS_INSTANCING_ON logs the Editor's missing variant error, once
-        /// (tests/projects/brg errors); a list whose override material draws instead, a list of
+        /// (tests/projects/brg errors); a list whose override material or shader draws instead, a list of
         /// other LightModes and a command with no visible instances log nothing.</summary>
         [Fact]
         public void AListReadingACommandOfAPassWithoutDotsLogsTheEditorsError()
@@ -327,15 +327,16 @@ namespace UnityEngine.Tests
             var logged = new List<string>();
             var previous = Debug.unityLogger.logHandler;
             Debug.unityLogger.logHandler = new CapturingHandler(logged, previous);
-            void Draw(string lightMode, Material overrideMaterial = null)
+            void Draw(string lightMode, Material overrideMaterial = null, Shader overrideShader = null)
             {
                 var tags = new List<ShaderTagId> { new ShaderTagId(lightMode) };
-                var drawing = new DrawingSettings(tags[0], new SortingSettings(m_Camera)) { overrideMaterial = overrideMaterial };
+                var drawing = new DrawingSettings(tags[0], new SortingSettings(m_Camera)) { overrideMaterial = overrideMaterial, overrideShader = overrideShader };
                 FrameBuilder.DrawRendererList(Cull(), drawing, all, tags);
             }
             try
             {
                 Draw("UniversalForward", overridden);
+                Draw("UniversalForward", overrideShader: m_Shader);
                 Draw("SRPDefaultUnlit");
                 visible = 0;
                 Draw("UniversalForward");
