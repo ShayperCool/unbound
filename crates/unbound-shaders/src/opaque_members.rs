@@ -46,7 +46,8 @@ pub(crate) fn opaque_members(source: &str) -> String {
     let mut inserts = Vec::new();
     let mut count = 0usize;
     for body in bodies(source, &toks) {
-        let locals = declared(source, &toks, body.open, body.close);
+        let mut locals = declared(source, &toks, body.open, body.close);
+        locals.extend(written_parameters(source, &toks, body.params, body.open));
         // Per call text, its local.
         let mut hoisted: HashMap<String, String> = HashMap::new();
         let mut declarations = String::new();
@@ -156,8 +157,10 @@ fn functions_returning<'a>(
     found
 }
 
-/// A top-level function's body: the token indices of its braces.
+/// A top-level function's body: the token indices of its braces, and of its parameter list's
+/// opening parenthesis.
 struct Body {
+    params: usize,
     open: usize,
     close: usize,
 }
@@ -184,6 +187,7 @@ fn bodies(source: &str, toks: &[Token]) -> Vec<Body> {
             Some("{") => match matching(source, toks, after) {
                 Some(end) => {
                     found.push(Body {
+                        params: k,
                         open: after,
                         close: end,
                     });
@@ -203,21 +207,81 @@ fn is_number(source: &str, t: &Token) -> bool {
 }
 
 /// The names a body declares (a word after a type or a template's `>`, before `=`, `;`, `,`, `[`,
-/// `)` or `:`), or more: a name it may declare is not read at its start.
+/// `)` or `:`, and the further names of its declaration after its commas), or more: a name it may
+/// declare is not read at its start.
 fn declared<'a>(source: &'a str, toks: &[Token], open: usize, close: usize) -> HashSet<&'a str> {
     let mut found = HashSet::new();
     for k in open + 1..close {
         let (t, before) = (&toks[k], &toks[k - 1]);
         let typed = (before.kind == Kind::Word && text(source, before) != "return")
             || text(source, before) == ">";
+        let next = toks.get(k + 1).map_or("", |n| text(source, n));
         if t.kind == Kind::Word
             && !is_number(source, t)
             && typed
-            && toks
-                .get(k + 1)
-                .is_some_and(|n| matches!(text(source, n), "=" | ";" | "," | "[" | ")" | ":"))
+            && matches!(next, "=" | ";" | "," | "[" | ")" | ":")
         {
             found.insert(text(source, t));
+            further_names(source, toks, k + 1, close, &mut found);
+        }
+    }
+    found
+}
+
+/// The names a declaration lists after its first (`float a = 0, b, c[2];`): the word after each of
+/// its commas outside brackets, up to its `;`.
+fn further_names<'a>(
+    source: &'a str,
+    toks: &[Token],
+    from: usize,
+    end: usize,
+    found: &mut HashSet<&'a str>,
+) {
+    let mut nesting = 0i32;
+    for j in from..end {
+        match text(source, &toks[j]) {
+            "(" | "[" | "{" => nesting += 1,
+            ")" | "]" | "}" => {
+                nesting -= 1;
+                if nesting < 0 {
+                    return;
+                }
+            }
+            ";" if nesting == 0 => return,
+            "," if nesting == 0 => {
+                if let Some(name) = toks.get(j + 1).filter(|n| n.kind == Kind::Word) {
+                    found.insert(text(source, name));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The parameters a function writes (`out`, `inout`): their values at the start of the body are
+/// not those the body later reads.
+fn written_parameters<'a>(
+    source: &'a str,
+    toks: &[Token],
+    open: usize,
+    body: usize,
+) -> HashSet<&'a str> {
+    let mut found = HashSet::new();
+    let mut written = false;
+    for k in open + 1..body {
+        let t = &toks[k];
+        match text(source, t) {
+            "out" | "inout" => written = true,
+            "," | ")" => written = false,
+            name if written
+                && t.kind == Kind::Word
+                && toks
+                    .get(k + 1)
+                    .is_some_and(|n| matches!(text(source, n), "," | ")" | ":" | "=" | "[")) =>
+            {
+                found.insert(name);
+            }
+            _ => {}
         }
     }
     found
@@ -261,6 +325,15 @@ mod tests {
             "{BUILDER}float4 F(float2 uv) {{ float4 st = float4(1, 1, 0, 0); return Build(_T, sampler_T, st).tex.Sample(sampler_T, uv); }}\n"
         );
         assert_eq!(opaque_members(&local), local);
+        // A local declared after a comma, and a parameter the function writes.
+        let listed = format!(
+            "{BUILDER}float4 F(float2 uv) {{ float4 a = 0, st = float4(1, 1, 0, 0); return Build(_T, sampler_T, st).tex.Sample(sampler_T, uv); }}\n"
+        );
+        assert_eq!(opaque_members(&listed), listed);
+        let written = format!(
+            "{BUILDER}void F(float2 uv, inout float4 st, out float4 c) {{ st *= 2; c = Build(_T, sampler_T, st).tex.Sample(sampler_T, uv); }}\n"
+        );
+        assert_eq!(opaque_members(&written), written);
         let nested = format!(
             "{BUILDER}float4 F(float2 uv) {{ return Build(Build(_T, sampler_T, _T_ST).tex, sampler_T, _T_ST).tex.Sample(sampler_T, uv); }}\n"
         );
