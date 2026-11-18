@@ -23,3 +23,10 @@ What the Editor does (6000.0.71f1, Linux): a screen camera targeting another dis
 render at all (no OnPreRender); an overlay canvas targeting another display is not drawn;
 `Camera.allCamerasCount` still counts every enabled camera; `Display.displays` has one display.
 Unbound matches exactly.
+
+## Metal (macOS)
+
+Recorded with `tests/flat_reference.py record display --variable DISPLAY_PROBE_OUT --label <label>
+--no-method --windowed --env DISPLAY_PROBE_RUN=1`: two captures of the 6000.0.71f1 macOS Editor
+(Metal, Apple M2 Pro) give the Linux reference's values and its `game.png` byte for byte, so there
+is no Metal reference; the Mac compares with the Linux one.

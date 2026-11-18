@@ -3,12 +3,14 @@
 tests/projects/<probe>/Reference, recorded by an Editor method writing into the directory its
 output variable names), on macOS arm64.
 
-    flat_reference.py record  PROBE --variable VAR --label L [--method M] [--windowed]
+    flat_reference.py record  PROBE --variable VAR --label L [--method M | --no-method] [--windowed]
+                              [--env NAME=VALUE ...]
     flat_reference.py publish PROBE L [--require FILE:TEXT ...]
 
 `record` makes two independent captures (L-1, L-2), each in a fresh copy of the probe's
 Assets/Packages/ProjectSettings under the validation cache, with the macOS Editor (batch mode
-unless --windowed; the caller holds the machine's heavy-job lock). `publish` (the shared gate,
+unless --windowed; the caller holds the machine's heavy-job lock), with -executeMethod M (none with
+--no-method, for a probe whose InitializeOnLoad runner starts itself) and each --env set. `publish` (the shared gate,
 tests/editor_runner.py) requires both to have run on the Metal device and exited 0 (the probe's
 method quits the Editor, in Play mode for most), to contain each --require text and to be
 byte-identical, then copies them to Reference/metal (never over an existing one). The Linux
@@ -32,7 +34,7 @@ def captures(probe, label):
     return [run_root(PROJECTS/probe, label)/f'{label}-{i}' for i in (1, 2)]
 
 
-def record(probe, variable, label, method, windowed):
+def record(probe, variable, label, method, windowed, env=()):
     for out in captures(probe, label):
         if out.exists():
             raise SystemExit(f'refusing to overwrite {out}')
@@ -45,8 +47,9 @@ def record(probe, variable, label, method, windowed):
         (project/'ProjectSettings/ProjectVersion.txt').write_text(f'm_EditorVersion: {unity_version()}\n')
         (out/'capture').mkdir()
         result = editor_runner.run(editor_runner.EditorJob(
-            project, out/'editor.log', out, ['-executeMethod', method],
-            batch=not windowed, env={variable: str(out/'capture')}, label=f'{probe}-{out.name}'))
+            project, out/'editor.log', out, ['-executeMethod', method] if method else [],
+            batch=not windowed, env={**dict(e.split('=', 1) for e in env), variable: str(out/'capture')},
+            label=f'{probe}-{out.name}'))
         print(editor_runner.summary(result), flush=True)
     return 0
 
@@ -92,7 +95,9 @@ def main():
     r.add_argument('--variable', required=True)
     r.add_argument('--label', required=True)
     r.add_argument('--method', default='ProbeRunner.Record')
+    r.add_argument('--no-method', dest='method', action='store_const', const=None)
     r.add_argument('--windowed', action='store_true')
+    r.add_argument('--env', action='append', default=[], metavar='NAME=VALUE')
     p = sub.add_parser('publish')
     p.add_argument('probe')
     p.add_argument('label')
@@ -106,7 +111,9 @@ def main():
     if not MACOS_ARM64:
         raise SystemExit('flat_reference.py records Metal references on macOS arm64 only')
     if args.mode == 'record':
-        return record(args.probe, args.variable, args.label, args.method, args.windowed)
+        if any('=' not in e for e in args.env):
+            parser.error('--env takes NAME=VALUE')
+        return record(args.probe, args.variable, args.label, args.method, args.windowed, args.env)
     return publish(args.probe, args.label, args.require)
 
 
