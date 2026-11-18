@@ -1639,14 +1639,17 @@ namespace Unbound.Runtime
                 }
                 else if (deferred)
                 {
-                    // Deferred: the light buffer is the intermediate (no MSAA), copied to the
-                    // target where the MSAA one is resolved.
+                    // Deferred: the intermediate (no MSAA, half float for an HDR camera, the
+                    // default format for an LDR one) is copied to the target where the MSAA one
+                    // is resolved.
                     // A partial screen camera's light buffer has its pixel size, as a forward
                     // intermediate has (measured: tests/projects/camerastack *.part.*.def.persp).
                     bool pixelSize = onScreen && !fullScreen;
                     int w = pixelSize ? Math.Max(1, camera.scaledPixelWidth) : sceneTarget != null ? sceneTarget.ScaledWidth : Math.Max(1, Screen.width);
                     int h = pixelSize ? Math.Max(1, camera.scaledPixelHeight) : sceneTarget != null ? sceneTarget.ScaledHeight : Math.Max(1, Screen.height);
-                    msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear));
+                    msaaTarget = temporaries.Own(camera.allowHDR
+                        ? RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear)
+                        : RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default));
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
@@ -1729,6 +1732,9 @@ namespace Unbound.Runtime
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
                 int forwardOpaque = 0;
+                // An LDR deferred camera's G-buffer depth is its target's (when that has one): it
+                // starts from it when the camera clears nothing and goes back to it at the end.
+                RenderTexture deferredDepth = null;
                 if (deferred)
                 {
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
@@ -1742,12 +1748,22 @@ namespace Unbound.Runtime
                         GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
                         GfxStream.CopyDepth(depthSource, TextureHandles.Of(gbufferDepth));
                     }
-                    else if (onScreen && camera.clearFlags == CameraClearFlags.Nothing)
+                    // Don't Clear off the screen: an LDR camera renders into its target's own depth,
+                    // whose stencil keeps the marks of the target's last deferred render; an HDR
+                    // camera's intermediate starts without any (measured: tests/projects/builtinfx
+                    // deferredDontClear.*). Without a depth buffer of the target, cleared as well.
+                    else if (!onScreen && camera.clearFlags == CameraClearFlags.Nothing && !camera.allowHDR
+                        && cameraTarget != null && cameraTarget.depth > 0)
+                    {
+                        GfxStream.CopyDepth(TextureHandles.Of(cameraTarget), TextureHandles.Of(gbufferDepth));
+                    }
+                    else if (camera.clearFlags == CameraClearFlags.Nothing)
                     {
                         GfxStream.SetTarget(TextureHandles.Of(gbufferDepth));
                         GfxStream.Viewport(viewport);
                         GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
                     }
+                    deferredDepth = gbufferDepth;
                     if (deferredSeed && automatic) EndScreenStack();
                     // Depth only and Don't Clear: the light buffer starts as what is under the
                     // camera, as a forward intermediate does (measured on the screen: a perspective
@@ -1814,6 +1830,8 @@ namespace Unbound.Runtime
                         Immediate.BlitInto(msaaTarget, null, camera.pixelRect);
                     else
                         Graphics.Blit(msaaTarget, resolveTarget);
+                    if (deferredDepth != null && !camera.allowHDR && resolveTarget != null && resolveTarget == cameraTarget && cameraTarget.depth > 0)
+                        GfxStream.CopyDepth(TextureHandles.Of(deferredDepth), TextureHandles.Of(cameraTarget));
                     if (resolveTarget == null && fullScreen)
                     {
                         // The full-screen resolve leaves the screen without depth: a later camera

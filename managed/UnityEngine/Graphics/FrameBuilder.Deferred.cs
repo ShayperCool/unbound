@@ -10,18 +10,23 @@ namespace Unbound.Runtime
     // Deferred passes fill the G-buffer (albedo and occlusion, specular and smoothness, normals,
     // and the light buffer with emission and ambient), then Hidden/Internal-DeferredReflections
     // adds the reflection probes' light and Hidden/Internal-DeferredShading each light's, before
-    // the objects without a Deferred pass and the transparent ones draw forward into the light
-    // buffer. The light buffer is half float (as HDR cameras have it; an LDR camera's is clamped
-    // when it goes to its target). Camera events: Before/After GBuffer, Reflections, Lighting and
+    // the objects without a Deferred pass and the transparent ones draw forward into the camera's
+    // target. An HDR camera's lights add into its target (half float); an LDR camera's go into a
+    // 10-bit light buffer of their own as exp2(-light), each light multiplying it, which the
+    // shading shader's second pass decodes into the target over the scene's pixels (the final
+    // pass; matches the Unity 6000.0.71f1 Editor, tests/projects/builtinfx path_deferred_ldr,
+    // settings_deferredLdr_*). Camera events: Before/After GBuffer, Reflections, Lighting and
     // FinalPass, no depth texture events (measured: tests/projects/builtinfx paths.events.*).
     internal static partial class FrameBuilder
     {
         static Material s_DeferredShading, s_DeferredReflections, s_DeferredReflectionsOver;
-        static bool s_CustomShadingReported;
-        static Shader s_OwnShading;
+        /// <summary>The shading and reflection materials with the blend factors the camera's
+        /// light buffer takes: added (HDR) or multiplied (LDR).</summary>
+        static Material s_ShadingHdr, s_ShadingLdr, s_ReflectionsAddHdr, s_ReflectionsAddLdr;
         static readonly int s_SrcBlend = Shader.PropertyToID("_SrcBlend");
         static readonly int s_DstBlend = Shader.PropertyToID("_DstBlend");
         static readonly int s_LightAsQuad = Shader.PropertyToID("_LightAsQuad");
+        static readonly int s_StencilNonBackground = Shader.PropertyToID("_StencilNonBackground");
         static readonly int s_LightPosId = Shader.PropertyToID("_LightPos");
         static readonly int s_LightDirId = Shader.PropertyToID("_LightDir");
         static readonly int s_LightColorId = Shader.PropertyToID("_LightColor");
@@ -49,14 +54,33 @@ namespace Unbound.Runtime
             stencilState = new StencilState(true, PassStencilBits, 0, CompareFunction.Always, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
         };
 
-        /// <summary>The light passes: over the marked pixels, with no depth test (their quads
-        /// cover the view, as before they had a depth buffer).</summary>
-        static readonly RenderStateBlock s_LightStencil = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth)
+        /// <summary>A light drawn over the whole view: over the G-buffer's marked pixels, with no
+        /// depth test (its quad covers the view).</summary>
+        static readonly RenderStateBlock s_LightStencil = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth | RenderStateMask.Raster)
         {
+            rasterState = new RasterState(CullMode.Off),
             depthState = new DepthState(false, CompareFunction.Always),
-            stencilReference = SceneStencilBits,
-            stencilState = new StencilState(true, SceneStencilBits, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
+            stencilReference = LightMarkBit,
+            stencilState = new StencilState(true, LightMarkBit, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
         };
+
+        /// <summary>The 10-bit buffers of the G-buffer: normals, and an LDR camera's light buffer.</summary>
+        static RenderTextureDescriptor TenBit(int width, int height) =>
+            new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB2101010, 0) { sRGB = false };
+
+        /// <summary><paramref name="copy"/>: <paramref name="source"/> with these blend factors,
+        /// made again when the source's shader changes.</summary>
+        static Material BlendCopy(ref Material copy, Material source, BlendMode src, BlendMode dst)
+        {
+            if (copy == null || copy.shader != source.shader)
+            {
+                if (copy != null) UnityEngine.Object.DestroyImmediate(copy);
+                copy = new Material(source) { hideFlags = HideFlags.HideAndDontSave };
+            }
+            if (copy.GetFloat(s_SrcBlend) != (float)src) copy.SetFloat(s_SrcBlend, (float)src);
+            if (copy.GetFloat(s_DstBlend) != (float)dst) copy.SetFloat(s_DstBlend, (float)dst);
+            return copy;
+        }
 
         /// <summary>The pass a material fills the G-buffer with (-1: it draws forward).</summary>
         internal static int DeferredPass(Material material)
@@ -90,27 +114,29 @@ namespace Unbound.Runtime
             for (int i = 0; i < deferred.Count; i++) s_Items[i] = deferred[i].Item;
             for (int i = 0; i < forward.Count; i++) s_Items[deferred.Count + i] = forward[i];
 
-            // The light buffer is half float for LDR cameras too: the shaders' HDR variants.
-            const bool hdr = true;
+            // HDR: the lights add into the camera's target; LDR: a light buffer of their own.
+            bool hdr = camera.allowHDR;
             var gbuffer0 = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear });
             var gbuffer1 = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear });
-            var gbuffer2 = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = false });
+            var gbuffer2 = Temporary(TenBit(width, height));
+            var lightBuffer = hdr ? light : Temporary(TenBit(width, height));
             ulong g0 = TextureHandles.Of(gbuffer0), g1 = TextureHandles.Of(gbuffer1), g2 = TextureHandles.Of(gbuffer2);
-            ulong lightHandle = TextureHandles.Of(light), depthHandle = TextureHandles.Of(depth);
+            ulong targetHandle = TextureHandles.Of(light), lightHandle = TextureHandles.Of(lightBuffer), depthHandle = TextureHandles.Of(depth);
 
-            // The G-buffer: cleared (the light buffer to the background), then the Deferred passes.
+            // The G-buffer: cleared (an HDR camera's target to the background, an LDR camera's
+            // light buffer to black), then the Deferred passes.
             var background = camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor ? camera.backgroundColor : Color.black;
             if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
-            foreach (var handle in new[] { g0, g1, g2 })
+            foreach (var handle in hdr ? new[] { g0, g1, g2 } : new[] { g0, g1, g2, lightHandle })
             {
                 GfxStream.SetTarget(handle, GfxStream.NoTexture);
                 GfxStream.Viewport(viewport);
                 GfxStream.Clear(GfxStream.ClearColor, Color.clear);
             }
-            GfxStream.SetTarget(lightHandle, depthHandle);
+            GfxStream.SetTarget(targetHandle, depthHandle);
             GfxStream.Viewport(viewport);
             byte clear = camera.clearFlags == CameraClearFlags.Nothing ? (byte)0 : (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil);
-            if (camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor) clear |= GfxStream.ClearColor;
+            if (hdr && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor) clear |= GfxStream.ClearColor;
             if (clear != 0) GfxStream.Clear(clear, background);
             GfxStream.SetTargets(new[] { g0, g1, g2, lightHandle }, depthHandle);
             GfxStream.Viewport(viewport);
@@ -144,6 +170,9 @@ namespace Unbound.Runtime
             var quad = MotionQuad(context.Projection);
             ulong quadMesh = quad.Sync();
             var quadModel = (context.Projection * context.View).inverseDoublePrecision;
+            // The light buffer takes each light added (HDR) or multiplied (LDR, exp2(-light)).
+            var src = hdr ? BlendMode.One : BlendMode.DstColor;
+            var dst = hdr ? BlendMode.One : BlendMode.Zero;
 
             // Reflections: the default reflection, then each probe over it, into a buffer added to
             // the light buffer.
@@ -162,47 +191,43 @@ namespace Unbound.Runtime
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
             GfxStream.GlobalTexture("_CameraReflectionsTexture", reflectionsHandle);
-            if (reflectionsShading != null) GfxStream.Draw(quadMesh, 0, reflectionsShading.Sync(), 1, quadModel, Color.white);
+            if (reflectionsShading != null)
+            {
+                var add = hdr ? BlendCopy(ref s_ReflectionsAddHdr, reflectionsShading, src, dst) : BlendCopy(ref s_ReflectionsAddLdr, reflectionsShading, src, dst);
+                GfxStream.Draw(quadMesh, 0, add.Sync(), 1, quadModel, Color.white);
+            }
             RunEvent(camera, CameraEvent.AfterReflections, light);
 
-            // Lighting: each light over the scene's pixels (outside its range it adds nothing),
-            // with the project's deferred shading shader (none: no light is drawn).
+            // Lighting: each light over its volume or the view, on the scene's pixels, with the
+            // project's deferred shading shader (none: no light is drawn).
             RunEvent(camera, CameraEvent.BeforeLighting, light);
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
             var shading = GraphicsSettings.RendererMaterial(BuiltinShaderType.DeferredShading, ref s_DeferredShading);
-            if (shading != null && !s_CustomShadingReported
-                && shading.shader != (s_OwnShading ??= Shader.Find("Hidden/Internal-DeferredShading")))
-            {
-                // Measured difference (tests/projects/builtinfx settings_deferredLdr_custom): the
-                // Editor decodes an LDR camera's light buffer with the shader's second pass;
-                // Unbound's light buffer is linear.
-                s_CustomShadingReported = true;
-                Debug.LogWarning("Unbound: a custom deferred shading shader's final pass (an LDR camera's light buffer decode) is not drawn: Unbound's light buffer is linear");
-            }
             var lights = new List<Light>();
             if (shading != null)
             {
                 if (ForwardLights.Main != null) lights.Add(ForwardLights.Main);
                 lights.AddRange(ForwardLights.Lights);
             }
-            ulong shadingMaterial = shading != null ? shading.Sync() : 0;
+            ulong shadingMaterial = shading == null ? 0
+                : (hdr ? BlendCopy(ref s_ShadingHdr, shading, src, dst) : BlendCopy(ref s_ShadingLdr, shading, src, dst)).Sync();
             if (lights.Count > 0)
             {
-                // The lights test the G-buffer's stencil, bound as their depth buffer, and read
-                // its depth from a copy (a texture is not sampled while it is drawn into).
+                // The lights test the G-buffer's stencil and depth, bound as their depth buffer,
+                // and read its depth from a copy (a texture is not sampled while it is drawn into).
                 var sampledDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
                 GfxStream.CopyDepth(depthHandle, TextureHandles.Of(sampledDepth));
                 GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(sampledDepth));
                 GfxStream.SetTarget(lightHandle, depthHandle);
                 GfxStream.Viewport(viewport);
-                GfxStream.StateOverride(s_LightStencil);
             }
             int mask = camera.cullingMask;
             foreach (var l in lights)
             {
                 if (l == null || (l.cullingMask & mask) == 0) continue;
-                var properties = new Dictionary<int, object> { [s_LightAsQuad] = 1f };
+                var kind = LightVolume(l, camera, context, out var volume, out var volumeModel);
+                var properties = new Dictionary<int, object> { [s_LightAsQuad] = kind == VolumeKind.View ? 1f : 0f };
                 string keyword = ForwardLights.AddPassProperties(l, 1f, properties);
                 properties[s_LightColorId] = properties[s_LightColor0Id];
                 var t = l.transform;
@@ -225,7 +250,23 @@ namespace Unbound.Runtime
                 foreach (var k in s_DeferredLightKeywords) GfxStream.Keyword(k, k == keyword);
                 if (shadowKeyword != null) GfxStream.Keyword(shadowKeyword, true);
                 if (softKeyword != null) GfxStream.Keyword(softKeyword, true);
-                GfxStream.Draw(quadMesh, 0, shadingMaterial, 0, quadModel, Color.white, properties: properties);
+                if (kind == VolumeKind.View)
+                {
+                    GfxStream.StateOverride(s_LightStencil);
+                    GfxStream.Draw(quadMesh, 0, shadingMaterial, 0, quadModel, Color.white, properties: properties);
+                }
+                else
+                {
+                    ulong volumeMesh = volume.Sync();
+                    if (kind == VolumeKind.Marked)
+                    {
+                        GfxStream.StateOverride(s_VolumeMark);
+                        GfxStream.Draw(volumeMesh, 0, shadingMaterial, 0, volumeModel, Color.white, properties: properties);
+                        GfxStream.StateOverride(s_VolumeMarked);
+                    }
+                    else GfxStream.StateOverride(VolumeState(kind, LightmapModeForRender(l)));
+                    GfxStream.Draw(volumeMesh, 0, shadingMaterial, 0, volumeModel, Color.white, properties: properties);
+                }
                 if (shadowKeyword != null) GfxStream.Keyword(shadowKeyword, false);
                 if (softKeyword != null) GfxStream.Keyword(softKeyword, false);
             }
@@ -234,13 +275,35 @@ namespace Unbound.Runtime
             GfxStream.GlobalFloat("_LightAsQuad", 0f);
             RunEvent(camera, CameraEvent.AfterLighting, light);
             if (hdr) GfxStream.Keyword("UNITY_HDR_ON", false);
-            // The final pass decodes an LDR light buffer; this one is already linear.
+
+            // The final pass: an LDR camera's target is cleared (its color, as the camera clears
+            // it) and takes the light buffer decoded by the shading shader's second pass, which
+            // Unity's draws over the scene's pixels (_StencilNonBackground).
+            if (!hdr && shading != null)
+            {
+                GfxStream.SetTarget(targetHandle, depthHandle);
+                GfxStream.Viewport(viewport);
+                GfxStream.GlobalFloat("_StencilNonBackground", LightMarkBit);
+                if (camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor) GfxStream.Clear(GfxStream.ClearColor, background);
+                GfxStream.GlobalTexture("_LightBuffer", lightHandle);
+            }
             RunEvent(camera, CameraEvent.BeforeFinalPass, light);
+            if (!hdr && shading != null)
+            {
+                GfxStream.SetTarget(targetHandle, depthHandle);
+                GfxStream.Viewport(viewport);
+                GfxStream.Camera(Matrix4x4.identity, Immediate.Ortho);
+                // The pass's stencil reference names _StencilNonBackground, which the material
+                // answers (Unity's is a global).
+                var final = BlendCopy(ref s_ShadingLdr, shading, src, dst);
+                if (final.GetFloat(s_StencilNonBackground) != LightMarkBit) final.SetFloat(s_StencilNonBackground, LightMarkBit);
+                GfxStream.Draw(Immediate.BlitQuad.Sync(), 0, final.Sync(), 1, Matrix4x4.identity, Color.white);
+            }
             RunEvent(camera, CameraEvent.AfterFinalPass, light);
 
-            // The forward part draws into the light buffer, tested against the G-buffer's depth.
-            SetupCamera(lightHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
-            GfxStream.SetTarget(lightHandle, depthHandle);
+            // The forward part draws into the camera's target, tested against the G-buffer's depth.
+            SetupCamera(targetHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
+            GfxStream.SetTarget(targetHandle, depthHandle);
             GfxStream.Viewport(viewport);
             GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
             return deferred.Count;
@@ -252,14 +315,7 @@ namespace Unbound.Runtime
         {
             ulong material = shading.Sync();
             // A probe blends over what is there by its falloff (the shader's blend factors).
-            if (s_DeferredReflectionsOver == null || s_DeferredReflectionsOver.shader != shading.shader)
-            {
-                if (s_DeferredReflectionsOver != null) UnityEngine.Object.DestroyImmediate(s_DeferredReflectionsOver);
-                s_DeferredReflectionsOver = new Material(shading) { hideFlags = HideFlags.HideAndDontSave };
-                s_DeferredReflectionsOver.SetFloat(s_SrcBlend, (float)BlendMode.SrcAlpha);
-                s_DeferredReflectionsOver.SetFloat(s_DstBlend, (float)BlendMode.OneMinusSrcAlpha);
-            }
-            ulong overMaterial = s_DeferredReflectionsOver.Sync();
+            ulong overMaterial = BlendCopy(ref s_DeferredReflectionsOver, shading, BlendMode.SrcAlpha, BlendMode.OneMinusSrcAlpha).Sync();
             // The default reflection first; a scene without one reflects black, which adds nothing.
             var defaultReflection = ReflectionProbe.defaultTexture;
             if (!ReferenceEquals(defaultReflection, ReflectionProbe.Black))

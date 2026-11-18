@@ -45,6 +45,17 @@ render 200x150 textures with `Camera.Render`, a few cases wait for the player lo
   part renders, take the modes without a shader first. `settings_halo_unrendered`: a custom shader
   set and unset again before any render.
 
+* **Deferred light volumes** (`deferred_volume_*`, `deferredVolumes.*`, recorded after the deferred
+  stencil part): with the custom deferred shading shader (`Probe/Settings/Deferred`, one colour per
+  light it draws), over a floor, a wall, a sphere and a cube, one light each: a point light small
+  on the screen and a large one, one around the camera, one crossing the far plane, one around the
+  camera crossing the far plane too, a spot light seen from outside, one whose cone holds the
+  camera, one crossing the far plane.
+* **Deferred cameras that clear nothing** (`deferred_dontclear_*`, `deferredDontClear.*`, recorded
+  last): a sphere drawn by a render that clears to a solid colour, moved and drawn again with the
+  camera's clear flags into the same target, a quad over the view showing where stencil bit 7 is
+  set; HDR and LDR cameras that clear nothing, and that clear to a solid colour.
+
 `ProbeRunner.Create` made the scene (a camera with a Skybox and a FlareLayer, a projector, lights
 with a halo and a flare, a lens flare, a halo, occlusion components, a proxy volume) and the assets
 in `Assets/Resources` (the Editor wrote them).
@@ -97,6 +108,20 @@ Run Unbound and compare:
 * `actualRenderingPath`: legacy deferred lighting and orthographic deferred shading render forward;
   UsePlayerSettings follows GraphicsSettings (Forward here). Deferred events: Before/After GBuffer,
   Reflections, Lighting, FinalPass, then the opaque image effects; no depth texture events.
+* Deferred lights (`deferred_volume_*`): a directional light draws over the view; a point light
+  over Unity's icosahedron (its icosphere when the light's box covers more than a quarter of the
+  view's height) scaled by its range, a spot light over Unity's pyramid around its cone. A volume
+  clear of the near and far planes lights the scene's pixels inside it; one crossing the near plane
+  draws its back faces where they are behind the scene; one crossing only the far plane its front
+  faces in front of the scene (pixels behind the volume too); one crossing both draws over the view.
+  The G-buffer pass samples the ambient light probe as a forward pass does. An LDR camera's lights
+  go into their own 10-bit buffer as exp2(-light), multiplied, which the shading shader's second
+  pass decodes into the target over the scene's pixels (`settings_deferredLdr_*`: the custom shader's
+  second pass over the whole view).
+* A deferred camera that clears nothing (`deferredDontClear.*`): an LDR one draws into its target's
+  depth, whose stencil keeps the G-buffer marks of the target's last render (the sphere's first place
+  reads marked); an HDR one starts from no marks. A new target's depth and stencil are undefined
+  (RenderTexture.Create), so the part starts from a render that clears.
 * Material variants keep only their overrides; the rest, queue, keywords, instancing and GI flags
   come from the parent, also when it changes at run time. `parent` set from script keeps the
   material's own values. `Lerp` interpolates colors and `[Gamma]` floats in linear space and texture
@@ -128,7 +153,7 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   level of imported textures; it warns).
 * `target_buffers_mrt1`: Unbound leaves a second color buffer alone where a shader writes one output;
   the Editor's GL driver broadcasts it.
-* `path_deferred*`: within a mean of 3.6 (shadow edges and the point and spot lights' highlights).
+* `path_deferred*`: within a mean of 2.9 (shadow edges and the point and spot lights' highlights).
 * `probe_blend_distance_now`: probes created the same frame (mean 4.3).
 * Built-in shader settings, as the Editor draws them: each effect with the setting's shader when
   it has one, whatever the mode, else with the shader it last drew with (SetCustomShader(null) and a
@@ -147,13 +172,7 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   `Camera.Render` calls of the frame it is first drawn in has no object motion in the second
   (`settings_motionVectors_custom`). Unbound draws them alike
   (`GraphicsSettings.RendererShader`), with these differences: `settings_deferred_builtin` and
-  `settings_deferredReflections_*` are within the `path_deferred*` means (3.6);
-  `settings_deferred_{custom,customNull,disabled}`: both draw a custom shader's light pass over the
-  scene's pixels only (the G-buffer's stencil marks, `deferredStencil.*`), but
-  the Editor draws the point and spot lights over their volumes and Unbound each light over the
-  whole view (mean 15.7; Unity's own shader adds nothing outside a light's range);
-  `settings_deferredLdr_*`: the Editor decodes an LDR camera's light buffer with the shader's second
-  pass, here still the custom one; Unbound's light buffer is linear and has no such pass (it warns);
+  `settings_deferredReflections_{builtin,disabled}` are within the `path_deferred*` means (2.9);
   `settings_lensFlare_builtin`: as `flare_LensFlareObject`,
   a flare's first render fades in by the frame's delta time.
 * `static_batching.mesh`: Unbound keeps each renderer's own mesh; `material.crc.values`: checksums

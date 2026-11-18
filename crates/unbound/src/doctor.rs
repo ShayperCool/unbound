@@ -19,7 +19,6 @@ use unbound_project::Project;
 const RENDERING_LIMITATIONS: &[&str] = &[
     "Editor asynchronous shader-compilation startup delays are not reproduced; the FlareLayer probe controls compilation synchronously.",
     "Game-view Gizmos.DrawGUITexture is not supported; Scene-view rendering is not available.",
-    "A custom deferred shading shader (Graphics settings) draws its light pass over the background too and not its final pass (an LDR camera's light buffer decode): Unbound's light buffer is linear and not masked to the scene.",
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[

@@ -29,9 +29,7 @@ EXPECTED_IMAGES = [
     r"^probe_blend_distance_now$",
     # Built-in shader settings (README "What differs").
     r"^settings_deferred_builtin$",
-    r"^settings_deferredReflections_(builtin|custom|customNull|disabled)$",
-    r"^settings_deferred_(custom|customNull|disabled)$",
-    r"^settings_deferredLdr_(builtin|custom|customNull|disabled)$",
+    r"^settings_deferredReflections_(builtin|disabled)$",
     r"^settings_lensFlare_builtin$",
 ]
 
