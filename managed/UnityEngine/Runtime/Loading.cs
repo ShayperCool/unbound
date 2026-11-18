@@ -196,7 +196,7 @@ namespace Unbound.Runtime
                         continue;
                     }
                     var asset = CreateAsset(doc, guid);
-                    if (asset == null) continue;
+                    if ((object)asset == null) continue;
                     asset.IsPersistentAsset = isAsset;
                     file.Objects[doc.FileId] = asset;
                     assets.Add((asset, doc));
@@ -406,9 +406,16 @@ namespace Unbound.Runtime
                 {
                     MissingScripts.Report(script, doc);
                     // As in Unity, the asset still exists: an object of the base class, so lists
-                    // of assets keep their entries (its data cannot be read).
+                    // of assets and references keep their entries (its data cannot be read). It
+                    // compares equal to null, as a timeline's markers of a missing class are no
+                    // markers and raise no "empty marker" warning (Unity 6000.0.71f1,
+                    // tests/projects/gameinterop timeline.CutsceneMissing).
                     var placeholder = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
-                    if (placeholder != null) ReadName(placeholder, doc.Body);
+                    if (placeholder != null)
+                    {
+                        ReadName(placeholder, doc.Body);
+                        placeholder.m_Destroyed = true;
+                    }
                     return placeholder;
                 }
                 if (!typeof(ScriptableObject).IsAssignableFrom(type)) return null;

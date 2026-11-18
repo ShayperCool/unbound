@@ -485,7 +485,9 @@ namespace Unbound.Runtime
                     var reference = node.AsRef();
                     if (reference.IsNull) return Unassigned(type);
                     var obj = m_Resolver.Resolve(reference, type);
-                    return obj != null && type.IsInstanceOfType(obj) ? obj : null;
+                    // A reference keeps an object that compares equal to null (an asset object whose
+                    // script is missing: tests/projects/gameinterop timeline.CutsceneMissing).
+                    return (object)obj != null && type.IsInstanceOfType(obj) ? obj : null;
                 }
                 case Shape.LazyReference:
                 {
