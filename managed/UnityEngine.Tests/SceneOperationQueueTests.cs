@@ -369,7 +369,7 @@ namespace Unbound.Tests
         [Fact]
         public void OtherReleasesKeepTheValueSetAndTheOnePassTiming()
         {
-            ProjectInfo.UnityVersion = "6000.0.0f1";
+            ProjectInfo.UnityVersion = UnityEngine.Tests.TestRelease.Unmeasured;
             Application.backgroundLoadingPriority = ThreadPriority.High;
             Assert.Equal(ThreadPriority.High, Application.backgroundLoadingPriority);
             var a = Load("a", 0, milliseconds: 70);
