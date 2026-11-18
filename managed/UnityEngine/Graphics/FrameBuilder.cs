@@ -103,6 +103,9 @@ namespace Unbound.Runtime
             /// <summary>An IMGUI draw with alphaBlend false: blending is turned off for this draw
             /// alone, over the state override in force (<see cref="BeginOpaqueImgui"/>).</summary>
             internal bool OpaqueImgui;
+            /// <summary>An IMGUI draw in a linear project: stored unconverted into sRGB targets (as
+            /// with GL.sRGBWrite off), so it blends in gamma space (GuiRender.GuiMaterial).</summary>
+            internal bool GammaImgui;
             internal int Queue;
             internal int SortingLayer;
             internal int SortingOrder;
@@ -2311,86 +2314,106 @@ namespace Unbound.Runtime
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             for (int i = from; i < to; i++) s_MaterialHandles[i] = s_Items[i].Material.Sync();
-            for (int i = from; i < to; i++)
+            try
             {
-                var item = s_Items[i];
-                // A maximum LOD that leaves the shader no SubShader hides it (measured).
-                if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
-                bool meshLike = IsLit(item);
-                int layer = meshLike ? LayerOf(item) : 0;
-                // The object's base pass light: the main one, unless its culling mask leaves the
-                // object out.
-                var main = ForwardLights.Main;
-                bool otherBase = meshLike && main != null && (main.cullingMask & (1 << layer)) == 0;
-                bool lit = meshLike && (ForwardLights.Any || IsVertexLit(item.Material.shader) || otherBase);
-                // The main light's screen-space shadows reach the renderers that receive shadows.
-                string shadowKeyword = s_ScreenShadows && !otherBase && meshLike && ReceivesShadows(item) ? "SHADOWS_SCREEN" : null;
-                if (!lit)
+                for (int i = from; i < to; i++) EmitItem(i, dispatch);
+            }
+            finally { GammaImgui(false); }
+        }
+
+        static bool s_GammaImgui;
+
+        /// <summary>Turns the storing of IMGUI's draws unconverted on or off around them
+        /// (<see cref="DrawItem.GammaImgui"/>): GL.sRGBWrite's flag, with the target bound again;
+        /// off gives back the scripts' GL.sRGBWrite.</summary>
+        internal static void GammaImgui(bool on)
+        {
+            if (on == s_GammaImgui) return;
+            s_GammaImgui = on;
+            GfxStream.SetGlFlag(GfxStream.CameraNoSrgbWrite, on || !GL.sRGBWrite);
+            GfxStream.RebindTarget();
+        }
+
+        static void EmitItem(int i, RenderDispatchContext dispatch)
+        {
+            var item = s_Items[i];
+            GammaImgui(item.GammaImgui);
+            // A maximum LOD that leaves the shader no SubShader hides it (measured).
+            if (item.Material.shader != null && item.Material.shader.IsLodHidden) return;
+            bool meshLike = IsLit(item);
+            int layer = meshLike ? LayerOf(item) : 0;
+            // The object's base pass light: the main one, unless its culling mask leaves the
+            // object out.
+            var main = ForwardLights.Main;
+            bool otherBase = meshLike && main != null && (main.cullingMask & (1 << layer)) == 0;
+            bool lit = meshLike && (ForwardLights.Any || IsVertexLit(item.Material.shader) || otherBase);
+            // The main light's screen-space shadows reach the renderers that receive shadows.
+            string shadowKeyword = s_ScreenShadows && !otherBase && meshLike && ReceivesShadows(item) ? "SHADOWS_SCREEN" : null;
+            if (!lit)
+            {
+                EmitForward(item, s_MaterialHandles[i], true, true, null, shadowKeyword, dispatch: dispatch);
+                return;
+            }
+            var bounds = BoundsOf(item);
+            if (IsVertexLit(item.Material.shader))
+            {
+                var vertexLit = new Dictionary<int, object>();
+                ForwardLights.VertexLitProperties(bounds, layer, s_CameraView, vertexLit);
+                EmitForward(item, s_MaterialHandles[i], true, true, vertexLit, dispatch: dispatch);
+                return;
+            }
+            var baseLight = otherBase ? ForwardLights.BaseLightFor(layer) : main;
+            ForwardLights.Classify(bounds, layer, s_ObjectLights, baseLight);
+            Dictionary<int, object> extra = null;
+            string keyword = null;
+            if (otherBase)
+            {
+                extra = new Dictionary<int, object>();
+                extra[s_OcclusionMaskSelectorId] = ForwardLights.OcclusionMaskSelector(baseLight);
+                if (baseLight != null)
                 {
-                    EmitForward(item, s_MaterialHandles[i], true, true, null, shadowKeyword, dispatch: dispatch);
-                    continue;
+                    var forward = baseLight.transform.forward;
+                    extra[s_WorldSpaceLightPos0Id] = new Vector4(-forward.x, -forward.y, -forward.z, 0f);
+                    extra[s_LightColor0Id] = (Vector4)baseLight.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear);
                 }
-                var bounds = BoundsOf(item);
-                if (IsVertexLit(item.Material.shader))
+                else
                 {
-                    var vertexLit = new Dictionary<int, object>();
-                    ForwardLights.VertexLitProperties(bounds, layer, s_CameraView, vertexLit);
-                    EmitForward(item, s_MaterialHandles[i], true, true, vertexLit, dispatch: dispatch);
-                    continue;
+                    extra[s_WorldSpaceLightPos0Id] = Vector4.zero;
+                    extra[s_LightColor0Id] = Vector4.zero;
                 }
-                var baseLight = otherBase ? ForwardLights.BaseLightFor(layer) : main;
-                ForwardLights.Classify(bounds, layer, s_ObjectLights, baseLight);
-                Dictionary<int, object> extra = null;
-                string keyword = null;
-                if (otherBase)
-                {
-                    extra = new Dictionary<int, object>();
-                    extra[s_OcclusionMaskSelectorId] = ForwardLights.OcclusionMaskSelector(baseLight);
-                    if (baseLight != null)
-                    {
-                        var forward = baseLight.transform.forward;
-                        extra[s_WorldSpaceLightPos0Id] = new Vector4(-forward.x, -forward.y, -forward.z, 0f);
-                        extra[s_LightColor0Id] = (Vector4)baseLight.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear);
-                    }
-                    else
-                    {
-                        extra[s_WorldSpaceLightPos0Id] = Vector4.zero;
-                        extra[s_LightColor0Id] = Vector4.zero;
-                    }
-                }
-                if (s_ObjectLights.Vertex.Count > 0)
-                {
-                    extra ??= new Dictionary<int, object>();
-                    ForwardLights.VertexLightProperties(s_ObjectLights, extra);
-                    keyword = "VERTEXLIGHT_ON";
-                }
-                if (s_ObjectLights.Spherical.Count > 0)
-                {
-                    extra ??= new Dictionary<int, object>();
-                    var sh = ForwardLights.WithSphericalLights(RenderSettings.ambientProbe, s_ObjectLights, bounds.center);
-                    sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
-                    extra[Shader.PropertyToID("unity_SHAr")] = ar;
-                    extra[Shader.PropertyToID("unity_SHAg")] = ag;
-                    extra[Shader.PropertyToID("unity_SHAb")] = ab;
-                    extra[Shader.PropertyToID("unity_SHBr")] = br;
-                    extra[Shader.PropertyToID("unity_SHBg")] = bg;
-                    extra[Shader.PropertyToID("unity_SHBb")] = bb;
-                    extra[Shader.PropertyToID("unity_SHC")] = c;
-                }
-                EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword, dispatch);
-                if (s_ObjectLights.Pixel.Count == 0) continue;
-                int addPass = ForwardAddPass(item.Material.shader);
-                if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) continue;
-                bool receives = ReceivesShadows(item);
-                for (int p = 0; p < s_ObjectLights.Pixel.Count; p++)
-                {
-                    var light = s_ObjectLights.Pixel[p];
-                    var properties = new Dictionary<int, object>();
-                    string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
-                    AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
-                    Unbound.Runtime.Profiling.RenderStats.NextDrawLight(light);
-                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
-                }
+            }
+            if (s_ObjectLights.Vertex.Count > 0)
+            {
+                extra ??= new Dictionary<int, object>();
+                ForwardLights.VertexLightProperties(s_ObjectLights, extra);
+                keyword = "VERTEXLIGHT_ON";
+            }
+            if (s_ObjectLights.Spherical.Count > 0)
+            {
+                extra ??= new Dictionary<int, object>();
+                var sh = ForwardLights.WithSphericalLights(RenderSettings.ambientProbe, s_ObjectLights, bounds.center);
+                sh.ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
+                extra[Shader.PropertyToID("unity_SHAr")] = ar;
+                extra[Shader.PropertyToID("unity_SHAg")] = ag;
+                extra[Shader.PropertyToID("unity_SHAb")] = ab;
+                extra[Shader.PropertyToID("unity_SHBr")] = br;
+                extra[Shader.PropertyToID("unity_SHBg")] = bg;
+                extra[Shader.PropertyToID("unity_SHBb")] = bb;
+                extra[Shader.PropertyToID("unity_SHC")] = c;
+            }
+            EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword, dispatch);
+            if (s_ObjectLights.Pixel.Count == 0) return;
+            int addPass = ForwardAddPass(item.Material.shader);
+            if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) return;
+            bool receives = ReceivesShadows(item);
+            for (int p = 0; p < s_ObjectLights.Pixel.Count; p++)
+            {
+                var light = s_ObjectLights.Pixel[p];
+                var properties = new Dictionary<int, object>();
+                string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
+                AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
+                Unbound.Runtime.Profiling.RenderStats.NextDrawLight(light);
+                EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
             }
         }
 

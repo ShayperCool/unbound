@@ -33,10 +33,10 @@ canvases. IMGUI blends in gamma space (the half-opaque white box over that backg
 gamma space (the sRGB grey 128 shows 128, the linear one 188), with URP and without; OnGUI gets
 one Repaint a frame.
 
-Unbound draws the canvas images as the Editor does, the panel within 2/255, and runs one Repaint a
-frame. Its IMGUI (the GL quad drawn in OnGUI too) blends and tints in linear space, so `imgui` and
-`imgui_builtin` differ where IMGUI draws translucent or tinted (`image_limits.json` says how much;
-docs/COMPATIBILITY_GAPS.md). Other devices, GPUs and drivers are unmeasured.
+Unbound draws the canvas images and IMGUI as the Editor does (IMGUI with Unity's own IMGUI
+shaders, which turn texture colours to gamma in a linear project, its draws and what OnGUI draws
+itself stored unconverted), the panel within 2/255, and runs one Repaint a frame
+(`image_limits.json`). Other devices, GPUs and drivers are unmeasured.
 
     python3 tests/projects/urpoverlayui/run.py record --label A    # and B; then publish A B
     python3 tests/projects/urpoverlayui/run.py gate

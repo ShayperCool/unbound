@@ -300,6 +300,8 @@ namespace Unbound.Runtime
             /// <summary>Drawn without alpha blending (GUI.DrawTexture / DrawTextureWithTexCoords
             /// with alphaBlend false); a batch never mixes blended and opaque triangles.</summary>
             internal bool Opaque;
+            /// <summary>Glyphs: their alpha from the font texture, their colour from the vertices.</summary>
+            internal bool Text;
             internal List<int> Indices;
         }
 
@@ -356,26 +358,26 @@ namespace Unbound.Runtime
 
         /// <summary>The batch the next triangles go to: the last one when it has the same texture,
         /// clip and blending, else a new one after it (draw order is call order).</summary>
-        static List<int> BatchFor(Texture texture, bool opaque = false)
+        static List<int> BatchFor(Texture texture, bool opaque, bool text)
         {
             var clip = CurrentClip();
             if (s_Batches.Count > 0)
             {
                 var last = s_Batches[s_Batches.Count - 1];
-                if (last.Texture == texture && last.Clip == clip && last.Opaque == opaque) return last.Indices;
+                if (last.Texture == texture && last.Clip == clip && last.Opaque == opaque && last.Text == text) return last.Indices;
             }
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
-            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Opaque = opaque, Indices = indices });
+            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Opaque = opaque, Text = text, Indices = indices });
             return indices;
         }
 
         /// <summary>A quad from local corners (top left, top right, bottom right, bottom left) and
         /// the matching texture coordinates.</summary>
         static void Quad(Texture texture, Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl,
-            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, bool opaque = false)
+            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, bool opaque = false, bool text = false)
         {
             if (CurrentClip().width <= 0f) return;
-            var indices = BatchFor(texture, opaque);
+            var indices = BatchFor(texture, opaque, text);
             int start = s_Positions.Count;
             s_Positions.Add(GUIClip.GUIToScreen(tl));
             s_Positions.Add(GUIClip.GUIToScreen(tr));
@@ -415,7 +417,7 @@ namespace Unbound.Runtime
         {
             if (texture == null || indices.Count == 0) return;
             if (CurrentClip().width <= 0f) return;
-            var batch = BatchFor(texture, !alphaBlend);
+            var batch = BatchFor(texture, !alphaBlend, false);
             int start = s_Positions.Count;
             Color32 tint = color;
             for (int i = 0; i < positions.Count; i++)
@@ -479,7 +481,7 @@ namespace Unbound.Runtime
                     new Vector2(origin.x + v1.position.x, origin.y - v1.position.y),
                     new Vector2(origin.x + v2.position.x, origin.y - v2.position.y),
                     new Vector2(origin.x + v3.position.x, origin.y - v3.position.y),
-                    v0.uv0, v1.uv0, v2.uv0, v3.uv0, tint);
+                    v0.uv0, v1.uv0, v2.uv0, v3.uv0, tint, text: true);
             }
         }
 
@@ -510,18 +512,46 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Batches.Count; i++)
                 s_Mesh.SetTriangles(s_Batches[i].Indices, i, false);
             ulong mesh = s_Mesh.Sync();
-            CollectItems(mesh, CanvasSystem.DefaultMaterial, height, into);
+            CollectItems(mesh, height, into);
         }
 
-        /// <summary>One draw per batch, in batch (call) order, of submesh i of the frame's mesh. All
-        /// share the one UI material, which is never changed here; an opaque batch's draw is marked
+        static Material s_TextureMaterial, s_TextMaterial;
+
+        /// <summary>Unity's own IMGUI shaders: Hidden/Internal-GUITextureClip (a texture tinted by
+        /// the vertex colours) and Hidden/Internal-GUITextureClipText (glyphs: the font's alpha).
+        /// Unbound clips by the draws' clip rects, so their clip texture passes everything. In a
+        /// linear project the texture's colours are turned to gamma (_ManualTex2SRGB) and the
+        /// draws store their output unconverted (<see cref="FrameBuilder.DrawItem.GammaImgui"/>):
+        /// IMGUI blends and tints in gamma space (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/urpoverlayui imgui and imgui_builtin).</summary>
+        static Material GuiMaterial(bool text)
+        {
+            ref var material = ref text ? ref s_TextMaterial : ref s_TextureMaterial;
+            if (material == null)
+            {
+                using (ObjectRegistry.AsAssets())
+                    material = new Material(Shader.Find(text ? "Hidden/Internal-GUITextureClipText" : "Hidden/Internal-GUITextureClip")) { name = text ? "IMGUI Text" : "IMGUI" };
+                material.IsPersistentAsset = true;
+                material.hideFlags = HideFlags.HideAndDontSave;
+                material.SetTexture("_GUIClipTexture", Texture2D.whiteTexture);
+                material.SetMatrix("unity_GUIClipTextureMatrix", Matrix4x4.zero);
+                material.SetColor("_Color", Color.white);
+            }
+            material.SetFloat("_ManualTex2SRGB", QualitySettings.activeColorSpace == ColorSpace.Linear ? 1f : 0f);
+            return material;
+        }
+
+        /// <summary>One draw per batch, in batch (call) order, of submesh i of the frame's mesh, with
+        /// the IMGUI shader of its kind (<see cref="GuiMaterial"/>); an opaque batch's draw is marked
         /// <see cref="FrameBuilder.DrawItem.OpaqueImgui"/>, and the renderer turns blending off for
         /// that draw alone (<see cref="FrameBuilder.BeginOpaqueImgui"/>).</summary>
-        internal static void CollectItems(ulong mesh, Material material, float height, List<FrameBuilder.DrawItem> into)
+        internal static void CollectItems(ulong mesh, float height, List<FrameBuilder.DrawItem> into)
         {
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             for (int i = 0; i < s_Batches.Count; i++)
             {
                 var b = s_Batches[i];
+                var material = GuiMaterial(b.Text);
                 into.Add(new FrameBuilder.DrawItem
                 {
                     Mesh = mesh,
@@ -533,6 +563,7 @@ namespace Unbound.Runtime
                     Clip = new Rect(b.Clip.x, height - b.Clip.yMax, b.Clip.width, b.Clip.height),
                     ClipEnabled = true,
                     OpaqueImgui = b.Opaque,
+                    GammaImgui = linear,
                     Queue = material.renderQueue,
                     Sequence = FrameBuilder.NextSequence(),
                 });
@@ -569,7 +600,11 @@ namespace Unbound.Runtime
 
         public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into)
         {
-            RunFrame();
+            // What OnGUI draws itself (GL, Graphics.DrawTexture) blends in gamma space in a linear
+            // project, as IMGUI's own draws do (tests/projects/urpoverlayui imgui: the GL quad).
+            FrameBuilder.GammaImgui(QualitySettings.activeColorSpace == ColorSpace.Linear);
+            try { RunFrame(); }
+            finally { FrameBuilder.GammaImgui(false); }
             GuiRender.Collect(into);
         }
 

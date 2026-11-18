@@ -144,6 +144,16 @@ namespace Unbound.Runtime
             Camera(state.View, state.Projection, state.Flags);
         }
 
+        /// <summary>Binds the current target again, keeping the viewport: the renderer reads
+        /// GL.sRGBWrite's flag when a target is bound.</summary>
+        internal static void RebindTarget()
+        {
+            var viewport = s_State.Viewport;
+            if (s_State.Colors != null) SetTargets(s_State.Colors, s_State.Depth, s_State.Mip, s_State.Slice, s_State.Layers);
+            else SetTarget(s_State.Color, s_State.Depth, s_State.Mip, s_State.Slice, s_State.Layers);
+            Viewport(viewport);
+        }
+
         internal static bool Pending => s_Length > 0;
 
         /// <summary>The commands recorded since the last hand-over (read by tests).</summary>

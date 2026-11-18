@@ -79,6 +79,32 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 6, 6, 6 }, f.BatchIndexCounts());
         }
 
+        /// <summary>Glyphs and textures never share a batch (they draw with Unity's text and
+        /// texture IMGUI shaders), and every IMGUI draw stores its colours unconverted exactly in a
+        /// linear project, so IMGUI blends in gamma space there (tests/projects/urpoverlayui
+        /// imgui).</summary>
+        [Fact]
+        public void GlyphsAndTexturesAreSeparateDrawsStoredUnconvertedInLinear()
+        {
+            using var f = new Fixture();
+            var texture = f.Texture(601);
+            f.Repaint(() =>
+            {
+                GuiRender.DrawTexture(new Rect(10f, 10f, 20f, 20f), texture, new Rect(0f, 0f, 1f, 1f), Color.white);
+                GuiRender.DrawGlyphs(new Vector2(10f, 10f), new[]
+                {
+                    new UIVertex { position = new Vector3(0f, 0f), color = Color.white },
+                    new UIVertex { position = new Vector3(4f, 0f), color = Color.white },
+                    new UIVertex { position = new Vector3(4f, -4f), color = Color.white },
+                    new UIVertex { position = new Vector3(0f, -4f), color = Color.white },
+                }, texture, Color.white);
+            });
+            var items = f.Collect();
+            Assert.Equal(2, items.Count);
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            Assert.All(items, i => Assert.Equal(linear, i.GammaImgui));
+        }
+
         /// <summary>Unbound's choice (unmeasured): consecutive opaque draws of one texture and clip
         /// share one batch, as blended ones do. b3398e3b: one blended batch (flag absent). Red:
         /// return a new batch whenever <c>opaque</c> is true in BatchFor (two items), or invert the
@@ -353,6 +379,10 @@ namespace UnityEngine.Tests
                     restore.Add(GuiRender.Clear);
                     UiMaterial = Material(3000, 801);
                     UiMaterialQueue = UiMaterial.renderQueue;
+                    // The IMGUI shaders' materials stand in as the UI material.
+                    Save(typeof(GuiRender), "s_TextureMaterial", "s_TextMaterial");
+                    Field(typeof(GuiRender), "s_TextureMaterial").SetValue(null, UiMaterial);
+                    Field(typeof(GuiRender), "s_TextMaterial").SetValue(null, UiMaterial);
                     GfxStream.SetTarget(901, 902);
                     GfxStream.Scissor(null);
                     GfxStream.StateOverride(null);
@@ -385,7 +415,7 @@ namespace UnityEngine.Tests
             internal List<FrameBuilder.DrawItem> Collect()
             {
                 var items = new List<FrameBuilder.DrawItem>();
-                GuiRender.CollectItems(1001, UiMaterial, 100f, items);
+                GuiRender.CollectItems(1001, 100f, items);
                 return items;
             }
 
