@@ -1,15 +1,23 @@
 use super::*;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use unbound_yaml::{Value, parse_documents};
 
 struct Fixture(HashMap<Guid, Vec<Document>>);
 
 impl PrefabSource for Fixture {
     fn prefab(&self, guid: Guid, stack: &mut Vec<Guid>) -> anyhow::Result<Arc<Vec<Document>>> {
-        let docs = self.0.get(&guid).unwrap();
+        let docs = self
+            .0
+            .get(&guid)
+            .ok_or_else(|| anyhow::anyhow!("no asset has guid {guid}"))?;
         stack.push(guid);
         let out = flatten(docs, self, stack)?;
         stack.pop();
+        // As DocumentLoader: a prefab whose root is a missing prefab's instance does not load.
+        anyhow::ensure!(
+            !root_is_missing_prefab(&out),
+            "the root of {guid} is missing"
+        );
         Ok(Arc::new(out))
     }
 }
@@ -330,5 +338,318 @@ PrefabInstance:
     assert_eq!(
         filter.body.path("m_Mesh.guid").unwrap().as_guid(),
         Some(guid)
+    );
+}
+
+const MISSING: &str = "0000000000000000000000000000dead";
+
+/// A scene with an instance (60) of a missing prefab: its stripped objects (root GameObject 600
+/// and Transform 601, a child's GameObject 650 and Transform 640, two BoxColliders, a script, a
+/// RectTransform), an added child of the root and of the child, components added to the root and
+/// the child, and a scene object referencing them.
+fn missing_scene(root_modifications: bool) -> String {
+    let mods = if root_modifications {
+        format!(
+            "    - target: {{fileID: 11, guid: {MISSING}, type: 3}}
+      propertyPath: m_LocalPosition.x
+      value: 2
+      objectReference: {{fileID: 0}}
+    - target: {{fileID: 10, guid: {MISSING}, type: 3}}
+      propertyPath: m_Name
+      value: Car
+      objectReference: {{fileID: 0}}
+    - target: {{fileID: 11, guid: {MISSING}, type: 3}}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {{fileID: 0}}
+"
+        )
+    } else {
+        String::new()
+    };
+    let stripped = |class: i32, name: &str, id: i64, source: i64, extra: &str| {
+        format!(
+            "--- !u!{class} &{id} stripped\n{name}:\n  m_CorrespondingSourceObject: {{fileID: {source}, guid: {MISSING}, type: 3}}\n  m_PrefabInstance: {{fileID: 60}}\n{extra}"
+        )
+    };
+    let mut scene = format!(
+        "%YAML 1.1
+--- !u!1 &1
+GameObject:
+  m_Component:
+  - component: {{fileID: 2}}
+  - component: {{fileID: 3}}
+  m_Name: Holder
+--- !u!4 &2
+Transform:
+  m_GameObject: {{fileID: 1}}
+  m_Children: []
+  m_Father: {{fileID: 0}}
+--- !u!114 &3
+MonoBehaviour:
+  m_GameObject: {{fileID: 1}}
+  wheel: {{fileID: 650}}
+  box: {{fileID: 630}}
+--- !u!1001 &60
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {{fileID: 2}}
+    m_Modifications:
+{mods}    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {{fileID: 10, guid: {MISSING}, type: 3}}
+      insertIndex: -1
+      addedObject: {{fileID: 700}}
+    - targetCorrespondingSourceObject: {{fileID: 20, guid: {MISSING}, type: 3}}
+      insertIndex: -1
+      addedObject: {{fileID: 710}}
+  m_SourcePrefab: {{fileID: 100100000, guid: {MISSING}, type: 3}}
+"
+    );
+    scene += &stripped(
+        114,
+        "MonoBehaviour",
+        610,
+        24,
+        "  m_GameObject: {fileID: 600}\n  m_Enabled: 1\n  m_Script: {fileID: 11500000, guid: 0000000000000000000000000000beef, type: 3}\n",
+    );
+    scene += &stripped(65, "BoxCollider", 630, 22, "");
+    scene += &stripped(65, "BoxCollider", 620, 23, "");
+    scene += &stripped(224, "RectTransform", 645, 25, "");
+    scene += &stripped(4, "Transform", 640, 21, "");
+    scene += &stripped(1, "GameObject", 650, 20, "");
+    scene += &stripped(4, "Transform", 601, 11, "");
+    scene += &stripped(1, "GameObject", 600, 10, "");
+    scene += "--- !u!1 &800
+GameObject:
+  m_Component:
+  - component: {fileID: 801}
+  m_Name: Added
+--- !u!4 &801
+Transform:
+  m_GameObject: {fileID: 800}
+  m_Children: []
+  m_Father: {fileID: 601}
+--- !u!1 &810
+GameObject:
+  m_Component:
+  - component: {fileID: 811}
+  m_Name: Deep
+--- !u!4 &811
+Transform:
+  m_GameObject: {fileID: 810}
+  m_Children: []
+  m_Father: {fileID: 640}
+--- !u!135 &700
+SphereCollider:
+  m_GameObject: {fileID: 600}
+--- !u!136 &710
+CapsuleCollider:
+  m_GameObject: {fileID: 650}
+";
+    scene
+}
+
+fn ids(doc: &Document, list: &str, key: Option<&str>) -> Vec<i64> {
+    doc.body
+        .get(list)
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+        .iter()
+        .map(|item| {
+            let item = match key {
+                Some(k) => item.get(k).unwrap(),
+                None => item,
+            };
+            item.get("fileID").unwrap().as_i64().unwrap()
+        })
+        .collect()
+}
+
+fn name_of(docs: &[Document], transform: i64) -> String {
+    let t = docs.iter().find(|d| d.file_id == transform).unwrap();
+    let go = t
+        .body
+        .path("m_GameObject.fileID")
+        .unwrap()
+        .as_i64()
+        .unwrap();
+    let go = docs.iter().find(|d| d.file_id == go).unwrap();
+    go.body.get("m_Name").unwrap().as_str().unwrap().to_string()
+}
+
+#[test]
+fn a_missing_prefabs_stripped_objects_become_the_editors_placeholders() {
+    let scene = parse_documents(&missing_scene(true)).unwrap();
+    let docs = flatten(&scene, &Fixture(HashMap::new()), &mut Vec::new()).unwrap();
+    let by_id = |id: i64| docs.iter().find(|d| d.file_id == id).unwrap();
+    // The root: the stripped GameObject and Transform the m_Name and position modifications
+    // target, named after the instance, with the root modifications and the added component.
+    let root = by_id(600);
+    assert_eq!(
+        root.body.get("m_Name").unwrap().as_str(),
+        Some(format!("Car (Missing Prefab with guid: {MISSING})").as_str())
+    );
+    assert_eq!(ids(root, "m_Component", Some("component")), [601, 700]);
+    let root_t = by_id(601);
+    assert_eq!(
+        root_t.body.path("m_LocalPosition.x").unwrap().as_i64(),
+        Some(2)
+    );
+    assert_eq!(
+        root_t.body.path("m_Father.fileID").unwrap().as_i64(),
+        Some(2)
+    );
+    // Its children: the added child first, then a placeholder per other stripped object in class
+    // id then file id order, numbered by the root's child count.
+    let children = ids(root_t, "m_Children", None);
+    let names: Vec<String> = children.iter().map(|&t| name_of(&docs, t)).collect();
+    assert_eq!(
+        names,
+        [
+            "Added",
+            "Placeholder for referenced GameObject in Prefab instance (2)",
+            "Placeholder for referenced Transform in Prefab instance (3)",
+            "Placeholder for referenced BoxCollider in Prefab instance (4)",
+            "Placeholder for referenced BoxCollider in Prefab instance (5)",
+            "Placeholder for referenced MonoBehaviour in Prefab instance (6)",
+            "Placeholder for referenced RectTransform in Prefab instance (7)",
+        ]
+    );
+    assert_eq!(children[0], 801);
+    assert_eq!(children[2], 640);
+    assert_eq!(by_id(645).class_id, 224);
+    // A stripped GameObject gets a Transform, then what the instance adds to it.
+    let wheel = by_id(650);
+    let wheel_components = ids(wheel, "m_Component", Some("component"));
+    assert_eq!(wheel_components.len(), 2);
+    assert_eq!(wheel_components[1], 710);
+    assert_eq!(wheel_components[0], children[1]);
+    // A stripped component gets a GameObject and a Transform; the referenced objects exist.
+    let box_a = by_id(620);
+    assert!(!box_a.stripped);
+    let owner = box_a
+        .body
+        .path("m_GameObject.fileID")
+        .unwrap()
+        .as_i64()
+        .unwrap();
+    assert_eq!(ids(by_id(owner), "m_Component", Some("component"))[1], 620);
+    assert_eq!(
+        children[3],
+        ids(by_id(owner), "m_Component", Some("component"))[0]
+    );
+    let script = by_id(610);
+    assert_eq!(
+        script.body.path("m_Script.guid").unwrap().as_str(),
+        Some("0000000000000000000000000000beef")
+    );
+    assert_ne!(
+        script.body.path("m_GameObject.fileID").unwrap().as_i64(),
+        Some(600)
+    );
+    // An added child of a stripped child stays under that child's placeholder.
+    assert_eq!(ids(by_id(640), "m_Children", None), [811]);
+    // The instance is marked with its root's name for the scene load's error.
+    let instance = by_id(60);
+    assert_eq!(
+        instance.body.get(MISSING_PREFAB_NAME).unwrap().as_str(),
+        root.body.get("m_Name").unwrap().as_str()
+    );
+    let unique: HashSet<i64> = docs.iter().map(|d| d.file_id).collect();
+    assert_eq!(unique.len(), docs.len());
+}
+
+#[test]
+fn without_root_modifications_a_missing_prefabs_root_is_new_and_unmodified() {
+    let scene = parse_documents(&missing_scene(false)).unwrap();
+    let docs = flatten(&scene, &Fixture(HashMap::new()), &mut Vec::new()).unwrap();
+    let instance = docs.iter().find(|d| d.file_id == 60).unwrap();
+    let name = format!("Missing Prefab with guid: {MISSING}");
+    assert_eq!(
+        instance.body.get(MISSING_PREFAB_NAME).unwrap().as_str(),
+        Some(name.as_str())
+    );
+    let root = docs
+        .iter()
+        .find(|d| d.class_id == 1 && d.body.get("m_Name").and_then(Value::as_str) == Some(&name))
+        .unwrap();
+    assert!(![600, 650].contains(&root.file_id));
+    let root_t = ids(root, "m_Component", Some("component"))[0];
+    let root_t = docs.iter().find(|d| d.file_id == root_t).unwrap();
+    assert_eq!(
+        root_t.body.path("m_LocalPosition.x").unwrap().as_i64(),
+        Some(0)
+    );
+    // The stripped root objects are placeholders like the others; the added child of the
+    // stripped root transform now sits under that transform's placeholder.
+    let names: Vec<String> = ids(root_t, "m_Children", None)
+        .iter()
+        .map(|&t| name_of(&docs, t))
+        .collect();
+    assert_eq!(
+        names[0],
+        "Placeholder for referenced GameObject in Prefab instance (1)"
+    );
+    assert_eq!(
+        names[1],
+        "Placeholder for referenced GameObject in Prefab instance (2)"
+    );
+    assert_eq!(names.len(), 8);
+    assert_eq!(
+        ids(
+            docs.iter().find(|d| d.file_id == 601).unwrap(),
+            "m_Children",
+            None
+        ),
+        [801]
+    );
+}
+
+#[test]
+fn a_variant_of_a_missing_prefab_does_not_load_and_its_instances_are_missing() {
+    let variant_guid = Guid::parse("0000000000000000000000000000cafe").unwrap();
+    let variant = format!(
+        "%YAML 1.1
+--- !u!1001 &5
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {{fileID: 0}}
+    m_Modifications:
+    - target: {{fileID: 10, guid: {MISSING}, type: 3}}
+      propertyPath: m_Name
+      value: Variant
+      objectReference: {{fileID: 0}}
+  m_SourcePrefab: {{fileID: 100100000, guid: {MISSING}, type: 3}}
+"
+    );
+    let variant = parse_documents(&variant).unwrap();
+    let expanded = flatten(&variant, &Fixture(HashMap::new()), &mut Vec::new()).unwrap();
+    assert!(root_is_missing_prefab(&expanded));
+    // A prefab whose missing instance has a parent is not a variant of it: it still loads.
+    let scene = parse_documents(&missing_scene(true)).unwrap();
+    let docs = flatten(&scene, &Fixture(HashMap::new()), &mut Vec::new()).unwrap();
+    assert!(!root_is_missing_prefab(&docs));
+
+    let scene = format!(
+        "%YAML 1.1
+--- !u!1001 &70
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {{fileID: 0}}
+    m_Modifications:
+    - target: {{fileID: 7, guid: {variant_guid}, type: 3}}
+      propertyPath: m_Name
+      value: V
+      objectReference: {{fileID: 0}}
+  m_SourcePrefab: {{fileID: 100100000, guid: {variant_guid}, type: 3}}
+"
+    );
+    let fixture = Fixture([(variant_guid, variant)].into());
+    let docs = flatten(&parse_documents(&scene).unwrap(), &fixture, &mut Vec::new()).unwrap();
+    let instance = docs.iter().find(|d| d.file_id == 70).unwrap();
+    assert_eq!(
+        instance.body.get(MISSING_PREFAB_NAME).unwrap().as_str(),
+        Some(format!("V (Missing Prefab with guid: {variant_guid})").as_str())
     );
 }

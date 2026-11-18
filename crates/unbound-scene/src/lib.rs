@@ -5,7 +5,9 @@ mod flatten;
 pub mod path;
 
 pub use encode::{encode_documents, encode_value};
-pub use flatten::{PrefabSource, flatten, read_prefab_inputs};
+pub use flatten::{
+    MISSING_PREFAB_NAME, PrefabSource, flatten, read_prefab_inputs, root_is_missing_prefab,
+};
 
 use anyhow::{Context, Result};
 use std::{
@@ -106,7 +108,19 @@ where
     pub fn load(&self, file: &std::path::Path) -> Result<Vec<Document>> {
         let docs = read_documents(file)?;
         let mut stack = Vec::new();
-        flatten(&docs, self, &mut stack).with_context(|| format!("expanding {}", file.display()))
+        let expanded = flatten(&docs, self, &mut stack)
+            .with_context(|| format!("expanding {}", file.display()))?;
+        let prefab = file
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("prefab"));
+        if prefab && root_is_missing_prefab(&expanded) {
+            tracing::warn!(
+                "{}: the prefab's root is an instance of a missing prefab; it has no objects",
+                file.display()
+            );
+            return Ok(Vec::new());
+        }
+        Ok(expanded)
     }
 
     /// The expanded prefabs kept: how many, and their documents' heap bytes (roughly).
@@ -142,7 +156,14 @@ where
         stack.push(guid);
         let expanded = flatten(&docs, self, stack);
         stack.pop();
-        let expanded = Arc::new(expanded.with_context(|| format!("expanding {}", file.display()))?);
+        let expanded = expanded.with_context(|| format!("expanding {}", file.display()))?;
+        if root_is_missing_prefab(&expanded) {
+            anyhow::bail!(
+                "{}: the prefab's root is an instance of a missing prefab",
+                file.display()
+            );
+        }
+        let expanded = Arc::new(expanded);
         self.prefabs.lock().unwrap().insert(guid, expanded.clone());
         Ok(expanded)
     }

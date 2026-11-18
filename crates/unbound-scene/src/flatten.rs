@@ -63,6 +63,11 @@ pub fn read_prefab_inputs(docs: &[Document]) {
             instance_modification(&instance.body),
             &|id| id,
         );
+        // The fields a modification sets, which apply_instance reads only for present targets.
+        let mut scratch = Value::Map(Map::default());
+        for m in modifications(&instance.body) {
+            apply_modification(&mut scratch, m);
+        }
     }
 }
 
@@ -135,9 +140,17 @@ pub fn flatten(
         let source = match prefabs.prefab(source_guid, stack) {
             Ok(source) => source,
             Err(error) => {
-                // The Editor keeps such an instance as a "Missing Prefab" placeholder object.
                 tracing::warn!("prefab instance {p}: {error:#}");
-                out.extend(missing_prefab_placeholder(instance, docs, source_guid));
+                let placeholders = missing_prefab_placeholder(instance, docs, source_guid);
+                if let Some(map) = out
+                    .iter_mut()
+                    .find(|d| d.class_id == PREFAB_INSTANCE && d.file_id == p)
+                    .and_then(|d| d.body.as_map_mut())
+                {
+                    let name = missing_instance_name(&instance.body, source_guid);
+                    map.insert(MISSING_PREFAB_NAME, Value::Scalar(name));
+                }
+                out.extend(placeholders);
                 continue;
             }
         };
@@ -163,6 +176,18 @@ pub fn flatten(
     Ok(out)
 }
 
+/// Whether the prefab these expanded documents make has, as its root, an instance of a missing
+/// prefab (a variant whose parent is missing): the Unity 6000.0 Editor fails such a prefab's
+/// import, so it has no objects and its own instances are missing too
+/// (tests/projects/missingprefab).
+pub fn root_is_missing_prefab(docs: &[Document]) -> bool {
+    docs.iter().any(|d| {
+        d.class_id == PREFAB_INSTANCE
+            && d.body.get(MISSING_PREFAB_NAME).is_some()
+            && file_id(instance_modification(&d.body).get("m_TransformParent")) == 0
+    })
+}
+
 /// Records where an instance's object comes from: the source prefab's object and the instance.
 fn link_to_source(body: &mut Value, source_id: i64, source: Guid, instance: i64) {
     let Some(map) = body.as_map_mut() else { return };
@@ -177,59 +202,254 @@ fn link_to_source(body: &mut Value, source_id: i64, source: Guid, instance: i64)
     map.insert("m_PrefabInstance", object_ref(instance));
 }
 
-/// A GameObject standing for an instance whose prefab is missing, under the instance's parent;
-/// a stripped transform of the instance (what other objects may reference) becomes its transform.
+/// The prefix of the name of the placeholder for a stripped object of a missing prefab's instance.
+const PLACEHOLDER_NAME: &str = "Placeholder for referenced";
+/// Mixed into an instance's file id for the ids of the objects its placeholders add.
+const PLACEHOLDER_ID_SALT: i64 = 0x4d50_0000_0000_0000;
+/// The Unbound-only field a missing instance's PrefabInstance document gets: the name its root
+/// shows (read by the managed scene load, which logs the Editor's error for it).
+pub const MISSING_PREFAB_NAME: &str = "m_UnboundMissingPrefabName";
+/// Property paths whose first modification names the instance's root Transform.
+const ROOT_TRANSFORM_PROPERTIES: [&str; 3] = [
+    "m_LocalPosition",
+    "m_LocalRotation",
+    "m_LocalEulerAnglesHint",
+];
+
+fn modifications(instance: &Value) -> &[Value] {
+    instance_modification(instance)
+        .get("m_Modifications")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+}
+
+/// The source object the first modification of a property matching `matches` targets.
+fn first_target(instance: &Value, matches: impl Fn(&str) -> bool) -> Option<&Value> {
+    modifications(instance).iter().find(|m| {
+        m.get("propertyPath")
+            .and_then(Value::as_str)
+            .is_some_and(&matches)
+    })
+}
+
+/// The name a missing prefab's instance root shows: the instance's first `m_Name` modification
+/// with the missing GUID, as the Unity 6000.0 Editor names it (tests/projects/missingprefab).
+fn missing_instance_name(instance: &Value, source: Guid) -> String {
+    let name = first_target(instance, |p| p == "m_Name")
+        .and_then(|m| m.get("value"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if name.is_empty() {
+        format!("Missing Prefab with guid: {source}")
+    } else {
+        format!("{name} (Missing Prefab with guid: {source})")
+    }
+}
+
+fn source_file_id(doc: &Document) -> i64 {
+    file_id(doc.body.get("m_CorrespondingSourceObject"))
+}
+
+/// The objects standing for an instance whose prefab is missing, as the Unity 6000.0 Editor makes
+/// them (tests/projects/missingprefab): a root GameObject named by [`missing_instance_name`] under
+/// the instance's parent, whose Transform takes the instance's modifications of the root
+/// Transform, and for every other stripped object of the instance (what the file references),
+/// in class id then file id order, a child of the root named "Placeholder for referenced
+/// <class> in Prefab instance (<n>)", n counting the root's children: a stripped GameObject gets a
+/// Transform, a stripped Transform a GameObject, a stripped component a GameObject and a
+/// Transform. The root is the stripped GameObject the instance's first `m_Name` modification
+/// targets, its Transform the stripped Transform the first position, rotation or Euler hint
+/// modification targets; without both modifications the root is new and unmodified. Objects the
+/// instance adds keep their parents and owners among these (added children of the root come first).
 fn missing_prefab_placeholder(
     instance: &Document,
     docs: &[Document],
     source: Guid,
 ) -> Vec<Document> {
     let p = instance.file_id;
-    let modification = instance
-        .body
-        .get("m_Modification")
-        .cloned()
-        .unwrap_or_default();
-    let name = modification
-        .get("m_Modifications")
-        .and_then(Value::as_seq)
-        .unwrap_or_default()
+    let body = &instance.body;
+    let modification = instance_modification(body);
+    let root_go_source =
+        first_target(body, |path| path == "m_Name").map(|m| file_id(m.get("target")));
+    let root_t_source = first_target(body, |path| {
+        ROOT_TRANSFORM_PROPERTIES
+            .iter()
+            .any(|prefix| path.starts_with(prefix))
+    })
+    .map(|m| file_id(m.get("target")));
+    let known = root_go_source.is_some_and(|s| s != 0) && root_t_source.is_some_and(|s| s != 0);
+    let mut stripped: Vec<&Document> = docs
         .iter()
-        .find(|m| m.get("propertyPath").and_then(Value::as_str) == Some("m_Name"))
-        .and_then(|m| m.get("value"))
-        .and_then(Value::as_str)
-        .map(String::from)
-        .unwrap_or_else(|| format!("Missing Prefab with guid: {source}"));
-    let transform_id = docs
-        .iter()
-        .find(|d| {
-            d.stripped && is_transform(d.class_id) && file_id(d.body.get("m_PrefabInstance")) == p
-        })
-        .map(|d| d.file_id)
-        .unwrap_or((p ^ 2) & ID_MASK);
-    let go_id = (p ^ 1) & ID_MASK;
+        .filter(|d| d.stripped && file_id(d.body.get("m_PrefabInstance")) == p)
+        .collect();
+    stripped.sort_by_key(|d| (d.class_id, d.file_id));
+    let find = |source: Option<i64>, class: &dyn Fn(i32) -> bool| {
+        source
+            .filter(|_| known)
+            .and_then(|s| {
+                stripped
+                    .iter()
+                    .find(|d| class(d.class_id) && source_file_id(d) == s)
+            })
+            .copied()
+    };
+    let root_go = find(root_go_source, &|c| c == 1);
+    let root_t = find(root_t_source, &is_transform);
+    let mut next_id = 0;
+    let mut new_id = || {
+        next_id += 1;
+        (p ^ (PLACEHOLDER_ID_SALT + next_id)) & ID_MASK
+    };
+    let go_id = root_go.map_or_else(&mut new_id, |d| d.file_id);
+    let transform_id = root_t.map_or_else(&mut new_id, |d| d.file_id);
     let parse = |yaml: String| unbound_yaml::parse_value(&yaml).unwrap_or_default();
-    let go = Document {
+    let link = |doc: Option<&Document>| match doc {
+        Some(d) => format!(
+            "m_CorrespondingSourceObject: {{fileID: {}, guid: {source}, type: 3}}\nm_PrefabInstance: {{fileID: {p}}}\n",
+            source_file_id(d)
+        ),
+        None => format!("m_PrefabInstance: {{fileID: {p}}}\n"),
+    };
+    let game_object = |id: i64, name: &str, transform: i64, from: Option<&Document>| Document {
         class_id: 1,
-        file_id: go_id,
+        file_id: id,
         stripped: false,
         type_name: "GameObject".into(),
         body: parse(format!(
-            "m_PrefabInstance: {{fileID: {p}}}\nm_Component:\n- component: {{fileID: {transform_id}}}\nm_Name: '{}'\nm_IsActive: 1\n",
+            "{}m_Component:\n- component: {{fileID: {transform}}}\nm_Name: '{}'\nm_IsActive: 1\n",
+            link(from),
             name.replace('\'', "''")
         )),
     };
-    let parent = file_id(modification.get("m_TransformParent"));
-    let transform = Document {
-        class_id: TRANSFORM,
-        file_id: transform_id,
+    let transform = |id: i64, go: i64, parent: i64, from: Option<&Document>| Document {
+        class_id: from.map_or(TRANSFORM, |d| d.class_id),
+        file_id: id,
         stripped: false,
-        type_name: "Transform".into(),
+        type_name: from.map_or("Transform".into(), |d| d.type_name.clone()),
         body: parse(format!(
-            "m_PrefabInstance: {{fileID: {p}}}\nm_GameObject: {{fileID: {go_id}}}\nm_LocalRotation: {{x: 0, y: 0, z: 0, w: 1}}\nm_LocalPosition: {{x: 0, y: 0, z: 0}}\nm_LocalScale: {{x: 1, y: 1, z: 1}}\nm_Children: []\nm_Father: {{fileID: {parent}}}\n"
+            "{}m_GameObject: {{fileID: {go}}}\nm_LocalRotation: {{x: 0, y: 0, z: 0, w: 1}}\nm_LocalPosition: {{x: 0, y: 0, z: 0}}\nm_LocalScale: {{x: 1, y: 1, z: 1}}\nm_Children: []\nm_Father: {{fileID: {parent}}}\n",
+            link(from)
         )),
     };
-    vec![go, transform]
+
+    let name = missing_instance_name(body, source);
+    let mut root = transform(
+        transform_id,
+        go_id,
+        file_id(modification.get("m_TransformParent")),
+        root_t,
+    );
+    if known {
+        let target = root_t_source.unwrap_or_default();
+        for m in modifications(body)
+            .iter()
+            .filter(|m| file_id(m.get("target")) == target)
+        {
+            apply_modification(&mut root.body, m);
+        }
+    }
+    let mut out = vec![game_object(go_id, &name, transform_id, root_go)];
+    // The instance's added children of the root, then the placeholders.
+    let mut children: Vec<i64> = docs
+        .iter()
+        .filter(|d| !d.stripped && is_transform(d.class_id))
+        .filter(|d| file_id(d.body.get("m_Father")) == transform_id)
+        .map(|d| d.file_id)
+        .collect();
+    for d in stripped {
+        if root_go.is_some_and(|r| r.file_id == d.file_id)
+            || root_t.is_some_and(|r| r.file_id == d.file_id)
+        {
+            continue;
+        }
+        let n = children.len() + 1;
+        let class = if d.class_id == 1 {
+            "GameObject"
+        } else {
+            d.type_name.as_str()
+        };
+        let label = format!("{PLACEHOLDER_NAME} {class} in Prefab instance ({n})");
+        let (go, t) = match d.class_id {
+            1 => (d.file_id, new_id()),
+            c if is_transform(c) => (new_id(), d.file_id),
+            _ => (new_id(), new_id()),
+        };
+        out.push(game_object(go, &label, t, (d.class_id == 1).then_some(d)));
+        out.push(transform(
+            t,
+            go,
+            transform_id,
+            is_transform(d.class_id).then_some(d),
+        ));
+        if d.class_id != 1 && !is_transform(d.class_id) {
+            let mut component = d.clone();
+            component.stripped = false;
+            if let Some(map) = component.body.as_map_mut() {
+                map.insert("m_GameObject", object_ref(go));
+            }
+            if let Some(owner) = out.iter_mut().rev().find(|o| o.file_id == go) {
+                insert_ref(
+                    &mut owner.body,
+                    "m_Component",
+                    Some("component"),
+                    d.file_id,
+                    -1,
+                );
+            }
+            out.push(component);
+        }
+        children.push(t);
+    }
+    if let Some(map) = root.body.as_map_mut() {
+        map.insert(
+            "m_Children",
+            Value::Seq(children.into_iter().map(object_ref).collect()),
+        );
+    }
+    out.insert(1, root);
+    // Components the instance adds, on the objects they name as their GameObject.
+    for added in modification
+        .get("m_AddedComponents")
+        .and_then(Value::as_seq)
+        .unwrap_or_default()
+    {
+        let id = file_id(added.get("addedObject"));
+        let Some(owner) = docs
+            .iter()
+            .find(|d| !d.stripped && d.file_id == id)
+            .map(|d| file_id(d.body.get("m_GameObject")))
+        else {
+            continue;
+        };
+        if let Some(go) = out
+            .iter_mut()
+            .find(|o| o.class_id == 1 && o.file_id == owner)
+        {
+            insert_ref(&mut go.body, "m_Component", Some("component"), id, -1);
+        }
+    }
+    out
+}
+
+/// Sets the property one `m_Modifications` entry names on an object's body.
+fn apply_modification(body: &mut Value, m: &Value) {
+    let Some(property) = m.get("propertyPath").and_then(Value::as_str) else {
+        return;
+    };
+    let reference = m.get("objectReference").unwrap_or(&Value::Null);
+    let reference_set = reference.as_ref().is_some_and(|r| r.file_id != 0);
+    let existing_is_ref = path::get(body, property)
+        .and_then(Value::as_map)
+        .is_some_and(|m| m.get("fileID").is_some());
+    let value = if reference_set || existing_is_ref {
+        reference.clone()
+    } else {
+        match m.get("value") {
+            Some(Value::Scalar(s)) => Value::Scalar(s.clone()),
+            _ => Value::Scalar(String::new()),
+        }
+    };
+    path::set(body, property, value);
 }
 
 fn apply_instance(objects: &mut Vec<Document>, modification: &Value, map_id: &dyn Fn(i64) -> i64) {
@@ -252,28 +472,9 @@ fn apply_instance(objects: &mut Vec<Document>, modification: &Value, map_id: &dy
     });
     for m in sizes.into_iter().chain(others) {
         let target = map_id(file_id(m.get("target")));
-        let Some(property) = m.get("propertyPath").and_then(Value::as_str) else {
-            continue;
-        };
-        let reference = m.get("objectReference").unwrap_or(&Value::Null);
-        let reference_set = reference.as_ref().is_some_and(|r| r.file_id != 0);
-        let scalar = m.get("value");
-        let Some(&i) = index.get(&target) else {
-            continue;
-        };
-        let body = &mut objects[i].body;
-        let existing_is_ref = path::get(body, property)
-            .and_then(Value::as_map)
-            .is_some_and(|m| m.get("fileID").is_some());
-        let value = if reference_set || existing_is_ref {
-            reference.clone()
-        } else {
-            match scalar {
-                Some(Value::Scalar(s)) => Value::Scalar(s.clone()),
-                _ => Value::Scalar(String::new()),
-            }
-        };
-        path::set(body, property, value);
+        if let Some(&i) = index.get(&target) {
+            apply_modification(&mut objects[i].body, m);
+        }
     }
 
     // Removed components and GameObjects.
