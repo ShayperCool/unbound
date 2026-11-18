@@ -65,6 +65,15 @@ impl UnityInstall {
         self.data.join("Managed/UnityEngine")
     }
 
+    /// The names of the engine assemblies the installation ships (`UnityEngine.CoreModule`, ...):
+    /// which modules exist depends on the installed patch, not only on the release family.
+    pub fn engine_module_names(&self) -> std::collections::BTreeSet<String> {
+        crate::compile::glob_dlls(&self.managed_engine_dir(), "UnityEngine")
+            .iter()
+            .filter_map(|p| Some(p.file_stem()?.to_str()?.to_string()))
+            .collect()
+    }
+
     /// The editor's modules outside `Managed/UnityEngine`: `Managed/UnityEditor.Graphs.dll` and
     /// each platform's `PlaybackEngines/*/UnityEditor.*.dll` and `Unity.Android.*.dll`. Editor
     /// play mode compiles game code against them (`Project::engine_references`), and the runtime's

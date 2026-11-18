@@ -47,6 +47,13 @@ pub struct ProfileData {
     /// Script assemblies the Editor does not IL post-process (its safe-mode list).
     #[serde(default)]
     pub skip_code_gen: Vec<String>,
+    /// Defines of the tables above that exist only with an engine module assembly
+    /// (`ENABLE_UNITY_CONSENT` → `UnityEngine.UnityConsentModule`). Which modules an installation
+    /// ships is a fact of that installation, not of the family: a 6000.0 patch before a module
+    /// was added lacks its assembly and its define, so [`Profile::engine_defines`] leaves the
+    /// define out when the installation the project compiles against has no such assembly.
+    #[serde(default)]
+    pub module_defines: BTreeMap<String, String>,
 }
 
 /// Player Settings' active input handling (`activeInputHandler`): the legacy Input Manager, the
@@ -270,7 +277,9 @@ impl Profile {
     }
 
     /// The defines an assembly is compiled with, before the project's own scripting defines and
-    /// the assembly's `versionDefines`.
+    /// the assembly's `versionDefines`. `has_engine_module` answers whether the installation the
+    /// project compiles against has an engine module assembly (`UnityEngine.IdentifiersModule`):
+    /// a [`ProfileData::module_defines`] define is left out without its module.
     pub fn engine_defines(
         &self,
         mode: CompileMode,
@@ -278,6 +287,7 @@ impl Profile {
         editor_only_assembly: bool,
         net_standard: bool,
         input: InputHandling,
+        has_engine_module: &dyn Fn(&str) -> bool,
     ) -> Vec<String> {
         let d = &self.data;
         let mut out = self.version_defines();
@@ -308,6 +318,11 @@ impl Profile {
         if editor_only_assembly {
             out.extend(d.editor_only_assembly.iter().cloned());
         }
+        out.retain(|define| {
+            d.module_defines
+                .get(define)
+                .is_none_or(|module| has_engine_module(module))
+        });
         dedup_in_order(&mut out);
         out
     }
@@ -364,6 +379,7 @@ mod tests {
             false,
             true,
             InputHandling::InputManager,
+            &|_| true,
         );
         let os: Vec<_> = defines
             .iter()
@@ -382,6 +398,7 @@ mod tests {
                 false,
                 true,
                 input,
+                &|_| true,
             )
         };
         let legacy = defines(InputHandling::InputManager);
@@ -429,6 +446,52 @@ mod tests {
         assert_eq!(pick("6000.5.0f1"), Some(("d", true)));
         assert_eq!(pick("2021.3.1f1"), Some(("a", true)));
         assert_eq!(pick("2019.4.1f1"), Some(("a", true)));
+    }
+
+    #[test]
+    fn module_defines_follow_the_installed_module_assemblies() {
+        let profile = Profile::for_version("6000.0.67f1".parse().unwrap()).unwrap();
+        let module_defines = [
+            ("ENABLE_UNITY_CONSENT", "UnityEngine.UnityConsentModule"),
+            (
+                "ENABLE_UNITY_CLOUD_IDENTIFIERS",
+                "UnityEngine.IdentifiersModule",
+            ),
+        ];
+        for (define, module) in module_defines {
+            assert_eq!(
+                profile.data.module_defines.get(define).map(String::as_str),
+                Some(module)
+            );
+        }
+        let defines = |has: &dyn Fn(&str) -> bool| {
+            profile.engine_defines(
+                CompileMode::EditorPlayMode,
+                "Android",
+                false,
+                false,
+                InputHandling::InputManager,
+                has,
+            )
+        };
+        let full = defines(&|_| true);
+        let has = |list: &[String], d: &str| list.iter().any(|x| x == d);
+        assert!(has(&full, "ENABLE_UNITY_CONSENT"));
+        assert!(has(&full, "ENABLE_UNITY_CLOUD_IDENTIFIERS"));
+        // An installation without the two modules (an earlier 6000.0 patch): only those two go.
+        let without = defines(&|m| !module_defines.iter().any(|(_, module)| *module == m));
+        let removed: Vec<&String> = full.iter().filter(|d| !without.contains(d)).collect();
+        assert_eq!(
+            removed,
+            ["ENABLE_UNITY_CONSENT", "ENABLE_UNITY_CLOUD_IDENTIFIERS"]
+        );
+        // One module present, the other absent.
+        let consent_only = defines(&|m| m != "UnityEngine.IdentifiersModule");
+        assert!(has(&consent_only, "ENABLE_UNITY_CONSENT"));
+        assert!(!has(&consent_only, "ENABLE_UNITY_CLOUD_IDENTIFIERS"));
+        // Defines without a module entry never depend on the installation.
+        assert!(has(&without, "ENABLE_AUDIO"));
+        assert!(has(&without, "ENABLE_CLOUD_SERVICES"));
     }
 
     #[test]

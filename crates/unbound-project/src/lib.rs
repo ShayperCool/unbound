@@ -272,7 +272,9 @@ impl Project {
             .iter()
             .filter_map(|p| Some(p.file_name()?.to_str()?.to_string()))
             .collect();
+        let engine_modules = self.install.engine_module_names();
         let mut graph = assemblies::build(&assemblies::GraphInput {
+            has_engine_module: &|name| engine_modules.contains(name),
             bcl_names: &bcl_names,
             net_standard,
             roots: &roots,
@@ -337,4 +339,68 @@ fn dll_files(dir: &Path) -> Vec<PathBuf> {
         .collect();
     files.sort();
     files
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A project on an earlier 6000.0 patch compiles against its own installation, which may
+    /// lack engine modules the profile's release has: their defines follow the installation.
+    #[test]
+    fn module_defines_follow_the_installation_the_project_compiles_against() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-module-defines-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        std::fs::create_dir_all(root.join("Assets")).unwrap();
+        std::fs::write(root.join("Assets/A.cs"), "class A {}\n").unwrap();
+        let defines_with = |modules: &[&str]| {
+            let data = scratch.join(format!("install-{}/Editor/Data", modules.len()));
+            let managed = data.join("Managed/UnityEngine");
+            std::fs::create_dir_all(&managed).unwrap();
+            for module in modules {
+                std::fs::write(managed.join(format!("{module}.dll")), b"").unwrap();
+            }
+            let version: UnityVersion = "6000.0.67f1".parse().unwrap();
+            let project = Project {
+                assets: root.join("Assets"),
+                root: root.clone(),
+                version,
+                profile: Profile::for_version(version).unwrap(),
+                install: UnityInstall { data, version },
+                settings: Settings::default(),
+                packages: Vec::new(),
+                missing_packages: Vec::new(),
+            };
+            let graph = project
+                .script_graph(CompileMode::EditorPlayMode, "Android")
+                .unwrap();
+            let main = graph
+                .assemblies
+                .iter()
+                .find(|a| a.name == "Assembly-CSharp")
+                .expect("the predefined assembly builds");
+            main.defines.clone()
+        };
+        let base = ["UnityEngine", "UnityEngine.CoreModule"];
+        let without = defines_with(&base);
+        let with = defines_with(&[
+            base[0],
+            base[1],
+            "UnityEngine.UnityConsentModule",
+            "UnityEngine.IdentifiersModule",
+        ]);
+        let _ = std::fs::remove_dir_all(&scratch);
+        for define in ["ENABLE_UNITY_CONSENT", "ENABLE_UNITY_CLOUD_IDENTIFIERS"] {
+            assert!(with.iter().any(|d| d == define), "{define}");
+            assert!(!without.iter().any(|d| d == define), "{define}");
+        }
+        let removed: Vec<&String> = with.iter().filter(|d| !without.contains(d)).collect();
+        assert_eq!(removed.len(), 2, "{removed:?}");
+        assert!(without.iter().any(|d| d == "UNITY_6000_0_67"));
+    }
 }

@@ -147,6 +147,9 @@ pub struct GraphInput<'a> {
     /// The target's API compatibility level is .NET Standard 2.1 (runtime assemblies only; the
     /// Editor builds Editor-only assemblies against .NET Framework either way).
     pub net_standard: bool,
+    /// Whether the installation has an engine module assembly (`UnityEngine.IdentifiersModule`),
+    /// for the profile's module defines.
+    pub has_engine_module: &'a dyn Fn(&str) -> bool,
 }
 
 #[derive(Debug, Default)]
@@ -317,6 +320,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
             editor_only,
             input.net_standard,
             input.settings.input_handling,
+            input.has_engine_module,
         );
         d.extend(project_defines.iter().cloned());
         d
