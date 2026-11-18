@@ -270,8 +270,8 @@ public class StyleAnimationsProbe : MonoBehaviour
         box.style.opacity = 1;
         At("uss.again", 500, "Opacity", Opacity);
         At("uss.again", 1500, "Opacity", Opacity);
-        // A completed transition ends at 1. Going to 0 with no duration and back to 1 with one:
-        // the completed transition with that end value keeps the second change from running.
+        // A completed transition ends at 1. A zero duration leaves opacity without a transition, which
+        // forgets the completed one: going to 0 at once and back to 1 with a duration runs again.
         box.style.transitionDuration = new List<TimeValue> { new TimeValue(0, TimeUnit.Millisecond) };
         box.style.opacity = 0;
         At("uss.instant", 1500, "Opacity", Opacity);
