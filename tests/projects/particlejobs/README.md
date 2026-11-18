@@ -10,6 +10,8 @@ local space) and emits particles with known values into them:
 - `A` (custom data module on, Custom1 a 4-component constant vector), with two scripts receiving
   OnParticleUpdateJobScheduled, a disabled one, and one declaring the message with a
   `ParticleSystemJobData` parameter (as UniTask's trigger does);
+- `NoAxis` (plain particles), `MeshAlloc` (AllocateMeshIndexAttribute, billboards), `Pending` (a job
+  writing velocities, then SetParticles of new positions in LateUpdate);
 - `Other` (one particle), `Empty` (playing, no particles), `Stopped` (stopped with clearing when it
   is made, after Play On Awake played it), `Paused` (one particle, paused), `Simulated` (one particle,
   never played, later Simulate), `StopClearLater`/`StopLater` (playing, empty, stopped with and
@@ -34,15 +36,22 @@ Measured:
   ignored."
 - A job sees positions, velocities (without animated velocity), axes of rotation, rotations and
   rotational speeds in radians, 3D start sizes, start colors, the percentage of the lifetime lived,
-  the inverse start lifetime, random seeds and Custom1 as the module made it; Custom2 (off) and the
-  mesh indices (billboards) are arrays that were not created, of the particle count.
+  the inverse start lifetime, random seeds and Custom1 as the module made it; Custom2 (off), the
+  mesh indices (billboards) and the axes of rotation of particles given none are arrays that were not
+  created, of the particle count. AllocateMeshIndexAttribute gives billboards' jobs mesh indices
+  (-1), and a job's write is there in the next frame's job.
 - Writes reach the particles: rotations read back in degrees, the lifetime percentage and inverse
   start lifetime give the remaining and start lifetimes (150 % gives -2 s remaining; 100 % and 150 %
   die at the next update); custom data holds what the job wrote until the module's next run.
 - A later job on the system runs after the earlier one; parallel jobs run each index once, batches
   are (0, 2) and (2, 1).
-- A read of the system before its job has run sees the particles as they were (the job is still in
-  its batch); once the job has run, a read sees its writes before the update ends.
+- A read in the message after scheduling sees the particles as they were. The job runs once the
+  messages are over, alongside the frame: a read after it has run (waited for in LateUpdate) sees its
+  writes before the update ends. Whether a LateUpdate read without waiting comes before or after the
+  job depends on timing, so it is not recorded. SetParticles in LateUpdate keeps the job's velocities
+  with the script's positions.
 
-Unmeasured: Mesh-mode mesh indices, jobs scheduled from a Simulate call's message (Unbound completes
-them before the call returns), sub-emitters, world simulation space, other releases.
+Unmeasured: Mesh-mode mesh indices, a script's write in the message while its job has not run, jobs
+scheduled from a Simulate call's message (Unbound completes them before the call returns),
+sub-emitters, world simulation space, other releases. Unbound finishes the messages' jobs right after
+the messages, so its scripts always see a job's writes after the update.

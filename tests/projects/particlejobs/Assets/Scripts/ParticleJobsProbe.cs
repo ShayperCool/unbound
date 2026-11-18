@@ -146,6 +146,38 @@ namespace ParticleJobsProbe
         }
     }
 
+    /// <summary>What a job sees of the axis and mesh index arrays, and a mesh index write.</summary>
+    struct AttributeJob : IJobParticleSystem
+    {
+        public NativeArray<float> Out;
+
+        public void Execute(ParticleSystemJobData d)
+        {
+            Out[0] = d.axisOfRotations.x.IsCreated ? 1f : 0f;
+            if (d.axisOfRotations.x.IsCreated)
+            {
+                var axis = d.axisOfRotations[0];
+                Out[1] = axis.x; Out[2] = axis.y; Out[3] = axis.z;
+            }
+            Out[4] = d.meshIndices.IsCreated ? 1f : 0f;
+            if (d.meshIndices.IsCreated)
+            {
+                Out[5] = d.meshIndices[0];
+                var meshes = d.meshIndices;
+                meshes[0] = 3;
+            }
+        }
+    }
+
+    struct VelocityJob : IJobParticleSystem
+    {
+        public void Execute(ParticleSystemJobData d)
+        {
+            var velocities = d.velocities;
+            for (int i = 0; i < d.count; i++) velocities[i] = new Vector3(0f, 0f, 7f);
+        }
+    }
+
     struct CountJob : IJobParticleSystem
     {
         public NativeArray<int> Count;
@@ -185,6 +217,9 @@ namespace ParticleJobsProbe
         readonly Dictionary<string, int> m_Calls = new Dictionary<string, int>();
         readonly List<string> m_Logs = new List<string>();
 
+        ParticleSystem m_NoAxis, m_MeshAlloc, m_Pending;
+        NativeArray<float> m_NoAxisOut, m_MeshAllocOut, m_MeshAllocNext;
+        JobHandle m_AttributeHandles;
         ParticleSystem m_A, m_Other, m_Empty, m_Stopped, m_Paused, m_Simulated, m_StopClearLater, m_StopLater, m_NeverPlayed;
         readonly Dictionary<string, string> m_Phases = new Dictionary<string, string>();
         JobCallback m_ACallback;
@@ -316,6 +351,9 @@ namespace ParticleJobsProbe
             m_Counts = new NativeArray<int>(8, Allocator.Persistent);
             m_Batches = new NativeArray<int>(8, Allocator.Persistent);
             m_Count = new NativeArray<int>(1, Allocator.Persistent);
+            m_NoAxisOut = new NativeArray<float>(8, Allocator.Persistent);
+            m_MeshAllocOut = new NativeArray<float>(8, Allocator.Persistent);
+            m_MeshAllocNext = new NativeArray<float>(8, Allocator.Persistent);
 
             m_A = MakeSystem("A", true, Vector3.zero);
             m_ACallback = m_A.GetComponent<JobCallback>();
@@ -337,6 +375,13 @@ namespace ParticleJobsProbe
             m_NeverPlayed = MakeSystem("NeverPlayed", false, new Vector3(80f, 0f, 0f), neverPlay: true);
             m_StopClearLater.Play();
             m_StopLater.Play();
+            m_NoAxis = MakeSystem("NoAxis", false, new Vector3(90f, 0f, 0f));
+            m_MeshAlloc = MakeSystem("MeshAlloc", false, new Vector3(100f, 0f, 0f));
+            m_MeshAlloc.AllocateMeshIndexAttribute();
+            m_Pending = MakeSystem("Pending", false, new Vector3(110f, 0f, 0f));
+            m_NoAxis.Play();
+            m_MeshAlloc.Play();
+            m_Pending.Play();
             m_A.Play();
             m_Other.Play();
             m_Empty.Play();
@@ -359,6 +404,14 @@ namespace ParticleJobsProbe
             if (m_InSimulate) m_SimulateCalls += callback.label + " ";
             // The order of different systems' messages is not recorded (Unity does not specify it).
             if (callback.label == "A" || callback.label == "A2") m_Frame.Add("message " + callback.label);
+            if (m_Phase == 1 && (callback.label == "NoAxis" || callback.label == "MeshAlloc"))
+            {
+                var job = new AttributeJob { Out = callback.label == "NoAxis" ? m_NoAxisOut : m_MeshAllocOut };
+                m_AttributeHandles = JobHandle.CombineDependencies(m_AttributeHandles, job.Schedule(callback.GetComponent<ParticleSystem>()));
+            }
+            if (m_Phase == 2 && callback.label == "Pending") new VelocityJob().Schedule(m_Pending);
+            if (m_Phase == 2 && callback.label == "MeshAlloc")
+                m_AttributeHandles = new AttributeJob { Out = m_MeshAllocNext }.Schedule(m_MeshAlloc);
             if (callback.label == "Other" && m_Mode == "other")
             {
                 m_Mode = "";
@@ -404,6 +457,10 @@ namespace ParticleJobsProbe
                         new Color32(255, 255, 255, 255), 4f, 5678u);
                     Emit(m_A, new Vector3(-1f, 0f, 0f), Vector3.zero, Vector3.one, Vector3.zero, Vector3.zero,
                         new Color32(1, 2, 3, 4), 2f, 77u);
+                    // Plain particles: no axis of rotation or mesh index given.
+                    m_NoAxis.Emit(2);
+                    m_MeshAlloc.Emit(2);
+                    m_Pending.Emit(2);
                     Emit(m_Other, Vector3.zero, Vector3.zero, Vector3.one, Vector3.zero, Vector3.zero, new Color32(1, 1, 1, 1), 4f, 1u);
                     Emit(m_Paused, Vector3.zero, Vector3.zero, Vector3.one, Vector3.zero, Vector3.zero, new Color32(1, 1, 1, 1), 4f, 1u);
                     m_Paused.Pause();
@@ -414,10 +471,18 @@ namespace ParticleJobsProbe
                     m_Mode = "read";
                     break;
                 case 2:
+                {
                     m_Mode = "write";
                     break;
+                }
                 case 3:
                 {
+                    m_AttributeHandles.Complete();
+                    Put("meshAlloc.meshIndex0.nextFrame", m_MeshAllocNext[5]);
+                    var pending = Particles(m_Pending);
+                    Put("pending.p0.position", pending[0].position);
+                    Put("pending.p0.velocity", pending[0].velocity);
+                    Put("pending.p1.position", pending[1].position);
                     var p = Particles(m_A);
                     Put("write.count", p.Length);
                     for (int i = 0; i < p.Length; i++)
@@ -468,13 +533,18 @@ namespace ParticleJobsProbe
                     m_Mode = "other";
                     break;
                 case 8:
-                    foreach (var pair in m_Calls) Put("messages." + pair.Key, pair.Value);
-                    foreach (var pair in m_Phases) Put("messagePhases." + pair.Key, pair.Value);
+                    // Sorted: the order of different systems' messages is not Unity's to keep.
+                    var labels = new List<string>(m_Calls.Keys);
+                    labels.Sort(StringComparer.Ordinal);
+                    foreach (var label in labels) Put("messages." + label, m_Calls[label]);
+                    foreach (var label in labels)
+                        if (m_Phases.TryGetValue(label, out var phases)) Put("messagePhases." + label, phases);
                     Put("messages.parameter", m_ParameterCalls);
                     Put("messages.parameter.count", m_ParameterCount);
                     Put("logs", string.Join(" | ", m_Logs));
                     Put("complete", true);
                     File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable(Variable), "values.jsonl"), m_Out.ToString());
+                    m_NoAxisOut.Dispose(); m_MeshAllocOut.Dispose(); m_MeshAllocNext.Dispose();
                     m_Values.Dispose(); m_Seeds.Dispose(); m_Info.Dispose(); m_Seen.Dispose();
                     m_Hits.Dispose(); m_Counts.Dispose(); m_Batches.Dispose(); m_Count.Dispose();
                     EditorApplication.Exit(0);
@@ -489,6 +559,13 @@ namespace ParticleJobsProbe
             {
                 case 1:
                 {
+                    m_AttributeHandles.Complete();
+                    Put("noAxis.axis.created", m_NoAxisOut[0]);
+                    Put("noAxis.axis0", new Vector3(m_NoAxisOut[1], m_NoAxisOut[2], m_NoAxisOut[3]));
+                    Put("noAxis.meshIndices.created", m_NoAxisOut[4]);
+                    Put("meshAlloc.meshIndices.created", m_MeshAllocOut[4]);
+                    Put("meshAlloc.meshIndex0", m_MeshAllocOut[5]);
+                    Put("noAxis.axisAfterJob", Particles(m_NoAxis)[0].axisOfRotation);
                     Put("frame.order", string.Join(", ", m_Frame));
                     m_Handle.Complete();
                     Put("read.count", m_Info[0]);
@@ -529,8 +606,14 @@ namespace ParticleJobsProbe
                 }
                 case 2:
                 {
-                    Put("sync.lateUpdate.position0", Particles(m_A)[0].position);
-                    // The job finished (it runs once its batch is out), the update has not ended.
+                    // SetParticles after the system's job (velocities) was scheduled; it may or may not have run.
+                    var pending = Particles(m_Pending);
+                    // Whether the job has run by now depends on timing: not recorded.
+                    pending[0].position = new Vector3(5f, 5f, 5f);
+                    pending[1].position = new Vector3(6f, 6f, 6f);
+                    m_Pending.SetParticles(pending, pending.Length);
+                    // A read here may or may not see the job's writes (the job runs once its batch is
+                    // out, alongside the frame): not recorded. The job finished (it runs once its batch is out), the update has not ended.
                     JobHandle.ScheduleBatchedJobs();
                     var waited = System.Diagnostics.Stopwatch.StartNew();
                     while (!m_Handle.IsCompleted && waited.ElapsedMilliseconds < 5000) System.Threading.Thread.Sleep(1);
