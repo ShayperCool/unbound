@@ -1,0 +1,10 @@
+{
+  "frame.png": {
+    "mean": 0.09, "worst": 10, "over8": 5,
+    "reason": "Against the Metal reference (macOS Editor, Apple M2 Pro): five pixels on the mirror spheres' top silhouettes (rows 24 and 25 from the top) differ by up to 10; every other pixel within 7. Two identical Unbound runs."
+  },
+  "sun.png": {
+    "mean": 0.63, "worst": 37, "over8": 10,
+    "reason": "The procedural sky's simple sun disk, as against the OpenGL Core reference (image_limits.json): the disk's edge pixels differ by up to 37; the disk itself and the sky elsewhere within 2. Two identical Unbound runs."
+  }
+}
