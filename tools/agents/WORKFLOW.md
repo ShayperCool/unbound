@@ -91,14 +91,15 @@ tools/validation/README.md for why that is unsafe).
    their limitations. Keep three things apart: what is documented, what the reference capture
    shows, and your own hypotheses.
 3. Probe: extend an existing `tests/projects/<probe>` or add one.
-   - Exception for crash-class defects (see `AGENTS.md`, "Unity contracts and parity decisions"):
-     a fix for an exception, crash, object or component Unbound fails to create, or API member
-     that throws where Unity works, with Unity's behaviour unambiguous (documented for the
-     release, or plainly no throw and no log in the Editor), skips the Editor probe. A managed or Rust test that fails before
-     the fix and passes after it, plus a rerun of the project where the failure was seen (a debug
-     check, not named in Git), replace it; the gap row and the report then name that test. Probe as below when the resulting values, objects, order, callbacks or log lines are in
-     doubt, or whether Unity creates the object at all, and for every value, visual, timing or
-     order difference.
+   - Exception for crash-class defects (see `AGENTS.md`, "Unity contracts and parity decisions"): a
+     fix for an exception, crash, object or component Unbound fails to create, or API member that
+     throws where Unity works, with Unity's behaviour unambiguous (documented for the release, or
+     plainly no throw and no log in the Editor), skips the Editor probe. A managed or Rust test
+     that fails before the fix and passes after it, plus a rerun of the project where the failure
+     was seen (a debug check, not named in Git), replace it; the gap row and the report then name
+     that test. Probe as below when the resulting values, objects, order, callbacks or log lines
+     are in doubt, or whether Unity creates the object at all, and for every value, visual, timing
+     or order difference.
    - Record the Unity Editor reference in `Reference/unity-<version>`.
    - Record it twice; publish one copy if both captures are identical, and keep the repeat outside
      Git.
