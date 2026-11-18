@@ -1,8 +1,11 @@
 {
-  "commands": ["python3 tests/projects/packageresolve/run.py gate"],
+  "commands": [
+    "python3 tests/projects/packageresolve/run.py gate"
+  ],
   "summary": "packageresolve: .*",
   "engine_paths": [
     "crates/unbound-project/src/packages.rs",
-    "crates/unbound-compat/src/packages.rs"
+    "crates/unbound-compat/src/packages.rs",
+    "crates/unbound-runtime/src/view.rs"
   ]
 }
