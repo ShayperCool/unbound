@@ -17,6 +17,7 @@ namespace Unbound.Runtime
     internal static partial class FrameBuilder
     {
         static Material s_DeferredShading, s_DeferredReflections, s_DeferredReflectionsOver;
+        static bool s_CustomShadingReported;
         static readonly int s_SrcBlend = Shader.PropertyToID("_SrcBlend");
         static readonly int s_DstBlend = Shader.PropertyToID("_DstBlend");
         static readonly int s_LightAsQuad = Shader.PropertyToID("_LightAsQuad");
@@ -114,68 +115,45 @@ namespace Unbound.Runtime
             // Reflections: the default reflection, then each probe over it, into a buffer added to
             // the light buffer.
             RunEvent(camera, CameraEvent.BeforeReflections, light);
-            s_DeferredReflections ??= new Material(Shader.Find("Hidden/Internal-DeferredReflections")) { hideFlags = HideFlags.HideAndDontSave };
+            // The project's reflections shader; none, or No Support, draws no reflections.
+            var reflectionsShading = GraphicsSettings.DeferredReflectionsDisabled ? null
+                : GraphicsSettings.RendererMaterial(BuiltinShaderType.DeferredReflections, ref s_DeferredReflections);
             var reflections = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGBHalf, 0) { sRGB = false });
             ulong reflectionsHandle = TextureHandles.Of(reflections);
             SetupCamera(reflectionsHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
             GfxStream.SetTarget(reflectionsHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
             GfxStream.Clear(GfxStream.ClearColor, Color.clear);
-            ulong reflectionMaterial = s_DeferredReflections.Sync();
-            // A probe blends over what is there by its falloff (the shader's blend factors).
-            if (s_DeferredReflectionsOver == null)
-            {
-                s_DeferredReflectionsOver = new Material(s_DeferredReflections) { hideFlags = HideFlags.HideAndDontSave };
-                s_DeferredReflectionsOver.SetFloat(s_SrcBlend, (float)BlendMode.SrcAlpha);
-                s_DeferredReflectionsOver.SetFloat(s_DstBlend, (float)BlendMode.OneMinusSrcAlpha);
-            }
-            ulong reflectionOverMaterial = s_DeferredReflectionsOver.Sync();
-            // The default reflection first; a scene without one reflects black, which adds nothing.
-            var defaultReflection = ReflectionProbe.defaultTexture;
-            if (!ReferenceEquals(defaultReflection, ReflectionProbe.Black))
-            {
-                var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
-                DrawReflection(quadMesh, quadModel, reflectionMaterial, defaultReflection, decode,
-                    new Vector3(-1e6f, -1e6f, -1e6f), new Vector3(1e6f, 1e6f, 1e6f), Vector3.zero, false, 1f);
-            }
-            var probes = new List<ReflectionProbe>();
-            foreach (var probe in ReflectionProbe.s_Enabled)
-                if (probe && probe.isActiveAndEnabled && (probe.texture != null || probe.mode == ReflectionProbeMode.Realtime)) probes.Add(probe);
-            // Less important and larger probes first: smaller, more important ones blend over them.
-            // The probes' placement as the frame began (ReflectionProbe.Drawn).
-            probes.Sort((a, b) =>
-            {
-                var pa = a.Drawn;
-                var pb = b.Drawn;
-                int c = pa.Importance.CompareTo(pb.Importance);
-                if (c != 0) return c;
-                var sa = pa.Size;
-                var sb = pb.Size;
-                return (sb.x * sb.y * sb.z).CompareTo(sa.x * sa.y * sa.z);
-            });
-            foreach (var probe in probes)
-            {
-                var placement = probe.Drawn;
-                var box = placement.Bounds;
-                DrawReflection(quadMesh, quadModel, reflectionOverMaterial, probe.texture ?? ReflectionProbe.Black, probe.textureHDRDecodeValues,
-                    box.min, box.max, placement.Position, placement.BoxProjection, Mathf.Max(placement.BlendDistance, 1e-4f));
-            }
+            if (reflectionsShading != null) DrawReflections(reflectionsShading, quadMesh, quadModel);
             SetupCamera(lightHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
             GfxStream.GlobalTexture("_CameraReflectionsTexture", reflectionsHandle);
-            GfxStream.Draw(quadMesh, 0, reflectionMaterial, 1, quadModel, Color.white);
+            if (reflectionsShading != null) GfxStream.Draw(quadMesh, 0, reflectionsShading.Sync(), 1, quadModel, Color.white);
             RunEvent(camera, CameraEvent.AfterReflections, light);
 
-            // Lighting: each light over the whole view (outside its range it adds nothing).
+            // Lighting: each light over the whole view (outside its range it adds nothing), with
+            // the project's deferred shading shader (none: no light is drawn).
             RunEvent(camera, CameraEvent.BeforeLighting, light);
             GfxStream.SetTarget(lightHandle, GfxStream.NoTexture);
             GfxStream.Viewport(viewport);
-            s_DeferredShading ??= new Material(Shader.Find("Hidden/Internal-DeferredShading")) { hideFlags = HideFlags.HideAndDontSave };
-            ulong shadingMaterial = s_DeferredShading.Sync();
+            var shading = GraphicsSettings.RendererMaterial(BuiltinShaderType.DeferredShading, ref s_DeferredShading);
+            if (shading != null && !s_CustomShadingReported && shading.shader.name != "Hidden/Internal-DeferredShading")
+            {
+                // Measured differences (tests/projects/builtinfx settings_deferred*_custom): the
+                // Editor draws a custom shader's light pass over the scene's pixels only, and an
+                // LDR camera's light buffer decode with its second pass; Unbound's light buffer is
+                // linear and its light quads cover the view.
+                s_CustomShadingReported = true;
+                Debug.LogWarning("Unbound: a custom deferred shading shader draws its light pass over the background too, and not its final pass (an LDR camera's light buffer decode): Unbound's light buffer is linear and not masked to the scene");
+            }
             var lights = new List<Light>();
-            if (ForwardLights.Main != null) lights.Add(ForwardLights.Main);
-            lights.AddRange(ForwardLights.Lights);
+            if (shading != null)
+            {
+                if (ForwardLights.Main != null) lights.Add(ForwardLights.Main);
+                lights.AddRange(ForwardLights.Lights);
+            }
+            ulong shadingMaterial = shading != null ? shading.Sync() : 0;
             int mask = camera.cullingMask;
             foreach (var l in lights)
             {
@@ -221,6 +199,52 @@ namespace Unbound.Runtime
             GfxStream.Viewport(viewport);
             GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
             return deferred.Count;
+        }
+
+        /// <summary>The default reflection, then each probe over it, drawn with the reflections
+        /// shader's first pass into the bound reflections buffer.</summary>
+        static void DrawReflections(Material shading, ulong quadMesh, Matrix4x4 quadModel)
+        {
+            ulong material = shading.Sync();
+            // A probe blends over what is there by its falloff (the shader's blend factors).
+            if (s_DeferredReflectionsOver == null || s_DeferredReflectionsOver.shader != shading.shader)
+            {
+                if (s_DeferredReflectionsOver != null) UnityEngine.Object.DestroyImmediate(s_DeferredReflectionsOver);
+                s_DeferredReflectionsOver = new Material(shading) { hideFlags = HideFlags.HideAndDontSave };
+                s_DeferredReflectionsOver.SetFloat(s_SrcBlend, (float)BlendMode.SrcAlpha);
+                s_DeferredReflectionsOver.SetFloat(s_DstBlend, (float)BlendMode.OneMinusSrcAlpha);
+            }
+            ulong overMaterial = s_DeferredReflectionsOver.Sync();
+            // The default reflection first; a scene without one reflects black, which adds nothing.
+            var defaultReflection = ReflectionProbe.defaultTexture;
+            if (!ReferenceEquals(defaultReflection, ReflectionProbe.Black))
+            {
+                var decode = ReflectionProbe.defaultTextureHDRDecodeValues;
+                DrawReflection(quadMesh, quadModel, material, defaultReflection, decode,
+                    new Vector3(-1e6f, -1e6f, -1e6f), new Vector3(1e6f, 1e6f, 1e6f), Vector3.zero, false, 1f);
+            }
+            var probes = new List<ReflectionProbe>();
+            foreach (var probe in ReflectionProbe.s_Enabled)
+                if (probe && probe.isActiveAndEnabled && (probe.texture != null || probe.mode == ReflectionProbeMode.Realtime)) probes.Add(probe);
+            // Less important and larger probes first: smaller, more important ones blend over them.
+            // The probes' placement as the frame began (ReflectionProbe.Drawn).
+            probes.Sort((a, b) =>
+            {
+                var pa = a.Drawn;
+                var pb = b.Drawn;
+                int c = pa.Importance.CompareTo(pb.Importance);
+                if (c != 0) return c;
+                var sa = pa.Size;
+                var sb = pb.Size;
+                return (sb.x * sb.y * sb.z).CompareTo(sa.x * sa.y * sa.z);
+            });
+            foreach (var probe in probes)
+            {
+                var placement = probe.Drawn;
+                var box = placement.Bounds;
+                DrawReflection(quadMesh, quadModel, overMaterial, probe.texture ?? ReflectionProbe.Black, probe.textureHDRDecodeValues,
+                    box.min, box.max, placement.Position, placement.BoxProjection, Mathf.Max(placement.BlendDistance, 1e-4f));
+            }
         }
 
         static void DrawReflection(ulong mesh, Matrix4x4 model, ulong material, Texture cube, Vector4 decode, Vector3 min, Vector3 max,

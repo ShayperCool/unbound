@@ -282,43 +282,38 @@ namespace UnityEngine.Tests
 
         static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
 
+        /// <summary>The built-in renderer draws a setting's effect with the setting's shader
+        /// whatever the mode, keeps the last one through SetCustomShader(null), has none while the
+        /// setting never had one, and falls back to Unity's own for a setting the project does not
+        /// list (tests/projects/builtinfx settings.*).</summary>
         [Fact]
-        public void CustomBuiltInShadersTheRendererDoesNotApplyAreReported()
+        public void TheRendererDrawsWithTheSettingsShaderAndKeepsTheLastOne()
         {
-            const string Custom = "0123456789abcdef0123456789abcdef";
             try
             {
-                using (var logs = new RecordedLogs())
-                {
-                    GraphicsSettings.LoadShaderModes(
-                        new Dictionary<string, int> { ["m_ScreenSpaceShadows"] = 2, ["m_LensFlare"] = 2, ["m_Deferred"] = 1, ["m_DepthNormals"] = 0 },
-                        new Dictionary<string, (string, long)>
-                        {
-                            ["m_ScreenSpaceShadows"] = (Custom, 4800000),
-                            // Controls: a built-in shader in custom mode, a custom shader in built-in mode, a disabled type.
-                            ["m_LensFlare"] = ("0000000000000000f000000000000000", 102),
-                            ["m_Deferred"] = (Custom, 4800000),
-                            ["m_DepthNormals"] = (Custom, 4800000),
-                        });
-                    var warning = Assert.Single(logs.Logged, l => l.Contains("custom built-in shaders"));
-                    Assert.StartsWith("Warning: Unbound: the project's custom built-in shaders (m_ScreenSpaceShadows) are not applied", warning);
-                }
-
-                // A custom shader is reported only for a type in custom mode.
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int> { ["m_LightHalo"] = 1, ["m_MotionVectors"] = 1 });
+                // Listed without a shader that resolves: none until one is set.
+                Assert.Null(GraphicsSettings.RendererShader(BuiltinShaderType.MotionVectors));
                 var shader = CustomShader();
-                Assert.NotNull(shader);
-                int custom = Hits("GraphicsSettings.SetCustomShader");
-                GraphicsSettings.SetCustomShader(BuiltinShaderType.MotionVectors, shader);
-                Assert.Equal(custom, Hits("GraphicsSettings.SetCustomShader"));
-                GraphicsSettings.SetCustomShader(BuiltinShaderType.ScreenSpaceShadows, shader);
-                Assert.Equal(custom + 1, Hits("GraphicsSettings.SetCustomShader"));
-
-                // A mode other than the built-in shader is reported.
-                int mode = Hits("GraphicsSettings.SetShaderMode");
-                GraphicsSettings.SetShaderMode(BuiltinShaderType.MotionVectors, BuiltinShaderMode.UseBuiltin);
-                Assert.Equal(mode, Hits("GraphicsSettings.SetShaderMode"));
-                GraphicsSettings.SetShaderMode(BuiltinShaderType.MotionVectors, BuiltinShaderMode.Disabled);
-                Assert.Equal(mode + 1, Hits("GraphicsSettings.SetShaderMode"));
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.LightHalo, shader);
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.LightHalo, BuiltinShaderMode.Disabled);
+                Assert.Same(shader, GraphicsSettings.RendererShader(BuiltinShaderType.LightHalo));
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.LightHalo, null);
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.LightHalo, BuiltinShaderMode.UseBuiltin);
+                Assert.Null(GraphicsSettings.GetCustomShader(BuiltinShaderType.LightHalo));
+                Assert.Same(shader, GraphicsSettings.RendererShader(BuiltinShaderType.LightHalo));
+                // One material per shader, made anew when the shader changes.
+                Material cached = null;
+                var first = GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref cached);
+                Assert.Same(shader, first.shader);
+                Assert.Same(first, GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref cached));
+                var other = Own(UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/RuntimeApis/Other\" { SubShader { Pass { } } }"));
+                GraphicsSettings.SetCustomShader(BuiltinShaderType.LightHalo, other);
+                var second = GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref cached);
+                Assert.Same(other, second.shader);
+                Assert.NotSame(first, second);
+                // Control: a setting the project does not list draws with Unity's own shader.
+                Assert.Same(Shader.Find("Hidden/Internal-Flare"), GraphicsSettings.RendererShader(BuiltinShaderType.LensFlare));
             }
             finally
             {
@@ -326,42 +321,33 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>The load-time report needs a custom-mode shader the built-in renderer could
-        /// draw with: none when every quality level uses a render pipeline, none for a project
-        /// whose shader list is missing (a custom mode without a shader resolves to none).</summary>
+        /// <summary>No Support switches off screen-space shadows (with the Editor's warning, once
+        /// per mode change) and deferred reflections, not the other settings' effects.</summary>
         [Fact]
-        public void CustomBuiltInShadersAreReportedOnlyWhereTheBuiltInRendererDraws()
+        public void NoSupportSwitchesOffScreenSpaceShadowsAndDeferredReflections()
         {
-            const string Custom = "0123456789abcdef0123456789abcdef";
-            var modes = new Dictionary<string, int> { ["m_ScreenSpaceShadows"] = 2 };
-            var shaders = new Dictionary<string, (string, long)> { ["m_ScreenSpaceShadows"] = (Custom, 4800000) };
             try
             {
+                GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+                Assert.False(GraphicsSettings.ScreenShadowsDisabled());
+                Assert.False(GraphicsSettings.DeferredReflectionsDisabled);
                 using (var logs = new RecordedLogs())
                 {
-                    GraphicsSettings.LoadShaderModes(modes, shaders, builtinRenderer: false);
-                    Assert.DoesNotContain(logs.Logged, l => l.Contains("custom built-in shaders"));
-                    Assert.Equal(BuiltinShaderMode.UseCustom, GraphicsSettings.GetShaderMode(BuiltinShaderType.ScreenSpaceShadows));
-                    GraphicsSettings.LoadShaderModes(modes, null);
-                    Assert.DoesNotContain(logs.Logged, l => l.Contains("custom built-in shaders"));
-                    Assert.Null(GraphicsSettings.GetCustomShader(BuiltinShaderType.ScreenSpaceShadows));
-                    // Control: the built-in renderer with the shader.
-                    GraphicsSettings.LoadShaderModes(modes, shaders);
-                    Assert.Single(logs.Logged, l => l.Contains("custom built-in shaders"));
+                    GraphicsSettings.SetShaderMode(BuiltinShaderType.ScreenSpaceShadows, BuiltinShaderMode.Disabled);
+                    Assert.True(GraphicsSettings.ScreenShadowsDisabled());
+                    Assert.True(GraphicsSettings.ScreenShadowsDisabled());
+                    Assert.Single(logs.Logged, l => l == "Warning: Screenspace cascaded shadow map support is disabled in graphics settings");
+                    GraphicsSettings.SetShaderMode(BuiltinShaderType.ScreenSpaceShadows, BuiltinShaderMode.UseBuiltin);
+                    Assert.False(GraphicsSettings.ScreenShadowsDisabled());
+                    GraphicsSettings.SetShaderMode(BuiltinShaderType.ScreenSpaceShadows, BuiltinShaderMode.Disabled);
+                    Assert.True(GraphicsSettings.ScreenShadowsDisabled());
+                    Assert.Equal(2, logs.Logged.Count(l => l.Contains("Screenspace cascaded shadow map support")));
                 }
-                var project = new GraphicsSettings.ProjectRenderPipeline();
-                Assert.True(project.UsesBuiltinRenderer);
-                project.Default = (Custom, 11400000);
-                Assert.False(project.UsesBuiltinRenderer);
-                // A level without its own pipeline uses the default one.
-                project.QualityLevels.Add(null);
-                Assert.False(project.UsesBuiltinRenderer);
-                project.QualityLevels.Clear();
-                project.Default = null;
-                project.QualityLevels.Add((Custom, 11400000));
-                Assert.False(project.UsesBuiltinRenderer);
-                project.QualityLevels.Add(null);
-                Assert.True(project.UsesBuiltinRenderer);
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.DeferredReflections, BuiltinShaderMode.Disabled);
+                Assert.True(GraphicsSettings.DeferredReflectionsDisabled);
+                // Control: No Support of another setting keeps its shader drawing.
+                GraphicsSettings.SetShaderMode(BuiltinShaderType.LensFlare, BuiltinShaderMode.Disabled);
+                Assert.NotNull(GraphicsSettings.RendererShader(BuiltinShaderType.LensFlare));
             }
             finally
             {

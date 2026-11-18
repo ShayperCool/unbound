@@ -69,6 +69,7 @@ namespace Unbound.Runtime
             s_ScreenShadowMask = null;
             var light = LightingGlobals.MainLightOf();
             if (light == null || light.shadows == LightShadows.None || QualitySettings.shadows == ShadowQuality.Disable) return false;
+            if (GraphicsSettings.ScreenShadowsDisabled()) return false;
             var mask = RenderDirectionalShadow(light, camera, context, width, height);
             if (mask == null) return false;
             GfxStream.GlobalTexture("_ShadowMapTexture", TextureHandles.Of(mask));
@@ -145,12 +146,33 @@ namespace Unbound.Runtime
                 new Vector4(0.5f * sx + ox, 0.5f * sy + oy, 0.5f, 1f));
         }
 
+        /// <summary>The collector's pass for hard or soft shadows: the first pass of its SubShader
+        /// tagged ShadowmapFilter HardShadow or PCF_SOFT (Unity's collector), else the first
+        /// pass (a custom collector without those tags draws with it: measured,
+        /// tests/projects/builtinfx settings_screenSpaceShadows_custom, soft shadows).</summary>
+        static int CollectorPass(Shader shader, bool soft)
+        {
+            var declarations = Unbound.Runtime.ShaderDeclarations.Of(shader);
+            if (!declarations.SubShadersKnown) return 0;
+            string filter = soft ? "PCF_SOFT" : "HardShadow";
+            int pass = 0;
+            foreach (var sub in declarations.SubShaders)
+            {
+                if (sub.Tags.TryGetValue("ShadowmapFilter", out var tag) && tag == filter) return pass;
+                pass += sub.Passes.Count;
+            }
+            return 0;
+        }
+
         /// <summary>A directional light's shadows collected into a screen-space mask (what its
         /// passes read with SHADOWS_SCREEN); null when it casts none.</summary>
         static RenderTexture RenderDirectionalShadow(Light light, Camera camera, CameraContext context, int width, int height)
         {
             float distance = Mathf.Min(QualitySettings.shadowDistance, camera.farClipPlane);
             if (distance <= camera.nearClipPlane) return null;
+            // The project's collector shader (none: no screen-space shadows).
+            var collector = GraphicsSettings.RendererMaterial(BuiltinShaderType.ScreenSpaceShadows, ref s_Collector);
+            if (collector == null) return null;
             if (QualitySettings.shadowNearPlaneOffset != 3f)
                 Stubs.Ignored("QualitySettings.shadowNearPlaneOffset", "directional shadow maps keep the near plane measured at the default offset of 3");
             int cascades = BuiltinShadowCascades(camera.orthographic);
@@ -233,7 +255,6 @@ namespace Unbound.Runtime
             RunLightEvent(camera, light, LightEvent.AfterShadowMap, shadowMap);
 
             // Collect into the screen-space mask.
-            s_Collector ??= new Material(Shader.Find("Hidden/Internal-ScreenSpaceShadows")) { hideFlags = HideFlags.HideAndDontSave };
             var mask = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = false });
             SetupCamera(TextureHandles.Of(mask), new Rect(0, 0, width, height), CameraClearFlags.SolidColor, Color.white, context.View, context.Projection, 0);
             GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(depth));
@@ -255,7 +276,7 @@ namespace Unbound.Runtime
             var model = (context.Projection * context.View).inverseDoublePrecision;
             // Its shader declares _ShadowMapTexture, so the map is the draw's, not a global.
             s_CollectorProperties[s_ShadowMapTextureId] = shadowMap;
-            GfxStream.Draw(quad.Sync(), 0, s_Collector.Sync(), soft ? 2 : 0, model, Color.white, properties: s_CollectorProperties);
+            GfxStream.Draw(quad.Sync(), 0, collector.Sync(), CollectorPass(collector.shader, soft), model, Color.white, properties: s_CollectorProperties);
             s_CollectorProperties.Clear();
             RunLightEvent(camera, light, LightEvent.AfterScreenspaceMask, mask);
             GfxStream.Keyword("SHADOWS_SPLIT_SPHERES", false);

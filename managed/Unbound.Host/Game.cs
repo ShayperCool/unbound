@@ -453,7 +453,7 @@ public static unsafe class Game
         var shaderRefs = new Dictionary<string, (string, long)>();
         foreach (var (setting, reference) in rp.ShaderRefs)
             if (Ref(reference) is { } r) shaderRefs[setting] = r;
-        UnityEngine.Rendering.GraphicsSettings.LoadShaderModes(rp.ShaderModes, shaderRefs, project.UsesBuiltinRenderer);
+        UnityEngine.Rendering.GraphicsSettings.LoadShaderModes(rp.ShaderModes, shaderRefs);
         UnityEngine.Camera.s_DefaultRenderingPath = (UnityEngine.RenderingPath)rp.DefaultRenderingPath;
         if (rp.TransparencySortAxis.Count == 3)
             UnityEngine.Rendering.GraphicsSettings.transparencySortAxis = new UnityEngine.Vector3(rp.TransparencySortAxis[0], rp.TransparencySortAxis[1], rp.TransparencySortAxis[2]);

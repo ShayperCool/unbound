@@ -26,7 +26,6 @@ namespace Unbound.Runtime
             return false;
         }
 
-        static Shader s_DepthNormalsShader;
         static bool s_DepthNormalsDrawn;
         static readonly Dictionary<(Material, Shader), (Material Copy, int Version)> s_ReplacementMaterials = new Dictionary<(Material, Shader), (Material, int)>();
 
@@ -104,22 +103,24 @@ namespace Unbound.Runtime
         /// <summary>_CameraDepthNormalsTexture: view-space normals and linear depth packed into
         /// ARGB32 by Unity's Hidden/Internal-DepthNormalsTexture, which replaces each object's
         /// shader by its SubShader of the same RenderType (objects of another RenderType, or none,
-        /// are left out), cleared to the far plane facing the camera.</summary>
+        /// are left out), cleared to the far plane facing the camera; or by the project's
+        /// depth-normals shader, and not at all while that setting never had one
+        /// (<see cref="GraphicsSettings.RendererShader"/>).</summary>
         static void RenderDepthNormals(Camera camera, CameraContext context, int width, int height)
         {
-            s_DepthNormalsShader ??= Shader.Find("Hidden/Internal-DepthNormalsTexture");
+            var depthNormalsShader = GraphicsSettings.RendererShader(BuiltinShaderType.DepthNormals);
+            if (depthNormalsShader == null) return;
             var texture = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.D24_UNorm_S8_UInt));
             texture.filterMode = FilterMode.Point;
             SetupCamera(TextureHandles.Of(texture), new Rect(0, 0, width, height), CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
             GfxStream.Clear((byte)(GfxStream.ClearColor | GfxStream.ClearDepth | GfxStream.ClearStencil), new Color(0.5f, 0.5f, 1f, 1f));
             RunEvent(camera, CameraEvent.BeforeDepthNormalsTexture, texture);
-            if (s_DepthNormalsShader != null)
             {
                 foreach (var item in s_Items)
                 {
                     var info = ShaderPassInfo.Of(item.Material.shader);
                     if (info == null || !info.Tags.TryGetValue("RenderType", out var type) || string.IsNullOrEmpty(type)) continue;
-                    var replacement = Shader.Replacement(s_DepthNormalsShader, "RenderType", type);
+                    var replacement = Shader.Replacement(depthNormalsShader, "RenderType", type);
                     var replaced = ShaderPassInfo.Of(replacement);
                     if (replaced == null || !replaced.Found) continue;
                     var material = ReplacementMaterial(item.Material, replacement);
@@ -152,8 +153,11 @@ namespace Unbound.Runtime
         /// moves it from where it was made).</summary>
         static void RenderMotionVectors(Camera camera, CameraContext context, int width, int height, int opaqueCount, bool automatic)
         {
+            // The project's motion vector shader; while that setting never had one there is no
+            // motion vector texture (GraphicsSettings.RendererShader).
+            var motionVectors = GraphicsSettings.RendererMaterial(BuiltinShaderType.MotionVectors, ref s_MotionVectors);
+            if (motionVectors == null) return;
             var saved = GfxStream.Current;
-            s_MotionVectors ??= new Material(Shader.Find("Hidden/Internal-MotionVectors")) { hideFlags = HideFlags.HideAndDontSave };
             if (!s_MotionTextures.TryGetValue(camera, out var texture) || !texture || texture.width != width || texture.height != height)
             {
                 if (texture) UnityEngine.Object.DestroyImmediate(texture);
@@ -177,7 +181,7 @@ namespace Unbound.Runtime
             // The camera's motion over the whole view, from the depth texture.
             if (s_CameraDepth != null) GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(s_CameraDepth));
             var quad = MotionQuad(context.Projection);
-            GfxStream.Draw(quad.Sync(), 0, s_MotionVectors.Sync(), 1, (context.Projection * context.View).inverseDoublePrecision, Color.white);
+            GfxStream.Draw(quad.Sync(), 0, motionVectors.Sync(), 1, (context.Projection * context.View).inverseDoublePrecision, Color.white);
             // The moving objects test against the camera's depth texture, bound as their depth
             // buffer (as Unity binds the camera's own).
             if (s_CameraDepth != null)
@@ -187,7 +191,7 @@ namespace Unbound.Runtime
                 GfxStream.SetTarget(TextureHandles.Of(texture), TextureHandles.Of(s_CameraDepth));
                 GfxStream.Viewport(new Rect(0, 0, width, height));
             }
-            ulong internalPass = s_MotionVectors.Sync();
+            ulong internalPass = motionVectors.Sync();
             for (int i = 0; i < opaqueCount; i++)
             {
                 var item = s_Items[i];
@@ -207,7 +211,7 @@ namespace Unbound.Runtime
                 else
                 {
                     var draw = item;
-                    draw.Material = s_MotionVectors;
+                    draw.Material = motionVectors;
                     GfxStream.NextDrawBuiltinMotion(previous, force);
                     EmitDraw(draw, internalPass, 0, false, false);
                 }

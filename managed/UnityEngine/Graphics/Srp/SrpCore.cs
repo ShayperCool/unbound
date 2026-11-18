@@ -548,9 +548,6 @@ namespace UnityEngine.Rendering
             internal (string Guid, long FileId)? Default;
             internal List<(string Guid, long FileId)?> QualityLevels = new List<(string, long)?>();
 
-            /// <summary>Whether some quality level draws with the built-in renderer: no default
-            /// pipeline, and no levels or a level without its own pipeline.</summary>
-            internal bool UsesBuiltinRenderer => Default == null && (QualityLevels.Count == 0 || QualityLevels.Contains(null));
             internal Dictionary<string, (string Guid, long FileId)> GlobalSettings = new Dictionary<string, (string, long)>();
         }
 
@@ -615,36 +612,95 @@ namespace UnityEngine.Rendering
         static readonly (string Guid, long FileId)?[] s_ShaderRefs = new (string, long)?[8];
         static readonly Shader[] s_CustomShaders = new Shader[8];
         static readonly bool[] s_CustomShaderLoaded = new bool[8];
+        /// <summary>Whether the project's graphics settings list each setting.</summary>
+        static readonly bool[] s_ShaderListed = new bool[8];
+        /// <summary>The shader the built-in renderer last drew each setting's effect with.</summary>
+        static readonly Shader[] s_RendererShaders = new Shader[8];
+        /// <summary>Unity's own shader of each setting.</summary>
+        static readonly string[] s_BuiltinShaderNames =
+        {
+            "Hidden/Internal-DeferredShading", "Hidden/Internal-DeferredReflections", null, "Hidden/Internal-ScreenSpaceShadows",
+            "Hidden/Internal-DepthNormalsTexture", "Hidden/Internal-MotionVectors", "Hidden/Internal-Halo", "Hidden/Internal-Flare",
+        };
 
         /// <summary>Takes the project's built-in shader modes and shaders; a type the settings do
         /// not list uses the built-in shader, and its shader is none, as is a disabled type's
         /// (measured: tests/projects/runtimeapis custom_shader.type1, the project's deferred
         /// reflections disabled; disabling one later keeps its shader, set_mode.depth_disabled.shader).
-        /// Not measured: a built-in-mode type whose stored shader is a custom one, and a setting
-        /// missing from the project's graphics settings. A custom-mode setting whose shader is not
-        /// one of Unity's built-in shaders is reported when the built-in renderer can draw the
-        /// project (<paramref name="builtinRenderer"/>: no render pipeline for every quality
-        /// level): it does not draw with it. A project whose quality levels all use a render
-        /// pipeline draws with neither (its pipeline's own shaders), so nothing is reported.</summary>
-        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null,
-            bool builtinRenderer = true)
+        /// Not measured: a built-in-mode type whose stored shader is a custom one.</summary>
+        internal static void LoadShaderModes(IReadOnlyDictionary<string, int> modes, IReadOnlyDictionary<string, (string Guid, long FileId)> shaders = null)
         {
-            List<string> notApplied = null;
             for (int i = 0; i < s_ShaderModes.Length; i++)
             {
                 string setting = s_ShaderModeSettings[i];
+                s_ShaderListed[i] = setting != null && modes.ContainsKey(setting);
                 s_ShaderModes[i] = setting != null && modes.TryGetValue(setting, out int mode) ? (BuiltinShaderMode)mode : BuiltinShaderMode.UseBuiltin;
                 s_ShaderRefs[i] = setting != null && s_ShaderModes[i] != BuiltinShaderMode.Disabled && shaders != null
                     && shaders.TryGetValue(setting, out var reference) ? reference : null;
                 s_CustomShaders[i] = null;
                 s_CustomShaderLoaded[i] = false;
-                if (s_ShaderModes[i] == BuiltinShaderMode.UseCustom && s_ShaderRefs[i] is { } shader
-                    && shader.Guid != Unbound.Runtime.BuiltinShaders.ExtraGuid && shader.Guid != Unbound.Runtime.BuiltinShaders.DefaultGuid)
-                    (notApplied ??= new List<string>()).Add(setting);
+                s_RendererShaders[i] = null;
             }
-            if (notApplied != null && builtinRenderer)
-                Debug.LogWarning("Unbound: the project's custom built-in shaders (" + string.Join(", ", notApplied) + ") are not applied: " + RendererOwnShaders);
+            s_ScreenShadowsDisabledReported = false;
         }
+
+        /// <summary>The shader the built-in renderer draws a setting's effect with when it draws it:
+        /// the setting's shader (<see cref="GetCustomShader"/>) when it has one, whatever its mode;
+        /// without one, the shader it last drew that effect with, and none when it never had one
+        /// (that effect is not drawn). Measured in the Editor (tests/projects/builtinfx settings.*,
+        /// settings_*): a custom shader draws in the custom, built-in and No Support modes alike;
+        /// SetCustomShader(null) keeps the last shader drawn with, and so does a shader set and
+        /// unset again before any draw (settings_halo_unrendered); a depth-normals or motion vector
+        /// texture whose setting never had a shader is not made. Unmeasured, chosen: a setting the
+        /// project's graphics settings do not list draws with Unity's own shader.</summary>
+        internal static Shader RendererShader(BuiltinShaderType type)
+        {
+            int slot = (int)type;
+            var shader = GetCustomShader(type);
+            if (shader != null) s_RendererShaders[slot] = shader;
+            else if (s_RendererShaders[slot] == null && !s_ShaderListed[slot] && s_BuiltinShaderNames[slot] != null)
+                s_RendererShaders[slot] = Shader.Find(s_BuiltinShaderNames[slot]);
+            return s_RendererShaders[slot];
+        }
+
+        /// <summary><paramref name="cached"/>, made anew for the setting's <see cref="RendererShader"/>
+        /// when that changed; null when there is none.</summary>
+        internal static Material RendererMaterial(BuiltinShaderType type, ref Material cached)
+        {
+            var shader = RendererShader(type);
+            if (shader == null) return null;
+            if (cached == null || cached.shader != shader)
+            {
+                if (cached != null) UnityEngine.Object.DestroyImmediate(cached);
+                cached = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            }
+            return cached;
+        }
+
+        static bool s_ScreenShadowsDisabledReported;
+
+        /// <summary>Whether screen-space shadows are switched off (the No Support mode): a
+        /// directional light then casts no shadows, with the Editor's warning (measured,
+        /// tests/projects/builtinfx settings.screenSpaceShadows.disabled; logged once a mode
+        /// change here, the Editor's repetition is unmeasured). The other settings' No Support
+        /// mode draws as the others do, except deferred reflections (<see
+        /// cref="DeferredReflectionsDisabled"/>).</summary>
+        internal static bool ScreenShadowsDisabled()
+        {
+            if (s_ShaderModes[(int)BuiltinShaderType.ScreenSpaceShadows] != BuiltinShaderMode.Disabled) return false;
+            if (!s_ScreenShadowsDisabledReported)
+            {
+                s_ScreenShadowsDisabledReported = true;
+                Debug.LogWarning("Screenspace cascaded shadow map support is disabled in graphics settings");
+            }
+            return true;
+        }
+
+        /// <summary>Deferred reflections in the No Support mode are not drawn: no probe or default
+        /// reflection reaches the deferred lighting (measured, tests/projects/builtinfx
+        /// settings_deferredReflections_disabled).</summary>
+        internal static bool DeferredReflectionsDisabled =>
+            s_ShaderModes[(int)BuiltinShaderType.DeferredReflections] == BuiltinShaderMode.Disabled;
 
         /// <summary>The slot of a built-in shader type; a type without a setting (the removed legacy
         /// deferred lighting, values outside the enum) asserts and shares the deferred shading
@@ -659,16 +715,14 @@ namespace UnityEngine.Rendering
         /// <summary>The project's mode of a built-in shader, as last set (any value is kept).</summary>
         public static BuiltinShaderMode GetShaderMode(BuiltinShaderType type) => s_ShaderModes[ShaderSlot(type)];
 
-        /// <summary>Keeps the mode; the built-in renderer still draws with its own shaders (a
-        /// custom or disabled mode is reported once, unbound doctor lists it too).</summary>
+        /// <summary>Keeps the mode; the built-in renderer draws as <see cref="RendererShader"/>,
+        /// <see cref="ScreenShadowsDisabled"/> and <see cref="DeferredReflectionsDisabled"/> say.</summary>
         public static void SetShaderMode(BuiltinShaderType type, BuiltinShaderMode mode)
         {
-            s_ShaderModes[ShaderSlot(type)] = mode;
-            if (mode != BuiltinShaderMode.UseBuiltin)
-                Unbound.Runtime.Stubs.Ignored("GraphicsSettings.SetShaderMode", "keeps a custom or disabled mode, but " + RendererOwnShaders);
+            int slot = ShaderSlot(type);
+            if (slot == (int)BuiltinShaderType.ScreenSpaceShadows && s_ShaderModes[slot] != mode) s_ScreenShadowsDisabledReported = false;
+            s_ShaderModes[slot] = mode;
         }
-
-        const string RendererOwnShaders = "the built-in renderer draws with its own deferred, shadow, depth-normals, motion-vector, halo and flare shaders";
 
         /// <summary>The shader a built-in shader type uses: the project's (null when it does not
         /// resolve), else the one set; setting one leaves the mode as it is (measured:
@@ -689,9 +743,6 @@ namespace UnityEngine.Rendering
             int slot = ShaderSlot(type);
             s_CustomShaderLoaded[slot] = true;
             s_CustomShaders[slot] = shader;
-            // Only a custom-mode type would draw with it (a later SetShaderMode reports itself).
-            if (shader != null && s_ShaderModes[slot] == BuiltinShaderMode.UseCustom)
-                Unbound.Runtime.Stubs.Ignored("GraphicsSettings.SetCustomShader", "keeps the shader, but " + RendererOwnShaders);
         }
 
         public static bool lightsUseLinearIntensity { get; set; }

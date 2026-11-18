@@ -224,13 +224,15 @@ namespace Unbound.Runtime
                 AddHalo(ViewPoint(view, light.transform.position), size, new Color(c.r * k, c.g * k, c.b * k));
             }
             if (s_Vertices.Count == 0 || HalosHidden(camera)) return false;
+            // The project's halo shader, whatever its mode (none: no halo is drawn).
+            var haloMaterial = GraphicsSettings.RendererMaterial(BuiltinShaderType.LightHalo, ref s_HaloMaterial);
+            if (haloMaterial == null) return false;
             s_HaloMesh ??= NewMesh("Unbound Halos");
             s_HaloMesh.Clear();
             s_HaloMesh.SetVertices(s_Vertices);
             s_HaloMesh.SetUVs(0, s_Uvs);
             s_HaloMesh.SetColors(s_Colors);
             s_HaloMesh.SetTriangles(s_Indices, 0);
-            s_HaloMaterial ??= new Material(Shader.Find("Hidden/Internal-Halo")) { hideFlags = HideFlags.HideAndDontSave };
             // The global _HaloFalloff (the scene's halo texture, the built-in falloff, or what a
             // script set), bound with the draw.
             s_HaloProperties[s_FalloffId] = Shader.GetGlobalTexture(s_FalloffId) ?? Falloff;
@@ -238,7 +240,7 @@ namespace Unbound.Runtime
             s_HaloProperties[s_FalloffStId] = new Vector4(1f, 1f, 0f, 0f);
             var saved = GfxStream.Current;
             GfxStream.Camera(Matrix4x4.identity, projection, saved.Flags);
-            GfxStream.Draw(s_HaloMesh.Sync(), 0, s_HaloMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_HaloProperties);
+            GfxStream.Draw(s_HaloMesh.Sync(), 0, haloMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_HaloProperties);
             GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
             return true;
         }
@@ -395,6 +397,8 @@ namespace Unbound.Runtime
             var cameraPosition = view.inverseDoublePrecision.MultiplyPoint3x4(Vector3.zero);
             var saved = GfxStream.Current;
             bool matrices = false;
+            // The project's flare shader, whatever its mode (none: no flare is drawn; they still fade).
+            var flareMaterial = GraphicsSettings.RendererMaterial(BuiltinShaderType.LensFlare, ref s_FlareMaterial);
             foreach (var source in s_Sources)
             {
                 var viewPoint = source.Directional ? view.MultiplyVector(source.Point) : view.MultiplyPoint3x4(source.Point);
@@ -412,7 +416,7 @@ namespace Unbound.Runtime
                         ? Mathf.Min(1f, fade.Visibility + Time.deltaTime * source.FadeIn)
                         : Mathf.Max(0f, fade.Visibility - Time.deltaTime * source.FadeOut);
                 }
-                if (fade.Visibility <= 0f || !front) continue;
+                if (fade.Visibility <= 0f || !front || flareMaterial == null) continue;
                 if (!BuildFlare(source, fade.Visibility, FlarePoint(view, source, camera.nearClipPlane))) continue;
                 CheckLayer(camera, (Component)source.Key, "lens flare");
                 // Each camera fades its flares on its own; a flare drawn by a second camera in a
@@ -432,11 +436,10 @@ namespace Unbound.Runtime
                 s_FlareMesh.SetUVs(0, s_Uvs);
                 s_FlareMesh.SetColors(s_Colors);
                 s_FlareMesh.SetTriangles(s_Indices, 0);
-                s_FlareMaterial ??= new Material(Shader.Find("Hidden/Internal-Flare")) { hideFlags = HideFlags.HideAndDontSave };
                 s_FlareProperties.Clear();
                 s_FlareProperties[s_FlareTextureId] = source.Asset.m_FlareTexture;
                 s_FlareProperties[s_FlareTextureStId] = new Vector4(1f, 1f, 0f, 0f);
-                GfxStream.Draw(s_FlareMesh.Sync(), 0, s_FlareMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_FlareProperties);
+                GfxStream.Draw(s_FlareMesh.Sync(), 0, flareMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_FlareProperties);
             }
             if (matrices) GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
             // A flare that is no longer drawn (disabled, without an asset) starts over.
