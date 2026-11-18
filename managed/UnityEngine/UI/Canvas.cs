@@ -39,6 +39,10 @@ namespace UnityEngine
 
         bool m_HasEnabled;
         bool m_AddedActive;
+        /// <summary>The depth update that last numbered this canvas as a sorting canvas, and
+        /// whether it numbered any renderer then (CanvasSystem.UpdateDepths).</summary>
+        internal int m_DepthPass;
+        internal bool m_NumbersRenderers;
 
         internal override void OnAttached() => m_AddedActive = m_GameObject.ActiveInHierarchyNoThrow;
 
@@ -47,6 +51,7 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             CanvasSystem.Register(this);
+            CanvasSystem.ReleaseDepths(transform);
             SendHierarchyChanged(transform);
             CanvasSystem.MarkLayoutDirty(this);
             if (!m_HasEnabled && m_AddedActive && m_RenderMode == RenderMode.WorldSpace)
@@ -65,6 +70,7 @@ namespace UnityEngine
         internal override void OnEngineDisable()
         {
             CanvasSystem.Unregister(this);
+            if (m_GameObject != null) CanvasSystem.ReleaseDepths(m_GameObject.m_Transform);
             if (m_GameObject != null && !m_GameObject.m_Destroyed) SendHierarchyChanged(m_GameObject.m_Transform);
         }
 
@@ -72,6 +78,7 @@ namespace UnityEngine
         {
             CanvasSystem.Unregister(this);
             // The canvas alone goes (its object stays): what was below it changed canvas.
+            if (m_GameObject != null && !m_GameObject.m_Destroyed) CanvasSystem.ReleaseDepths(m_GameObject.m_Transform);
             if (m_GameObject != null && !m_GameObject.m_Destroyed) SendHierarchyChanged(m_GameObject.m_Transform);
         }
 
@@ -166,6 +173,7 @@ namespace UnityEngine
             {
                 if (m_OverrideSorting == value) return;
                 m_OverrideSorting = value;
+                CanvasSystem.ReleaseDepths(transform);
                 Messaging.SendCanvasHierarchyChanged(transform);
             }
         }
@@ -403,6 +411,10 @@ namespace UnityEngine
         internal bool m_CullTransparentMesh = true;
         internal int m_AbsoluteDepth = -1;
         internal int m_RelativeDepth = -1;
+        /// <summary>The canvas and the sorting canvas that numbered the depths, and in which
+        /// update (CanvasSystem.UpdateDepths).</summary>
+        internal Canvas m_DepthCanvas, m_DepthRoot;
+        internal int m_DepthPass;
 
         public CanvasRenderer() { }
 

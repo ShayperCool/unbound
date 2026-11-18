@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     /// canvases on top of everything by sorting order, camera and world canvases inside their
     /// cameras' transparent queue; within a canvas, hierarchy order.
     /// </summary>
-    internal sealed class CanvasSystem : FrameBuilder.IDrawSource
+    internal sealed partial class CanvasSystem : FrameBuilder.IDrawSource
     {
         static readonly CanvasSystem s_Instance = new CanvasSystem();
         internal static CanvasSystem Instance => s_Instance;
@@ -25,7 +25,7 @@ namespace Unbound.Runtime
         {
             FrameBuilder.Sources.Add(s_Instance);
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.EarlyUpdate.UpdateCanvasRectTransform), DriveRootRects);
-            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.PlayerUpdateCanvases), SendWillRenderCanvases);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.PlayerUpdateCanvases), UpdateCanvases);
         }
 
         internal static Material DefaultMaterial
@@ -69,6 +69,15 @@ namespace Unbound.Runtime
         {
             Canvas.InvokePreWillRender();
             Canvas.InvokeWillRender();
+        }
+
+        /// <summary>The frame's canvas update: willRenderCanvases, then the renderers' depths
+        /// (<c>Canvas.ForceUpdateCanvases</c> sends the events only and numbers nothing, as
+        /// measured: tests/projects/uidepth <c>forced.now</c>).</summary>
+        static void UpdateCanvases()
+        {
+            SendWillRenderCanvases();
+            UpdateDepths();
         }
 
         static void DriveRootRects()
@@ -210,12 +219,11 @@ namespace Unbound.Runtime
         /// tests/projects/display, an overlay canvas on Display 2 is not drawn).</summary>
         public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into)
         {
-            int depth = 0;
             foreach (var canvas in OverlayCanvases())
             {
                 var root = canvas.rootCanvas;
                 if ((root != null ? root : canvas).m_TargetDisplay != 0) continue;
-                CollectCanvas(canvas, null, into, ref depth);
+                CollectCanvas(canvas, null, into);
             }
         }
 
@@ -225,7 +233,6 @@ namespace Unbound.Runtime
             // emitted for it; each emission draws them once more (Unbound.Runtime.Culling.EmitUI).
             if (camera.CanvasCopies <= 0) return;
             int first = into.Count;
-            int depth = 0;
             foreach (var canvas in DrawnCanvases(root =>
                          (root.m_RenderMode == RenderMode.ScreenSpaceCamera && root.m_Camera == camera.Camera) ||
                          root.m_RenderMode == RenderMode.WorldSpace))
@@ -236,7 +243,7 @@ namespace Unbound.Runtime
                         Trace.Render($"  canvas '{canvas.name}' culled by camera '{camera.Camera.name}' (layer {canvas.m_GameObject.m_Layer})");
                     continue;
                 }
-                CollectCanvas(canvas, camera, into, ref depth);
+                CollectCanvas(canvas, camera, into);
             }
             // The further copies draw the same geometry again, each copy after the one before where
             // the sort leaves them tied (the order between copies is unmeasured: one blended draw
@@ -251,15 +258,15 @@ namespace Unbound.Runtime
                 }
         }
 
-        void CollectCanvas(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)
+        void CollectCanvas(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             int before = into.Count;
-            CollectCanvasDraws(canvas, camera, into, ref depth);
+            CollectCanvasDraws(canvas, camera, into);
             if (Trace.RenderDetailOn && Time.frameCount % 60 == 1)
                 Trace.Render($"  canvas '{canvas.name}' ({canvas.m_RenderMode}, camera '{camera?.Camera?.name ?? "overlay"}', layer {canvas.m_GameObject.m_Layer}, order {canvas.sortingOrder}): {into.Count - before} draws");
         }
 
-        void CollectCanvasDraws(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, ref int depth)
+        void CollectCanvasDraws(Canvas canvas, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
             var root = canvas.rootCanvas;
             int layer = canvas.cachedSortingLayerValue;
@@ -268,7 +275,7 @@ namespace Unbound.Runtime
             s_HasDrawnBounds = false;
             // Nothing the walk does moves the root: its matrices once for the whole canvas.
             var placement = new RootPlacement(root.transform);
-            Walk(canvas.transform, canvas, placement, camera, into, layer, order, ref depth, isCanvasRoot: true);
+            Walk(canvas.transform, canvas, placement, camera, into, layer, order, isCanvasRoot: true);
             if (camera == null || first == into.Count) return;
             // Among the camera's draws a canvas sorts as one unit, at the centre of the bounds of
             // what it draws (not at its own transform): a canvas whose content lies behind its root
@@ -302,14 +309,6 @@ namespace Unbound.Runtime
             else { s_DrawnBounds = world; s_HasDrawnBounds = true; }
         }
 
-        /// <summary>No depth for the renderers under a disabled canvas.</summary>
-        static void ClearDepths(Transform t)
-        {
-            foreach (var c in t.m_GameObject.m_Components)
-                if (c is CanvasRenderer cr) cr.m_AbsoluteDepth = -1;
-            foreach (var child in t.m_Children) ClearDepths(child);
-        }
-
         /// <summary>Whether a canvas lies under a disabled one: nothing there is drawn, enabled
         /// canvases included (measured, 6000.0, tests/projects/sorting).</summary>
         static bool UnderDisabledCanvas(Canvas canvas)
@@ -333,7 +332,7 @@ namespace Unbound.Runtime
         }
 
         void Walk(Transform t, Canvas canvas, in RootPlacement root, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into,
-            int layer, int order, ref int depth, bool isCanvasRoot)
+            int layer, int order, bool isCanvasRoot)
         {
             var go = t.m_GameObject;
             if (!go.m_IsActive) return;
@@ -342,9 +341,8 @@ namespace Unbound.Runtime
                 foreach (var c in go.m_Components)
                 {
                     if (!(c is Canvas nested) || nested.m_Destroyed) continue;
-                    // A disabled nested canvas hides everything under it: nothing there is drawn
-                    // or has a depth (so nothing there is hit either; measured, 6000.0).
-                    if (!nested.m_Enabled) { ClearDepths(t); return; }
+                    // A disabled nested canvas hides everything under it (measured, 6000.0).
+                    if (!nested.m_Enabled) return;
                     // A nested canvas that sorts on its own is drawn separately.
                     if (nested.m_OverrideSorting) return;
                     // Color batching follows the nearest Canvas, independently of sorting.
@@ -354,11 +352,6 @@ namespace Unbound.Runtime
             foreach (var c in go.m_Components)
             {
                 if (!(c is CanvasRenderer cr) || cr.m_Destroyed) continue;
-                // Every renderer of an active object has its depth, in hierarchy order, drawn or
-                // not: without a mesh or material, culled, transparent, its graphic disabled
-                // (measured, 6000.0). An invisible raycast target (a Graphic that never makes its
-                // mesh) is hit so.
-                cr.m_AbsoluteDepth = depth++;
                 if (cr.m_Cull || cr.m_Mesh == null || cr.m_MaterialCount == 0) continue;
                 // A renderer whose alpha (its own times its groups') is zero or less is never drawn,
                 // cullTransparentMesh or not; the flag adds the test for all-transparent vertices
@@ -397,7 +390,7 @@ namespace Unbound.Runtime
                 }
             }
             foreach (var child in t.m_Children)
-                Walk(child, canvas, root, camera, into, layer, order, ref depth, isCanvasRoot: false);
+                Walk(child, canvas, root, camera, into, layer, order, isCanvasRoot: false);
             // A mask's pop instructions after its children: its mesh again with the materials that
             // undo its stencil (uGUI's Mask sets them; they write no colour). Without them a mask's
             // stencil stays for everything drawn after it.

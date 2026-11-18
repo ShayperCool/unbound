@@ -115,6 +115,7 @@ namespace UnityEngine.Tests
             first.SetAlpha(0f);
             var second = Renderer("second", m_Canvas.transform, cull: false);
             Drawn();
+            CanvasSystem.UpdateDepths();
             Assert.Equal(first.absoluteDepth + 1, second.absoluteDepth);
             Assert.True(first.absoluteDepth >= 0);
         }

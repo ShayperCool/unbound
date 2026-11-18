@@ -57,7 +57,7 @@ namespace UnityEngine.Tests
             var second = new GameObject("second", typeof(RectTransform), typeof(CanvasRenderer));
             second.transform.SetParent(canvas.transform, false);
             second.GetComponent<CanvasRenderer>().cull = true;
-            CanvasSystem.Instance.CollectOverlayDraws(new System.Collections.Generic.List<FrameBuilder.DrawItem>());
+            CanvasSystem.UpdateDepths();
             int a = bare.GetComponent<CanvasRenderer>().absoluteDepth;
             int b = second.GetComponent<CanvasRenderer>().absoluteDepth;
             Assert.True(a >= 0 && b == a + 1, $"{a}, {b}");

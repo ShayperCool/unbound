@@ -320,6 +320,8 @@ namespace Unbound.Runtime
             if (worldPositionStays) t.KeepWorldPose(worldPosition, worldRotation, worldScale, parent);
             else t.MarkChanged();
 
+            // Renderers that changed canvas lose their depth at once (tests/projects/uidepth).
+            Unbound.Runtime.CanvasSystem.ReleaseDepths(t);
             Messaging.SendToHierarchy(t, "OnTransformParentChanged");
             if (oldParent != null) Messaging.SendFast(oldParent.m_GameObject, "OnTransformChildrenChanged");
             if (parent != null) Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
