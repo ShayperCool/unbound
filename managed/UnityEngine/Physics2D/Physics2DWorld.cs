@@ -35,14 +35,15 @@ namespace Unbound.Runtime
     /// PreLateUpdate.Physics2DLateUpdate (Update) or only through Physics2D.Simulate (Script);
     /// interpolated bodies get their transform poses in PreUpdate.Physics2DUpdate. The systems are
     /// registered when the world is first needed.
+    ///
+    /// A scene created or loaded with LocalPhysicsMode.Physics2D owns a physics scene of its own (a
+    /// separate Box2D world, <see cref="Space"/>): its components are simulated, queried and
+    /// reported only there, and only by its PhysicsScene2D.Simulate (tests/projects/localphysics).
+    /// Everything else is in the default physics scene.
     /// </summary>
     internal static class Physics2DWorld
     {
-        static World s_World;
-        static Body s_StaticBody;
         static bool s_Registered;
-        static bool s_StructureDirty;
-        static bool s_AttachmentDirty;
         static bool s_Stepping;
         /// <summary>Fixtures are being destroyed because their collider left the simulation.</summary>
         static bool s_Removing;
@@ -51,32 +52,258 @@ namespace Unbound.Runtime
         static bool s_MeasuredSimulation;
         internal static bool MeasuredSlide { get; private set; }
         internal static bool MeasuredCastContacts { get; private set; }
-        internal static int SubStepCount { get; private set; }
-        internal static float SubStepLostTime { get; private set; }
         internal static bool MeasuredSimulation => s_MeasuredSimulation;
-        static readonly List<Rigidbody2D> s_Rigidbodies = new List<Rigidbody2D>();
-        static readonly List<Collider2D> s_Colliders = new List<Collider2D>();
         static readonly List<B2Shape> s_ShapeBuffer = new List<B2Shape>();
-        static readonly Listener s_Listener = new Listener();
-        static readonly Filter s_Filter = new Filter();
-        /// <summary>The layers whose colliders get contacts: the simulation layers of the last step
-        /// (Physics2D.simulationLayers, or the mask passed to Physics2D.Simulate).</summary>
-        static int s_ContactLayers = Physics2D.AllLayers;
         static readonly List<HeldBody> s_Held = new List<HeldBody>();
+
+        // ------------------------------------------------------------------ physics scenes
+
+        /// <summary>
+        /// One 2D physics scene (PhysicsScene2D): the default one, or the local one a scene made with
+        /// LocalPhysicsMode.Physics2D owns (6000.0 Scripting API: LocalPhysicsMode, PhysicsScene2D).
+        /// Each is its own Box2D world with its own bodies, contacts and callbacks. Components join
+        /// the physics scene of their GameObject's scene; only the default one is simulated
+        /// automatically (measured: tests/projects/localphysics).
+        /// </summary>
+        internal sealed class Space
+        {
+            internal World World;
+            /// <summary>The body that holds the shapes of colliders without a Rigidbody2D.</summary>
+            internal Body StaticBody;
+            /// <summary>The body joints without a connected Rigidbody2D attach to.</summary>
+            internal Body Ground;
+            internal bool StructureDirty;
+            internal bool AttachmentDirty;
+            internal readonly List<Rigidbody2D> Rigidbodies = new List<Rigidbody2D>();
+            internal readonly List<Collider2D> Colliders = new List<Collider2D>();
+            /// <summary>Its contact listener and filter: Box2D calls them while it changes this world's
+            /// contacts, also outside a step (a body type change), so they work on this physics scene.</summary>
+            internal readonly Listener Listener;
+            internal readonly Filter Filter;
+            /// <summary>The layers whose colliders get contacts: the simulation layers of the last step
+            /// (Physics2D.simulationLayers, or the mask passed to Simulate).</summary>
+            internal int ContactLayers = Physics2D.AllLayers;
+            internal readonly Dictionary<PairKey, Pair> Pairs = new Dictionary<PairKey, Pair>();
+            // Native getters filter the scene's dense touching-pair list. Removal
+            // fills a slot from the end. Solver edges keep their linked order.
+            internal readonly List<Pair> ContactPairs = new List<Pair>();
+            internal uint ContactPairRemovalVersion;
+            internal readonly Dictionary<Contact, ContactObservation> ContactObservations = new Dictionary<Contact, ContactObservation>();
+            internal int SubStepCount;
+            internal float SubStepLostTime;
+            /// <summary>The handle of the scene that owns it; 0 for the default physics scene.</summary>
+            internal readonly int Scene;
+            /// <summary>Its PhysicsScene2D identity: 0 for the default one; local identities are
+            /// Unbound's own (Unity's are not measured).</summary>
+            internal readonly int Handle;
+            internal bool Released;
+
+            internal Space(int scene, int handle)
+            {
+                Scene = scene;
+                Handle = handle;
+                Listener = new Listener(this);
+                Filter = new Filter(this);
+            }
+        }
+
+        static readonly Space s_Default = new Space(0, 0);
+        /// <summary>The physics scene the code below works on; the default one except while a
+        /// local scene's members are changed, synced, queried or simulated.</summary>
+        static Space s_Space = s_Default;
+        static readonly List<Space> s_Locals = new List<Space>();
+        static readonly Dictionary<int, Space> s_ByScene = new Dictionary<int, Space>();
+        static int s_NextHandle = 1;
+        /// <summary>Scene moves made during a step or its callbacks, applied once the step has ended.</summary>
+        static bool s_MembershipPending;
+
+        // The state of the current physics scene, under the names it had when there was one.
+        static World s_World { get => s_Space.World; set => s_Space.World = value; }
+        static Body s_StaticBody { get => s_Space.StaticBody; set => s_Space.StaticBody = value; }
+        static bool s_StructureDirty { get => s_Space.StructureDirty; set => s_Space.StructureDirty = value; }
+        static bool s_AttachmentDirty { get => s_Space.AttachmentDirty; set => s_Space.AttachmentDirty = value; }
+        static List<Rigidbody2D> s_Rigidbodies => s_Space.Rigidbodies;
+        static List<Collider2D> s_Colliders => s_Space.Colliders;
+        static Listener s_Listener => s_Space.Listener;
+        static int s_ContactLayers { get => s_Space.ContactLayers; set => s_Space.ContactLayers = value; }
+        static Dictionary<PairKey, Pair> s_Pairs => s_Space.Pairs;
+        static List<Pair> s_ContactPairs => s_Space.ContactPairs;
+        static uint s_ContactPairRemovalVersion { get => s_Space.ContactPairRemovalVersion; set => s_Space.ContactPairRemovalVersion = value; }
+        static Dictionary<Contact, ContactObservation> s_ContactObservations => s_Space.ContactObservations;
+        internal static int SubStepCount => s_Default.SubStepCount;
+        internal static float SubStepLostTime => s_Default.SubStepLostTime;
+
+        internal readonly struct Scope : IDisposable
+        {
+            readonly Space m_Previous;
+            internal Scope(Space space)
+            {
+                m_Previous = s_Space;
+                s_Space = space;
+            }
+            public void Dispose() => s_Space = m_Previous;
+        }
+
+        internal static Scope Enter(Space space) => new Scope(space ?? s_Default);
+
+        internal static Space DefaultSpace => s_Default;
+
+        /// <summary>No physics scene: an empty world with nothing to hit (an invalid PhysicsScene2D's
+        /// queries find nothing, measured: tests/projects/localphysics `p2.unload.raycast`).</summary>
+        internal static readonly Space NoSpace = new Space(-1, -1) { Released = true };
+
+        /// <summary>The physics scene a GameObject's components belong to: its scene's local one,
+        /// or the default one.</summary>
+        internal static Space SpaceOf(GameObject go) =>
+            s_ByScene.Count == 0 || go == null || !s_ByScene.TryGetValue(go.m_Scene.Value, out var space) ? s_Default : space;
+
+        static Space SpaceOf(Rigidbody2D rb) => rb.m_Registered ? rb.m_Space ?? s_Default : SpaceOf(rb.m_GameObject);
+        static Space SpaceOf(Collider2D c) => c.m_Registered ? c.m_Space ?? s_Default : SpaceOf(c.m_GameObject);
+
+        /// <summary>The local physics scene a scene owns; null when it uses the default one.</summary>
+        internal static Space LocalOf(int sceneHandle) => s_ByScene.TryGetValue(sceneHandle, out var space) ? space : null;
+
+        /// <summary>A physics scene by its PhysicsScene2D handle; null when there is none (any more).</summary>
+        internal static Space Find(int handle)
+        {
+            if (handle == 0) return s_Default;
+            foreach (var space in s_Locals)
+                if (space.Handle == handle) return space;
+            return null;
+        }
+
+        /// <summary>A scene made with LocalPhysicsMode.Physics2D gets its own physics scene. Its
+        /// Box2D world is created with the first component that joins it.</summary>
+        internal static void CreateLocal(int sceneHandle)
+        {
+            if (s_ByScene.ContainsKey(sceneHandle)) return;
+            var space = new Space(sceneHandle, s_NextHandle++);
+            s_Locals.Add(space);
+            s_ByScene[sceneHandle] = space;
+        }
+
+        /// <summary>The scene that owns a local physics scene is unloaded: the physics scene goes with
+        /// it (6000.0 Scripting API, LocalPhysicsMode: "the lifetime of the physics Scene(s) is the
+        /// same as the Scene"; a created scene's is invalid afterwards, tests/projects/localphysics).
+        /// Objects moved out of the scene first join their new physics scene; what is left leaves
+        /// the simulation without callbacks.</summary>
+        internal static void ReleaseLocal(int sceneHandle)
+        {
+            if (!s_ByScene.TryGetValue(sceneHandle, out var space)) return;
+            SceneMembershipChanged();
+            using (Enter(space))
+            {
+                foreach (var rb in s_Rigidbodies.ToArray()) Remove(rb, silent: true);
+                foreach (var c in s_Colliders.ToArray())
+                {
+                    bool was = s_SilentRemoval;
+                    s_SilentRemoval = true;
+                    try { Remove(c); }
+                    finally { s_SilentRemoval = was; }
+                }
+                Physics2DJoints.Forget(space);
+                s_Listener.Clear();
+                space.World = null;
+                space.StaticBody = null;
+                space.Ground = null;
+                space.StructureDirty = space.AttachmentDirty = false;
+            }
+            space.Released = true;
+            s_Locals.Remove(space);
+            s_ByScene.Remove(sceneHandle);
+        }
+
+        /// <summary>GameObjects moved to another scene (SceneManager.MoveGameObjectToScene, a scene
+        /// merge, DontDestroyOnLoad or a new parent) take their bodies and colliders to that scene's
+        /// physics scene. A body that changes physics scene starts there at rest: its linear and
+        /// angular velocity are zero, into a local scene and back (measured:
+        /// tests/projects/localphysics `p2.into.*`, `p2.back.velocity`). Unbound's choices
+        /// (unmeasured): the move applies at once, or after the step when made in its callbacks, and
+        /// the contacts the components leave send their exit callbacks as a removal does. Without
+        /// local physics scenes every component is in the default one.</summary>
+        internal static void SceneMembershipChanged()
+        {
+            if (s_Locals.Count == 0) return;
+            if (s_Stepping || s_Dispatching) { s_MembershipPending = true; return; }
+            s_MembershipPending = false;
+            List<Rigidbody2D> bodies = null;
+            List<Collider2D> colliders = null;
+            Collect(s_Default);
+            for (int i = 0; i < s_Locals.Count; i++) Collect(s_Locals[i]);
+            if (bodies == null && colliders == null) return;
+            if (colliders != null) foreach (var c in colliders) Remove(c);
+            if (bodies != null)
+                foreach (var rb in bodies)
+                {
+                    Remove(rb);
+                    rb.m_PendingVelocity = Vector2.zero;
+                    rb.m_PendingAngularVelocity = 0f;
+                }
+            if (bodies != null) foreach (var rb in bodies) Add(rb);
+            if (colliders != null) foreach (var c in colliders) Add(c);
+
+            void Collect(Space space)
+            {
+                foreach (var rb in space.Rigidbodies)
+                    if (!ReferenceEquals(SpaceOf(rb.m_GameObject), space)) (bodies ??= new List<Rigidbody2D>()).Add(rb);
+                foreach (var c in space.Colliders)
+                    if (!ReferenceEquals(SpaceOf(c.m_GameObject), space)) (colliders ??= new List<Collider2D>()).Add(c);
+            }
+        }
 
         internal static bool IsStepping => s_Stepping || s_Dispatching;
 
-        internal static World World
+        /// <summary>A physics scene's Box2D world, made when first needed.</summary>
+        internal static World WorldOf(Space space)
         {
-            get
+            using (Enter(space))
             {
                 EnsureWorld();
                 return s_World;
             }
         }
 
-        internal static IReadOnlyList<Rigidbody2D> Rigidbodies => s_Rigidbodies;
-        internal static IReadOnlyList<Collider2D> Colliders => s_Colliders;
+        internal static Space SpaceOfCollider(Collider2D c) => SpaceOf(c);
+
+        /// <summary>PhysicsScene2D.IsEmpty: no Rigidbody2D and no Collider2D in the physics scene (a
+        /// static collider alone counts, measured: tests/projects/localphysics `p2.lone.empty`).</summary>
+        internal static bool IsEmpty(Space space)
+        {
+            SceneMembershipChanged();
+            return space.Rigidbodies.Count == 0 && space.Colliders.Count == 0;
+        }
+
+        /// <summary>Whether a GameObject's components are in the physics scene being worked on.</summary>
+        internal static bool InCurrentSpace(GameObject go) => ReferenceEquals(SpaceOf(go), s_Space);
+
+        /// <summary>The ground body of the physics scene a world belongs to: what a joint without a
+        /// connected Rigidbody2D holds to.</summary>
+        internal static Body GroundOf(World world)
+        {
+            var space = ReferenceEquals(s_Default.World, world) ? s_Default : null;
+            for (int i = 0; space == null && i < s_Locals.Count; i++)
+                if (ReferenceEquals(s_Locals[i].World, world)) space = s_Locals[i];
+            space ??= s_Space;
+            return space.Ground ??= world.CreateBody(new BodyDef());
+        }
+
+        /// <summary>Wakes every body of every physics scene (a new Physics2D.gravity, which they all share:
+        /// tests/projects/localphysics `p2.gravity.velocity`).</summary>
+        internal static void WakeAll()
+        {
+            Wake(s_Default);
+            foreach (var space in s_Locals) Wake(space);
+
+            static void Wake(Space space)
+            {
+                foreach (var rb in space.Rigidbodies) if (rb.m_Body != null) rb.m_Body.IsAwake = true;
+            }
+        }
+
+        /// <summary>The colliders of a body's or collider's physics scene.</summary>
+        internal static IReadOnlyList<Collider2D> CollidersOf(Rigidbody2D rb) => SpaceOf(rb).Colliders;
+        internal static IReadOnlyList<Collider2D> CollidersOf(Collider2D c) => SpaceOf(c).Colliders;
+
 
         static void EnsureWorld()
         {
@@ -90,7 +317,7 @@ namespace Unbound.Runtime
             if (!MeasuredCastContacts)
                 Stubs.Ignored("Physics2D cast contact features", "this release is unmeasured; using legacy polygon clipping and core-spread witness selection");
             s_World = new World(ToB2(Physics2D.s_Gravity));
-            s_World.SetContactFilter(s_Filter);
+            s_World.SetContactFilter(s_Space.Filter);
             s_World.SetContactListener(s_Listener);
             Contact.FrictionMixer = (a, b) => Physics2D.CombineFriction(a.UserData as Collider2D, a.Friction, b.UserData as Collider2D, b.Friction);
             Contact.RestitutionMixer = (a, b) => Physics2D.CombineBounciness(a.UserData as Collider2D, a.Restitution, b.UserData as Collider2D, b.Restitution);
@@ -112,25 +339,31 @@ namespace Unbound.Runtime
             });
         }
 
-        /// <summary>Forgets every body (the game domain is torn down).</summary>
+        /// <summary>Forgets every body and every local physics scene (the game domain is torn down).</summary>
         internal static void Reset()
         {
             Physics2DJoints.Reset();
             Physics2DEffectors.Reset();
+            s_IgnoredPairs.Clear();
+            foreach (var space in s_Locals) space.Released = true;
+            s_Locals.Clear();
+            s_ByScene.Clear();
+            s_Space = s_Default;
+            s_MembershipPending = false;
             s_Rigidbodies.Clear();
             s_Colliders.Clear();
             s_Listener.Clear();
-            s_IgnoredPairs.Clear();
             s_World = null;
             s_StaticBody = null;
+            s_Default.Ground = null;
             s_StructureDirty = false;
             s_AttachmentDirty = false;
             s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
             s_ContactLayers = Physics2D.AllLayers;
             s_Held.Clear();
             s_MeasuredSimulation = MeasuredSlide = MeasuredCastContacts = false;
-            SubStepCount = 0;
-            SubStepLostTime = 0f;
+            s_Default.SubStepCount = 0;
+            s_Default.SubStepLostTime = 0f;
         }
 
         // ------------------------------------------------------------------ conversions
@@ -186,19 +419,30 @@ namespace Unbound.Runtime
 
         internal static void Add(Rigidbody2D rb)
         {
-            EnsureWorld();
             if (rb.m_Registered) return;
+            using (Enter(SpaceOf(rb.m_GameObject))) AddCurrent(rb);
+        }
+
+        static void AddCurrent(Rigidbody2D rb)
+        {
+            EnsureWorld();
             rb.m_Registered = true;
+            rb.m_Space = s_Space;
             s_Rigidbodies.Add(rb);
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
             s_AttachmentDirty = true;
-            if (rb.m_GameObject.m_Transform != null) Flush();
+            if (rb.m_GameObject.m_Transform != null) FlushCurrent();
         }
 
         internal static void Remove(Rigidbody2D rb, bool silent = false)
         {
             if (!rb.m_Registered) return;
+            using (Enter(rb.m_Space)) RemoveCurrent(rb, silent);
+        }
+
+        static void RemoveCurrent(Rigidbody2D rb, bool silent)
+        {
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
             bool wasSilent = s_SilentRemoval;
@@ -222,19 +466,30 @@ namespace Unbound.Runtime
 
         internal static void Add(Collider2D c)
         {
-            EnsureWorld();
             if (c.m_Registered) return;
+            using (Enter(SpaceOf(c.m_GameObject))) AddCurrent(c);
+        }
+
+        static void AddCurrent(Collider2D c)
+        {
+            EnsureWorld();
             c.CaptureSkin();
             c.m_Registered = true;
+            c.m_Space = s_Space;
             c.m_ShapeDirty = true;
             s_Colliders.Add(c);
             s_StructureDirty = true;
-            if (c.m_GameObject.m_Transform != null) Flush();
+            if (c.m_GameObject.m_Transform != null) FlushCurrent();
         }
 
         internal static void Remove(Collider2D c)
         {
             if (!c.m_Registered) return;
+            using (Enter(c.m_Space)) RemoveCurrent(c);
+        }
+
+        static void RemoveCurrent(Collider2D c)
+        {
             c.m_Registered = false;
             s_Colliders.Remove(c);
             DestroyFixtures(c, removing: true);
@@ -252,7 +507,7 @@ namespace Unbound.Runtime
         {
             if (!c.m_Registered) return;
             c.m_ShapeDirty = true;
-            s_StructureDirty = true;
+            SpaceOf(c).StructureDirty = true;
         }
 
         /// <summary>A rigidbody's simulation state changed (simulated, body type, mass properties).</summary>
@@ -260,20 +515,28 @@ namespace Unbound.Runtime
         {
             if (!rb.m_Registered) return;
             rb.m_BodyDirty = true;
-            s_StructureDirty = true;
+            SpaceOf(rb).StructureDirty = true;
         }
 
         internal static void MarkAttachmentDirty()
         {
-            s_StructureDirty = true;
-            s_AttachmentDirty = true;
+            s_Default.StructureDirty = s_Default.AttachmentDirty = true;
+            foreach (var space in s_Locals) space.StructureDirty = space.AttachmentDirty = true;
         }
 
         // ------------------------------------------------------------------ structure
 
         /// <summary>Brings bodies and fixtures in line with the components (not with moved transforms;
-        /// <see cref="SyncTransforms"/> does that).</summary>
+        /// <see cref="SyncTransforms"/> does that), in every physics scene.</summary>
         internal static void Flush()
+        {
+            if (s_MembershipPending) SceneMembershipChanged();
+            using (Enter(s_Default)) FlushCurrent();
+            for (int i = 0; i < s_Locals.Count; i++)
+                using (Enter(s_Locals[i])) FlushCurrent();
+        }
+
+        static void FlushCurrent()
         {
             if (!s_StructureDirty || s_World == null) return;
             if (s_Stepping) return;
@@ -521,21 +784,33 @@ namespace Unbound.Runtime
         internal static void Refilter(Collider2D c)
         {
             foreach (var f in c.m_Fixtures) f.Refilter();
-            if (s_World != null) s_World.HasNewContacts = true;
+            var world = SpaceOf(c).World;
+            if (world != null) world.HasNewContacts = true;
         }
 
         internal static void RefilterAll()
         {
-            foreach (var c in s_Colliders) Refilter(c);
+            foreach (var c in s_Default.Colliders) Refilter(c);
+            foreach (var space in s_Locals)
+                foreach (var c in space.Colliders) Refilter(c);
         }
 
         // ------------------------------------------------------------------ transforms
 
-        /// <summary>Moves bodies and shapes to their transforms where the transforms changed.</summary>
+        /// <summary>Moves bodies and shapes to their transforms where the transforms changed, in every
+        /// physics scene.</summary>
         internal static void SyncTransforms()
         {
+            if (s_MembershipPending) SceneMembershipChanged();
+            using (Enter(s_Default)) SyncCurrent();
+            for (int i = 0; i < s_Locals.Count; i++)
+                using (Enter(s_Locals[i])) SyncCurrent();
+        }
+
+        static void SyncCurrent()
+        {
             if (s_World == null) return;
-            Flush();
+            FlushCurrent();
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
@@ -618,13 +893,17 @@ namespace Unbound.Runtime
         /// Physics2D.autoSyncTransforms is set.</summary>
         internal static void PrepareQuery()
         {
-            if (s_World == null) return;
+            if (s_Default.World == null && s_Locals.Count == 0) return;
             if (Physics2D.s_AutoSyncTransforms) SyncTransforms();
             else Flush();
         }
 
         // ------------------------------------------------------------------ simulation
 
+        /// <summary>The default physics scene's step: the automatic simulation, Physics2D.Simulate and
+        /// the default PhysicsScene2D's Simulate. Called by script, it runs only in
+        /// SimulationMode2D.Script; otherwise the Editor warns and does not run it (measured:
+        /// tests/projects/localphysics `p2.defaultSim.*`).</summary>
         internal static bool Simulate(float deltaTime, int simulationLayers, bool fromLoop)
         {
             if (IsStepping)
@@ -634,15 +913,40 @@ namespace Unbound.Runtime
             }
             if (!fromLoop && Physics2D.s_SimulationMode != SimulationMode2D.Script)
             {
-                if (s_MeasuredSimulation) return false;
+                if (s_MeasuredSimulation)
+                {
+                    Debug.LogWarning(NotScriptMode);
+                    return false;
+                }
             }
-            if (s_World == null) return false;
-            if (deltaTime < 0f) return false;
             // The automatic modes simulate Physics2D.simulationLayers; Physics2D.Simulate takes
             // the layers as its argument (Physics2D.simulationLayers, Scripting API 6000.0).
-            int layers = fromLoop ? Physics2D.s_SimulationLayers : simulationLayers;
+            using (Enter(s_Default)) return SimulateCurrent(deltaTime, fromLoop ? Physics2D.s_SimulationLayers : simulationLayers);
+        }
+
+        const string NotScriptMode = "Physics2D.Simulate(...) was called but simulation mode was not set to 'Script'. You should set the simulation mode to 'Script' before calling this function therefore the simulation was not run.";
+
+        /// <summary>A local physics scene's step (PhysicsScene2D.Simulate). Local scenes are stepped
+        /// only by script, whatever Physics2D.simulationMode is (measured:
+        /// tests/projects/localphysics `p2.sim.*`, in SimulationMode2D.FixedUpdate).</summary>
+        internal static bool Simulate(Space space, float deltaTime, int simulationLayers)
+        {
+            if (ReferenceEquals(space, s_Default)) return Simulate(deltaTime, simulationLayers, fromLoop: false);
+            if (IsStepping)
+            {
+                Debug.LogError("Physics2D.Simulate cannot be called during a simulation step or its callbacks.");
+                return false;
+            }
+            using (Enter(space)) return SimulateCurrent(deltaTime, simulationLayers);
+        }
+
+        static bool SimulateCurrent(float deltaTime, int layers)
+        {
+            if (s_MembershipPending) SceneMembershipChanged();
+            if (s_World == null) return false;
+            if (deltaTime < 0f) return false;
             Physics2D.ApplyTuning();
-            SyncTransforms();
+            SyncCurrent();
             Physics2DJoints.Sync();
             Physics2DJoints.SetSimulationLayers(s_MeasuredSimulation ? layers : Physics2D.AllLayers);
             s_World.Gravity = ToB2(Physics2D.s_Gravity);
@@ -651,7 +955,7 @@ namespace Unbound.Runtime
                 // Only contacts of colliders on the simulated layers are handled: the contact
                 // filter drops the others, and pairs it allowed before are filtered again.
                 s_ContactLayers = layers;
-                RefilterAll();
+                foreach (var c in s_Colliders) Refilter(c);
             }
             if (layers != Physics2D.AllLayers) HoldBodiesOutside(layers);
 
@@ -660,8 +964,8 @@ namespace Unbound.Runtime
             float subStepTime = deltaTime, simulatedTime = deltaTime;
             bool subStepping = Physics2D.s_UseSubStepping && Physics2D.s_SimulationMode != SimulationMode2D.FixedUpdate
                 && SubSteps(deltaTime, out subStepCount, out subStepTime, out simulatedTime);
-            SubStepCount = subStepCount;
-            SubStepLostTime = deltaTime - simulatedTime;
+            s_Space.SubStepCount = subStepCount;
+            s_Space.SubStepLostTime = deltaTime - simulatedTime;
             if (subStepping && !Physics2D.s_UseSubStepContacts && !s_MeasuredSimulation)
             {
                 Unbound.Runtime.Stubs.Ignored("Physics2D.useSubStepContacts",
@@ -706,7 +1010,7 @@ namespace Unbound.Runtime
 
             Physics2DEffectors.AfterStep(deltaTime);
             // Reaction forces come from the impulses of the last (sub-)step.
-            Physics2DJoints.AfterStep(subStepTime);
+            Physics2DJoints.AfterStep(s_World, subStepTime);
             s_Listener.Dispatch();
             Flush();
             return true;
@@ -872,6 +1176,13 @@ namespace Unbound.Runtime
         /// <summary>Interpolated and extrapolated bodies: their transforms show the pose between steps.</summary>
         static void Interpolate()
         {
+            using (Enter(s_Default)) InterpolateCurrent();
+        }
+
+        /// <summary>Only the default physics scene is simulated automatically, so only its bodies are
+        /// interpolated between its steps.</summary>
+        static void InterpolateCurrent()
+        {
             if (s_World == null || Physics2D.s_SimulationMode != SimulationMode2D.FixedUpdate) return;
             float dt = Time.fixedDeltaTime;
             if (dt <= 0f) return;
@@ -991,20 +1302,24 @@ namespace Unbound.Runtime
             return null;
         }
 
-        sealed class Filter : IContactFilter
+        internal sealed class Filter : IContactFilter
         {
+            readonly Space m_Owner;
+            internal Filter(Space owner) { m_Owner = owner; }
+
             public bool ShouldCollide(Fixture fixtureA, Fixture fixtureB)
             {
                 var a = fixtureA.UserData as Collider2D;
                 var b = fixtureB.UserData as Collider2D;
-                if (s_ContactLayers != Physics2D.AllLayers && !(OnContactLayers(a) && OnContactLayers(b))) return false;
+                int layers = m_Owner.ContactLayers;
+                if (layers != Physics2D.AllLayers && !(OnContactLayers(a, layers) && OnContactLayers(b, layers))) return false;
                 return Physics2DWorld.ShouldCollide(a, b);
             }
 
-            static bool OnContactLayers(Collider2D c) => c != null
-                && (s_ContactLayers & (1 << c.m_GameObject.m_Layer)) != 0
+            static bool OnContactLayers(Collider2D c, int layers) => c != null
+                && (layers & (1 << c.m_GameObject.m_Layer)) != 0
                 && (!s_MeasuredSimulation || c.m_AttachedBody == null
-                    || (s_ContactLayers & (1 << c.m_AttachedBody.m_GameObject.m_Layer)) != 0);
+                    || (layers & (1 << c.m_AttachedBody.m_GameObject.m_Layer)) != 0);
         }
 
         // ------------------------------------------------------------------ contacts and callbacks
@@ -1024,12 +1339,7 @@ namespace Unbound.Runtime
             internal Vector2 EnterRelativeVelocity;
         }
 
-        static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
-        // Native getters filter the scene's dense touching-pair list. Removal
-        // fills a slot from the end. Solver edges keep their linked order.
-        static readonly List<Pair> s_ContactPairs = new List<Pair>();
-        static uint s_ContactPairRemovalVersion;
-        sealed class ContactObservation
+        internal sealed class ContactObservation
         {
             internal readonly Vector2[] Points = new Vector2[2];
             internal readonly Vector2[] Velocities = new Vector2[2];
@@ -1037,12 +1347,12 @@ namespace Unbound.Runtime
             internal Unbound.Box2D.Common.FixedArray2<float> NormalImpulses, TangentImpulses;
             internal ulong ImpulseStep;
         }
-        static readonly Dictionary<Contact, ContactObservation> s_ContactObservations = new Dictionary<Contact, ContactObservation>();
 
         internal static IEnumerable<Pair> PublicContactPairs(Object view)
         {
             if (view == null) yield break;
-            foreach (var pair in s_ContactPairs)
+            var space = view is Collider2D collider ? SpaceOf(collider) : view is Rigidbody2D body ? SpaceOf(body) : s_Space;
+            foreach (var pair in space.ContactPairs)
                 if (pair.Touching > 0 && (pair.A == (object)view || pair.B == (object)view ||
                     pair.A.m_AttachedBody == (object)view || pair.B.m_AttachedBody == (object)view))
                     yield return pair;
@@ -1059,24 +1369,28 @@ namespace Unbound.Runtime
         }
 
         internal static Pair FindPair(Collider2D a, Collider2D b) =>
-            s_Pairs.TryGetValue(new PairKey(a, b), out var pair) ? pair : null;
+            SpaceOf(a).Pairs.TryGetValue(new PairKey(a, b), out var pair) ? pair : null;
 
         /// <summary>The pairs a collider is part of.</summary>
         internal static IEnumerable<Pair> PairsOf(Collider2D c)
         {
-            for (int i = 0; i < s_ContactPairs.Count; i++)
+            var pairs = SpaceOf(c).ContactPairs;
+            for (int i = 0; i < pairs.Count; i++)
             {
-                var p = s_ContactPairs[i];
+                var p = pairs[i];
                 if (p.Touching > 0 && (p.A == (object)c || p.B == (object)c)) yield return p;
             }
         }
 
-        sealed class Listener : IContactListener
+        internal sealed class Listener : IContactListener
         {
+            readonly Space m_Owner;
             ulong step;
+            internal Listener(Space owner) { m_Owner = owner; }
             internal void BeginStep() => step++;
             internal void Clear()
             {
+                using var scope = Enter(m_Owner);
                 s_Pairs.Clear();
                 s_ContactPairs.Clear();
                 s_ContactObservations.Clear();
@@ -1084,6 +1398,7 @@ namespace Unbound.Runtime
 
             public void BeginContact(Contact contact)
             {
+                using var scope = Enter(m_Owner);
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
@@ -1113,6 +1428,7 @@ namespace Unbound.Runtime
 
             public void EndContact(Contact contact)
             {
+                using var scope = Enter(m_Owner);
                 s_ContactObservations.Remove(contact);
                 Physics2DEffectors.End(contact);
                 var a = contact.FixtureA.UserData as Collider2D;
@@ -1132,6 +1448,7 @@ namespace Unbound.Runtime
 
             public void PreSolve(Contact contact, in Manifold oldManifold)
             {
+                using var scope = Enter(m_Owner);
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
@@ -1162,6 +1479,7 @@ namespace Unbound.Runtime
 
             public void PostSolve(Contact contact, in ContactImpulse impulse)
             {
+                using var scope = Enter(m_Owner);
                 // Accumulate every solve in this step, including time-of-impact solves.
                 // The manifold impulses remain the discrete solver's warm-start cache.
                 if (s_MeasuredSimulation && s_ContactObservations.TryGetValue(contact, out var observation))
@@ -1184,6 +1502,7 @@ namespace Unbound.Runtime
             // Reentrant removals wait until both sides of the current notification have run.
             internal void DispatchRemovals()
             {
+                using var scope = Enter(m_Owner);
                 if (s_Dispatching) return;
                 s_Dispatching = true;
                 try
@@ -1208,6 +1527,7 @@ namespace Unbound.Runtime
             /// <summary>Sends the callbacks of the step that just ended.</summary>
             internal void Dispatch()
             {
+                using var scope = Enter(m_Owner);
                 if (s_ContactPairs.Count == 0) return;
                 s_Dispatching = true;
                 try
@@ -1383,6 +1703,7 @@ namespace Unbound.Runtime
         internal static bool CollectContacts(Collider2D self, Collider2D other, List<ContactPoint2D> into)
         {
             bool enabled = true;
+            var observations = SpaceOf(self).ContactObservations;
             foreach (var f in self.m_Fixtures)
             {
                 var body = f.Body;
@@ -1404,7 +1725,7 @@ namespace Unbound.Runtime
                     if (selfIsA) normal = -normal;
                     var selfBody = selfIsA ? contact.FixtureA.Body : contact.FixtureB.Body;
                     var otherBody = selfIsA ? contact.FixtureB.Body : contact.FixtureA.Body;
-                    s_ContactObservations.TryGetValue(contact, out var observation);
+                    observations.TryGetValue(contact, out var observation);
                     for (int i = 0; i < count; i++)
                     {
                         var p = world.Points[i];

@@ -21,6 +21,28 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Physics2DQueries
     {
+        /// <summary>The physics scene the queries search: the default one (the Physics2D queries), a
+        /// PhysicsScene2D's own (<see cref="In"/>), or the one of the colliders a collider or body
+        /// cast or overlap starts from (measured: tests/projects/localphysics `p2.query.*`).</summary>
+        static W.Space s_Target;
+
+        static World QueryWorld => W.WorldOf(s_Target ?? W.DefaultSpace);
+
+        internal readonly struct Target : IDisposable
+        {
+            readonly W.Space m_Previous;
+            internal Target(W.Space space)
+            {
+                m_Previous = s_Target;
+                s_Target = space;
+            }
+            public void Dispose() => s_Target = m_Previous;
+        }
+
+        internal static Target In(W.Space space) => new Target(space);
+
+        static Target InSpaceOf(Collider2D c) => new Target(c != null ? W.SpaceOfCollider(c) : s_Target);
+
         internal sealed class AabbQuery : IQueryCallback
         {
             internal readonly List<Fixture> Found = new List<Fixture>();
@@ -76,7 +98,7 @@ namespace Unbound.Runtime
         static List<Fixture> FixturesIn(AABB aabb)
         {
             var query = new AabbQuery();
-            W.World.QueryAABB(query, aabb);
+            QueryWorld.QueryAABB(query, aabb);
             return query.Found;
         }
 
@@ -84,7 +106,7 @@ namespace Unbound.Runtime
         static float Reach(Vector2 origin, float distance, float extent)
         {
             if (!float.IsInfinity(distance) && distance < 1e6f) return Mathf.Max(0f, distance);
-            if (!W.World.ContactManager.BroadPhase.TryGetBounds(out var bounds)) return 1f;
+            if (!QueryWorld.ContactManager.BroadPhase.TryGetBounds(out var bounds)) return 1f;
             float far = 0f;
             foreach (var corner in new[] { bounds.LowerBound, bounds.UpperBound, new B2(bounds.LowerBound.X, bounds.UpperBound.Y), new B2(bounds.UpperBound.X, bounds.LowerBound.Y) })
                 far = Mathf.Max(far, (W.ToUnity(corner) - origin).magnitude);
@@ -140,7 +162,7 @@ namespace Unbound.Runtime
             if (dir != Vector2.zero && length > 0f)
             {
                 var query = new RayQuery();
-                W.World.RayCast(query, W.ToB2(origin), W.ToB2(origin + dir * length));
+                QueryWorld.RayCast(query, W.ToB2(origin), W.ToB2(origin + dir * length));
                 foreach (var (fixture, fraction, b2Normal) in query.Hits)
                 {
                     var c = fixture.UserData as Collider2D;
@@ -214,6 +236,7 @@ namespace Unbound.Runtime
         /// the colliders themselves and those of <paramref name="ignoreBody"/> are not hit.</summary>
         internal static List<RaycastHit2D> CastColliders(IReadOnlyList<Collider2D> colliders, B2Transform? pose, Vector2 direction, float distance, ContactFilter2D filter, Rigidbody2D ignoreBody, CastScratch scratch = null)
         {
+            using var target = InSpaceOf(colliders.Count > 0 ? colliders[0] : null);
             W.PrepareQuery();
             scratch ??= new CastScratch();
             scratch.Clear();
@@ -259,7 +282,7 @@ namespace Unbound.Runtime
             proxyB.Set(shape, childIndex);
             query ??= new AabbQuery(true);
             query.Clear();
-            W.World.QueryAABB(query, swept);
+            QueryWorld.QueryAABB(query, swept);
             // Keep fixture encounter order and ascending child order for equal-distance hits.
             query.OrderChildren();
             foreach (var candidate in query.Children)
@@ -422,6 +445,9 @@ namespace Unbound.Runtime
 
         internal static List<Collider2D> OverlapColliders(IEnumerable<Collider2D> colliders, B2Transform? pose, ContactFilter2D filter, Rigidbody2D ignoreBody)
         {
+            Collider2D first = null;
+            foreach (var c in colliders) { first = c; break; }
+            using var target = InSpaceOf(first);
             W.PrepareQuery();
             var result = new List<Collider2D>();
             var seen = new HashSet<Collider2D>(ReferenceComparer.Instance);
@@ -442,7 +468,7 @@ namespace Unbound.Runtime
         {
             shape.ComputeAABB(out var aabb, pose, childIndex);
             var query = new AabbQuery(true);
-            W.World.QueryAABB(query, aabb);
+            QueryWorld.QueryAABB(query, aabb);
             query.OrderChildren();
             foreach (var candidate in query.Children)
             {

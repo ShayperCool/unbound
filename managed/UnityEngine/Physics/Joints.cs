@@ -108,7 +108,17 @@ namespace UnityEngine
         public Rigidbody connectedBody
         {
             get => m_ConnectedBody;
-            set { m_ConnectedBody = value; m_ConnectedAnchorConfigured = false; Rebuild(); }
+            set
+            {
+                // A joint joins bodies of one physics scene; the Editor refuses another scene's body
+                // and keeps the connection it had (measured: tests/projects/localphysics `p3.joint.*`).
+                if (value != null && !ReferenceEquals(W.SpaceOf(value.m_GameObject), W.SpaceOf(m_GameObject)))
+                {
+                    Debug.LogWarning($"Rigidbody cannot be connected to {GetType().Name} as they belong to a different physics scenes. Joint's GameObject name: '{name}', Rigidbody component's GameObject name: '{value.name}'.", this);
+                    return;
+                }
+                m_ConnectedBody = value; m_ConnectedAnchorConfigured = false; Rebuild();
+            }
         }
 
         public Vector3 axis { get => m_Axis; set { m_Axis = value; FramesChanged(); } }

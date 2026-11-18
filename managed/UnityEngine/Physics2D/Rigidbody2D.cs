@@ -35,6 +35,8 @@ namespace UnityEngine
         // Runtime state.
         internal Body m_Body;
         internal bool m_Registered;
+        /// <summary>The physics scene it is registered in (Physics2DWorld.Space).</summary>
+        internal Unbound.Runtime.Physics2DWorld.Space m_Space;
         internal bool m_BodyDirty;
         internal bool m_MassDirty;
         internal Vector2 m_PendingVelocity;
@@ -104,7 +106,7 @@ namespace UnityEngine
             {
                 body.BodyType = type;
                 m_MassDirty = true;
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     if (ReferenceEquals(c.m_AttachedBody, this)) W.Refilter(c);
             }
             body.LinearDamping = Mathf.Max(0f, m_LinearDamping);
@@ -607,7 +609,7 @@ namespace UnityEngine
         {
             if (!m_Registered) return;
             W.Flush();
-            foreach (var c in W.Colliders)
+            foreach (var c in W.CollidersOf(this))
                 if (ReferenceEquals(c.m_AttachedBody, this)) W.Refilter(c);
         }
 
@@ -830,7 +832,7 @@ namespace UnityEngine
             {
                 W.Flush();
                 int count = 0;
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     // Colliders a composite merges are not attached themselves (measured).
                     if (ReferenceEquals(c.m_AttachedBody, this) && !c.HasComposite()) count++;
                 return count;
@@ -842,7 +844,7 @@ namespace UnityEngine
         {
             W.Flush();
             var list = new List<Collider2D>();
-            foreach (var c in W.Colliders)
+            foreach (var c in W.CollidersOf(this))
                 if (ReferenceEquals(c.m_AttachedBody, this) && (findTriggers || !c.m_IsTrigger)) list.Add(c);
             return list;
         }

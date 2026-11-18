@@ -325,11 +325,16 @@ namespace UnityEngine
 
         /// <summary>Steps the default physics scene; a scene's local physics scene only moves through
         /// its own PhysicsScene.Simulate.</summary>
-        public static void Simulate(float step)
+        public static void Simulate(float step) => SimulateDefault(step, "Physics");
+
+        /// <summary>A script's step of the default physics scene: Physics.Simulate, or the default
+        /// PhysicsScene's Simulate, whose warning names PhysicsScene (measured:
+        /// tests/projects/localphysics `p3.defaultSim.log0`).</summary>
+        internal static void SimulateDefault(float step, string caller)
         {
             if (simulationMode != SimulationMode.Script)
             {
-                Debug.LogWarning("Physics.Simulate(...) was called but simulation mode is not set to Script. You should set simulation mode to Script first before calling this function therefore the simulation was not run.");
+                Debug.LogWarning(caller + ".Simulate(...) was called but simulation mode is not set to Script. You should set simulation mode to Script first before calling this function therefore the simulation was not run.");
                 return;
             }
             W.EnsureRegistered();

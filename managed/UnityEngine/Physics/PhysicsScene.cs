@@ -12,9 +12,9 @@ namespace UnityEngine
     /// queries search only its own colliders and its Simulate steps only its own components. A local
     /// physics scene is never simulated automatically, and it is no longer valid once its scene is
     /// unloaded; the default one is always valid.
-    /// What Unity does with an invalid physics scene is not documented. Unbound's choice
-    /// (unmeasured): IsEmpty and Simulate throw InvalidOperationException, and its queries find
-    /// nothing.
+    /// What Unity does with an invalid physics scene is not documented; measured for a created scene
+    /// after its unload (tests/projects/localphysics `p3.unload.*`): IsEmpty and Simulate throw
+    /// InvalidOperationException, and its queries find nothing.
     /// </summary>
     public partial struct PhysicsScene
     {
@@ -29,7 +29,7 @@ namespace UnityEngine
 
         public bool IsEmpty()
         {
-            // Unbound's choice (unmeasured): the 6000.0 Scripting API documents only valid scenes.
+            // The 6000.0 Scripting API documents only valid scenes (measured: tests/projects/localphysics).
             if (!IsValid())
                 throw new InvalidOperationException($"PhysicsScene.IsEmpty: {this} is not valid (the Scene that owned it was unloaded or destroyed).");
             var space = Live();
@@ -38,15 +38,16 @@ namespace UnityEngine
 
         public void Simulate(float step)
         {
-            // Unbound's choice (unmeasured): the 6000.0 Scripting API documents only valid scenes.
+            // The 6000.0 Scripting API documents only valid scenes (measured: tests/projects/localphysics).
             if (!IsValid())
                 throw new InvalidOperationException($"PhysicsScene.Simulate: {this} is not valid (the Scene that owned it was unloaded or destroyed).");
             var space = Live();
             // The default physics scene steps as Physics.Simulate steps it, with that method's
-            // simulation-mode requirement (Unbound's reading: the page documents no difference).
+            // simulation-mode requirement; a local one steps in any mode (measured:
+            // tests/projects/localphysics `p3.sim.*`, `p3.defaultSim.*`).
             if (ReferenceEquals(space, W.DefaultSpace))
             {
-                Physics.Simulate(step);
+                Physics.SimulateDefault(step, "PhysicsScene");
                 return;
             }
             W.EnsureRegistered();

@@ -113,6 +113,8 @@ namespace Unbound.Runtime
             if (dt <= 0f) return;
             foreach (var effector in s_Effectors.Values)
             {
+                // Only the effectors of the physics scene that was just stepped act.
+                if (!Physics2DWorld.InCurrentSpace(effector.m_GameObject)) continue;
                 if (effector is BuoyancyEffector2D buoyancy) { Float(buoyancy); continue; }
                 if (effector is not AreaEffector2D && effector is not PointEffector2D) continue;
                 var targets = new Dictionary<Body, (Collider2D source, Collider2D target)>();

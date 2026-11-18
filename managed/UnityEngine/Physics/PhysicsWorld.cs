@@ -233,9 +233,10 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Locals.Count; i++) Collect(s_Locals[i]);
             if (bodies == null && colliders == null) return;
             // Leave the old physics scene (a body takes its shapes along), then join the new one
-            // as an activation does: at the current transform, keeping the body's velocity. Unity
-            // documents only the move; the kept velocity and the timing (here: the next physics
-            // access) are Unbound's, not measured.
+            // as an activation does: at the current transform, keeping the body's linear and
+            // angular velocity (measured: tests/projects/localphysics `p3.into.*`,
+            // `p3.back.velocity`). Unity documents only the move; the timing (here: the next
+            // physics access) is Unbound's, not measured.
             if (bodies != null) foreach (var rb in bodies) Remove(rb);
             if (colliders != null) foreach (var c in colliders) Remove(c);
             if (bodies != null) foreach (var rb in bodies) Add(rb);

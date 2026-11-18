@@ -34,6 +34,8 @@ namespace UnityEngine
 
         // Runtime state.
         internal bool m_Registered;
+        /// <summary>The physics scene it is registered in (Physics2DWorld.Space).</summary>
+        internal Unbound.Runtime.Physics2DWorld.Space m_Space;
         internal bool m_ShapeDirty;
         internal Rigidbody2D m_AttachedBody;
         internal Body m_StaticBody;
@@ -80,7 +82,7 @@ namespace UnityEngine
             if (this is CompositeCollider2D composite)
             {
                 var rb = W.FindRigidbody(this);
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     if (c != this && c.m_CompositeOperation != CompositeOperation.None && ReferenceEquals(W.FindRigidbody(c), rb))
                         W.MarkShapeDirty(c);
                 if (m_Registered) composite.SourcesChanged();

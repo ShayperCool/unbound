@@ -201,7 +201,7 @@ namespace UnityEngine
             return filter;
         }
 
-        [Unbound.EditorFaithful("handle 0 is the one 2D world (PhysicsScene2D.IsValid answers so)")]
+        [Unbound.EditorFaithful("handle 0 is the default 2D physics scene (PhysicsScene2D.IsValid answers so)")]
         public static PhysicsScene2D defaultPhysicsScene => default;
 
         public static int velocityIterations
@@ -224,7 +224,7 @@ namespace UnityEngine
                 EnsureSettings();
                 s_Gravity = value;
                 // Sleeping bodies notice a new gravity.
-                foreach (var rb in W.Rigidbodies) if (rb.m_Body != null) rb.m_Body.IsAwake = true;
+                W.WakeAll();
             }
         }
 
@@ -774,10 +774,25 @@ namespace UnityEngine
         public static int OverlapCollider(Collider2D collider, List<Collider2D> results) => OverlapCollider(collider, new ContactFilter2D().NoFilter(), results);
     }
 
-    /// <summary>The 2D physics world of a scene. Unbound has one world: every scene shares it.</summary>
+    /// <summary>
+    /// A 2D physics scene: Physics2D.defaultPhysicsScene, or the local one a scene created or loaded
+    /// with LocalPhysicsMode.Physics2D owns (6000.0 Scripting API: PhysicsScene2D, LocalPhysicsMode,
+    /// PhysicsScene2D.Simulate, PhysicsSceneExtensions2D.GetPhysicsScene2D). Its queries search only
+    /// its own colliders and its Simulate steps only its own components. A local physics scene is
+    /// never simulated automatically, and a created scene's is no longer valid once the scene is
+    /// unloaded, IsEmpty and Simulate then throwing InvalidOperationException and its queries finding
+    /// nothing; the default one is always valid (measured: tests/projects/localphysics).
+    /// </summary>
     public partial struct PhysicsScene2D : IEquatable<PhysicsScene2D>
     {
         int m_SceneHandle;
+
+        internal PhysicsScene2D(int handle) { m_SceneHandle = handle; }
+
+        /// <summary>The live physics scene this one names; null once it is gone.</summary>
+        W.Space Live() => W.Find(m_SceneHandle);
+
+        Q.Target Searching() => Q.In(Live() ?? W.NoSpace);
 
         public override string ToString() => $"({m_SceneHandle})";
 
@@ -791,17 +806,25 @@ namespace UnityEngine
 
         public bool Equals(PhysicsScene2D other) => other.m_SceneHandle == m_SceneHandle;
 
-        public bool IsValid() => m_SceneHandle == 0;
+        public bool IsValid() => Live() != null;
 
-        public bool IsEmpty() => W.Rigidbodies.Count == 0 && W.Colliders.Count == 0;
+        public bool IsEmpty() => W.IsEmpty(Valid("IsEmpty"));
 
-        public int subStepCount => W.SubStepCount;
+        public int subStepCount => (Live() ?? W.NoSpace).SubStepCount;
 
-        public float subStepLostTime => W.SubStepLostTime;
+        public float subStepLostTime => (Live() ?? W.NoSpace).SubStepLostTime;
 
-        public bool Simulate(float deltaTime) => Physics2D.Simulate(deltaTime);
+        public bool Simulate(float deltaTime) => Simulate(deltaTime, Physics2D.AllLayers);
 
-        public bool Simulate(float deltaTime, int simulationLayers = -1) => Physics2D.Simulate(deltaTime, simulationLayers);
+        public bool Simulate(float deltaTime, int simulationLayers = -1)
+        {
+            var space = Valid("Simulate");
+            W.EnsureRegistered();
+            return W.Simulate(space, deltaTime, simulationLayers);
+        }
+
+        W.Space Valid(string method) => Live()
+            ?? throw new InvalidOperationException($"PhysicsScene2D.{method}: {this} is not valid (the Scene that owned it was unloaded or destroyed).");
 
         static ContactFilter2D Legacy(int layerMask) => ContactFilter2D.CreateLegacyFilter(layerMask, float.NegativeInfinity, float.PositiveInfinity);
 
@@ -825,53 +848,72 @@ namespace UnityEngine
             return results.Count;
         }
 
-        public RaycastHit2D Linecast(Vector2 start, Vector2 end, int layerMask = -5) => First(Physics2D.LinecastList(start, end, Legacy(layerMask)));
-        public RaycastHit2D Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter) => First(Physics2D.LinecastList(start, end, contactFilter));
-        public int Linecast(Vector2 start, Vector2 end, RaycastHit2D[] results, int layerMask = -5) => Copy(Physics2D.LinecastList(start, end, Legacy(layerMask)), results);
-        public int Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter, RaycastHit2D[] results) => Copy(Physics2D.LinecastList(start, end, contactFilter), results);
-        public int Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter, List<RaycastHit2D> results) => Copy(Physics2D.LinecastList(start, end, contactFilter), results);
-        public RaycastHit2D Raycast(Vector2 origin, Vector2 direction, float distance, int layerMask = -5) => First(Physics2D.RaycastList(origin, direction, distance, Legacy(layerMask)));
-        public RaycastHit2D Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter) => First(Physics2D.RaycastList(origin, direction, distance, contactFilter));
-        public int Raycast(Vector2 origin, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) => Copy(Physics2D.RaycastList(origin, direction, distance, Legacy(layerMask)), results);
-        public int Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) => Copy(Physics2D.RaycastList(origin, direction, distance, contactFilter), results);
-        public int Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) => Copy(Physics2D.RaycastList(origin, direction, distance, contactFilter), results);
-        public RaycastHit2D CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, int layerMask = -5) => First(Physics2D.CircleCastList(origin, radius, direction, distance, Legacy(layerMask)));
-        public RaycastHit2D CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter) => First(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter));
-        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) => Copy(Physics2D.CircleCastList(origin, radius, direction, distance, Legacy(layerMask)), results);
-        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) => Copy(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter), results);
-        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) => Copy(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter), results);
-        public RaycastHit2D BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, int layerMask = -5) => First(Physics2D.BoxCastList(origin, size, angle, direction, distance, Legacy(layerMask)));
-        public RaycastHit2D BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter) => First(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter));
-        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) => Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, Legacy(layerMask)), results);
-        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) => Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter), results);
-        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) => Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter), results);
-        public RaycastHit2D CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, int layerMask = -5) => First(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, Legacy(layerMask)));
-        public RaycastHit2D CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter) => First(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter));
-        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) => Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, Legacy(layerMask)), results);
-        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) => Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter), results);
-        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) => Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter), results);
-        public RaycastHit2D GetRayIntersection(Ray ray, float distance, int layerMask = -5) => Physics2D.GetRayIntersection(ray, distance, layerMask);
-        public int GetRayIntersection(Ray ray, float distance, RaycastHit2D[] results, int layerMask = -5) => Physics2D.GetRayIntersectionNonAlloc(ray, results, distance, layerMask);
-        public int GetRayIntersection(Ray ray, float distance, List<RaycastHit2D> results, int layerMask = -5) => Physics2D.GetRayIntersection(ray, distance, results, layerMask);
-        public Collider2D OverlapPoint(Vector2 point, int layerMask = -5) => First(Physics2D.OverlapPointList(point, Legacy(layerMask)));
-        public Collider2D OverlapPoint(Vector2 point, ContactFilter2D contactFilter) => First(Physics2D.OverlapPointList(point, contactFilter));
-        public int OverlapPoint(Vector2 point, Collider2D[] results, int layerMask = -5) => Copy(Physics2D.OverlapPointList(point, Legacy(layerMask)), results);
-        public int OverlapPoint(Vector2 point, ContactFilter2D contactFilter, Collider2D[] results) => Copy(Physics2D.OverlapPointList(point, contactFilter), results);
-        public int OverlapPoint(Vector2 point, ContactFilter2D contactFilter, List<Collider2D> results) => Copy(Physics2D.OverlapPointList(point, contactFilter), results);
-        public Collider2D OverlapCircle(Vector2 point, float radius, int layerMask = -5) => First(Physics2D.OverlapCircleList(point, radius, Legacy(layerMask)));
-        public Collider2D OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter) => First(Physics2D.OverlapCircleList(point, radius, contactFilter));
-        public int OverlapCircle(Vector2 point, float radius, Collider2D[] results, int layerMask = -5) => Copy(Physics2D.OverlapCircleList(point, radius, Legacy(layerMask)), results);
-        public int OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter, Collider2D[] results) => Copy(Physics2D.OverlapCircleList(point, radius, contactFilter), results);
-        public int OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter, List<Collider2D> results) => Copy(Physics2D.OverlapCircleList(point, radius, contactFilter), results);
-        public Collider2D OverlapBox(Vector2 point, Vector2 size, float angle, int layerMask = -5) => First(Physics2D.OverlapBoxList(point, size, angle, Legacy(layerMask)));
-        public Collider2D OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter) => First(Physics2D.OverlapBoxList(point, size, angle, contactFilter));
-        public int OverlapBox(Vector2 point, Vector2 size, float angle, Collider2D[] results, int layerMask = -5) => Copy(Physics2D.OverlapBoxList(point, size, angle, Legacy(layerMask)), results);
-        public int OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter, Collider2D[] results) => Copy(Physics2D.OverlapBoxList(point, size, angle, contactFilter), results);
-        public int OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter, List<Collider2D> results) => Copy(Physics2D.OverlapBoxList(point, size, angle, contactFilter), results);
-        public Collider2D OverlapArea(Vector2 pointA, Vector2 pointB, int layerMask = -5) => First(Physics2D.OverlapAreaList(pointA, pointB, Legacy(layerMask)));
-        public Collider2D OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter) => First(Physics2D.OverlapAreaList(pointA, pointB, contactFilter));
-        public int OverlapArea(Vector2 pointA, Vector2 pointB, Collider2D[] results, int layerMask = -5) => Copy(Physics2D.OverlapAreaList(pointA, pointB, Legacy(layerMask)), results);
-        public int OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter, Collider2D[] results) => Copy(Physics2D.OverlapAreaList(pointA, pointB, contactFilter), results);
-        public int OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter, List<Collider2D> results) => Copy(Physics2D.OverlapAreaList(pointA, pointB, contactFilter), results);
+        public RaycastHit2D Linecast(Vector2 start, Vector2 end, int layerMask = -5) { using (Searching()) return First(Physics2D.LinecastList(start, end, Legacy(layerMask))); }
+        public RaycastHit2D Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.LinecastList(start, end, contactFilter)); }
+        public int Linecast(Vector2 start, Vector2 end, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.LinecastList(start, end, Legacy(layerMask)), results); }
+        public int Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter, RaycastHit2D[] results) { using (Searching()) return Copy(Physics2D.LinecastList(start, end, contactFilter), results); }
+        public int Linecast(Vector2 start, Vector2 end, ContactFilter2D contactFilter, List<RaycastHit2D> results) { using (Searching()) return Copy(Physics2D.LinecastList(start, end, contactFilter), results); }
+        public RaycastHit2D Raycast(Vector2 origin, Vector2 direction, float distance, int layerMask = -5) { using (Searching()) return First(Physics2D.RaycastList(origin, direction, distance, Legacy(layerMask))); }
+        public RaycastHit2D Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.RaycastList(origin, direction, distance, contactFilter)); }
+        public int Raycast(Vector2 origin, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.RaycastList(origin, direction, distance, Legacy(layerMask)), results); }
+        public int Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) { using (Searching()) return Copy(Physics2D.RaycastList(origin, direction, distance, contactFilter), results); }
+        public int Raycast(Vector2 origin, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) { using (Searching()) return Copy(Physics2D.RaycastList(origin, direction, distance, contactFilter), results); }
+        public RaycastHit2D CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, int layerMask = -5) { using (Searching()) return First(Physics2D.CircleCastList(origin, radius, direction, distance, Legacy(layerMask))); }
+        public RaycastHit2D CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter)); }
+        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.CircleCastList(origin, radius, direction, distance, Legacy(layerMask)), results); }
+        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) { using (Searching()) return Copy(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter), results); }
+        public int CircleCast(Vector2 origin, float radius, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) { using (Searching()) return Copy(Physics2D.CircleCastList(origin, radius, direction, distance, contactFilter), results); }
+        public RaycastHit2D BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, int layerMask = -5) { using (Searching()) return First(Physics2D.BoxCastList(origin, size, angle, direction, distance, Legacy(layerMask))); }
+        public RaycastHit2D BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter)); }
+        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, Legacy(layerMask)), results); }
+        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) { using (Searching()) return Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter), results); }
+        public int BoxCast(Vector2 origin, Vector2 size, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) { using (Searching()) return Copy(Physics2D.BoxCastList(origin, size, angle, direction, distance, contactFilter), results); }
+        public RaycastHit2D CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, int layerMask = -5) { using (Searching()) return First(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, Legacy(layerMask))); }
+        public RaycastHit2D CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter)); }
+        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, Legacy(layerMask)), results); }
+        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, RaycastHit2D[] results) { using (Searching()) return Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter), results); }
+        public int CapsuleCast(Vector2 origin, Vector2 size, CapsuleDirection2D capsuleDirection, float angle, Vector2 direction, float distance, ContactFilter2D contactFilter, List<RaycastHit2D> results) { using (Searching()) return Copy(Physics2D.CapsuleCastList(origin, size, capsuleDirection, angle, direction, distance, contactFilter), results); }
+        public RaycastHit2D GetRayIntersection(Ray ray, float distance, int layerMask = -5) { using (Searching()) return Physics2D.GetRayIntersection(ray, distance, layerMask); }
+        public int GetRayIntersection(Ray ray, float distance, RaycastHit2D[] results, int layerMask = -5) { using (Searching()) return Physics2D.GetRayIntersectionNonAlloc(ray, results, distance, layerMask); }
+        public int GetRayIntersection(Ray ray, float distance, List<RaycastHit2D> results, int layerMask = -5) { using (Searching()) return Physics2D.GetRayIntersection(ray, distance, results, layerMask); }
+        public Collider2D OverlapPoint(Vector2 point, int layerMask = -5) { using (Searching()) return First(Physics2D.OverlapPointList(point, Legacy(layerMask))); }
+        public Collider2D OverlapPoint(Vector2 point, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.OverlapPointList(point, contactFilter)); }
+        public int OverlapPoint(Vector2 point, Collider2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.OverlapPointList(point, Legacy(layerMask)), results); }
+        public int OverlapPoint(Vector2 point, ContactFilter2D contactFilter, Collider2D[] results) { using (Searching()) return Copy(Physics2D.OverlapPointList(point, contactFilter), results); }
+        public int OverlapPoint(Vector2 point, ContactFilter2D contactFilter, List<Collider2D> results) { using (Searching()) return Copy(Physics2D.OverlapPointList(point, contactFilter), results); }
+        public Collider2D OverlapCircle(Vector2 point, float radius, int layerMask = -5) { using (Searching()) return First(Physics2D.OverlapCircleList(point, radius, Legacy(layerMask))); }
+        public Collider2D OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.OverlapCircleList(point, radius, contactFilter)); }
+        public int OverlapCircle(Vector2 point, float radius, Collider2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.OverlapCircleList(point, radius, Legacy(layerMask)), results); }
+        public int OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter, Collider2D[] results) { using (Searching()) return Copy(Physics2D.OverlapCircleList(point, radius, contactFilter), results); }
+        public int OverlapCircle(Vector2 point, float radius, ContactFilter2D contactFilter, List<Collider2D> results) { using (Searching()) return Copy(Physics2D.OverlapCircleList(point, radius, contactFilter), results); }
+        public Collider2D OverlapBox(Vector2 point, Vector2 size, float angle, int layerMask = -5) { using (Searching()) return First(Physics2D.OverlapBoxList(point, size, angle, Legacy(layerMask))); }
+        public Collider2D OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.OverlapBoxList(point, size, angle, contactFilter)); }
+        public int OverlapBox(Vector2 point, Vector2 size, float angle, Collider2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.OverlapBoxList(point, size, angle, Legacy(layerMask)), results); }
+        public int OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter, Collider2D[] results) { using (Searching()) return Copy(Physics2D.OverlapBoxList(point, size, angle, contactFilter), results); }
+        public int OverlapBox(Vector2 point, Vector2 size, float angle, ContactFilter2D contactFilter, List<Collider2D> results) { using (Searching()) return Copy(Physics2D.OverlapBoxList(point, size, angle, contactFilter), results); }
+        public Collider2D OverlapArea(Vector2 pointA, Vector2 pointB, int layerMask = -5) { using (Searching()) return First(Physics2D.OverlapAreaList(pointA, pointB, Legacy(layerMask))); }
+        public Collider2D OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter) { using (Searching()) return First(Physics2D.OverlapAreaList(pointA, pointB, contactFilter)); }
+        public int OverlapArea(Vector2 pointA, Vector2 pointB, Collider2D[] results, int layerMask = -5) { using (Searching()) return Copy(Physics2D.OverlapAreaList(pointA, pointB, Legacy(layerMask)), results); }
+        public int OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter, Collider2D[] results) { using (Searching()) return Copy(Physics2D.OverlapAreaList(pointA, pointB, contactFilter), results); }
+        public int OverlapArea(Vector2 pointA, Vector2 pointB, ContactFilter2D contactFilter, List<Collider2D> results) { using (Searching()) return Copy(Physics2D.OverlapAreaList(pointA, pointB, contactFilter), results); }
+    }
+}
+
+namespace UnityEngine
+{
+    public static partial class PhysicsSceneExtensions2D
+    {
+        /// <summary>The scene's own local 2D physics scene, or Physics2D.defaultPhysicsScene when it
+        /// has none (6000.0 Scripting API, PhysicsSceneExtensions2D.GetPhysicsScene2D; measured:
+        /// tests/projects/localphysics `*.create.*`, `both.*`, `loaded*.distinct2d`).</summary>
+        public static PhysicsScene2D GetPhysicsScene2D(this UnityEngine.SceneManagement.Scene scene)
+        {
+            // Unbound's choice (unmeasured), as for GetPhysicsScene: the 6000.0 Scripting API
+            // documents only valid scenes.
+            if (!scene.IsValid())
+                throw new ArgumentException("GetPhysicsScene2D: the Scene is not valid (it does not exist or has been unloaded).", nameof(scene));
+            var space = W.LocalOf(scene.handle);
+            return space != null ? new PhysicsScene2D(space.Handle) : Physics2D.defaultPhysicsScene;
+        }
     }
 }

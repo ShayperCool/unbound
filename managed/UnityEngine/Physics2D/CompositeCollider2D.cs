@@ -199,7 +199,7 @@ namespace UnityEngine
             var sources = new List<Collider2D>();
             var rb = m_GameObject.GetComponent<Rigidbody2D>();
             if (rb == null) return sources;
-            foreach (var c in W.Colliders)
+            foreach (var c in W.CollidersOf(this))
             {
                 if (c == this || c is CompositeCollider2D || c.m_CompositeOperation == CompositeOperation.None) continue;
                 if (!ReferenceEquals(W.FindRigidbody(c), rb)) continue;

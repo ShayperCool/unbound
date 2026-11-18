@@ -7,7 +7,6 @@ namespace Unbound.Runtime
     internal static class Physics2DJoints
     {
         static readonly List<Joint2D> s_Joints = new List<Joint2D>();
-        static Body s_Ground;
         internal static void Add(Joint2D joint)
         {
             Physics2DWorld.EnsureRegistered();
@@ -28,7 +27,8 @@ namespace Unbound.Runtime
                     else if (joint.m_Joint is Unbound.Box2D.Dynamics.Joints.WheelJoint wheel) joint.m_SuspendedMotor = wheel.GetMotorTorque(1f);
                     else if (joint.m_Joint is Unbound.Box2D.Dynamics.Joints.PrismaticJoint slider) joint.m_SuspendedMotor = slider.GetMotorForce(1f);
                 }
-                Physics2DWorld.World.DestroyJoint(joint.m_Joint);
+                // A joint is in its bodies' world (each physics scene has its own).
+                joint.m_Joint.BodyA.World.DestroyJoint(joint.m_Joint);
                 joint.m_Joint = null;
             }
             joint.m_JointDirty = true;
@@ -39,7 +39,20 @@ namespace Unbound.Runtime
             foreach (var joint in s_Joints)
                 if (joint.m_Joint != null && (joint.m_Joint.BodyA == body || joint.m_Joint.BodyB == body)) Release(joint, preserve: true);
         }
-        internal static void Reset() { s_Joints.Clear(); s_Ground = null; }
+        internal static void Reset() => s_Joints.Clear();
+
+        /// <summary>A local physics scene is released with its world: its joints are gone with it and
+        /// are made again in the physics scene their bodies join.</summary>
+        internal static void Forget(Physics2DWorld.Space space)
+        {
+            if (space.World == null) return;
+            foreach (var joint in s_Joints)
+            {
+                if (joint.m_Joint == null || joint.m_Joint.BodyA.World != space.World) continue;
+                joint.m_Joint = null;
+                joint.m_JointDirty = true;
+            }
+        }
         internal static void Sync()
         {
             foreach (var joint in s_Joints) Sync(joint);
@@ -60,8 +73,11 @@ namespace Unbound.Runtime
             var own = joint.attachedRigidbody?.m_Body;
             var other = joint.m_ConnectedBody != null ? joint.m_ConnectedBody.m_Body : null;
             if (own == null || (joint.m_ConnectedBody != null && other == null)) { Release(joint, preserve: true); return; }
-            var world = Physics2DWorld.World;
-            if (other == null) other = s_Ground ??= world.CreateBody(new BodyDef());
+            // The joint goes into its own body's world; without a connected body it holds to the
+            // ground of that physics scene.
+            var world = own.World;
+            if (other == null) other = Physics2DWorld.GroundOf(world);
+            if (other.World != world) { Release(joint, preserve: true); return; }
             if (own == other) { Release(joint); return; }
             var a = joint.ReverseBodies ? other : own; var b = joint.ReverseBodies ? own : other;
             if (joint.m_Joint != null && !joint.m_JointDirty && joint.m_Joint.BodyA == a && joint.m_Joint.BodyB == b) return;
@@ -74,12 +90,15 @@ namespace Unbound.Runtime
             }
             joint.m_JointDirty = false;
         }
-        internal static void AfterStep(float deltaTime)
+        /// <summary>Breaks the joints of the world that was just stepped whose reaction exceeds their
+        /// limits.</summary>
+        internal static void AfterStep(World world, float deltaTime)
         {
             if (deltaTime <= 0f) return;
             foreach (var joint in s_Joints.ToArray())
             {
                 if (joint == null || joint.m_Joint == null || !joint.m_Joint.SimulationEnabled || joint.m_BreakAction == JointBreakAction2D.Ignore) continue;
+                if (joint.m_Joint.BodyA.World != world) continue;
                 var force = joint.GetReactionForce(deltaTime);
                 var torque = joint.GetReactionTorque(deltaTime);
                 if (force.sqrMagnitude <= joint.m_BreakForce * joint.m_BreakForce && Mathf.Abs(torque) <= joint.m_BreakTorque) continue;

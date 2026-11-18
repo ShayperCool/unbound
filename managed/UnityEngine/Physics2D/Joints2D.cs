@@ -28,6 +28,13 @@ namespace UnityEngine
             set
             {
                 if (RejectConnectionSettings) { Debug.LogWarning($"The connected rigidbody for the '{GetType().Name}' type cannot be set.", this); return; }
+                // A joint joins bodies of one physics scene; the Editor refuses another scene's body
+                // and keeps the connection it had (measured: tests/projects/localphysics `p2.joint.*`).
+                if (value != null && !ReferenceEquals(W.SpaceOf(value.m_GameObject), W.SpaceOf(m_GameObject)))
+                {
+                    Debug.LogWarning($"Cannot set the connected rigidbody for the '{GetType().Name}' type because it connects to a rigidbody in a different physics scene.", this);
+                    return;
+                }
                 m_ConnectedBody = value; ConnectionChanged(); AnchorsChanged();
             }
         }

@@ -106,11 +106,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static int OverlapCollider(global::UnityEngine.Vector2 position, float angle, global::UnityEngine.Collider2D collider, global::System.Collections.Generic.List<global::UnityEngine.Collider2D> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.OverlapCollider"); return default; }
         [global::Unbound.Stub] public static int OverlapCollider(global::UnityEngine.Vector2 position, float angle, global::UnityEngine.Collider2D collider, global::UnityEngine.ContactFilter2D contactFilter, global::System.Collections.Generic.List<global::UnityEngine.Collider2D> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsScene2D.OverlapCollider"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class PhysicsSceneExtensions2D
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.PhysicsScene2D GetPhysicsScene2D(this global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PhysicsSceneExtensions2D.GetPhysicsScene2D"); return default; }
-    }
     unsafe partial class Rigidbody2D
     {
         [global::Unbound.Stub] internal void SetDragBehaviour(bool dragged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SetDragBehaviour"); }
