@@ -154,6 +154,12 @@ namespace Unbound.Runtime
                     Debug.LogException(e, src);
                 }
             }
+            // A copy of a hierarchy made at run time keeps each object's hide flags; a copy of an
+            // asset's (a prefab, an imported model) gets none (Unity 6000.0.71f1,
+            // tests/projects/toolapis imported.madeInstance, imported.instance).
+            if (!sourceGo.m_IsPrefabAsset && !sourceGo.IsPersistentAsset)
+                foreach (var (from, to) in map)
+                    if (to is GameObject || to is Component) to.CopyHideFlags(from);
             return new Prepared
             {
                 Original = original, RootGo = rootGo, Root = rootClone, Map = map, Pairs = pairs,

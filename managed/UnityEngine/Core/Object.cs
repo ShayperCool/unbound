@@ -124,6 +124,14 @@ namespace UnityEngine
         /// <summary>The flags for the engine's own reads, also of a destroyed object.</summary>
         internal HideFlags HideFlagsNoThrow => m_SharedIdentity?.Flags ?? m_HideFlags;
 
+        /// <summary>Sets the flags without what setting <see cref="hideFlags"/> does besides (a
+        /// GameObject passing them to its components): for copies that take each object's own.</summary>
+        internal void CopyHideFlags(Object from)
+        {
+            if (m_SharedIdentity == null) m_HideFlags = from.HideFlagsNoThrow;
+            else m_SharedIdentity.Flags = from.HideFlagsNoThrow;
+        }
+
         public int GetInstanceID()
         {
             MainThreadCheck.EnsureRunningOnMainThread();

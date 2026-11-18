@@ -300,6 +300,37 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(source);
         }
 
+        /// <summary>A copy of a GameObject hierarchy made at run time keeps each object's hide flags
+        /// (Unity 6000.0.71f1, tests/projects/toolapis imported.madeInstance); a copy of another
+        /// object (a texture) gets none.</summary>
+        [Fact]
+        public void ACopyOfAMadeHierarchyKeepsEachObjectsHideFlags()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var made = new GameObject("MadeWithFlags") { hideFlags = HideFlags.HideInHierarchy | HideFlags.NotEditable };
+            var child = new GameObject("Child");
+            child.transform.SetParent(made.transform);
+            made.AddComponent<BoxCollider>().hideFlags = HideFlags.NotEditable;
+            var copy = Object.Instantiate(made);
+            try
+            {
+                Assert.Equal(HideFlags.HideInHierarchy | HideFlags.NotEditable, copy.hideFlags);
+                Assert.Equal(made.transform.hideFlags, copy.transform.hideFlags);
+                Assert.Equal(HideFlags.NotEditable, copy.GetComponent<BoxCollider>().hideFlags);
+                Assert.Equal(HideFlags.None, copy.transform.GetChild(0).gameObject.hideFlags);
+                var texture = new Texture2D(2, 2) { hideFlags = HideFlags.NotEditable };
+                var textureCopy = Object.Instantiate(texture);
+                Assert.Equal(HideFlags.None, textureCopy.hideFlags);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(textureCopy);
+            }
+            finally
+            {
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(made);
+            }
+        }
+
         [Fact]
         public void ShaderClonePreservesNameAndOwnsMutableSettings()
         {
