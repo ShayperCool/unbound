@@ -233,6 +233,8 @@ public class UitkProbe : MonoBehaviour
             PoolDepthControls(rows);
             RawDepthSourceControls(rows);
             FrontFaces(rows);
+            LenientNames(rows);
+            PackedTargets(rows);
             rows.Append("{\"k\":\"complete\",\"v\":true}\n");
         }
         catch (Exception e)
@@ -669,6 +671,101 @@ public class UitkProbe : MonoBehaviour
                     Row(rows, "Compute.RawLoad." + suffix, new Color(v.y, v.z, 0, 1));
             }
         output.Release();
+    }
+
+    /// <summary>Recorded last: a texture of two texels (0.25, 0.75) of three own states (point
+    /// and repeat, bilinear and clamp, point and mirror) through wrongly spelt inline sampler
+    /// names (`Lenient*`), sampled at u 0.4, 1.4, -0.4 and 1.9 (red, green, blue, alpha), where
+    /// the texture's state and the state the name spells give different values.</summary>
+    static readonly string[] LenientCases =
+    {
+        "LenientPointLinear", "LenientLinearPoint", "LenientTrilinearPoint", "LenientClampRepeat",
+        "LenientClampMirror", "LenientMirrorClamp", "LenientAniso", "LenientBare",
+    };
+
+    static void LenientNames(StringBuilder rows)
+    {
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        target.Create();
+        var readback = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var texture = Pair(0.25f, 0.75f, FilterMode.Point);
+        var states = new (string, FilterMode, TextureWrapMode)[]
+        {
+            ("pointRepeat", FilterMode.Point, TextureWrapMode.Repeat),
+            ("bilinearClamp", FilterMode.Bilinear, TextureWrapMode.Clamp),
+            ("pointMirror", FilterMode.Point, TextureWrapMode.Mirror),
+        };
+        foreach (var (state, filter, wrap) in states)
+        {
+            texture.filterMode = filter;
+            texture.wrapMode = wrap;
+            foreach (var name in LenientCases)
+            {
+                var shader = Shader.Find("Probe/SamplerStates/" + name);
+                if (shader == null)
+                {
+                    rows.Append("{\"k\":\"").Append(name).Append('.').Append(state).Append("\",\"v\":\"missing\"}\n");
+                    continue;
+                }
+                var material = new Material(shader);
+                material.SetTexture("_L", texture);
+                Graphics.Blit(null, target, material);
+                Row(rows, name + "." + state, Read(target, readback));
+                DestroyImmediate(material);
+            }
+        }
+        DestroyImmediate(texture); DestroyImmediate(readback); DestroyImmediate(target);
+    }
+
+    /// <summary>Recorded last: what a program samples from packed 16-bit color targets (4444,
+    /// 5-6-5, 1-5-5-5) of two texels: (0.25, 0.5, 0.3, 0.7) drawn and cleared, point sampled;
+    /// 0.2 and 0.6 drawn side by side, sampled between them through a bilinear state; 0.25 then
+    /// 0.04 added by a blended draw (`Packed.&lt;format&gt;.*`). A float target's rows are the
+    /// control.</summary>
+    static void PackedTargets(StringBuilder rows)
+    {
+        var target = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        target.Create();
+        var readback = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
+        var fill = new Material(Shader.Find("Probe/SamplerStates/PackedFill"));
+        var read = new Material(Shader.Find("Probe/SamplerStates/PackedRead"));
+        foreach (var format in new[] { RenderTextureFormat.ARGB4444, RenderTextureFormat.RGB565, RenderTextureFormat.ARGB1555, RenderTextureFormat.ARGBFloat })
+        {
+            string key = "Packed." + format;
+            rows.Append("{\"k\":\"").Append(key).Append(".supported\",\"v\":").Append(SystemInfo.SupportsRenderTextureFormat(format) ? "true" : "false").Append("}\n");
+            var packed = new RenderTexture(2, 1, 0, format, RenderTextureReadWrite.Linear);
+            packed.Create();
+            void Sample(string name, FilterMode filter, float u)
+            {
+                packed.filterMode = filter;
+                read.SetTexture("_P", packed);
+                read.SetFloat("_U", u);
+                Graphics.Blit(null, target, read);
+                Row(rows, key + "." + name, Read(target, readback));
+            }
+            void Fill(float mode, UnityEngine.Rendering.BlendMode src = UnityEngine.Rendering.BlendMode.One, UnityEngine.Rendering.BlendMode dst = UnityEngine.Rendering.BlendMode.Zero)
+            {
+                fill.SetFloat("_Mode", mode);
+                fill.SetFloat("_Src", (float)src);
+                fill.SetFloat("_Dst", (float)dst);
+                Graphics.Blit(null, packed, fill);
+            }
+            Fill(0);
+            Sample("draw", FilterMode.Point, 0.25f);
+            var previous = RenderTexture.active;
+            RenderTexture.active = packed;
+            GL.Clear(false, true, new Color(0.25f, 0.5f, 0.3f, 0.7f));
+            RenderTexture.active = previous;
+            Sample("clear", FilterMode.Point, 0.25f);
+            Fill(1);
+            Sample("halves.left", FilterMode.Point, 0.25f);
+            Sample("halves.between", FilterMode.Bilinear, 0.5f);
+            Fill(0);
+            Fill(2, UnityEngine.Rendering.BlendMode.One, UnityEngine.Rendering.BlendMode.One);
+            Sample("blend", FilterMode.Point, 0.25f);
+            DestroyImmediate(packed);
+        }
+        DestroyImmediate(fill); DestroyImmediate(read); DestroyImmediate(readback); DestroyImmediate(target);
     }
 
     static Color Read(RenderTexture texture, Texture2D readback)
