@@ -494,7 +494,27 @@ class ImageTests(unittest.TestCase):
         removed = self.declared([('', line), ('controls', self.URP.format('0.00', 4))])
         self.assertEqual(suite.images_worse(old, removed),
                          ['p/run.py check --profile controls: pixels over 8 3 -> 4'])
-        self.assertEqual(suite.images_unmatched(old, removed), (['p/run.py check --profile motion'], []))
+        self.assertEqual(suite.images_unmatched(old, removed), (['p/run.py check --profile motion'], [], []))
+
+    def test_a_step_whose_command_changed_is_still_judged(self):
+        def run(gate, mean):
+            command = f'python3 /r/tests/projects/urp/compare.py /r/tests/projects/urp/Reference/lit.png --gate {gate}'
+            return {'status': 'pass', 'steps': [{'kind': 'compare', 'command': command, 'step': suite.step_id(command),
+                               'images': {'': {'mean': mean, 'worst': 3, 'over': 0}}}]}
+        old, new = run('/r/tests/projects/urp/residuals.json', 0.10), run('/r/tests/projects/urp/renamed.json', 5.0)
+        self.assertEqual(suite.images_worse(old, new),
+                         ['urp/compare.py Reference/lit.png --gate urp/renamed.json: mean 0.10 -> 5.00'])
+        self.assertEqual(suite.images_unmatched(old, new), ([], [], [
+            ('urp/compare.py Reference/lit.png --gate urp/residuals.json',
+             'urp/compare.py Reference/lit.png --gate urp/renamed.json')]))
+        lines, regressed = suite.compare_runs({'probes': {'p': new}}, {'probes': {'p': old}})
+        self.assertTrue(regressed)
+        self.assertIn('(command changed)', lines[-1])
+        # Two changed steps with the same script and first argument: not paired by guessing.
+        two = lambda gates, mean: {'steps': run(gates[0], mean)['steps'] + run(gates[1], mean)['steps']}
+        old2, new2 = two(['/r/tests/a.json', '/r/tests/b.json'], 0.1), two(['/r/tests/c.json', '/r/tests/d.json'], 5.0)
+        self.assertEqual(suite.images_worse(old2, new2), [])
+        self.assertEqual([len(part) for part in suite.images_unmatched(old2, new2)], [2, 2, 0])
 
     def test_step_identity_is_its_command_without_run_paths(self):
         label = 'suite-sheriff-20261118-090834'
@@ -503,7 +523,7 @@ class ImageTests(unittest.TestCase):
                 '/slots/slot-10/tests/projects/urp/Reference/unity-6000.0.71f1/scenarios/lit.png',
                 f'{work}/out/lit.png', '--gate', '/slots/slot-10/tests/projects/urp/image-residuals.json']
         self.assertEqual(suite.step_id(argv, label),
-                         'urp/compare.py scenarios/lit.png --gate urp/image-residuals.json')
+                         'urp/compare.py scenarios/lit.png {work}/out/lit.png --gate urp/image-residuals.json')
         # Another checkout, run label and runtime give the same identity.
         other = [a.replace('/slots/slot-10', '/data/integration').replace(label[6:], 'r2') for a in argv]
         self.assertEqual(suite.step_id(other, 'suite-r2'), suite.step_id(argv, label))
@@ -511,8 +531,14 @@ class ImageTests(unittest.TestCase):
         # gate.json commands: the shell command unwrapped; a label argument read as {label}.
         self.assertEqual(suite.step_id(['bash', '-c', 'python3 tests/projects/p/run.py check --label '
                                         f'{label}-quit --out={work}/x.json --leave'], label),
-                         'p/run.py check --label {label}-quit --out= --leave')
+                         'p/run.py check --label {label}-quit --out={work}/x.json --leave')
         self.assertEqual(suite.step_id([f'/runtimes/snapshots/ab12/unbound', 'check']), 'check')
+        runs = f'/home/u/.cache/unbound/validation/runs/p/{label}-gamma/gamma/out.jsonl'
+        self.assertEqual(suite.step_id(['/r/tests/projects/p/compare.py', runs], label),
+                         'p/compare.py {label}-gamma/gamma/out.jsonl')
+        # A recorded command cut inside the quoted shell command: its last partial word is left out.
+        cut = "bash -c 'python3 tests/projects/p/run.py check --profile motion --out /home/u/.cac"
+        self.assertEqual(suite.step_id(cut, label, cut=True), 'p/run.py check --profile motion --out')
 
     def test_cut_commands_of_older_records_match_by_prefix(self):
         reference = '/slots/slot-10/tests/projects/urp/Reference/unity-6000.0.71f1/scenarios/'
@@ -531,9 +557,11 @@ class ImageTests(unittest.TestCase):
         self.assertEqual([c for _, _, c in suite.step_ids(old['steps'])], [False, False])
         new = {'steps': [step('extra', 0.4, False), step('lit', 0.01, False), step('unlit', 0.5, False)]}
         self.assertEqual(suite.images_worse(old, new),
-                         ['urp/compare.py scenarios/lit.png --gate urp/image-residuals.json: mean 0.00 -> 0.01'])
+                         ['urp/compare.py scenarios/lit.png {work}/out/lit.png --gate urp/image-residuals.json: '
+                          'mean 0.00 -> 0.01'])
         self.assertEqual(suite.images_unmatched(old, new),
-                         ([], ['urp/compare.py scenarios/extra.png --gate urp/image-residuals.json']))
+                         ([], ['urp/compare.py scenarios/extra.png {work}/out/extra.png --gate urp/image-residuals.json'],
+                          []))
 
 class ContinuationTests(unittest.TestCase):
     def probe(self, tail_code=0, tail_text='9 nodes compared, 0 differences'):

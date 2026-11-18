@@ -76,12 +76,15 @@ comparison keeps recorded residuals pass their comparator the probe's residual l
 cameramsaa, flares, indirectspec, lightprobes, lines and terrain. Each run records them (`images` in the
 summary: every printed image mean, worst channel difference and count of pixels over 8, by
 comparator step and image). A step is identified by its command (step_id: the script and its
-arguments, a gate.json command unwrapped, run output paths left out), never by its position, so a
-recipe that gains or loses a step compares every other step with itself. A probe with any status
+arguments, a gate.json command unwrapped, run folders and the label written as placeholders),
+never by its position, so a recipe that gains or loses a step compares every other step with
+itself; a step whose command changed is compared with the one baseline step of the same script
+and first argument. A probe with any status
 regresses when one of them gets worse against the baseline: a higher mean as printed (two
 decimals), more pixels over the comparator's own bound of 8, or a measurement its step ran but no
 longer printed. There is no other tolerance. A baseline step that did not run again and a step
-measured for the first time are listed as `unmatched`, not judged. Summaries written before
+measured for the first time are listed as `unmatched`, not judged, as are pairs under a changed
+command (those are judged). Summaries written before
 images were recorded give the measurements their stored summary still shows.
 
 Exit codes: 0 when no probe has a new failure against the baseline, no failing probe got worse
@@ -925,27 +928,43 @@ COMMAND_LIMIT = 400  # characters of a step's command kept in its record
 INTERPRETERS = re.compile(r'(python3?(\.\d+)?|bash|sh|env)$')
 
 
-def step_id(argv, label=None):
+def split_command(text):
+    """A recorded command line's argv. A command cut at COMMAND_LIMIT may end inside a quoted
+    argument (often the whole of a `bash -c '...'`): it is closed there."""
+    for ending in ('', "'", '"'):
+        try:
+            return shlex.split(text + ending)
+        except ValueError:
+            continue
+    return text.split()
+
+
+def step_id(argv, label=None, cut=False):
     """A compare step's identity across runs and checkouts, from its command alone (its argv, or
     the recorded command line): the script and every argument in order, with a `bash -c`/`sh -c`
     command unwrapped and the interpreter left out. A repository path (a script, a reference, a
-    residual list: under tests/) keeps its last two parts; any other path (the run's outputs,
-    which name the run label, the checkout or a runtime snapshot) is left out, so identities do
-    not change with the run, and inserting or removing a step changes no other step's identity
-    ('urp/compare.py scenarios/lit.png --gate urp/image-residuals.json',
+    residual list: under tests/) keeps its last two parts; a path in the run's own folders keeps
+    its part inside them ('{work}/out/lit.png'; a runs/ folder from its '{label}' part on); any
+    other path (a checkout, a runtime snapshot) is left out. So identities do not change with the
+    run, and inserting or removing a step changes no other step's identity
+    ('urp/compare.py scenarios/lit.png {work}/out/lit.png --gate urp/image-residuals.json',
     'residentdrawer/run.py check --profile motion'). label is the run's {label} value
-    ('suite-<run label>'), which some recipes pass as an argument: it reads '{label}'."""
+    ('suite-<run label>'), which some recipes pass as an argument: it reads '{label}'. cut: argv
+    is a recorded command cut at COMMAND_LIMIT, whose last (partial) argument is left out."""
     if isinstance(argv, str):
-        try:
-            argv = shlex.split(argv)
-        except ValueError:  # a recorded command cut inside a quoted argument
-            argv = argv.split()
+        argv = split_command(argv)
     tokens = [token.replace(label, '{label}') for token in argv] if label else list(argv)
     if len(tokens) >= 3 and Path(tokens[0]).name in ('bash', 'sh') and tokens[1] == '-c':
-        return step_id(tokens[2])
+        return step_id(split_command(tokens[2]), cut=cut)
+    if cut:
+        tokens = tokens[:-1]
     while len(tokens) > 1 and INTERPRETERS.fullmatch(Path(tokens[0]).name):
         tokens = tokens[1:]
     return ' '.join(part for part in (identity_token(token) for token in tokens) if part)
+
+
+# A suite step's work folder: <cache>/validation/suite/<run label>/<probe>.
+WORK_FOLDER = re.compile(r'^.*?/validation/suite/[^/]+/[^/]+(?=/|$)')
 
 
 def identity_token(token):
@@ -953,9 +972,23 @@ def identity_token(token):
     if '/' not in value:
         return token
     path = value.replace('\\', '/')
-    if not (path.startswith('tests/') or '/tests/' in path):
+    if path.startswith('tests/') or '/tests/' in path:
+        kept = '/'.join(Path(path).parts[-2:])
+    elif WORK_FOLDER.match(path):
+        kept = WORK_FOLDER.sub('{work}', path)
+    elif '{label}' in path:
+        kept = path[path.rfind('/', 0, path.index('{label}'))+1:]
+    else:
         return option + separator if option else ''
-    return option + separator + '/'.join(Path(path).parts[-2:])
+    return option + separator + kept
+
+
+def coarse_id(sid):
+    """A step identity's script and first argument: what matched_steps pairs a step whose command
+    changed by (a profile option added, a residual list renamed)."""
+    tokens = sid.partition(' #')[0].split()
+    first = next((token for token in tokens[1:] if not token.startswith('-')), '')
+    return ' '.join(tokens[:1] + [first])
 
 
 def step_ids(steps, label=None):
@@ -969,16 +1002,7 @@ def step_ids(steps, label=None):
         if step.get('kind') in ('compare', 'identical'):
             command = step.get('command', '')
             complete = 'step' in step or len(command) < COMMAND_LIMIT
-            if 'step' in step:
-                base = step['step']
-            elif complete:
-                base = step_id(command, label)
-            else:
-                try:
-                    tokens = shlex.split(command)
-                except ValueError:
-                    tokens = command.split()
-                base = step_id(tokens[:-1], label)
+            base = step['step'] if 'step' in step else step_id(command, label, cut=not complete)
             seen[base] = seen.get(base, 0) + 1
             out.append((step, base if seen[base] == 1 else f'{base} #{seen[base]}', complete))
     return out
@@ -1013,8 +1037,10 @@ def recorded_images(result, label=None):
 def matched_steps(old, new, labels=(None, None)):
     """{baseline step identity: this run's step identity} for the compare steps of both runs, by
     their commands, not their positions. An incomplete baseline identity (a cut command) matches
-    the first unmatched step of this run whose identity extends it. A result without step records
-    is identified by its recorded measurements. labels: each run's {label} value (run_label)."""
+    the first unmatched step of this run whose identity extends it. Steps left over on both sides
+    are paired when their script and first argument (coarse_id) are those of exactly one step on
+    each side: a step whose command changed is still judged. A result without step records is
+    identified by its recorded measurements. labels: each run's {label} value (run_label)."""
     after = [sid for _, sid, _ in step_ids(new.get('steps'), labels[1])] or list(recorded_images(new, labels[1]))
     before = ([(sid, complete) for _, sid, complete in step_ids(old.get('steps'), labels[0])]
               or [(sid, True) for sid in recorded_images(old, labels[0])])
@@ -1032,6 +1058,14 @@ def matched_steps(old, new, labels=(None, None)):
         if candidates:
             matched[sid] = candidates[0]
             used.add(candidates[0])
+    left = [sid for sid, _ in before if sid not in matched]
+    right = [sid for sid in after if sid not in used]
+    for sid in left:
+        key = coarse_id(sid)
+        olds = [other for other in left if coarse_id(other) == key]
+        news = [other for other in right if coarse_id(other) == key]
+        if len(olds) == 1 and len(news) == 1:
+            matched[sid] = news[0]
     return matched
 
 
@@ -1055,14 +1089,17 @@ def images_worse(old, new, labels=(None, None)):
 
 
 def images_unmatched(old, new, labels=(None, None)):
-    """Image measurements on only one side: the baseline's steps that did not run again (an
-    earlier failure, a removed or changed command) and this run's steps the baseline did not
-    measure. Listed, not judged: images_worse judges the steps of both runs."""
+    """Image measurements whose step has no counterpart, and steps judged under a changed command:
+    (the baseline's steps without one in this run (an earlier failure, a removed profile), this
+    run's steps without one in the baseline, [(baseline identity, this run's identity)] of steps
+    paired by coarse_id). Listed, not judged: images_worse judges every pair."""
     before, after = recorded_images(old, labels[0]), recorded_images(new, labels[1])
     matched = matched_steps(old, new, labels)
     gone = sorted(sid for sid in before if sid not in matched)
     added = sorted(sid for sid in after if sid not in set(matched.values()))
-    return gone, added
+    changed = sorted((sid, other) for sid, other in matched.items() if sid in before and other != sid
+                     and coarse_id(sid) == coarse_id(other) and not other.startswith(sid.partition(' #')[0]))
+    return gone, added, changed
 
 
 def matched_summary(text, pattern):
@@ -1519,13 +1556,15 @@ def compare_runs(current, previous, accepted=None):
             lines.append(f'images    {name}: ' + '; '.join(images[:8])
                          + (f'; and {len(images) - 8} more' if len(images) > 8 else ''))
             regressed = True
-        gone, added = images_unmatched(old, result, labels) if old is not None else ([], [])
-        if gone or added:
-            # Not judged: a baseline step that did not run again (its failure is listed above) or
-            # whose command changed, and a step that measures images for the first time.
+        gone, added, changed = images_unmatched(old, result, labels) if old is not None else ([], [], [])
+        if gone or added or changed:
+            # Listed, not judged: a baseline step without a counterpart in this run (an earlier
+            # failure is listed above), a step measured for the first time; a step paired under a
+            # changed command is judged above.
             lines.append(f'unmatched {name}: ' + '; '.join(
-                [f'baseline step {sid} did not run' for sid in gone]
-                + [f'step {sid} has no baseline' for sid in added]))
+                [f'baseline step {sid} has no counterpart in this run' for sid in gone]
+                + [f'step {sid} has no baseline' for sid in added]
+                + [f'step {b} compared with baseline step {a} (command changed)' for a, b in changed]))
     for name in sorted(set(before) - set(current['probes'])):
         lines.append(f'gone      {name} (was {before[name]["status"]})')
     return lines, regressed
