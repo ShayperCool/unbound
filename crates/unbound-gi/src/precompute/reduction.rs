@@ -3,10 +3,10 @@
 //! for its children by their shares of it, so replacing children by their parent changes the
 //! light by how far each child's weight is from the parent's weight times that child's share.
 //! The joins that change it least go first, over all of the trees at once, until few enough
-//! references are left; a tree may be left out whole at the cost of all of its weight. This is
-//! the order of joins of the Unity 6000.0.71f1 Editor's precompute: with it Unbound's light
-//! probes of tests/projects/realtimegi `Room` keep the Editor's environment references (the
-//! same values of its coarser levels for the probes that see much of it), see
+//! references are left; a tree may be left out whole at the cost of all of its weight. With it
+//! Unbound's light probes of tests/projects/realtimegi `Room` at the Unity 6000.0.71f1 Editor's
+//! budget of 64 references reference the Editor's environment values for five of the nine
+//! probes (the other four 28 values apart) and keep all of their light as the Editor's do, see
 //! docs/REALTIME_GI.md, Unbound's precompute.
 use super::transport::{Hierarchy, Weight};
 use std::cmp::Ordering;

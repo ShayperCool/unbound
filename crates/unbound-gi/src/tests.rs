@@ -3403,10 +3403,11 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
     };
     // With the values outside the probe comparator's tolerance (of 5070) measured with Unbound's
     // clusters, transport and visibility, the light probe coefficients off (of 243) with its
-    // probe transport, and the median relative error in thousandths. (Without a budget of
-    // references the environment-only cases from `room-gradient` on are 0.6 to 0.7% low at the
-    // median, with this tree or one of positions alone: the transport's, cause open; the
-    // earlier budget over a tree of positions alone happened to offset it.) (In an earlier local experiment, before the present cluster tree and
+    // probe transport, and the median relative error in ten-thousandths. (Without any budget of
+    // references the cases from `room-pointoff` on have about the same medians, 0.9 to 1.6%,
+    // and the environment-only ones from `room-gradient` on are 0.6 to 0.7% low at the median,
+    // with this tree or one of positions alone: the transport's, cause open; the earlier budget
+    // over a tree of positions alone happened to offset it.) (In an earlier local experiment, before the present cluster tree and
     // budget of references, with the Editor's own cluster geometry, which its precompute keeps
     // outside the project, and this transport, the first four were 12, 14, 29 and 81 values:
     // docs/REALTIME_GI.md, Unbound's precompute.)
@@ -3458,7 +3459,7 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
         (cube, "room-envdata", 157, 0, 93),
         (flat, "room-sky-none", 160, 0, 107),
     ];
-    for (room, case, measured, probes, median_permille) in cases {
+    for (room, case, measured, probes, measured_median) in cases {
         if case == "room-emission-call" {
             r.set(lit);
             r.converge();
@@ -3479,10 +3480,85 @@ fn own_transport_lights_the_room_as_the_editors_precompute() {
             fails * 100 <= measured * 115,
             "{case}: {fails} values outside the tolerance"
         );
+        // The median in ten-thousandths, within 15% and a twentieth of a percent of it.
         assert!(
-            median * 1000.0 <= median_permille as f32 * 1.15 + 1.0,
+            median * 1e4 <= measured_median as f32 * 1.15 + 5.0,
             "{case}: median relative error {median}"
         );
+    }
+}
+
+/// Per probe, the environment values a probe set references.
+fn environment_references(set: &crate::data::ProbeSet) -> Vec<std::collections::BTreeSet<u32>> {
+    set.probes
+        .iter()
+        .map(|p| {
+            p.references
+                .iter()
+                .filter(|r| set.dependencies[r.0 as usize] == crate::data::ENVIRONMENT_ID)
+                .map(|r| r.1)
+                .collect()
+        })
+        .collect()
+}
+
+/// Per texel of a transport, the sum of its weights (the share of its rays that meet a value).
+fn texel_weight_sums(s: &System) -> Vec<f32> {
+    let mut sums = Vec::new();
+    for g in &s.transport.segments {
+        let n = g.references.len();
+        for k in 0..g.texels.len() {
+            sums.push(
+                (0..n)
+                    .map(|r| {
+                        g.reference_weights[r] as f32 * g.weights[k * n + r] as f32
+                            / (65535.0 * 255.0)
+                    })
+                    .sum(),
+            );
+        }
+    }
+    sums.sort_by(f32::total_cmp);
+    sums
+}
+
+#[test]
+fn own_references_keep_the_light_and_the_editors_environment_values() {
+    // Unbound's light probes of the Room at the budget of 64 references: the environment values
+    // each references against the Editor's, and the light the references keep (all of it, as
+    // the Editor's: within 0.005 of each probe's band 0 of 1, its texels' weights summing to 1).
+    let data = room_data();
+    let (own, set) = own_room_precompute(&data, "Room", Some(&ROOM_PROBES));
+    let set = set.unwrap();
+    let editor = &data.probe_sets[0];
+    let (ours, theirs) = (environment_references(&set), environment_references(editor));
+    let same = ours.iter().zip(&theirs).filter(|(a, b)| a == b).count();
+    let apart: usize = ours
+        .iter()
+        .zip(&theirs)
+        .map(|(a, b)| a.symmetric_difference(b).count())
+        .sum();
+    eprintln!("environment references: {same} of 9 probes the Editor's, {apart} values apart");
+    // Measured: 5 of 9 the same, the other four 28 values apart.
+    assert!(same >= 5 && apart * 100 <= 28 * 115, "{same} {apart}");
+    for (p, (ours, theirs)) in set.probes.iter().zip(&editor.probes).enumerate() {
+        let band0 = |p: &crate::data::Probe| p.weights.iter().map(|w| w[0]).sum::<f32>();
+        assert!(ours.references.len() <= 64);
+        assert!(
+            (band0(ours) - 1.0).abs() < 1e-3,
+            "probe {p}: {}",
+            band0(ours)
+        );
+        assert!(
+            (band0(theirs) - 1.0).abs() < 5e-3,
+            "probe {p}: {}",
+            band0(theirs)
+        );
+    }
+    for s in [&own, &data.systems[0]] {
+        let sums = texel_weight_sums(s);
+        let (p10, median) = (sums[sums.len() / 10], sums[sums.len() / 2]);
+        assert!(p10 > 0.995 && (median - 1.0).abs() < 1e-3, "{p10} {median}");
     }
 }
 

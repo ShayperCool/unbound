@@ -10,6 +10,7 @@
 //! precompute).
 use super::geometry::Bvh;
 use super::math::{V3, add, dot, scale};
+use rayon::prelude::*;
 
 /// A cluster's description: its centre (in voxels), its normal times [`NORMAL_WEIGHT`] and per
 /// direction of [`SIGHT_DIRECTIONS`] what it sees.
@@ -193,24 +194,36 @@ pub(super) fn build(features: &[[f32; FEATURES]], areas: &[f32]) -> TreeLayout {
         depth: usize,
     }
     let mut nodes: Vec<Node> = Vec::new();
-    // Top down, each node's parts in order.
-    let mut stack: Vec<(Vec<usize>, Option<usize>)> = vec![((0..features.len()).collect(), None)];
-    while let Some((members, parent)) = stack.pop() {
-        let index = nodes.len();
-        let depth = parent.map_or(0, |p| nodes[p].depth + 1);
-        nodes.push(Node {
-            children: Vec::new(),
-            leaf: (members.len() == 1).then(|| members[0]),
-            area: members.iter().map(|&i| areas[i]).sum(),
-            depth,
-        });
-        if let Some(p) = parent {
-            nodes[p].children.push(index);
+    // Top down, level by level, each level's groups split in parallel; each node's parts in
+    // order.
+    let mut level: Vec<(Vec<usize>, Option<usize>)> = vec![((0..features.len()).collect(), None)];
+    while !level.is_empty() {
+        let parts: Vec<Vec<Vec<usize>>> = level
+            .par_iter()
+            .map(|(members, _)| {
+                if members.len() > 1 {
+                    split(members, features, areas)
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect();
+        let mut next = Vec::new();
+        for ((members, parent), parts) in level.into_iter().zip(parts) {
+            let index = nodes.len();
+            let depth = parent.map_or(0, |p| nodes[p].depth + 1);
+            nodes.push(Node {
+                children: Vec::new(),
+                leaf: (members.len() == 1).then(|| members[0]),
+                area: members.iter().map(|&i| areas[i]).sum(),
+                depth,
+            });
+            if let Some(p) = parent {
+                nodes[p].children.push(index);
+            }
+            next.extend(parts.into_iter().map(|p| (p, Some(index))));
         }
-        if members.len() > 1 {
-            let parts = split(&members, features, areas);
-            stack.extend(parts.into_iter().rev().map(|p| (p, Some(index))));
-        }
+        level = next;
     }
     // The levels, root first, in depth-first order: a leaf above the deepest level stands for
     // itself (as its own single child) on every level below it.
@@ -350,5 +363,27 @@ mod tests {
         check_form(&t, 2);
         let share = |c: usize| t.weights[t.order.iter().position(|&o| o == c).unwrap()];
         assert_eq!((share(0), share(1)), (191, 64));
+    }
+
+    #[test]
+    fn a_large_system_with_far_outliers_makes_a_tree() {
+        // A grid of 4800 clusters on a floor and 200 far from it in a line, each farther: the
+        // splits that peel one outlier off at a time still end, without deep recursion.
+        let mut f = Vec::new();
+        for i in 0..4800 {
+            f.push(described(
+                [(i % 80) as f32, 0.0, (i / 80) as f32],
+                [0.0, 1.0, 0.0],
+            ));
+        }
+        for i in 0..200 {
+            f.push(described(
+                [1e3 * 2f32.powi(i / 20), 5.0, 0.0],
+                [0.0, -1.0, 0.0],
+            ));
+        }
+        let areas = vec![1.0; f.len()];
+        let t = build(&f, &areas);
+        check_form(&t, f.len());
     }
 }

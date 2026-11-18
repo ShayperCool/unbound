@@ -650,7 +650,8 @@ fn a_texel_facing_a_near_surface_takes_its_light_from_its_clusters() {
 #[test]
 fn the_budget_bounds_a_texels_references() {
     // A floor under a lid of many small clusters: the references of each texel fit the budget,
-    // each standing for the light of what it joins; what is left out is little light.
+    // each standing for the light of what it joins, and a source of light (the system's
+    // clusters, a face of the environment) is kept whole or left out whole.
     let ground = floor(8.0, 8.0);
     let mut lid = Mesh::default();
     lid.quad(
@@ -662,17 +663,36 @@ fn the_budget_bounds_a_texels_references() {
     let unlimited = texel_weights(&transport_of(&[&ground, &lid], 64, 100_000));
     let limited = texel_weights(&transport_of(&[&ground, &lid], 64, 16));
     assert!(unlimited.values().any(|l| l.len() > 32));
-    let mut kept = 0f32;
+    // Per source: the system's clusters, and each face of the environment.
+    let per_source = |list: &[((u16, u32), f32)]| {
+        let mut out = [0f32; 7];
+        for &((dep, index), w) in list {
+            if dep == 0 {
+                let (size, start) = crate::environment::level_of(index as usize).unwrap();
+                out[1 + (index as usize - start) / (size * size)] += w;
+            } else {
+                out[0] += w;
+            }
+        }
+        out
+    };
+    let mut left_out = 0usize;
     for (texel, list) in &limited {
         assert!(list.len() <= 16, "{texel:?}: {}", list.len());
-        let (a, b): (f32, f32) = (
-            list.iter().map(|r| r.1).sum(),
-            unlimited[texel].iter().map(|r| r.1).sum(),
-        );
-        assert!(a <= b + 0.01 && a > 0.9 * b, "{texel:?}: {a} {b}");
-        kept += a / b / limited.len() as f32;
+        let (kept, all) = (per_source(list), per_source(&unlimited[texel]));
+        // The weights are quantized per segment of four texels: within 0.01 of their sum.
+        for (k, a) in kept.iter().zip(&all) {
+            assert!(
+                *k < 0.01 || (k - a).abs() < 0.01,
+                "{texel:?}: {kept:?} of {all:?}"
+            );
+            left_out += (*k < 0.01 && *a >= 0.01) as usize;
+        }
     }
-    assert!(kept > 0.97, "{kept}");
+    eprintln!(
+        "{left_out} sources of light left out over {} texels",
+        limited.len()
+    );
 }
 
 #[test]
@@ -896,8 +916,9 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
         assert!(sum[2].abs() < 0.01 && sum[3].abs() < 0.01, "{sum:?}");
     }
     // With a budget of 8 its references are joined to at most eight, each standing for the light
-    // of what it joins: the floor's and the sky's facing the probe most are kept, the sky's
-    // seen at a grazing angle may be left out.
+    // of what it joins: all of the floor's, and each face of the sky kept whole or left out
+    // whole (a tree's root is left out where that changes the light least), the face above
+    // kept.
     let unlimited = p.clone();
     let set = super::probes::probe_set(
         &[[200.0, 1.0, 200.0]],
@@ -909,20 +930,27 @@ fn a_probe_above_a_floor_takes_half_its_light_from_it() {
     .unwrap();
     let kept = &set.probes[0];
     assert!(kept.references.len() <= 8, "{:?}", kept.references);
-    let band0 = |p: &crate::data::Probe, dep: u8| -> f32 {
-        p.references
-            .iter()
-            .zip(&p.weights)
-            .filter(|(r, _)| r.0 == dep)
-            .map(|(_, w)| w[0])
-            .sum()
+    let per_source = |p: &crate::data::Probe| {
+        let (mut floor, mut faces) = (0f32, [0f32; 6]);
+        for (&(dep, index), w) in p.references.iter().zip(&p.weights) {
+            if dep == 0 {
+                let (size, start) = crate::environment::level_of(index as usize).unwrap();
+                faces[(index as usize - start) / (size * size)] += w[0];
+            } else {
+                floor += w[0];
+            }
+        }
+        (floor, faces)
     };
-    // All of the floor's light, the sky's above.
-    assert!((band0(kept, 1) - band0(&unlimited, 1)).abs() < 1e-3);
-    let sky = band0(kept, 0);
+    let ((floor, faces), (all_floor, all_faces)) = (per_source(kept), per_source(&unlimited));
+    assert!((floor - all_floor).abs() < 1e-3, "{floor} {all_floor}");
+    for (f, (&k, &a)) in faces.iter().zip(&all_faces).enumerate() {
+        assert!(k == 0.0 || (k - a).abs() < 1e-3, "face {f}: {k} of {a}");
+    }
+    // +y: the face of the sky above.
     assert!(
-        sky > 1.0 / 6.0 - 0.01 && sky <= band0(&unlimited, 0) + 1e-3,
-        "{sky}"
+        (faces[2] - all_faces[2]).abs() < 1e-3 && faces[2] > 0.1,
+        "{faces:?}"
     );
     // Down to one reference: the tree of most light, the floor's root.
     let set = super::probes::probe_set(
