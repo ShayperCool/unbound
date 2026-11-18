@@ -650,10 +650,11 @@ namespace UnityEngine.Rendering
         /// (tests/projects/builtinfx settings.*, settings_*): a custom shader draws in the custom,
         /// built-in and No Support modes alike; SetCustomShader(null) keeps the last shader drawn
         /// with, and so does a shader set and unset again before any draw
-        /// (settings_halo_unrendered); a depth-normals or motion vector texture whose setting never
-        /// had a shader is not made (none is returned). Unmeasured, chosen: the other effects whose
-        /// setting never had a shader draw with Unity's own (with a warning once: the project's No
-        /// Support without a shader, say), as does a setting the project does not list (quietly).</summary>
+        /// (settings_halo_unrendered); a depth-normals or motion vector texture whose listed setting
+        /// never had a shader is not made (none is returned). Unmeasured, chosen: the other effects
+        /// whose listed setting never had a shader draw with Unity's own (with a warning once: the
+        /// project's No Support without a shader, say); a setting the project does not list, of any
+        /// effect, draws with Unity's own quietly.</summary>
         internal static Shader RendererShader(BuiltinShaderType type)
         {
             int slot = (int)type;

@@ -330,6 +330,7 @@ namespace UnityEngine.Tests
                     Assert.Empty(logs.Logged);
                 }
                 GraphicsSettings.LoadShaderModes(new Dictionary<string, int>());
+                Assert.NotNull(Shader.Find("Hidden/Internal-MotionVectors"));
                 Assert.Same(Shader.Find("Hidden/Internal-MotionVectors"), GraphicsSettings.RendererShader(BuiltinShaderType.MotionVectors));
             }
             finally
