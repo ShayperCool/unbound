@@ -44,6 +44,12 @@ public static class CompileEventsProbe
         EditorApplication.update += Tick;
     }
 
+    [UnityEditor.Callbacks.DidReloadScripts]
+    static void Reloaded()
+    {
+        if (!string.IsNullOrEmpty(Out)) Log("didReloadScripts");
+    }
+
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
@@ -113,11 +119,11 @@ public static class CompileEventsProbe
         void Put(string key, string value) =>
             rows.Append("{\"k\":\"").Append(key).Append("\",\"v\":\"").Append(value.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"}\n");
         Put("ScriptCompilationDuringPlay", EditorPrefs.GetInt("ScriptCompilationDuringPlay", -1).ToString());
-        // How the domain the rounds start in finished loading (its last two events; the Editor
-        // loaded others before, in Edit mode).
+        // How the domain the rounds start in loaded: its events from its editor scripts' load on (the
+        // Editor loaded others before, in Edit mode).
         int first = Array.IndexOf(lines, "round 1");
         var before = (first < 0 ? lines : lines.Take(first)).Select(l => l.Split(' ')[0]).ToArray();
-        Put("start.end", string.Join(",", before.Skip(Math.Max(0, before.Length - 2))));
+        Put("start.load", string.Join(",", before.Skip(Math.Max(0, Array.LastIndexOf(before, "initializeOnLoad")))));
         for (int round = 1; round <= s_Versions.Length; round++)
         {
             int begin = Array.IndexOf(lines, "round " + round);

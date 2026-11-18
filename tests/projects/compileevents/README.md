@@ -15,7 +15,8 @@ does not depend on the changed script. Per round: the order of the events, an as
 or not required) being `assembly` because their order among themselves is Unity's own; each compiled
 assembly's started and finished events with its messages (type, file, line, column, text); the
 assemblies not required; the context's type and whether started and finished share it; and how the
-domain the rounds start in finished loading (`start.end`, its last two events).
+domain the rounds start in loaded (`start.load`, its events from its editor scripts' load on, a
+`[DidReloadScripts]` method of the probe's included).
 
 Measured: compilationStarted, then each compiled assembly's started and finished events (output
 path `Library/ScriptAssemblies/<name>.dll`, the warnings with them) and assemblyCompilationNotRequired
