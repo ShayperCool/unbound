@@ -165,6 +165,9 @@ struct Target {
     texture: Option<(wgpu::Texture, u32, u32)>,
     auto_mips: bool,
     defer_mips: Option<wgpu::TextureFormat>,
+    /// The channel bits its texture keeps of what is drawn (`owned::PACKED_*`; 0: none, the
+    /// screen's case).
+    packed: u8,
 }
 
 /// A further color of a target.
@@ -178,6 +181,7 @@ struct ExtraColor {
     texture: Option<(wgpu::Texture, u32, u32)>,
     auto_mips: bool,
     defer_mips: Option<wgpu::TextureFormat>,
+    packed: u8,
 }
 
 impl Target {
@@ -2990,6 +2994,7 @@ impl UnityRenderer {
             texture: Some((s.texture.clone(), 0, 0)),
             auto_mips: false,
             defer_mips: None,
+            packed: 0,
         }
     }
 
@@ -3103,6 +3108,7 @@ impl UnityRenderer {
                 auto_mips: generate_mips && !t.defer_mips,
                 defer_mips: (generate_mips && t.defer_mips)
                     .then_some(t.target_format(self.color_space)),
+                packed: t.packed,
             }
         };
         if depth == commands::NO_TEXTURE {
@@ -3164,25 +3170,30 @@ impl UnityRenderer {
     /// A packed target's level drawn into is packed again before anything reads it: before
     /// other attachments are prepared, a copy, and the end of each submission's work.
     fn mark_packed(&mut self, target: &Target) {
-        let packed = match self.textures.get(&self.target_handles.0).map(|t| t.packed) {
-            Some(owned::PACKED_565) => CopyKind::Packed565,
-            Some(owned::PACKED_5551) => CopyKind::Packed5551,
-            _ => return,
+        let size = wgpu::Extent3d {
+            width: target.width,
+            height: target.height,
+            depth_or_array_layers: 1,
         };
-        if let Some((texture, layer, level)) = &target.texture {
+        let colors = std::iter::once((target.packed, &target.texture))
+            .chain(target.extra.iter().map(|e| (e.packed, &e.texture)));
+        for (packed, image) in colors {
+            let kind = match packed {
+                owned::PACKED_565 => CopyKind::Packed565,
+                owned::PACKED_5551 => CopyKind::Packed5551,
+                _ => continue,
+            };
+            let Some((texture, layer, level)) = image else {
+                continue;
+            };
             if texture.format() != wgpu::TextureFormat::Rgba8Unorm {
                 self.warn_once(format!("packed-format{:?}", texture.format()), || {
                     "a packed render target is not stored as linear RGBA8: its channel bits are not kept".into()
                 });
-                return;
+                continue;
             }
-            let size = wgpu::Extent3d {
-                width: target.width,
-                height: target.height,
-                depth_or_array_layers: 1,
-            };
             self.pending_packed
-                .insert((texture.clone(), *level, *layer), (size, packed));
+                .insert((texture.clone(), *level, *layer), (size, kind));
         }
     }
 
@@ -3380,6 +3391,7 @@ impl UnityRenderer {
                     open = false;
                 }
                 Command::GenerateMips { texture } => {
+                    self.process_packed(&mut passes);
                     if let Some(t) = self.textures.get(&texture) {
                         if resources::is_integer(t.texture.format()) {
                             self.warn_once(format!("mips{texture}"), || format!("GenerateMips cannot filter the integer render texture {texture}: skipped"));
@@ -3509,6 +3521,7 @@ impl UnityRenderer {
                                 texture: t.texture,
                                 auto_mips: t.auto_mips,
                                 defer_mips: t.defer_mips,
+                                packed: t.packed,
                             });
                         }
                         let target = self.state.target.as_mut().unwrap();
@@ -3683,11 +3696,11 @@ impl UnityRenderer {
                         self.mark_msaa_written(&target);
                     }
                     let color = resources::unorm8_clear(target.format, color);
-                    let color = match self.textures.get(&self.target_handles.0).map(|t| t.packed) {
-                        Some(owned::PACKED_565) if self.conventions.packed_clears_round => {
+                    let color = match target.packed {
+                        owned::PACKED_565 if self.conventions.packed_clears_round => {
                             resources::packed_clear(color, [5, 6, 5, 0])
                         }
-                        Some(owned::PACKED_5551) if self.conventions.packed_clears_round => {
+                        owned::PACKED_5551 if self.conventions.packed_clears_round => {
                             resources::packed_clear(color, [5, 5, 5, 1])
                         }
                         _ => color,
@@ -4047,6 +4060,7 @@ impl UnityRenderer {
                     self.release_buffer(handle);
                 }
                 Command::Dispatch(d) => {
+                    self.process_packed(&mut passes);
                     open = false;
                     self.dispatch_reads_depth_target = false;
                     let planned = self.plan_dispatch(&d);

@@ -172,7 +172,7 @@ namespace UnityEngine
         /// with the Editor's warning, where a descriptor's GraphicsFormat throws: the Vulkan Editor
         /// makes `new RenderTexture(2, 1, 0, RenderTextureFormat.ARGB4444)` an R8G8B8A8_UNorm
         /// target and logs this (tests/projects/samplerstates Packed.ARGB4444 on Vulkan).</summary>
-        static GraphicsFormat SupportedOrFallback(GraphicsFormat requested)
+        internal static GraphicsFormat SupportedOrFallback(GraphicsFormat requested)
         {
             if (!Compat.RenderingMeasured || requested == GraphicsFormat.None || SystemInfo.IsFormatSupported(requested, GraphicsFormatUsage.Render))
                 return requested;

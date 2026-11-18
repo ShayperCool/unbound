@@ -470,6 +470,10 @@ namespace UnityEngine.Rendering
                 memoryless = memorylessMode,
                 useDynamicScale = useDynamicScale,
             };
+            // A legacy format the device cannot render falls back as RenderTexture.GetTemporary's
+            // does (unmeasured for the command buffer, taken alike).
+            var supported = RenderTexture.SupportedOrFallback(desc.graphicsFormat);
+            if (supported != desc.graphicsFormat) desc.graphicsFormat = supported;
             GetTemporaryRT(nameID, desc, filter);
         }
 
