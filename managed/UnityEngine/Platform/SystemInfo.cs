@@ -113,10 +113,7 @@ namespace UnityEngine
         {
             get
             {
-                if (OperatingSystem.IsMacOS()
-                    && Unbound.Runtime.MachineIdentity.MacSysctlInteger("hw.tbfrequency") is long timebase and > 0
-                    && Unbound.Runtime.MachineIdentity.MacSysctlInteger("kern.clockrate") is long hz and > 0)
-                    return (int)(timebase * hz / 1_000_000);
+                if (s_AppleSiliconFrequency.Value is int apple) return apple;
                 var mhz = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("cpu MHz") : null;
                 if (mhz != null && double.TryParse(mhz, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
                     return (int)value;
@@ -124,6 +121,13 @@ namespace UnityEngine
                 return 0;
             }
         }
+        /// <summary>Apple silicon's answer (see <see cref="processorFrequency"/>); null elsewhere,
+        /// an Intel Mac's included (unmeasured).</summary>
+        static readonly Lazy<int?> s_AppleSiliconFrequency = new Lazy<int?>(() =>
+            OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+                && Unbound.Runtime.MachineIdentity.MacSysctlInteger("hw.tbfrequency") is long timebase and > 0
+                && Unbound.Runtime.MachineIdentity.MacSysctlInteger("kern.clockrate") is long hz and > 0
+                ? (int)(timebase * hz / 1_000_000) : null);
         public static int processorCount { get { MainThreadCheck.Check("GetProcessorCount"); return Environment.ProcessorCount; } }
         public static int systemMemorySize { get { MainThreadCheck.Check("GetPhysicalMemoryMB"); return s_MemoryMb.Value; } }
         public static string deviceUniqueIdentifier => s_DeviceId.Value;

@@ -40,4 +40,6 @@ On macOS arm64 the suite compares with `Reference/unity-6000.0.71f1/metal.png` (
 the same values as the Linux capture), two identical captures of the macOS Editor in batch mode
 (Metal) on an Apple M2 Pro: Metal's image differs from the Linux one by the device's rounding (mean
 0.58, 4 pixels over 8). Unbound on Metal: mean 0.06, 862 pixels differ by up to 19, the same
-silhouette shift (`image-residuals.json`, two identical runs).
+silhouette shift (`image-residuals.json`, two identical runs). Its ambient-only spheres, bluer than
+the Editor's in an earlier macOS run (main of 2026-11-17, 567a8d4f5), match on 3d6ed1a5c; which
+change in between resolved it is not identified.
