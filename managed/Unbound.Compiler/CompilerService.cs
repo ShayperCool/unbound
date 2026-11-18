@@ -558,7 +558,7 @@ public sealed partial class CompilerService
     {
         if (!File.Exists(path)) return null;
         try { return System.Text.Json.JsonSerializer.Deserialize<List<DiagnosticInfo>>(File.ReadAllBytes(path)); }
-        catch (Exception e) when (e is System.Text.Json.JsonException || e is IOException) { return null; }
+        catch (Exception e) when (e is System.Text.Json.JsonException || e is IOException || e is UnauthorizedAccessException) { return null; }
     }
 
     static void WriteAtomically(string path, MemoryStream stream)

@@ -116,12 +116,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnEditorDomainLoadEndsWithAfterAssemblyReload()
         {
-            // Once, after ExitingEditMode on Play mode entry (the order after the load callbacks:
-            // compileevents start.load).
+            // The domain load ends with afterAssemblyReload, after Play mode entry's ExitingEditMode
+            // and beforeAssemblyReload (compileevents start.load).
             var seen = new List<string>();
             AssemblyReloadEvents.AssemblyReloadCallback after = () => seen.Add("afterAssemblyReload");
+            AssemblyReloadEvents.AssemblyReloadCallback beforeReload = () => seen.Add("beforeAssemblyReload");
             Action<PlayModeStateChange> state = s => seen.Add(s.ToString());
             AssemblyReloadEvents.afterAssemblyReload += after;
+            AssemblyReloadEvents.beforeAssemblyReload += beforeReload;
             EditorApplication.playModeStateChanged += state;
             bool wasPlaying = Unbound.Runtime.EditorSession.IsPlaying;
             try
@@ -134,9 +136,11 @@ namespace UnityEngine.Tests
                 Unbound.Runtime.EditorSession.EndEnteringPlayMode();
                 Unbound.Runtime.EditorSession.IsPlaying = wasPlaying;
                 AssemblyReloadEvents.afterAssemblyReload -= after;
+                AssemblyReloadEvents.beforeAssemblyReload -= beforeReload;
                 EditorApplication.playModeStateChanged -= state;
             }
-            Assert.Equal(new[] { "ExitingEditMode", "afterAssemblyReload" }, seen);
+            // Entering Play mode reloads the domain: ExitingEditMode, then beforeAssemblyReload.
+            Assert.Equal(new[] { "ExitingEditMode", "beforeAssemblyReload", "afterAssemblyReload" }, seen);
         }
 
         [Fact]

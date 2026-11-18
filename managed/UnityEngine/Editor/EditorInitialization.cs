@@ -28,6 +28,19 @@ namespace UnityEditor
         const string InitializeOnLoad = "UnityEditor.InitializeOnLoadAttribute";
         const string InitializeOnLoadMethod = "UnityEditor.InitializeOnLoadMethodAttribute";
         const string InitializeOnEnterPlayMode = "UnityEditor.InitializeOnEnterPlayModeAttribute";
+        /// <summary>Set by the host for a session it relaunched for a script edit (crates/unbound).</summary>
+        const string ScriptReloadVariable = "UNBOUND_SCRIPT_RELOAD";
+        static bool? s_ContinuesScriptReload;
+
+        /// <summary>Whether this session was relaunched for a script edit: read once, and the variable
+        /// cleared so that processes the session starts do not inherit it.</summary>
+        static bool ContinuesScriptReload()
+        {
+            if (s_ContinuesScriptReload is bool known) return known;
+            s_ContinuesScriptReload = Environment.GetEnvironmentVariable(ScriptReloadVariable) == "1";
+            Environment.SetEnvironmentVariable(ScriptReloadVariable, null);
+            return s_ContinuesScriptReload.Value;
+        }
 
         internal static void BeforePlayMode()
         {
@@ -57,8 +70,16 @@ namespace UnityEditor
                 ForEachStaticMethod(InitializeOnLoadMethod, method => Invoke(method));
             }
             finally { PlayModeDomainLoading = false; }
-            // The Editor sends it before the domain reloads, in Edit mode.
-            if (enteringPlayMode) EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+            // The Editor sends it before the domain reloads, in Edit mode, then beforeAssemblyReload when
+            // entering Play mode reloads the domain (tests/projects/compileevents start.load).
+            if (enteringPlayMode)
+            {
+                EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+                // A session restarted for a script edit continues that reload (its old session raised
+                // beforeAssemblyReload).
+                if (!ContinuesScriptReload() && !(EditorSettings.enterPlayModeOptionsEnabled && (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) != 0))
+                    UnityEditor.AssemblyReloadEvents.RaiseBefore();
+            }
             try
             {
                 PlayModeDomainLoading = enteringPlayMode;
