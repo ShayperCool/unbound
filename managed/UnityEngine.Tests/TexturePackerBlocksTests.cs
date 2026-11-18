@@ -115,6 +115,7 @@ namespace UnityEngine.Tests
             new object[] { new[] { TextureFormat.ASTC_4x4, TextureFormat.ASTC_4x4 }, new[] { true, true }, 0, TextureFormat.ASTC_4x4, 3 },
             new object[] { new[] { TextureFormat.ETC2_RGB, TextureFormat.ETC2_RGB }, new[] { true, true }, 0, TextureFormat.ETC2_RGB, 3 },
             new object[] { new[] { TextureFormat.ETC_RGB4, TextureFormat.ETC2_RGB }, new[] { true, true }, 0, TextureFormat.ETC2_RGB, 3 },
+            new object[] { new[] { TextureFormat.ETC_RGB4, TextureFormat.ETC_RGB4 }, new[] { true, true }, 0, TextureFormat.ETC2_RGB, 3 },
             // Mipmaps on some only, or padding with mipmaps: uncompressed.
             new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, false }, 0, TextureFormat.RGBA32, 7 },
             new object[] { new[] { TextureFormat.DXT5, TextureFormat.DXT5 }, new[] { true, true }, 1, TextureFormat.RGBA32, 7 },

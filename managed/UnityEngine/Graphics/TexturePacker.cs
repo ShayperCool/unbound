@@ -53,9 +53,7 @@ namespace Unbound.Runtime
             bool blockAligned = false)
         {
             int count = widths.Length;
-            // A maximum over the largest texture side (int.MaxValue meaning "no limit") is that side
-            // (the cap is not measured).
-            int max = NextPowerOfTwo(Math.Clamp(maximumSize, 8, UnityEngine.SystemInfo.maxTextureSize));
+            int max = MaximumSide(maximumSize);
             for (int i = 0; i < count; i++)
             {
                 widths[i] = FitSide(widths[i], max);
@@ -288,11 +286,17 @@ namespace Unbound.Runtime
             return rects;
         }
 
+        /// <summary>The atlas's largest side for a requested maximum: at least 8, at most the
+        /// device's largest texture, a power of two (int.MaxValue meaning "no limit" is the device's
+        /// largest; the cap is not measured).</summary>
+        static int MaximumSide(int maximumSize) => NextPowerOfTwo(Math.Clamp(maximumSize, 8, UnityEngine.SystemInfo.maxTextureSize));
+
         /// <summary>The atlas's format, as the Unity 6000.0.71f1 Editor chooses it (tests/projects/
-        /// packtextures). The first texture's format when it is DXT1, DXT5, BC7, ETC (RGB), ETC2 RGB,
-        /// ETC2 RGBA8, ASTC 4×4 or a 4444 format, else RGBA32; each texture keeps it when of the
-        /// same format, where DXT1 with DXT5 makes DXT5, ETC with ETC2 RGB makes ETC2 RGB and either
-        /// with ETC2 RGBA8 makes ETC2 RGBA8, the two 4444 formats go together, and anything else, or
+        /// packtextures). The first texture's format when it is DXT1, DXT5, BC7, ETC2 RGB, ETC2
+        /// RGBA8, ASTC 4×4 or a 4444 format (ETC (RGB) counting as ETC2 RGB, whose blocks it
+        /// shares: unmeasured, the Editor reports ETC textures made at run time as ETC2 RGB), else
+        /// RGBA32; each texture keeps it when of the same format, where DXT1 with DXT5 makes DXT5
+        /// and ETC2 RGB with ETC2 RGBA8 makes ETC2 RGBA8, the two 4444 formats go together, and anything else, or
         /// a texture that must shrink to the maximum size, makes RGBA32. A block-compressed format
         /// stays only when no texture has mipmaps, or all have them and there is no padding; a 4444
         /// format stays either way (the Scripting API page says such sets make RGBA32; the Editor
@@ -301,7 +305,7 @@ namespace Unbound.Runtime
         /// <paramref name="mipmaps"/>: any texture has them.</summary>
         internal static UnityEngine.TextureFormat AtlasFormat(List<UnityEngine.Texture2D> textures, int padding, int maximumSize, out bool mipmaps)
         {
-            int max = NextPowerOfTwo(Math.Clamp(maximumSize, 8, UnityEngine.SystemInfo.maxTextureSize));
+            int max = MaximumSide(maximumSize);
             var format = Candidate(textures[0].format);
             bool withMips = false, withoutMips = false;
             foreach (var texture in textures)
@@ -325,8 +329,9 @@ namespace Unbound.Runtime
         static UnityEngine.TextureFormat Candidate(UnityEngine.TextureFormat format) => format switch
         {
             UnityEngine.TextureFormat.ARGB4444 or UnityEngine.TextureFormat.RGBA4444 or UnityEngine.TextureFormat.DXT1 or UnityEngine.TextureFormat.DXT5
-                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB
+                or UnityEngine.TextureFormat.BC7 or UnityEngine.TextureFormat.ETC2_RGB
                 or UnityEngine.TextureFormat.ETC2_RGBA8 or UnityEngine.TextureFormat.ASTC_4x4 => format,
+            UnityEngine.TextureFormat.ETC_RGB4 => UnityEngine.TextureFormat.ETC2_RGB,
             _ => UnityEngine.TextureFormat.RGBA32,
         };
 
@@ -344,8 +349,6 @@ namespace Unbound.Runtime
                 case UnityEngine.TextureFormat.BC7:
                 case UnityEngine.TextureFormat.ASTC_4x4:
                     return texture == atlas ? atlas : Rgba32;
-                case UnityEngine.TextureFormat.ETC_RGB4:
-                    return texture is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB or UnityEngine.TextureFormat.ETC2_RGBA8 ? texture : Rgba32;
                 case UnityEngine.TextureFormat.ETC2_RGB:
                     return texture is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB ? atlas
                         : texture == UnityEngine.TextureFormat.ETC2_RGBA8 ? texture : Rgba32;
@@ -394,9 +397,7 @@ namespace Unbound.Runtime
             {
                 var texture = textures[i];
                 var from = texture.format;
-                // ETC blocks are ETC2 RGB blocks (unmeasured for this atlas: the Editor reports ETC
-                // textures made at run time as ETC2 RGB).
-                bool same = from == format || (format == UnityEngine.TextureFormat.ETC2_RGB && from == UnityEngine.TextureFormat.ETC_RGB4);
+                // ETC blocks are ETC2 RGB blocks (see AtlasFormat).
                 bool opaqueAlpha = (format == UnityEngine.TextureFormat.DXT5 && from == UnityEngine.TextureFormat.DXT1)
                     || (format == UnityEngine.TextureFormat.ETC2_RGBA8 && from is UnityEngine.TextureFormat.ETC_RGB4 or UnityEngine.TextureFormat.ETC2_RGB);
                 int x = xs[i], y = ys[i], w = texture.width, h = texture.height;
