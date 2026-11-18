@@ -379,7 +379,7 @@ namespace Unbound
             if (typeof(T) == typeof(float)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, float>(ref value), null, null);
             if (typeof(T) == typeof(double)) return Format(System.Runtime.CompilerServices.Unsafe.As<T, double>(ref value), null, null);
             // A value tuple called directly ((a, b).ToString()).
-            if (typeof(T).IsValueType && IsLibraryTuple(typeof(T))) return TupleToString((System.Runtime.CompilerServices.ITuple)value);
+            if (LibraryTuple<T>.Is) return TupleToString((System.Runtime.CompilerServices.ITuple)value);
             return MonoEnumNames.ToString(ref value);
         }
         public static string ToString(Enum value) => MonoEnumNames.ToString(value, null);
@@ -439,6 +439,12 @@ namespace Unbound
         static class Texts<T>
         {
             internal static readonly bool Mono = !typeof(T).IsValueType || PrintsOtherwise(Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T));
+        }
+
+        /// <summary>Whether T is a value tuple of the class library (answered once per type).</summary>
+        static class LibraryTuple<T>
+        {
+            internal static readonly bool Is = typeof(T).IsValueType && IsLibraryTuple(typeof(T));
         }
 
         /// <summary>Whether values of a value type print otherwise under Mono: enums, floats, doubles

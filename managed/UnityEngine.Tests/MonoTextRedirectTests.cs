@@ -91,6 +91,34 @@ public static class Game
             });
         }
 
+        sealed class LogTexts : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Texts = new();
+            public void LogFormat(LogType type, Object context, string format, params object[] args) => Texts.Add(string.Format(format, args));
+            public void LogException(Exception error, Object context) { }
+        }
+
+        /// <summary>Unity's logger writes a value that is not IFormattable by its ToString(), so a
+        /// tuple of floats reads as Mono writes it, in the current culture (tests/projects/apierrors
+        /// <c>format.number.tuple_to_string</c>), while a float itself is written invariantly.</summary>
+        [Fact]
+        public void TheLoggerWritesATupleAsItsMonoText()
+        {
+            var texts = new LogTexts();
+            var logger = new Logger(texts);
+            logger.Log((1f / 3f, 2.5f));
+            logger.Log(new ArgumentOutOfRangeException("p", (1f / 3f, 2.5f), "Too big.").ActualValue);
+            WithCulture("de-DE", () =>
+            {
+                logger.Log((1f / 3f, 2.5f));
+                logger.Log(1f / 3f);
+            });
+            // Control: a tuple without floats and a game's own ITuple keep their own text.
+            logger.Log((1, "x"));
+            logger.Log(new OwnTuple());
+            Assert.Equal(new[] { "(0.3333333, 2.5)", "(0.3333333, 2.5)", "(0,3333333, 2,5)", "0.3333333", "(1, x)", "own" }, texts.Texts);
+        }
+
         /// <summary>A hot-reload edit's calls that format a float or read a message go through the
         /// shims the loaded image references, as the loaded code's do (an image that formats
         /// something references every shim; one that formats nothing is loaded as it is, and an edit

@@ -110,9 +110,9 @@ python3 -m unittest discover -s tests/projects/editorapi -p test_compare.py
 
 The shared runner stages authored files in the validation cache, validates GPU completion
 and independent repeat equality before publishing, and captures the engine with an immutable
-runtime snapshot. Exception records keep argument
-exceptions' whole messages (in the Editor's layout, the parameter name on its own line) and
-parameter names, and record a null reference by its type alone. Other releases need their own controls and exact class tables.
+runtime snapshot. Exception records keep argument exceptions' whole messages (in the
+Editor's layout, the parameter name on its own line) and parameter names, and record a null
+reference by its type alone. Other releases need their own controls and exact class tables.
 
 The [CustomEditor contract](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CustomEditor.html)
 selects the inspected type and tries regular editors before fallback editors. The inherited

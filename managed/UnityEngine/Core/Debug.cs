@@ -68,8 +68,8 @@ namespace UnityEngine
                 double d => Unbound.MonoNumberFormat.Format(d, null, CultureInfo.InvariantCulture),
                 Enum e => Unbound.MonoEnumNames.ToString(e, null),
                 IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-                Exception exception => Unbound.Runtime.MonoExceptions.ToStringOf(exception),
-                _ => message.ToString(),
+                // Any other value as its ToString() reads under Mono (exceptions, tuples of floats).
+                _ => Unbound.MonoNumberFormat.ObjectToString(message),
             };
         }
 
