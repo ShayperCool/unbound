@@ -141,7 +141,8 @@ const RAISES: [(u64, u32); 6] = [
 /// (measured but `INSTANCING_ON`, whose variant the probe's draws do not select: it is taken as
 /// the instancing feature, which `#pragma require instancing` measures). The stereo and device
 /// capability keywords (`STEREO_INSTANCING_ON`, `UNITY_DEVICE_SUPPORTS_NATIVE_16BIT`, ...) are not
-/// listed: Unbound enables none of them. `MESH_INSTANCE_REPLAY` is Unbound's (a draw replaying
+/// listed: the renderer is given none of them (scripts see the device's capability keywords
+/// enabled, their variants compile without them). `MESH_INSTANCE_REPLAY` is Unbound's (a draw replaying
 /// mesh instances), drawn as instancing.
 const KEYWORD_REQUIREMENTS: [(&str, u64); 7] = [
     ("SHADOWS_SCREEN", T30),

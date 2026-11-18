@@ -501,12 +501,31 @@ namespace UnityEngine
         public static void EnableKeyword(string keyword)
         {
             if (Compat.BuiltinGlobalKeywords != null) RegisterGlobalKeyword(keyword);
-            if (s_GlobalKeywords.Add(keyword)) GfxStream.Keyword(keyword, true);
+            if (s_GlobalKeywords.Add(keyword) && !DeviceCapability(keyword)) GfxStream.Keyword(keyword, true);
         }
 
         public static void DisableKeyword(string keyword)
         {
-            if (s_GlobalKeywords.Remove(keyword)) GfxStream.Keyword(keyword, false);
+            if (s_GlobalKeywords.Remove(keyword) && !DeviceCapability(keyword)) GfxStream.Keyword(keyword, false);
+        }
+
+        /// <summary>A device capability keyword (`UNITY_DEVICE_SUPPORTS_*`, which select a compute
+        /// shader's native 16-bit, wave or inline ray tracing variant, 6000.0 Manual "Set a shader
+        /// to require GPU features"). Scripts see its state, but the renderer is never told: it
+        /// compiles their variants without them, as it translates neither 16-bit types (WGSL has
+        /// no 16-bit integers) nor wave operations (see docs/COMPATIBILITY_GAPS.md).</summary>
+        static bool DeviceCapability(string keyword) => keyword.StartsWith("UNITY_DEVICE_SUPPORTS_", StringComparison.Ordinal);
+
+        /// <summary>The capability keywords a device enables from the start
+        /// (GraphicsDeviceProfile.CapabilityKeywords) replace the previous device's.</summary>
+        internal static void SetDeviceKeywords(string[] previous, string[] current)
+        {
+            foreach (var keyword in previous) s_GlobalKeywords.Remove(keyword);
+            foreach (var keyword in current)
+            {
+                if (Compat.BuiltinGlobalKeywords != null) RegisterGlobalKeyword(keyword);
+                s_GlobalKeywords.Add(keyword);
+            }
         }
 
         public static bool IsKeywordEnabled(string keyword) => s_GlobalKeywords.Contains(keyword);

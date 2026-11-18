@@ -114,6 +114,11 @@ namespace Unbound.Runtime
         /// `metal.dispatch.offset*`, gpubuffers metal `indirect.unaligned`); elsewhere it
         /// dispatches nothing (OpenGL Core, gpubuffers `indirect.unaligned`; Vulkan unmeasured).</summary>
         internal bool IndirectOffsetRoundsDown { get; init; }
+        /// <summary>The device capability keywords (`UNITY_DEVICE_SUPPORTS_*`) the device enables
+        /// globally from the start: the macOS Editor's Metal device the native 16-bit, 32-wide and
+        /// any-size wave ones (tests/projects/shaderkeywords metal.jsonl `global.enabled.initial`,
+        /// `.after`, `.restored`); none on OpenGL Core (the Linux reference), Vulkan unmeasured.</summary>
+        internal string[] CapabilityKeywords { get; init; } = System.Array.Empty<string>();
         /// <summary>ComputeBuffer.CopyCount into a destination too small at the offset asserts
         /// `dstOffset + size &lt;= m_size` (OpenGL Core); the Metal Editor copies nothing there
         /// silently (tests/projects/gpubuffers metal `append.cb.copybeyond`).</summary>
@@ -280,6 +285,7 @@ namespace Unbound.Runtime
             Packs4444Targets = true,
             SetDataResetsCounter = true,
             IndirectOffsetRoundsDown = true,
+            CapabilityKeywords = new[] { "UNITY_DEVICE_SUPPORTS_NATIVE_16BIT", "UNITY_DEVICE_SUPPORTS_WAVE_32", "UNITY_DEVICE_SUPPORTS_WAVE_ANY" },
             CopyCountAssertsRange = false,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
@@ -360,7 +366,12 @@ namespace Unbound.Runtime
         internal static GraphicsDeviceProfile Current { get; private set; } = OpenGLCore;
 
         /// <summary>Selects the device the host chose (GraphicsDeviceType's name).</summary>
-        internal static void Select(string name) => Current = Named(name);
+        internal static void Select(string name)
+        {
+            var previous = Current;
+            Current = Named(name);
+            UnityEngine.Shader.SetDeviceKeywords(previous.CapabilityKeywords, Current.CapabilityKeywords);
+        }
 
         /// <summary>The profile of a GraphicsDeviceType name (none: OpenGL Core).</summary>
         internal static GraphicsDeviceProfile Named(string name) => name switch
