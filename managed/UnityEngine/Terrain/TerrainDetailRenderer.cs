@@ -86,8 +86,10 @@ namespace UnityEngine
         int m_WaveFrame = -1;
         /// <summary>The detail shaders' constants, the draws' own values: one set for each time the
         /// details are collected in a frame (a camera rendering twice in a frame from two places
-        /// needs two), reused from frame to frame.</summary>
+        /// needs two), reused from frame to frame with their values boxed again only when they change.</summary>
         readonly List<Dictionary<int, object>> m_DetailValues = new List<Dictionary<int, object>>();
+        readonly List<BoxedVectors> m_DetailBoxes = new List<BoxedVectors>();
+        const int DetailValueCount = 5;
         int m_DetailValuesUsed, m_DetailValuesFrame = -1;
 
         void CollectDetails(Terrain terrain, TerrainData data, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
@@ -97,27 +99,9 @@ namespace UnityEngine
                 BuildDetails(terrain, data, origin);
             float distance = terrain.detailObjectDistance;
             if (distance <= 0f) return;
-            float phase = AdvanceWavePhase(Time.frameCount, Time.deltaTime, data.wavingGrassStrength);
             float squared = distance * distance;
-            var cam = camera.Camera;
-            var right = cam != null ? cam.transform.right : Vector3.right;
-            var up = cam != null ? cam.transform.up : Vector3.up;
-            if (m_DetailValuesFrame != Time.frameCount)
-            {
-                m_DetailValuesFrame = Time.frameCount;
-                m_DetailValuesUsed = 0;
-            }
-            if (m_DetailValuesUsed == m_DetailValues.Count) m_DetailValues.Add(new Dictionary<int, object>());
-            var values = m_DetailValues[m_DetailValuesUsed++];
-            // (phase, wavingGrassSpeed × 0.4, wavingGrassAmount × 6, the detail distance squared)
-            // (matches the Unity 6000.0.71f1 Editor, tests/projects/grass `Waving`).
-            values[s_WaveAndDistanceId] = new Vector4(phase, data.wavingGrassSpeed * WaveSizeScale, data.wavingGrassAmount * WaveAmountScale, squared);
-            var relative = camera.Position - origin;
-            values[s_CameraPositionId] = new Vector4(relative.x, relative.y, relative.z, 1f / squared);
-            values[s_CameraRightId] = (Vector4)right;
-            values[s_CameraUpId] = (Vector4)up;
-            // The tint is a colour: linear in a linear-space project.
-            values[s_WavingTintId] = QualitySettings.activeColorSpace == ColorSpace.Linear ? data.wavingGrassTint.linear : data.wavingGrassTint;
+            int frame = Time.frameCount;
+            var values = DetailValues(frame, data, origin, camera, AdvanceWavePhase(frame, Time.deltaTime, data.wavingGrassStrength), squared);
             foreach (var patch in m_DetailPatches)
             {
                 if (!patch.HasBounds || patch.Bounds.SqrDistanceUnchecked(camera.Position) > squared) continue;
@@ -136,6 +120,38 @@ namespace UnityEngine
                 detail.Renderer.renderingLayerMask = renderingLayerMask;
                 FrameBuilder.AddMeshDraws(detail.Renderer, detail.Mesh, detail.Model, Color.white, camera, into);
             }
+        }
+
+        /// <summary>The detail shaders' constants for one collection of the details in this frame
+        /// (the waving phase, the detail distance squared, the camera's place and axes, the tint):
+        /// the frame's next set, its values boxed again only when they change.</summary>
+        internal Dictionary<int, object> DetailValues(int frame, TerrainData data, Vector3 origin, FrameBuilder.CameraContext camera, float phase, float squared)
+        {
+            var cam = camera.Camera;
+            var right = cam != null ? cam.transform.right : Vector3.right;
+            var up = cam != null ? cam.transform.up : Vector3.up;
+            if (m_DetailValuesFrame != frame)
+            {
+                m_DetailValuesFrame = frame;
+                m_DetailValuesUsed = 0;
+            }
+            if (m_DetailValuesUsed == m_DetailValues.Count)
+            {
+                m_DetailValues.Add(new Dictionary<int, object>());
+                m_DetailBoxes.Add(new BoxedVectors(DetailValueCount));
+            }
+            var boxes = m_DetailBoxes[m_DetailValuesUsed];
+            var values = m_DetailValues[m_DetailValuesUsed++];
+            // (phase, wavingGrassSpeed × 0.4, wavingGrassAmount × 6, the detail distance squared)
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/grass `Waving`).
+            values[s_WaveAndDistanceId] = boxes.Box(0, new Vector4(phase, data.wavingGrassSpeed * WaveSizeScale, data.wavingGrassAmount * WaveAmountScale, squared));
+            var relative = camera.Position - origin;
+            values[s_CameraPositionId] = boxes.Box(1, new Vector4(relative.x, relative.y, relative.z, 1f / squared));
+            values[s_CameraRightId] = boxes.Box(2, right);
+            values[s_CameraUpId] = boxes.Box(3, up);
+            // The tint is a colour: linear in a linear-space project.
+            values[s_WavingTintId] = boxes.Box(4, QualitySettings.activeColorSpace == ColorSpace.Linear ? data.wavingGrassTint.linear : data.wavingGrassTint);
+            return values;
         }
 
         const float WavePhaseRate = 0.05f, WaveSizeScale = 0.4f, WaveAmountScale = 6f;

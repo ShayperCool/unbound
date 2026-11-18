@@ -531,6 +531,42 @@ namespace UnityEngine.Tests
             Assert.Equal(0.1f * 0.8f * 0.05f + 0.2f * 0.5f * 0.05f, renderer.AdvanceWavePhase(7, 0.3f, 0f), 6);
         }
 
+        /// <summary>The detail shaders' constants are reused from frame to frame: a frame whose
+        /// values are those of the frame before allocates nothing, a changed value is boxed anew
+        /// (the box given to the frame before keeps its value), and a second collection in one
+        /// frame gets a set of its own.</summary>
+        [Fact]
+        public void DetailConstantsAllocateNothingFromFrameToFrame()
+        {
+            var data = Data(DetailScatterMode.InstanceCountMode, new DetailPrototype { prototypeTexture = Own(new Texture2D(4, 4)) });
+            var go = Own(new GameObject("constants"));
+            go.SetActive(false);
+            var terrain = go.AddComponent<Terrain>();
+            terrain.terrainData = data;
+            go.SetActive(true);
+            var renderer = terrain.Renderer;
+            int wave = Shader.PropertyToID("_WaveAndDistance"), position = Shader.PropertyToID("_CameraPosition");
+            var camera = new Unbound.Runtime.FrameBuilder.CameraContext { Position = new Vector3(1f, 2f, 3f) };
+            var first = renderer.DetailValues(1, data, Vector3.zero, camera, 0.25f, 100f);
+            var firstWave = first[wave];
+            var again = renderer.DetailValues(2, data, Vector3.zero, camera, 0.25f, 100f);
+            Assert.Same(first, again);
+            long before = System.GC.GetAllocatedBytesForCurrentThread();
+            renderer.DetailValues(3, data, Vector3.zero, camera, 0.25f, 100f);
+            Assert.Equal(0, System.GC.GetAllocatedBytesForCurrentThread() - before);
+            Assert.Same(firstWave, again[wave]);
+
+            var moved = renderer.DetailValues(4, data, Vector3.zero, camera, 0.5f, 100f);
+            Assert.Equal(new Vector4(0.5f, data.wavingGrassSpeed * 0.4f, data.wavingGrassAmount * 6f, 100f), (Vector4)moved[wave]);
+            Assert.Equal(new Vector4(0.25f, data.wavingGrassSpeed * 0.4f, data.wavingGrassAmount * 6f, 100f), (Vector4)firstWave);
+            Assert.Equal(new Vector4(1f, 2f, 3f, 0.01f), (Vector4)moved[position]);
+
+            var second = renderer.DetailValues(4, data, Vector3.zero, new Unbound.Runtime.FrameBuilder.CameraContext { Position = Vector3.one }, 0.5f, 100f);
+            Assert.NotSame(moved, second);
+            Assert.Equal(new Vector4(1f, 2f, 3f, 0.01f), (Vector4)moved[position]);
+            Assert.Equal(new Vector4(1f, 1f, 1f, 0.01f), (Vector4)second[position]);
+        }
+
         /// <summary>Meshes in the Grass render mode drawn without instancing are part of the grass
         /// mesh (drawn with the grass shader); in the VertexLit mode they make the meshes' own.</summary>
         [Theory]
