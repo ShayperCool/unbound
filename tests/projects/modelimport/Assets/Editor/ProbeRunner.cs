@@ -10,8 +10,8 @@ using UnityEngine;
 /// <summary>
 /// <c>-executeMethod ProbeRunner.Create</c> makes the probe scene: a <see cref="ModelImportProbe"/>
 /// holding every model in Assets/Models. <c>-executeMethod ProbeRunner.Record</c> with
-/// <c>MODEL_IMPORT_PROBE_OUT</c> set opens it and enters Play mode, where the probe records the
-/// reference and exits the Editor.
+/// <c>MODEL_IMPORT_PROBE_OUT</c> set opens it, renders once (as an Editor that has drawn its
+/// views) and enters Play mode, where the probe records the reference and exits the Editor.
 /// </summary>
 public static class ProbeRunner
 {
@@ -32,6 +32,17 @@ public static class ProbeRunner
     public static void Record()
     {
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
+        // As an Editor that has drawn its views before Play mode (the case Unbound plays: the
+        // configured pipeline's shader tag is active as the scene loads, tests/projects/graphqueue):
+        // a camera made for it renders once and goes, so the pipeline is made.
+        var camera = new GameObject("ProbeRunner.Render").AddComponent<Camera>();
+        var target = new RenderTexture(64, 64, 24);
+        camera.targetTexture = target;
+        camera.Render();
+        camera.targetTexture = null;
+        UnityEngine.Object.DestroyImmediate(camera.gameObject);
+        UnityEngine.Object.DestroyImmediate(target);
+        Debug.Log("model import probe: after a render, pipeline tag '" + Shader.globalRenderPipeline + "'");
         EditorApplication.EnterPlaymode();
     }
 }
