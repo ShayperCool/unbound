@@ -82,3 +82,13 @@ view-projection follows the screen it was made on) and compare:
   cubes as moving from where they were made and the spheres and plane as still; Unbound takes all
   of them to be still then (`compare.py` lists these as expected). Later frames match.
 * `draw_mesh`: the faces of the instanced cubes the red point light reaches (mean 1.5).
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro) recorded with `tests/flat_reference.py record builtinrp
+--variable BUILTIN_PROBE_OUT` and `publish`. Unbound on Metal matches 819 of 954 values (124
+expected, as on Linux) and 37 of 38 images within a mean of 2 (626 values and 35 images of the Linux
+reference). Open: every `previousViewProjection` is the Metal device's (its second row negated and
+its third row the [0, 1] depth one) where Unbound gives the OpenGL-style matrix, and so
+`motion_auto_frame3`'s motion vectors differ in y.

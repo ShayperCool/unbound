@@ -148,3 +148,15 @@ in `test_compare.py` check those outcomes and preserve existing expected values.
   a flare's first render fades in by the frame's delta time.
 * `static_batching.mesh`: Unbound keeps each renderer's own mesh; `material.crc.values`: checksums
   are Unbound's own.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro), and two more identical to them, recorded with
+`tests/flat_reference.py record builtinfx --variable BUILTINFX_PROBE_OUT` and `publish`. A lens
+flare fades in over real time, and three of four Metal captures drew `flare_LensFlareObject`
+differently, so on Metal the probe records `flare_LensFlareObject.skipped` instead (the Linux path
+is unchanged). Unbound on Metal matches 302 of 305 values and 112 of 115 images within a mean of 2
+(299 values and all 115 images of the Linux reference). Open: `raster.sRGBWrite_False` (Unbound
+reads the linear colour where the Metal Editor reads the sRGB-encoded one) and
+`probe_own_target_0/4/5`.

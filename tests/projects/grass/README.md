@@ -78,3 +78,13 @@ at the faded far edge (not traced), `Refusals` in one pixel by one level (its sl
 in the Grass render mode take the terrain's normal at every vertex and the grass shader, as the
 Editor draws them, since Q533 and Q553; they differed in 2153 pixels up to 133/255), `Instanced` within 1/255. Any other difference
 fails.
+
+## Metal (macOS)
+
+On macOS arm64 the compare steps read `Reference/metal`, two identical captures of the 6000.0.71f1
+macOS Editor (Metal, Apple M2 Pro), recorded with `tests/flat_reference.py record grass --variable
+GRASS_PROBE_OUT` and `publish`. Unbound on Metal matches all 1224 records; its images differ from
+the Metal Editor's at blade edges more than on Linux (for example `Coloured` 943 pixels up to 193,
+`Counts` 2919 up to 168; on Linux 382 up to 48 and 599 up to 47), unresolved and not declared as
+residuals (`image-residuals.json` is the Linux list). Against the Linux reference on the Mac they
+differ in about 44000 pixels per image.
