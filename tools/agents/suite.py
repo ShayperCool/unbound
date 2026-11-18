@@ -586,8 +586,9 @@ def recipes(release):
     for name in ('appfacts', 'customrt', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     R['flares'] = guarded(lambda runs: [*folder(runs), '--residuals', '{probe}/residuals.json'])
-    # rtdepth on the Vulkan device too (screen and render texture orientation, reversed depth).
-    if (PROJECTS/'rtdepth/Reference'/f'unity-{release}'/'vulkan').is_dir():
+    # rtdepth on the Vulkan device too (screen and render texture orientation, reversed depth);
+    # on macOS arm64 the probe runs on Metal only.
+    if not MACOS_ARM64 and (PROJECTS/'rtdepth/Reference'/f'unity-{release}'/'vulkan').is_dir():
         R['rtdepth'] += [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}-vulkan',
                                 '--device', 'vulkan', env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
                          py('compare.py', '{probe}/Reference/unity-{release}/vulkan', '{runs}-vulkan/unbound',
