@@ -567,6 +567,18 @@ namespace UnityEngine.SceneManagement
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
         }
 
+        /// <summary>A Resources or AssetBundle asynchronous load in Play mode: while scene operations
+        /// are queued it waits behind them in their queue (a scene load held by allowSceneActivation
+        /// holds it) and completes when it reaches the head; false when nothing is queued (the load
+        /// then completes at the next preloading pass, as one made before a queued scene load does).
+        /// Measured: tests/projects/sceneunload `queue.*`.</summary>
+        internal static bool QueueAssetLoad(AsyncOperation operation)
+        {
+            if (!Compat.SceneAsyncPreparationMeasured || !Unbound.Runtime.EditorSession.IsPlaying || !s_Operations.HasWork) return false;
+            s_Operations.EnqueueAfterLast(operation, () => { }, SceneOperationQueue.Kind.Asset, Time.frameCount);
+            return true;
+        }
+
         /// <summary>Resources.UnloadUnusedAssets in Play mode: a queued operation (see
         /// <see cref="SceneOperationQueue"/>).</summary>
         internal static AsyncOperation QueueUnloadUnused()

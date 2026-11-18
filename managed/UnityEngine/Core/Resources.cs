@@ -53,7 +53,7 @@ namespace UnityEngine
         {
             var request = new ResourceRequest { m_Path = path, m_Type = type };
             request.m_Asset = Load(path, type);
-            AsyncOperations.CompleteNextFrame(request);
+            AsyncOperations.CompleteAsAssetLoad(request);
             return request;
         }
 
@@ -161,26 +161,47 @@ namespace UnityEngine
 
         /// <summary>The forced unload after a Single load (Scripting API 6000.0,
         /// EditorSettings.forceAssetUnloadAndGCOnSceneLoad: it unloads unused assets and collects
-        /// the managed heap). Unbound collects the heap, then compacts the object registry (scene
-        /// loads only compacted it before); it does not walk the heap for unused assets (the walk an
-        /// explicit UnloadUnusedAssets makes), whose cost on every scene change is not measured.</summary>
+        /// the managed heap): Unbound collects the heap, then unloads unused assets as an explicit
+        /// UnloadUnusedAssets does (measured: tests/projects/sceneunload, the outgoing scene's and
+        /// unreferenced Resources assets are gone the frame after the load).</summary>
         internal static void UnloadAfterSingleLoad()
         {
+            long started = Unbound.Runtime.Trace.ScenesOn ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             GC.Collect();
-            UnloadUnusedAssetsInternal();
+            UnloadUnusedAssetsNow();
+            if (Unbound.Runtime.Trace.ScenesOn)
+                Unbound.Runtime.Trace.Scenes($"unused assets unloaded after a Single load in {System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1} ms");
         }
 
         internal static void UnloadUnusedAssetsInternal() => ObjectRegistry.Compact();
 
         public static Object[] FindObjectsOfTypeAll(Type type) =>
-            ObjectErrors.FindTypeIsValid(type) ? ObjectRegistry.TypedArray(type, ObjectRegistry.All(type)) : null;
+            ObjectErrors.FindTypeIsValid(type) ? ObjectRegistry.TypedArray(type, Loaded(ObjectRegistry.All(type))) : null;
 
         public static T[] FindObjectsOfTypeAll<T>() where T : Object
         {
-            var all = ObjectRegistry.All(typeof(T));
+            var all = Loaded(ObjectRegistry.All(typeof(T)));
             var result = new T[all.Count];
             for (int i = 0; i < all.Count; i++) result[i] = (T)all[i];
             return result;
+        }
+
+        /// <summary>The objects without assets unloaded as unused (they are not loaded objects
+        /// until they are loaded again).</summary>
+        static List<Object> Loaded(List<Object> all)
+        {
+            List<Object> kept = null;
+            for (int i = 0; i < all.Count; i++)
+            {
+                bool unloaded = all[i] is TextAsset { Unloaded: true };
+                if (unloaded && kept == null)
+                {
+                    kept = new List<Object>(all.Count);
+                    for (int j = 0; j < i; j++) kept.Add(all[j]);
+                }
+                else if (!unloaded) kept?.Add(all[i]);
+            }
+            return kept ?? all;
         }
 
         public static Object InstanceIDToObject(int instanceID) => ObjectRegistry.FindById(instanceID);
@@ -219,6 +240,15 @@ namespace Unbound.Runtime
         static AsyncOperations()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.EarlyUpdate.UpdatePreloading), Run);
+        }
+
+        /// <summary>A Resources or AssetBundle asynchronous load: it waits behind queued scene
+        /// operations (<see cref="UnityEngine.SceneManagement.SceneManagerInternal.QueueAssetLoad"/>),
+        /// else finishes on the next frame.</summary>
+        internal static void CompleteAsAssetLoad(UnityEngine.AsyncOperation op)
+        {
+            if (!op.HasOperation) UnityEngine.AsyncOperation.Bind(op);
+            if (!UnityEngine.SceneManagement.SceneManagerInternal.QueueAssetLoad(op)) CompleteNextFrame(op);
         }
 
         internal static void CompleteNextFrame(UnityEngine.AsyncOperation op)

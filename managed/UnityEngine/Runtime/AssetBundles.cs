@@ -167,7 +167,7 @@ namespace UnityEngine
         static AssetBundleCreateRequest Request(AssetBundle bundle)
         {
             var request = AsyncOperation.Bind(new AssetBundleCreateRequest { m_AssetBundle = bundle }, completionProgress: bundle == null ? 0f : 1f);
-            AsyncOperations.CompleteNextFrame(request);
+            AsyncOperations.CompleteAsAssetLoad(request);
             return request;
         }
 
@@ -424,7 +424,7 @@ namespace UnityEngine
         {
             var objects = load() ?? Array.Empty<Object>();
             var request = new AssetBundleRequest { m_AllAssets = objects, m_Asset = objects.Length > 0 ? objects[0] : null };
-            AsyncOperations.CompleteNextFrame(request);
+            AsyncOperations.CompleteAsAssetLoad(request);
             return request;
         }
 

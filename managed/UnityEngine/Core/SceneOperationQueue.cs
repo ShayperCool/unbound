@@ -31,7 +31,9 @@ namespace UnityEngine.SceneManagement
         // AsyncOperation.allowSceneActivation documents this pending progress plateau.
         const float ReadyProgress = .9f;
 
-        internal enum Kind { Load, Unload, UnloadUnused }
+        /// <summary>Asset: a Resources or AssetBundle asynchronous load, which integrates at once
+        /// when it reaches the head.</summary>
+        internal enum Kind { Load, Unload, UnloadUnused, Asset }
 
         sealed class Request
         {
@@ -61,6 +63,9 @@ namespace UnityEngine.SceneManagement
 
         static readonly double MillisecondsPerTick = 1000.0 / Stopwatch.Frequency;
 
+        /// <summary>A request is queued or integrating.</summary>
+        internal bool HasWork => m_Current != null || m_Requests.Count != 0;
+
         internal bool IsUnloading
         {
             get
@@ -75,8 +80,10 @@ namespace UnityEngine.SceneManagement
         internal void Enqueue(AsyncOperation operation, SceneData scene, Action work, Kind kind, bool async, int frame, Action prepare = null)
         {
             bool load = kind == Kind.Load;
-            AsyncOperation.Bind(operation, AsyncOperation.OperationCapabilities.Priority
-                | (load ? AsyncOperation.OperationCapabilities.SceneActivation : AsyncOperation.OperationCapabilities.None));
+            // An asset load's request comes bound with its own completion progress.
+            if (!operation.HasOperation)
+                AsyncOperation.Bind(operation, AsyncOperation.OperationCapabilities.Priority
+                    | (load ? AsyncOperation.OperationCapabilities.SceneActivation : AsyncOperation.OperationCapabilities.None));
             bool forced = load && !async;
             // The LoadScene API forces earlier asynchronous work, including held activations,
             // to complete at its next-frame load. Keep allowSceneActivation's public value.
@@ -127,7 +134,7 @@ namespace UnityEngine.SceneManagement
                     if (request.Started && request.Prepared && request.BlocksLoader) return;
                     if (request.Started && !request.Prepared)
                     {
-                        if (frame <= request.Frame) return;
+                        if (frame <= request.Frame || WaitsForEarlier(request)) return;
                         Prepare(request);
                         if (request.BlocksLoader) return;
                     }
@@ -135,13 +142,18 @@ namespace UnityEngine.SceneManagement
                 while (generation == m_Generation)
                 {
                     var next = Take(frame);
-                    if (next == null) return;
+                    if (next == null || WaitsForEarlier(next)) return;
                     Prepare(next);
                     if (next.BlocksLoader) return;
                 }
             }
             finally { m_Preparation.Clear(); m_Preparing = false; }
         }
+
+        /// <summary>An unused-asset unload is prepared once everything queued before it has
+        /// integrated: after a Single load it completes the frame after the load (measured:
+        /// tests/projects/sceneunload `singleasync/done`).</summary>
+        bool WaitsForEarlier(Request request) => request.BlocksLoader && m_Requests.Count != 0 && m_Requests[0] != request;
 
         /// <summary>The untaken request made before this frame with the highest priority, the
         /// earliest among equals, moved behind the taken ones. Nothing is taken past an untaken
@@ -222,6 +234,8 @@ namespace UnityEngine.SceneManagement
                     }
                     if (frame <= request.ArmedFrame || !request.Operation.allowSceneActivation) break;
                 }
+                // An unused-asset unload integrates once the loader has prepared it.
+                else if (request.BlocksLoader && !request.Prepared) break;
                 Integrate(request);
                 // Rounded to whole milliseconds, as the limit is.
                 if ((long)(m_Clock() - start + .5) >= limit) break;

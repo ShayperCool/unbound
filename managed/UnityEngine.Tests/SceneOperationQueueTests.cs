@@ -389,5 +389,42 @@ namespace Unbound.Tests
             Assert.False(old.isDone);
             Assert.Empty(m_Events);
         }
+
+        [Fact]
+        public void AnAssetLoadQueuedBehindAHeldSceneLoadWaitsForIt()
+        {
+            // tests/projects/sceneunload queue.sceneFirst: a Resources or AssetBundle load requested
+            // after a held scene load completes only after the scene's activation.
+            var scene = Load("scene", 0);
+            scene.allowSceneActivation = false;
+            var asset = new AsyncOperation();
+            m_Queue.EnqueueAfterLast(asset, () => m_Events.Add("asset"), SceneOperationQueue.Kind.Asset, 0);
+            for (int frame = 1; frame <= 10; frame++) { m_Queue.Prepare(frame); m_Queue.Process(frame); }
+            Assert.False(asset.isDone);
+            scene.allowSceneActivation = true;
+            var frames = Run(11, scene, asset);
+            Assert.Equal(frames[0], frames[1]);
+            Assert.Equal(new[] { "scene.objects", "scene.completed", "asset" }, m_Events);
+        }
+
+        [Fact]
+        public void TheUnloadAfterASingleLoadCompletesTheFrameAfterTheLoad()
+        {
+            // tests/projects/sceneunload singleasync/done: when the load reports done the unload has
+            // not run; it is prepared only once the load has integrated.
+            var load = Load("load", 0);
+            var unload = new AsyncOperation();
+            m_Queue.EnqueueAfterLast(unload, () => m_Events.Add("unused"), SceneOperationQueue.Kind.UnloadUnused, 0);
+            var frames = Run(1, load, unload);
+            Assert.Equal(frames[0] + 1, frames[1]);
+        }
+
+        [Fact]
+        public void AnUnusedAssetUnloadAloneCompletesAtTheNextPass()
+        {
+            var unload = new AsyncOperation();
+            m_Queue.EnqueueAfterLast(unload, () => m_Events.Add("unused"), SceneOperationQueue.Kind.UnloadUnused, 0);
+            Assert.Equal(new[] { 1 }, Run(1, unload));
+        }
     }
 }
