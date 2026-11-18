@@ -294,7 +294,7 @@ namespace Unbound.Runtime
                 int slash = path.LastIndexOf('/');
                 var parent = slash < 0 ? root : root.Find(path.Substring(0, slash));
                 // A transform already under its parent keeps its place among its siblings.
-                if (t.m_Parent != parent) t.SetParent(parent, true);
+                if (t.m_Parent != parent) Unbound.Runtime.Hierarchy.SetParent(t, parent, true, -1);
                 var x = avatar.DefaultPose.X[i];
                 t.SetLocalPositionAndRotation(new Vector3(x.t.x, x.t.y, x.t.z), AnimatorHuman.Rotation(x.q));
                 t.localScale = new Vector3(x.s.x, x.s.y, x.s.z);
@@ -366,7 +366,13 @@ namespace Unbound.Runtime
                     i++;
                     continue;
                 }
-                child.SetParent(root, true);
+                // The engine's own edit: a model's asset optimized as it loads is reparented too.
+                Unbound.Runtime.Hierarchy.SetParent(child, root, true, -1);
+                if (child.m_Parent != root)
+                {
+                    i++;
+                    continue;
+                }
                 Flatten(nonSkeleton, root, child);
             }
         }

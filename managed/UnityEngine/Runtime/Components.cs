@@ -329,7 +329,6 @@ namespace Unbound.Runtime
         internal static void SetParent(Transform t, Transform parent, bool worldPositionStays, int siblingIndex)
         {
             var go = t.m_GameObject;
-            bool wasActive = go.activeInHierarchy;
             Vector3 worldPosition = default, worldScale = default;
             Quaternion worldRotation = default;
             if (worldPositionStays)
@@ -343,10 +342,11 @@ namespace Unbound.Runtime
             // tests/projects/messages).
             Messaging.SendToHierarchy(t, "OnBeforeTransformParentChanged");
             if (t.m_Destroyed || (parent != null && parent.m_Destroyed)) return;
-            // A script that hears it may have moved the transform already: it leaves its parent of
-            // now, and the request still decides where it ends up (Unity 6000.0.71f1,
+            // A script that hears it may have moved the transform already: it leaves its parent (and
+            // activity) of now, and the request still decides where it ends up (Unity 6000.0.71f1,
             // tests/projects/gameinterop reentrant.before).
             var oldParent = t.m_Parent;
+            bool wasActive = go.activeInHierarchy;
             if (oldParent == null) SceneRegistry.RemoveRoot(go);
             else oldParent.m_Children.Remove(t);
 
