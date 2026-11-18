@@ -513,12 +513,19 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Whether <paramref name="args"/> holds a dispatch's arguments at the offset: any
-        /// buffer can; an offset that is not a multiple of 4 or arguments past the end dispatch
-        /// nothing, silently, as in the Editor.</summary>
-        internal static bool IndirectArguments(GpuBufferStorage args, uint offset)
+        /// buffer can; arguments past the end, and an offset that is not a multiple of 4 where the
+        /// device does not round it down to one (<see cref="GraphicsDeviceProfile.IndirectOffsetRoundsDown"/>,
+        /// which sets <paramref name="offset"/> to the offset read), dispatch nothing, silently, as in
+        /// the Editor.</summary>
+        internal static bool IndirectArguments(GpuBufferStorage args, ref uint offset)
         {
             if (args == null) throw new ArgumentNullException("argsBuffer");
-            return !args.Released && offset % 4 == 0 && offset + 12L <= args.Size;
+            if (offset % 4 != 0)
+            {
+                if (!GraphicsDeviceProfile.Current.IndirectOffsetRoundsDown) return false;
+                offset &= ~3u;
+            }
+            return !args.Released && offset + 12L <= args.Size;
         }
     }
 }

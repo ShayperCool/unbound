@@ -293,7 +293,7 @@ namespace UnityEngine
         internal void DispatchIndirect(int kernelIndex, GpuBufferStorage args, uint argsOffset, Dictionary<int, object> overrides)
         {
             var kernel = Kernel(kernelIndex);
-            if (!GpuBufferOps.IndirectArguments(args, argsOffset)) return;
+            if (!GpuBufferOps.IndirectArguments(args, ref argsOffset)) return;
             var properties = Properties(kernelIndex, overrides);
             GfxStream.Dispatch(m_File, kernel, string.Join(" ", m_Keywords), 0, 0, 0, properties, args.Handle, argsOffset);
         }

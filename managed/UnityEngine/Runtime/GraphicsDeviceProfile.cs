@@ -108,6 +108,12 @@ namespace Unbound.Runtime
         /// 14). Measured for a whole ComputeBuffer.SetData; Unbound applies it to every SetData
         /// of the buffer (CommandBuffer.SetBufferData unmeasured, kept).</summary>
         internal bool SetDataResetsCounter { get; init; }
+        /// <summary>An indirect dispatch at a byte offset that is not a multiple of 4 reads its
+        /// arguments at the offset rounded down to one (Metal: offsets 2 and 14 of
+        /// { 2, 1, 1, 3, 2, 2 } dispatch 2 and 12 groups, tests/projects/cmdbuffers metal.jsonl
+        /// `metal.dispatch.offset*`, gpubuffers metal `indirect.unaligned`); elsewhere it
+        /// dispatches nothing (OpenGL Core, gpubuffers `indirect.unaligned`; Vulkan unmeasured).</summary>
+        internal bool IndirectOffsetRoundsDown { get; init; }
         /// <summary>ComputeBuffer.CopyCount into a destination too small at the offset asserts
         /// `dstOffset + size &lt;= m_size` (OpenGL Core); the Metal Editor copies nothing there
         /// silently (tests/projects/gpubuffers metal `append.cb.copybeyond`).</summary>
@@ -273,6 +279,7 @@ namespace Unbound.Runtime
             PackedTargetsKeepChannelBits = true,
             Packs4444Targets = true,
             SetDataResetsCounter = true,
+            IndirectOffsetRoundsDown = true,
             CopyCountAssertsRange = false,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
