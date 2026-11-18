@@ -1,0 +1,12 @@
+{"key":"marker","value":"UnityEngine.Animations.ProcessAnimationJobStruct`1"}
+{"key":"marker.onJobStruct","value":"0"}
+{"key":"producer","value":"internal struct Execute,GetJobReflectionData"}
+{"key":"reflectionData","value":"set cached perType"}
+{"key":"reflectionData.afterCreate","value":"set"}
+{"key":"execute.1","value":"ok count 1 [inner.animation valid True dt 0.1]"}
+{"key":"execute.0","value":"ok count 11 [inner.rootMotion valid True]"}
+{"key":"execute.2","value":"NotImplementedException: Invalid Animation jobs method index. count 11 []"}
+{"key":"evaluate.first","value":"[outer.rootMotion; outer.animation] evaluations 1"}
+{"key":"evaluate.second","value":"[outer.rootMotion; outer.animation] evaluations 2"}
+{"key":"evaluate.rootMotion","value":"[outer.rootMotion; outer.animation]"}
+{"key":"complete","value":"1"}
