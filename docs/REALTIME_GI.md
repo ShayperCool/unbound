@@ -834,10 +834,12 @@ is how the Editor's products are made in the measured release, as follows.
   joins that change least go first, over all trees at once, until no more than the budget of
   references with a weight are left; a parent taking more than 10 over the budget of the rays
   joins only after every other, and a tree's root, once it stands for the tree, may be left out
-  at the cost of its squared weight. This is the order of joins of the Editor's precompute:
-  over Unbound's own transport of the Room's light probes it keeps the Editor's environment
-  references (the same values of the 4x4 and 2x2 levels for the three probes that see much of
-  the environment, one or two apart for three more). The texels
+  at the cost of its squared weight. Over Unbound's own transport of the Room's light probes
+  it references the Editor's environment values for five of the nine probes (values of the
+  4x4 and 2x2 levels, none of the finest; 28 values apart over the other four), and the
+  references keep all of the light, as the Editor's (each probe's band 0 within 0.001 of 1,
+  the Editor's within 0.005; the texels' weights 1 at the median, more than 0.995 for nine in
+  ten of them, as the Editor's). The texels
   are solved in segments of a block of 2x2 texels, the first standing for the block, with the
   normal at its centre and per reference the direction its rays arrive from (the nearest of the
   directionality's 255 directions to their mean), the weights quantized to the runtime's 16-bit
@@ -916,9 +918,8 @@ is how the Editor's products are made in the measured release, as follows.
   how much of the rest comes from the clusters' values and how much from the probes' references
   is not separated. Not measured: probes inside geometry (whose rays all meet back faces and
   take nothing) and outside the system's bounds. A probe reads every system's clusters its
-  rays meet (its dependencies: the environment, then the systems in order). Open: where the
-  Editor's references differ from this order of joins over Unbound's transport (one or two of
-  the environment's for three of the Room's probes, beside the clusters' own differences).
+  rays meet (its dependencies: the environment, then the systems in order). Open: the
+  Editor's environment references that differ from Unbound's for four of the Room's probes.
 - **A scene's bake** (`bake.rs`, and `crates/unbound-runtime/src/realtime_gi.rs` `bake`): all of
   the above from a scene's renderers alone (each one's mesh, matrix, realtime lightmap UV
   settings, cluster size, Modelling Tolerance and group of Lightmap Parameters and System Tag)
@@ -972,8 +973,8 @@ Tag, and the light probes of its LightProbeGroups (their positions, tetrahedrali
 baked lighting, as the Editor's bake gives a scene without baked global illumination). The
 bake is cached under `Library/Unbound/RealtimeGI/` ([A scene's bake](#unbounds-precompute));
 nothing is written to the project's files (the Editor writes `LightingData.asset` beside the
-scene). With it the probe's `roombake-base` puts 81 of its 5070 lightmap values outside the
-comparator's tolerance and `roombake-moved` 122 (gated on 4% of them; each renderer compared in
+scene). With it the probe's `roombake-base` puts 66 of its 5070 lightmap values outside the
+comparator's tolerance and `roombake-moved` 119 (gated on 4% of them; each renderer compared in
 its own UV space, since where the renderers lie in the atlas is each precompute's choice), and
 everything else (which renderers draw realtime GI, their UVs, the light probes' count, the
 lightmaps mode, the runtime-loaded scene without it) as the Editor's. Said once, not made:
