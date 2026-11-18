@@ -64,41 +64,6 @@ namespace Unbound.Runtime
             stencilState = new StencilState(true, LightMarkBit, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
         };
 
-        /// <summary>Per target texture with a depth buffer, the depth and stencil an LDR deferred
-        /// camera draws its G-buffer with: kept from one render of the target to the next, as the
-        /// target's own depth and stencil are in Unity (the depth goes back into the target after
-        /// the camera, the stencil marks stay here).</summary>
-        static readonly Dictionary<RenderTexture, RenderTexture> s_TargetGBufferDepths = new Dictionary<RenderTexture, RenderTexture>();
-        static readonly List<RenderTexture> s_DeadTargets = new List<RenderTexture>();
-
-        static RenderTexture TargetGBufferDepth(RenderTexture target, int width, int height)
-        {
-            if (s_TargetGBufferDepths.TryGetValue(target, out var depth) && depth && depth.width == width && depth.height == height)
-                return depth;
-            if (depth) UnityEngine.Object.DestroyImmediate(depth);
-            // The depths of destroyed targets go with them.
-            foreach (var pair in s_TargetGBufferDepths)
-                if (!pair.Key) s_DeadTargets.Add(pair.Key);
-            foreach (var dead in s_DeadTargets)
-            {
-                if (s_TargetGBufferDepths[dead]) UnityEngine.Object.DestroyImmediate(s_TargetGBufferDepths[dead]);
-                s_TargetGBufferDepths.Remove(dead);
-            }
-            s_DeadTargets.Clear();
-            using (ObjectRegistry.AsAssets())
-                depth = new RenderTexture(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt))
-                {
-                    name = "Deferred G-buffer depth",
-                    hideFlags = HideFlags.HideAndDontSave,
-                };
-            depth.Create();
-            GfxStream.SetTarget(TextureHandles.Of(depth));
-            GfxStream.Viewport(new Rect(0, 0, width, height));
-            GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
-            s_TargetGBufferDepths[target] = depth;
-            return depth;
-        }
-
         /// <summary>The 10-bit buffers of the G-buffer: normals, and an LDR camera's light buffer.</summary>
         static RenderTextureDescriptor TenBit(int width, int height) =>
             new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB2101010, 0) { sRGB = false };
@@ -133,7 +98,10 @@ namespace Unbound.Runtime
         /// <paramref name="opaqueCount"/>) to put those that fill the G-buffer first, draws them,
         /// the shadows, reflections and lights; returns where the forward opaque draws start. The
         /// light buffer and depth are bound again at the end, with the camera's matrices.</summary>
-        static int RenderDeferredOpaque(Camera camera, CameraContext context, RenderTexture light, RenderTexture depth, Rect viewport, int opaqueCount)
+        /// <param name="depthAttachment">The depth and stencil the passes draw with: <paramref name="depth"/>'s,
+        /// or an LDR camera's target's own (then <paramref name="depth"/> takes a copy of it after the
+        /// G-buffer, which the shadows and lights sample).</param>
+        static int RenderDeferredOpaque(Camera camera, CameraContext context, RenderTexture light, RenderTexture depth, ulong depthAttachment, Rect viewport, int opaqueCount)
         {
             int width = (int)viewport.width, height = (int)viewport.height;
             // Draws with a Deferred pass first, in their order.
@@ -156,7 +124,8 @@ namespace Unbound.Runtime
             var gbuffer2 = Temporary(TenBit(width, height));
             var lightBuffer = hdr ? light : Temporary(TenBit(width, height));
             ulong g0 = TextureHandles.Of(gbuffer0), g1 = TextureHandles.Of(gbuffer1), g2 = TextureHandles.Of(gbuffer2);
-            ulong targetHandle = TextureHandles.Of(light), lightHandle = TextureHandles.Of(lightBuffer), depthHandle = TextureHandles.Of(depth);
+            ulong targetHandle = TextureHandles.Of(light), lightHandle = TextureHandles.Of(lightBuffer), depthHandle = depthAttachment;
+            ulong sampledHandle = TextureHandles.Of(depth);
 
             // The G-buffer: cleared (an HDR camera's target to the background, an LDR camera's
             // light buffer to black), then the Deferred passes.
@@ -190,15 +159,16 @@ namespace Unbound.Runtime
             }
             GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);
+            if (sampledHandle != depthHandle) GfxStream.CopyDepth(depthHandle, sampledHandle);
             GfxStream.GlobalTexture("_CameraGBufferTexture0", g0);
             GfxStream.GlobalTexture("_CameraGBufferTexture1", g1);
             GfxStream.GlobalTexture("_CameraGBufferTexture2", g2);
-            GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
+            GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
             // Shadows: collected against the G-buffer's depth.
             s_CameraDepth = depth;
             RenderShadows(camera, context, width, height);
-            GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
+            GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
             // The lights and reflections draw as quads over the view (Unity's global).
             GfxStream.GlobalFloat("_LightAsQuad", 1f);
@@ -342,7 +312,7 @@ namespace Unbound.Runtime
             SetupCamera(targetHandle, viewport, CameraClearFlags.Nothing, Color.black, context.View, context.Projection, 0);
             GfxStream.SetTarget(targetHandle, depthHandle);
             GfxStream.Viewport(viewport);
-            GfxStream.GlobalTexture("_CameraDepthTexture", depthHandle);
+            GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
             return deferred.Count;
         }
 
