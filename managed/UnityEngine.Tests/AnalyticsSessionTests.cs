@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Unbound.Runtime;
@@ -69,9 +70,12 @@ namespace UnityEngine.Tests
             Assert.Equal("", AnalyticsSessionInfo.identityToken);
         }
 
+        static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
         [Fact]
         public void DeleteAllKeepsTheSessionPreferences()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             AnalyticsSessionInfo.BeginPlaySession();
             PlayerPrefs.SetString("game.progress", "level 3");
             string user = AnalyticsSessionInfo.userId;
@@ -82,6 +86,50 @@ namespace UnityEngine.Tests
             Assert.Equal(AnalyticsSessionInfo.sessionId.ToString(), PlayerPrefs.GetString("unity.player_sessionid"));
             AnalyticsSessionInfo.BeginPlaySession();
             Assert.Equal(user, AnalyticsSessionInfo.userId);
+        }
+
+        [Fact]
+        public void WithoutAMeasuredAnswerDeleteAllClearsTheSessionPreferencesToo()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            AnalyticsSessionInfo.BeginPlaySession();
+            string user = AnalyticsSessionInfo.userId;
+            PlayerPrefs.DeleteAll();
+            Assert.False(PlayerPrefs.HasKey("unity.cloud_userid"));
+            Assert.False(PlayerPrefs.HasKey("unity.player_session_count"));
+            Assert.False(PlayerPrefs.HasKey("unity.player_sessionid"));
+            AnalyticsSessionInfo.BeginPlaySession();
+            Assert.Equal(1, AnalyticsSessionInfo.sessionCount);
+            Assert.NotEqual(user, AnalyticsSessionInfo.userId);
+        }
+
+        /// <summary>With services enabled in the project's settings (unmeasured), a script's use of
+        /// the session reports it; the session every Play mode starts does not.</summary>
+        [Fact]
+        public void ServicesEnabledIsReportedOnUseNotAtTheSessionStart()
+        {
+            const string member = "AnalyticsSessionInfo with Unity services enabled in project settings";
+            var loaded = typeof(EditorServiceSettings).GetField("s_Loaded", BindingFlags.Static | BindingFlags.NonPublic);
+            object wasLoaded = loaded.GetValue(null);
+            bool wasConfigured = EditorServiceSettings.Configured;
+            loaded.SetValue(null, true);
+            EditorServiceSettings.Configured = true;
+            try
+            {
+                int before = Hits(member);
+                AnalyticsSessionInfo.BeginPlaySession();
+                Assert.Equal(before, Hits(member));
+                _ = AnalyticsSessionInfo.sessionId;
+                Assert.Equal(before + 1, Hits(member));
+                EditorServiceSettings.Configured = false;
+                _ = AnalyticsSessionInfo.sessionId;
+                Assert.Equal(before + 1, Hits(member));
+            }
+            finally
+            {
+                EditorServiceSettings.Configured = wasConfigured;
+                loaded.SetValue(null, wasLoaded);
+            }
         }
 
         [Fact]

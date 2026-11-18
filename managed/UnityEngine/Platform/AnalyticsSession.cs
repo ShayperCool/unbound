@@ -7,6 +7,14 @@ using Unbound.Runtime;
 
 namespace UnityEngine.Analytics
 {
+    public enum AnalyticsSessionState
+    {
+        kSessionStopped = 0,
+        kSessionStarted = 1,
+        kSessionPaused = 2,
+        kSessionResumed = 3,
+    }
+
     /// <summary>
     /// The analytics session of the Editor with Unity services not logged in: each Play mode starts a
     /// session, counted and identified in the project's preferences (<c>unity.player_session_count</c>,
@@ -16,14 +24,6 @@ namespace UnityEngine.Analytics
     /// Each value is read on the main thread only. Matches the Unity 6000.0.71f1 Editor with services
     /// disabled (tests/projects/analyticssession); with services enabled the session reports it.
     /// </summary>
-    public enum AnalyticsSessionState
-    {
-        kSessionStopped = 0,
-        kSessionStarted = 1,
-        kSessionPaused = 2,
-        kSessionResumed = 3,
-    }
-
     public static partial class AnalyticsSessionInfo
     {
         public delegate void SessionStateChanged(AnalyticsSessionState sessionState, long sessionId, long sessionElapsedTime, bool sessionChanged);
@@ -45,18 +45,26 @@ namespace UnityEngine.Analytics
         public static event SessionStateChanged sessionStateChanged;
         public static event IdentityTokenChanged identityTokenChanged;
 
-        /// <summary>Play mode started: a new session, the count and ids written to the preferences.</summary>
         /// <summary>Only the services-disabled profile is measured: with Unity services enabled in the
-        /// project's settings the Editor may fetch settings and raise events, which is reported.</summary>
+        /// project's settings the Editor may fetch settings and raise events, which a script's use of
+        /// the session or of RemoteSettings reports (the session itself starts silently, as every
+        /// Play mode starts one whether or not a script reads it).</summary>
         internal static void CheckServicesDisabled(string what)
         {
             EditorServiceSettings.Ensure();
             if (EditorServiceSettings.Configured) Stubs.NotImplemented(what + " with Unity services enabled in project settings");
         }
 
+        /// <summary>A script reads or writes the session on the main thread.</summary>
+        static void Check(string binding)
+        {
+            MainThreadCheck.Check(binding);
+            CheckServicesDisabled("AnalyticsSessionInfo");
+        }
+
+        /// <summary>Play mode started: a new session, the count and ids written to the preferences.</summary>
         internal static void BeginPlaySession()
         {
-            CheckServicesDisabled("AnalyticsSessionInfo");
             long.TryParse(PlayerPrefs.GetString(CountKey), NumberStyles.Integer, CultureInfo.InvariantCulture, out long previous);
             s_Count = Math.Max(0, previous) + 1;
             s_FirstRun = s_Count == 1;
@@ -78,24 +86,24 @@ namespace UnityEngine.Analytics
 
         internal static void CallIdentityTokenChanged(string token) => identityTokenChanged?.Invoke(token);
 
-        public static AnalyticsSessionState sessionState { get { MainThreadCheck.Check("get_sessionState"); return s_State; } }
-        public static long sessionId { get { MainThreadCheck.Check("get_sessionId"); return s_SessionId; } }
-        public static long sessionCount { get { MainThreadCheck.Check("get_sessionCount"); return s_Count; } }
-        public static long sessionElapsedTime { get { MainThreadCheck.Check("get_sessionElapsedTime"); return s_Elapsed.ElapsedMilliseconds; } }
-        public static bool sessionFirstRun { get { MainThreadCheck.Check("get_sessionFirstRun"); return s_FirstRun; } }
-        public static string userId { get { MainThreadCheck.Check("get_userId"); return s_UserId; } }
-        public static string identityToken { get { MainThreadCheck.Check("get_identityToken"); return ""; } }
+        public static AnalyticsSessionState sessionState { get { Check("get_sessionState"); return s_State; } }
+        public static long sessionId { get { Check("get_sessionId"); return s_SessionId; } }
+        public static long sessionCount { get { Check("get_sessionCount"); return s_Count; } }
+        public static long sessionElapsedTime { get { Check("get_sessionElapsedTime"); return s_Elapsed.ElapsedMilliseconds; } }
+        public static bool sessionFirstRun { get { Check("get_sessionFirstRun"); return s_FirstRun; } }
+        public static string userId { get { Check("get_userId"); return s_UserId; } }
+        public static string identityToken { get { Check("get_identityToken"); return ""; } }
 
         public static string customUserId
         {
-            get { MainThreadCheck.Check("get_customUserIdInternal"); return s_CustomUserId; }
-            set { MainThreadCheck.Check("set_customUserIdInternal"); s_CustomUserId = value ?? ""; }
+            get { Check("get_customUserIdInternal"); return s_CustomUserId; }
+            set { Check("set_customUserIdInternal"); s_CustomUserId = value ?? ""; }
         }
 
         public static string customDeviceId
         {
-            get { MainThreadCheck.Check("get_customDeviceIdInternal"); return s_CustomDeviceId; }
-            set { MainThreadCheck.Check("set_customDeviceIdInternal"); s_CustomDeviceId = value ?? ""; }
+            get { Check("get_customDeviceIdInternal"); return s_CustomDeviceId; }
+            set { Check("set_customDeviceIdInternal"); s_CustomDeviceId = value ?? ""; }
         }
     }
 }
