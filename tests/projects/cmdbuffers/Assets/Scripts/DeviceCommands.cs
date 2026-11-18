@@ -66,8 +66,9 @@ public partial class CmdBuffersProbe
     // On the Linux Editor's OpenGL Core device the instances a multiplier adds read the call's
     // instance data past its own instances, which holds what an earlier call left there
     // (device.multiplier.stale): a full run read earlier sections' colors. A call of six
-    // instances placed off the target, with clear colors, first makes that data defined. (On
-    // Metal they do not read it: see s_AddedInstancesUndefined.)
+    // instances with clear colors first makes that data defined (placed off the target, or, for
+    // a shader that places by instance ID, overwritten by the clear that follows). (On Metal
+    // they do not read it: see s_AddedInstancesUndefined.)
     static readonly Matrix4x4[] s_OffTarget = Enumerable.Repeat(Matrix4x4.Translate(new Vector3(100, 100, 0)), 6).ToArray();
     static MaterialPropertyBlock s_ClearColors;
 

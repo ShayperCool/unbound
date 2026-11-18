@@ -147,7 +147,7 @@ def verify(candidate, safe_append_skip=False):
             return code or 1
     # The instances a multiplier adds read zero in Unbound, the Editor's what an earlier call
     # left in its instance buffer: the call's own two colors must still match.
-    # (The Metal Editor's added instances read the same as without the earlier call.)
+    # (On Metal the added columns are masked, so the stale and fresh rows are equal.)
     stale, fresh = 'device.multiplier.stale.colors.2.pixels', 'device.multiplier.placed.colors.2.pixels'
     if stale in ref:
         if ref[stale] != ref.get(fresh):

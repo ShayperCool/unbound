@@ -50,10 +50,11 @@ The instances `SetInstanceMultiplier` adds read the call's instance data past it
 instances. On the Linux Editor (OpenGL Core) that data holds what an earlier call left there
 (`device.multiplier.stale`): a full run read earlier sections' colors, a run of the device
 section alone read zero. Every case that reads past its own instances therefore first draws six
-instances placed off the target with clear colors. On Metal the added instances do not read that
+instances with clear colors (placed off the target, or by instance ID and then cleared). On Metal the added instances do not read that
 data (a clearing call with visible colors and placements is not read) and two captures differed
 in what they drew, so there the probe records `device.multiplier.mesh.{2,3}.*.skipped` instead
-of drawing those cases and masks (`-`) the added columns of the ID-placed color cases. Unmeasured:
+of drawing those cases and masks (`-`) every column from the call's own instance count on in the ID-placed color cases
+(also those no added instance reaches). Unmeasured:
 what the Metal Editor's added instances read.
 
 ## Metal (macOS)
