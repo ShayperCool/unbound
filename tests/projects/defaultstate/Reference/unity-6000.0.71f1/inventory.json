@@ -1171,6 +1171,12 @@
       "type": "UnityEditor.Compilation.CompilerMessage"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Compilation.ScriptCompilerOptions"
+    },
+    {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -2009,6 +2015,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.UndoRedoInfo"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UnityStats"
     },
     {
       "category": "class",

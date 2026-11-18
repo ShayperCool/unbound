@@ -410,6 +410,19 @@
 {"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/line","status":"value","value":"0"}
 {"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/message","status":"value","value":"null"}
 {"key":"UnityEditor.Compilation.CompilerMessage/Field/UnityEditor.Compilation.CompilerMessage/type","status":"value","value":"enum:0"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/AdditionalCompilerArguments","status":"value","value":"null"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/AllowUnsafeCode","status":"value","value":"false"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/AnalyzerConfigPath","status":"value","value":"null"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/ApiCompatibilityLevel","status":"value","value":"enum:3"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/CodeOptimization","status":"value","value":"enum:0"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/EditorAssembliesCompatibilityLevel","status":"value","value":"enum:1"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/EmitReferenceAssembly","status":"getter-threw","value":"System.NotImplementedException"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/LanguageVersion","status":"value","value":"string:9.0"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/ResponseFiles","status":"value","value":"[]"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/RoslynAdditionalFilePaths","status":"value","value":"[]"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/RoslynAnalyzerDllPaths","status":"value","value":"[]"}
+{"key":"UnityEditor.Compilation.ScriptCompilerOptions/Property/UnityEditor.Compilation.ScriptCompilerOptions/RoslynAnalyzerRulesetPath","status":"value","value":"null"}
 {"key":"UnityEditor.ConsoleWindow/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.ConsoleWindow/Property/UnityEditor.EditorWindow/antiAlias","status":"value","value":"1"}
 {"key":"UnityEditor.ConsoleWindow/Property/UnityEditor.EditorWindow/autoRepaintOnSceneChange","status":"value","value":"false"}
@@ -1047,6 +1060,7 @@
 {"key":"UnityEditor.UndoRedoInfo/Field/UnityEditor.UndoRedoInfo/undoGroup","status":"value","value":"0"}
 {"key":"UnityEditor.UndoRedoInfo/Field/UnityEditor.UndoRedoInfo/undoName","status":"value","value":"null"}
 {"key":"UnityEditor.UndoRedoInfo/Property/UnityEditor.UndoRedoInfo/isRedo","status":"value","value":"false"}
+{"key":"UnityEditor.UnityStats/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.Unsupported/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.View/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.View/Property/UnityEditor.View/allChildren","status":"value","value":"[object:UnityEditor.View:]"}

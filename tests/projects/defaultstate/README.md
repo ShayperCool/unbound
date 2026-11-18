@@ -31,6 +31,10 @@ windows, and the two text-asset identity rows record their shifted implementatio
 The compilation events slice adds 6 rows for CompilerMessage (now hand-written) from two
 independent GPU captures that agree on them; earlier rows are unchanged.
 
+The compiler options slice adds 14 rows for ScriptCompilerOptions and UnityStats (now
+hand-written) from two independent Linux GPU captures that agree on them; earlier rows are
+unchanged. UnityStats has only static members; reading the obsolete EmitReferenceAssembly throws.
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.

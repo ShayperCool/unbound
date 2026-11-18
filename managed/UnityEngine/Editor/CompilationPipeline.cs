@@ -141,7 +141,9 @@ namespace UnityEditor.Compilation
         public string[] RoslynAdditionalFilePaths { get; set; }
         public string AnalyzerConfigPath { get; set; }
         public bool AllowUnsafeCode { get; set; }
-        [Obsolete("Use of reference assemblies is always enabled", true)] public bool EmitReferenceAssembly { get; set; }
+        /// <summary>Removed: reading it throws (Unity 6000.0.71f1, tests/projects/defaultstate).</summary>
+        [Obsolete("Use of reference assemblies is always enabled", true)]
+        public bool EmitReferenceAssembly { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         internal bool UseDeterministicCompilation { get; set; }
         public string[] AdditionalCompilerArguments { get; set; }
         public CodeOptimization CodeOptimization { get; set; }
