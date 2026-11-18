@@ -392,6 +392,8 @@ namespace UnityEngine
             var triangles = new List<uint>();
             for (int s = 0; s < mesh.subMeshCount; s++)
             {
+                // Sub-meshes of lines or points have no triangles (and GetTriangles would log so).
+                if (mesh.GetTopology(s) != MeshTopology.Triangles) continue;
                 var t = mesh.GetTriangles(s);
                 for (int k = 0; k + 2 < t.Length; k += 3)
                 {

@@ -63,6 +63,28 @@ namespace UnityEngine.Tests
             finally { Unbound.Runtime.EditorSession.IsPlaying = playing; }
         }
 
+        /// <summary>Baking a mesh with a sub-mesh of lines logs nothing: the engine's bake does not
+        /// ask for its triangles (GetTriangles of such a sub-mesh logs the topology error).</summary>
+        [Fact]
+        public void BakingASubMeshOfLinesLogsNothing()
+        {
+            var source = Floor(true);
+            source.subMeshCount = 2;
+            source.SetTriangles(new[] { 0, 1, 2, 0, 2, 3 }, 0);
+            source.SetIndices(new[] { 0, 1 }, MeshTopology.Lines, 1);
+            var go = new GameObject("lines skin");
+            try
+            {
+                var skin = go.AddComponent<SkinnedMeshRenderer>();
+                skin.sharedMesh = source;
+                var baked = new Mesh();
+                Assert.Empty(Logs(() => skin.BakeMesh(baked)));
+                Assert.Equal(6u, baked.GetIndexCount(0));
+                Assert.Equal(new[] { "Error: Failed getting triangles. Submesh topology is lines or points." }, Logs(() => source.GetTriangles(1)));
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
         [Fact]
         public void NavigationMeshesBuildFromMeshesScriptsCannotRead()
         {
@@ -111,6 +133,7 @@ namespace UnityEngine.Tests
                     Assert.True(skin.SkinnedPose(out positions, out _));
                 }));
                 // Drawing it deforms a copy that keeps the source's readability, logging nothing.
+                skin.sharedMaterial = new Material(Shader.Create("Standard", 2000));
                 var camera = new GameObject("camera").AddComponent<Camera>();
                 camera.transform.position = new Vector3(0f, 10f, -10f);
                 var context = new Unbound.Runtime.FrameBuilder.CameraContext
@@ -119,6 +142,7 @@ namespace UnityEngine.Tests
                 };
                 var draws = new List<Unbound.Runtime.FrameBuilder.DrawItem>();
                 Assert.Empty(Logs(() => skin.CollectDraws(context, draws)));
+                Assert.NotEmpty(draws);
                 Object.DestroyImmediate(camera.gameObject);
                 Assert.Equal(4, baked.vertexCount);
                 Assert.Equal(new Vector3(-5f, 0f, -5f), baked.vertices[0]);

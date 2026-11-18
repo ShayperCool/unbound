@@ -760,7 +760,9 @@ namespace UnityEngine
             mesh.uv = m_Mesh.uv;
             mesh.colors = m_Mesh.colors;
             mesh.subMeshCount = m_Mesh.subMeshCount;
-            for (int s = 0; s < m_Mesh.subMeshCount; s++) mesh.SetTriangles(m_Mesh.GetTriangles(s), s);
+            // A sub-mesh of lines or points bakes empty, as before, without GetTriangles' error.
+            for (int s = 0; s < m_Mesh.subMeshCount; s++)
+                mesh.SetTriangles(m_Mesh.GetTopology(s) == MeshTopology.Triangles ? m_Mesh.GetTriangles(s) : System.Array.Empty<int>(), s);
             mesh.RecalculateBounds();
         }
 
