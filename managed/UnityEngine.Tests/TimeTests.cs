@@ -29,6 +29,13 @@ namespace UnityEngine.Tests
 
         const double Step = 1.0 / 60;
 
+        /// <summary>The wall time since <paramref name="wall"/> was restarted, just before the
+        /// latest frame began, read after the clock read it bounds: the most real time a fixed-step
+        /// frame can have counted by then. Within a frame the clock follows the wall clock, so a
+        /// read is ahead of the frame's start by the time the thread took to get there, which a
+        /// loaded machine stretches; that, and nothing the frames themselves add, is allowed.</summary>
+        static double InFrame(System.Diagnostics.Stopwatch wall) => wall.Elapsed.TotalSeconds + 1e-9;
+
         /// <summary>Runs <paramref name="body"/> from a first frame (fixed-step when
         /// <paramref name="fixedStep"/> is not 0), then puts the clocks back.</summary>
         static void FromFirstFrame(double fixedStep, System.Action body)
@@ -53,14 +60,20 @@ namespace UnityEngine.Tests
         {
             FromFirstFrame(Step, () =>
             {
+                var wall = System.Diagnostics.Stopwatch.StartNew();
                 Time.BeginFrame(Step, Step);
-                double before = Time.realtimeSinceStartupAsDouble;
-                for (int i = 0; i < 3; i++) Time.HostFrameOutsidePlay(Step);
+                double before = Time.realtimeSinceStartupAsDouble, intoFirst = InFrame(wall);
+                for (int i = 0; i < 3; i++)
+                {
+                    wall.Restart();
+                    Time.HostFrameOutsidePlay(Step);
+                }
                 double paused = Time.realtimeSinceStartupAsDouble;
-                Assert.InRange(paused - before, 3 * Step - 0.002, 3 * Step + 0.01);
+                Assert.InRange(paused - before, 3 * Step - intoFirst, 3 * Step + InFrame(wall));
+                wall.Restart();
                 Time.BeginFrame(Step, Step);
                 double resumed = Time.realtimeSinceStartupAsDouble;
-                Assert.InRange(resumed - Time.unscaledTimeAsDouble, 3 * Step - 1e-9, 3 * Step + 0.01);
+                Assert.InRange(resumed - Time.unscaledTimeAsDouble, 3 * Step - 1e-9, 3 * Step + InFrame(wall));
                 Assert.True(resumed >= paused);
             });
         }
@@ -74,18 +87,22 @@ namespace UnityEngine.Tests
         {
             FromFirstFrame(Step, () =>
             {
+                var wall = System.Diagnostics.Stopwatch.StartNew();
                 for (int frame = 1; frame <= 3; frame++)
                 {
                     System.Threading.Thread.Sleep(40); // a frame over twice as slow as its step
                     double late = Time.realtimeSinceStartupAsDouble;
                     // (At most the next frame's start: the read that finds the step used up.)
                     Assert.InRange(late - Time.unscaledTimeAsDouble, 0, Step + 1e-9);
+                    wall.Restart();
                     Time.BeginFrame(Step, Step);
                     double start = Time.realtimeSinceStartupAsDouble;
-                    Assert.InRange(start - Time.unscaledTimeAsDouble, 0, 0.01);
+                    Assert.InRange(start - Time.unscaledTimeAsDouble, 0, InFrame(wall));
                     Assert.True(start >= late, $"{start} after {late}");
                 }
-                Assert.InRange(Time.realtimeSinceStartupAsDouble, 3 * Step, 3 * Step + 0.01);
+                // The three 40 ms frames moved the clock by their steps, not by the wall time.
+                double end = Time.realtimeSinceStartupAsDouble;
+                Assert.InRange(end, 3 * Step, 3 * Step + InFrame(wall));
             });
         }
 
@@ -112,15 +129,18 @@ namespace UnityEngine.Tests
                 double after = Time.realtimeSinceStartupAsDouble;
                 Assert.True(after >= now);
                 Assert.True(after - Time.unscaledTimeAsDouble > Step, "the wait moved real time ahead");
+                var wall = System.Diagnostics.Stopwatch.StartNew();
                 for (int frame = 0; frame < 4; frame++)
                 {
                     System.Threading.Thread.Sleep(20); // read late in a slow frame
                     double late = Time.realtimeSinceStartupAsDouble;
                     Assert.True(late >= after, "real time went back");
                     after = late;
+                    wall.Restart();
                     Time.BeginFrame(Step, Step);
                 }
-                Assert.InRange(Time.realtimeSinceStartupAsDouble - Time.unscaledTimeAsDouble, 0, 0.01);
+                double caughtUp = Time.realtimeSinceStartupAsDouble;
+                Assert.InRange(caughtUp - Time.unscaledTimeAsDouble, 0, InFrame(wall));
             });
         }
 
