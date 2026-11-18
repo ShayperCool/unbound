@@ -95,6 +95,12 @@ namespace UnityEngine
             internal string DirectionalityNote;
             internal float AlbedoBoost = 1f;
             internal bool Converged, Failed;
+            /// <summary>The scene has just loaded: its first EnlightenRuntimeUpdate does not solve
+            /// it yet, so what scripts change in the next frame is its first state solved
+            /// (matches the Unity 6000.0.71f1 Editor, tests/projects/realtimegi
+            /// `room-delegate-inversesquared`, `-norange` and `-linear-range6`: the light's range
+            /// changed in the frame after the load).</summary>
+            internal bool JustLoaded = true;
             /// <summary>The scene's own light probes its probe sets light, and the probes'
             /// coefficients as read back.</summary>
             internal ProbeSet Probes;
@@ -434,6 +440,11 @@ namespace UnityEngine
                         continue;
                     }
                     scene.EnvironmentVersion = s_EnvironmentVersion;
+                }
+                if (scene.JustLoaded)
+                {
+                    scene.JustLoaded = false;
+                    continue;
                 }
                 fixed (GiLight* lights = s_Lights)
                     result = Native.Api.GiUpdate(scene.Handle, &frame, lights, count, &error);
