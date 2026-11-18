@@ -81,7 +81,7 @@ namespace UnityEngine.U2D
         Color m_Color = Color.white;
         /// <summary>The draws' `_RendererColor`, kept while the tint stays (see <see cref="CollectDraws"/>).</summary>
         Dictionary<int, object> m_TintProperties;
-        Color m_TintPropertiesFor;
+        Color32 m_TintPropertiesFor;
         static readonly int s_RendererColor = Shader.PropertyToID("_RendererColor");
         SpriteMaskInteraction m_MaskInteraction;
         Texture m_ShapeTexture;
@@ -392,11 +392,12 @@ namespace UnityEngine.U2D
             // `unity_SpriteColor` as it is, the built-in pipeline's `_RendererColor` as bytes
             // (tests/projects/vertexcolors spriteshape.*).
             var tint = VertexColors.InColorSpace(m_Color);
-            if (m_TintProperties == null || !m_TintPropertiesFor.Equals(tint))
+            var bytes = VertexColors.Bytes(tint);
+            if (m_TintProperties == null || !m_TintPropertiesFor.Equals(bytes))
             {
                 m_TintProperties ??= new Dictionary<int, object>(1);
-                m_TintProperties[s_RendererColor] = (Color)VertexColors.Bytes(tint);
-                m_TintPropertiesFor = tint;
+                m_TintProperties[s_RendererColor] = (Color)bytes;
+                m_TintPropertiesFor = bytes;
             }
             float distance = FrameBuilder.Distance(camera, bounds.center);
             var groups = FrameBuilder.GroupsOf(this, camera);

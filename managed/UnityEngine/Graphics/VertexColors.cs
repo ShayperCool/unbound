@@ -6,11 +6,11 @@ namespace UnityEngine
     {
         /// <summary>The draw's color is no renderer color: it multiplies the vertex colors as it is.</summary>
         None,
-        /// <summary>A renderer color of the vertices: `unity_SpriteColor` for a program that reads it
+        /// <summary>A renderer color of the vertices: `unity_SpriteColor` for a program that declares it
         /// (vertex colors left alone), else the vertex colors' bytes (SpriteRenderer, a tilemap's cells drawn one
         /// by one).</summary>
         Vertices,
-        /// <summary>A renderer color of constants only: `unity_SpriteColor` for a program that reads it;
+        /// <summary>A renderer color of constants only: `unity_SpriteColor` for a program that declares it;
         /// the vertex colors are left alone (SpriteShapeRenderer, which also sets `_RendererColor`).</summary>
         Constant,
     }
@@ -19,8 +19,9 @@ namespace UnityEngine
     /// How renderers put colors into vertex data and per-draw constants (matches the Unity 6000.0.71f1
     /// Editor, tests/projects/vertexcolors): a renderer's color is in the project's color space
     /// (<see cref="InColorSpace"/>); in vertex colors and in the built-in pipeline's
-    /// `_RendererColor` it is stored as bytes (<see cref="Bytes"/>), in URP's `unity_SpriteColor`
-    /// as it is (unclamped). A mesh's own vertex colors are never converted.
+    /// `_RendererColor` it is stored as bytes (<see cref="Bytes"/>), in `unity_SpriteColor`
+    /// as it is (unclamped), for every program that declares it (URP's shader library does, for all its
+    /// programs). A mesh's own vertex colors are never converted.
     /// </summary>
     internal static class VertexColors
     {

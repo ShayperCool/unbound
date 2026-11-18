@@ -4534,8 +4534,8 @@ impl UnityRenderer {
             pad: [0.0; 4],
         };
         let offset = self.push_uniform(uniform);
-        // A renderer's color for the vertices goes to a program reading `unity_SpriteColor`
-        // there instead: its vertex colors are left alone (the draw's uniform with a white color,
+        // A renderer's color for the vertices goes to a program declaring `unity_SpriteColor`
+        // there instead (read or not): its vertex colors are left alone (the draw's uniform with a white color,
         // made for the first such pass).
         let mut untinted_offset = None;
         let linear = space == 1;
@@ -4956,7 +4956,7 @@ impl UnityRenderer {
                 texture: texture_bg.clone(),
                 buffers: buffers_bg,
                 offset: if draw.tint == commands::DrawTint::Vertices
-                    && self.compiled.reads_sprite_color(id)
+                    && self.compiled.declares_sprite_color(id)
                 {
                     *untinted_offset.get_or_insert_with(|| {
                         self.push_uniform(DrawUniform {

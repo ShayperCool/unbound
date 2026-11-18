@@ -9,7 +9,7 @@ namespace UnityEngine.Tilemaps
     /// center (the tile anchor), under the tilemap's orientation and the cell's transform, colored
     /// by the cell's and the tilemap's colors (their product, in the project's color space: in the
     /// vertices as bytes in Chunk mode; each cell's draw's own color in Individual mode, which a
-    /// program reading `unity_SpriteColor` takes as it is; tests/projects/vertexcolors tilemap.*). Chunk mode draws the whole tilemap as one sorted
+    /// program declaring `unity_SpriteColor` takes as it is; tests/projects/vertexcolors tilemap.*). Chunk mode draws the whole tilemap as one sorted
     /// unit (a mesh per texture), its cells ordered by the sort order; Individual mode sorts each
     /// cell on its own at its center.
     /// </summary>

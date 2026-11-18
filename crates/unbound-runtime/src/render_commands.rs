@@ -47,11 +47,11 @@ pub enum DrawTint {
     #[default]
     None,
     /// A renderer's color of the vertices: `unity_SpriteColor` as it is, the vertex color
-    /// left alone, for a program that reads it; else the vertex color times the color as
+    /// left alone, for a program that declares it (read or not); else the vertex color times the color as
     /// bytes (each channel clamped to 0..1, times 255, rounded half up).
     Vertices,
-    /// A renderer's color of the constants alone: `unity_SpriteColor` for a program that reads
-    /// it; the vertex color is left alone.
+    /// A renderer's color of the constants alone: `unity_SpriteColor` for a program that
+    /// declares it; the vertex color is left alone.
     Constant,
 }
 

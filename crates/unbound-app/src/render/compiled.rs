@@ -30,7 +30,8 @@ struct ProgramGpu {
     /// Whether the vertex program reads vertex inputs: one that reads none (built from its
     /// vertex and instance ids) draws without vertex buffers.
     vertex_inputs: bool,
-    /// Whether the program reads `unity_SpriteColor` (a renderer's own color reaches it there).
+    /// Whether the program declares `unity_SpriteColor` (a renderer's own color reaches it there,
+    /// read or not: URP's shader library declares it for every program).
     sprite_color: bool,
     /// Where it takes a BatchRendererGroup draw's DOTS instancing data.
     dots: super::dots::DotsLayout,
@@ -553,8 +554,8 @@ impl CompiledPrograms {
         self.programs[id as usize].vertex_inputs
     }
 
-    /// Whether program `id` reads `unity_SpriteColor`.
-    pub fn reads_sprite_color(&self, id: u32) -> bool {
+    /// Whether program `id` declares `unity_SpriteColor`.
+    pub fn declares_sprite_color(&self, id: u32) -> bool {
         self.programs[id as usize].sprite_color
     }
 
