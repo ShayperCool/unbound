@@ -78,7 +78,7 @@ namespace UnityEditor
                 EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
                 // A session restarted for a script edit continues that reload (its old session raised
                 // beforeAssemblyReload).
-                if (!ContinuesScriptReload() && !(EditorSettings.enterPlayModeOptionsEnabled && (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) != 0))
+                if (!ContinuesScriptReload() && (EditorSettings.ActiveEnterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) == 0)
                     UnityEditor.AssemblyReloadEvents.RaiseBefore();
             }
             try
@@ -108,7 +108,7 @@ namespace UnityEditor
                 var parameters = method.GetParameters();
                 if (parameters.Length == 0) Invoke(method);
                 else if (parameters.Length == 1 && parameters[0].ParameterType.IsEnum)
-                    Invoke(method, Enum.ToObject(parameters[0].ParameterType, 0)); // EnterPlayModeOptions.None
+                    Invoke(method, Enum.ToObject(parameters[0].ParameterType, (int)EditorSettings.ActiveEnterPlayModeOptions)); // the options Play mode is entered with
             });
         }
 

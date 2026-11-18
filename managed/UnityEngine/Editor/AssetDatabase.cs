@@ -430,24 +430,44 @@ namespace UnityEditor
 
     public sealed partial class EditorSettings : Object
     {
-        static bool s_Loaded, s_EnterPlayModeOptionsEnabled;
+        static volatile bool s_Loaded;
+        static readonly object s_LoadLock = new object();
+        static bool s_EnterPlayModeOptionsEnabled;
         static EnterPlayModeOptions s_EnterPlayModeOptions;
 
-        /// <summary>The project's ProjectSettings/EditorSettings.asset (class 159), read once; a
-        /// project without one keeps the defaults (off, None).</summary>
+        /// <summary>The project's ProjectSettings/EditorSettings.asset (class 159), read once (from any
+        /// thread, the flag published after the values); a project without one, or with one that
+        /// cannot be read, keeps the defaults (off, None), as the host's reader of the file does.</summary>
         static void Load()
         {
             if (s_Loaded) return;
-            s_Loaded = true;
-            string path = System.IO.Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "EditorSettings.asset");
-            if (!Unbound.Runtime.Native.IsReady || !System.IO.File.Exists(path)) return;
-            foreach (var doc in Unbound.Runtime.Native.LoadDocuments(path))
+            lock (s_LoadLock)
             {
-                if (doc.ClassId != EditorSettingsClassId) continue;
-                s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
-                s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
+                if (s_Loaded) return;
+                try
+                {
+                    string path = System.IO.Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "EditorSettings.asset");
+                    if (Unbound.Runtime.Native.IsReady && System.IO.File.Exists(path))
+                        foreach (var doc in Unbound.Runtime.Native.LoadDocuments(path))
+                        {
+                            if (doc.ClassId != EditorSettingsClassId) continue;
+                            s_EnterPlayModeOptionsEnabled = doc.Body.Bool("m_EnterPlayModeOptionsEnabled");
+                            s_EnterPlayModeOptions = (EnterPlayModeOptions)doc.Body.Int("m_EnterPlayModeOptions", 0);
+                        }
+                }
+                catch (Exception e)
+                {
+                    s_EnterPlayModeOptionsEnabled = false;
+                    s_EnterPlayModeOptions = EnterPlayModeOptions.None;
+                    Debug.LogWarning("Unbound: ProjectSettings/EditorSettings.asset cannot be read (" + e.Message + "): Enter Play Mode Options keep their defaults");
+                }
+                finally { s_Loaded = true; }
             }
         }
+
+        /// <summary>The options Play mode is entered with: the project's when enabled, else None.</summary>
+        internal static EnterPlayModeOptions ActiveEnterPlayModeOptions =>
+            enterPlayModeOptionsEnabled ? enterPlayModeOptions : EnterPlayModeOptions.None;
 
         const int EditorSettingsClassId = 159;
 
