@@ -242,15 +242,16 @@ color), `pipeline-sky` (a procedural skybox) and `pipeline-sky-intensity` (its a
 2); then, the environment back to the flat ambient color, `RoomDirectional`:
 `roomdirectional-base`, `roomdirectional-moved` and `roomdirectional-dim` (directional
 lightmaps under the pipeline). That set is its own reference, `Reference/unity-<version>/urp`.
+The directional cases of the `urp` and `gamma` sets come from two captures each that agree in them; the gamma
+pair's earlier cases differ from each other and from the reference by up to 0.002
+(`room-base`, `room-moved`, `room-sky-only`, `room-sky-only-intensity`, `room-envdata`; no
+value outside the comparator's tolerance), as earlier gamma captures did, and stay as they were.
+
 With both `--pipeline urp --color-space gamma` the pipeline's sequence runs in the gamma-space
 project; its own reference is `Reference/unity-<version>/urp-gamma` (two byte-identical
 captures). It is recorded but not part of gate.json: Unbound's run has one value outside the
 comparator's bounds there, the corner texel (16,41) of `pipeline-directional`
 (docs/REALTIME_GI.md, Open).
-The directional cases of both sets come from two captures each that agree in them; the gamma
-pair's earlier cases differ from each other and from the reference by up to 0.002
-(`room-base`, `room-moved`, `room-sky-only`, `room-sky-only-intensity`, `room-envdata`; no
-value outside the comparator's tolerance), as earlier gamma captures did, and stay as they were.
 
 With `--bake` the capture opens `RoomBake` instead (`run.py setup-bake` adds it and
 `RoomBakeLoaded`: the Room saved without lighting data, its LightmapSettings asking for a bake
@@ -532,7 +533,8 @@ python3 tests/projects/realtimegi/script_bake.py check               # Unbound (
 project and compares with `Reference/unity-<release>/`; `gate --pipeline urp` (and `record`,
 `publish` with it) does the same with the Universal Render Pipeline and
 `Reference/unity-<release>/urp`, and `--color-space gamma` with the project in the gamma color
-space and `Reference/unity-<release>/gamma`. The engine's result in both: no state or gated
+space and `Reference/unity-<release>/gamma` (both together: `Reference/unity-<release>/urp-gamma`,
+not in gate.json). The engine's result in both: no state or gated
 value failing and no value reported. `gate --bake` starts the engine in `RoomBake`, which
 Unbound bakes with its own precompute as the Editor opens it, and compares with `--own-layout`
 (the renderers lie where each precompute put them, so their places are not compared; each

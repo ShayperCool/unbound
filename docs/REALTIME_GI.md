@@ -1135,12 +1135,14 @@ measure):
   pipeline other than the Universal Render Pipeline in a gamma-space project, and a device other
   than the NVIDIA OpenGL Core one both the Editor and Unbound ran on. The Universal Render
   Pipeline's sequence in a gamma-space project (tests/projects/realtimegi `--pipeline urp
-  --color-space gamma`, two identical captures) is drawn as the Editor draws it but for one
-  value: no state value off, the spot cases 7 isolated values off (the texels next to the
-  emissive panel and (32,33), (41,34), (42,24); its light 2.2 times brighter in gamma), and in
-  `pipeline-directional` the corner texel (16,41) 0.031 above the Editor's (0.0305 against a
-  bound of 0.0293; in the linear project 0.029 above, just inside it, and in the built-in
-  pipeline's `room-directional` 0.032, inside its 0.033). That corner is equally bright without
+  --color-space gamma`, two identical captures; lightmaps and values, no frames) gives the
+  Editor's lightmaps but for one value: no state value off, the spot cases 7 isolated values off
+  (the texels next to the emissive panel and (32,33), (41,34), (42,24); the light's intensity is
+  taken as a gamma value, so its lightmaps are about 40 times the linear project's and the
+  relative tolerance decides), and in `pipeline-directional` the corner texel (16,41) 0.0305
+  above the Editor's, against the comparator's bound for an isolated value of 0.0293 (0.02 + 10%;
+  in the linear project 0.0291 above against 0.0292, and in the built-in pipeline's
+  `room-directional` 0.032 above, within even the plain bound of 0.033). That corner is equally bright without
   shadows and whichever of a cluster's points count as visible, so its texel's sampling is the
   open part, as for the isolated texels below. Until then that set is recorded, not gated.
 - Realtime lightmap indices of lighting data whose scene's Lighting Settings turn realtime GI
