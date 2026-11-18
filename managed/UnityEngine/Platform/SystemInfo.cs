@@ -14,8 +14,12 @@ namespace UnityEngine
     {
         public const string unsupportedIdentifier = "n/a";
 
+        /// <summary>/proc/meminfo's MemTotal in MiB; on macOS hw.memsize in MiB (16384 on a 16 GB
+        /// Mac, as the macOS Editor answers).</summary>
         static readonly Lazy<int> s_MemoryMb = new Lazy<int>(() =>
         {
+            if (OperatingSystem.IsMacOS() && Unbound.Runtime.MachineIdentity.MacSysctlInteger("hw.memsize") is long bytes and > 0)
+                return (int)(bytes / (1024 * 1024));
             try
             {
                 foreach (var line in File.ReadLines("/proc/meminfo"))
@@ -26,8 +30,11 @@ namespace UnityEngine
             return 8192;
         });
 
+        /// <summary>/proc/cpuinfo's "model name"; on macOS the CPU's brand string
+        /// (<c>Apple M2 Pro</c>, as the macOS Editor answers).</summary>
         static readonly Lazy<string> s_Processor = new Lazy<string>(() =>
         {
+            if (OperatingSystem.IsMacOS()) return Unbound.Runtime.MachineIdentity.MacSysctlString("machdep.cpu.brand_string") ?? "Unknown";
             try
             {
                 foreach (var line in File.ReadLines("/proc/cpuinfo"))
@@ -83,23 +90,33 @@ namespace UnityEngine
             OperatingSystem.IsWindows() ? OperatingSystemFamily.Windows : OperatingSystemFamily.Linux;
         public static string processorType => s_Processor.Value;
         public static string processorModel => s_Processor.Value;
-        /// <summary>/proc/cpuinfo's vendor_id (<c>AuthenticAMD</c>, <c>GenuineIntel</c>).</summary>
+        /// <summary>/proc/cpuinfo's vendor_id (<c>AuthenticAMD</c>, <c>GenuineIntel</c>); on Apple
+        /// silicon <c>Apple</c> (the macOS Editor's answer on an Apple M2 Pro).</summary>
         public static string processorManufacturer
         {
             get
             {
-                var vendor = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("vendor_id") : null;
+                var vendor = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("vendor_id")
+                    : OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "Apple"
+                    : null;
                 if (vendor == null) Unbound.Runtime.Stubs.Ignored("SystemInfo.processorManufacturer", "is not read on this OS: it answers \"\"");
                 return vendor ?? "";
             }
         }
 
         /// <summary>The first processor's clock when first asked, in whole MHz (/proc/cpuinfo's
-        /// "cpu MHz", which follows frequency scaling).</summary>
+        /// "cpu MHz", which follows frequency scaling). On macOS, which reports no clock on Apple
+        /// silicon, the timebase frequency times the scheduler's clock rate (hw.tbfrequency 24 MHz
+        /// x kern.clockrate's hz 100): 2400, the macOS Editor's steady answer on an Apple M2 Pro
+        /// (the formula is our reading of that value).</summary>
         public static int processorFrequency
         {
             get
             {
+                if (OperatingSystem.IsMacOS()
+                    && Unbound.Runtime.MachineIdentity.MacSysctlInteger("hw.tbfrequency") is long timebase and > 0
+                    && Unbound.Runtime.MachineIdentity.MacSysctlInteger("kern.clockrate") is long hz and > 0)
+                    return (int)(timebase * hz / 1_000_000);
                 var mhz = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("cpu MHz") : null;
                 if (mhz != null && double.TryParse(mhz, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
                     return (int)value;
@@ -111,9 +128,11 @@ namespace UnityEngine
         public static int systemMemorySize { get { MainThreadCheck.Check("GetPhysicalMemoryMB"); return s_MemoryMb.Value; } }
         public static string deviceUniqueIdentifier => s_DeviceId.Value;
         public static string deviceName => Environment.MachineName;
-        /// <summary>"PC" on Linux (measured: tests/projects/appfacts); the macOS Editor's hardware
-        /// model is not read yet.</summary>
-        public static string deviceModel { get { MainThreadCheck.Check("GetDeviceModel"); if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.deviceModel", "is not read on macOS yet: it answers \"PC\""); return "PC"; } }
+        /// <summary>"PC" on Linux (measured: tests/projects/appfacts); on macOS the hardware model
+        /// (hw.model, <c>Mac14,9</c>, as the macOS Editor answers).</summary>
+        public static string deviceModel { get { MainThreadCheck.Check("GetDeviceModel"); return s_DeviceModel.Value; } }
+        static readonly Lazy<string> s_DeviceModel = new Lazy<string>(() =>
+            OperatingSystem.IsMacOS() ? Unbound.Runtime.MachineIdentity.MacSysctlString("hw.model") ?? "PC" : "PC");
         public static DeviceType deviceType => DeviceType.Desktop;
         [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool supportsAccelerometer => false;

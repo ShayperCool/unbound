@@ -57,6 +57,44 @@ namespace Unbound.Runtime
             return fields;
         }
 
+        [DllImport("libc", EntryPoint = "sysctlbyname")]
+        static extern unsafe int SysctlByName(byte* name, void* value, nuint* length, void* newValue, nuint newLength);
+
+        /// <summary>macOS sysctl <paramref name="name"/> into <paramref name="value"/> (at most
+        /// <paramref name="capacity"/> bytes, null to ask the size); its length, or -1.</summary>
+        static unsafe long Sysctl(string name, byte* value, nuint capacity)
+        {
+            if (!OperatingSystem.IsMacOS()) return -1;
+            var utf8 = System.Text.Encoding.UTF8.GetBytes(name + "\0");
+            nuint length = capacity;
+            fixed (byte* key = utf8)
+                return SysctlByName(key, value, &length, null, 0) == 0 ? (long)length : -1;
+        }
+
+        /// <summary>A macOS sysctl string (<c>machdep.cpu.brand_string</c>, <c>hw.model</c>), null
+        /// when it cannot be read.</summary>
+        internal static unsafe string MacSysctlString(string name)
+        {
+            long size = Sysctl(name, null, 0);
+            if (size <= 0 || size > 4096) return null;
+            var bytes = new byte[size];
+            fixed (byte* buffer = bytes)
+                size = Sysctl(name, buffer, (nuint)bytes.Length);
+            if (size <= 0) return null;
+            int end = Array.IndexOf(bytes, (byte)0, 0, (int)size);
+            return System.Text.Encoding.UTF8.GetString(bytes, 0, end < 0 ? (int)size : end);
+        }
+
+        /// <summary>A macOS sysctl integer of 4 or 8 bytes, or the first int of a structure
+        /// (<c>kern.clockrate</c>'s hz); null when it cannot be read.</summary>
+        internal static unsafe long? MacSysctlInteger(string name)
+        {
+            const int Capacity = 64;
+            byte* buffer = stackalloc byte[Capacity];
+            long length = Sysctl(name, buffer, Capacity);
+            return length == 8 ? *(long*)buffer : length >= 4 ? *(int*)buffer : null;
+        }
+
         /// <summary>"Linux 7.0 Ubuntu 26.04 64bit": the kernel's major.minor, then the
         /// distribution's NAME and VERSION_ID.</summary>
         internal static string LinuxOperatingSystem()
