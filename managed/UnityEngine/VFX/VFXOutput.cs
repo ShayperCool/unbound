@@ -173,7 +173,7 @@ namespace Unbound.Runtime
             if (task.temporaryBuffers != null && task.temporaryBuffers.Length != 0) return "it keeps buffers of the frame before (motion vectors), which is not done yet";
             if (sourceRefusal != null) return sourceRefusal;
             if (!(processor is Material)) return "its shader was not imported";
-            if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(system, task);
+            if (task.type == VFXTaskType.ParticleMeshOutput) return MeshRefusal(task);
             return null;
         }
 
@@ -220,14 +220,15 @@ namespace Unbound.Runtime
             {
                 var tasks = systems[s].tasks ?? Array.Empty<VFXEditorTaskDesc>();
                 refusals[s] = new string[tasks.Length];
-                bool bySize = ChoosesMeshesBySize(systems[s], sources);
+                var bySize = ListsChosenBySize(systems[s], sources);
                 for (int t = 0; t < tasks.Length; t++)
                 {
                     int index = tasks[t].shaderSourceIndex;
                     if (index < 0 || index >= sources.Length || sources[index].compute || !IsOutput(tasks[t].type)) continue;
                     string source = sources[index].source;
                     refusals[s][t] = SourceRefusal(source);
-                    if (bySize && tasks[t].type == VFXTaskType.ParticleMeshOutput) refusals[s][t] ??= LodRefusal;
+                    if (bySize != null && tasks[t].type == VFXTaskType.ParticleMeshOutput && bySize.Contains(Buffer(tasks[t], "indirectBuffer")))
+                        refusals[s][t] ??= LodRefusal;
                     if (refusals[s][t] != null || string.IsNullOrEmpty(source) || !IsLit(source)) continue;
                     if ((systems[s].flags & VFXSystemFlag.SystemHasStrips) != 0) refusals[s][t] = LitStripRefusal;
                 }

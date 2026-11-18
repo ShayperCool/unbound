@@ -26,7 +26,7 @@ namespace Unbound.Runtime
 
         /// <summary>The words describing a submesh to the arguments' kernel: its index count,
         /// first index and base vertex.</summary>
-        const int SubMeshWords = 3;
+        internal const int SubMeshWords = 3;
 
         readonly int m_MeshExpression, m_SubMeshMaskExpression;
 
@@ -58,7 +58,7 @@ namespace Unbound.Runtime
         /// (tests/projects/vfxlit, `mesh pair`); meshes chosen by the size a particle takes on
         /// screen are not drawn (<see cref="LodRefusal"/>): which the Editor draws differs from
         /// one run to the next (`mesh lod` keeps no image), so it is not measured.</summary>
-        static string MeshRefusal(in VFXEditorSystemDesc system, in VFXEditorTaskDesc task)
+        static string MeshRefusal(in VFXEditorTaskDesc task)
         {
             if (Parameter(task, MeshParameter, -1) < 0 || Parameter(task, SubMeshMaskParameter, -1) < 0) return "its task names no mesh or no submesh mask";
             return null;
@@ -71,18 +71,30 @@ namespace Unbound.Runtime
         /// it writes into that program).</summary>
         const string LodDefine = "#define VFX_FEATURE_LOD";
 
-        /// <summary>Whether a system chooses its particles' meshes by their size on screen: its
-        /// output update's source says so.</summary>
-        static bool ChoosesMeshesBySize(in VFXEditorSystemDesc system, VFXShaderSourceDesc[] sources)
+        /// <summary>The lists an output update of a system writes when it chooses each particle's
+        /// mesh, of several, by its size on screen (its source says so; it writes one list per
+        /// mesh, `outputBuffer0`, `outputBuffer1`, ...): the buffers its output's mesh tasks draw.
+        /// An update choosing among one mesh only culls by size, which is drawn.</summary>
+        static List<int> ListsChosenBySize(in VFXEditorSystemDesc system, VFXShaderSourceDesc[] sources)
         {
+            List<int> lists = null;
             foreach (var task in system.tasks ?? Array.Empty<VFXEditorTaskDesc>())
             {
                 int index = task.shaderSourceIndex;
-                if (index >= 0 && index < sources.Length && sources[index].compute
-                    && sources[index].source != null && sources[index].source.Contains(LodDefine, StringComparison.Ordinal)) return true;
+                if (index < 0 || index >= sources.Length || !sources[index].compute
+                    || sources[index].source == null || !sources[index].source.Contains(LodDefine, StringComparison.Ordinal)) continue;
+                int written = 0;
+                foreach (var buffer in task.buffers ?? Array.Empty<VFXMapping>())
+                    if (buffer.name.StartsWith(OutputListPrefix, StringComparison.Ordinal)) written++;
+                if (written < 2) continue;
+                foreach (var buffer in task.buffers ?? Array.Empty<VFXMapping>())
+                    if (buffer.name.StartsWith(OutputListPrefix, StringComparison.Ordinal)) (lists ??= new List<int>()).Add(buffer.index);
             }
-            return false;
+            return lists;
         }
+
+        /// <summary>The names of the lists an output update writes, one per mesh.</summary>
+        const string OutputListPrefix = "outputBuffer";
 
         /// <summary>Computes the arguments of each submesh the mask names from the list's count
         /// in <paramref name="counts"/>, each entry described by its submesh as the mesh has it
@@ -98,7 +110,7 @@ namespace Unbound.Runtime
             int subMeshes = Math.Min(mesh.subMeshCount, MaskBits);
             uint mask = named;
             for (int subMesh = 0; subMesh < subMeshes && mask != 0; subMesh++, mask >>= 1)
-                if ((mask & 1) != 0) MeshEntry(arguments, mesh, subMesh);
+                if ((mask & 1) != 0) MeshEntry(arguments, mesh, subMesh, m_MeshEntries, m_MeshDescribed);
             mask = named;
             for (int subMesh = 0; subMesh < subMeshes && mask != 0; subMesh++, mask >>= 1)
                 if ((mask & 1) != 0 && !arguments.Fill(m_MeshEntries[subMesh], counts, m_CountPairs)) return false;
@@ -106,25 +118,26 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The entry of arguments of a submesh, reserved or described anew when the
-        /// submesh is not the one it was described by.</summary>
-        void MeshEntry(VFXIndirectArgs arguments, Mesh mesh, int subMesh)
+        /// submesh is not the one it was described by (<paramref name="entries"/> by submesh,
+        /// <paramref name="described"/> <see cref="SubMeshWords"/> per submesh: an output's).</summary>
+        internal static void MeshEntry(VFXIndirectArgs arguments, Mesh mesh, int subMesh, int[] entries, uint[] described)
         {
             // The indices as the renderer holds them, not as SetSubMesh placed them.
             var (first, count, baseVertex) = Uploaded(mesh, subMesh);
             int at = subMesh * SubMeshWords;
-            int entry = m_MeshEntries[subMesh];
-            if (entry < 0) entry = m_MeshEntries[subMesh] = arguments.Reserve(VFXIndirectArgs.Kind.Meshes, count, first, baseVertex);
-            else if (m_MeshDescribed[at] != count || m_MeshDescribed[at + 1] != first || m_MeshDescribed[at + 2] != baseVertex)
+            int entry = entries[subMesh];
+            if (entry < 0) entry = entries[subMesh] = arguments.Reserve(VFXIndirectArgs.Kind.Meshes, count, first, baseVertex);
+            else if (described[at] != count || described[at + 1] != first || described[at + 2] != baseVertex)
                 arguments.Describe(entry, VFXIndirectArgs.Kind.Meshes, count, first, baseVertex);
             else return;
-            m_MeshDescribed[at] = count;
-            m_MeshDescribed[at + 1] = first;
-            m_MeshDescribed[at + 2] = baseVertex;
+            described[at] = count;
+            described[at + 1] = first;
+            described[at + 2] = baseVertex;
         }
 
         /// <summary>The range of a submesh's indices an indirect draw of it reads: as the
         /// renderer holds them (<see cref="Mesh.UploadedIndexRange"/>).</summary>
-        internal static (uint First, uint Count, uint BaseVertex) Uploaded(Mesh mesh, int subMesh)
+        static (uint First, uint Count, uint BaseVertex) Uploaded(Mesh mesh, int subMesh)
         {
             var range = mesh.UploadedIndexRange(subMesh);
             return (range.Start, range.Count, (uint)range.BaseVertex);

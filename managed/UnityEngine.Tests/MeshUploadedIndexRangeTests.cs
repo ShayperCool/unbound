@@ -69,7 +69,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AMeshOutputDrawsTheIndicesAsTheRendererHoldsThem()
+        public void AMeshOutputDescribesItsArgumentsByTheIndicesAsTheRendererHoldsThem()
         {
             // Quads, then triangles placed before them: SetSubMesh's ranges are not the ones drawn.
             var mesh = Grid();
@@ -78,9 +78,25 @@ namespace UnityEngine.Tests
             mesh.subMeshCount = 2;
             mesh.SetSubMesh(0, new SubMeshDescriptor(3, 4, MeshTopology.Quads), MeshUpdateFlags.DontRecalculateBounds);
             mesh.SetSubMesh(1, new SubMeshDescriptor(0, 3), MeshUpdateFlags.DontRecalculateBounds);
-            Assert.Equal((0u, 6u, 0u), Unbound.Runtime.VFXOutput.Uploaded(mesh, 0));
-            Assert.Equal((6u, 3u, 0u), Unbound.Runtime.VFXOutput.Uploaded(mesh, 1));
             Assert.Equal(0, mesh.GetSubMesh(1).indexStart);
+
+            var arguments = new Unbound.Runtime.VFXIndirectArgs();
+            var entries = new[] { -1, -1 };
+            var described = new uint[2 * Unbound.Runtime.VFXOutput.SubMeshWords];
+            for (int subMesh = 0; subMesh < 2; subMesh++) Unbound.Runtime.VFXOutput.MeshEntry(arguments, mesh, subMesh, entries, described);
+            Assert.Equal((Unbound.Runtime.VFXIndirectArgs.Kind.Meshes, 6u, 0u, 0u), arguments.Description(entries[0]));
+            Assert.Equal((Unbound.Runtime.VFXIndirectArgs.Kind.Meshes, 3u, 6u, 0u), arguments.Description(entries[1]));
+
+            // The triangles moved after a second quad: described anew in the same entry.
+            mesh.SetIndexBufferParams(11, IndexFormat.UInt16);
+            mesh.SetIndexBufferData(new ushort[] { 0, 1, 5, 4, 1, 2, 6, 5, 1, 2, 6 }, 0, 0, 11);
+            mesh.subMeshCount = 2;
+            mesh.SetSubMesh(0, new SubMeshDescriptor(0, 8, MeshTopology.Quads), MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetSubMesh(1, new SubMeshDescriptor(8, 3), MeshUpdateFlags.DontRecalculateBounds);
+            int second = entries[1];
+            Unbound.Runtime.VFXOutput.MeshEntry(arguments, mesh, 1, entries, described);
+            Assert.Equal(second, entries[1]);
+            Assert.Equal((Unbound.Runtime.VFXIndirectArgs.Kind.Meshes, 3u, 12u, 0u), arguments.Description(entries[1]));
         }
     }
 }

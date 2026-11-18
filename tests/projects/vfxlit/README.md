@@ -177,7 +177,8 @@ adds to that is not separated.
 ## Not covered
 
 - Outputs with motion vectors (they keep buffers of the frame before), lit strips, meshes chosen
-  by their size on screen: not drawn; each says so once for its asset. Outputs of three or four
+  among several by their size on screen: not drawn; each says so once for its asset. One mesh
+  culled by its size on screen is drawn, not measured. Outputs of three or four
   meshes, several meshes through a sorted list or by a lit output: drawn as `mesh pair`, not
   measured.
 - A sorted lit output with another sort criterion than the default, of quads that cut

@@ -1066,17 +1066,36 @@ namespace UnityEngine.Tests
             var severalMeshes = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };
             Assert.Null(VFXOutput.Refusal(severalMeshes, listed, material));
             Assert.Null(VFXOutput.Refusal(severalMeshes, otherMesh, material));
-            // Chosen by their size on screen (the output update's source says so): not drawn.
-            var update = new VFXEditorTaskDesc { type = VFXTaskType.PerCameraUpdate, shaderSourceIndex = 0 };
-            VFXEditorTaskDesc Mesh(VFXEditorTaskDesc task) { task.shaderSourceIndex = 1; return task; }
+            // Chosen by their size on screen among several (the output update's source says so,
+            // and it writes a list per mesh): those meshes' tasks are not drawn. Another mesh
+            // output of the system, of its own list, is; so is one culled by size alone.
+            const string Lod = "#define VFX_FEATURE_LOD 1\n#define VFX_FEATURE_SORT 0", Plain = "#define VFX_FEATURE_SORT 0";
+            VFXEditorTaskDesc Update(int source, params int[] lists)
+            {
+                var buffers = new VFXMapping[lists.Length];
+                for (int i = 0; i < lists.Length; i++) buffers[i] = new VFXMapping("outputBuffer" + i, lists[i]);
+                return new VFXEditorTaskDesc { type = VFXTaskType.PerCameraUpdate, shaderSourceIndex = source, buffers = buffers };
+            }
+            VFXEditorTaskDesc Drawing(VFXEditorTaskDesc task, int list, int source)
+            {
+                task.shaderSourceIndex = source;
+                task.buffers = new[] { new VFXMapping("indirectBuffer", list) };
+                return task;
+            }
+            var bySizeSources = new[]
+            {
+                new VFXShaderSourceDesc { compute = true, source = Lod }, new VFXShaderSourceDesc { compute = true, source = Plain },
+                new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Pair\" {}" }, new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Other\" {}" },
+                new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Single\" {}" },
+            };
             var bySize = VFXOutput.SourceRefusals(
-                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { update, Mesh(otherMesh), Mesh(listed) } } },
-                new[] { new VFXShaderSourceDesc { compute = true, source = "#define VFX_FEATURE_LOD 1\n#define VFX_FEATURE_SORT 0" }, new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Pair\" {}" } });
-            Assert.Equal(new[] { null, VFXOutput.LodRefusal, VFXOutput.LodRefusal }, bySize[0]);
-            var byIndex = VFXOutput.SourceRefusals(
-                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { update, Mesh(otherMesh), Mesh(listed) } } },
-                new[] { new VFXShaderSourceDesc { compute = true, source = "#define VFX_FEATURE_SORT 0" }, new VFXShaderSourceDesc { source = "Shader \"Hidden/VFX/Pair\" {}" } });
-            Assert.Equal(new string[] { null, null, null }, byIndex[0]);
+                new[] { new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[]
+                {
+                    Update(0, 1, 2), Drawing(otherMesh, 1, 2), Drawing(listed, 2, 2), Update(1, 3), Drawing(listed, 3, 3),
+                    Update(0, 4), Drawing(listed, 4, 4),
+                } } },
+                bySizeSources);
+            Assert.Equal(new[] { null, VFXOutput.LodRefusal, VFXOutput.LodRefusal, null, null, null, null }, bySize[0]);
             // Two outputs of meshes, each with its own shader, are each drawn.
             otherMesh.shaderSourceIndex = 5;
             var twoOutputs = new VFXEditorSystemDesc { name = "Particles", type = VFXSystemType.Particle, tasks = new[] { otherMesh, listed } };

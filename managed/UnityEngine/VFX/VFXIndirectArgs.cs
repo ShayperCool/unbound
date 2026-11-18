@@ -152,6 +152,14 @@ namespace Unbound.Runtime
             m_DescriptionsChanged = true;
         }
 
+        /// <summary>What an entry is described as: its kind, and a mesh's index count, first
+        /// index and base vertex.</summary>
+        internal (Kind Kind, uint IndexCount, uint FirstIndex, uint BaseVertex) Description(int entry)
+        {
+            int at = entry * DescriptionWords;
+            return ((Kind)m_Descriptions[at], m_Descriptions[at + 1], m_Descriptions[at + 2], m_Descriptions[at + 3]);
+        }
+
         /// <summary>Gives an entry back.</summary>
         internal void Release(int entry)
         {

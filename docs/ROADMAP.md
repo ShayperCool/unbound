@@ -193,13 +193,14 @@ In dependency order; each item ends with an Editor-reference probe.
       (`tests/projects/vfx`). Quad and mesh outputs that draw themselves, unlit or lit by
       URP in its forward and deferred renderers, are drawn, and effects cast shadows
       (`tests/projects/vfxlit`); unlit quads, triangles and octagons are also drawn through
-      an indirect buffer, sorted or not (`tests/projects/vfxoutputs`), lit quads through a
-      sorted one, and meshes through one, sorted or not (`tests/projects/vfxlit`); composed
-      Shader Graph quad outputs, unlit and lit by 2D lights through the 2D renderer, unlit
-      through the forward renderer (`tests/projects/vfxlit`). Not yet: lit outputs through
-      an indirect buffer that is not sorted, outputs of several meshes, points, lines and
-      cubes, and motion vectors (such an output says once that it is not drawn; its system
-      runs).
+      an indirect buffer, sorted or not (`tests/projects/vfxoutputs`), lit quads through
+      one, sorted or not, and meshes through one, sorted or not, outputs of several meshes by
+      each particle's mesh index (`tests/projects/vfxlit`); composed Shader Graph quad
+      outputs, unlit and lit by 2D lights through the 2D renderer, also from unsorted lists,
+      unlit through the forward renderer, and quads drawn by a graph of the older Visual
+      Effect target (`tests/projects/vfxlit`). Not yet: meshes chosen by their size on
+      screen, points, lines and cubes, and motion vectors (such an output says once that it
+      is not drawn; its system runs).
       Systems spawned by GPU events run (`tests/projects/vfxevents`), and particle strips,
       drawn as quads joined along each strip, also sorted (`tests/projects/vfxstrips`);
       bounds set to Automatic are computed from the particles (`tests/projects/vfxbounds`),
