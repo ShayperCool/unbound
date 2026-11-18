@@ -482,7 +482,10 @@ namespace UnityEngine
 
         public Material GetMaterial() => GetMaterial(0);
 
-        public Material GetMaterial(int index) => index >= 0 && index < m_MaterialCount ? m_Materials[index] : null;
+        /// <summary>The material in a slot; a destroyed one reads as null (6000.0.71f1,
+        /// tests/projects/uitransparentcull `modifier.single.held`), although the renderer still
+        /// draws nothing for it (CanvasSystem).</summary>
+        public Material GetMaterial(int index) => index >= 0 && index < m_MaterialCount && m_Materials[index] != null ? m_Materials[index] : null;
 
         public void SetPopMaterial(Material material, int index)
         {
@@ -495,7 +498,8 @@ namespace UnityEngine
             m_PopMaterials[index] = material;
         }
 
-        public Material GetPopMaterial(int index) => index >= 0 && index < m_PopMaterials.Length ? m_PopMaterials[index] : null;
+        /// <summary>A pop material; a destroyed one reads as null, as a destroyed material does.</summary>
+        public Material GetPopMaterial(int index) => index >= 0 && index < m_PopMaterials.Length && m_PopMaterials[index] != null ? m_PopMaterials[index] : null;
 
         public void SetTexture(Texture texture) => m_Texture = texture;
 

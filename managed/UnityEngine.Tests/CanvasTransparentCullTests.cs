@@ -12,8 +12,8 @@ namespace UnityEngine.Tests
     /// Which canvas renderers the canvas leaves out for transparency, as the Unity 6000.0.71f1 Editor
     /// draws them (tests/projects/uitransparentcull): a renderer whose alpha, its own times its
     /// CanvasGroups', is zero or less is never drawn, with or without cullTransparentMesh; the flag
-    /// adds the test for a mesh whose vertices are all transparent. Asserted on the draws the canvas
-    /// collects.
+    /// adds the test for a mesh whose vertices are all transparent; a destroyed material draws
+    /// nothing. Asserted on the draws the canvas collects.
     /// </summary>
     public class CanvasTransparentCullTests : IDisposable
     {
@@ -106,6 +106,31 @@ namespace UnityEngine.Tests
             Renderer("kept", m_Canvas.transform, cull: false, vertexAlpha: 0);
             Renderer("one byte", m_Canvas.transform, cull: true, vertexAlpha: 1);
             Assert.Equal(new[] { "kept", "one byte" }, Drawn());
+        }
+
+        /// <summary>A renderer whose material is destroyed after it was set draws nothing until it is
+        /// given another (tests/projects/uitransparentcull destroyed.*, modifier.*), a slot of a
+        /// renderer at a time.</summary>
+        [Fact]
+        public void ADestroyedMaterialDrawsNothingUntilTheRendererGetsAnother()
+        {
+            Renderer("kept", m_Canvas.transform, cull: true);
+            var renderer = Renderer("destroyed", m_Canvas.transform, cull: true);
+            var material = renderer.GetMaterial(0);
+            var shader = material.shader;
+            Object.DestroyImmediate(material);
+            Assert.Equal(new[] { "kept" }, Drawn());
+            // It reads as null (`modifier.single.held`).
+            Assert.True(ReferenceEquals(renderer.GetMaterial(0), null));
+            renderer.SetMaterial(Own(new Material(shader)), 0);
+            Assert.Equal(new[] { "kept", "destroyed" }, Drawn());
+            // The second of two slots destroyed: the first still draws.
+            var second = Own(new Material(shader));
+            renderer.materialCount = 2;
+            renderer.SetMaterial(second, 1);
+            Assert.Equal(new[] { "kept", "destroyed", "destroyed" }, Drawn());
+            Object.DestroyImmediate(second);
+            Assert.Equal(new[] { "kept", "destroyed" }, Drawn());
         }
 
         [Fact]

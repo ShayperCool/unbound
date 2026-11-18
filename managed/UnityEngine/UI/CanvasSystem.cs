@@ -373,7 +373,13 @@ namespace Unbound.Runtime
                 // batched with it and takes its alpha texture (see AlphaRun).
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
-                    var material = cr.GetMaterial(i) ?? DefaultMaterial;
+                    // An unset slot draws the default UI material; a destroyed material, which a
+                    // renderer keeps until its Graphic gives it another, draws nothing, as its pop
+                    // materials do (6000.0.71f1, tests/projects/uitransparentcull destroyed.*,
+                    // modifier.*: a StencilMaterial entry removed by its only user).
+                    var held = i < cr.m_Materials.Length ? cr.m_Materials[i] : null;
+                    if (!ReferenceEquals(held, null) && held == null) continue;
+                    var material = held ?? DefaultMaterial;
                     var alphaTexture = m_Run.AlphaFor(canvas, material, cr, cr.m_MaterialCount);
                     into.Add(new FrameBuilder.DrawItem
                     {
