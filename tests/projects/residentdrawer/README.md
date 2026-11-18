@@ -114,7 +114,9 @@ same visibility); their images differ from them by the device's rounding (per pr
 image mean of 0.38 to 0.92), and `direct` and `controls` also in 83 pixels of each frame by up to
 64/255. Those 83 pixels are why `occlusion` keeps `direct`'s values on Metal but not its images
 (82 pixels differ, mean 0.05; on Vulkan the two are identical): its images are within 2 pixels over
-8 of Vulkan's. Where those pixels are and why is not studied.
+8 of Vulkan's. Where those pixels are and why is not studied. Unbound on Metal matches every
+profile's Metal reference: all values (508, 508, 497, 562, 31, 31 and 5405) and every image within
+the comparator's bounds.
 
 Every renderer the drawer holds is visible in the Editor, wherever it is (behind the camera, on
 a layer the camera does not draw, casting no shadows).
