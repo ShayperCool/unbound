@@ -260,5 +260,21 @@ namespace UnityEngine.Tests
             Assert.Equal(1, script.Messages);
             Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(ps)[1].position);
         }
+
+        [Fact]
+        public void SimulateFinishesAPendingJobFirstAndLeavesOtherSystemsJobs()
+        {
+            var (ps, _) = Make(2);
+            var (other, _) = Make(2);
+            JobScript.OnMessage = s => new WriteIndexJob().Schedule(s.gameObject == ps.gameObject ? ps : other);
+            ParticleSystemManager.UpdateAll();
+            JobScript.OnMessage = null;
+            ps.Simulate(0.1f, true, false, true);
+            // The simulated system's job wrote before the call stepped it (no velocity: positions stay).
+            Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(ps)[1].position);
+            Assert.True(other.m_JobsPending);
+            ParticleSystemManager.EndUpdateAll();
+            Assert.Equal(new Vector3(1f, 2f, 0f), ParticlesOf(other)[1].position);
+        }
     }
 }

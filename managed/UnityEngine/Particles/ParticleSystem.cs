@@ -412,6 +412,8 @@ namespace UnityEngine
         {
             ParticleSystemManager.Sync();
             var systems = SimulatedSystems(withChildren, out int hierarchyCount);
+            // A system's pending particle jobs finish before the call changes its particles.
+            foreach (var ps in systems) ps.CompleteManagedJobs();
             // Every simulated system has its bounds again.
             foreach (var ps in systems) ps.GiveBounds();
             // Reset every selected system before a parent can emit into its children.
@@ -514,15 +516,15 @@ namespace UnityEngine
                     ps.m_BirthDelayClock = false;
                 }
             }
-            // Each system the call stepped gets its job message, in the call's system order; their
-            // jobs finish before the call returns.
+            // Each system the call stepped gets its job message, in the call's system order; the
+            // call's systems' jobs finish before it returns (Unbound's choice, unmeasured).
             foreach (var ps in systems)
             {
                 if (!ps.m_SteppedBySimulate) continue;
                 ps.m_SteppedBySimulate = false;
                 ParticleSystemManager.SendJobMessage(ps);
             }
-            ParticleSystemManager.CompleteJobs();
+            foreach (var ps in systems) ps.CompleteManagedJobs();
         }
 
         // Measured Simulate histories: Birth children advance their existing particles
@@ -1961,9 +1963,8 @@ namespace Unbound.Runtime
 
         internal const string JobMessage = "OnParticleUpdateJobScheduled";
 
-        /// <summary>The particle jobs finish and their writes reach the particles: when the frame's
-        /// particle update ends, before its messages, and when a Simulate call ends (Unbound's
-        /// choice, unmeasured).</summary>
+        /// <summary>The particle jobs finish and their writes reach the particles when the frame's
+        /// particle update ends, before its messages (and before the next update begins).</summary>
         internal static void CompleteJobs()
         {
             for (int i = 0; i < s_JobSystems.Count; i++)
