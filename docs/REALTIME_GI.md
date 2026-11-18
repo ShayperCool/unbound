@@ -138,16 +138,20 @@ the two). The update is converged (`DynamicGI.isConverged`) once an update of ev
 leaves its drawn texels unchanged: the bounce reads them, so nothing changes until the inputs
 do.
 
-A scene's realtime GI is not solved in the first PostLateUpdate.EnlightenRuntimeUpdate after it
-loads: its first update solves what the next frame's scripts have set. The probe's light
-delegate cases change the point light's range in the frame after the Room loads
-(`room-delegate-inversesquared`, `-norange` at range 4, `-linear-range6`): solved once before at
-the light's own range, the update threshold kept part of that brighter light (1.2% in sum at
-range 6, 6 isolated values; `crates/unbound-gi` replays both, matching the engine's earlier
-lightmaps to the value), solved first from the changed state the Editor's are met as in its
-other cases (0 to 3 isolated values, 0.3 to 0.5% below in sum). Not measured: whether a scene
-loaded additively, or a scene's own bake (`Lightmapping.bakeOnSceneLoad`), waits alike (Unbound
-treats every load alike), and synchronous mode in the frame after a load.
+A scene's realtime GI keeps nothing of its state in the first PostLateUpdate.EnlightenRuntimeUpdate
+after it loads: Unbound solves nothing in that update, so its first update solves what the next
+frame's scripts have set. The probe's light delegate cases change the point light's range, or
+move it, in the frame after the Room loads (`room-delegate-inversesquared`, `-norange` at range
+4, `-linear-range6`, `-linear-near`): solved once before with the light as it loaded, the update
+threshold kept part of that light (1.2% in sum at range 6, 6 isolated values;
+`crates/unbound-gi` replays both, matching the engine's earlier lightmaps to the value), solved
+first from the changed state the Editor's are met as in its other cases (0 to 3 isolated
+values, 0.3 to 0.7% below in sum). Not measured: how many updates after a load the Editor
+leaves unsolved, or whether it instead solves every segment until the scene first converges
+(the probe changes a scene only in the frame after its load and once it has converged), a
+scene loaded additively, a scene's own bake (`Lightmapping.bakeOnSceneLoad`) and the update
+outside synchronous mode (the probe runs in synchronous mode); Unbound treats every load
+alike.
 
 ## Lights of a render pipeline
 
