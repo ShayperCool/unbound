@@ -136,9 +136,6 @@ namespace UnityEditor.Compilation
             m_ResponseFiles = scriptCompilerOptions.m_ResponseFiles;
             LanguageVersion = scriptCompilerOptions.LanguageVersion;
             UseDeterministicCompilation = scriptCompilerOptions.UseDeterministicCompilation;
-#pragma warning disable 618
-            EmitReferenceAssembly = scriptCompilerOptions.EmitReferenceAssembly;
-#pragma warning restore 618
         }
 
         public string RoslynAnalyzerRulesetPath { get; set; }
@@ -146,7 +143,7 @@ namespace UnityEditor.Compilation
         public string[] RoslynAdditionalFilePaths { get; set; }
         public string AnalyzerConfigPath { get; set; }
         public bool AllowUnsafeCode { get; set; }
-        [Obsolete("Use of reference assemblies is always enabled")] public bool EmitReferenceAssembly { get; set; }
+        [Obsolete("Use of reference assemblies is always enabled", true)] public bool EmitReferenceAssembly { get; set; }
         internal bool UseDeterministicCompilation { get; set; }
         public string[] AdditionalCompilerArguments { get; set; }
         public CodeOptimization CodeOptimization { get; set; }
