@@ -6,10 +6,18 @@
 //! the locked commit although the branch has moved on); without one the revision is resolved
 //! with `git ls-remote`.
 //!
-//! Authentication is the user's own git setup (credential helpers, ssh keys and agents); git
-//! never prompts (`GIT_TERMINAL_PROMPT=0`), as the Editor cannot. `UNBOUND_OFFLINE` forbids the
-//! fetch. Each package is kept as `git/<name>@<key>`, the key a hash of the repository URL, the
-//! commit and the folder, so another commit or folder is another entry.
+//! The commit is checked out (the repository's export attributes do not apply), with the
+//! repository as `origin`, so the user's git-lfs, when installed, brings large files as for the
+//! Editor; without it they stay pointer files, as the Manual says the Editor leaves them
+//! (unmeasured).
+//!
+//! Authentication is the user's own git setup (credential helpers, ssh keys and agents). Git runs
+//! without input and with `GIT_TERMINAL_PROMPT=0`, so a credential prompt fails instead of
+//! waiting, as the Editor cannot prompt either; ssh itself may still ask on the terminal (an
+//! unknown host key, a passphrase) unless the user's ssh setup has `BatchMode`.
+//! `UNBOUND_OFFLINE` forbids the fetch. Each package is kept as `git/<name>@<key>`, the key a
+//! hash of the store format, the repository URL, the commit and the folder, so another commit
+//! or folder is another entry.
 use anyhow::{Context, Result, bail};
 use std::{
     path::{Path, PathBuf},
@@ -84,11 +92,12 @@ fn git(dir: Option<&Path>, args: &[&str]) -> Result<Vec<u8>> {
             .rev()
             .find(|l| !l.trim().is_empty())
             .unwrap_or("");
-        bail!(
-            "git {} failed: {}",
-            args.first().unwrap_or(&""),
-            redacted(last.trim())
-        );
+        // The subcommand: the first argument that is neither an option nor a `-c` setting.
+        let subcommand = args
+            .iter()
+            .find(|a| !a.starts_with('-') && !a.contains('='))
+            .unwrap_or(&"");
+        bail!("git {subcommand} failed: {}", redacted(last.trim()));
     }
     Ok(output.stdout)
 }
@@ -129,6 +138,19 @@ pub fn fetch(
     hash: Option<&str>,
     offline: bool,
 ) -> Result<PathBuf> {
+    // Neither may reach git as an option or leave the checkout.
+    anyhow::ensure!(
+        !spec.url.is_empty() && !spec.url.starts_with('-'),
+        "`{}` is not a repository URL",
+        redacted(&spec.url)
+    );
+    anyhow::ensure!(
+        Path::new(&spec.path)
+            .components()
+            .all(|c| matches!(c, std::path::Component::Normal(_))),
+        "`?path=/{}` is not a folder of the repository",
+        spec.path
+    );
     let hash = match hash {
         Some(hash) => hash.to_ascii_lowercase(),
         None if offline => bail!(
@@ -142,7 +164,16 @@ pub fn fetch(
         is_commit(&hash),
         "the lock file's hash `{hash}` is not a full commit hash"
     );
-    let key = blake3::hash(format!("{}\0{hash}\0{}", spec.url, spec.path).as_bytes()).to_hex();
+    let key = blake3::hash(
+        format!(
+            "{}\0{}\0{hash}\0{}",
+            crate::packages::STORE_FORMAT,
+            spec.url,
+            spec.path
+        )
+        .as_bytes(),
+    )
+    .to_hex();
     let folder = store.join("git");
     let root = folder.join(format!("{name}@{}", &key[..16]));
     if crate::packages::package_name(&root).as_deref() == Some(name) {
@@ -159,49 +190,59 @@ pub fn fetch(
     let scratch = folder.join(format!(".{name}@{}.{}", &key[..16], std::process::id()));
     let _ = std::fs::remove_dir_all(&scratch);
     let repository = scratch.join("repository");
+    let tree = scratch.join("tree");
     std::fs::create_dir_all(&repository)?;
+    std::fs::create_dir_all(&tree)?;
     let result = (|| {
-        git(Some(&repository), &["init", "--bare", "-q"])?;
+        let repo = Some(repository.as_path());
+        git(repo, &["init", "--bare", "-q"])?;
+        git(repo, &["remote", "add", "origin", &spec.url])?;
         // A shallow fetch of the commit, as the Editor's; a server that refuses to serve an
         // unadvertised commit gets a full fetch of its branches and tags.
-        if let Err(e) = git(
-            Some(&repository),
-            &["fetch", "-q", "--depth", "1", &spec.url, &hash],
-        ) {
+        if let Err(e) = git(repo, &["fetch", "-q", "--depth", "1", "origin", &hash]) {
             tracing::debug!("package {name}: {e:#}; fetching every branch and tag");
             git(
-                Some(&repository),
+                repo,
                 &[
                     "fetch",
                     "-q",
-                    &spec.url,
+                    "origin",
                     "+refs/heads/*:refs/heads/*",
                     "+refs/tags/*:refs/tags/*",
                 ],
             )?;
         }
         let commit = format!("{hash}^{{commit}}");
-        git(Some(&repository), &["cat-file", "-e", &commit])
+        git(repo, &["cat-file", "-e", &commit])
             .with_context(|| format!("{} has no commit {hash}", redacted(&spec.url)))?;
-        let mut args = vec!["archive", "--format=tar", hash.as_str()];
-        if !spec.path.is_empty() {
-            args.extend(["--", spec.path.as_str()]);
-        }
-        let archive = git(Some(&repository), &args)
-            .with_context(|| format!("the repository has no folder `{}` at {hash}", spec.path))?;
-        let staging = scratch.join("package");
-        crate::packages::extract_tar(&archive, &spec.path, &staging)?;
+        let work_tree = format!("--work-tree={}", tree.display());
+        let folder = if spec.path.is_empty() {
+            "."
+        } else {
+            spec.path.as_str()
+        };
+        git(
+            repo,
+            &[
+                &work_tree,
+                "-c",
+                "core.bare=false",
+                "checkout",
+                "-q",
+                &hash,
+                "--",
+                folder,
+            ],
+        )
+        .with_context(|| format!("the repository has no folder `{folder}` at {hash}"))?;
+        let package = tree.join(&spec.path);
         anyhow::ensure!(
-            crate::packages::package_name(&staging).as_deref() == Some(name),
-            "`{}` at {hash} holds no package.json naming {name}",
-            if spec.path.is_empty() {
-                "/"
-            } else {
-                &spec.path
-            }
+            crate::packages::package_name(&package).as_deref() == Some(name),
+            "`/{}` at {hash} holds no package.json naming {name}",
+            spec.path
         );
         let _ = std::fs::remove_dir_all(&root);
-        std::fs::rename(&staging, &root)?;
+        std::fs::rename(&package, &root)?;
         Ok(())
     })();
     let _ = std::fs::remove_dir_all(&scratch);
@@ -297,6 +338,14 @@ mod tests {
             )
             .unwrap();
             std::fs::write(work.join("README.md"), version).unwrap();
+            // Export attributes apply to archives, not to the checkout the Editor makes.
+            std::fs::create_dir_all(work.join("pkgs/thing/Tests")).unwrap();
+            std::fs::write(work.join("pkgs/thing/Tests/T.cs"), "class T {}").unwrap();
+            std::fs::write(
+                work.join(".gitattributes"),
+                "/pkgs/thing/Tests export-ignore\n",
+            )
+            .unwrap();
             run(&work, &["add", "-A"]);
             run(&work, &["commit", "-q", "-m", version]);
             commits.push(run(&work, &["rev-parse", "HEAD"]));
@@ -342,6 +391,10 @@ mod tests {
             !root.join("README.md").exists(),
             "only the package folder is kept"
         );
+        assert!(
+            root.join("Tests/T.cs").is_file(),
+            "export-ignore does not apply"
+        );
         // Without a lock the revision is resolved: the branch's head, an annotated tag's commit.
         let head = fetch(&store, "com.test.thing", &spec, None, false).unwrap();
         assert_eq!(version(&head), "1.0.1");
@@ -379,6 +432,10 @@ mod tests {
         assert!(fetch(&store, "com.test.thing", &wrong_folder, Some(&v1), false).is_err());
         let wrong_name = parse_spec(&format!("{url}?path=/pkgs/thing"));
         assert!(fetch(&store, "com.test.other", &wrong_name, Some(&v1), false).is_err());
+        let escaping = parse_spec(&format!("{url}?path=/../pkgs/thing"));
+        assert!(fetch(&store, "com.test.thing", &escaping, Some(&v1), false).is_err());
+        let option = parse_spec("--upload-pack=touch /tmp/x");
+        assert!(fetch(&store, "com.test.thing", &option, Some(&v1), false).is_err());
         let left: Vec<_> = std::fs::read_dir(store.join("git"))
             .unwrap()
             .flatten()

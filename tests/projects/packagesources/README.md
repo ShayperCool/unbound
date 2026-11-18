@@ -50,7 +50,8 @@ a section matches.
 
 Not measured: registries answering 401 (the Editor's retries), `https` and default ports, a
 section with both `token` and `_auth` (Unbound sends the token), the global configuration file,
-git LFS, other releases.
+git LFS, other releases. Without a lock file Unbound asks the repository for the revision's commit
+on every start (it writes no lock), so such a package needs the network even when fetched before.
 
 ```sh
 export UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1

@@ -543,7 +543,7 @@ fn unpack_tarball_at(gzipped: &[u8], root: &Path) -> Result<()> {
 
 /// The files and folders of tar archive `data` under its folder `prefix` ("" for all of it)
 /// written to `target`; nothing may leave `target`, and links are skipped.
-pub(crate) fn extract_tar(data: &[u8], prefix: &str, target: &Path) -> Result<()> {
+fn extract_tar(data: &[u8], prefix: &str, target: &Path) -> Result<()> {
     std::fs::create_dir_all(target)?;
     for (path, kind, contents) in tar_entries(data)? {
         let Ok(relative) = Path::new(&path).strip_prefix(prefix) else {
@@ -571,6 +571,10 @@ pub(crate) fn extract_tar(data: &[u8], prefix: &str, target: &Path) -> Result<()
     Ok(())
 }
 
+/// The format of the store's `git/` and `tarballs/` entries, part of their keys: bump it when
+/// what an entry holds changes, so an older entry is never used.
+pub(crate) const STORE_FORMAT: u32 = 1;
+
 /// Whether a `file:` dependency names a tarball rather than a folder (the Editor's
 /// `local-tarball`).
 fn is_tarball(version: &str) -> bool {
@@ -589,11 +593,14 @@ fn local_path(packages_dir: &Path, version: &str) -> PathBuf {
     }
 }
 
-/// A local tarball unpacked into the store's `tarballs/` folder, keyed by a hash of its contents,
-/// so a replaced archive is unpacked again whatever its size and time.
+/// A local tarball unpacked into the store's `tarballs/` folder, keyed by a hash of its contents
+/// (and the store format), so a replaced archive is unpacked again whatever its size and time.
 fn unpack_local_tarball(tarball: &Path, store: &Path, name: &str) -> Result<PathBuf> {
     let bytes = std::fs::read(tarball).with_context(|| format!("opening {}", tarball.display()))?;
-    let key = blake3::hash(&bytes).to_hex();
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&STORE_FORMAT.to_le_bytes());
+    hasher.update(&bytes);
+    let key = hasher.finalize().to_hex();
     let root = store
         .join("tarballs")
         .join(format!("{name}@{}", &key[..16]));
