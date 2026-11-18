@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/awakerootmotion/run.py gate"
+  ],
+  "summary": "awakerootmotion: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Lifecycle.cs",
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Animation/AnimatorAvatar.cs",
+    "managed/UnityEngine/Animation/Human/AvatarBuild.cs"
+  ]
+}

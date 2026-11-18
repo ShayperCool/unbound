@@ -1,0 +1,134 @@
+{"k":"awake.active.added","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.active.add.calls","v":"active.Neighbour.Awake,active.Neighbour.OnEnable,active.ThrowAwake.Awake,active.ThrowAwake.OnDisable"}
+{"k":"awake.active.add.logs","v":"Exception: InvalidOperationException: ThrowAwake Awake fails"}
+{"k":"awake.active.later","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.active.frames.calls","v":"active.Neighbour.Start,active.Neighbour.Update"}
+{"k":"awake.active.frames.logs","v":""}
+{"k":"awake.active.reenabled","v":"enabled=True activeAndEnabled=True"}
+{"k":"awake.active.reenable.calls","v":"active.ThrowAwake.OnEnable"}
+{"k":"awake.active.reenable.logs","v":""}
+{"k":"awake.active.reenableFrames.calls","v":"active.ThrowAwake.Start,active.Neighbour.Update,active.ThrowAwake.Update"}
+{"k":"awake.active.reenableFrames.logs","v":""}
+{"k":"awake.inactive.added","v":"enabled=True activeAndEnabled=False"}
+{"k":"awake.inactive.add.calls","v":""}
+{"k":"awake.inactive.add.logs","v":""}
+{"k":"awake.inactive.activated","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.inactive.activate.calls","v":"inactive.ThrowAwake.Awake,inactive.ThrowAwake.OnDisable,inactive.Neighbour.Awake,inactive.Neighbour.OnEnable"}
+{"k":"awake.inactive.activate.logs","v":"Exception: InvalidOperationException: ThrowAwake Awake fails"}
+{"k":"awake.inactive.frames.calls","v":"inactive.Neighbour.Start,active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update"}
+{"k":"awake.inactive.frames.logs","v":""}
+{"k":"awake.inactive.again","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.inactive.again.calls","v":"inactive.Neighbour.OnDisable,inactive.Neighbour.OnEnable"}
+{"k":"awake.inactive.again.logs","v":""}
+{"k":"awake.disabled.activated","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.disabled.activate.calls","v":"active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update,disabled.ThrowAwake.Awake"}
+{"k":"awake.disabled.activate.logs","v":"Exception: InvalidOperationException: ThrowAwake Awake fails"}
+{"k":"awake.disabled.enabled","v":"enabled=True activeAndEnabled=True"}
+{"k":"awake.disabled.enable.calls","v":"active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update,disabled.ThrowAwake.OnEnable"}
+{"k":"awake.disabled.enable.logs","v":""}
+{"k":"awake.disabled.frames.calls","v":"disabled.ThrowAwake.Start,active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update,disabled.ThrowAwake.Update"}
+{"k":"awake.disabled.frames.logs","v":""}
+{"k":"awake.copy.instantiated","v":"enabled=False activeAndEnabled=False"}
+{"k":"awake.copy.neighbour","v":"enabled=True activeAndEnabled=True"}
+{"k":"awake.copy.instantiate.calls","v":"active(Clone).Neighbour.Awake,active(Clone).Neighbour.OnEnable,active(Clone).ThrowAwake.Awake,active(Clone).ThrowAwake.OnDisable"}
+{"k":"awake.copy.instantiate.logs","v":"Exception: InvalidOperationException: ThrowAwake Awake fails"}
+{"k":"awake.copy.frames.calls","v":"copy.Neighbour.Start,active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update,disabled.ThrowAwake.Update,copy.Neighbour.Update"}
+{"k":"awake.copy.frames.logs","v":""}
+{"k":"control.enable.added","v":"enabled=True activeAndEnabled=True"}
+{"k":"control.start.added","v":"enabled=True activeAndEnabled=True"}
+{"k":"control.add.calls","v":"controls.ThrowEnable.Awake,controls.ThrowEnable.OnEnable,controls.ThrowStart.Awake,controls.ThrowStart.OnEnable"}
+{"k":"control.add.logs","v":"Exception: InvalidOperationException: ThrowEnable OnEnable fails"}
+{"k":"control.enable.later","v":"enabled=True activeAndEnabled=True"}
+{"k":"control.start.later","v":"enabled=True activeAndEnabled=True"}
+{"k":"control.frames.calls","v":"controls.ThrowEnable.Start,controls.ThrowStart.Start,active.Neighbour.Update,active.ThrowAwake.Update,inactive.Neighbour.Update,disabled.ThrowAwake.Update,copy.Neighbour.Update,controls.ThrowEnable.Update,controls.ThrowStart.Update"}
+{"k":"control.frames.logs","v":"Exception: InvalidOperationException: ThrowStart Start fails"}
+{"k":"awake.active.destroy.calls","v":"active.ThrowAwake.OnDisable,active.ThrowAwake.OnDestroy"}
+{"k":"awake.active.destroy.logs","v":""}
+{"k":"awake.inactive.destroy.calls","v":"inactive.ThrowAwake.OnDestroy"}
+{"k":"awake.inactive.destroy.logs","v":""}
+{"k":"motion.Walker.component","v":true}
+{"k":"motion.Walker.instantiated","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=False"}
+{"k":"motion.Walker.applyOff","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=False"}
+{"k":"motion.Walker.controller","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Walker_Full apply=False"}
+{"k":"motion.Walker.applyOn","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Walker_Full apply=True"}
+{"k":"motion.Walker.updated","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Walker_Full apply=True"}
+{"k":"motion.WalkerNoNode.component","v":true}
+{"k":"motion.WalkerNoNode.instantiated","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=null apply=False"}
+{"k":"motion.WalkerNoNode.applyOff","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=null apply=False"}
+{"k":"motion.WalkerNoNode.controller","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=C_WalkerNoNode_Full apply=False"}
+{"k":"motion.WalkerNoNode.applyOn","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=C_WalkerNoNode_Full apply=True"}
+{"k":"motion.WalkerNoNode.updated","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=C_WalkerNoNode_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.component","v":false}
+{"k":"motion.WalkerNoAvatar.instantiated","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=False"}
+{"k":"motion.WalkerNoAvatar.applyOff","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=False"}
+{"k":"motion.WalkerNoAvatar.controller","v":"hasRootMotion=False isHuman=False avatar=null controller=C_WalkerNoAvatar_Full apply=False"}
+{"k":"motion.WalkerNoAvatar.applyOn","v":"hasRootMotion=False isHuman=False avatar=null controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.updated","v":"hasRootMotion=False isHuman=False avatar=null controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.Mover.component","v":false}
+{"k":"motion.Mover.instantiated","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=False"}
+{"k":"motion.Mover.applyOff","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=False"}
+{"k":"motion.Mover.controller","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Mover_Full apply=False"}
+{"k":"motion.Mover.applyOn","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Mover_Full apply=True"}
+{"k":"motion.Mover.updated","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Mover_Full apply=True"}
+{"k":"motion.MoverAvatar.component","v":true}
+{"k":"motion.MoverAvatar.instantiated","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=null apply=False"}
+{"k":"motion.MoverAvatar.applyOff","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=null apply=False"}
+{"k":"motion.MoverAvatar.controller","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_MoverAvatar_Full apply=False"}
+{"k":"motion.MoverAvatar.applyOn","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_MoverAvatar_Full apply=True"}
+{"k":"motion.MoverAvatar.updated","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_MoverAvatar_Full apply=True"}
+{"k":"motion.HumanA.component","v":true}
+{"k":"motion.HumanA.instantiated","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=null apply=True"}
+{"k":"motion.HumanA.applyOff","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=null apply=False"}
+{"k":"motion.HumanA.controller","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=HumanA apply=False"}
+{"k":"motion.HumanA.applyOn","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=HumanA apply=True"}
+{"k":"motion.HumanA.updated","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=HumanA apply=True"}
+{"k":"motion.Walker.frame","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Walker_Full apply=True"}
+{"k":"motion.Walker.otherController","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Mover_Full apply=True"}
+{"k":"motion.Walker.noController","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=True"}
+{"k":"motion.Walker.disabled","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=True"}
+{"k":"motion.WalkerNoNode.frame","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=C_WalkerNoNode_Full apply=True"}
+{"k":"motion.WalkerNoNode.otherController","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=C_Mover_Full apply=True"}
+{"k":"motion.WalkerNoNode.noController","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=null apply=True"}
+{"k":"motion.WalkerNoNode.disabled","v":"hasRootMotion=False isHuman=False avatar=WalkerNoNodeAvatar:True:False controller=null apply=True"}
+{"k":"motion.WalkerNoAvatar.frame","v":"hasRootMotion=False isHuman=False avatar=null controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.otherController","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Mover_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.noController","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=True"}
+{"k":"motion.WalkerNoAvatar.disabled","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=True"}
+{"k":"motion.Mover.frame","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Mover_Full apply=True"}
+{"k":"motion.Mover.otherController","v":"hasRootMotion=False isHuman=False avatar=null controller=C_Walker_Full apply=True"}
+{"k":"motion.Mover.noController","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=True"}
+{"k":"motion.Mover.disabled","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=True"}
+{"k":"motion.MoverAvatar.frame","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_MoverAvatar_Full apply=True"}
+{"k":"motion.MoverAvatar.otherController","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_Walker_Full apply=True"}
+{"k":"motion.MoverAvatar.noController","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=null apply=True"}
+{"k":"motion.MoverAvatar.disabled","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=null apply=True"}
+{"k":"motion.HumanA.frame","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=HumanA apply=True"}
+{"k":"motion.HumanA.otherController","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=C_Walker_Full apply=True"}
+{"k":"motion.HumanA.noController","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=null apply=True"}
+{"k":"motion.HumanA.disabled","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=null apply=True"}
+{"k":"motion.WalkerNoNode.avatarFromWalker","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=True"}
+{"k":"motion.WalkerNoNode.avatarFromWalker.rebound","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_WalkerNoNode_Full apply=True"}
+{"k":"motion.Walker.avatarFromWalkerNoNode","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=null apply=True"}
+{"k":"motion.Walker.avatarFromWalkerNoNode.rebound","v":"hasRootMotion=False isHuman=False avatar=WalkerAvatar:True:False controller=C_Walker_Full apply=True"}
+{"k":"motion.Mover.avatarFromMoverAvatar","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=null apply=True"}
+{"k":"motion.Mover.avatarFromMoverAvatar.rebound","v":"hasRootMotion=False isHuman=False avatar=MoverAvatarAvatar:True:False controller=C_Mover_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.avatarFromHumanA","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=null apply=True"}
+{"k":"motion.WalkerNoAvatar.avatarFromHumanA.rebound","v":"hasRootMotion=False isHuman=True avatar=HumanAAvatar:True:True controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.HumanA.avatarFromNone","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=True"}
+{"k":"motion.HumanA.avatarFromNone.rebound","v":"hasRootMotion=False isHuman=False avatar=null controller=HumanA apply=True"}
+{"k":"motion.WalkerNoAvatar.builtHips","v":"hasRootMotion=True isHuman=False avatar=BuiltHips:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtHips.updated","v":"hasRootMotion=True isHuman=False avatar=BuiltHips:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtLeg","v":"hasRootMotion=True isHuman=False avatar=BuiltLeg:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtLeg.updated","v":"hasRootMotion=True isHuman=False avatar=BuiltLeg:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtNone","v":"hasRootMotion=False isHuman=False avatar=BuiltNone:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtNone.updated","v":"hasRootMotion=False isHuman=False avatar=BuiltNone:True:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtMissing","v":"hasRootMotion=False isHuman=False avatar=BuiltMissing:False:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.WalkerNoAvatar.builtMissing.updated","v":"hasRootMotion=False isHuman=False avatar=BuiltMissing:False:False controller=C_WalkerNoAvatar_Full apply=True"}
+{"k":"motion.HumanA.builtHuman","v":"hasRootMotion=False isHuman=True avatar=BuiltHuman:True:True controller=HumanA apply=True"}
+{"k":"motion.built.BuiltHips","v":"valid=True human=False"}
+{"k":"motion.built.BuiltLeg","v":"valid=True human=False"}
+{"k":"motion.built.BuiltNone","v":"valid=True human=False"}
+{"k":"motion.built.BuiltMissing","v":"valid=False human=False"}
+{"k":"motion.built.BuiltHuman","v":"valid=True human=True"}
+{"k":"motion.bare","v":"hasRootMotion=False isHuman=False avatar=null controller=null apply=False"}
+{"k":"complete","v":true}
