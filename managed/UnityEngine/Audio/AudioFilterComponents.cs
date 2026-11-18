@@ -19,26 +19,31 @@ namespace UnityEngine
     // latest the next audio update).
 
     /// <summary>Passes the low frequencies of an AudioSource. The cutoff is a curve over the
-    /// listener's distance (matches the Unity 6000.0.71f1 Editor, tests/projects/audiolowpass):
-    /// each key a cutoff stored as (cutoff - 10) / 21990, clamped to 0..1, each key time a
-    /// distance over the source's maxDistance. <see cref="cutoffFrequency"/> reads the first key
-    /// and sets a curve of one key; a curve of more than one key sets the cutoff at the
-    /// listener's distance every source update (<see cref="AudioSource.DistanceCurveValue"/>).
-    /// A new filter's key is 5000 / 22000, so its cutoff reads 5007.7 Hz. Resonance Q is kept
-    /// as set (default 1).</summary>
+    /// listener's distance (matches the Unity 6000.0.71f1 Editor, tests/projects/audiolowpass;
+    /// <see cref="Compat.AudioLowPassCurveMeasured"/>): each key a cutoff stored as
+    /// (cutoff - 10) / 21990, clamped to 0..1, each key time a distance over the source's
+    /// maxDistance. <see cref="cutoffFrequency"/> reads the first key and sets a curve of one key;
+    /// a curve of more than one key sets the cutoff at the listener's distance every source update
+    /// (<see cref="AudioSource.DistanceCurveValue"/>). A new filter's key is 5000 / 22000, so its
+    /// cutoff reads 5007.7 Hz. Resonance Q is kept as set (default 1). Other releases keep the
+    /// cutoff as set, clamped to 10..22000 (default 5000), and refuse a custom cutoff curve.</summary>
     [ClassId(169)]
     [RequireComponent(typeof(AudioBehaviour))]
     public sealed partial class AudioLowPassFilter : Behaviour
     {
         /// <summary>The lowest cutoff, and the span of cutoffs above it the curve's 0..1 covers.</summary>
-        const float MinCutoff = 10f, CutoffSpan = 21990f;
+        const float MinCutoff = 10f, CutoffSpan = 21990f, MaxCutoff = MinCutoff + CutoffSpan;
         /// <summary>A new filter's key: 5000 Hz over 22000 (not over the span the cutoff reads).</summary>
         const float DefaultKey = 5000f / 22000f;
+        /// <summary>The documented default cutoff, kept where the curve is not measured.</summary>
+        const float DefaultCutoff = 5000f;
         /// <summary>The newest serialized version whose curve keys are in world units (times
         /// maxDistance, read back over the source's maxDistance).</summary>
         const int WorldUnitsVersion = 2;
 
         internal AnimationCurve m_Curve = DefaultCurve();
+        /// <summary>The cutoff where the curve is not measured (<see cref="Compat.AudioLowPassCurveMeasured"/>).</summary>
+        internal float m_CutoffFrequency = DefaultCutoff;
         internal float m_LowpassResonanceQ = 1f;
         /// <summary>The serialized curve's key times are still in world units.</summary>
         bool m_KeysInWorldUnits;
@@ -53,12 +58,26 @@ namespace UnityEngine
 
         public float cutoffFrequency
         {
-            get { Normalize(); return Cutoff(FirstKey); }
+            get
+            {
+                if (!Compat.AudioLowPassCurveMeasured) return m_CutoffFrequency;
+                Normalize();
+                return Cutoff(FirstKey);
+            }
             set
             {
+                if (!Compat.AudioLowPassCurveMeasured)
+                {
+                    m_CutoffFrequency = Mathf.Clamp(value, MinCutoff, MaxCutoff);
+                    return;
+                }
                 float key = (value - MinCutoff) / CutoffSpan;
                 float clamped = key <= 1f ? key : 1f;
-                m_Curve = new AnimationCurve(new Keyframe(0f, key < 0f ? 0f : clamped));
+                // The curve becomes one key at time 0, in place (its wrap modes kept).
+                var only = new Keyframe(0f, key < 0f ? 0f : clamped);
+                while (m_Curve.length > 1) m_Curve.RemoveKey(m_Curve.length - 1);
+                if (m_Curve.length == 1) m_Curve.MoveKey(0, only);
+                else m_Curve.AddKey(only);
                 m_KeysInWorldUnits = false;
             }
         }
@@ -82,11 +101,13 @@ namespace UnityEngine
         {
             get
             {
+                if (!Compat.AudioLowPassCurveMeasured) throw AudioFilterChain.CustomCutoffCurve();
                 Normalize();
                 return new AnimationCurve(m_Curve.keys) { preWrapMode = m_Curve.preWrapMode, postWrapMode = m_Curve.postWrapMode };
             }
             set
             {
+                if (!Compat.AudioLowPassCurveMeasured) throw AudioFilterChain.CustomCutoffCurve();
                 if (value == null) throw new ArgumentNullException(nameof(value));
                 if (value.length == 0)
                 {
@@ -99,14 +120,14 @@ namespace UnityEngine
         }
 
         /// <summary>The curve of an older serialized version in the normalized distances: its
-        /// times over the source's maxDistance, as when it was loaded.</summary>
+        /// times over the source's maxDistance (kept as they are without a positive one).</summary>
         void Normalize()
         {
             if (!m_KeysInWorldUnits) return;
             var source = m_GameObject != null ? m_GameObject.GetComponent<AudioSource>() : null;
             if (source == null) return;
             m_KeysInWorldUnits = false;
-            AudioSource.ScaleTimes(m_Curve, 1f / source.m_MaxDistance);
+            if (source.m_MaxDistance > 0f) AudioSource.ScaleTimes(m_Curve, 1f / source.m_MaxDistance);
         }
 
         /// <summary>The filter's DSP values: the cutoff of its curve at the listener's distance
@@ -114,8 +135,13 @@ namespace UnityEngine
         /// first key).</summary>
         internal bool Describe(AudioSource source, out AudioFilterDescriptor d)
         {
-            Normalize();
-            float cutoff = Cutoff(source != null ? source.DistanceCurveValue(m_Curve) : FirstKey);
+            float cutoff;
+            if (Compat.AudioLowPassCurveMeasured)
+            {
+                Normalize();
+                cutoff = Cutoff(source != null ? source.DistanceCurveValue(m_Curve) : FirstKey);
+            }
+            else cutoff = Mathf.Clamp(m_CutoffFrequency, MinCutoff, MaxCutoff);
             d = new AudioFilterDescriptor
             {
                 Kind = AudioFilterKind.LowPass,
@@ -131,17 +157,28 @@ namespace UnityEngine
             s.Normalize();
             m_Curve = new AnimationCurve(s.m_Curve.keys) { preWrapMode = s.m_Curve.preWrapMode, postWrapMode = s.m_Curve.postWrapMode };
             m_KeysInWorldUnits = s.m_KeysInWorldUnits;
+            m_CutoffFrequency = s.m_CutoffFrequency;
             m_LowpassResonanceQ = s.m_LowpassResonanceQ;
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_LowpassResonanceQ = body.Float("m_LowpassResonanceQ", 1f);
-            // A curve without keys is the default one (a loaded filter's consistency check).
-            m_Curve = body.Get("lowpassLevelCustomCurve") is YNode curve && curve.Kind == YKind.Map && (curve.Get("m_Curve")?.Count ?? 0) > 0
-                ? BuiltinReaders.AnimationCurve(curve) : DefaultCurve();
-            m_KeysInWorldUnits = body.Int("serializedVersion", 1) <= WorldUnitsVersion;
-            AudioFilterChain.CheckSerialized(this, body, "m_LowpassResonanceQ", "lowpassLevelCustomCurve");
+            bool keyed = body.Get("lowpassLevelCustomCurve") is YNode curve && curve.Kind == YKind.Map && (curve.Get("m_Curve")?.Count ?? 0) > 0;
+            if (Compat.AudioLowPassCurveMeasured)
+            {
+                // A curve without keys is the default one (a loaded filter's consistency check).
+                m_Curve = keyed ? BuiltinReaders.AnimationCurve((YNode)body.Get("lowpassLevelCustomCurve")) : DefaultCurve();
+                m_KeysInWorldUnits = body.Int("serializedVersion", 1) <= WorldUnitsVersion;
+            }
+            else
+            {
+                m_CutoffFrequency = body.Float("m_CutoffFrequency", DefaultCutoff);
+                if (keyed)
+                    Debug.LogError("Unbound: AudioLowPassFilter's serialized custom cutoff curve is not supported on this Unity release; '" + m_GameObject?.m_Name + "' runs at a fixed cutoff of " + m_CutoffFrequency + " Hz", this);
+            }
+            // The cutoff field of older files is not read (the curve is the cutoff).
+            AudioFilterChain.CheckSerialized(this, body, "m_CutoffFrequency", "m_LowpassResonanceQ", "lowpassLevelCustomCurve");
         }
     }
 
@@ -530,6 +567,9 @@ namespace Unbound.Runtime
             }
             source.m_ActivationPending = false;
         }
+
+        internal static NotSupportedException CustomCutoffCurve() =>
+            new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound on this Unity release: the cutoff does not follow a distance curve");
 
         internal static bool IsFilterType(Type type) => type == typeof(AudioLowPassFilter)
             || type == typeof(AudioHighPassFilter) || type == typeof(AudioEchoFilter)

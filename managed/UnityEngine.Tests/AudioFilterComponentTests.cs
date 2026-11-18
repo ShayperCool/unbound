@@ -700,7 +700,7 @@ namespace UnityEngine.Tests
         public void TheLowPassCutoffIsItsCurvesKeyAndASetterGivesACurveOfOneKey()
         {
             var lowPass = Source("cutoff").gameObject.AddComponent<AudioLowPassFilter>();
-            foreach (var (set, key, read) in new[] { (300f, 290f / 21990f, 300f), (5f, 0f, 10f), (30000f, 1f, 22000f), (float.NaN, 1f, 22000f) })
+            foreach (var (set, key, read) in new[] { (300f, 290f / 21990f, 300f), (5f, 0f, 10f), (30000f, 1f, 22000f) })
             {
                 lowPass.cutoffFrequency = set;
                 var keys = lowPass.customCutoffCurve.keys;
@@ -713,6 +713,25 @@ namespace UnityEngine.Tests
             lowPass.cutoffFrequency = 2000f;
             Assert.Equal(1, lowPass.customCutoffCurve.length);
             Assert.Equal(2000.00012f, lowPass.cutoffFrequency);
+            // Set every frame (a script fading the cutoff): the curve's key changes in place.
+            lowPass.cutoffFrequency = 1000f;
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 100; i++) lowPass.cutoffFrequency = 1000f + i;
+            Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+            Assert.Equal(1099f, lowPass.cutoffFrequency, 3);
+        }
+
+        [Fact]
+        public void AnUnmeasuredReleaseKeepsTheCutoffAsSetAndRefusesACurve()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var source = Source("unmeasured");
+            var lowPass = source.gameObject.AddComponent<AudioLowPassFilter>();
+            Assert.Equal(5000f, lowPass.cutoffFrequency);
+            lowPass.cutoffFrequency = 30000f;
+            Assert.Equal((22000f, 22000f), (lowPass.cutoffFrequency, Assert.Single(Collected(source)).Cutoff));
+            Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve);
+            Assert.Throws<NotSupportedException>(() => lowPass.customCutoffCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f));
         }
 
         [Fact]

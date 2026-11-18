@@ -492,6 +492,13 @@ namespace Unbound.Runtime
         /// Other releases retain their previous float setter and 10 ms DSP minimum until measured.</summary>
         internal static bool AudioComponentEchoDelayMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>AudioLowPassFilter's cutoff is a curve over the listener's distance: keys of
+        /// (cutoff - 10) / 21990, a new filter's key 5000 / 22000, set curves scaled to end at
+        /// one, older serialized versions in world units (tests/projects/audiolowpass, measured on
+        /// 6000.0.71f1 for the 6000.0 family). Other releases keep a cutoff clamped on set
+        /// (default 5000) and fail loudly for a custom cutoff curve until measured.</summary>
+        internal static bool AudioLowPassCurveMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Listener component ordering and per-source bypass, measured on
         /// 6000.0.71f1 by tests/projects/audiodistortion. Other releases retain reverb-only
         /// listener support and their prior bypassEffects routing until measured.</summary>
