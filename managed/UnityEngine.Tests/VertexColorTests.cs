@@ -203,5 +203,37 @@ namespace UnityEngine.Tests
             Assert.Empty(((Mesh)typeof(SpriteShapeRenderer).GetField("m_Mesh", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 .GetValue(shape)).colors32);
         }
+
+        sealed class Pipeline2D : RenderPipelineAsset
+        {
+            internal Material Default2D;
+            protected override RenderPipeline CreatePipeline() => null;
+            public override Material default2DMaterial => Default2D;
+        }
+
+        [Fact]
+        public void RenderersAddedByAScriptTakeThePipelinesDefault2DMaterial()
+        {
+            var pipeline = Own(ScriptableObject.CreateInstance<Pipeline2D>());
+            pipeline.Default2D = Material();
+            GraphicsSettings.defaultRenderPipeline = pipeline;
+            var go = Own(new GameObject("renderers"));
+            Assert.Same(pipeline.Default2D, go.AddComponent<SpriteRenderer>().sharedMaterial);
+            var shapes = go.AddComponent<SpriteShapeRenderer>().sharedMaterials;
+            Assert.Equal(new[] { pipeline.Default2D, pipeline.Default2D }, shapes);
+            var holder = Own(new GameObject("tilemap"));
+            holder.AddComponent<Tilemap>();
+            Assert.Same(pipeline.Default2D, holder.AddComponent<TilemapRenderer>().sharedMaterial);
+
+            // A renderer read from a scene keeps what the pipeline does not decide.
+            var read = Own(new GameObject("read"));
+            var deserialized = (SpriteRenderer)ComponentFactory.Create(typeof(SpriteRenderer), read, deserializing: true);
+            Assert.NotSame(pipeline.Default2D, deserialized.sharedMaterial);
+
+            // A pipeline without a default 2D material leaves the built-in one.
+            pipeline.Default2D = null;
+            var plain = Own(new GameObject("plain")).AddComponent<SpriteRenderer>();
+            Assert.Equal(deserialized.sharedMaterial, plain.sharedMaterial);
+        }
     }
 }

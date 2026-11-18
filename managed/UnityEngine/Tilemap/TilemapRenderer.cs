@@ -43,11 +43,12 @@ namespace UnityEngine.Tilemaps
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
         internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
 
-        /// <summary>A renderer added by a script starts with the Sprites-Default material.</summary>
+        /// <summary>A renderer added by a script starts with the default 2D material
+        /// (<see cref="BuiltinObjects.Default2D"/>).</summary>
         internal override void OnAttached()
         {
             base.OnAttached();
-            var material = BuiltinObjects.SpritesDefault;
+            var material = BuiltinObjects.Default2D;
             if (material != null) m_Materials = new[] { material };
         }
 

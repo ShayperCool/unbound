@@ -1042,12 +1042,12 @@ namespace UnityEngine
 
         public event Action<SpriteRenderer> spriteChangeEvent;
 
-        /// <summary>A sprite renderer starts with the built-in Sprites-Default material (a scene's or
-        /// prefab's own materials replace it when read).</summary>
+        /// <summary>A sprite renderer starts with the default 2D material (<see cref="BuiltinObjects.Default2D"/>;
+        /// a scene's or prefab's own materials replace it when read).</summary>
         internal override void OnAttached()
         {
             base.OnAttached();
-            var material = BuiltinObjects.SpritesDefault;
+            var material = BuiltinObjects.Default2D;
             if (material != null) m_Materials = new[] { material };
         }
 

@@ -452,6 +452,22 @@ namespace Unbound.Runtime
 
         const long SpritesDefaultFileId = 10754;
 
+        /// <summary>The material of a sprite, tilemap or sprite shape renderer added by a script:
+        /// the render pipeline's default 2D material (URP's Sprite-Unlit-Default, whichever renderer
+        /// the cameras use), else Sprites-Default (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/vertexcolors *.defaultmaterials). A renderer read from a scene or prefab
+        /// keeps Sprites-Default until its own materials replace it: the pipeline is not asked.</summary>
+        internal static Material Default2D
+        {
+            get
+            {
+                if (ComponentFactory.IsDeserializing) return SpritesDefault;
+                var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+                var material = pipeline != null ? pipeline.default2DMaterial : null;
+                return material != null ? material : SpritesDefault;
+            }
+        }
+
         /// <summary>The built-in Sprites-Mask material (`unity_builtin_extra`, file 10758), the
         /// material of a sprite mask added by a script.</summary>
         internal static Material SpritesMask

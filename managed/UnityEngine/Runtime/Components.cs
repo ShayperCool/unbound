@@ -9,10 +9,14 @@ namespace Unbound.Runtime
     /// DisallowMultipleComponent, one Transform).</summary>
     internal static class ComponentFactory
     {
-        [ThreadStatic] static int t_Creating;
+        [ThreadStatic] static int t_Creating, t_Deserializing;
 
         /// <summary>True while the engine itself constructs a component.</summary>
         internal static bool IsCreating => t_Creating > 0;
+
+        /// <summary>True while a component read from a scene or prefab is attached (its own
+        /// serialized state replaces what <see cref="Component.OnAttached"/> sets).</summary>
+        internal static bool IsDeserializing => t_Deserializing > 0;
 
         /// <summary>Constructs a component of a type and attaches it, without lifecycle calls.</summary>
         internal static Component Create(Type type, GameObject go, bool deserializing = false)
@@ -39,7 +43,12 @@ namespace Unbound.Runtime
                 t_Creating--;
             }
             c.m_GameObject = go;
-            c.OnAttached();
+            if (deserializing) t_Deserializing++;
+            try { c.OnAttached(); }
+            finally
+            {
+                if (deserializing) t_Deserializing--;
+            }
             return c;
         }
 

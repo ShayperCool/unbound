@@ -125,12 +125,12 @@ namespace UnityEngine.U2D
         public SpriteMaskInteraction maskInteraction { get => m_MaskInteraction; set => m_MaskInteraction = value; }
         internal override SpriteMaskInteraction MaskInteraction => m_MaskInteraction;
 
-        /// <summary>A renderer added by a script starts with two Sprites-Default materials (fill and
-        /// edges), as the Editor makes it.</summary>
+        /// <summary>A renderer added by a script starts with the default 2D material twice (fill and
+        /// edges, <see cref="BuiltinObjects.Default2D"/>), as the Editor makes it.</summary>
         internal override void OnAttached()
         {
             base.OnAttached();
-            var material = BuiltinObjects.SpritesDefault;
+            var material = BuiltinObjects.Default2D;
             if (material != null) m_Materials = new[] { material, material };
         }
 
