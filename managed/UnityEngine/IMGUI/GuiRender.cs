@@ -288,21 +288,39 @@ namespace Unbound.Runtime
 
     /// <summary>
     /// What UnityGUI draws in a frame: textured, tinted quads in screen pixels, each with the clip
-    /// rect in force, batched by texture, clip and blending. They become one mesh drawn over
-    /// everything else (after the screen-space overlay canvases) with the UI shader.
+    /// rect in force, batched by texture, clip and shader. They become one mesh drawn over
+    /// everything else (after the screen-space overlay canvases) with Unity's IMGUI shaders.
     /// </summary>
     internal static class GuiRender
     {
+        /// <summary>The IMGUI shader a batch is drawn with (<see cref="GuiMaterial"/>).</summary>
+        internal enum Kind
+        {
+            /// <summary>Hidden/Internal-GUITextureClip: a texture tinted by the vertex colours.</summary>
+            Texture,
+            /// <summary>Hidden/Internal-GUITextureClipText: glyphs, the font's alpha.</summary>
+            Text,
+            /// <summary>Hidden/Internal-GUITextureBlit: the texture's colour without its alpha, the
+            /// tint's alpha blending it (GUI.DrawTexture and DrawTextureWithTexCoords with
+            /// alphaBlend false).</summary>
+            Blit,
+            /// <summary>Hidden/Internal-GUIRoundedRect: one GUI.DrawTexture with border widths or
+            /// corner radiuses, its parameters per draw.</summary>
+            Rounded,
+        }
+
         struct Batch
         {
             internal Texture Texture;
             internal Rect Clip;
-            /// <summary>Drawn without alpha blending (GUI.DrawTexture / DrawTextureWithTexCoords
-            /// with alphaBlend false); a batch never mixes blended and opaque triangles.</summary>
-            internal bool Opaque;
-            /// <summary>Glyphs: their alpha from the font texture, their colour from the vertices.</summary>
-            internal bool Text;
+            internal Kind Kind;
             internal List<int> Indices;
+            /// <summary>A rounded draw: its vertices are in GUI coordinates (the shader measures its
+            /// rect there), placed on the screen by <see cref="ToScreen"/> (GUI.matrix and the clip
+            /// offset); its shader parameters.</summary>
+            internal Matrix4x4 ToScreen;
+            internal int FirstVertex, VertexCount;
+            internal Dictionary<int, object> Properties;
         }
 
         static readonly List<Vector3> s_Positions = new List<Vector3>();
@@ -311,6 +329,9 @@ namespace Unbound.Runtime
         static readonly List<Batch> s_Batches = new List<Batch>();
         static readonly Stack<List<int>> s_Spare = new Stack<List<int>>();
         static readonly List<Rect> s_ExtraClips = new List<Rect>();
+        /// <summary>Per-draw parameters of rounded draws, reused from frame to frame.</summary>
+        static readonly List<Dictionary<int, object>> s_RoundedProperties = new List<Dictionary<int, object>>();
+        static int s_RoundedUsed;
         static Mesh s_Mesh;
 
         internal static int QuadCount => s_Positions.Count / 4;
@@ -327,6 +348,7 @@ namespace Unbound.Runtime
             }
             s_Batches.Clear();
             s_ExtraClips.Clear();
+            s_RoundedUsed = 0;
         }
 
         /// <summary>Clips further drawing to a rect (in the current coordinates) as well.</summary>
@@ -357,27 +379,27 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The batch the next triangles go to: the last one when it has the same texture,
-        /// clip and blending, else a new one after it (draw order is call order).</summary>
-        static List<int> BatchFor(Texture texture, bool opaque, bool text)
+        /// clip and shader, else a new one after it (draw order is call order).</summary>
+        static List<int> BatchFor(Texture texture, Kind kind)
         {
             var clip = CurrentClip();
             if (s_Batches.Count > 0)
             {
                 var last = s_Batches[s_Batches.Count - 1];
-                if (last.Texture == texture && last.Clip == clip && last.Opaque == opaque && last.Text == text) return last.Indices;
+                if (last.Texture == texture && last.Clip == clip && last.Kind == kind) return last.Indices;
             }
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
-            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Opaque = opaque, Text = text, Indices = indices });
+            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Kind = kind, Indices = indices });
             return indices;
         }
 
         /// <summary>A quad from local corners (top left, top right, bottom right, bottom left) and
         /// the matching texture coordinates.</summary>
         static void Quad(Texture texture, Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl,
-            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, bool opaque = false, bool text = false)
+            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, Kind kind = Kind.Texture)
         {
             if (CurrentClip().width <= 0f) return;
-            var indices = BatchFor(texture, opaque, text);
+            var indices = BatchFor(texture, kind);
             int start = s_Positions.Count;
             s_Positions.Add(GUIClip.GUIToScreen(tl));
             s_Positions.Add(GUIClip.GUIToScreen(tr));
@@ -399,34 +421,73 @@ namespace Unbound.Runtime
         /// <summary>A texture stretched over a rect; <paramref name="uv"/> is in texture space (v up).</summary>
         internal static void DrawTexture(Rect rect, Texture texture, Rect uv, Color color) => DrawTexture(rect, texture, uv, color, true);
 
-        /// <summary>A texture stretched over a rect, alpha-blended or (<paramref name="alphaBlend"/>
-        /// false) not: GUI.DrawTexture's and GUI.DrawTextureWithTexCoords' quad.</summary>
+        /// <summary>A texture stretched over a rect: blended by its alpha, or (<paramref name="alphaBlend"/>
+        /// false) by the tint's alone (<see cref="Kind.Blit"/>): GUI.DrawTexture's and
+        /// GUI.DrawTextureWithTexCoords' quad.</summary>
         internal static void DrawTexture(Rect rect, Texture texture, Rect uv, Color color, bool alphaBlend)
         {
             if (texture == null || rect.width == 0f || rect.height == 0f) return;
             Quad(texture,
                 new Vector2(rect.xMin, rect.yMin), new Vector2(rect.xMax, rect.yMin), new Vector2(rect.xMax, rect.yMax), new Vector2(rect.xMin, rect.yMax),
                 new Vector2(uv.xMin, uv.yMax), new Vector2(uv.xMax, uv.yMax), new Vector2(uv.xMax, uv.yMin), new Vector2(uv.xMin, uv.yMin),
-                color, !alphaBlend);
+                color, alphaBlend ? Kind.Texture : Kind.Blit);
         }
 
-        /// <summary>Textured triangles in local GUI coordinates (<paramref name="uvs"/> in texture
-        /// space, v up), one tint, batched and clipped as quads are: GUI.DrawTexture's border and
-        /// rounded corners, alpha-blended or (<paramref name="alphaBlend"/> false) not.</summary>
-        internal static void DrawTriangles(Texture texture, List<Vector2> positions, List<Vector2> uvs, List<int> indices, Color color, bool alphaBlend = true)
+        static readonly int s_RectId = Shader.PropertyToID("_Rect");
+        static readonly int s_CornerRadiusesId = Shader.PropertyToID("_CornerRadiuses");
+        static readonly int s_BorderWidthsId = Shader.PropertyToID("_BorderWidths");
+        static readonly int s_SmoothCornersId = Shader.PropertyToID("_SmoothCorners");
+
+        /// <summary>GUI.DrawTexture with border widths (left, top, right, bottom) or corner
+        /// radiuses (top-left, top-right, bottom-right, bottom-left): one quad over
+        /// <paramref name="rect"/> (local GUI coordinates) drawn with Unity's rounded-rect IMGUI
+        /// shader, which shapes, anti-aliases and patterns it in the pixel shader.</summary>
+        internal static void DrawRoundedTexture(Rect rect, Texture texture, Rect uv, Color color, Vector4 borderWidths, Vector4 cornerRadiuses)
         {
-            if (texture == null || indices.Count == 0) return;
-            if (CurrentClip().width <= 0f) return;
-            var batch = BatchFor(texture, !alphaBlend, false);
+            if (texture == null || !(rect.width > 0f) || !(rect.height > 0f)) return;
+            var clip = CurrentClip();
+            if (clip.width <= 0f) return;
+            if (s_RoundedUsed == s_RoundedProperties.Count)
+                s_RoundedProperties.Add(new Dictionary<int, object>
+                {
+                    [s_RectId] = new float[4], [s_CornerRadiusesId] = new float[4], [s_BorderWidthsId] = new float[4], [s_SmoothCornersId] = 1f,
+                });
+            var properties = s_RoundedProperties[s_RoundedUsed++];
+            Set((float[])properties[s_RectId], rect.x, rect.y, rect.width, rect.height);
+            Set((float[])properties[s_CornerRadiusesId], cornerRadiuses.x, cornerRadiuses.y, cornerRadiuses.z, cornerRadiuses.w);
+            Set((float[])properties[s_BorderWidthsId], borderWidths.x, borderWidths.y, borderWidths.z, borderWidths.w);
             int start = s_Positions.Count;
+            s_Positions.Add(new Vector2(rect.xMin, rect.yMin));
+            s_Positions.Add(new Vector2(rect.xMax, rect.yMin));
+            s_Positions.Add(new Vector2(rect.xMax, rect.yMax));
+            s_Positions.Add(new Vector2(rect.xMin, rect.yMax));
+            s_Uvs.Add(new Vector2(uv.xMin, uv.yMax));
+            s_Uvs.Add(new Vector2(uv.xMax, uv.yMax));
+            s_Uvs.Add(new Vector2(uv.xMax, uv.yMin));
+            s_Uvs.Add(new Vector2(uv.xMin, uv.yMin));
             Color32 tint = color;
-            for (int i = 0; i < positions.Count; i++)
+            for (int i = 0; i < 4; i++) s_Colors.Add(tint);
+            var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
+            indices.Add(start);
+            indices.Add(start + 1);
+            indices.Add(start + 2);
+            indices.Add(start + 2);
+            indices.Add(start + 3);
+            indices.Add(start);
+            s_Batches.Add(new Batch
             {
-                s_Positions.Add(GUIClip.GUIToScreen(positions[i]));
-                s_Uvs.Add(uvs[i]);
-                s_Colors.Add(tint);
-            }
-            foreach (int index in indices) batch.Add(start + index);
+                Texture = texture, Clip = clip, Kind = Kind.Rounded, Indices = indices,
+                ToScreen = GUIClip.GetMatrix() * Matrix4x4.Translate(GUIClip.Unclip(Vector2.zero)),
+                FirstVertex = start, VertexCount = 4, Properties = properties,
+            });
+        }
+
+        static void Set(float[] into, float a, float b, float c, float d)
+        {
+            into[0] = a;
+            into[1] = b;
+            into[2] = c;
+            into[3] = d;
         }
 
         internal static void FillRect(Rect rect, Color color) => DrawTexture(rect, Texture2D.whiteTexture, new Rect(0, 0, 1, 1), color);
@@ -481,7 +542,7 @@ namespace Unbound.Runtime
                     new Vector2(origin.x + v1.position.x, origin.y - v1.position.y),
                     new Vector2(origin.x + v2.position.x, origin.y - v2.position.y),
                     new Vector2(origin.x + v3.position.x, origin.y - v3.position.y),
-                    v0.uv0, v1.uv0, v2.uv0, v3.uv0, tint, text: true);
+                    v0.uv0, v1.uv0, v2.uv0, v3.uv0, tint, Kind.Text);
             }
         }
 
@@ -504,6 +565,10 @@ namespace Unbound.Runtime
                 var p = s_Positions[i];
                 positions[i] = new Vector3(p.x, height - p.y, 0f);
             }
+            // Rounded draws keep their GUI coordinates; their draw's matrix places them.
+            foreach (var b in s_Batches)
+                for (int i = b.FirstVertex; i < b.FirstVertex + b.VertexCount; i++)
+                    positions[i] = s_Positions[i];
             s_Mesh.Clear();
             s_Mesh.vertices = positions;
             s_Mesh.colors32 = s_Colors.ToArray();
@@ -515,67 +580,70 @@ namespace Unbound.Runtime
             CollectItems(mesh, height, into);
         }
 
-        static Material s_TextureMaterial, s_TextMaterial;
+        static readonly Material[] s_Materials = new Material[4];
+        static readonly string[] s_ShaderNames =
+            { "Hidden/Internal-GUITextureClip", "Hidden/Internal-GUITextureClipText", "Hidden/Internal-GUITextureBlit", "Hidden/Internal-GUIRoundedRect" };
         static readonly int s_ManualTex2SRGB = Shader.PropertyToID("_ManualTex2SRGB");
         /// <summary>The _ManualTex2SRGB each material was given last (-1: none yet).</summary>
-        static float s_TextureToGamma = -1f, s_TextToGamma = -1f;
+        static readonly float[] s_ToGamma = { -1f, -1f, -1f, -1f };
 
-        /// <summary>Unity's own IMGUI shaders: Hidden/Internal-GUITextureClip (a texture tinted by
-        /// the vertex colours) and Hidden/Internal-GUITextureClipText (glyphs: the font's alpha).
-        /// Unbound clips by the draws' clip rects, so their clip texture passes everything. In a
-        /// linear project the texture's colours are turned to gamma (_ManualTex2SRGB) and the
-        /// draws store their output unconverted (<see cref="FrameBuilder.DrawItem.GammaImgui"/>):
-        /// IMGUI blends and tints in gamma space (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/urpoverlayui imgui and imgui_builtin).</summary>
-        static Material GuiMaterial(bool text)
+        /// <summary>Unity's own IMGUI shaders, one per <see cref="Kind"/>. Unbound clips by the
+        /// draws' clip rects, so their clip texture passes everything. In a linear project the
+        /// texture's colours are turned to gamma (_ManualTex2SRGB) and the draws store their output
+        /// unconverted (<see cref="FrameBuilder.DrawItem.GammaImgui"/>): IMGUI blends and tints in
+        /// gamma space (matches the Unity 6000.0.71f1 Editor, tests/projects/urpoverlayui imgui and
+        /// imgui_builtin; tests/projects/uialphaborders imgui).</summary>
+        static Material GuiMaterial(Kind kind)
         {
-            ref var material = ref text ? ref s_TextMaterial : ref s_TextureMaterial;
+            int k = (int)kind;
+            ref var material = ref s_Materials[k];
             if (material == null)
             {
                 using (ObjectRegistry.AsAssets())
-                    material = new Material(Shader.Find(text ? "Hidden/Internal-GUITextureClipText" : "Hidden/Internal-GUITextureClip")) { name = text ? "IMGUI Text" : "IMGUI" };
+                    material = new Material(Shader.Find(s_ShaderNames[k])) { name = "IMGUI " + kind };
                 material.IsPersistentAsset = true;
                 material.hideFlags = HideFlags.HideAndDontSave;
                 material.SetTexture("_GUIClipTexture", Texture2D.whiteTexture);
                 material.SetMatrix("unity_GUIClipTextureMatrix", Matrix4x4.zero);
                 material.SetColor("_Color", Color.white);
-                (text ? ref s_TextToGamma : ref s_TextureToGamma) = -1f;
+                s_ToGamma[k] = -1f;
             }
             // Set only when it changes (a set sends the material to the renderer again; the
             // shaders declare no such property, so it is not read back).
             float toGamma = QualitySettings.activeColorSpace == ColorSpace.Linear ? 1f : 0f;
-            ref float set = ref text ? ref s_TextToGamma : ref s_TextureToGamma;
-            if (set != toGamma)
+            if (s_ToGamma[k] != toGamma)
             {
                 material.SetFloat(s_ManualTex2SRGB, toGamma);
-                set = toGamma;
+                s_ToGamma[k] = toGamma;
             }
             return material;
         }
 
         /// <summary>One draw per batch, in batch (call) order, of submesh i of the frame's mesh, with
-        /// the IMGUI shader of its kind (<see cref="GuiMaterial"/>); an opaque batch's draw is marked
-        /// <see cref="FrameBuilder.DrawItem.OpaqueImgui"/>, and the renderer turns blending off for
-        /// that draw alone (<see cref="FrameBuilder.BeginOpaqueImgui"/>).</summary>
+        /// the IMGUI shader of its kind (<see cref="GuiMaterial"/>); a rounded draw with its own
+        /// parameters and its GUI-to-screen matrix (the mesh's screen runs from the bottom left).</summary>
         internal static void CollectItems(ulong mesh, float height, List<FrameBuilder.DrawItem> into)
         {
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            var flip = Matrix4x4.identity;
+            flip.m11 = -1f;
+            flip.m13 = height;
             for (int i = 0; i < s_Batches.Count; i++)
             {
                 var b = s_Batches[i];
-                var material = GuiMaterial(b.Text);
+                var material = GuiMaterial(b.Kind);
                 into.Add(new FrameBuilder.DrawItem
                 {
                     Mesh = mesh,
                     Submesh = i,
                     Material = material,
-                    Model = Matrix4x4.identity,
+                    Model = b.Kind == Kind.Rounded ? flip * b.ToScreen : Matrix4x4.identity,
                     Color = Color.white,
                     MainTexture = TextureHandles.Of(b.Texture),
                     Clip = new Rect(b.Clip.x, height - b.Clip.yMax, b.Clip.width, b.Clip.height),
                     ClipEnabled = true,
-                    OpaqueImgui = b.Opaque,
                     GammaImgui = linear,
+                    Properties = b.Properties,
                     Queue = material.renderQueue,
                     Sequence = FrameBuilder.NextSequence(),
                 });

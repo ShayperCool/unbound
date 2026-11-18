@@ -103,9 +103,6 @@ namespace Unbound.Runtime
             internal bool ClipEnabled;
             /// <summary>Canvas supplies its clip variant independently of the global keyword.</summary>
             internal bool CanvasDraw;
-            /// <summary>An IMGUI draw with alphaBlend false: blending is turned off for this draw
-            /// alone, over the state override in force (<see cref="BeginOpaqueImgui"/>).</summary>
-            internal bool OpaqueImgui;
             /// <summary>An IMGUI draw in a linear project: stored unconverted into sRGB targets (as
             /// with GL.sRGBWrite off), so it blends in gamma space (GuiRender.GuiMaterial).</summary>
             internal bool GammaImgui;
@@ -1199,23 +1196,13 @@ namespace Unbound.Runtime
             if (item.Setup is DrawSetup setup) GfxStream.DrawSetup(setup);
             bool restoreCanvasClip = item.CanvasDraw && Shader.s_GlobalKeywords.Contains("UNITY_UI_CLIP_RECT");
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", false);
-            // Inside the mask's override, so the opaque draw keeps its stencil test and the mask's
-            // After puts back what was there before both.
-            var beforeOpaque = item.OpaqueImgui ? BeginOpaqueImgui() : null;
-            try
+            // (The pass count for the render counters, set just before each of the item's draws.)
+            if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties, passes);
+            else
             {
-                // (The pass count for the render counters, set just before each of the item's draws.)
-                if (item.Dots is BatchCulling.DrawRef dots) BatchCulling.Draw(item, dots, material, pass, properties, passes);
-                else
-                {
-                    Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
-                    GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
-                    item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
-                }
-            }
-            finally
-            {
-                if (item.OpaqueImgui) EndOpaqueImgui(beforeOpaque);
+                Unbound.Runtime.Profiling.RenderStats.NextDrawPasses(passes);
+                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                item.ClipEnabled ? item.Clip : (Rect?)null, properties, flipWinding: item.Renderer?.DrawFlipWinding(item.Model) ?? false, tint: item.Tint);
             }
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", true);
             if (masking) SpriteMasking.After(previousState);
