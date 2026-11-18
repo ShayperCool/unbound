@@ -161,9 +161,9 @@ pub mod state_mask {
     pub const STENCIL: u32 = 8;
     /// Unbound's own: the raster state's culling alone (a TwoSided shadow caster's).
     pub const CULL: u32 = 16;
-    /// Unbound's own: the engine's stencil bits (the override's reference) set on every pixel
-    /// a pass draws, with no stencil test, beside the bits the pass's own stencil reference
-    /// and write mask give (the deferred G-buffer pass's, NativeApi 88).
+    /// Unbound's own: the engine's stencil bits (the override's reference) written on every
+    /// pixel a pass draws, with no stencil test, beside the bits of the pass's own stencil
+    /// reference the override's read mask keeps (the deferred G-buffer pass's, NativeApi 88).
     pub const ENGINE_STENCIL: u32 = 32;
 }
 

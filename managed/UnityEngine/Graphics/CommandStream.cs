@@ -646,8 +646,9 @@ namespace Unbound.Runtime
         const int CullOnlyMask = 16;
 
         /// <summary>A state override mask bit of Unbound's own: the engine's stencil bits (the
-        /// block's reference) set on every pixel the draws that follow draw, with no stencil test,
-        /// beside the bits their passes' own stencil reference and write mask give (NativeApi 88).</summary>
+        /// block's reference) written on every pixel the draws that follow draw, with no stencil
+        /// test, beside the bits of their passes' own stencil reference the block's read mask
+        /// keeps (NativeApi 88).</summary>
         internal const int EngineStencilMask = 32;
 
         /// <summary>The render state overrides of the draws that follow (a renderer list's

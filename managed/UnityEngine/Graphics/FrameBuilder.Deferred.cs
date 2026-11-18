@@ -29,22 +29,24 @@ namespace Unbound.Runtime
         static readonly string[] s_DeferredLightKeywords = { "DIRECTIONAL", "DIRECTIONAL_COOKIE", "POINT", "POINT_COOKIE", "SPOT" };
 
         /// <summary>The stencil bits the G-buffer pass sets on every pixel it draws, which the
-        /// light passes test and the passes after the lighting see (measured: tests/projects/builtinfx
-        /// deferredStencil.*, Unity 6000.0.71f1: bits 6 and 7 over a Standard object and over one
-        /// whose Deferred pass writes 2, which keeps its 2; none over the background).</summary>
+        /// light passes test and the passes after the lighting see, and the bits of a Deferred
+        /// pass's own stencil reference written beside them, whatever its test, operation and
+        /// write mask (measured: tests/projects/builtinfx deferredStencil.*, Unity 6000.0.71f1:
+        /// 0xC0 over a Standard object, Ref 2 0xC2, Ref 1 Equal Keep and Ref 1 IncrSat 0xC1,
+        /// Ref 8 WriteMask 0 0xC8, Ref 16 and Ref 32 0xC0; none over the background).</summary>
         const byte SceneStencilBits = 0xC0;
+        const byte PassStencilBits = 0x0F;
 
         /// <summary>"During [the base and lighting] stages stencil state defined in the shader
-        /// will be ignored ... it's not possible to mask out these objects based on a stencil
-        /// test, but they can still modify the buffer contents" (Unity 6000.0 Manual, ShaderLab
-        /// command: Stencil): the G-buffer draws set the engine's bits with no stencil test
-        /// beside what their own reference writes (a pass operation other than Replace is
-        /// unmeasured: Replace is used), and the lights draw over the marked pixels only
+        /// will be ignored" (Unity 6000.0 Manual, ShaderLab command: Stencil): the G-buffer draws
+        /// write the engine's bits and the pass's kept reference bits with no stencil test
+        /// (GfxStream.EngineStencilMask), and the lights draw over the marked pixels only
         /// (tests/projects/builtinfx settings_deferred_custom: a custom light pass leaves the
         /// background as it is).</summary>
         static readonly RenderStateBlock s_GBufferStencil = new RenderStateBlock((RenderStateMask)GfxStream.EngineStencilMask)
         {
             stencilReference = SceneStencilBits,
+            stencilState = new StencilState(true, PassStencilBits, 0, CompareFunction.Always, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
         };
 
         /// <summary>The light passes: over the marked pixels, with no depth test (their quads
