@@ -42,6 +42,23 @@ Measured in 6000.0.71f1 (Linear and Gamma; both repeats byte-identical):
 These are observations of this release and context (Linux Editor, OpenGL Core, NVIDIA), not
 documented guarantees.
 
+Metal (`Reference/unity-6000.0.71f1/metal/<space>`, the macOS Editor's Game view on an Apple M2
+Pro, windowed, two identical captures per color space; macOS checks compare with it). The values
+are the Linux ones; 62 Linear and 10 Gamma images differ from the Linux ones:
+
+- In Linear color space a partial camera's HDR intermediate (`part.bH`, `part.bHn`, also a deferred
+  one's light buffer, `part.bH.def*`, and B first on the screen, `first.*.part.bH`) that keeps the
+  color under it (Depth only, Don't Clear) starts from the screen's stored bytes read as linear
+  values: after the resolve that color shows encoded twice (the clear color 26/26/76 becomes
+  88/88/149). Its LDR and full-screen intermediates start from the decoded colors, as on Linux.
+- In both color spaces the full-screen LDR B without antialiasing (`q0.*.full.bL`, 10 images)
+  covers one more row of pixels at three quads' top edges (rows 13, 31 and 49 from the top: the
+  device's coverage of an edge through pixel centres).
+
+Unbound on Metal: 192/192 images and 387/387 values in both color spaces. A Don't Clear deferred
+camera over the screen takes the screen's depth with the rows the right way up (before, its
+`full.bH.def.persp` images drew B where A's red quad hides it).
+
 Run from the repository root; the runner takes one launcher lease per Editor through
 `tests/editor_runner.py` (do not wrap it in `with-heavy-job`):
 
