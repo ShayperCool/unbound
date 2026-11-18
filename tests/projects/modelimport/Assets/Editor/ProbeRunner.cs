@@ -43,6 +43,13 @@ public static class ProbeRunner
         UnityEngine.Object.DestroyImmediate(camera.gameObject);
         UnityEngine.Object.DestroyImmediate(target);
         Debug.Log("model import probe: after a render, pipeline tag '" + Shader.globalRenderPipeline + "'");
+        if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null && string.IsNullOrEmpty(Shader.globalRenderPipeline))
+        {
+            // Without the tag the capture would be the batch-mode case this render exists to avoid.
+            Debug.LogError("model import probe: the render made no pipeline shader tag; not recording");
+            EditorApplication.Exit(1);
+            return;
+        }
         EditorApplication.EnterPlaymode();
     }
 }

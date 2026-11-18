@@ -66,8 +66,12 @@ Editor and the shader's -1 in Unbound (no validation runs on them; what sets 0 i
 established); the description-made Arnold Maya, Autodesk Interactive, Physical and Autodesk
 Interactive cutout materials keep the shader's queue in the Editor (rawRenderQueue -1, queue 3000,
 2450 for the cutout, RenderType "Transparent" for the three transparent ones) while Unbound gives
-them an explicit queue 2000 and reads "Opaque" (11 values, cause not established). These are the
-probe's only URP differences.
+them an explicit queue 2000 and reads "Opaque" (11 values). Their rawRenderQueue -1 matched before
+the configured pipeline's tag was made active as the scene loads (their queue then read 2000 in
+Unbound, as without the tag); with the tag active, the validation URP's import postprocessing runs
+on them in Unbound stores its computed opaque queue 2000 against the shader's 3000/2450. Whether
+and with which tag the Editor validates these materials is not established (as for the
+validation on load in tests/projects/graphqueue). These are the probe's only URP differences.
 
 The URP reference is recorded as an Editor that has drawn its views before Play mode: the runner
 renders one camera before entering Play mode, so the configured pipeline's shader tag is active
