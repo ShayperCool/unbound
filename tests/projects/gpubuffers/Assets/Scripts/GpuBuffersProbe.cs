@@ -411,6 +411,13 @@ public class GpuBuffersProbe : MonoBehaviour
 
     // ------------------------------------------------------------ indirect dispatch
 
+    // macOS Editor captures (Metal, Apple M2 Pro) differed in three places, which the Metal
+    // probe leaves out: a command buffer's indirect dispatch (the group count it adds to the
+    // output the script cleared just before, and once the groups it dispatched), a dispatch
+    // whose arguments lie past the buffer's end (undefined anywhere), and whether the section's
+    // first readback, polled and read frames later, completes with an error.
+    static readonly bool s_MetalUndefined = SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal;
+
     uint[] RunGroups(Action dispatch, uint baseValue = 0)
     {
         using var output = new ComputeBuffer(40, 4);
@@ -457,7 +464,8 @@ public class GpuBuffersProbe : MonoBehaviour
             Value("indirect.gbstructured", U(RunGroups(() => cs.DispatchIndirect(kGroups, s))));
         });
         Try("indirect.unaligned", () => Value("indirect.unaligned", U(RunGroups(() => cs.DispatchIndirect(kGroups, args, 2)))));
-        Try("indirect.beyond", () => Value("indirect.beyond", U(RunGroups(() => cs.DispatchIndirect(kGroups, args, 16)))));
+        if (s_MetalUndefined) Value("indirect.beyond.skipped", Q("arguments past the buffer's end"));
+        else Try("indirect.beyond", () => Value("indirect.beyond", U(RunGroups(() => cs.DispatchIndirect(kGroups, args, 16)))));
         Try("indirect.null", () => Value("indirect.null", U(RunGroups(() => cs.DispatchIndirect(kGroups, (ComputeBuffer)null)))));
         Try("indirect.zero", () =>
         {
@@ -476,7 +484,8 @@ public class GpuBuffersProbe : MonoBehaviour
             ComputeBuffer.CopyCount(app, a3, 0);
             Value("indirect.gpu", U(RunGroups(() => cs.DispatchIndirect(kGroups, a3))));
         });
-        Try("indirect.cmd", () =>
+        if (s_MetalUndefined) Value("indirect.cmd.skipped", Q("two captures dispatched different groups"));
+        else Try("indirect.cmd", () =>
         {
             Value("indirect.cmd", U(RunGroups(() =>
             {
@@ -1003,8 +1012,14 @@ public class GpuBuffersProbe : MonoBehaviour
         var buf = new ComputeBuffer(16, 4);
         buf.SetData(Fill(16, i => (uint)i * 7u + 1u));
 
-        var w = Make("rb.buffer", cb => AsyncGPUReadback.Request(buf), false);
-        yield return Settle(w);
+        Watch w;
+        if (s_MetalUndefined)
+            Value("rb.buffer.skipped", Q("the first readback sometimes completes with an error"));
+        else
+        {
+            w = Make("rb.buffer", cb => AsyncGPUReadback.Request(buf), false);
+            yield return Settle(w);
+        }
         w = Make("rb.callback", cb => AsyncGPUReadback.Request(buf, cb));
         yield return Settle(w);
         w = Make("rb.range", cb => AsyncGPUReadback.Request(buf, 16, 8, cb));
