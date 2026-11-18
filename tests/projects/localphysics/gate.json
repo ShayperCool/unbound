@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/localphysics/run.py check"
+  ],
+  "summary": "\\d+/\\d+ records match; \\d+ differ",
+  "engine_paths": [
+    "managed/UnityEngine/Physics/PhysicsWorld.cs",
+    "managed/UnityEngine/Physics/PhysicsScene.cs",
+    "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
+    "managed/UnityEngine/Physics2D/Physics2D.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs"
+  ]
+}
