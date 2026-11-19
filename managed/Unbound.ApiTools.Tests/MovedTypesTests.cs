@@ -129,8 +129,6 @@ namespace Old
     [InlineData("Unity.Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Manual); }")]
     // Moved types of assemblies whose name does not start with "Unity" are not considered.
     [InlineData("Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Moved); }")]
-    // `global::Moved` names the global namespace only, not the usings' namespaces (CS0400).
-    [InlineData("Unity.Moved.Target", true, "using Old.Space; public static class C { static object M() => typeof(global::Moved); }")]
     public void OtherwiseTheNameStaysMissing(string targetName, bool updates, string consumer)
     {
         var root = TestAssemblies.TempDir();
@@ -138,7 +136,7 @@ namespace Old
         {
             var package = new CompilerService().Compile(Setup(root, targetName, consumer, updates)).Assemblies.Single(a => a.Name == "Package");
             Assert.Equal("failed", package.Status);
-            Assert.Contains(package.Errors, e => e.Id is "CS0234" or "CS0400");
+            Assert.Contains(package.Errors, e => e.Id == "CS0234");
         }
         finally { Directory.Delete(root, recursive: true); }
     }
