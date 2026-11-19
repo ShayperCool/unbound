@@ -456,9 +456,9 @@ namespace UnityEngine.Tests
             Assert.Equal(weldWithout, Hits(WeldWithoutCleaning));
         }
 
-        // The two weld/cleaning combinations PhysX's cooking cannot make are reported through
-        // Stubs.Ignored, every cooking counted, one warning each for the process; the default and
-        // None (no cleaning, no welding) are not reported.
+        // Welding off with cleaning on, which PhysX's cooking cannot make, is reported through
+        // Stubs.Ignored, every cooking counted, one warning for the process; the default, None (no
+        // cleaning, no welding) and welding without cleaning (welded before the cooking) are not.
         // Red at 4d0029d5: nothing is reported, so the count assertions fail.
         [Fact]
         public void UnsupportedWeldCombinationsAreReported()
@@ -479,7 +479,24 @@ namespace UnityEngine.Tests
                 Run(1);
             }, WeldOff, WeldWithoutCleaning);
             ReportedOnce(capture, WeldOff, weldOff, 2);
-            ReportedOnce(capture, WeldWithoutCleaning, weldWithout, 2);
+            Assert.Equal(weldWithout, Hits(WeldWithoutCleaning));
+            Assert.Equal(0, capture.Warnings.TryGetValue(WeldWithoutCleaning, out var weldWarnings) ? weldWarnings : 0);
+        }
+
+        // Welding without cleaning (tests/projects/cookingforcesvideo cooking.weldingOnly): vertices
+        // at one position become one, an unused vertex is left out, the triangles keep their order.
+        [Fact]
+        public void WeldingWithoutCleaningMergesColocatedVerticesAndDropsUnusedOnes()
+        {
+            var vertices = new[] { new Vector3(0, 0, 0), new Vector3(2, 0, 0), new Vector3(1, 0, 1), new Vector3(1, 0, 1), new Vector3(5, 5, 5), new Vector3(2, 0, 2) };
+            var (welded, triangles) = MeshCollider.Welded(vertices, new[] { 0, 2, 1, 1, 3, 5 });
+            Assert.Equal(new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 1), new Vector3(2, 0, 0), new Vector3(2, 0, 2) }, welded);
+            Assert.Equal(new[] { 0, 1, 2, 2, 1, 3 }, triangles);
+            // A collider cooked so has the used vertices' bounds.
+            var mesh = new Mesh { vertices = vertices, triangles = new[] { 0, 2, 1, 1, 3, 5 } };
+            var collider = MeshAt("WeldOnlyBounds", Origin + new Vector3(0f, 0f, 240f), mesh, MeshColliderCookingOptions.WeldColocatedVertices);
+            Run(1);
+            Assert.Equal(new Vector3(2f, 0f, 2f), collider.bounds.size);
         }
     }
 }

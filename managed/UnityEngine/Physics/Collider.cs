@@ -638,11 +638,12 @@ namespace UnityEngine
         /// degenerate triangles and other artifacts; Weld Colocated Vertices off keeps vertices with the
         /// same position apart; Use Fast Midphase off uses the slower legacy midphase. The PhysX
         /// parameters they map to are Unbound's choice (unmeasured), named on the native side.
-        /// Two combinations PhysX's cooking cannot make are reported, not approximated: welding off
-        /// with cleaning on (cleaning merges vertices at the same position), and welding on with
-        /// cleaning off (PhysX welds only while cleaning). InflateConvexMesh is obsolete in 6000.0 and
-        /// is not read; the options name triangle mesh cooking, so convex hulls do not read them
-        /// (Unbound's reading, unmeasured).</summary>
+        /// Welding without cleaning, which the native cooking does only while it cleans, is done
+        /// before it (<see cref="Welded"/>). Welding off with cleaning on is reported, not
+        /// approximated (cleaning merges vertices at the same position). InflateConvexMesh is
+        /// obsolete in 6000.0 and is not read; convex hulls do not read the options (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/cookingforcesvideo cooking.*.convex: every
+        /// option gives one hull).</summary>
         int CookingFlags()
         {
             var o = m_CookingOptions;
@@ -653,9 +654,6 @@ namespace UnityEngine
             if (!weld && clean)
                 Stubs.Ignored("MeshColliderCookingOptions.WeldColocatedVertices (off)",
                     "is not honoured yet: with EnableMeshCleaning on, cooking still merges vertices at the same position");
-            if (weld && !clean)
-                Stubs.Ignored("MeshColliderCookingOptions.WeldColocatedVertices (without EnableMeshCleaning)",
-                    "is not honoured yet: cooking merges vertices at the same position only while it cleans the mesh");
             return (fast ? 0 : 1) | (clean ? 0 : 2) | (weld ? 0 : 4) | (midphase ? 0 : 8);
         }
 
@@ -729,11 +727,42 @@ namespace UnityEngine
                     return 0;
                 }
             }
+            // Welding without cleaning: done here, as the native cooking welds only while it cleans.
+            if ((flags & 2) != 0 && (flags & 4) == 0) (vertices, triangles) = Welded(vertices, triangles);
             fixed (Vector3* v = vertices)
             fixed (int* t = triangles)
                 m_MeshData = B3.ua3_mesh_create(v, vertices.Length, t, triangleCount | (flags << 27));
             if (m_MeshData == IntPtr.Zero) return 0;
             return B3.ua3_shape_mesh(body, def, m_MeshData, Vector3.one);
+        }
+
+        /// <summary>Weld Colocated Vertices: vertices at one position become one; vertices no
+        /// triangle uses are left out, as welding leaves them (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/cookingforcesvideo cooking.weldingOnly and cooking.noCleaning: the bounds
+        /// leave out an unused vertex, the triangles keep their order).</summary>
+        internal static (Vector3[] Vertices, int[] Triangles) Welded(Vector3[] vertices, int[] triangles)
+        {
+            var at = new Dictionary<Vector3, int>();
+            var map = new int[vertices.Length];
+            var kept = new List<Vector3>();
+            var welded = new int[triangles.Length];
+            for (int i = 0; i < triangles.Length; i++)
+            {
+                int index = triangles[i];
+                if (map[index] == 0)
+                {
+                    var position = vertices[index];
+                    if (!at.TryGetValue(position, out int n))
+                    {
+                        n = kept.Count;
+                        kept.Add(position);
+                        at[position] = n;
+                    }
+                    map[index] = n + 1;
+                }
+                welded[i] = map[index] - 1;
+            }
+            return (kept.ToArray(), welded);
         }
 
         internal override Bounds LocalBounds() => m_Mesh != null ? m_Mesh.bounds : new Bounds(Vector3.zero, Vector3.zero);
