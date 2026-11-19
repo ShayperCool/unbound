@@ -451,18 +451,24 @@ namespace Unbound.Runtime
             }
 
             readonly Dictionary<string, string> m_DependencyHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            readonly Dictionary<string, List<string>> m_DependencyNames = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
             /// <summary>The game assemblies an image references, directly or not, with their contents'
             /// hashes: what a plugin's adapted image also depends on.</summary>
             string Dependencies(byte[] image)
             {
                 var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-                var pending = new Stack<byte[]>();
-                pending.Push(image);
+                var pending = new Stack<IEnumerable<string>>();
+                pending.Push(ReferencedNames(image));
                 while (pending.Count > 0)
-                    foreach (var name in ReferencedNames(pending.Pop()))
+                    foreach (var name in pending.Pop())
                         if (m_ByName.TryGetValue(name, out var dependency) && dependency.Dll != null && File.Exists(dependency.Dll) && names.Add(name))
-                            pending.Push(File.ReadAllBytes(dependency.Dll));
+                        {
+                            // Each dependency's references are read once per load.
+                            if (!m_DependencyNames.TryGetValue(name, out var referenced))
+                                m_DependencyNames[name] = referenced = ReferencedNames(File.ReadAllBytes(dependency.Dll)).ToList();
+                            pending.Push(referenced);
+                        }
                 var text = new StringBuilder();
                 foreach (var name in names)
                 {
