@@ -124,8 +124,9 @@ impl RuntimeState {
     /// asset roots (not a root itself: `Assets` and a package's folder are no assets).
     fn file_of(&self, asset_path: &str) -> Option<PathBuf> {
         self.asset_roots.iter().find_map(|(dir, root)| {
-            let rest = asset_path.strip_prefix(root.as_str())?.strip_prefix('/')?;
-            (!rest.is_empty()).then(|| dir.join(rest))
+            let head = asset_path.get(..root.len())?;
+            let rest = asset_path[root.len()..].strip_prefix('/')?;
+            (head.eq_ignore_ascii_case(root) && !rest.is_empty()).then(|| dir.join(rest))
         })
     }
 
@@ -133,89 +134,32 @@ impl RuntimeState {
     /// file or folder without a `.meta` gets one (`main` the main object's file id of a native
     /// asset an API created), one that is gone leaves the database, and one with a `.meta` is
     /// listed as its `.meta` says; a `.meta` whose GUID another asset has (a copied file) gets a
-    /// new one, as the Editor gives it. Returns what each path is now (an empty GUID: not an
-    /// asset).
-    fn import_paths(&self, paths: &[ImportPath]) -> Result<Vec<serde_json::Value>> {
+    /// new one, as the Editor gives it. Hidden names and what is inside a folder plug-in are no
+    /// assets. Each path's result says what it is now (an empty GUID: not an asset) or why it
+    /// was not imported; one path's failure does not stop the others.
+    fn import_paths(&self, paths: &[ImportPath]) -> Vec<serde_json::Value> {
         let mut found = Vec::with_capacity(paths.len());
-        let mut entries = Vec::with_capacity(paths.len());
+        let mut entries: Vec<(String, Option<unbound_project::assetdb::Asset>)> =
+            Vec::with_capacity(paths.len());
+        let mut taken: HashMap<Guid, String> = HashMap::new();
         let db = self.db();
         for request in paths {
-            let file = self
-                .file_of(&request.path)
-                .with_context(|| format!("{} is no asset of the project", request.path))?;
-            if !file.exists() {
-                entries.push((request.path.clone(), None));
-                found.push(json!({ "guid": "" }));
-                continue;
+            match self.import_path(request, &db, &taken) {
+                Ok(Some(asset)) => {
+                    found.push(json!({
+                        "guid": asset.guid.to_string(),
+                        "kind": if asset.is_folder { "folder" } else { asset_kind(&request.path) },
+                        "labels": asset.labels,
+                    }));
+                    taken.insert(asset.guid, request.path.to_ascii_lowercase());
+                    entries.push((request.path.clone(), Some(asset)));
+                }
+                Ok(None) => {
+                    found.push(json!({ "guid": "" }));
+                    entries.push((request.path.clone(), None));
+                }
+                Err(e) => found.push(json!({ "guid": "", "error": format!("{e:#}") })),
             }
-            let meta = unbound_assets::new_meta::meta_path(&file);
-            if !meta.exists() {
-                anyhow::ensure!(
-                    self.editable_roots
-                        .iter()
-                        .any(|root| file.starts_with(root)),
-                    "{} is in a read-only package: the Editor imports nothing there",
-                    request.path
-                );
-                anyhow::ensure!(
-                    self.new_meta_measured,
-                    "Unbound has not measured the .meta files this release's Editor writes: {} is left without one",
-                    request.path
-                );
-                let importer = match request.main {
-                    Some(main) => unbound_assets::new_meta::NewImporter::NativeFormat { main },
-                    None => unbound_assets::new_meta::importer_for(&file, file.is_dir())
-                        .with_context(|| {
-                            format!(
-                                "Unbound does not know the .meta file the Editor writes for {} yet",
-                                request.path
-                            )
-                        })?,
-                };
-                let guid = unbound_assets::new_meta::new_guid();
-                std::fs::write(
-                    &meta,
-                    unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta),
-                )?;
-            }
-            let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
-            let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
-            let taken = db.by_guid(guid).is_some_and(|other| {
-                !other.path.eq_ignore_ascii_case(&request.path) && other.file.exists()
-            }) || entries.iter().any(
-                |(path, asset): &(String, Option<unbound_project::assetdb::Asset>)| {
-                    asset.as_ref().is_some_and(|a| a.guid == guid)
-                        && !path.eq_ignore_ascii_case(&request.path)
-                },
-            );
-            if taken {
-                let fresh = unbound_assets::new_meta::new_guid();
-                let text = std::fs::read_to_string(&meta)?;
-                std::fs::write(
-                    &meta,
-                    text.replacen(&format!("guid: {guid}"), &format!("guid: {fresh}"), 1),
-                )?;
-                tracing::warn!(
-                    "{}: its .meta had the GUID of another asset; it gets a new one",
-                    request.path
-                );
-                guid = fresh;
-            }
-            found.push(json!({
-                "guid": guid.to_string(),
-                "kind": if file.is_dir() { "folder" } else { asset_kind(&request.path) },
-                "labels": labels,
-            }));
-            entries.push((
-                request.path.clone(),
-                Some(unbound_project::assetdb::Asset {
-                    guid,
-                    path: request.path.clone(),
-                    is_folder: file.is_dir(),
-                    file,
-                    labels,
-                }),
-            ));
         }
         let resources = entries
             .iter()
@@ -228,34 +172,134 @@ impl RuntimeState {
                 }
             }
         });
-        Ok(found)
+        found
+    }
+
+    /// One path of [`Self::import_paths`]: the asset it is now, None when nothing is there.
+    fn import_path(
+        &self,
+        request: &ImportPath,
+        db: &AssetDb,
+        taken: &HashMap<Guid, String>,
+    ) -> Result<Option<unbound_project::assetdb::Asset>> {
+        let file = self
+            .file_of(&request.path)
+            .with_context(|| format!("{} is no asset of the project", request.path))?;
+        let mut segments = request.path.split('/').skip(1).peekable();
+        while let Some(segment) = segments.next() {
+            anyhow::ensure!(
+                !unbound_project::assetdb::is_hidden(segment),
+                "{}: a hidden name is no asset",
+                request.path
+            );
+            anyhow::ensure!(
+                segments.peek().is_none()
+                    || !unbound_assets::new_meta::is_folder_plugin(Path::new(segment)),
+                "{}: what is inside a folder plug-in is no asset of its own",
+                request.path
+            );
+        }
+        if !file.exists() {
+            return Ok(None);
+        }
+        let meta = unbound_assets::new_meta::meta_path(&file);
+        if !meta.exists() {
+            anyhow::ensure!(
+                self.editable_roots
+                    .iter()
+                    .any(|root| file.starts_with(root)),
+                "{} is in a read-only package: the Editor imports nothing there",
+                request.path
+            );
+            anyhow::ensure!(
+                self.new_meta_measured,
+                "Unbound has not measured the .meta files this release's Editor writes: {} is left without one",
+                request.path
+            );
+            let importer = match request.main {
+                Some(main) => unbound_assets::new_meta::NewImporter::NativeFormat { main },
+                None => unbound_assets::new_meta::importer_for(&file, file.is_dir()).with_context(
+                    || {
+                        format!(
+                            "Unbound does not know the .meta file the Editor writes for {} yet",
+                            request.path
+                        )
+                    },
+                )?,
+            };
+            let guid = unbound_assets::new_meta::new_guid();
+            std::fs::write(
+                &meta,
+                unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta),
+            )?;
+        }
+        let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
+        let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
+        let path = request.path.to_ascii_lowercase();
+        let collides = db
+            .by_guid(guid)
+            .is_some_and(|other| other.path.to_ascii_lowercase() != path && other.file.exists())
+            || taken.get(&guid).is_some_and(|other| *other != path);
+        if collides {
+            let fresh = unbound_assets::new_meta::new_guid();
+            let text = std::fs::read_to_string(&meta)?;
+            let (line, rest) = text
+                .match_indices("guid: ")
+                .map(|(at, _)| at)
+                .find(|&at| at == 0 || text.as_bytes()[at - 1] == b'\n')
+                .map(|at| text.split_at(at))
+                .context("no guid line")?;
+            let after = rest.find(['\r', '\n']).unwrap_or(rest.len());
+            std::fs::write(&meta, format!("{line}guid: {fresh}{}", &rest[after..]))?;
+            tracing::warn!(
+                "{}: its .meta had the GUID of another asset; it gets a new one",
+                request.path
+            );
+            guid = fresh;
+        }
+        Ok(Some(unbound_project::assetdb::Asset {
+            guid,
+            path: request.path.clone(),
+            is_folder: file.is_dir(),
+            file,
+            labels,
+        }))
     }
 
     /// AssetDatabase.Refresh: every new file and folder of the project's own assets imported (a
-    /// `.meta` written), and the database scanned again.
-    fn refresh_assets(&self) -> Result<usize> {
-        let written = if self.new_meta_measured {
-            unbound_assets::new_meta::import_roots(
-                &self.editable_roots,
-                &self.new_meta,
-                unbound_project::assetdb::is_hidden,
-            )
+    /// `.meta` written) and listed. Returns what was imported.
+    fn refresh_assets(&self) -> Vec<serde_json::Value> {
+        if !self.new_meta_measured {
+            return Vec::new();
+        }
+        let imported = unbound_assets::new_meta::import_roots(
+            &self.editable_roots,
+            &self.new_meta,
+            unbound_project::assetdb::is_hidden,
+        );
+        let requests: Vec<ImportPath> = imported
             .written
-            .len()
-        } else {
-            0
-        };
-        let roots: Vec<_> = self
-            .asset_roots
             .iter()
-            .map(|(dir, path)| unbound_project::assetdb::Root {
-                dir,
-                virtual_path: path.clone(),
+            .filter_map(|meta| {
+                let file = meta.with_extension("");
+                self.asset_roots.iter().find_map(|(dir, root)| {
+                    let rest = file.strip_prefix(dir).ok()?;
+                    Some(ImportPath {
+                        path: format!("{root}/{}", rest.to_string_lossy()),
+                        main: None,
+                    })
+                })
             })
             .collect();
-        let scanned = AssetDb::scan(&roots);
-        self.update_db(true, |db| *db = scanned);
-        Ok(written)
+        let results = self.import_paths(&requests);
+        requests
+            .iter()
+            .zip(results)
+            .map(|(request, mut result)| {
+                result["path"] = json!(request.path);
+                result
+            })
+            .collect()
     }
 }
 
@@ -731,9 +775,20 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 paths: Vec<ImportPath>,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(json!({ "assets": s.import_paths(&r.paths)? }).to_string())
+            Ok(json!({ "assets": s.import_paths(&r.paths) }).to_string())
         }
-        "asset-refresh" => Ok(json!({ "written": s.refresh_assets()? }).to_string()),
+        "asset-refresh" => Ok(json!({ "assets": s.refresh_assets() }).to_string()),
+        "texture-platforms" => {
+            // The installation's platform modules a texture's settings list, with each entry at
+            // its defaults (what the Editor adds to a texture's .meta when it saves its settings).
+            let entries: Vec<_> = s
+                .new_meta
+                .platforms
+                .iter()
+                .map(|name| json!({ "name": name, "entry": unbound_assets::new_meta::texture_platform_entry(name) }))
+                .collect();
+            Ok(serde_json::Value::Array(entries).to_string())
+        }
         "asset-roots" => {
             // The asset database's roots, and whether the project holds each (where editor APIs write).
             let roots: Vec<_> = s

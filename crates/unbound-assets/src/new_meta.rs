@@ -137,6 +137,11 @@ impl MetaContext {
     }
 }
 
+/// The per-platform entry of a texture's settings at its defaults, for the platform `name`.
+pub fn texture_platform_entry(name: &str) -> String {
+    include_str!("new_meta/texture_platform.yaml").replace("{platform}", name)
+}
+
 /// A new GUID, as random as the Editor's.
 pub fn new_guid() -> Guid {
     let mut bytes = [0u8; 16];
@@ -173,11 +178,10 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
             "NativeFormatImporter:\n  externalObjects: {{}}\n  mainObjectFileID: {main}\n{TRAILER}"
         )),
         NewImporter::Texture => {
-            let entry = include_str!("new_meta/texture_platform.yaml");
             let platforms: String = ["DefaultTexturePlatform", "Standalone"]
                 .into_iter()
                 .chain(context.platforms.iter().map(String::as_str))
-                .map(|name| entry.replace("{platform}", name))
+                .map(texture_platform_entry)
                 .collect();
             out.push_str(
                 &include_str!("new_meta/texture_importer.yaml").replace("{platforms}", &platforms),

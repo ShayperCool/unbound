@@ -12,6 +12,8 @@ public class ProjectWritesEditTests
         // Once per run: a session that starts again (Unbound starts the test run again to compile
         // new defines) finds the values written.
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROJECT_WRITES_OUT")) || ProjectWritesProbe.Done()) yield break;
+        // Errors a step logs are recorded values, not this test's failure.
+        LogAssert.ignoreFailingMessages = true;
         ProjectWritesProbe.Steps("edit");
         // Written before anything is awaited: the define and package changes may reload the
         // domain once the Editor gets to them. run.py reads what is on disk after the run.

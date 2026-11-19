@@ -110,6 +110,9 @@ namespace Unbound.Runtime
 
         internal static List<YTextDocument> Parse(string text)
         {
+            // The Editor writes LF; a file saved with CRLF reads as the same YAML (and is written
+            // back with LF, as the Editor writes it).
+            text = text.Replace("\r\n", "\n");
             var docs = new List<YTextDocument>();
             var lines = new List<Line>();
             YTextDocument current = null;
@@ -196,6 +199,7 @@ namespace Unbound.Runtime
         /// <summary>A file that is one block map at its top level (a <c>.meta</c> file).</summary>
         internal static YText ParseTopLevel(string text)
         {
+            text = text.Replace("\r\n", "\n");
             var lines = new List<Line>();
             char quote = '\0';
             foreach (var raw in text.Split('\n'))

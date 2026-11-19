@@ -105,7 +105,8 @@ public static class ProjectWritesProbe
     /// and the Editor sorts documents by file id (IdsAscending records that order).</summary>
     static string MainDocumentFirst(string text)
     {
-        var parts = text.Split(new[] { "\n--- " }, StringSplitOptions.None);
+        bool ends = text.EndsWith("\n", StringComparison.Ordinal);
+        var parts = (ends ? text.Substring(0, text.Length - 1) : text).Split(new[] { "\n--- " }, StringSplitOptions.None);
         if (parts.Length < 3) return text;
         var documents = parts.Skip(1).ToList();
         var main = documents.FindIndex(d => d.StartsWith("!u!114 &11400000\n", StringComparison.Ordinal));
@@ -113,7 +114,7 @@ public static class ProjectWritesProbe
         var first = documents[main];
         documents.RemoveAt(main);
         documents.Insert(0, first);
-        return parts[0] + string.Concat(documents.Select(d => "\n--- " + d));
+        return parts[0] + string.Concat(documents.Select(d => "\n--- " + d)) + (ends ? "\n" : "");
     }
 
     static readonly Regex s_DocumentId = new Regex("(?m)^--- !u![0-9]+ &(-?[0-9]+)");
@@ -208,7 +209,7 @@ public static class ProjectWritesProbe
         Guard("00.open", () =>
         {
             foreach (var path in new[] { "Assets/Startup.meta", "Assets/Startup/Tex.png.meta", "Assets/Startup/Startup.cs.meta",
-                                         "Assets/Startup/Image.psd.meta", "Packages/packages-lock.json" })
+                                         "Assets/Startup/Image.psd.meta", "Packages/packages-lock.json", "Assets/Crlf/Tex.png.meta", "Assets/Crlf/Notes.txt.meta" })
                 Snap("00.open", path);
         });
         Guard("01.refresh", NewFilesAndRefresh);
@@ -217,6 +218,9 @@ public static class ProjectWritesProbe
         Guard("04.create", CreateAsset);
         Guard("05.copy", CopyMoveRename);
         Guard("06.delete", Delete);
+        Guard("06.folder", CopyFolder);
+        Guard("06.crlf", Crlf);
+        Guard("06.readonly", ReadOnlyPackage);
         Guard("07.batch", Batch);
         Guard("08.importer", ImporterChange);
         Guard("09.labels", Labels);
@@ -351,6 +355,57 @@ public static class ProjectWritesProbe
         Put("06.trash.returns", AssetDatabase.MoveAssetToTrash("Assets/New/Notes.txt"));
         Snap("06.trash", "Assets/New/Notes.txt");
         Snap("06.trash", "Assets/New/Notes.txt.meta");
+    }
+
+    static void CopyFolder()
+    {
+        // A folder with a hidden file (as Finder leaves one), a nested folder and an asset.
+        Write("Assets/Tree/.hidden", "hidden\n");
+        Write("Assets/Tree/Leaf/Note.txt", "leaf\n");
+        AssetDatabase.Refresh();
+        Put("06.folder.returns", AssetDatabase.CopyAsset("Assets/Tree", "Assets/Tree Copy"));
+        foreach (var path in new[] { "Assets/Tree Copy.meta", "Assets/Tree Copy/Leaf.meta", "Assets/Tree Copy/Leaf/Note.txt.meta", "Assets/Tree Copy/.hidden", "Assets/Tree Copy/.hidden.meta" })
+            Snap("06.folder", path);
+        Put("06.folder.distinct", AssetDatabase.AssetPathToGUID("Assets/Tree Copy/Leaf/Note.txt") != AssetDatabase.AssetPathToGUID("Assets/Tree/Leaf/Note.txt"));
+    }
+
+    static void Crlf()
+    {
+        // run.py stages Assets/Crlf with CRLF .meta files.
+        AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Crlf/Notes.txt"), new[] { "crlf" });
+        Snap("06.crlf.labels", "Assets/Crlf/Notes.txt.meta");
+        Put("06.crlf.labels.crlf", Read("Assets/Crlf/Notes.txt.meta")?.Contains("\r\n"));
+        var importer = (TextureImporter)AssetImporter.GetAtPath("Assets/Crlf/Tex.png");
+        Put("06.crlf.importer.readable", importer?.isReadable);
+        Put("06.crlf.importer.dirty", AssetDatabase.WriteImportSettingsIfDirty("Assets/Crlf/Tex.png"));
+        Snap("06.crlf.importer.unchanged", "Assets/Crlf/Tex.png.meta");
+        if (importer != null)
+        {
+            importer.isReadable = true;
+            importer.SaveAndReimport();
+        }
+        Snap("06.crlf.importer", "Assets/Crlf/Tex.png.meta");
+        Put("06.crlf.importer.crlf", Read("Assets/Crlf/Tex.png.meta")?.Contains("\r\n"));
+        Put("06.crlf.copy", AssetDatabase.CopyAsset("Assets/Crlf/Notes.txt", "Assets/Crlf/Notes Copy.txt"));
+        Snap("06.crlf.copy", "Assets/Crlf/Notes Copy.txt.meta");
+        Put("06.crlf.copy.crlf", Read("Assets/Crlf/Notes Copy.txt.meta")?.Contains("\r\n"));
+    }
+
+    static void ReadOnlyPackage()
+    {
+        // The test framework is a built-in package: read-only.
+        // (A file the Package Manager does not rewrite in its copy of the package.)
+        const string file = "Packages/com.unity.test-framework/LICENSE.md";
+        Put("06.readonly.exists", AssetDatabase.AssetPathToGUID(file).Length == 32);
+        Put("06.readonly.move", AssetDatabase.MoveAsset(file, "Assets/LICENSE.md"));
+        Put("06.readonly.validate", AssetDatabase.ValidateMoveAsset(file, "Assets/LICENSE.md"));
+        Put("06.readonly.copy", AssetDatabase.CopyAsset(file, "Packages/com.unity.test-framework/copy.md"));
+        var folder = AssetDatabase.CreateFolder("Packages/com.unity.test-framework", "New");
+        Put("06.readonly.folder", folder.Length == 32 ? "a GUID" : folder);
+        Put("06.readonly.delete", AssetDatabase.DeleteAsset(file));
+        Put("06.readonly.stillThere", AssetDatabase.AssetPathToGUID(file, AssetPathToGUIDOptions.OnlyExistingAssets).Length == 32);
+        Put("06.readonly.copyOut", AssetDatabase.CopyAsset(file, "Assets/LICENSE copy.md"));
+        Snap("06.readonly", "Assets/LICENSE copy.md.meta");
     }
 
     static void Batch()

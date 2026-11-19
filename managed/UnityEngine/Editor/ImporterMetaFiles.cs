@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using UnityEngine;
@@ -53,6 +54,16 @@ namespace Unbound.Runtime
     {
         internal static bool Write(AssetImporter importer)
         {
+            try { return WriteSettings(importer); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError($"Unbound: writing the .meta of {importer.assetPath}: {e.Message}");
+                return false;
+            }
+        }
+
+        static bool WriteSettings(AssetImporter importer)
+        {
             if (importer?.m_Settings == null || string.IsNullOrEmpty(importer.m_SettingsType)) return false;
             var path = importer.assetPath;
             if (string.IsNullOrEmpty(path) || !AssetDatabase.Editable(path)) return false;
@@ -71,7 +82,11 @@ namespace Unbound.Runtime
             SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
             var written = UnityYamlText.WriteTopLevel(root);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
-            if (written == text) return false;
+            if (written == text.Replace("\r\n", "\n")) return false;
+            // A texture's settings written again list every installed platform module (the
+            // Editor adds the missing ones at their defaults: tests/projects/projectwrites 06.crlf).
+            if (importer.m_SettingsType == "TextureImporter" && AddInstalledPlatforms(section))
+                written = UnityYamlText.WriteTopLevel(root);
             File.WriteAllText(meta, written);
             return true;
         }
@@ -96,10 +111,36 @@ namespace Unbound.Runtime
             AssetPostprocessing.ForgetPreprocessed(path);
         }
 
+        sealed class Platform
+        {
+            public string Name { get; set; }
+            public string Entry { get; set; }
+        }
+
+        static Platform[] s_Platforms;
+
+        static bool AddInstalledPlatforms(YText section)
+        {
+            var list = section.Get("platformSettings");
+            if (list == null || list.Kind != YKind.Seq) return false;
+            s_Platforms ??= System.Text.Json.JsonSerializer.Deserialize<Platform[]>(Native.Call("texture-platforms", "{}"),
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) ?? Array.Empty<Platform>();
+            bool added = false;
+            foreach (var platform in s_Platforms)
+            {
+                if (list.Items.Any(item => item.Get("buildTarget")?.Text == platform.Name)) continue;
+                var entry = UnityYamlText.ParseTopLevel("platformSettings:\n" + platform.Entry).Get("platformSettings");
+                if (entry?.Kind != YKind.Seq || entry.Items.Count != 1) continue;
+                list.Items.Add(entry.Items[0]);
+                added = true;
+            }
+            return added;
+        }
+
         /// <summary>Each scalar of <paramref name="settings"/> (the importer's tree) into the same
         /// place of <paramref name="text"/> where it differs; entries the file does not have stay
         /// out (their place in the Editor's layout is not known).</summary>
-        static void Patch(YText text, YNode settings, string at, List<string> unwritten)
+        internal static void Patch(YText text, YNode settings, string at, List<string> unwritten)
         {
             if (text == null || settings == null) return;
             switch (settings.Kind)

@@ -331,6 +331,21 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A map's value set, a new key placed in ordinal order of the keys (as the build
+        /// targets of <c>scriptingDefineSymbols</c>: Android, Standalone, iPhone).</summary>
+        internal static void SetInOrdinalOrder(YText map, string key, YText value)
+        {
+            if (map.Get(key) != null)
+            {
+                map.Set(key, value);
+                return;
+            }
+            int at = 0;
+            while (at < map.Keys.Count && string.CompareOrdinal(map.Keys[at], key) < 0) at++;
+            map.Keys.Insert(at, key);
+            map.Values.Insert(at, value);
+        }
+
         /// <summary>A scalar of a settings file's object ("" when it has none).</summary>
         internal static string Value(string name, string key) => AtPath("ProjectSettings/" + name + ".asset")?.Body?.Get(key)?.Text ?? "";
 
@@ -338,7 +353,14 @@ namespace Unbound.Runtime
         /// (tests/projects/projectwrites 14.unsaved).</summary>
         internal static void SaveOnQuit()
         {
-            if (!EditorApplication.isPlaying) Save();
+            try
+            {
+                if (!EditorApplication.isPlaying) Save();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         /// <summary>AssetDatabase.SaveAssets: edited settings files written as the Editor writes them
@@ -355,7 +377,7 @@ namespace Unbound.Runtime
                     f.Dirty = false;
                     if (f.Object != null) EditorUtility.ClearDirty(f.Object);
                 }
-                catch (IOException e)
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
                 {
                     Debug.LogError($"Unbound: saving {f.AssetPath}: {e.Message}");
                 }

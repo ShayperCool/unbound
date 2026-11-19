@@ -101,6 +101,28 @@ COPIED = {
     'Assets/Startup/Sand.terrainlayer': 'terrain/Assets/Terrain/Sand.terrainlayer',
     'Assets/Startup/Room.giparams': 'realtimegi/Assets/Settings/RoomSystemsSystemTag1.giparams',
 }
+# Files whose .meta files use CRLF line endings (as some version control setups leave them).
+CRLF = {
+    'Assets/Crlf.meta': b'fileFormatVersion: 2\r\nguid: 6a1f3e0c9b2d4e5f8a7b6c5d4e3f2a10\r\nfolderAsset: yes\r\nDefaultImporter:\r\n'
+                        b'  externalObjects: {}\r\n  userData: \r\n  assetBundleName: \r\n  assetBundleVariant: \r\n',
+    'Assets/Crlf/Notes.txt': b'notes\n',
+    'Assets/Crlf/Notes.txt.meta': b'fileFormatVersion: 2\r\nguid: 7b2f3e0c9b2d4e5f8a7b6c5d4e3f2a10\r\nTextScriptImporter:\r\n'
+                                  b'  externalObjects: {}\r\n  userData: \r\n  assetBundleName: \r\n  assetBundleVariant: \r\n',
+    'Assets/Crlf/Tex.png': PNG,
+}
+
+
+def crlf_texture_meta():
+    """A texture .meta with the importer's defaults (Default and Standalone platform entries), CRLF."""
+    templates = PROBE.parents[2]/'crates/unbound-assets/src/new_meta'
+    entry = (templates/'texture_platform.yaml').read_text()
+    body = (templates/'texture_importer.yaml').read_text().replace(
+        '{platforms}', ''.join(entry.replace('{platform}', name) for name in ('DefaultTexturePlatform', 'Standalone')))
+    text = 'fileFormatVersion: 2\nguid: 8c3f3e0c9b2d4e5f8a7b6c5d4e3f2a10\n' + body
+    return text.replace('\n', '\r\n').encode()
+
+
+CRLF['Assets/Crlf/Tex.png.meta'] = crlf_texture_meta()
 PARTS = ('Assets', 'Packages', 'ProjectSettings')
 GUID = re.compile(rb'\b[0-9a-f]{32}\b')
 TIME = re.compile(rb'timeCreated: [0-9]+')
@@ -117,7 +139,7 @@ def stage(out):
     """The probe's project for one run, as both hosts get it; returns (project, initial files)."""
     project = value_probe.assemble(PROBE, out)
     (project/'Packages/packages-lock.json').unlink(missing_ok=True)
-    startup = {**STARTUP, **{path: (PROJECTS/source).read_bytes() for path, source in COPIED.items()}}
+    startup = {**STARTUP, **{path: (PROJECTS/source).read_bytes() for path, source in COPIED.items()}, **CRLF}
     for path, data in startup.items():
         (project/path).parent.mkdir(parents=True, exist_ok=True)
         (project/path).write_bytes(data)
@@ -141,13 +163,14 @@ def guids(project):
 def main_document_first(data):
     """A file's documents with the main object's first: the others' file ids are random and the
     Editor sorts documents by file id (`exit.<path>.idsAscending` records that order)."""
-    parts = data.split(b'\n--- ')
+    ends = data.endswith(b'\n')
+    parts = (data[:-1] if ends else data).split(b'\n--- ')
     if len(parts) < 3:
         return data
     documents = parts[1:]
     main = next((i for i, d in enumerate(documents) if d.startswith(b'!u!114 &11400000\n')), 0)
     documents.insert(0, documents.pop(main))
-    return parts[0] + b''.join(b'\n--- ' + d for d in documents)
+    return parts[0] + b''.join(b'\n--- ' + d for d in documents) + (b'\n' if ends else b'')
 
 
 DOCUMENT_ID = re.compile(rb'(?m)^--- !u![0-9]+ &(-?[0-9]+)')

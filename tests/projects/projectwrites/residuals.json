@@ -25,5 +25,13 @@
   "The Editor gives a file of an extension no importer claims the DefaultImporter; Unbound cannot tell when it opens the project which extensions packages' ScriptedImporters claim (the scripts are not compiled yet), so it reports the file and writes no .meta": [
     "edit.exit.Assets/Startup/Unknown.xyz.meta",
     "play.exit.Assets/Startup/Unknown.xyz.meta"
+  ],
+  "CopyAsset and CreateFolder into a read-only package: the Editor writes into its own per-project copy of the package (with a warning) and answers true and a GUID; Unbound's copy of a built-in or registry package is the installation's or the shared package store's, used by other projects too, so it refuses (false, \"\", an error)": [
+    "edit.06.readonly.copy",
+    "edit.06.readonly.folder",
+    "edit.06.readonly.logs",
+    "play.06.readonly.copy",
+    "play.06.readonly.folder",
+    "play.06.readonly.logs"
   ]
 }
