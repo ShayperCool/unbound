@@ -246,7 +246,7 @@ namespace UnityEngine
 
         public static Material GetDefaultCanvasMaterial() => CanvasSystem.DefaultMaterial;
 
-        public static Material GetETC1SupportedCanvasMaterial() => CanvasSystem.DefaultMaterial;
+        public static Material GetETC1SupportedCanvasMaterial() => CanvasSystem.Etc1Material;
 
         [Obsolete("Shared default material now used for text and general UI elements, call Canvas.GetDefaultCanvasMaterial()", false)]
         public static Material GetDefaultCanvasTextMaterial() => CanvasSystem.DefaultMaterial;

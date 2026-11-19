@@ -28,6 +28,25 @@ namespace Unbound.Runtime
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.PlayerUpdateCanvases), UpdateCanvases);
         }
 
+        static Material s_Etc1Material;
+
+        /// <summary>Canvas.GetETC1SupportedCanvasMaterial: a material of its own, "ETC1 Supported UI
+        /// Material" with UI/DefaultETC1, the same object on every call (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/uialphaborders etc1Material*).</summary>
+        internal static Material Etc1Material
+        {
+            get
+            {
+                if (s_Etc1Material == null)
+                {
+                    using (ObjectRegistry.AsAssets())
+                        s_Etc1Material = new Material(Shader.Find("UI/DefaultETC1")) { name = "ETC1 Supported UI Material" };
+                    s_Etc1Material.IsPersistentAsset = true;
+                }
+                return s_Etc1Material;
+            }
+        }
+
         internal static Material DefaultMaterial
         {
             get
@@ -275,7 +294,7 @@ namespace Unbound.Runtime
             s_HasDrawnBounds = false;
             // Nothing the walk does moves the root: its matrices once for the whole canvas.
             var placement = new RootPlacement(root.transform);
-            m_Run = default;
+            m_Batches.Clear();
             Walk(canvas.transform, canvas, placement, camera, into, layer, order, isCanvasRoot: true);
             if (camera == null || first == into.Count) return;
             // Among the camera's draws a canvas sorts as one unit, at the centre of the bounds of
@@ -368,9 +387,9 @@ namespace Unbound.Runtime
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
                 if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, t.localToWorldMatrix);
-                // Each material slot of each renderer is a draw of its own. A renderer drawn right
-                // after another of the same canvas with the same single material and texture is
-                // batched with it and takes its alpha texture (see AlphaRun).
+                // Each material slot of each renderer is a draw of its own. A renderer with the same
+                // single material and texture as an earlier one of the canvas takes that one's alpha
+                // texture (see AlphaBatches).
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
                     // A destroyed material, which a renderer keeps until its Graphic gives it
@@ -381,7 +400,7 @@ namespace Unbound.Runtime
                     var held = i < cr.m_Materials.Length ? cr.m_Materials[i] : null;
                     if (!ReferenceEquals(held, null) && held == null) continue;
                     var material = held ?? DefaultMaterial;
-                    var alphaTexture = m_Run.AlphaFor(canvas, material, cr, cr.m_MaterialCount);
+                    var alphaTexture = m_Batches.AlphaFor(canvas, material, cr, cr.m_MaterialCount);
                     into.Add(new FrameBuilder.DrawItem
                     {
                         Mesh = mesh,
@@ -414,7 +433,6 @@ namespace Unbound.Runtime
                 ulong mesh = cr.PrepareCanvasMesh(color, QualitySettings.activeColorSpace == ColorSpace.Linear && !alwaysGamma,
                     root.FromWorld * t.localToWorldMatrix).Sync();
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
-                m_Run = default;
                 for (int i = 0; i < cr.m_PopMaterialCount && i < cr.m_PopMaterials.Length; i++)
                 {
                     var material = cr.m_PopMaterials[i];
@@ -452,44 +470,61 @@ namespace Unbound.Runtime
             return properties;
         }
 
-        /// <summary>The draw run the canvas walk is in. Renderers drawn one after another under one
-        /// canvas with the same single material, texture and rect clipping are one batch, and the
-        /// batch draws with its first renderer's alpha texture, whatever the others set (matches
-        /// the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders canvas `shared*`: adjacent
-        /// unclipped sibling renderers). Batches across other draws, which Unity's canvas may also
-        /// form, and clipped batches are not measured: renderers with another clip start a run.</summary>
-        struct AlphaRun
+        /// <summary>The alpha textures a canvas walk has given batches. Renderers under one canvas
+        /// with the same single material, texture and rect clipping draw with the alpha texture of
+        /// the first of them, whatever the others set and whatever is drawn between them, overlapping
+        /// draws included (matches the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders canvas
+        /// `shared*` and batches `apart.*`, `over.*`, `mask.*`). Renderers with another clip rect or
+        /// softness keep their own (unmeasured).</summary>
+        sealed class AlphaBatches
         {
-            Canvas m_Canvas;
-            Material m_Material;
-            Texture m_Texture, m_Alpha;
-            bool m_Clipped;
-            Rect m_ClipRect;
-            Vector2 m_Softness;
-
-            internal Texture AlphaFor(Canvas canvas, Material material, CanvasRenderer cr, int materials)
+            readonly struct Key : IEquatable<Key>
             {
-                if (materials == 1 && m_Material != null && ReferenceEquals(canvas, m_Canvas)
-                    && ReferenceEquals(material, m_Material) && ReferenceEquals(cr.m_Texture, m_Texture)
-                    && cr.m_HasRectClipping == m_Clipped
-                    && (!m_Clipped || (cr.m_ClipRect == m_ClipRect && cr.m_ClippingSoftness == m_Softness)))
-                    return m_Alpha;
-                if (materials == 1)
+                readonly Canvas m_Canvas;
+                readonly Material m_Material;
+                readonly Texture m_Texture;
+                readonly bool m_Clipped;
+                readonly Rect m_ClipRect;
+                readonly Vector2 m_Softness;
+
+                internal Key(Canvas canvas, Material material, CanvasRenderer cr)
                 {
                     m_Canvas = canvas;
                     m_Material = material;
                     m_Texture = cr.m_Texture;
-                    m_Alpha = cr.m_AlphaTexture;
                     m_Clipped = cr.m_HasRectClipping;
-                    m_ClipRect = cr.m_ClipRect;
-                    m_Softness = cr.m_ClippingSoftness;
+                    m_ClipRect = m_Clipped ? cr.m_ClipRect : default;
+                    m_Softness = m_Clipped ? cr.m_ClippingSoftness : default;
                 }
-                else this = default;
+
+                public bool Equals(Key other) => ReferenceEquals(m_Canvas, other.m_Canvas) && ReferenceEquals(m_Material, other.m_Material)
+                    && ReferenceEquals(m_Texture, other.m_Texture) && m_Clipped == other.m_Clipped
+                    && m_ClipRect == other.m_ClipRect && m_Softness == other.m_Softness;
+
+                public override bool Equals(object obj) => obj is Key other && Equals(other);
+
+                public override int GetHashCode() => HashCode.Combine(
+                    System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(m_Canvas),
+                    System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(m_Material),
+                    m_Texture is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(m_Texture),
+                    m_Clipped, m_ClipRect, m_Softness);
+            }
+
+            readonly Dictionary<Key, Texture> m_First = new Dictionary<Key, Texture>();
+
+            internal void Clear() => m_First.Clear();
+
+            internal Texture AlphaFor(Canvas canvas, Material material, CanvasRenderer cr, int materials)
+            {
+                if (materials != 1 || material == null) return cr.m_AlphaTexture;
+                var key = new Key(canvas, material, cr);
+                if (m_First.TryGetValue(key, out var first)) return first;
+                m_First.Add(key, cr.m_AlphaTexture);
                 return cr.m_AlphaTexture;
             }
         }
 
-        AlphaRun m_Run;
+        readonly AlphaBatches m_Batches = new AlphaBatches();
 
         /// <summary>Whether every vertex of a mesh is fully transparent (what
         /// <c>cullTransparentMesh</c> culls: a graphic's colour is in its vertices).</summary>

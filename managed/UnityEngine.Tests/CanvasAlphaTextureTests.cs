@@ -243,5 +243,42 @@ namespace UnityEngine.Tests
             Assert.Equal(handle, split.MainTexture);
             Assert.DoesNotContain(s_MainTex, split.Properties.Keys);
         }
+
+        /// <summary>A draw of another material between two renderers of one material and texture
+        /// does not end their batch: the second still takes the first's alpha texture (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/uialphaborders batches apart.* and over.*).</summary>
+        [Fact]
+        public void AnotherDrawBetweenKeepsTheFirstAlphaTexture()
+        {
+            var main = MakeTexture("main");
+            var a = MakeTexture("alpha a");
+            var other = MakeTexture("alpha other");
+            Renderer("first", main).SetAlphaTexture(a);
+            var between = Renderer("between", main);
+            between.SetMaterial(Own(new Material(m_Shader)), 0);
+            between.SetAlphaTexture(other);
+            Renderer("third", main).SetAlphaTexture(MakeTexture("alpha b"));
+            var draws = Draws();
+            Assert.Equal(3, draws.Count);
+            Assert.Same(a, AlphaOf(draws[0]));
+            Assert.Same(other, AlphaOf(draws[1]));
+            Assert.Same(a, AlphaOf(draws[2]));
+        }
+
+        /// <summary>Canvas.GetETC1SupportedCanvasMaterial (tests/projects/uialphaborders etc1Material*).</summary>
+        [Fact]
+        public void TheEtc1CanvasMaterialIsItsOwn()
+        {
+            // The test domain has no built-in shaders: one under the built-in name stands in.
+            if (Shader.Find("UI/DefaultETC1") == null)
+                Shader.Register(ShaderUtil.CreateShaderAsset("Shader \"UI/DefaultETC1\" { SubShader { Pass { } } }"));
+            if (Shader.Find("UI/Default") == null)
+                Shader.Register(ShaderUtil.CreateShaderAsset("Shader \"UI/Default\" { SubShader { Pass { } } }"));
+            var etc1 = Canvas.GetETC1SupportedCanvasMaterial();
+            Assert.Equal("ETC1 Supported UI Material", etc1.name);
+            Assert.Equal("UI/DefaultETC1", etc1.shader.name);
+            Assert.Same(etc1, Canvas.GetETC1SupportedCanvasMaterial());
+            Assert.NotSame(Canvas.GetDefaultCanvasMaterial(), etc1);
+        }
     }
 }
