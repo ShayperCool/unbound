@@ -37,6 +37,17 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Orders the modifications by the file id of their target, keeping the order of
+        /// those of one target, as the Editor's PrefabInstance documents have them (every capture of
+        /// tests/projects/scenesave; a fresh instance's order in memory is unmeasured).</summary>
+        internal void OrderByTarget()
+        {
+            var ordered = new List<(ObjectRef, string, string, ObjectRef)>(Stored.Count);
+            ordered.AddRange(System.Linq.Enumerable.OrderBy(Stored, m => m.Target.FileId));
+            Stored.Clear();
+            Stored.AddRange(ordered);
+        }
+
         internal bool Modifies(string guid, long fileId, string path)
         {
             foreach (var stored in Stored)

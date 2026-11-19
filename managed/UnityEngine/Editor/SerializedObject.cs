@@ -106,13 +106,10 @@ namespace UnityEditor
         bool Apply(bool recordUndo = false)
         {
             if (!m_Modified) return false;
-            if (recordUndo && Undo.postprocessModifications != null)
-            {
-                // A handler's exception is logged; the apply goes on (the Editor's handlers run from
-                // its native apply).
-                try { Undo.InvokePostprocessModifications(Modifications()); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            // The recorded changes reach Undo.postprocessModifications when Undo's records are
+            // flushed, after the values are applied (measured: tests/projects/scenesave postprocess,
+            // filter.*, throw.*).
+            if (recordUndo && Undo.postprocessModifications != null) Undo.QueueModifications(Modifications());
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 var target = m_Targets[i];

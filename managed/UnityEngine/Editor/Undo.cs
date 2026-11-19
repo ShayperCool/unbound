@@ -75,12 +75,25 @@ namespace UnityEditor
         /// tests/projects/scenesave second.undo).</summary>
         static readonly List<StateOperation> s_Unflushed = new List<StateOperation>();
 
-        /// <summary>Marks the objects recorded since the last flush dirty when they changed.</summary>
+        /// <summary>Marks the objects recorded since the last flush dirty when they changed, and
+        /// passes the property changes recorded since to Undo.postprocessModifications (a handler's
+        /// exception is logged, the flush goes on; what the handlers return changes no value:
+        /// measured, tests/projects/scenesave filter.*, throw.*).</summary>
         internal static void FlushDirtiness()
         {
             foreach (var state in s_Unflushed) state.DirtyIfChanged();
             s_Unflushed.Clear();
+            if (s_Recorded.Count == 0) return;
+            var recorded = s_Recorded.ToArray();
+            s_Recorded.Clear();
+            try { InvokePostprocessModifications(recorded); }
+            catch (Exception e) { Debug.LogException(e); }
         }
+
+        static readonly List<UndoPropertyModification> s_Recorded = new List<UndoPropertyModification>();
+
+        /// <summary>Property changes a recorded edit made, for the next flush.</summary>
+        internal static void QueueModifications(UndoPropertyModification[] modifications) => s_Recorded.AddRange(modifications);
 
         public static int GetCurrentGroup() => s_Current;
 

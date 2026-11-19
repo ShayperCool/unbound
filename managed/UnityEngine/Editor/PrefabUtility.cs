@@ -248,13 +248,14 @@ namespace UnityEditor
                 foreach (var (target, path) in DefaultOverrides(go))
                     if (AssetDatabaseRuntime.TryGetLocation(target, out var targetGuid, out var targetId))
                         instance.Stored.Add((new ObjectRef(targetId, targetGuid, 3), path, DefaultOverrideValue(target, path), default));
+                instance.OrderByTarget();
             }
             var clone = Instantiation.CloneLinked(go, parent, scene, Link);
             return clone;
         }
 
-        /// <summary>The overrides an instance always has: its root's local pose, then the root's
-        /// name (the order of the Editor's PrefabInstance documents, tests/projects/scenesave).</summary>
+        /// <summary>The overrides an instance always has: its root's local pose and name (stored in
+        /// target order, <see cref="PrefabInstanceData.OrderByTarget"/>).</summary>
         internal static IEnumerable<(Object Target, string Path)> DefaultOverrides(GameObject root)
         {
             var t = root.transform;

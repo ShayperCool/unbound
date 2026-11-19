@@ -96,12 +96,13 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void PostprocessHandlersChainAndAThrowingOneDoesNotStopTheApply()
+        public void PostprocessHandlersRunAtTheFlushChainedAndAThrowingOneIsLogged()
         {
             var go = new GameObject("chained");
             var previous = Debug.unityLogger.logHandler;
             var messages = new Messages();
             var order = new List<string>();
+            Undo.FlushUndoRecordObjects();
             Undo.PostprocessModifications first = m => { order.Add("first " + m.Length); return Array.Empty<UndoPropertyModification>(); };
             Undo.PostprocessModifications second = m => { order.Add("second " + m.Length); throw new InvalidOperationException("handler failed"); };
             Undo.postprocessModifications += first;
@@ -112,7 +113,10 @@ namespace UnityEngine.Tests
                 var serialized = new SerializedObject(go.transform);
                 serialized.FindProperty("m_LocalPosition.z").floatValue = 4f;
                 Assert.True(serialized.ApplyModifiedProperties());
-                // The second handler got what the first returned; its exception is logged.
+                // Applied at once; the handlers run when Undo's records are flushed.
+                Assert.Equal(4f, go.transform.localPosition.z);
+                Assert.Empty(order);
+                Undo.FlushUndoRecordObjects();
                 Assert.Equal(new[] { "first 1", "second 0" }, order);
                 Assert.Contains("handler failed", messages.Values);
                 Assert.Equal(4f, go.transform.localPosition.z);
@@ -127,7 +131,21 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AnInstancesDefaultOverridesComeInTheEditorsOrder()
+        public void ModificationsAreOrderedByTargetKeepingEachTargetsOrder()
+        {
+            var data = new PrefabInstanceData { SourceGuid = "g" };
+            data.Stored.Add((new ObjectRef(30, "g", 3), "m_Name", "x", default));
+            data.Stored.Add((new ObjectRef(10, "g", 3), "m_LocalPosition.x", "0", default));
+            data.Stored.Add((new ObjectRef(10, "g", 3), "m_LocalRotation.w", "1", default));
+            data.Stored.Add((new ObjectRef(20, "g", 3), "count", "5", default));
+            data.Stored.Add((new ObjectRef(10, "g", 3), "m_LocalEulerAnglesHint.x", "0", default));
+            data.OrderByTarget();
+            Assert.Equal(new[] { "m_LocalPosition.x", "m_LocalRotation.w", "m_LocalEulerAnglesHint.x", "count", "m_Name" },
+                data.Stored.ConvertAll(m => m.Path));
+        }
+
+        [Fact]
+        public void AnInstancesDefaultOverridesHaveTheRootsPoseAndName()
         {
             var root = new GameObject("Root");
             root.transform.localPosition = new Vector3(1f, 0.5f, -2f);
@@ -168,18 +186,21 @@ namespace UnityEngine.Tests
                 foreach (var m in modifications) seen.Add($"{m.currentValue.target.name}|{m.currentValue.propertyPath}|{m.currentValue.value}|{m.previousValue.value}");
                 return modifications;
             };
+            Undo.FlushUndoRecordObjects();
             Undo.postprocessModifications += handler;
             try
             {
                 var serialized = new SerializedObject(go.transform);
                 serialized.FindProperty("m_LocalPosition.x").floatValue = 9f;
                 Assert.True(serialized.ApplyModifiedProperties());
+                Undo.FlushUndoRecordObjects();
                 Assert.Equal(new[] { "moved|m_LocalPosition.x|9|0" }, seen);
                 Assert.Equal(9f, go.transform.localPosition.x);
                 // Without Undo nothing is recorded.
                 seen.Clear();
                 serialized.FindProperty("m_LocalPosition.y").floatValue = 2f;
                 Assert.True(serialized.ApplyModifiedPropertiesWithoutUndo());
+                Undo.FlushUndoRecordObjects();
                 Assert.Empty(seen);
             }
             finally
