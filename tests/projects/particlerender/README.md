@@ -24,7 +24,7 @@ Systems built in code; each record is one JSON line `{"key", "value": [numbers]}
   as `cull/*` with the camera at their place (frames 5-14 and from 30); the active vertex streams
   after the obsolete EnableVertexStreams and DisableVertexStreams; supportsMeshInstancing for the
   legacy particle, particle Standard Surface and Unlit, Standard and no material, in Mesh and
-  Billboard mode; a free Rigidbody (mass 1, no gravity) hit by four particles (lifetime loss 1)
+  Billboard mode; a free Rigidbody (mass 1, no gravity or angular damping) hit by four particles (lifetime loss 1)
   with a collider force of 2 and each multiplier, head-on, at 60° and off its centre.
 - `sheet/*`: Texture Sheet Animation in random modes (frame over time two constants and two curves,
   random start frame, random row), read from the baked quads' texture coordinates.

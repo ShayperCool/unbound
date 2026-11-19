@@ -13,8 +13,8 @@ using UnityEngine;
 /// DisableVertexStreams, from the default streams and from custom ones.</item>
 /// <item><c>instancing/*</c>: supportsMeshInstancing for render modes and materials.</item>
 /// <item><c>force/*</c>: a free Rigidbody hit by particles with a collider force and each
-/// multiplier, head-on, at a slant and off its centre: its velocity, angular velocity and position
-/// over frames.</item>
+/// multiplier, head-on, at a slant and off its centre: its velocity and angular velocity over
+/// frames.</item>
 /// </list>
 /// </summary>
 public partial class ParticleRenderProbe
@@ -199,6 +199,7 @@ public partial class ParticleRenderProbe
             var body = box.AddComponent<Rigidbody>();
             body.useGravity = false;
             body.mass = 1f;
+            body.angularDamping = 0f;
             var ps = Make("force/" + name, s =>
             {
                 var m = s.main; m.startSpeed = 6f; m.startLifetime = 2f; m.startSize = 0.4f; m.loop = false; m.duration = 1f;
@@ -223,8 +224,10 @@ public partial class ParticleRenderProbe
             yield return null;
             foreach (var (key, body, ps) in bodies)
             {
-                var v = body.linearVelocity; var w = body.angularVelocity; var p = body.position;
-                Record(key + "/" + frame, new List<float> { ps.particleCount, v.x, v.y, v.z, w.x, w.y, w.z, p.x, p.z });
+                // Not the body's position: how many physics steps ran since a hit changes between
+                // runs (the body has no damping, so its velocities do not).
+                var v = body.linearVelocity; var w = body.angularVelocity;
+                Record(key + "/" + frame, new List<float> { ps.particleCount, v.x, v.y, v.z, w.x, w.y, w.z });
             }
         }
         foreach (var (_, body, ps) in bodies) { Done(ps); DestroyImmediate(body.gameObject); }
