@@ -166,7 +166,8 @@ namespace UnityEditor
 
         /// <summary>A visible object of an asset file other than its main one; objects hidden in
         /// the hierarchy (a controller's state machines, states, transitions, behaviours) are not
-        /// sub-assets (Unity 6000.0.71f1, tests/projects/animatorapi).</summary>
+        /// sub-assets (Unity 6000.0.71f1, tests/projects/animatorapi; measured for a controller's
+        /// objects, applied to every asset file's hidden objects).</summary>
         public static bool IsSubAsset(Object obj) => obj != null && obj.IsPersistentAsset && !IsMainAsset(obj) && (obj.hideFlags & HideFlags.HideInHierarchy) == 0;
 
         public static bool IsNativeAsset(Object obj)

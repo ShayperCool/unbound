@@ -484,6 +484,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             };
             let main = if kind == "yaml" {
                 unbound_assets::meta::main_object_file_id(&asset.file)
+                    .or_else(|| {
+                        std::fs::read_to_string(&asset.file)
+                            .ok()
+                            .and_then(|text| unbound_assets::meta::conventional_main_file_id(&text))
+                    })
                     .or_else(|| first_file_id(&asset.file))
                     .unwrap_or(0)
             } else {

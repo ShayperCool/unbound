@@ -90,7 +90,8 @@ pub fn scripted_importer_of(file: &std::path::Path) -> Option<(String, i64)> {
 /// The main object's file id a native-format asset's `.meta` names (`NativeFormatImporter`'s
 /// `mainObjectFileID`): Unity's main object of a `.controller`, `.asset`, `.mat`, ... whatever
 /// the order of the file's documents (a controller's sub-objects have random, often smaller,
-/// file ids); `None` without a readable `.meta` or for other importers.
+/// file ids); `None` without a readable `.meta`, for other importers, and for the unset ids 0
+/// and -1 that older `.meta` files hold.
 pub fn main_object_file_id(file: &std::path::Path) -> Option<i64> {
     let mut path = file.as_os_str().to_owned();
     path.push(".meta");
@@ -105,6 +106,21 @@ fn main_object_file_id_in(meta: &str) -> Option<i64> {
         .take_while(|l| l.starts_with(' '))
         .find_map(|l| l.strip_prefix("  mainObjectFileID: "))
         .and_then(|v| v.trim().parse().ok())
+        .filter(|id: &i64| *id != 0 && *id != -1)
+}
+
+/// The file id of the first document whose id is its class's main-object id (class id times
+/// 100000: 9100000 for a controller, 11400000 for a script asset, 2100000 for a material), the
+/// main object of a native-format file whose `.meta` names none.
+pub fn conventional_main_file_id(text: &str) -> Option<i64> {
+    text.lines()
+        .filter_map(|l| l.strip_prefix("--- !u!"))
+        .find_map(|header| {
+            let mut parts = header.split_whitespace();
+            let class: i64 = parts.next()?.parse().ok()?;
+            let id: i64 = parts.next()?.strip_prefix('&')?.parse().ok()?;
+            (id == class * 100000).then_some(id)
+        })
 }
 
 /// The importer section of a parsed `.meta` (`TextureImporter`, ...), or [`Value::Null`].
@@ -334,6 +350,20 @@ mod tests {
         assert_eq!(super::main_object_file_id_in(other), None);
         let missing = "fileFormatVersion: 2\nNativeFormatImporter:\n  externalObjects: {}\n";
         assert_eq!(super::main_object_file_id_in(missing), None);
+        let unset = "fileFormatVersion: 2\nNativeFormatImporter:\n  mainObjectFileID: 0\n";
+        assert_eq!(super::main_object_file_id_in(unset), None);
+        let unset = "fileFormatVersion: 2\nNativeFormatImporter:\n  mainObjectFileID: -1\n";
+        assert_eq!(super::main_object_file_id_in(unset), None);
+    }
+
+    #[test]
+    fn a_controller_without_a_named_main_object_has_its_conventional_one() {
+        let text = "%YAML 1.1\n--- !u!1101 &-6770969529484014324\nAnimatorStateTransition:\n--- !u!1102 &-8021527611943241081\nAnimatorState:\n--- !u!91 &9100000\nAnimatorController:\n";
+        assert_eq!(super::conventional_main_file_id(text), Some(9100000));
+        assert_eq!(
+            super::conventional_main_file_id("--- !u!1102 &5\nAnimatorState:\n"),
+            None
+        );
     }
 
     use super::*;
