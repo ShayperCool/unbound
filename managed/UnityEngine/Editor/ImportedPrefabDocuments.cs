@@ -16,12 +16,16 @@ namespace Unbound.Runtime
     /// hierarchy and each of its components is a document with its file id in the import; the
     /// import's other objects (meshes, materials, wind assets) are referenced by the asset's GUID and
     /// load from the import. A component class whose fields Unbound cannot write fails the asset's
-    /// instances loudly.
+    /// instances loudly. The native side also asks here for what a model's or prefab's
+    /// postprocessors changed (<see cref="UnityEditor.HierarchyPostprocessing"/>).
     /// </summary>
     internal static unsafe class ImportedPrefabDocuments
     {
+        const string PostprocessKey = "postprocess:";
+
         /// <summary>The native side's call (<c>imported_prefabs.rs</c>): the documents of the asset
-        /// whose GUID it passes, else an error message, into its sink.</summary>
+        /// whose GUID it passes (or what the postprocessors of a <c>postprocess:</c> GUID changed),
+        /// else an error message, into its sink.</summary>
         [UnmanagedCallersOnly]
         internal static int Write(byte* guid, int length, void* sink)
         {
@@ -29,7 +33,10 @@ namespace Unbound.Runtime
             int status;
             try
             {
-                text = Documents(Encoding.ASCII.GetString(guid, length));
+                var key = Encoding.ASCII.GetString(guid, length);
+                text = key.StartsWith(PostprocessKey, StringComparison.Ordinal)
+                    ? UnityEditor.HierarchyPostprocessing.Answer(key.Substring(PostprocessKey.Length))
+                    : Documents(key);
                 status = 0;
             }
             catch (Exception e)
@@ -57,8 +64,30 @@ namespace Unbound.Runtime
         /// <paramref name="file"/> holds with their file ids.</summary>
         internal static string Write(LoadedFile file, GameObject root)
         {
-            // Objects of the written hierarchy are referenced locally; the import's other objects
-            // (assets, another root's GameObjects) by the asset's GUID.
+            var (ids, assets) = References(file, root);
+            var sb = new StringBuilder(YamlHeader);
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+            {
+                var go = t.gameObject;
+                Append(sb, go, IdOf(go, file, ids), ids, assets);
+                foreach (var c in go.GetComponents<Component>())
+                {
+                    if (c == null) continue;
+                    if (!(c is MonoBehaviour) && !Writable(c.GetType()))
+                        throw new NotSupportedException($"{file.Path}: its {c.GetType().Name} components cannot be written as documents yet, so its instances in scenes and prefabs cannot expand");
+                    Append(sb, c, IdOf(c, file, ids), ids, assets);
+                }
+            }
+            return sb.ToString();
+        }
+
+        internal const string YamlHeader = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n";
+
+        /// <summary>How a hierarchy's documents reference objects: those of the hierarchy locally
+        /// by their file ids, the import's other objects (assets, another root's GameObjects) by
+        /// the asset's GUID.</summary>
+        internal static (Dictionary<Object, long> Ids, Dictionary<Object, (string, long)> Assets) References(LoadedFile file, GameObject root)
+        {
             var written = new HashSet<Object>(ReferenceEqualityComparer.Instance);
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
             {
@@ -74,53 +103,58 @@ namespace Unbound.Runtime
                 if (written.Contains(pair.Value)) ids[pair.Value] = pair.Key;
                 else assets[pair.Value] = (file.Guid, pair.Key);
             }
-            var sb = new StringBuilder("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
-            var writer = new UnityYamlWriter.Writer(sb, ids, assets);
-            WriteGameObject(root.transform, file, ids, writer, sb);
+            return (ids, assets);
+        }
+
+        /// <summary>The document of one GameObject or component with file id <paramref name="id"/>,
+        /// or null for a component whose class has no writer. References to objects
+        /// <paramref name="ids"/> does not hold are empty.</summary>
+        internal static string Document(Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets)
+        {
+            if (o is Component c && !(c is MonoBehaviour) && !Writable(c.GetType())) return null;
+            var sb = new StringBuilder();
+            Append(sb, o, id, ids, assets);
             return sb.ToString();
         }
 
-        static void WriteGameObject(Transform t, LoadedFile file, Dictionary<Object, long> ids, UnityYamlWriter.Writer w, StringBuilder sb)
+        static void Append(StringBuilder sb, Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets)
         {
-            var go = t.gameObject;
-            var components = go.GetComponents<Component>();
-            sb.Append("--- !u!1 &").Append(IdOf(go, file, ids)).Append("\nGameObject:\n");
-            Header(w, null);
-            w.Int("serializedVersion", 6);
-            w.Key("m_Component", 1);
-            foreach (var c in components)
-                if (c != null) w.Item("component", "{fileID: " + IdOf(c, file, ids) + "}", 1);
-            w.Int("m_Layer", go.m_Layer);
-            w.String("m_Name", go.m_Name);
-            w.String("m_TagString", go.m_Tag);
-            w.Line(1, "m_Icon", "{fileID: 0}");
-            w.Int("m_NavMeshLayer", go.m_NavMeshLayer);
-            w.Int("m_StaticEditorFlags", go.m_StaticEditorFlags);
-            w.Bool("m_IsActive", go.m_IsActive);
-            foreach (var c in components)
+            var w = new UnityYamlWriter.Writer(sb, ids, assets);
+            if (o is GameObject go)
             {
-                if (c == null) continue;
-                long id = IdOf(c, file, ids);
-                if (c is MonoBehaviour)
-                {
-                    sb.Append("--- !u!114 &").Append(id).Append("\nMonoBehaviour:\n");
-                    w.Header(c);
-                    if (c is ISerializationCallbackReceiver receiver)
-                    {
-                        try { receiver.OnBeforeSerialize(); }
-                        catch (Exception e) { Debug.LogException(e); }
-                    }
-                    w.Fields(c, c.GetType(), 1);
-                    continue;
-                }
-                if (!Writable(c.GetType()))
-                    throw new NotSupportedException($"{file.Path}: its {c.GetType().Name} components cannot be written as documents yet, so its instances in scenes and prefabs cannot expand");
-                int classId = EngineTypes.EngineClassIdOf(c.GetType());
-                sb.Append("--- !u!").Append(classId).Append(" &").Append(id).Append('\n').Append(c.GetType().Name).Append(":\n");
-                Header(w, go);
-                c.WriteSerialized(w);
+                sb.Append("--- !u!1 &").Append(id).Append("\nGameObject:\n");
+                Header(w, null);
+                w.Int("serializedVersion", 6);
+                w.Key("m_Component", 1);
+                foreach (var component in go.GetComponents<Component>())
+                    if (component != null)
+                        w.Item("component", "{fileID: " + (ids.TryGetValue(component, out var cid) ? cid : 0) + "}", 1);
+                w.Int("m_Layer", go.m_Layer);
+                w.String("m_Name", go.m_Name);
+                w.String("m_TagString", go.m_Tag);
+                w.Line(1, "m_Icon", "{fileID: 0}");
+                w.Int("m_NavMeshLayer", go.m_NavMeshLayer);
+                w.Int("m_StaticEditorFlags", go.m_StaticEditorFlags);
+                w.Bool("m_IsActive", go.m_IsActive);
+                return;
             }
-            for (int i = 0; i < t.childCount; i++) WriteGameObject(t.GetChild(i), file, ids, w, sb);
+            var c = (Component)o;
+            if (c is MonoBehaviour)
+            {
+                sb.Append("--- !u!114 &").Append(id).Append("\nMonoBehaviour:\n");
+                w.Header(c);
+                if (c is ISerializationCallbackReceiver receiver)
+                {
+                    try { receiver.OnBeforeSerialize(); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+                w.Fields(c, c.GetType(), 1);
+                return;
+            }
+            int classId = EngineTypes.EngineClassIdOf(c.GetType());
+            sb.Append("--- !u!").Append(classId).Append(" &").Append(id).Append('\n').Append(c.GetType().Name).Append(":\n");
+            Header(w, c.gameObject);
+            c.WriteSerialized(w);
         }
 
         /// <summary>A native document's header: no prefab links (the scene's expansion adds them) and
@@ -142,7 +176,7 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the class itself declares its writer: a derived class (a
         /// SkinnedMeshRenderer, a RectTransform) reads fields its base's writer does not write.</summary>
-        static bool Writable(Type type)
+        internal static bool Writable(Type type)
         {
             if (s_Writable.TryGetValue(type, out var writable)) return writable;
             var method = type.GetMethod(nameof(Component.WriteSerialized), BindingFlags.Instance | BindingFlags.NonPublic);

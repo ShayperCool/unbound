@@ -24,6 +24,9 @@ namespace Unbound.Runtime
         /// <summary>A ScriptedImporter's objects: their file ids are derived (ScriptedImports.Import),
         /// no document of the file holds them; a reference no object answers to is empty.</summary>
         internal bool UnknownFileIds;
+        /// <summary>What the import's postprocessors changed, for the native expansion (a model or
+        /// prefab whose import they change: UnityEditor.HierarchyPostprocessing).</summary>
+        internal string PostprocessAnswer;
 
         public Object Resolve(ObjectRef reference, Type expected)
         {
@@ -876,11 +879,21 @@ namespace Unbound.Runtime
                 {
                     case "prefab":
                     case "model":
-                        if (info.Kind == "model") UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model");
+                    {
+                        bool model = info.Kind == "model";
+                        if (model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model");
                         // A model is the prefab it imports to (the native side makes its documents).
-                        file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
-                        if (info.Kind == "model") ModelMaterialImport.UsePipelineDefault(file);
+                        // When postprocessors change this kind of import, they get the documents
+                        // without their changes and run on the objects.
+                        bool postprocessed = model ? UnityEditor.HierarchyPostprocessing.Models : UnityEditor.HierarchyPostprocessing.Prefabs;
+                        using (postprocessed && model ? ModelMaterialImport.Defer(info.Path) : null)
+                            file = ObjectGraphBuilder.Build(Native.LoadDocuments(postprocessed ? "raw:" + guid : guid), info.Path, guid,
+                                ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
+                        if (model) ModelMaterialImport.UsePipelineDefault(file);
+                        if (postprocessed) UnityEditor.HierarchyPostprocessing.Run(file, model);
+                        else if (model) UnityEditor.AssetPostprocessing.EndSession(info.Path);
                         break;
+                    }
                     case "yaml":
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);
                         if (info.MainFileId != 0 && file.Objects.TryGetValue(info.MainFileId, out var main)) file.MainObject = main;

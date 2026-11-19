@@ -55,21 +55,24 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Runs each hook on a new postprocessor of its type with this asset path, context
-        /// and importer; a hook's exception is logged and the next one runs. Returns the last hook's
-        /// result (OnAssignMaterialModel's material).</summary>
+        /// and importer (outside an asset's import: <see cref="UnityEditor.TextureGenerator"/>).</summary>
         internal static object Run(List<(int Order, Type Type, MethodInfo Method)> hooks, string assetPath,
-            UnityEditor.AssetImporters.AssetImportContext context, object[] arguments, AssetImporter importer = null)
+            UnityEditor.AssetImporters.AssetImportContext context, object[] arguments, AssetImporter importer = null) =>
+            Run(hooks, new ImportSession(assetPath, context, importer), arguments);
+
+        /// <summary>Runs each hook on the import's postprocessor of its type; a hook's exception is
+        /// logged and the next one runs. Returns the last hook's result; with
+        /// <paramref name="untilResult"/> the first one that is not null ends the calls (the Editor's
+        /// OnAssignMaterialModel: tests/projects/assetpostprocessors PPInstance).</summary>
+        internal static object Run(List<(int Order, Type Type, MethodInfo Method)> hooks, ImportSession import, object[] arguments,
+            bool untilResult = false)
         {
             object result = null;
             foreach (var (_, type, method) in hooks)
             {
                 try
                 {
-                    var postprocessor = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
-                    postprocessor.assetPath = assetPath;
-                    postprocessor.context = context;
-                    postprocessor.m_AssetImporter = importer;
-                    result = method.Invoke(postprocessor, arguments);
+                    result = method.Invoke(import.Instance(type), arguments);
                 }
                 catch (TargetInvocationException e)
                 {
@@ -79,8 +82,39 @@ namespace Unbound.Runtime
                 {
                     Debug.LogException(e);
                 }
+                if (untilResult && result is UnityEngine.Object o && o != null) break;
             }
             return result;
+        }
+    }
+
+    /// <summary>One asset's import: the postprocessor of each class every callback of the import
+    /// is called on (preprocessors included), with one context (matches the Unity 6000.0.71f1
+    /// Editor, tests/projects/assetpostprocessors PPInstance: one object counts every callback of
+    /// an import, a later import of the asset makes new ones).</summary>
+    internal sealed class ImportSession
+    {
+        internal readonly string Path;
+        internal readonly UnityEditor.AssetImporters.AssetImportContext Context;
+        internal readonly AssetImporter Importer;
+        readonly Dictionary<Type, AssetPostprocessor> m_Postprocessors = new Dictionary<Type, AssetPostprocessor>();
+
+        internal ImportSession(string path, UnityEditor.AssetImporters.AssetImportContext context, AssetImporter importer)
+        {
+            Path = path;
+            Context = context;
+            Importer = importer;
+        }
+
+        internal AssetPostprocessor Instance(Type type)
+        {
+            if (m_Postprocessors.TryGetValue(type, out var postprocessor)) return postprocessor;
+            postprocessor = (AssetPostprocessor)Activator.CreateInstance(type, nonPublic: true);
+            postprocessor.assetPath = Path;
+            postprocessor.context = Context;
+            postprocessor.m_AssetImporter = Importer;
+            m_Postprocessors[type] = postprocessor;
+            return postprocessor;
         }
     }
 }

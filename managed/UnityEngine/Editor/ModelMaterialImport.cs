@@ -23,6 +23,28 @@ namespace Unbound.Runtime
         static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
         static List<(int Order, Type Type, MethodInfo Method)> s_Preprocessors;
 
+        /// <summary>The model whose materials' description preprocessors wait for its
+        /// postprocessors' pass (<see cref="UnityEditor.HierarchyPostprocessing"/>), while it is
+        /// read.</summary>
+        [ThreadStatic] static string s_Deferring;
+        static readonly Dictionary<Material, MaterialDescription> s_Deferred =
+            new Dictionary<Material, MaterialDescription>(ReferenceEqualityComparer.Instance);
+
+        /// <summary>While the returned scope lasts, the description-imported materials of the
+        /// model at <paramref name="assetPath"/> are read without their preprocessors.</summary>
+        internal static IDisposable Defer(string assetPath) => new Deferral(assetPath);
+
+        sealed class Deferral : IDisposable
+        {
+            readonly string m_Previous = s_Deferring;
+            internal Deferral(string assetPath) => s_Deferring = assetPath;
+            public void Dispose() => s_Deferring = m_Previous;
+        }
+
+        /// <summary>The description of a material read under <see cref="Defer"/>, once.</summary>
+        internal static MaterialDescription TakeDeferred(Material material) =>
+            s_Deferred.Remove(material, out var description) ? description : null;
+
         internal static void Apply(Material material, YNode import, IReferenceResolver resolver)
         {
             var description = Read(import, resolver, material.name);
@@ -31,8 +53,10 @@ namespace Unbound.Runtime
             {
                 if (import.Str("importer") == "legacy")
                     Legacy(description, material);
+                else if (s_Deferring != null && s_Deferring == assetPath)
+                    s_Deferred[material] = description;
                 else
-                    Preprocess(assetPath, description, material);
+                    Describe(AssetPostprocessing.Session(assetPath), description, material);
             }
         }
 
@@ -100,29 +124,33 @@ namespace Unbound.Runtime
                 new[] { typeof(MaterialDescription), typeof(Material), typeof(AnimationClip[]) },
                 typeof(FBXMaterialDescriptionPreprocessor));
 
-        /// <summary>Runs the preprocessors, then validates the material with its shader's editor
-        /// (render pipelines' and projects' editors, <see cref="MaterialValidation"/>). Each time a
-        /// preprocessor sets the material's shader, the new shader's editor validates it at once
-        /// too, as the Editor does when a material's shader changes (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/modelimport with URP, <c>stages.*</c>: Lit's validation as URP's
-        /// FBX preprocessor sets Lit sees the emission and GI flags the Editor's own FBX
-        /// preprocessor set before, a Shader Graph shader set next has its queue control before
-        /// the next preprocessor runs, and a material whose shader changes again keeps the colour
-        /// Lit's first validation gave it; the last validation gives the others Lit's
-        /// <c>_Color</c> from the base colour the URP preprocessor set).</summary>
-        static void Preprocess(string assetPath, MaterialDescription description, Material material)
+        /// <summary>A material made from its description: runs the preprocessors, then validates
+        /// the material with its shader's editor (render pipelines' and projects' editors, <see
+        /// cref="MaterialValidation"/>). Each time a preprocessor sets the material's shader, the
+        /// new shader's editor validates it at once too, as the Editor does when a material's
+        /// shader changes (matches the Unity 6000.0.71f1 Editor, tests/projects/modelimport with
+        /// URP, <c>stages.*</c>: Lit's validation as URP's FBX preprocessor sets Lit sees the
+        /// emission and GI flags the Editor's own FBX preprocessor set before, a Shader Graph shader
+        /// set next has its queue control before the next preprocessor runs, and a material whose
+        /// shader changes again keeps the colour Lit's first validation gave it; the last
+        /// validation gives the others Lit's <c>_Color</c> from the base colour the URP
+        /// preprocessor set).</summary>
+        internal static void Describe(ImportSession import, MaterialDescription description, Material material)
         {
-            material.m_ValidateOnShaderChange = true;
-            try
+            using (ObjectRegistry.AsAssets())
             {
-                AssetPostprocessorHooks.Run(Preprocessors(), assetPath, new AssetImportContext(assetPath),
-                    new object[] { description, material, Array.Empty<AnimationClip>() });
+                material.m_ValidateOnShaderChange = true;
+                try
+                {
+                    AssetPostprocessorHooks.Run(Preprocessors(), import,
+                        new object[] { description, material, Array.Empty<AnimationClip>() });
+                }
+                finally
+                {
+                    material.m_ValidateOnShaderChange = false;
+                }
+                MaterialValidation.Validate(material, editorsOfTheEditor: false);
             }
-            finally
-            {
-                material.m_ValidateOnShaderChange = false;
-            }
-            MaterialValidation.Validate(material, editorsOfTheEditor: false);
         }
 
         /// <summary>

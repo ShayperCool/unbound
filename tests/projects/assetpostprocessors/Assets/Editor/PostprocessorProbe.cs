@@ -184,7 +184,9 @@ public static class PostprocessorProbe
 
     static void Run()
     {
-        // Load every asset first: Unbound runs an asset's postprocessors when it imports it.
+        // Load every asset first: Unbound runs an asset's postprocessors when it imports it (the
+        // tree too, whose import sets its maps' settings).
+        AssetDatabase.LoadMainAssetAtPath("Assets/Trees/Calm.st9");
         foreach (var path in Textures.Concat(Models).Concat(Prefabs).Concat(Clips))
             Guard("assets." + path, () =>
             {

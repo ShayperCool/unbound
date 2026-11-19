@@ -5,6 +5,7 @@ using System.Text.Json;
 using Unbound.Runtime;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
@@ -15,11 +16,15 @@ namespace UnityEditor
     /// (OnPreprocessAsset, then OnPreprocessTexture, OnPreprocessModel and OnPreprocessAnimation,
     /// or OnPreprocessAudio) once per session before their import (models as the editor domain
     /// loads, the others as they first load), and the settings they set are what the asset imports
-    /// with (the Editor writes them into the .meta; Unbound keeps them in memory, part of the import
-    /// cache's key). Assets of other kinds, which Unbound does not import, get no OnPreprocessAsset.
-    /// The postprocessors of a texture, its sprites, a cubemap and an audio clip run when the asset
-    /// loads, on its objects. Postprocessors
-    /// run by increasing <see cref="AssetPostprocessor.GetPostprocessOrder"/>, then class name;
+    /// with (the Editor writes them into the .meta; Unbound writes no authored file and keeps them in
+    /// memory, part of the import cache's key). Prefabs are imported when postprocessors change
+    /// prefab imports (OnPostprocessPrefab): each gets OnPreprocessAsset then. Assets of other
+    /// kinds, which Unbound does not import, get no OnPreprocessAsset. The postprocessors of a
+    /// texture, its sprites, a cubemap and an audio clip run when the asset loads, on its objects;
+    /// a model's and a prefab's as it loads or a scene first expands it
+    /// (<see cref="HierarchyPostprocessing"/>). Every callback of an asset's import is called on
+    /// one postprocessor per class (<see cref="ImportSession"/>). Postprocessors run by increasing
+    /// <see cref="AssetPostprocessor.GetPostprocessOrder"/>, then class name;
     /// OnPostprocessAllAssets runs by class name alone, and every load of the editor domain calls
     /// its five-argument form with no assets and <c>didDomainReload</c> true.
     /// </summary>
@@ -28,15 +33,13 @@ namespace UnityEditor
         const string AllAssets = "OnPostprocessAllAssets";
 
         /// <summary>The callbacks Unbound does not run yet (<see cref="ScriptMessages.NotSent"/>,
-        /// which <c>unbound doctor</c> lists too): model postprocessors (Unbound's model prefabs, which
-        /// scenes expand natively, run no managed postprocessor), OnPostprocessPrefab, the 2D array
-        /// and 3D texture postprocessors, the SpeedTree 7/8 ones and asset bundle name changes. Each postprocessor declaring one is reported once as the
-        /// editor domain loads.</summary>
+        /// which <c>unbound doctor</c> lists too): animated user properties and the camera and light
+        /// descriptions of models (Unbound imports neither), the 2D array and 3D texture
+        /// postprocessors, the SpeedTree 7/8 ones and asset bundle name changes. Each postprocessor
+        /// declaring one is reported once as the editor domain loads.</summary>
         internal static readonly string[] Unsupported =
         {
-            "OnPostprocessMeshHierarchy", "OnAssignMaterialModel", "OnPostprocessMaterial", "OnPostprocessAnimation",
-            "OnPostprocessModel", "OnPostprocessGameObjectWithUserProperties", "OnPostprocessGameObjectWithAnimatedUserProperties",
-            "OnPreprocessCameraDescription", "OnPreprocessLightDescription", "OnPostprocessPrefab",
+            "OnPostprocessGameObjectWithAnimatedUserProperties", "OnPreprocessCameraDescription", "OnPreprocessLightDescription",
             "OnPostprocessTexture2DArray", "OnPostprocessTexture3D", "OnPreprocessSpeedTree", "OnPostprocessSpeedTree",
             "OnPostprocessAssetbundleNameChanged",
         };
@@ -210,13 +213,28 @@ namespace UnityEditor
         // ------------------------------------------------------------------ the import pass
 
         static readonly HashSet<string> s_Preprocessed = new HashSet<string>(StringComparer.Ordinal);
+        static readonly Dictionary<string, ImportSession> s_Sessions = new Dictionary<string, ImportSession>(StringComparer.Ordinal);
+
+        /// <summary>The asset's import in progress (its preprocessors ran, its postprocessors have
+        /// not finished), else a new one.</summary>
+        internal static ImportSession Session(string path)
+        {
+            if (!s_Sessions.TryGetValue(path, out var session))
+                s_Sessions[path] = session = new ImportSession(path, new AssetImportContext(path), AssetImporter.GetAtPath(path));
+            return session;
+        }
+
+        /// <summary>The asset's import is done: a later one makes new postprocessors.</summary>
+        internal static void EndSession(string path) => s_Sessions.Remove(path);
 
         /// <summary>As the editor domain loads: the preprocessors of every model, whose prefab the
-        /// native side expands in scenes before any script asks for it. Textures and audio clips
-        /// are preprocessed when they first load (<see cref="EnsurePreprocessed"/>).</summary>
+        /// native side expands in scenes before any script asks for it (textures and audio clips
+        /// are preprocessed when they first load, <see cref="EnsurePreprocessed"/>), and the kinds
+        /// of imports the postprocessors change, for the native expansion.</summary>
         internal static void PrepareImports()
         {
             ReportUnsupported();
+            HierarchyPostprocessing.Announce();
             if (Hooks("OnPreprocessAsset").Count == 0 && Hooks("OnPreprocessModel").Count == 0 && Hooks("OnPreprocessAnimation").Count == 0)
                 return;
             foreach (var path in AssetDatabase.GetAllAssetPaths())
@@ -244,20 +262,22 @@ namespace UnityEditor
             // script changed on it before (Unbound's choice, unmeasured). Without a preprocessor of
             // the asset's kind none of this runs: such edits stay in memory, as SaveAndReimport
             // (a stub) does not import them.
-            var importer = AssetImporter.GetAtPath(path);
-            var context = new AssetImportContext(path);
-            AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), path, context, Array.Empty<object>(), importer);
+            var session = Session(path);
+            var importer = session.Importer;
+            AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), session, Array.Empty<object>());
             switch (kind)
             {
                 case "texture":
-                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessTexture"), path, context, Array.Empty<object>(), importer);
+                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessTexture"), session, Array.Empty<object>());
                     break;
                 case "model":
-                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessModel"), path, context, Array.Empty<object>(), importer);
-                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessAnimation"), path, context, Array.Empty<object>(), importer);
+                    // OnPreprocessAnimation follows (the Editor calls it after the hierarchy's
+                    // callbacks): the settings it sets must be known before Unbound's import.
+                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessModel"), session, Array.Empty<object>());
+                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessAnimation"), session, Array.Empty<object>());
                     break;
                 case "audio":
-                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessAudio"), path, context, Array.Empty<object>(), importer);
+                    AssetPostprocessorHooks.Run(Hooks("OnPreprocessAudio"), session, Array.Empty<object>());
                     break;
             }
             if (importer == null || !importer.m_SettingsChanged || importer.m_Settings == null) return;
@@ -287,14 +307,19 @@ namespace UnityEditor
         {
             var hooks = Hooks("OnPostprocessTexture", typeof(Texture2D));
             var spriteHooks = Hooks("OnPostprocessSprites", typeof(Texture2D), typeof(Sprite[]));
-            if (hooks.Count == 0 && (spriteHooks.Count == 0 || sprites.Length == 0)) return;
-            var importer = AssetImporter.GetAtPath(path);
-            var context = new AssetImportContext(path);
-            if (hooks.Count > 0)
+            if (hooks.Count == 0 && (spriteHooks.Count == 0 || sprites.Length == 0))
+            {
+                EndSession(path);
+                return;
+            }
+            var session = Session(path);
+            if (hooks.Count > 0 && BlockFormats.BlockBytes(texture.format) > 0)
+                PostprocessBeforeCompression(session, hooks, texture);
+            else if (hooks.Count > 0)
             {
                 bool readable = texture.m_IsReadable;
                 texture.m_IsReadable = true;
-                try { AssetPostprocessorHooks.Run(hooks, path, context, new object[] { texture }, importer); }
+                try { AssetPostprocessorHooks.Run(hooks, session, new object[] { texture }); }
                 finally
                 {
                     // The pixels a postprocessor read or set are the import's: uploaded, then kept
@@ -308,7 +333,108 @@ namespace UnityEditor
                 }
             }
             if (sprites.Length > 0)
-                AssetPostprocessorHooks.Run(spriteHooks, path, context, new object[] { texture, sprites }, importer);
+                AssetPostprocessorHooks.Run(spriteHooks, session, new object[] { texture, sprites });
+            EndSession(path);
+        }
+
+        /// <summary>OnPostprocessTexture of a block-compressed import: the Editor gives the texture
+        /// before its compression (readable RGB24 without alpha, else RGBA32, with its mips:
+        /// tests/projects/assetpostprocessors Plain.png and Sprite.png), then compresses what the
+        /// postprocessors left. Unbound's import is compressed already: the postprocessors get a
+        /// texture of the pixels before compression, and pixels they change are compressed into
+        /// the import's format.</summary>
+        static void PostprocessBeforeCompression(ImportSession session, List<(int, Type, MethodInfo)> hooks, Texture2D texture)
+        {
+            var levels = new List<Color32[]>();
+            bool alpha = true;
+            try
+            {
+                for (int mip = 0; mip < texture.mipmapCount; mip++)
+                {
+                    using var json = JsonDocument.Parse(Native.Call("texture-pixels",
+                        JsonSerializer.Serialize(new { guid = texture.m_AssetGuid, mip, beforeCompression = true })));
+                    var root = json.RootElement;
+                    alpha = root.GetProperty("hasAlpha").GetBoolean();
+                    var rgba = Convert.FromBase64String(root.GetProperty("rgba").GetString());
+                    var level = new Color32[rgba.Length / 4];
+                    for (int i = 0; i < level.Length; i++) level[i] = new Color32(rgba[4 * i], rgba[4 * i + 1], rgba[4 * i + 2], rgba[4 * i + 3]);
+                    levels.Add(level);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: {session.Path}: its OnPostprocessTexture gets the compressed import ({e.Message})");
+                AssetPostprocessorHooks.Run(hooks, session, new object[] { texture });
+                return;
+            }
+            var subject = new Texture2D(texture.width, texture.height, alpha ? TextureFormat.RGBA32 : TextureFormat.RGB24, levels.Count, !texture.isDataSRGB)
+            {
+                name = texture.name,
+                filterMode = texture.filterMode,
+                wrapModeU = texture.wrapModeU,
+                wrapModeV = texture.wrapModeV,
+                wrapModeW = texture.wrapModeW,
+                anisoLevel = texture.anisoLevel,
+            };
+            try
+            {
+                for (int mip = 0; mip < levels.Count; mip++) subject.SetPixels32(levels[mip], mip);
+                AssetPostprocessorHooks.Run(hooks, session, new object[] { subject });
+                bool changed = false;
+                for (int mip = 0; mip < levels.Count && !changed; mip++)
+                {
+                    var now = subject.GetPixels32(mip);
+                    for (int i = 0; i < now.Length && !changed; i++)
+                        changed = !now[i].Equals(levels[mip][i]);
+                }
+                if (changed) Recompress(texture, subject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(subject);
+            }
+        }
+
+        /// <summary>The pixels a postprocessor changed, compressed into the import's format.</summary>
+        static void Recompress(Texture2D texture, Texture2D pixels)
+        {
+            var blocks = new List<byte>();
+            for (int mip = 0; mip < texture.mipmapCount; mip++)
+            {
+                var level = pixels.GetPixels32(mip);
+                var rgba = new byte[level.Length * 4];
+                for (int i = 0; i < level.Length; i++)
+                {
+                    rgba[4 * i] = level[i].r;
+                    rgba[4 * i + 1] = level[i].g;
+                    rgba[4 * i + 2] = level[i].b;
+                    rgba[4 * i + 3] = level[i].a;
+                }
+                using var json = JsonDocument.Parse(Native.Call("texture-compress-blocks", JsonSerializer.Serialize(new
+                {
+                    format = (int)texture.format,
+                    width = Math.Max(1, texture.width >> mip),
+                    height = Math.Max(1, texture.height >> mip),
+                    import = true,
+                    data = Convert.ToBase64String(rgba),
+                })));
+                blocks.AddRange(Convert.FromBase64String(json.RootElement.GetProperty("blocks").GetString()));
+            }
+            bool readable = texture.m_IsReadable;
+            texture.m_IsReadable = true;
+            try
+            {
+                texture.LoadRawTextureData(blocks.ToArray());
+                texture.Apply(false, !readable);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, texture);
+            }
+            finally
+            {
+                texture.m_IsReadable = readable;
+            }
         }
 
         /// <summary>A cubemap's postprocessors as it loads: OnPostprocessCubemap with the cubemap
@@ -316,8 +442,8 @@ namespace UnityEditor
         internal static void PostprocessCubemap(string path, Cubemap cubemap)
         {
             var hooks = Hooks("OnPostprocessCubemap", typeof(Cubemap));
-            if (hooks.Count == 0) return;
-            AssetPostprocessorHooks.Run(hooks, path, new AssetImportContext(path), new object[] { cubemap }, AssetImporter.GetAtPath(path));
+            if (hooks.Count > 0) AssetPostprocessorHooks.Run(hooks, Session(path), new object[] { cubemap });
+            EndSession(path);
         }
 
         /// <summary>An audio clip's postprocessors as it loads: OnPostprocessAudio with the clip, which
@@ -325,11 +451,19 @@ namespace UnityEditor
         internal static void PostprocessAudio(string path, AudioClip clip)
         {
             var hooks = Hooks("OnPostprocessAudio", typeof(AudioClip));
-            if (hooks.Count == 0) return;
+            if (hooks.Count == 0)
+            {
+                EndSession(path);
+                return;
+            }
             var name = clip.name;
             clip.name = "";
-            try { AssetPostprocessorHooks.Run(hooks, path, new AssetImportContext(path), new object[] { clip }, AssetImporter.GetAtPath(path)); }
-            finally { clip.name = name; }
+            try { AssetPostprocessorHooks.Run(hooks, Session(path), new object[] { clip }); }
+            finally
+            {
+                clip.name = name;
+                EndSession(path);
+            }
         }
     }
 }

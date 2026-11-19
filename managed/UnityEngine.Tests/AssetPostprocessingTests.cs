@@ -268,5 +268,60 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Y", "A Assets/X.vfx", "Z Assets/X.vfx False", "B" },
                 s_AllAssetsCalls.FindAll(c => c.StartsWith("A ") || c.StartsWith("Z ") || c == "B" || c == "Y"));
         }
+
+        static readonly List<string> s_ImportCalls = new List<string>();
+
+        sealed class CountingPostprocessor : AssetPostprocessor
+        {
+            int m_Calls;
+            void OnPreprocessModel() => s_ImportCalls.Add("count " + ++m_Calls + " " + assetPath);
+            Object Give() { s_ImportCalls.Add("give"); return s_Given; }
+        }
+
+        sealed class LaterPostprocessor : AssetPostprocessor
+        {
+            Object Give() { s_ImportCalls.Add("later"); return null; }
+        }
+
+        static Object s_Given;
+
+        static (int, Type, System.Reflection.MethodInfo) Hook<T>(string name) =>
+            (0, typeof(T), typeof(T).GetMethod(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
+
+        [Fact]
+        public void OneImportCallsEveryCallbackOnOnePostprocessorPerClassAndAGivenMaterialEndsTheCalls()
+        {
+            // tests/projects/assetpostprocessors PPInstance: one object counts every callback of an
+            // import; a later import makes new ones. OnAssignMaterialModel stops at the first
+            // postprocessor that returns something.
+            s_ImportCalls.Clear();
+            var count = new List<(int, Type, System.Reflection.MethodInfo)> { Hook<CountingPostprocessor>("OnPreprocessModel") };
+            var import = new ImportSession("Assets/M.fbx", null, null);
+            AssetPostprocessorHooks.Run(count, import, Array.Empty<object>());
+            AssetPostprocessorHooks.Run(count, import, Array.Empty<object>());
+            AssetPostprocessorHooks.Run(count, new ImportSession("Assets/M.fbx", null, null), Array.Empty<object>());
+            Assert.Equal(new[] { "count 1 Assets/M.fbx", "count 2 Assets/M.fbx", "count 1 Assets/M.fbx" }, s_ImportCalls);
+
+            var give = new List<(int, Type, System.Reflection.MethodInfo)> { Hook<CountingPostprocessor>("Give"), Hook<LaterPostprocessor>("Give") };
+            s_ImportCalls.Clear();
+            s_Given = null;
+            AssetPostprocessorHooks.Run(give, import, Array.Empty<object>(), untilResult: true);
+            Assert.Equal(new[] { "give", "later" }, s_ImportCalls);
+            s_ImportCalls.Clear();
+            s_Given = new GameObject("Given");
+            try
+            {
+                Assert.Same(s_Given, AssetPostprocessorHooks.Run(give, import, Array.Empty<object>(), untilResult: true));
+                Assert.Equal(new[] { "give" }, s_ImportCalls);
+                // Without untilResult every postprocessor is called (the last one's result).
+                s_ImportCalls.Clear();
+                AssetPostprocessorHooks.Run(give, import, Array.Empty<object>());
+                Assert.Equal(new[] { "give", "later" }, s_ImportCalls);
+            }
+            finally
+            {
+                Object.DestroyImmediate((GameObject)s_Given);
+            }
+        }
     }
 }

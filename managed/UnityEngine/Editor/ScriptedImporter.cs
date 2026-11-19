@@ -325,7 +325,13 @@ namespace Unbound.Runtime
             using (Scope())
             using (UnityEditor.AssetImporter.Importing(info.Path, importer))
             using (ObjectRegistry.AsAssets())
+            {
+                // Every asset's import starts with OnPreprocessAsset (matches the Unity 6000.0.71f1
+                // Editor, tests/projects/assetpostprocessors Calm.st9), on the importer that imports it.
+                AssetPostprocessorHooks.Run(UnityEditor.AssetPostprocessing.Hooks("OnPreprocessAsset"),
+                    new ImportSession(info.Path, ctx, importer), Array.Empty<object>());
                 importer.OnImportAsset(ctx);
+            }
             foreach (var (_, obj) in ctx.m_Objects) MarkImported(obj);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };
             var table = settings.Count > 0 ? NameTable(settings[0].Body) : null;

@@ -32,11 +32,22 @@ sprite, then 50 pixels per unit), `Tone.wav` (stereo; forced to mono, then PCM a
 Load), and the model probe's `Materials.fbx` (legacy materials; scale 2, then colliders and
 read/write; a child with a BoxCollider added in OnPostprocessModel, `Cube_Red` given
 `Override.mat`, `M_Alpha` made green) and `Animated.fbx` (defaults), with this probe's `.meta`
-files. In Play mode `PostprocessorProbe` loads every asset, records the results (sizes, formats,
-mip texel hashes, sprites, the model's hierarchy, meshes, materials and colliders, the clip and
-its samples), what `AssetImporter.GetAtPath` gives, each `.meta`'s hash, each asset's callbacks in
-calling order with what they saw, the OnPostprocessAllAssets calls made in Play mode and the order
-of the Play mode domain's load.
+files, and `UserProps.fbx` (an ASCII FBX of `make_assets.py`: nodes `Tagged`, `Bare`, `Group` with
+a child `Inner`, user properties of each FBX type; a SphereCollider added for a true `collider`
+property, `Bare` renamed `BareRenamed` with a CapsuleCollider in OnPostprocessMeshHierarchy), the
+prefabs `Box` (a box collider and a child), `Nest` (a Box instance and a child) and `BoxVariant`
+(written by `Assets/Editor/ProbeScene.cs`; `PPPrefab` adds a sphere collider to Box, sizes its
+box collider, gives its child layer 5 and adds a capsule collider to the variant), the unconverted
+mono clips `Tone8.wav`, `Tone24.wav` and `ToneFloat.wav`, and `tests/projects/speedtree9wind`'s tree
+`Calm.st9` with readable maps of this probe. `PPInstance` counts its callbacks per object and
+returns `Override.mat` for `Inner`, after `PPParts` returned it for `Tagged`. In Play mode
+`PostprocessorProbe` loads every asset, records the results (sizes, formats, mip texel hashes,
+sprites, the models' and prefabs' hierarchies with their children's order, meshes, materials and
+colliders, the scene's instances of each model and prefab, the file ids of the objects
+postprocessors added, the clips and their samples, the settings the tree's import gives its maps),
+what `AssetImporter.GetAtPath` gives, each `.meta`'s hash, each asset's callbacks in calling order
+with what they saw, the OnPostprocessAllAssets calls made in Play mode and the order of the Play
+mode domain's load.
 
 Measured, beyond the documentation: ties of `GetPostprocessOrder` run by class name;
 OnPreprocessAsset runs for every asset (folders, scenes, materials and scripts too) before the
@@ -53,6 +64,21 @@ OnPreprocessAnimation (also for a file without animation), OnPostprocessAnimatio
 OnPostprocessModel. OnPostprocessAllAssets runs by class name; the domain reload entering Play mode
 calls only the five-argument overload, with no assets and `didDomainReload` true, after
 `afterAssemblyReload` and before `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`.
+
+Also measured: one postprocessor object per class serves every callback of an import (a later
+import makes new ones); the first material OnAssignMaterialModel returns ends that slot's calls;
+the model callbacks see the nodes in the file's order, the top-level nodes without a parent, a
+node's OnPostprocessGameObjectWithUserProperties after its materials and before its children (a
+boolean, an integer, a number of any precision as a float, a string, a vector as `(x, y, z, 0)`, a
+colour rounded to 8 bits; "A+U" properties too, "A" ones not); the imported hierarchy is sorted by
+name afterwards, and its objects' file ids hash their final paths (a renamed node's and an added
+object's too). OnPostprocessPrefab gets each prefab's root with the prefabs it nests (and a
+variant's base) already postprocessed, and its changes are what the prefab's and the scene's
+instances get; a ScriptedImporter's prefab (the tree) gets none. A PCM import stores unconverted
+24-bit samples as their top 16 bits and float samples truncated to 16 bits. The tree's import sets
+its colour maps' alpha as transparency and coverage-preserving mip maps (reference 0.1), its normal
+map's type (and no sRGB) and its extra map's sRGB off, and the Editor imports the maps again with
+them.
 
 Measured in Edit mode before Play mode (not compared; the Editor's import of an open project):
 changing `PPVersioned`'s version re-imports every texture (it has OnPreprocessTexture); changing
@@ -71,9 +97,10 @@ Values compare exactly (tolerance 0). The folder `.meta` files are committed so 
 see them (an asset without one has `importSettingsMissing` set in the Editor); the context's build
 target is left out (it is the Editor's platform).
 
-Unbound on macOS, 2026-11-18: 108/211 values, 0 failures and 103 recorded residuals
-(`residuals.json`, five causes): model postprocessors are not run yet (Unbound's model prefabs
-expand natively in scenes; they are reported once as the editor domain loads), OnPreprocessAsset is given
-only the textures, models and audio clips Unbound imports, the Editor's rewritten `.meta` files,
-the compressed format a block-compressed texture has in OnPostprocessTexture, and the Play mode
-domain's ExitingEditMode (as in compileevents).
+Unbound on macOS, 2026-11-19: 356/536 values, 0 failures and 180 recorded residuals
+(`residuals.json`, eight causes): OnPreprocessAsset is given only the assets Unbound imports (not
+folders, scenes or materials), the Editor's rewritten `.meta` files, the Play mode domain's
+ExitingEditMode (as in compileevents), OnPreprocessAnimation's place (Unbound runs it with the
+model's preprocessors), the Editor's second import of the tree's maps, a model import's ImportLog,
+a prefab's nested prefab instance objects in its asset listing, and the file ids of objects a
+prefab's postprocessor adds.
