@@ -96,12 +96,14 @@ namespace UnityEditor
                 if (!(file.MainObject is GameObject root)) return;
                 var (oldIds, assets) = ImportedPrefabDocuments.References(file, root);
                 var before = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
+                // Other files' objects the documents reference, found once for the pass.
+                var located = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
                 foreach (var o in HierarchyObjects(root))
-                    before[o] = ImportedPrefabDocuments.Document(o, oldIds[o], oldIds, assets);
+                    before[o] = ImportedPrefabDocuments.Document(o, oldIds[o], oldIds, assets, located);
                 List<Material> dropped;
                 using (ScriptedImports.Scope())
                     dropped = model ? RunModel(file, root, session) : RunPrefab(root, session);
-                file.PostprocessAnswer = Changes(file, root, model, oldIds, assets, before, dropped);
+                file.PostprocessAnswer = Changes(file, root, model, oldIds, assets, before, dropped, located);
             }
             catch (Exception e)
             {
@@ -322,7 +324,8 @@ namespace UnityEditor
         }
 
         static string Changes(LoadedFile file, GameObject root, bool model, Dictionary<Object, long> oldIds,
-            Dictionary<Object, (string, long)> assets, Dictionary<Object, string> before, List<Material> dropped)
+            Dictionary<Object, (string, long)> assets, Dictionary<Object, string> before, List<Material> dropped,
+            Dictionary<Object, string> located)
         {
             var objects = HierarchyObjects(root);
             var newIds = model ? ModelIds(file, root, objects) : PrefabIds(file, root, objects, oldIds);
@@ -343,12 +346,12 @@ namespace UnityEditor
                 if (oldIds.TryGetValue(o, out long old))
                 {
                     if (old != id) remap.Add((old, id));
-                    var now = ImportedPrefabDocuments.Document(o, old, oldIds, assets);
+                    var now = ImportedPrefabDocuments.Document(o, old, oldIds, assets, located);
                     if (now == null || now == before[o]) continue;
-                    docs.Append(WithoutPrefabLinks(ImportedPrefabDocuments.Document(o, id, ids, assets)));
+                    docs.Append(WithoutPrefabLinks(ImportedPrefabDocuments.Document(o, id, ids, assets, located)));
                     continue;
                 }
-                var added = ImportedPrefabDocuments.Document(o, id, ids, assets);
+                var added = ImportedPrefabDocuments.Document(o, id, ids, assets, located);
                 if (added == null)
                 {
                     Debug.LogError($"Unbound: {file.Path}: the {o.GetType().Name} a postprocessor added to '{o.name}' cannot be written as a document yet, so scene and prefab instances of the asset do not get it");

@@ -109,17 +109,19 @@ namespace Unbound.Runtime
         /// <summary>The document of one GameObject or component with file id <paramref name="id"/>,
         /// or null for a component whose class has no writer. References to objects
         /// <paramref name="ids"/> does not hold are empty.</summary>
-        internal static string Document(Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets)
+        internal static string Document(Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets,
+            Dictionary<Object, string> located = null)
         {
             if (o is Component c && !(c is MonoBehaviour) && !Writable(c.GetType())) return null;
             var sb = new StringBuilder();
-            Append(sb, o, id, ids, assets);
+            Append(sb, o, id, ids, assets, located);
             return sb.ToString();
         }
 
-        static void Append(StringBuilder sb, Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets)
+        static void Append(StringBuilder sb, Object o, long id, Dictionary<Object, long> ids, Dictionary<Object, (string, long)> assets,
+            Dictionary<Object, string> located = null)
         {
-            var w = new UnityYamlWriter.Writer(sb, ids, assets);
+            var w = new UnityYamlWriter.Writer(sb, ids, assets, located);
             if (o is GameObject go)
             {
                 sb.Append("--- !u!1 &").Append(id).Append("\nGameObject:\n");

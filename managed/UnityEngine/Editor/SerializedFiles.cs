@@ -167,12 +167,17 @@ namespace Unbound.Runtime
             readonly StringBuilder m_Out;
             readonly Dictionary<Object, long> m_Ids;
             readonly Dictionary<Object, (string Guid, long FileId)> m_Assets;
+            readonly Dictionary<Object, string> m_Located;
 
-            internal Writer(StringBuilder output, Dictionary<Object, long> ids, Dictionary<Object, (string Guid, long FileId)> assets = null)
+            /// <summary><paramref name="located"/>: references to other files' objects found
+            /// before, kept for writers that write many documents.</summary>
+            internal Writer(StringBuilder output, Dictionary<Object, long> ids, Dictionary<Object, (string Guid, long FileId)> assets = null,
+                Dictionary<Object, string> located = null)
             {
                 m_Out = output;
                 m_Ids = ids;
                 m_Assets = assets;
+                m_Located = located;
             }
 
             void Indent(int level) => m_Out.Append(' ', level * 2);
@@ -464,6 +469,13 @@ namespace Unbound.Runtime
                 if (m_Assets != null && m_Assets.TryGetValue(o, out var asset)) return $"{{fileID: {asset.FileId}, guid: {asset.Guid}, type: 3}}";
                 if (o is MonoScript script && script.m_Guid is string scriptGuid && scriptGuid.Length > 0)
                     return $"{{fileID: 11500000, guid: {scriptGuid}, type: 3}}";
+                if (m_Located == null) return Located(o);
+                if (!m_Located.TryGetValue(o, out var text)) m_Located[o] = text = Located(o);
+                return text;
+            }
+
+            static string Located(Object o)
+            {
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
                 {
                     int kind;
