@@ -16,7 +16,6 @@ namespace UnityEngine.Tests
     /// Nothing here assumes an order of emission: Unity does not document one.</summary>
     public class ParticleCollisionSubEmitterForceTests
     {
-        const string ColliderForce = "ParticleSystem.CollisionModule.colliderForce";
         static readonly Color32 White = new Color32(255, 255, 255, 255), Red = new Color32(255, 0, 0, 255);
 
         static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
@@ -226,16 +225,24 @@ namespace UnityEngine.Tests
             return (ps, box);
         }
 
-        [Fact]
-        public void AColliderForceCollisionWithAPushableRigidbodyIsReported()
+        /// <summary>A hit pushes the body along the particle's velocity with the collider force
+        /// for one physics step (head-on: the angle factor is 1), times the particle's speed (20)
+        /// when asked (Unity 6000.0.71f1, tests/projects/particlerender force/*).</summary>
+        [Theory]
+        [InlineData(false, 5f)]
+        [InlineData(true, 100f)]
+        public void AColliderForceCollisionPushesARigidbody(bool bySpeed, float expected)
         {
             var (ps, box) = TowardsBox(body: true, kinematic: false, colliderForce: 5f);
             try
             {
-                int before = Hits(ColliderForce);
+                var c = ps.collision; c.multiplyColliderForceByParticleSpeed = bySpeed;
                 ps.Simulate(.025f, false, false, false);
                 Assert.True(Assert.Single(Live(ps)).velocity.x < 0f);
-                Assert.Equal(before + 1, Hits(ColliderForce));
+                var force = box.GetComponent<Rigidbody>().GetAccumulatedForce();
+                Assert.Equal(expected, force.x, 3);
+                Assert.Equal(0f, force.y, 5);
+                Assert.Equal(0f, force.z, 5);
             }
             finally { Done(ps.gameObject, box); }
         }
@@ -244,15 +251,14 @@ namespace UnityEngine.Tests
         [InlineData(false, false, 5f)]
         [InlineData(true, true, 5f)]
         [InlineData(true, false, 0f)]
-        public void NoColliderForceIsReportedWithoutABodyItWouldPush(bool body, bool kinematic, float colliderForce)
+        public void NoBodyMovesWithoutOneTheForcePushes(bool body, bool kinematic, float colliderForce)
         {
             var (ps, box) = TowardsBox(body, kinematic, colliderForce);
             try
             {
-                int before = Hits(ColliderForce);
                 ps.Simulate(.025f, false, false, false);
                 Assert.True(Assert.Single(Live(ps)).velocity.x < 0f);
-                Assert.Equal(before, Hits(ColliderForce));
+                if (box.TryGetComponent<Rigidbody>(out var rb)) Assert.Equal(Vector3.zero, rb.GetAccumulatedForce());
             }
             finally { Done(ps.gameObject, box); }
         }
