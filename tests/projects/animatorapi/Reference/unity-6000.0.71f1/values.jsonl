@@ -425,6 +425,7 @@
 {"k":"read.file.count","v":"33"}
 {"k":"read.file.main","v":"9100000"}
 {"k":"read.file.meta","v":"fileFormatVersion: 2\nguid: <guid>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 9100000\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"read.unsetMain","v":"AnimatorController:Authored AnimatorController sub=False"}
 {"k":"read.logs","v":"Error: BlendTree \"Move\" in state \"Move\" in Controller \"Authored\" uses parameter \"Blend\" which does not exist. | Error: BlendTree \"Direct\" in state \"Direct\" in Controller \"Authored\" uses parameter \"Blend\" which does not exist. | Warning: Asset 'Authored': Transition 'Idle -> Sub' in state 'Idle' doesn't have an Exit Time or any condition, transition will be ignored | Warning: Asset 'Authored': Transition 'Run -> Exit' in state 'Run' doesn't have an Exit Time or any condition, transition will be ignored"}
 {"k":"clip.Walk.motion","v":"length=1 dur=1 speed=(0,0,0) angular=0 apparent=0 loop=False human=False root=False/False/False/False"}
 {"k":"clip.Walk.stats","v":"size=2764 clips=1 positionCurves=1 quaternionCurves=0 eulerCurves=0 scaleCurves=0 muscleCurves=0 genericCurves=0 pptrCurves=0 totalCurves=3 constantCurves=0 denseCurves=0 streamCurves=3"}
@@ -568,6 +569,17 @@
 {"k":"extra.bothDestinations","v":"AnimatorState:B AnimatorStateMachine:Clash 'A -> B'"}
 {"k":"extra.exitWithDestination","v":"'A -> B' 'Base Layer -> B'"}
 {"k":"extra.model.logs","v":""}
+{"k":"extra.loop.EmptyTree","v":"looping=True human=True"}
+{"k":"extra.loop.LoopTree","v":"looping=True human=False"}
+{"k":"extra.loop.OnceTree","v":"looping=False human=False"}
+{"k":"extra.loop.MixedTree","v":"looping=False human=False"}
+{"k":"extra.loop.OnceLoopTree","v":"looping=False human=False"}
+{"k":"extra.loopState.EmptyTree","v":"True loop=True length=1"}
+{"k":"extra.loopState.LoopTree","v":"True loop=True length=1"}
+{"k":"extra.loopState.OnceTree","v":"True loop=False length=1"}
+{"k":"extra.loopState.MixedTree","v":"True loop=False length=1"}
+{"k":"extra.loopState.OnceLoopTree","v":"True loop=False length=2"}
+{"k":"extra.loop.logs","v":""}
 {"k":"extra.tangents.steep","v":"0/0;0.36364/0.36364;24.77777/24.77777;0/0"}
 {"k":"extra.tangents.shape0","v":"0.2/0.2 auto 2.5/2.5"}
 {"k":"extra.tangents.shape1","v":"0.16/0.16 auto 4.925/4.925"}

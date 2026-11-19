@@ -695,6 +695,10 @@ public static class AnimatorApiProbe
         var m = Walk(c);
         PutModel("read.dump", m);
         PutFile("read.file", path, m);
+        // The same file whose .meta names no main object (mainObjectFileID: 0).
+        var unset = "Assets/Controllers/Unset.controller";
+        Put("read.unsetMain", N(AssetDatabase.LoadMainAssetAtPath(unset)) + " " + AssetDatabase.GetMainAssetTypeAtPath(unset)?.Name
+            + " sub=" + AssetDatabase.IsSubAsset(AssetDatabase.LoadAssetAtPath<AnimatorController>(unset)));
         Logs("read");
     }
 
@@ -1081,6 +1085,38 @@ public static class AnimatorApiProbe
         both.isExit = true;
         Put("extra.exitWithDestination", "'" + both.GetDisplayName(a) + "' '" + both.GetDisplayName(sm) + "'");
         Logs("extra.model");
+
+        // Looping of blend trees: as a Motion and as the playing state reports it.
+        var looped = Object.Instantiate(Clip("Walk"));
+        looped.name = "Looped";
+        var loopSettings = AnimationUtility.GetAnimationClipSettings(looped);
+        loopSettings.loopTime = true;
+        AnimationUtility.SetAnimationClipSettings(looped, loopSettings);
+        var lc = new AnimatorController { name = "Loops" };
+        lc.AddLayer("Base Layer");
+        lc.AddParameter("Blend", AnimatorControllerParameterType.Float);
+        var trees = new (string Name, AnimationClip[] Clips)[]
+        {
+            ("EmptyTree", new AnimationClip[0]), ("LoopTree", new[] { looped }), ("OnceTree", new[] { Clip("Walk") }),
+            ("MixedTree", new[] { looped, Clip("Run") }), ("OnceLoopTree", new[] { Clip("Run"), looped }),
+        };
+        foreach (var (treeName, treeClips) in trees)
+        {
+            lc.CreateBlendTreeInController(treeName, out var loopTree);
+            foreach (var clip in treeClips) loopTree.AddChild(clip);
+            Put("extra.loop." + treeName, $"looping={loopTree.isLooping} human={loopTree.isHumanMotion}");
+        }
+        var loopRig = Rig("LoopRig", lc);
+        var loopAnimator = loopRig.GetComponent<Animator>();
+        foreach (var (treeName, _) in trees)
+        {
+            loopAnimator.Play(treeName, 0, 0f);
+            loopAnimator.Update(0.02f);
+            var info = loopAnimator.GetCurrentAnimatorStateInfo(0);
+            Put("extra.loopState." + treeName, $"{info.IsName(treeName)} loop={info.loop} length={F(info.length)}");
+        }
+        Object.Destroy(loopRig);
+        Logs("extra.loop");
 
         var steep = new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 0.1f), new Keyframe(1.1f, 5), new Keyframe(2, 5.5f));
         AnimationUtility.SetKeyLeftTangentMode(steep, 1, AnimationUtility.TangentMode.ClampedAuto);

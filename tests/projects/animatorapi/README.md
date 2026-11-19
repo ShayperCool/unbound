@@ -17,7 +17,8 @@ only the last section loads. `AnimatorApiProbe.Record` runs everything in Play m
   model and the file the Editor writes, one row per document with file ids replaced by the
   object's place in the model. `memory.*` builds the same controller without an asset;
   `plain.*` and `withClip.*` the default blend parameter and `CreateAnimatorControllerAtPathWithClip`.
-* `read.*`: the authored controller as `AssetDatabase` loads it, dumped the same way.
+* `read.*`: the authored controller as `AssetDatabase` loads it, dumped the same way, and its copy
+  `Unset.controller`, whose `.meta` names no main object (`mainObjectFileID: 0`).
 * `clip.*`: Motion values, `GetAnimationClipStats`, curve and object curve bindings of each clip.
 * `play.*`: an in-memory controller (A to B on a trigger) playing on an Animator, edited while it
   plays (a parameter, a state and transition, a state's speed); the authored controller on an
@@ -32,7 +33,8 @@ only the last section loads. `AnimatorApiProbe.Record` runs everything in Play m
 * `extra.*`: new transition and blend tree defaults, the messages a controller's compilation logs,
   name collisions, removal from a sub-machine, both destinations, ClampedAuto and Auto tangents of
   several shapes, the raw tangent mode bits, the clip callback of a load and of
-  `AllocateAnimatorClip`.
+  `AllocateAnimatorClip`, and whether blend trees with no, looping, non-looping and mixed children
+  loop (as Motions and as the playing state reports it).
 
 ```
 python3 tests/projects/animatorapi/run.py record --label <label>     # macOS: batch Editor
@@ -68,6 +70,8 @@ the values below are observations of this release, not documented guarantees:
 * `GetBehaviours` lists, per layer, the state machines' behaviours and then the states'; a
   state machine behaviour's context is the machine and the state in it whose full path hash is
   smallest.
+* A blend tree loops when every child loops (an empty one does), and so does its playing state. A
+  controller whose `.meta` names no main object still has the controller as its main object.
 * Automatic thresholds spread a tree's children evenly from its minimum to its maximum threshold;
   a blend tree's average duration is the mean of its clips' (nested trees flattened).
 * ClampedAuto tangents are the central difference, zero at an extremum and at the ends, at most
