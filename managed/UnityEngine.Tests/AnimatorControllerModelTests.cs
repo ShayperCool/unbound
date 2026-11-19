@@ -348,14 +348,22 @@ namespace UnityEngine.Tests
             Assert.True(go.transform.position.z > 0f);
         }
 
-        /// <summary>defaultstate BlendTree: an empty tree loops and is a human motion.</summary>
+        /// <summary>defaultstate BlendTree, animatorapi extra.loop.*: a tree loops when every
+        /// child loops (an empty one does); one non-looping child of two is enough to stop it.</summary>
         [Fact]
-        public void AnEmptyBlendTreeLoopsAndIsHuman()
+        public void ABlendTreeLoopsWhenEveryChildLoops()
         {
             var tree = Keep(new BlendTree());
             Assert.True(tree.isLooping && tree.isHumanMotion);
-            tree.AddChild(Clip("Generic", 1f));
+            var looped = Clip("Looped", 1f);
+            var settings = AnimationUtility.GetAnimationClipSettings(looped);
+            settings.loopTime = true;
+            AnimationUtility.SetAnimationClipSettings(looped, settings);
+            tree.AddChild(looped);
+            Assert.True(tree.isLooping);
             Assert.False(tree.isHumanMotion);
+            tree.AddChild(Clip("Once", 2f));
+            Assert.False(tree.isLooping);
         }
 
         // ------------------------------------------------------------------ AnimationUtility, AnimationMode

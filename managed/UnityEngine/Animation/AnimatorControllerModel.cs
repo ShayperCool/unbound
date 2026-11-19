@@ -698,10 +698,12 @@ namespace UnityEditor.Animations
             k_ExitPosition = new Vector3(800, 120, 0), k_ParentStateMachinePosition = new Vector3(800, 20, 0);
         Vector3 m_AnyStatePosition = k_AnyStatePosition, m_EntryPosition = k_EntryPosition, m_ExitPosition = k_ExitPosition,
             m_ParentStateMachinePosition = k_ParentStateMachinePosition;
-        public Vector3 anyStatePosition { get => m_AnyStatePosition; set { m_AnyStatePosition = value; Edited(); } }
-        public Vector3 entryPosition { get => m_EntryPosition; set { m_EntryPosition = value; Edited(); } }
-        public Vector3 exitPosition { get => m_ExitPosition; set { m_ExitPosition = value; Edited(); } }
-        public Vector3 parentStateMachinePosition { get => m_ParentStateMachinePosition; set { m_ParentStateMachinePosition = value; Edited(); } }
+        // Where the graph view draws its nodes is layout only: it does not compile the controller
+        // again (Unbound's choice: unmeasured whether the Editor restarts Animators for it).
+        public Vector3 anyStatePosition { get => m_AnyStatePosition; set => m_AnyStatePosition = value; }
+        public Vector3 entryPosition { get => m_EntryPosition; set => m_EntryPosition = value; }
+        public Vector3 exitPosition { get => m_ExitPosition; set => m_ExitPosition = value; }
+        public Vector3 parentStateMachinePosition { get => m_ParentStateMachinePosition; set => m_ParentStateMachinePosition = value; }
 
         // Where AddState puts a state: the first at (200, 0, 0), the next 35 right and 65 down
         // from the last one (measured, tests/projects/animatorapi model.states.*).
@@ -1745,14 +1747,14 @@ namespace UnityEditor.Animations
             MaxThreshold = body.Float("m_MaxThreshold", 1f);
         }
 
-        /// <summary>Whether a child loops; an empty tree answers true (Unity 6000.0.71f1,
-        /// tests/projects/defaultstate BlendTree).</summary>
+        /// <summary>Whether every child loops (an empty tree does); the state playing the tree
+        /// reports the same (Unity 6000.0.71f1, tests/projects/animatorapi extra.loop.*,
+        /// extra.loopState.*: one non-looping child of two makes the tree not loop).</summary>
         internal override bool GetIsLooping()
         {
-            if (Children.Count == 0) return true;
             foreach (var c in Children)
-                if (c.motion != null && c.motion.isLooping) return true;
-            return false;
+                if (c.motion == null || !c.motion.isLooping) return false;
+            return true;
         }
 
         /// <summary>Whether every child is a human motion: an empty tree is (Unity 6000.0.71f1,
