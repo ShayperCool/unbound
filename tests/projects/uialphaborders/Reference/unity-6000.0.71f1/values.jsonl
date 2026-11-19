@@ -23,4 +23,8 @@
 {"k":"spriterenderer.plain.material","v":"Sprites/Default"}
 {"k":"spriterenderer.splitSrgb.material","v":"Sprites/Default"}
 {"k":"canvas.screen","v":[320,180]}
+{"k":"etc1Material","v":["ETC1 Supported UI Material","UI/DefaultETC1"]}
+{"k":"etc1Material.same","v":true}
+{"k":"etc1Material.isDefault","v":false}
+{"k":"batches.screen","v":[320,180]}
 {"k":"complete","v":true}

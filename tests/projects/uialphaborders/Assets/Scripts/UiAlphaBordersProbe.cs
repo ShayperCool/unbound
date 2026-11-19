@@ -66,8 +66,12 @@ public class UiAlphaBordersProbe : MonoBehaviour
         Value("imgui.repaints", m_Repaints.ToString());
         m_Imgui = false;
 
-        Canvases();
+        var first = Canvases();
         yield return Capture("canvas");
+        Destroy(first.gameObject);
+        yield return null;
+        Batches();
+        yield return Capture("batches");
 
         Value("complete", "true");
         int code = 0;
@@ -149,6 +153,41 @@ public class UiAlphaBordersProbe : MonoBehaviour
         return mesh;
     }
 
+    /// <summary>Renderers sharing one material and texture with different alpha textures: beside
+    /// another draw that does not overlap them (row 140) and one that overlaps both (row 100),
+    /// under one RectMask2D (row 60, inside the mask) and the ETC1 canvas material.</summary>
+    void Batches()
+    {
+        var canvas = new GameObject("BatchCanvas", typeof(RectTransform)).AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var etc1 = Canvas.GetETC1SupportedCanvasMaterial();
+        Value("etc1Material", etc1 == null ? "null" : "[" + Str(etc1.name) + "," + Str(etc1.shader != null ? etc1.shader.name : "null") + "]");
+        Value("etc1Material.same", (etc1 == Canvas.GetETC1SupportedCanvasMaterial()).ToString().ToLowerInvariant());
+        Value("etc1Material.isDefault", (etc1 == Canvas.GetDefaultCanvasMaterial()).ToString().ToLowerInvariant());
+        var shader = Shader.Find("UI/DefaultETC1");
+        var plain = new Material(Shader.Find("UI/Default"));
+        var apart = new Material(shader);
+        Bare(canvas, "apart.steps", 0, 140, apart, m_Steps);
+        Bare(canvas, "apart.other", 1, 140, plain, null);
+        Bare(canvas, "apart.half", 2, 140, apart, m_Half);
+        var over = new Material(shader);
+        Bare(canvas, "over.steps", 0, 100, over, m_Steps);
+        var cover = Bare(canvas, "over.other", 0, 100, new Material(plain), null);
+        ((RectTransform)cover.transform).anchoredPosition = new Vector2(20, 100);
+        ((RectTransform)cover.transform).sizeDelta = new Vector2(Cell + 40, Cell);
+        var overHalf = Bare(canvas, "over.half", 1, 100, over, m_Half);
+        ((RectTransform)overHalf.transform).anchoredPosition = new Vector2(44 + 40, 100);
+        var maskRect = Place(canvas, "mask", 0, 60, typeof(RectMask2D));
+        maskRect.sizeDelta = new Vector2(320, Cell);
+        var masked = new Material(shader);
+        foreach (var (name, column, alpha) in new[] { ("mask.steps", 0, m_Steps), ("mask.half", 1, m_Half) })
+        {
+            var r = Bare(canvas, name, column, 60, masked, alpha);
+            r.transform.SetParent(maskRect, true);
+        }
+        Canvas.ForceUpdateCanvases();
+    }
+
     /// <summary>A bare CanvasRenderer drawing the quadrant texture with <paramref name="material"/>.</summary>
     CanvasRenderer Bare(Canvas canvas, string name, int column, float y, Material material, Texture alpha)
     {
@@ -175,7 +214,7 @@ public class UiAlphaBordersProbe : MonoBehaviour
         Value(key + ".secondary", names.Append("]").ToString());
     }
 
-    void Canvases()
+    Canvas Canvases()
     {
         var canvas = new GameObject("Canvas", typeof(RectTransform)).AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -248,6 +287,7 @@ public class UiAlphaBordersProbe : MonoBehaviour
             renderer.sprite = renderers[i].Item2;
             Value("spriterenderer." + renderers[i].Item1 + ".material", Str(renderer.sharedMaterial != null ? renderer.sharedMaterial.shader.name : null));
         }
+        return canvas;
     }
 
     /// <summary>Renders a few frames, then records the last at its end.</summary>
