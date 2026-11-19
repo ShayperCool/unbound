@@ -8,8 +8,8 @@ namespace UnityEditor
     /// <summary>
     /// An editor singleton: the first <see cref="instance"/> access loads it from its
     /// <see cref="FilePathAttribute"/> file (when it has one and the file exists), else creates it.
-    /// <see cref="Save"/> writes it in Unity's text format; files in the project or the Editor's
-    /// preferences go to Unbound's own copies (<c>Library/Unbound/EditorFiles</c>, the global cache),
+    /// <see cref="Save"/> writes it in Unity's text format to that file in the project, as the
+    /// Editor does; one in the Editor's preferences goes to Unbound's copy in the global cache,
     /// which later loads read first.
     /// </summary>
     public partial class ScriptableSingleton<T> : ScriptableObject where T : ScriptableObject

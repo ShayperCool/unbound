@@ -39,8 +39,7 @@ namespace UnityEditorInternal
 
         /// <summary>
         /// Reads the objects of a serialized file (Unity's text format), not as assets: editor
-        /// singletons and settings load their state so. A file Unbound wrote earlier
-        /// (<see cref="SaveToSerializedFileAndForget"/>) is read in place of the project's.
+        /// singletons and settings load their state so.
         /// </summary>
         public static Object[] LoadSerializedFileAndForget(string path)
         {
@@ -68,9 +67,8 @@ namespace UnityEditorInternal
         }
 
         /// <summary>
-        /// Writes objects in Unity's text serialization. Authored project files are never written:
-        /// a path inside the project goes to <c>Library/Unbound/EditorFiles/</c>, where
-        /// <see cref="LoadSerializedFileAndForget"/> finds it again.
+        /// Writes objects in Unity's text serialization to the path, as the Editor does (a file
+        /// of the Editor's own preferences goes to Unbound's copy, <see cref="SerializedFiles"/>).
         /// </summary>
         public static void SaveToSerializedFileAndForget(Object[] obj, string path, bool allowTextSerialization)
         {
@@ -85,8 +83,9 @@ namespace UnityEditorInternal
 
 namespace Unbound.Runtime
 {
-    /// <summary>Where editor files live: project-relative paths are the project's; what Unbound
-    /// writes in the Editor's stead goes under Library/Unbound/EditorFiles.</summary>
+    /// <summary>Where editor files live: project-relative paths are the project's, written there as
+    /// the Editor writes them; files of the installed Editor's preferences (shared by every
+    /// project and Editor on the machine) go to Unbound's copy in the global cache, read first.</summary>
     internal static class SerializedFiles
     {
         static string Project => ProjectInfo.ProjectPath;
@@ -96,10 +95,6 @@ namespace Unbound.Runtime
 
         static string Overlay(string absolute)
         {
-            var project = Path.GetFullPath(Project).TrimEnd('/') + "/";
-            if (absolute.StartsWith(project, StringComparison.Ordinal))
-                return Path.Combine(project, "Library", "Unbound", "EditorFiles", absolute.Substring(project.Length));
-            // The installed Editor's preferences are never written either.
             var preferences = Path.GetFullPath(UnityEditorInternal.InternalEditorUtility.unityPreferencesFolder).TrimEnd('/') + "/";
             if (absolute.StartsWith(preferences, StringComparison.Ordinal))
             {
