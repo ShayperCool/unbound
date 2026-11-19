@@ -43,8 +43,13 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
         // A spherical zone reaching only the level a whole tree does not draw, and two spherical
         // zones whose winds cancel exactly at another tree.
         790, 791, 795, 800, 801, 802, 803, 805, 810, 811, 812, 813, 815, 820, 840, 860,
+        // A spherical zone whose wind exactly cancels the directional wind at a tree, and a tree
+        // without a wind asset.
+        870, 871, 872, 875, 876, 877, 880, 881, 882, 883, 885, 890, 900, 920, 940,
+        // That zone moved so that the winds no longer cancel, then gone.
+        950, 951, 952, 953, 955, 960, 970, 980, 1000, 1001, 1002, 1003, 1005, 1010, 1020, 1040, 1070, 1100,
     };
-    const int LastFrame = 860;
+    const int LastFrame = 1100;
 
     readonly StringBuilder m_Out = new StringBuilder();
     /// <summary>Each tree's camera and the constants it records: a renderer without per-object
@@ -249,6 +254,29 @@ public sealed class SpeedTreeWindProbe : MonoBehaviour
             Zone("CancelPlus", null, WindZoneMode.Spherical, 1f, Quaternion.identity, new Vector3(1001f, 0.5f, -1f), 4f);
             Zone("CancelMinus", null, WindZoneMode.Spherical, -1f, Quaternion.identity, new Vector3(1001f, 0.5f, -1f), 4f);
         }
+        // Two trees of an asset far from every zone (one the other's twin), and a tree whose Tree
+        // has no wind asset; then a directional wind along +z, then a spherical zone that blows
+        // along -z at the first tree with the same main wind: the winds at that tree sum to zero
+        // exactly. Whether it gets a local wind shows in its constants against its twin's.
+        if (m_Frame == 870)
+        {
+            Tree("OpposedTwin", m_Gusty, m_Dump, 19, new Vector3(1300f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+            Tree("Opposed", "OpposedTwin", m_Gusty, m_Dump, 20, new Vector3(1100f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+            Tree("Windless", m_Gusty, m_Dump, 18, new Vector3(1200f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+            GameObject.Find("Windless").GetComponent<Tree>().windAsset = null;
+        }
+        if (m_Frame == 875) Zone("Toward", null, WindZoneMode.Directional, 1f, Quaternion.identity, Vector3.zero);
+        if (m_Frame == 880)
+        {
+            // The point the zone blows toward: the bounds' center raised by a quarter of their height.
+            var bounds = GameObject.Find("Opposed").GetComponent<MeshRenderer>().bounds;
+            var point = new Vector3(bounds.center.x, bounds.center.y + bounds.size.y * 0.25f, bounds.center.z);
+            Zone("Against", null, WindZoneMode.Spherical, 1f, Quaternion.identity, point + new Vector3(0f, 0f, 5f), 20f);
+        }
+        // The zone moves 3 units along x (still in reach): the winds at the tree no longer cancel;
+        // whether its local wind gets a direction again shows from here. Then the zone goes.
+        if (m_Frame == 950) GameObject.Find("WindAgainst").transform.position += new Vector3(3f, 0f, 0f);
+        if (m_Frame == 1000) GameObject.Find("WindAgainst").SetActive(false);
     }
 
     /// <summary>An instance of a whole tree (its LOD group) whose levels draw quads with the dump

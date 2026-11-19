@@ -8,4 +8,4 @@ import value_probe  # noqa: E402
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(Path(__file__).resolve().parent, 'ProbeRunner.Record', 'SPEEDTREE_PROBE_OUT',
-                              tolerance=0, engine_args=['--frames', '900', '--size', '64x64']))
+                              tolerance=0, engine_args=['--frames', '1200', '--size', '64x64']))
