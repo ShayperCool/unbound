@@ -23,7 +23,9 @@ folder); `CreateAsset` of a ScriptableObject, `AddObjectToAsset`, `SaveAssets`; 
 `MoveAsset` (also into a missing folder and onto an asset), `RenameAsset` (also onto a taken name and
 an extension's), `GenerateUniqueAssetPath` (taken, free, folders, numbered names, other case, a
 missing folder); `DeleteAsset` (an asset, nothing, a folder) and the GUID lookups after it,
-`MoveAssetToTrash`; imports and `CreateAsset` between `StartAssetEditing` and `StopAssetEditing`;
+`MoveAssetToTrash`; `CopyAsset` of a folder holding a hidden file; labels, importer settings and a
+copy of assets whose `.meta` files use CRLF; moving, validating, copying, deleting and making a
+folder in a read-only (built-in) package and copying out of it; imports and `CreateAsset` between `StartAssetEditing` and `StopAssetEditing`;
 `TextureImporter`, `ModelImporter` and `AssetImporter` settings, `SaveAndReimport` and
 `WriteImportSettingsIfDirty`; `SetLabels`/`ClearLabels`; a texture imported with an
 `AssetPostprocessor` that changes its settings; `PlayerSettings.SetScriptingDefineSymbols`
@@ -45,18 +47,23 @@ Copies, moves and renames name a native asset's main object after its new file; 
 GUID, a move keeps it. `GenerateUniqueAssetPath` keeps a free path, else takes the first free
 `name N` (a name's own ` N` replaced), spells the folder as the project does and gives "" for a
 missing folder. `DeleteAsset` deletes folders too; `AssetPathToGUID` (by default) and
-`GUIDToAssetPath` still answer for a deleted asset. Labels are written at once, in ordinal order,
-repeats kept. Importer settings are written by `SaveAndReimport`, `WriteImportSettingsIfDirty` and
+`GUIDToAssetPath` still answer for a deleted asset. A folder copy takes its hidden files along,
+without a `.meta`. A `.meta` written again (labels, importer settings, a copy) has LF endings, and a
+texture's lists the installed platform modules. In a read-only package `ValidateMoveAsset` passes,
+`MoveAsset` answers that the path is immutable and `DeleteAsset` false. Labels are written at once,
+in ordinal order, repeats kept. Importer settings are written by `SaveAndReimport`, `WriteImportSettingsIfDirty` and
 a new AssetBundle name (lowercased), in place in the `.meta`; settings an `AssetPostprocessor`
 changes during an import are written too. Settings changed through the API are written by
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-19: 509/530 values, 0 failures and 21 recorded residuals
+Unbound on macOS, 2026-11-19: 603/630 values, 0 failures and 27 recorded residuals
 (`residuals.json`): lists of numbers written as YAML sequences instead of the Editor's hex strings
-(the serialized-file writer), the lock not written again after an Edit-mode `Client.Resolve`, and
-no `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot
-tell which extensions packages' ScriptedImporters claim).
+(the serialized-file writer), the lock not written again after an Edit-mode `Client.Resolve`, no
+`.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
+which extensions packages' ScriptedImporters claim), and copies and folders refused in a read-only
+package (the Editor writes into its per-project copy of the package; Unbound's package files are
+the installation's or the shared store's).
 
 Unmeasured: other importers (`.asmref`, plug-ins and folder plug-ins such as `.bundle`, videos,
 packages' ScriptedImporters: Unbound reports such new files and writes no `.meta`), file operations
