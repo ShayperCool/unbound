@@ -62,6 +62,22 @@ namespace UnityEditor
 
         /// <summary>The instance callback <paramref name="name"/> of every loaded postprocessor, in
         /// calling order (found once per session).</summary>
+        /// <summary>Makes <paramref name="hooks"/> the postprocessors of <paramref name="name"/>
+        /// until the scope ends (tests: the domain's own stay unseen).</summary>
+        internal static IDisposable HooksForTests(string name, List<(int Order, Type Type, MethodInfo Method)> hooks)
+        {
+            s_Hooks.TryGetValue(name, out var previous);
+            s_Hooks[name] = hooks;
+            return new Restore(() => { if (previous == null) s_Hooks.Remove(name); else s_Hooks[name] = previous; });
+        }
+
+        sealed class Restore : IDisposable
+        {
+            readonly Action m_Action;
+            internal Restore(Action action) => m_Action = action;
+            public void Dispose() => m_Action();
+        }
+
         internal static List<(int Order, Type Type, MethodInfo Method)> Hooks(string name, params Type[] parameters)
         {
             if (!s_Hooks.TryGetValue(name, out var hooks))
@@ -245,7 +261,7 @@ namespace UnityEditor
         }
 
         /// <summary>Runs an asset's preprocessors once per session, before its import.</summary>
-        internal static void EnsurePreprocessed(string path, string kind)
+        internal static void EnsurePreprocessed(string path, string kind, string guid = null)
         {
             if (path == null || !s_Preprocessed.Add(path)) return;
             // A prefab has no preprocessor of its own: OnPreprocessAsset alone.
@@ -253,14 +269,14 @@ namespace UnityEditor
             if (own == null && kind != "prefab") return;
             if (Hooks("OnPreprocessAsset").Count == 0 && (own == null || Hooks(own).Count == 0) && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
-            Preprocess(path, kind);
+            Preprocess(path, kind, guid);
         }
 
         /// <summary>An asset's preprocessors: OnPreprocessAsset, then its type's (a model's
         /// OnPreprocessModel, then OnPreprocessAnimation), on the asset's importer, which
         /// <see cref="AssetImporter.GetAtPath"/> also gives. Settings they changed are handed to the
         /// native import for this session.</summary>
-        internal static void Preprocess(string path, string kind)
+        internal static void Preprocess(string path, string kind, string guid = null)
         {
             // The import takes the importer's settings as the preprocessors leave them: with what a
             // script changed on it before (Unbound's choice, unmeasured). Without a preprocessor of
@@ -268,7 +284,7 @@ namespace UnityEditor
             // (a stub) does not import them.
             var session = Session(path);
             var importer = session.Importer;
-            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(guid ?? AssetDatabase.AssetPathToGUID(path));
             AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), session, Array.Empty<object>());
             switch (kind)
             {
@@ -290,7 +306,7 @@ namespace UnityEditor
             var settings = MetaSettings.ToJson(importer.m_Settings);
             if (settings == importer.m_ImportedSettings) return;
             importer.m_ImportedSettings = settings;
-            var guid = AssetDatabase.AssetPathToGUID(path);
+            guid ??= AssetDatabase.AssetPathToGUID(path);
             if (AssetDatabaseRuntime.IsMainLoaded(guid))
                 Debug.LogWarning($"Unbound: {path} loaded before its preprocessors ran; it keeps the import of its .meta's settings for this session");
             try

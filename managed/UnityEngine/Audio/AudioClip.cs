@@ -510,7 +510,7 @@ namespace Unbound.Runtime
 
         internal static LoadedFile Import(AssetDatabaseRuntime.AssetInfo info)
         {
-            UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "audio");
+            UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "audio", info.Guid);
             var clip = AudioClip.FromImport(info.Guid, System.IO.Path.GetFileNameWithoutExtension(info.Path));
             UnityEditor.AssetPostprocessing.PostprocessAudio(info.Path, clip);
             var file = new LoadedFile { MainObject = clip };

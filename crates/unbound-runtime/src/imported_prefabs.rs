@@ -247,7 +247,9 @@ mod tests {
 
     extern "C" fn answer(guid: *const u8, length: i32, sink: *mut c_void) -> i32 {
         let guid = unsafe { std::slice::from_raw_parts(guid, length as usize) };
-        let (status, text): (i32, &[u8]) = if guid.starts_with(b"0000") {
+        let (status, text): (i32, &[u8]) = if guid.starts_with(b"0000")
+            || guid.starts_with(b"postprocess:0000")
+        {
             (1, b"no such import")
         } else {
             (
@@ -280,6 +282,24 @@ mod tests {
             format!("{:#}", documents(failing).unwrap_err()),
             "no such import"
         );
+        // A postprocessing failure keeps the expansion (instances still expand); a kind no
+        // postprocessor is called on, and a file that is neither a model nor a prefab, get none.
+        let expanded =
+            unbound_yaml::parse_documents("%YAML 1.1\n--- !u!1 &5\nGameObject:\n  m_Name: P\n")
+                .unwrap();
+        set_postprocessing(false, true);
+        assert!(postprocess(failing, Path::new("A.prefab"), &expanded).is_none());
+        // The answer's document is laid over the expansion's.
+        let changed = postprocess(guid, Path::new("A.prefab"), &expanded)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            changed[0].body.get("m_Name").and_then(|v| v.as_str()),
+            Some("Tree")
+        );
+        assert!(postprocess(guid, Path::new("A.st9"), &expanded).is_none());
+        assert!(postprocess(guid, Path::new("A.fbx"), &expanded).is_none());
+        set_postprocessing(false, false);
         set_source(None);
     }
 

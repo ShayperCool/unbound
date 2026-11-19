@@ -1176,6 +1176,9 @@ namespace UnityEngine
             w.Int("m_WrapMode", (int)m_WrapMode);
             w.Bool("m_PlayAutomatically", m_PlayAutomatically);
             w.Bool("m_AnimatePhysics", m_AnimatePhysics);
+            // The older key the reader also takes as animating physics (kept by the documents a
+            // writer's keys are laid over).
+            w.Int("m_UpdateMode", m_AnimatePhysics ? (int)AnimationUpdateMode.Fixed : (int)AnimationUpdateMode.Normal);
             w.Int("m_CullingType", (int)m_CullingType);
             w.Key("m_UserAABB", 1);
             w.Vector3("m_Center", m_UserBounds.center, 2);

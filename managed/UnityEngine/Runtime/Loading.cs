@@ -871,11 +871,12 @@ namespace Unbound.Runtime
         internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
+            // An import's own postprocessors loading the asset: the Editor's first import has no
+            // artifact to give yet (ShaderGraph's OnPreprocessAsset asks, expecting null), and the
+            // asset is not imported from inside its own callbacks.
+            if (s_InImportCallbacks.Contains(guid)) return null;
             if (!s_Loading.Add(guid))
             {
-                // An import's own postprocessors loading the asset: the Editor's first import has
-                // no artifact to give yet (ShaderGraph's OnPreprocessAsset asks, expecting null).
-                if (s_InImportCallbacks.Contains(guid)) return null;
                 if (s_ReadingForPostprocessors.Contains(guid))
                     Debug.LogError($"Unbound: asset {guid} is referenced by a prefab it nests while its postprocessors' import reads it; the reference is empty (not supported yet).");
                 else
@@ -913,7 +914,7 @@ namespace Unbound.Runtime
                     case "model":
                     {
                         bool model = info.Kind == "model";
-                        if (model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model");
+                        if (model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model", guid);
                         // A model is the prefab it imports to (the native side makes its documents).
                         // When postprocessors change this kind of import, they get the documents
                         // without their changes and run on the objects.
@@ -930,7 +931,7 @@ namespace Unbound.Runtime
                         if (postprocessed) UnityEditor.HierarchyPostprocessing.Run(file, model);
                         else
                         {
-                            if (!model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab");
+                            if (!model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab", guid);
                             UnityEditor.AssetPostprocessing.EndSession(info.Path);
                         }
                         break;

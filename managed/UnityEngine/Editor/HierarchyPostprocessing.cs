@@ -86,11 +86,15 @@ namespace UnityEditor
             // Importing makes objects, which only the main thread may.
             if (!PlayerLoopDriver.IsMainThread)
                 throw new InvalidOperationException("a model's or prefab's postprocessors run on the main thread only");
+            return Answer(guid, AssetDatabaseRuntime.Info(guid));
+        }
+
+        internal static string Answer(string guid, AssetDatabaseRuntime.AssetInfo info)
+        {
             // A prefab whose import only OnPreprocessAsset is called on: nothing changes.
-            var info = AssetDatabaseRuntime.Info(guid);
             if (info?.Kind == "prefab" && !Prefabs)
             {
-                AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab");
+                AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab", guid);
                 AssetPostprocessing.EndSession(info.Path);
                 return "";
             }
@@ -149,28 +153,64 @@ namespace UnityEditor
         internal static string Fields(Object o)
         {
             var sb = new StringBuilder();
-            for (var type = o.GetType(); type != null && type != typeof(Object); type = type.BaseType)
-                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                {
-                    var value = field.GetValue(o);
-                    Append(sb, value);
-                    if (value is System.Collections.IEnumerable items && !(value is string))
-                        foreach (var item in items) Append(sb, item);
-                    sb.Append(';');
-                }
+            AppendFields(sb, o, typeof(Object), new HashSet<object>(ReferenceEqualityComparer.Instance), 0);
             return sb.ToString();
         }
 
-        static void Append(StringBuilder sb, object value)
+        /// <summary>How deep plain objects a component holds are followed (its modules, their
+        /// curves and gradients).</summary>
+        const int FieldDepth = 6;
+
+        static void AppendFields(StringBuilder sb, object o, Type stop, HashSet<object> seen, int depth)
         {
-            if (value == null) sb.Append("null,");
-            else if (value.GetType().IsValueType || value is string) sb.Append(value).Append(',');
-            else sb.Append('#').Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value)).Append(',');
+            for (var type = o.GetType(); type != null && type != stop && type != typeof(object); type = type.BaseType)
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    Append(sb, field.GetValue(o), seen, depth);
+                    sb.Append(';');
+                }
+        }
+
+        /// <summary>A value: engine objects by identity, plain objects by their fields, lists by
+        /// their items.</summary>
+        static void Append(StringBuilder sb, object value, HashSet<object> seen, int depth)
+        {
+            switch (value)
+            {
+                case null:
+                    sb.Append("null,");
+                    return;
+                case string text:
+                    sb.Append(text).Append(',');
+                    return;
+                case Object engine:
+                    sb.Append('#').Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(engine)).Append(',');
+                    return;
+                case Delegate:
+                    return;
+            }
+            var type = value.GetType();
+            if (type.IsPrimitive || type.IsEnum)
+            {
+                sb.Append(value).Append(',');
+                return;
+            }
+            if (depth >= FieldDepth || (!type.IsValueType && !seen.Add(value)))
+            {
+                sb.Append('#').Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value)).Append(',');
+                return;
+            }
+            sb.Append('{');
+            if (value is System.Collections.IEnumerable items)
+                foreach (var item in items) Append(sb, item, seen, depth + 1);
+            else
+                AppendFields(sb, value, typeof(object), seen, depth + 1);
+            sb.Append('}');
         }
 
         static List<Material> RunPrefab(LoadedFile file, GameObject root, ImportSession session)
         {
-            AssetPostprocessing.EnsurePreprocessed(file.Path, "prefab");
+            AssetPostprocessing.EnsurePreprocessed(file.Path, "prefab", file.Guid);
             AssetPostprocessorHooks.Run(PrefabHooks, session, new object[] { root });
             return new List<Material>();
         }

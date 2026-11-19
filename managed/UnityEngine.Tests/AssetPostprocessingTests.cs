@@ -297,11 +297,71 @@ namespace UnityEngine.Tests
                 Assert.Equal(before, HierarchyPostprocessing.Fields(light));
                 light.range = light.range + 3;
                 Assert.NotEqual(before, HierarchyPostprocessing.Fields(light));
+                // A change inside a plain object the component holds (a particle system's module).
+                var particles = go.AddComponent<ParticleSystem>();
+                var unchanged = HierarchyPostprocessing.Fields(particles);
+                Assert.Equal(unchanged, HierarchyPostprocessing.Fields(particles));
+                var main = particles.main;
+                main.startSpeed = 5f;
+                Assert.NotEqual(unchanged, HierarchyPostprocessing.Fields(particles));
             }
             finally
             {
                 Object.DestroyImmediate(go);
             }
+        }
+
+        sealed class Logs : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+        }
+
+        [Fact]
+        public void AnImportsOwnCallbacksLoadingTheAssetGetNothingWithoutALog()
+        {
+            // ShaderGraph's OnPreprocessAsset loads the graph it imports and expects null (the
+            // Editor's first import has no artifact).
+            const string guid = "0123456789abcdef0123456789abcdee";
+            var logs = new Logs();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                using (AssetDatabaseRuntime.ImportCallbacks(guid))
+                    Assert.Null(AssetDatabaseRuntime.LoadFile(guid));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            Assert.Empty(logs.Lines);
+        }
+
+        sealed class PreprocessingPostprocessor : AssetPostprocessor
+        {
+            void Count() => s_ImportCalls.Add("preprocess " + assetPath + " " + (assetImporter != null));
+        }
+
+        [Fact]
+        public void APrefabGetsOnPreprocessAssetOnceWithoutAPrefabPostprocessor()
+        {
+            // OnPreprocessAsset is every import's first callback: a prefab's runs without an
+            // OnPostprocessPrefab anywhere, once per session, and nothing else changes.
+            s_ImportCalls.Clear();
+            const string path = "Assets/OnlyPreprocessed.prefab", guid = "0123456789abcdef0123456789abcded";
+            var importer = AssetImporter.FromMeta(path, guid, "PrefabImporter", TestYaml.DocumentBody("PrefabImporter:\n  userData: \n"));
+            var info = new AssetDatabaseRuntime.AssetInfo { Guid = guid, Path = path, Kind = "prefab" };
+            using (AssetPostprocessing.HooksForTests("OnPreprocessAsset", new List<(int, Type, System.Reflection.MethodInfo)> { Hook<PreprocessingPostprocessor>("Count") }))
+            using (AssetPostprocessing.HooksForTests("OnPostprocessPrefab", new List<(int, Type, System.Reflection.MethodInfo)>()))
+            using (AssetImporter.Importing(path, importer))
+            {
+                Assert.Equal("", HierarchyPostprocessing.Answer(guid, info));
+                Assert.Equal("", HierarchyPostprocessing.Answer(guid, info));
+            }
+            Assert.Equal(new[] { "preprocess Assets/OnlyPreprocessed.prefab True" }, s_ImportCalls);
+            Assert.Null(AssetPostprocessing.ExistingSession(path));
         }
 
         static readonly List<string> s_ImportCalls = new List<string>();
