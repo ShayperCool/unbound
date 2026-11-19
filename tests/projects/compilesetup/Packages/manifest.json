@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "com.probe.consumer": "file:LocalPackages/com.probe.consumer-1.0.0.tgz",
+    "com.probe.localtests": "file:LocalPackages/com.probe.localtests",
+    "com.unity.2d.pixel-perfect": "5.0.3",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.render-pipelines.universal": "17.0.4"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/compilesetup/run.py gate"
+  ],
+  "summary": "compilesetup: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/assemblies.rs",
+    "crates/unbound-project/src/assembly_identity.rs",
+    "crates/unbound-project/src/compile.rs",
+    "crates/unbound-project/src/packages.rs",
+    "crates/unbound-project/src/plugins.rs",
+    "managed/Unbound.Compiler/CompilerService.cs",
+    "managed/Unbound.Compiler/MovedTypes.cs",
+    "managed/Unbound.Host/Unbound.Host.csproj"
+  ]
+}

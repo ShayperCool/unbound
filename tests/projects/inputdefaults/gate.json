@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/inputdefaults/run.py gate"
+  ],
+  "summary": "inputdefaults: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/settings.rs",
+    "crates/unbound-runtime/src/config.rs",
+    "data/profiles/inputmanager-6000.0.asset"
+  ]
+}

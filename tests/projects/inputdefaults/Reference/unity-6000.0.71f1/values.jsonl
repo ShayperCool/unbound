@@ -1,0 +1,45 @@
+{"k":"input.file","v":"exists"}
+{"k":"input.assets","v":"InputManager"}
+{"k":"input.axes","v":"18"}
+{"k":"input.axis.0","v":"m_Name=Horizontal;descriptiveName=;descriptiveNegativeName=;negativeButton=left;positiveButton=right;altNegativeButton=a;altPositiveButton=d;gravity=3;dead=0.001;sensitivity=3;snap=True;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.1","v":"m_Name=Vertical;descriptiveName=;descriptiveNegativeName=;negativeButton=down;positiveButton=up;altNegativeButton=s;altPositiveButton=w;gravity=3;dead=0.001;sensitivity=3;snap=True;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.2","v":"m_Name=Fire1;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=left ctrl;altNegativeButton=;altPositiveButton=mouse 0;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.3","v":"m_Name=Fire2;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=left alt;altNegativeButton=;altPositiveButton=mouse 1;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.4","v":"m_Name=Fire3;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=left shift;altNegativeButton=;altPositiveButton=mouse 2;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.5","v":"m_Name=Jump;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=space;altNegativeButton=;altPositiveButton=;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.6","v":"m_Name=Mouse X;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=;altNegativeButton=;altPositiveButton=;gravity=0;dead=0;sensitivity=0.1;snap=False;invert=False;type=1;axis=0;joyNum=0"}
+{"k":"input.axis.7","v":"m_Name=Mouse Y;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=;altNegativeButton=;altPositiveButton=;gravity=0;dead=0;sensitivity=0.1;snap=False;invert=False;type=1;axis=1;joyNum=0"}
+{"k":"input.axis.8","v":"m_Name=Mouse ScrollWheel;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=;altNegativeButton=;altPositiveButton=;gravity=0;dead=0;sensitivity=0.1;snap=False;invert=False;type=1;axis=2;joyNum=0"}
+{"k":"input.axis.9","v":"m_Name=Horizontal;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=;altNegativeButton=;altPositiveButton=;gravity=0;dead=0.19;sensitivity=1;snap=False;invert=False;type=2;axis=0;joyNum=0"}
+{"k":"input.axis.10","v":"m_Name=Vertical;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=;altNegativeButton=;altPositiveButton=;gravity=0;dead=0.19;sensitivity=1;snap=False;invert=True;type=2;axis=1;joyNum=0"}
+{"k":"input.axis.11","v":"m_Name=Fire1;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=joystick button 0;altNegativeButton=;altPositiveButton=;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.12","v":"m_Name=Fire2;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=joystick button 1;altNegativeButton=;altPositiveButton=;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.13","v":"m_Name=Fire3;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=joystick button 2;altNegativeButton=;altPositiveButton=;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.14","v":"m_Name=Jump;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=joystick button 3;altNegativeButton=;altPositiveButton=;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.15","v":"m_Name=Submit;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=return;altNegativeButton=;altPositiveButton=joystick button 0;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.16","v":"m_Name=Submit;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=enter;altNegativeButton=;altPositiveButton=space;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis.17","v":"m_Name=Cancel;descriptiveName=;descriptiveNegativeName=;negativeButton=;positiveButton=escape;altNegativeButton=;altPositiveButton=joystick button 1;gravity=1000;dead=0.001;sensitivity=1000;snap=False;invert=False;type=0;axis=0;joyNum=0"}
+{"k":"input.axis_raw.Horizontal","v":"0"}
+{"k":"input.button.Horizontal","v":"False"}
+{"k":"input.axis_raw.Vertical","v":"0"}
+{"k":"input.button.Vertical","v":"False"}
+{"k":"input.axis_raw.Fire1","v":"0"}
+{"k":"input.button.Fire1","v":"False"}
+{"k":"input.axis_raw.Fire2","v":"0"}
+{"k":"input.button.Fire2","v":"False"}
+{"k":"input.axis_raw.Fire3","v":"0"}
+{"k":"input.button.Fire3","v":"False"}
+{"k":"input.axis_raw.Jump","v":"0"}
+{"k":"input.button.Jump","v":"False"}
+{"k":"input.axis_raw.Mouse X","v":"0"}
+{"k":"input.button.Mouse X","v":"False"}
+{"k":"input.axis_raw.Mouse Y","v":"0"}
+{"k":"input.button.Mouse Y","v":"False"}
+{"k":"input.axis_raw.Mouse ScrollWheel","v":"0"}
+{"k":"input.button.Mouse ScrollWheel","v":"False"}
+{"k":"input.axis_raw.Submit","v":"0"}
+{"k":"input.button.Submit","v":"False"}
+{"k":"input.axis_raw.Cancel","v":"0"}
+{"k":"input.button.Cancel","v":"False"}
+{"k":"input.axis_raw.Missing","v":"throws System.ArgumentException: Input Axis Probe Missing Axis is not setup.\n To change the input settings use: Edit -> Project Settings... -> Input Manager"}
+{"k":"complete","v":true}
