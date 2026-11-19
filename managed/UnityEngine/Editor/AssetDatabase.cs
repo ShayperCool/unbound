@@ -157,18 +157,21 @@ namespace UnityEditor
         {
             if (assetObject == null) return "";
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
-            if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _)) return GUIDToAssetPath(guid);
-            // Unity's built-in resources report the files the Editor loads them from.
-            if (BuiltinObjects.TryGetLocation(assetObject, out var builtin, out _))
-                return string.Equals(builtin, BuiltinShaders.ExtraGuid, StringComparison.OrdinalIgnoreCase)
-                    ? "Resources/unity_builtin_extra"
-                    : "Library/unity default resources";
+            if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _) || BuiltinObjects.TryGetLocation(assetObject, out guid, out _))
+                return BuiltinResourcePath(guid) ?? GUIDToAssetPath(guid);
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)
                 return GetAssetPath(c.m_GameObject.transform.root.gameObject);
             if (assetObject is GameObject go && go.m_IsPrefabAsset && go.transform.parent != null)
                 return GetAssetPath(go.transform.root.gameObject);
             return "";
         }
+
+        /// <summary>The file the Editor loads a built-in resource from, which its asset path names
+        /// (tests/projects/modelimport: an imported model's Default-Material slot); null for any other GUID.</summary>
+        static string BuiltinResourcePath(string guid) =>
+            string.Equals(guid, BuiltinShaders.ExtraGuid, StringComparison.OrdinalIgnoreCase) ? "Resources/unity_builtin_extra"
+            : string.Equals(guid, BuiltinShaders.DefaultGuid, StringComparison.OrdinalIgnoreCase) ? "Library/unity default resources"
+            : null;
 
         public static string GetAssetPath(int instanceID) => GetAssetPath(ObjectRegistry.FindById(instanceID));
 

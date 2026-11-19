@@ -289,6 +289,27 @@ namespace UnityEngine.Tests
             Assert.Equal(shader, material.shader.name);
         }
 
+        /// <summary>Red on c8b396025 (its built-in GUID was looked up as a project asset): a built-in material named by a reference (an
+        /// imported model's Default-Material slot) reported an empty asset path once references
+        /// remembered its location. Its path is its resource file's, as the Editor answers
+        /// (tests/projects/modelimport `Materials/Cube_NoMat.mat0.asset`); the other file's
+        /// object reports that file, also when it is made without a reference.</summary>
+        [Fact]
+        public void ABuiltinMaterialReportsItsResourceFileAsItsAssetPath()
+        {
+            Builtin(Extra, 10303, "Default-Material", "Standard", 46, -1);
+            Builtin(Default, 10756, "FrameDebuggerRenderTargetDisplay", "Hidden/FrameDebuggerRenderTargetDisplay", 10755, -1);
+            var referenced = AssetDatabaseRuntime.Load(Extra, 10303, typeof(Material));
+            Assert.NotNull(referenced);
+            Assert.Equal("Resources/unity_builtin_extra", UnityEditor.AssetDatabase.GetAssetPath(referenced));
+            Assert.Equal("Resources/unity_builtin_extra", UnityEditor.AssetDatabase.GetAssetPath(referenced.GetInstanceID()));
+            var direct = BuiltinShaders.Resolve(Default, 10756);
+            Assert.NotNull(direct);
+            Assert.Equal("Library/unity default resources", UnityEditor.AssetDatabase.GetAssetPath(direct));
+            Assert.True(UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(referenced, out var guid, out long fileId));
+            Assert.Equal((Extra, 10303L), (guid, fileId));
+        }
+
         /// <summary>Red on 1f41393e (assertion): Default-ParticleSystem's renderQueue is its
         /// shader's 2000, not its stored override 3000. -1 follows the shader (documented); the
         /// override does not, whatever the shader's queue. Both values are the install's (Native
