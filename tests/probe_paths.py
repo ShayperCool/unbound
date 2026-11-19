@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import subprocess
 import sys
 
 DEFAULT_UNITY_VERSION = '6000.0.71f1'
@@ -94,16 +95,17 @@ GENERATED = ('Library', 'Temp', 'Logs', 'UserSettings', 'obj', '__pycache__')
 CHECKOUT = Path(__file__).resolve().parents[1]
 
 
-def project_copy(source, project, fresh=False):
+def project_copy(source, project, fresh=False, package_cache=True):
     """A private copy of the authored project `source` at `project`, for one engine or Editor run.
 
     Unbound, like the Editor, writes a project's files (new .meta files, settings, the package
     lock), so no run may use a project of the checkout itself: everything it writes stays in the
-    copy. The copy holds PROJECT_FOLDERS. Every other entry of the source's root (the probe's
-    Reference/, inputs such as Content/ that a probe reads relative to its project, its scripts)
-    is a link to the source's, as is Library/PackageCache (resolved package contents); none of
-    them is a run's to write. GENERATED folders, IDE files and hidden entries are left out.
-    Local packages named relative to Packages/ outside it keep naming the source's. An existing
+    copy. The copy holds PROJECT_FOLDERS. Every other entry of the source's root that Git does
+    not ignore (the probe's Reference/, inputs such as Content/ that a probe reads relative to
+    its project, its scripts) is a link to the source's, as is Library/PackageCache (resolved
+    package contents) unless not `package_cache` (an Editor run, which resolves packages into
+    it); none of them is a run's to write. GENERATED folders, IDE files and hidden entries are
+    left out. Local packages named relative to Packages/ outside it keep naming the source's. An existing
     `project` is used as it is, so the steps of one run share their copy, unless `fresh` (a
     driver reusing its run directory) replaces it with a new copy. Returns `project`."""
     source, project = Path(source).resolve(), Path(project)
@@ -136,15 +138,28 @@ def project_copy(source, project, fresh=False):
             changed = True
         if changed:
             copied.write_text(json.dumps(document, indent=2)+'\n')
-    if (source/'Library/PackageCache').is_dir():
+    if package_cache and (source/'Library/PackageCache').is_dir():
         (project/'Library').mkdir()
         (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
-    for entry in sorted(source.iterdir()):
-        if (entry.name in PROJECT_FOLDERS or entry.name in GENERATED or entry.name.startswith('.')
-                or entry.suffix in ('.csproj', '.sln')):
-            continue
-        (project/entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
+    entries = [entry for entry in sorted(source.iterdir())
+               if not (entry.name in PROJECT_FOLDERS or entry.name in GENERATED or entry.name.startswith('.')
+                       or entry.suffix in ('.csproj', '.sln'))]
+    ignored = set()
+    if entries and inside_git_checkout(source):
+        # Ignored leftovers (earlier run output) are not inputs: a run must not write through them.
+        listed = subprocess.run(['git', 'check-ignore', '-z', '--stdin'], cwd=source, capture_output=True,
+                                input=b'\0'.join(os.fsencode(entry.name) for entry in entries))
+        ignored = {os.fsdecode(name) for name in listed.stdout.split(b'\0') if name}
+    for entry in entries:
+        if entry.name not in ignored:
+            (project/entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
     return project
+
+
+def inside_git_checkout(path):
+    """Whether `path` is inside a Git checkout (a directory or worktree with a .git entry)."""
+    path = Path(path).resolve()
+    return any((directory/'.git').exists() for directory in (path, *path.parents))
 
 
 def checkout_project(path):

@@ -430,6 +430,12 @@ class MacosRunTest(unittest.TestCase):
             self.run_job(job)
         self.assertIn('inside the checkout', str(refused.exception))
         self.assertFalse((self.root/'c').exists())
+        # A copy whose PackageCache is the checkout's: the Editor would resolve packages into it.
+        (self.root/'project/Library').mkdir()
+        (self.root/'project/Library/PackageCache').symlink_to(checkout/'tests/projects', target_is_directory=True)
+        with self.assertRaises(SystemExit) as refused:
+            self.run_job(self.job('l', batch=True))
+        self.assertIn('PackageCache', str(refused.exception))
 
     def test_windowed_capture_records_its_exit_and_runs_on_macos_only(self):
         out = self.root/'x'

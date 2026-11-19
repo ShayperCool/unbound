@@ -893,6 +893,40 @@ class PerProbeReleaseTests(unittest.TestCase):
                     self.assertEqual(results[name]['release'], expected)
                     self.assertEqual(results[name]['summary'], expected)
 
+    def test_a_probe_that_writes_into_the_checkout_fails_the_run(self):
+        with tempfile.TemporaryDirectory() as temp, unittest.mock.patch.dict(os.environ):
+            os.environ.pop(land.RELEASE_VARIABLE, None)
+            root = Path(temp)
+            for name in ('writer', 'clean'):
+                (root/'tests/projects'/name/'Reference').mkdir(parents=True)
+                (root/'tests/projects'/name/'Reference/ref.txt').write_text(name)
+            git = lambda *args: subprocess.run(['git', *args], cwd=root, check=True, capture_output=True)
+            git('init', '-q')
+            git('add', '.')
+            git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'probes')
+            cli = root/'cli'
+            cli.symlink_to(sys.executable)
+            write = 'import sys; open(sys.argv[1], "w").write("guid")'
+            def recipes(release):
+                return {'writer': [suite.Step('compare', [sys.executable, '-c', write, '{probe}/New.cs.meta'])],
+                        'clean': [suite.Step('compare', [sys.executable, '-c', 'print("1/1 match")'])]}
+            argv = ['suite.py', '--cli', str(cli), '--label', 'writes', '--against', 'none']
+            with unittest.mock.patch.multiple(suite, REPO=root, PROJECTS=root/'tests/projects',
+                                              CACHE=root/'cache', AGENTS=root/'agents'), \
+                 unittest.mock.patch.object(sys, 'argv', argv), \
+                 unittest.mock.patch.object(suite, 'recipes', recipes), \
+                 unittest.mock.patch.object(suite, 'managed_for', return_value=root), \
+                 unittest.mock.patch.object(suite, 'make_runtime', return_value=root), \
+                 unittest.mock.patch.object(suite.signal, 'signal'), \
+                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as error:
+                self.assertEqual(suite.main(), 1)
+            summary = json.loads((root/'agents/suite/writes/summary.json').read_text())
+            self.assertEqual(summary['checkout_writes'], ['?? tests/projects/writer/New.cs.meta'])
+            self.assertEqual(summary['probes']['writer']['status'], 'fail')
+            self.assertIn('wrote into the checkout', summary['probes']['writer']['summary'])
+            self.assertEqual(summary['probes']['clean']['status'], 'pass')
+            self.assertIn('tests/projects/writer/New.cs.meta', error.getvalue())
+
     def test_mixed_project_releases_require_an_explicit_override(self):
         with tempfile.TemporaryDirectory() as temp, unittest.mock.patch.dict(os.environ):
             os.environ.pop(land.RELEASE_VARIABLE, None)
@@ -1434,6 +1468,21 @@ class CheckoutGuardTests(unittest.TestCase):
         (projects/'a/Assets/Edited.cs').write_text('a/Assets/Edited.cs')
         self.assertIn(' M tests/projects/a/Assets/Edited.cs (restored)',
                       probe_runtime.checkout_writes(self.root, before, ('tests/projects/a',)))
+        (projects/'a/Assets/Untracked.cs').unlink()
+        self.assertIn('?? tests/projects/a/Assets/Untracked.cs (removed)',
+                      probe_runtime.checkout_writes(self.root, before, ('tests/projects/a',)))
+
+    def test_staging_or_committing_during_a_run_is_not_a_write(self):
+        before = probe_runtime.checkout_state(self.root, ('tests/projects',))
+        git = lambda *args: subprocess.run(['git', *args], cwd=self.root, check=True, capture_output=True)
+        git('add', 'tests/projects/a/Assets/Untracked.cs')
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects',)), [])
+        git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-am', 'work in progress')
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects',)), [])
+        # A file committed during the run and then changed by it still counts.
+        (self.root/'tests/projects/a/Assets/Untracked.cs').write_text('changed by the run')
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects',)),
+                         [' M tests/projects/a/Assets/Untracked.cs'])
 
     def test_a_tree_outside_any_checkout_has_no_state(self):
         with tempfile.TemporaryDirectory() as scratch:

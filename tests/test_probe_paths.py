@@ -144,6 +144,20 @@ class ProjectCopyTests(unittest.TestCase):
         self.assertEqual((fresh/'Assets/Scripts/Probe.cs').read_text(), 'class Probe { int changed; }')
         self.assertEqual((self.source/'Reference/unity-R.jsonl').read_text(), 'reference')
 
+    def test_an_editor_copy_has_its_own_package_cache(self):
+        project = probe_paths.project_copy(self.source, Path(self.temp.name)/'editor', package_cache=False)
+        self.assertFalse((project/'Library').exists())
+        self.assertTrue((project/'Reference').is_symlink())
+
+    def test_ignored_leftovers_are_not_linked(self):
+        import subprocess
+        subprocess.run(['git', 'init', '-q'], cwd=self.source, check=True)
+        (self.source/'.gitignore').write_text('Evidence*/\n')
+        (self.source/'Evidence-old').mkdir()
+        project = probe_paths.project_copy(self.source, Path(self.temp.name)/'run/project')
+        self.assertFalse((project/'Evidence-old').exists())
+        self.assertTrue((project/'Content').is_symlink())
+
     def test_the_checkout_is_recognised(self):
         self.assertTrue(probe_paths.checkout_project(probe_paths.CHECKOUT/'tests/projects/physics'))
         self.assertFalse(probe_paths.checkout_project(self.source))

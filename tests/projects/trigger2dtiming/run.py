@@ -49,7 +49,8 @@ def main():
             out.mkdir(exist_ok=True)
         env[var] = str(out)
         source = project if name in ['timing', 'order'] else REPO/'tests/projects'/name
-        fixture = source if source == project else project_copy(source, work/'projects'/name, fresh=True)
+        fixture = source if source == project else project_copy(source, work/'projects'/name, fresh=True,
+                                                                       package_cache=a.mode != 'native')
         if a.mode == 'native':
             cmd = [os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode', '-nographics',
                    '-projectPath', str(fixture), '-executeMethod', 'ProbeRunner.Record',

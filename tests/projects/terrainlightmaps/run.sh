@@ -27,14 +27,16 @@ if [[ "$space" != Linear && "$space" != Gamma ]]; then echo 'color space must be
 # A private copy of the project for the selected color space: authored settings stay intact, and
 # what the run writes (Unbound writes project files as the Editor does) stays in the copy.
 if [[ "${1:-}" == native || "${1:-}" == engine ]]; then
- export TERRAIN_LIGHTMAP_SOURCE="$fixture" TERRAIN_LIGHTMAP_SPACE="$space" TERRAIN_LIGHTMAP_COPY="$output.project"
+ export TERRAIN_LIGHTMAP_SOURCE="$fixture" TERRAIN_LIGHTMAP_SPACE="$space" TERRAIN_LIGHTMAP_COPY="$output.project" TERRAIN_LIGHTMAP_MODE="${1:-}"
  fixture="$(python3 - <<'PY'
 import os
 import sys
 sys.path.insert(0, 'tests')
 from probe_paths import project_copy
 space = os.environ['TERRAIN_LIGHTMAP_SPACE']
-target = project_copy(os.environ['TERRAIN_LIGHTMAP_SOURCE'], os.environ['TERRAIN_LIGHTMAP_COPY'], fresh=True)
+# An Editor run (native) resolves packages into its Library: no link to the source's PackageCache.
+target = project_copy(os.environ['TERRAIN_LIGHTMAP_SOURCE'], os.environ['TERRAIN_LIGHTMAP_COPY'], fresh=True,
+                      package_cache=os.environ['TERRAIN_LIGHTMAP_MODE'] != 'native')
 settings = target/'ProjectSettings/ProjectSettings.asset'
 value = 'm_ActiveColorSpace: ' + ('0' if space == 'Gamma' else '1')
 settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', value).replace('m_ActiveColorSpace: 0', value))

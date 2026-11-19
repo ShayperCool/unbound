@@ -12,13 +12,15 @@ export MATERIAL_COLOR_TRANSFER_OUT="${MATERIAL_COLOR_TRANSFER_OUT:-$root/${2:-cu
 # Every run but `create` (which authors the probe's assets) uses a private copy of the project:
 # the probe edits loaded assets, and Unbound writes project files as the Editor does.
 if [[ "${1:-}" != create ]]; then
- export PROBE_SOURCE="$fixture" PROBE_COPY="$MATERIAL_COLOR_TRANSFER_OUT.project" PROBE_SPACE="$space"
+ export PROBE_SOURCE="$fixture" PROBE_COPY="$MATERIAL_COLOR_TRANSFER_OUT.project" PROBE_SPACE="$space" PROBE_MODE="${1:-}"
  fixture="$(python3 - <<'PYCOPY'
 import os
 import sys
 sys.path.insert(0, 'tests')
 from probe_paths import project_copy
-target = project_copy(os.environ['PROBE_SOURCE'], os.environ['PROBE_COPY'], fresh=True)
+# An Editor run resolves packages into its Library: no link to the source's PackageCache.
+target = project_copy(os.environ['PROBE_SOURCE'], os.environ['PROBE_COPY'], fresh=True,
+                      package_cache=os.environ['PROBE_MODE'] not in ('native'))
 if os.environ['PROBE_SPACE'] == 'Gamma':
     settings = target/'ProjectSettings/ProjectSettings.asset'
     settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', 'm_ActiveColorSpace: 0'))

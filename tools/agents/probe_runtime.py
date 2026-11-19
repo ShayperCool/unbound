@@ -13,6 +13,9 @@ import sys
 import threading
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'tests'))
+from probe_paths import inside_git_checkout  # noqa: E402
+
 NO_EDITOR = 'UNBOUND_SUITE_NO_EDITOR'
 EDITOR_EXIT = 126
 EDITOR_POLL = 1.0
@@ -120,13 +123,20 @@ def probe_release(command, root, environment=None):
     return releases.pop() if releases else default_release()
 
 
+def content_digest(file):
+    """What a checkout file holds: its bytes' digest, a link's target, None when it is not there."""
+    if file.is_symlink():
+        return 'link:' + os.readlink(file)
+    return hashlib.sha256(file.read_bytes()).hexdigest() if file.is_file() else None
+
+
 def checkout_state(root, paths=('.',)):
     """The checkout's uncommitted and untracked (not ignored) files under `paths` (relative to
     `root`): {path: (git status, content digest)}. Probe runs work on copies of their projects
     (tests/probe_paths.py project_copy), as Unbound and the Editor write a project's files;
     checkout_writes compares two states to find a run that wrote into the checkout anyway. A
     directory outside any Git checkout (a test's scratch tree) has no state: {}."""
-    if not any((directory/'.git').exists() for directory in (Path(root).resolve(), *Path(root).resolve().parents)):
+    if not inside_git_checkout(root):
         return {}
     listed = subprocess.run(['git', '-c', 'status.renames=false', '--no-optional-locks', 'status',
                              '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=all',
@@ -134,23 +144,28 @@ def checkout_state(root, paths=('.',)):
     state = {}
     for entry in filter(None, listed.split(b'\0')):
         path = os.fsdecode(entry[3:])
-        file = Path(root)/path
-        digest = (hashlib.sha256(file.read_bytes()).hexdigest()
-                  if file.is_file() and not file.is_symlink() else None)
-        state[path] = (entry[:2].decode(), digest)
+        state[path] = (entry[:2].decode(), content_digest(Path(root)/path))
     return state
 
 
 def checkout_writes(root, before, paths=('.',)):
-    """The files under `paths` a run created, changed or removed since checkout_state `before`:
-    sorted 'XY path' lines in git's porcelain form, the earlier status with '(restored)' for an
-    edited file the run put back as committed or '(removed)' for an untracked file it removed."""
+    """The files under `paths` whose content a run created, changed or removed since
+    checkout_state `before`, as sorted 'XY path' lines (git's porcelain status now, or the earlier
+    one with '(restored)' for a file the run put back as committed and '(removed)' for an
+    untracked file it removed). Only content counts: staging or committing during the run is not
+    a write."""
     after = checkout_state(root, paths)
     inside = lambda path: any(p in ('.', '') or path == p or path.startswith(p.rstrip('/')+'/') for p in paths)
-    changed = [f'{after[path][0]} {path}' for path in sorted(after) if before.get(path) != after[path]]
-    restored = [f'{before[path][0]} {path} ' + ('(removed)' if before[path][0] == '??' else '(restored)')
-                for path in sorted(before) if path not in after and inside(path)]
-    return changed + restored
+    written = []
+    for path in sorted(set(after) | {path for path in before if inside(path)}):
+        if path in after:
+            # A file that was clean before held what is committed; any listed content is new.
+            if path not in before or before[path][1] != after[path][1]:
+                written.append(f'{after[path][0]} {path}')
+        elif content_digest(Path(root)/path) != before[path][1]:
+            # No longer listed: committed as it is (not a write), or put back or removed.
+            written.append(f'{before[path][0]} {path} ' + ('(removed)' if before[path][0] == '??' else '(restored)'))
+    return written
 
 
 # ps's dates and column words follow the locale and the time zone: fix both, so that a start

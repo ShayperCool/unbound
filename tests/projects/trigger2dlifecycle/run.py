@@ -49,7 +49,8 @@ def main():
             out.mkdir(exist_ok=True)
         env[var] = str(out)
         source = project if name in ['lifecycle', 'receivers', 'timing', 'order'] else REPO/'tests/projects'/name
-        fixture = source if source == project else project_copy(source, work/'projects'/name, fresh=True)
+        fixture = source if source == project else project_copy(source, work/'projects'/name, fresh=True,
+                                                                       package_cache=a.mode != 'native')
         if out.exists() and ext:
             raise SystemExit(f'Refusing to overwrite {out}')
         if a.mode == 'native':
