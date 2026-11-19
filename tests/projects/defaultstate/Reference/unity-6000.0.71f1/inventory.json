@@ -1690,6 +1690,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.MaterialProperty"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.Menu"
     },
     {
@@ -1697,6 +1703,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.MenuItem"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.MeshUtility"
     },
     {
       "category": "class",
@@ -1887,8 +1899,32 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Rendering.EditorCameraUtils"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.Rendering.EditorGraphicsSettings"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Rendering.RenderPipelineEditorUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.Rendering.RenderPipelineGraphicsSettingsEditorUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.Rendering.RenderingLayersLimitSettings"
     },
     {
       "category": "struct",
@@ -1955,6 +1991,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.SceneView"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneVisibilityManager"
     },
     {
       "category": "scriptable",
@@ -6429,6 +6471,18 @@
     {
       "category": "class",
       "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.Rendering.ObjectIdRequest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.Rendering.ObjectIdResult"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.Rendering.OnDemandRendering"
     },
@@ -7043,6 +7097,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.SpaceAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.SparseTexture"
     },
     {
       "category": "class",
