@@ -64,7 +64,7 @@ pub fn parse(
         path: path.to_path_buf(),
         ..Default::default()
     };
-    for token in tokens(text) {
+    for (token, raw) in split(text) {
         let (name, value) = match token.find(':') {
             Some(i) => (&token[..i], &token[i + 1..]),
             None => (token.as_str(), ""),
@@ -78,7 +78,7 @@ pub fn parse(
                         .filter(|s| !s.is_empty())
                         .map(str::to_string),
                 );
-                out.arguments.push(quoted(token));
+                out.arguments.push(raw);
             }
             Some("r" | "reference") => {
                 let parts: Vec<&str> = value.split([';', ',']).collect();
@@ -96,7 +96,13 @@ pub fn parse(
                     };
                     match resolve(reference, project, system_directories) {
                         Some(p) => match alias {
-                            Some(alias) => out.aliased.push((alias.to_string(), p)),
+                            Some(alias) if is_identifier(alias) => {
+                                out.aliased.push((alias.to_string(), p))
+                            }
+                            Some(alias) => out.errors.push(format!(
+                                "{}: `{alias}` is not a valid extern alias",
+                                path.display()
+                            )),
                             None => out.references.push(p),
                         },
                         None => out.errors.push(format!(
@@ -108,22 +114,17 @@ pub fn parse(
                     }
                 }
             }
-            _ => out.arguments.push(quoted(token)),
+            _ => out.arguments.push(raw),
         }
     }
     out
 }
 
-/// An argument as the compiler reads it from a line of its own: a value with whitespace, whose
-/// quotes [`tokens`] removed, quoted again.
-fn quoted(token: String) -> String {
-    if !token.contains(char::is_whitespace) {
-        return token;
-    }
-    match token.find(':') {
-        Some(i) => format!("{}:\"{}\"", &token[..i], &token[i + 1..]),
-        None => format!("\"{token}\""),
-    }
+/// A C# identifier (an extern alias), as the compiler accepts one.
+fn is_identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars.next().is_some_and(|c| c == '_' || c.is_alphabetic())
+        && chars.all(|c| c == '_' || c.is_alphanumeric())
 }
 
 fn resolve(reference: &str, project: &Path, system_directories: &[PathBuf]) -> Option<PathBuf> {
@@ -144,14 +145,23 @@ fn resolve(reference: &str, project: &Path, system_directories: &[PathBuf]) -> O
 /// The arguments of a response file: separated by spaces, a quoted part (`"` or `'`) kept whole
 /// without its quotes, and `#` ending a line's arguments.
 pub fn tokens(text: &str) -> Vec<String> {
+    split(text).into_iter().map(|(value, _)| value).collect()
+}
+
+/// Each argument with its text as written (quotes included), which the compiler reads as a
+/// command line of its own.
+fn split(text: &str) -> Vec<(String, String)> {
     let mut out = Vec::new();
     for line in text.split(['\n', '\r']) {
         let mut current = String::new();
+        let mut raw = String::new();
         let mut chars = line.chars();
         while let Some(c) = chars.next() {
             match c {
                 '"' | '\'' => {
+                    raw.push(c);
                     for q in chars.by_ref() {
+                        raw.push(q);
                         if q == c {
                             break;
                         }
@@ -159,18 +169,22 @@ pub fn tokens(text: &str) -> Vec<String> {
                     }
                 }
                 ' ' => {
-                    if !current.is_empty() {
-                        out.push(std::mem::take(&mut current));
+                    if !current.is_empty() || !raw.is_empty() {
+                        out.push((std::mem::take(&mut current), std::mem::take(&mut raw)));
                     }
                 }
                 '#' => break,
-                _ => current.push(c),
+                _ => {
+                    current.push(c);
+                    raw.push(c);
+                }
             }
         }
-        if !current.is_empty() {
-            out.push(current);
+        if !current.is_empty() || !raw.is_empty() {
+            out.push((current, raw));
         }
     }
+    out.retain(|(value, _)| !value.is_empty());
     out
 }
 
@@ -212,7 +226,7 @@ mod tests {
         let rsp = parse(
             "-define:A;B\n-d:C,D\n/define:E\n-D:F\n-unsafe\n-r:Assets/Libs/Ref.dll\n\
              -reference:alias=System.Web.dll\n-r:Missing.dll\n-r:A.dll;B.dll\n-nowarn:CS0219\n-langversion:10\n\
-             -ruleset:\"Assets/Code Rules/a.ruleset\"\n-nowarn:'CS0219, CS0414'",
+             -ruleset:\"Assets/Code Rules/a.ruleset\"\n-unsafe\t\n-r:1bad=Assets/Libs/Ref.dll",
             &project.join("Assets/csc.rsp"),
             project,
             &[system.clone()],
@@ -234,10 +248,15 @@ mod tests {
                 "-nowarn:CS0219",
                 "-langversion:10",
                 "-ruleset:\"Assets/Code Rules/a.ruleset\"",
-                "-nowarn:\"CS0219, CS0414\""
+                "-unsafe\t"
             ]
         );
-        assert_eq!(rsp.errors.len(), 2);
+        assert_eq!(rsp.errors.len(), 3);
+        assert!(
+            rsp.errors[2].contains("not a valid extern alias"),
+            "{:?}",
+            rsp.errors
+        );
         assert!(rsp.errors[0].contains("Missing.dll could not be found"));
         assert!(rsp.errors[1].contains("multiple aliases"));
     }

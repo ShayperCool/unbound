@@ -176,7 +176,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         if let Some(r) = script
             .response_file
             .as_ref()
-            .filter(|r| !r.references.is_empty())
+            .filter(|r| !r.references.is_empty() || !r.aliased.is_empty())
         {
             let known = project_plugins
                 .get_or_insert_with(|| project.plugins().into_iter().map(|p| p.file).collect());

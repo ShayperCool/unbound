@@ -466,7 +466,11 @@ namespace Unbound.Runtime
                         {
                             // Each dependency's references are read once per load.
                             if (!m_DependencyNames.TryGetValue(name, out var referenced))
-                                m_DependencyNames[name] = referenced = ReferencedNames(File.ReadAllBytes(dependency.Dll)).ToList();
+                            {
+                                var bytes = File.ReadAllBytes(dependency.Dll);
+                                m_DependencyNames[name] = referenced = ReferencedNames(bytes).ToList();
+                                m_DependencyHashes[name] = Hash(bytes, "");
+                            }
                             pending.Push(referenced);
                         }
                 var text = new StringBuilder();

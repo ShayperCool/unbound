@@ -367,7 +367,7 @@ public sealed partial class CompilerService
     /// <summary>Options that change what the compiler does but that Unbound does not apply.</summary>
     static readonly string[] s_IgnoredOptions = { "analyzer", "a", "additionalfile", "resource", "res", "linkresource", "linkres",
         "link", "l", "addmodule", "keyfile", "keycontainer", "delaysign", "publicsign", "win32res", "win32icon", "win32manifest", "doc", "generatedfilesout",
-        "features", "analyzerconfig", "globalconfig", "platform", "target", "t", "recurse", "lib", "main", "m", "out", "o", "refout", "refonly",
+        "features", "analyzerconfig", "globalconfig", "platform", "target", "t", "recurse", "lib", "main", "m", "out", "refout", "refonly",
         "pathmap", "embed", "modulename", "nostdlib", "noconfig", "appconfig", "subsystemversion", "baseaddress", "filealign", "highentropyva",
         "sourcelink", "instrument", "errorlog", "reportanalyzer", "skipanalyzers" };
 
@@ -441,7 +441,8 @@ public sealed partial class CompilerService
         string? ruleSet)
     {
         var builder = new StringBuilder();
-        // A rule set file's contents decide diagnostics: an edit of it compiles again.
+        // A rule set file's contents decide diagnostics: an edit of it compiles again (not of a
+        // rule set it includes).
         if (ruleSet != null) builder.Append("ruleset ").Append(File.Exists(ruleSet) ? Hash(File.ReadAllBytes(ruleSet)) : "missing").Append('\n');
         builder.Append(CompilerIdentity).Append('\n');
         builder.Append(spec.Name).Append('\n');

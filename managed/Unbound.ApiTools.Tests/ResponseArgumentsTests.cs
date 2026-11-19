@@ -166,15 +166,19 @@ public static class Extra
                 request.Assemblies[0].AliasedReferences.Add(new AliasedReference { Alias = "Old", Path = built.Dll! });
                 return request;
             }
-            Rules("Error");
-            var service = new CompilerService();
-            var strict = Assert.Single(service.Compile(WithRules()).Assemblies);
-            Assert.Equal("failed", strict.Status);
-            Assert.Contains(strict.Errors, e => e.Id == "CS0219");
             Rules("None");
+            var service = new CompilerService();
             var relaxed = Assert.Single(service.Compile(WithRules()).Assemblies);
             Assert.Equal("compiled", relaxed.Status);
             Assert.DoesNotContain(relaxed.WarningList, w => w.Id == "CS0219");
+            // The same arguments with an edited rule set: compiled again, not the cached output.
+            Rules("Error");
+            var strict = Assert.Single(service.Compile(WithRules()).Assemblies);
+            Assert.Equal("failed", strict.Status);
+            Assert.Contains(strict.Errors, e => e.Id == "CS0219");
+            // -o is -optimize, which is applied: no warning.
+            var optimized = Assert.Single(new CompilerService().Compile(Request(root, lib, "-o+")).Assemblies);
+            Assert.DoesNotContain(optimized.WarningList, w => w.Id == "UNBOUND0003");
         }
         finally { Directory.Delete(root, recursive: true); }
     }
