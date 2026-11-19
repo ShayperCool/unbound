@@ -1206,6 +1206,10 @@ public partial class ParticleRenderProbe : MonoBehaviour
         yield return CatchupControls();
         yield return CacheControls();
         yield return MovedColliderControls();
+        yield return UnrenderedCulling();
+        VertexStreams();
+        MeshInstancing();
+        yield return ColliderForce();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle render complete: " + s_Path);

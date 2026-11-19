@@ -218,5 +218,11 @@
    "prewarm/maxdelta/0.25/d0.3_l8_r10/parent/start",
    "prewarm/maxdelta/0.25/d1_l8_r1/parent/start"
   ]
+ },
+ "streams-without-position": {
+  "reason": "DisableVertexStreams(Position): the Editor's active streams then end with a value outside ParticleSystemVertexStream (53) after Normal, Color and UV; Unbound lists the three streams. Not explained by the release's managed code (it removes Position and sets the list); no game draws without the Position stream.",
+  "keys": [
+   "streams/disable_position"
+  ]
  }
 }
