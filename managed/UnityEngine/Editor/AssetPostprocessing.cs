@@ -268,6 +268,7 @@ namespace UnityEditor
             // (a stub) does not import them.
             var session = Session(path);
             var importer = session.Importer;
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             AssetPostprocessorHooks.Run(Hooks("OnPreprocessAsset"), session, Array.Empty<object>());
             switch (kind)
             {
@@ -309,6 +310,7 @@ namespace UnityEditor
         /// readable (pixels it sets are uploaded), then OnPostprocessSprites with its sprites.</summary>
         internal static void PostprocessTexture(string path, Texture2D texture, Sprite[] sprites)
         {
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessTexture", typeof(Texture2D));
             var spriteHooks = Hooks("OnPostprocessSprites", typeof(Texture2D), typeof(Sprite[]));
             if (hooks.Count == 0 && (spriteHooks.Count == 0 || sprites.Length == 0))
@@ -485,6 +487,7 @@ namespace UnityEditor
         /// (pixels it sets are not uploaded: unmeasured).</summary>
         internal static void PostprocessCubemap(string path, Cubemap cubemap)
         {
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessCubemap", typeof(Cubemap));
             if (hooks.Count > 0) AssetPostprocessorHooks.Run(hooks, Session(path), new object[] { cubemap });
             EndSession(path);
@@ -494,6 +497,7 @@ namespace UnityEditor
         /// has no name yet (the Editor names it after the callback).</summary>
         internal static void PostprocessAudio(string path, AudioClip clip)
         {
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(AssetDatabase.AssetPathToGUID(path));
             var hooks = Hooks("OnPostprocessAudio", typeof(AudioClip));
             if (hooks.Count == 0)
             {

@@ -328,8 +328,9 @@ namespace Unbound.Runtime
             {
                 // Every asset's import starts with OnPreprocessAsset (matches the Unity 6000.0.71f1
                 // Editor, tests/projects/assetpostprocessors Calm.st9), on the importer that imports it.
-                AssetPostprocessorHooks.Run(UnityEditor.AssetPostprocessing.Hooks("OnPreprocessAsset"),
-                    new ImportSession(info.Path, ctx, importer), Array.Empty<object>());
+                using (AssetDatabaseRuntime.ImportCallbacks(info.Guid))
+                    AssetPostprocessorHooks.Run(UnityEditor.AssetPostprocessing.Hooks("OnPreprocessAsset"),
+                        new ImportSession(info.Path, ctx, importer), Array.Empty<object>());
                 importer.OnImportAsset(ctx);
             }
             foreach (var (_, obj) in ctx.m_Objects) MarkImported(obj);

@@ -103,6 +103,7 @@ namespace UnityEditor
         internal static void Run(LoadedFile file, bool model)
         {
             var session = AssetPostprocessing.Session(file.Path);
+            using var callbacks = AssetDatabaseRuntime.ImportCallbacks(file.Guid);
             try
             {
                 if (!(file.MainObject is GameObject root)) return;

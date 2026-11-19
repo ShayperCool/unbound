@@ -716,6 +716,30 @@ namespace Unbound.Runtime
         static readonly Dictionary<string, LoadedFile> s_Files = new Dictionary<string, LoadedFile>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
         static readonly HashSet<string> s_Loading = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Assets whose import is calling its postprocessors (<see cref="ImportCallbacks"/>).</summary>
+        static readonly HashSet<string> s_InImportCallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>While the returned scope lasts, the asset's import calls its postprocessors:
+        /// loading the asset meanwhile gives what it has published, else nothing.</summary>
+        internal static ImportCallbackScope ImportCallbacks(string guid) => new ImportCallbackScope(guid);
+
+        internal readonly struct ImportCallbackScope : IDisposable
+        {
+            readonly string m_Guid;
+            readonly bool m_Added;
+
+            internal ImportCallbackScope(string guid)
+            {
+                m_Guid = guid;
+                m_Added = !string.IsNullOrEmpty(guid) && s_InImportCallbacks.Add(guid);
+            }
+
+            public void Dispose()
+            {
+                if (m_Added) s_InImportCallbacks.Remove(m_Guid);
+            }
+        }
+
         /// <summary>Models and prefabs whose documents are being read for their postprocessors.</summary>
         static readonly HashSet<string> s_ReadingForPostprocessors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -849,6 +873,9 @@ namespace Unbound.Runtime
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
             if (!s_Loading.Add(guid))
             {
+                // An import's own postprocessors loading the asset: the Editor's first import has
+                // no artifact to give yet (ShaderGraph's OnPreprocessAsset asks, expecting null).
+                if (s_InImportCallbacks.Contains(guid)) return null;
                 if (s_ReadingForPostprocessors.Contains(guid))
                     Debug.LogError($"Unbound: asset {guid} is referenced by a prefab it nests while its postprocessors' import reads it; the reference is empty (not supported yet).");
                 else
