@@ -9,16 +9,17 @@ namespace UnityEditor.SceneManagement
     /// <summary>An editing stage (the main scenes, prefab mode).</summary>
     public abstract partial class Stage : ScriptableObject
     {
-        internal virtual int sceneCount => 0;
+        internal abstract int sceneCount { get; }
 
-        internal virtual Scene GetSceneAt(int index) => default;
+        internal abstract Scene GetSceneAt(int index);
 
+        [Unbound.EditorFaithful("a stage of no asset (the main stage) has no asset path; Prefab mode's has its prefab's")]
         public virtual string assetPath => "";
 
-        public virtual StageHandle stageHandle => default;
+        public virtual StageHandle stageHandle => StageHandle.Main;
 
         /// <summary>Puts a root GameObject in one of the stage's scenes.</summary>
-        internal virtual void PlaceGameObjectInStage(GameObject rootGameObject) { }
+        internal abstract void PlaceGameObjectInStage(GameObject rootGameObject);
 
         internal virtual ulong GetSceneCullingMask() => 0;
 
@@ -58,7 +59,8 @@ namespace UnityEditor.SceneManagement
     }
 
     /// <summary>The main stage: the scenes open in the Editor (the only stage Unbound's Editor has),
-    /// rendered with the default scene culling mask (measured: tests/projects/scenesave cull.*).</summary>
+    /// whose cameras cull with the main stage's Scene view mask (measured: tests/projects/scenesave
+    /// cull.combined).</summary>
     public sealed partial class MainStage : Stage
     {
         static MainStage s_Instance;
@@ -77,12 +79,13 @@ namespace UnityEditor.SceneManagement
 
         internal override Scene GetSceneAt(int index) => SceneManager.GetSceneAt(index);
 
-        internal override ulong GetSceneCullingMask() => SceneCullingMasks.DefaultSceneCullingMask;
+        internal override ulong GetSceneCullingMask() => SceneCullingMasks.MainStageSceneViewObjects;
 
         public override StageHandle stageHandle => StageHandle.Main;
 
         /// <summary>A root not in one of the main stage's scenes goes to the active scene; one that
-        /// is stays (measured: a root of the active scene stays where it is).</summary>
+        /// is stays, and so does a GameObject with a parent or none (measured: tests/projects/scenesave
+        /// stage.place*, no exception).</summary>
         internal override void PlaceGameObjectInStage(GameObject rootGameObject)
         {
             if (rootGameObject == null || rootGameObject.transform.parent != null) return;
@@ -92,8 +95,20 @@ namespace UnityEditor.SceneManagement
         }
     }
 
+    /// <summary>A stage of one preview scene (Prefab mode's); Unbound's Editor opens none.</summary>
     public abstract partial class PreviewSceneStage : Stage
     {
+        public Scene scene { get; protected set; }
+
+        internal override int sceneCount => scene.IsValid() ? 1 : 0;
+
+        internal override Scene GetSceneAt(int index) => index == 0 ? scene : default;
+
+        internal override void PlaceGameObjectInStage(GameObject rootGameObject)
+        {
+            if (rootGameObject != null && rootGameObject.transform.parent == null && scene.IsValid() && rootGameObject.scene != scene)
+                SceneManager.MoveGameObjectToScene(rootGameObject, scene);
+        }
     }
 
     /// <summary>Prefab mode. Unbound's Editor never opens it (no stage of it exists); its

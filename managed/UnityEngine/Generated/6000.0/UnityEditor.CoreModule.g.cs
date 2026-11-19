@@ -43073,15 +43073,11 @@ namespace UnityEditor.SceneManagement
     }
     unsafe partial class PreviewSceneStage
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.SceneManagement.Scene GetSceneAt(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.GetSceneAt"); return default; }
         [global::Unbound.Stub] protected internal override bool OnOpenStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.OnOpenStage"); return default; }
         [global::Unbound.Stub] protected override void OnCloseStage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.OnCloseStage"); }
-        [global::Unbound.Stub] internal override void PlaceGameObjectInStage(global::UnityEngine.GameObject rootGameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.PlaceGameObjectInStage"); }
         [global::Unbound.Stub] internal override void SyncSceneHierarchyToStage(global::UnityEditor.SceneHierarchyWindow sceneHierarchyWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.SyncSceneHierarchyToStage"); }
         [global::Unbound.Stub] internal override ulong GetSceneCullingMask() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.GetSceneCullingMask"); return default; }
         [global::Unbound.Stub] internal override void SyncSceneViewToStage(global::UnityEditor.SceneView sceneView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.SyncSceneViewToStage"); }
-        public global::UnityEngine.SceneManagement.Scene scene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.scene"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.scene"); } }
-        internal override int sceneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.sceneCount"); return default; } }
         public override global::UnityEditor.SceneManagement.StageHandle stageHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.stageHandle"); return default; } }
     }
     [global::Unbound.Stub]

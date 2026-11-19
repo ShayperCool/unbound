@@ -247,7 +247,7 @@ namespace UnityEditor
                 }
                 foreach (var (target, path) in DefaultOverrides(go))
                     if (AssetDatabaseRuntime.TryGetLocation(target, out var targetGuid, out var targetId))
-                        instance.Modifications.Add((targetGuid, targetId, path));
+                        instance.Stored.Add((new ObjectRef(targetId, targetGuid, 3), path, DefaultOverrideValue(target, path), default));
             }
             var clone = Instantiation.CloneLinked(go, parent, scene, Link);
             return clone;
@@ -260,6 +260,30 @@ namespace UnityEditor
             var t = root.transform;
             foreach (var path in t is RectTransform ? RectTransformDefaults : TransformDefaults)
                 yield return (t, path);
+        }
+
+        /// <summary>A default override's value as text: the source's name or local pose component.</summary>
+        static string DefaultOverrideValue(Object target, string path)
+        {
+            if (path == "m_Name") return target.name;
+            var dot = path.IndexOf('.');
+            var field = path.Substring(0, dot);
+            var axis = path[dot + 1];
+            Vector4 v;
+            switch (field)
+            {
+                case "m_LocalPosition": v = ((Transform)target).m_LocalPosition; break;
+                case "m_LocalRotation": { var q = ((Transform)target).m_LocalRotation; v = new Vector4(q.x, q.y, q.z, q.w); break; }
+                case "m_LocalEulerAnglesHint": v = ((Transform)target).m_LocalEulerAnglesHint; break;
+                case "m_Pivot": v = ((RectTransform)target).pivot; break;
+                case "m_AnchorMax": v = ((RectTransform)target).anchorMax; break;
+                case "m_AnchorMin": v = ((RectTransform)target).anchorMin; break;
+                case "m_SizeDelta": v = ((RectTransform)target).sizeDelta; break;
+                case "m_AnchoredPosition": v = ((RectTransform)target).anchoredPosition; break;
+                default: return "";
+            }
+            float c = axis switch { 'x' => v.x, 'y' => v.y, 'z' => v.z, _ => v.w };
+            return FloatText.Format(c);
         }
 
         static readonly string[] TransformDefaults =

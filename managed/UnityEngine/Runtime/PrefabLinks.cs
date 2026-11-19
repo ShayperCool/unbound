@@ -17,10 +17,8 @@ namespace Unbound.Runtime
         /// <summary>The engine made the instance's objects as placeholders: its prefab is missing or
         /// could not load (a variant whose parent is missing).</summary>
         internal bool SourceMissing;
-        /// <summary>The modified properties: the source object they target and the property path.</summary>
-        internal readonly List<(string Guid, long FileId, string Path)> Modifications = new List<(string, long, string)>();
-        /// <summary>The PrefabInstance's modifications as its file has them, in order (values as text,
-        /// object references as read).</summary>
+        /// <summary>The PrefabInstance's modifications as its file has them, in order: the source
+        /// object they target, the property path, the value as text, an object reference as read.</summary>
         internal readonly List<(ObjectRef Target, string Path, string Value, ObjectRef Reference)> Stored = new List<(ObjectRef, string, string, ObjectRef)>();
         Object m_Handle;
 
@@ -41,8 +39,9 @@ namespace Unbound.Runtime
 
         internal bool Modifies(string guid, long fileId, string path)
         {
-            foreach (var m in Modifications)
+            foreach (var stored in Stored)
             {
+                var m = (Guid: stored.Target.Guid ?? SourceGuid, stored.Target.FileId, stored.Path);
                 if (m.FileId != fileId || !string.Equals(m.Guid, guid, StringComparison.OrdinalIgnoreCase)) continue;
                 if (m.Path.Length == path.Length ? m.Path == path : m.Path.Length > path.Length && m.Path[path.Length] == '.' && m.Path.StartsWith(path, StringComparison.Ordinal))
                     return true;
@@ -112,8 +111,7 @@ namespace Unbound.Runtime
             foreach (var m in body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
             {
                 var target = m.Ref("target");
-                if (!target.IsNull) data.Modifications.Add((target.Guid, target.FileId, m.Str("propertyPath")));
-                data.Stored.Add((target, m.Str("propertyPath"), m.Str("value"), m.Ref("objectReference")));
+                if (!target.IsNull) data.Stored.Add((target, m.Str("propertyPath"), m.Str("value"), m.Ref("objectReference")));
             }
             return data;
         }

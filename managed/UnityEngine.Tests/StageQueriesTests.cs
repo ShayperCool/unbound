@@ -36,10 +36,15 @@ namespace UnityEngine.Tests
                 Assert.Same(main, StageUtility.GetStage(go));
                 Assert.Same(main, StageUtility.GetStage(scene));
                 Assert.Null(StageUtility.GetStage(default(Scene)));
-                Assert.Equal(SceneCullingMasks.DefaultSceneCullingMask, main.GetCombinedSceneCullingMaskForCamera());
-                // A root of a loaded scene stays where it is.
+                Assert.Equal(SceneCullingMasks.MainStageSceneViewObjects, main.GetCombinedSceneCullingMaskForCamera());
+                // A root of a loaded scene stays where it is; a child stays a child; none is ignored.
                 StageUtility.PlaceGameObjectInCurrentStage(go);
                 Assert.Equal(scene, go.scene);
+                var child = new GameObject("child");
+                child.transform.SetParent(go.transform, false);
+                StageUtility.PlaceGameObjectInCurrentStage(child);
+                Assert.Same(go.transform, child.transform.parent);
+                StageUtility.PlaceGameObjectInCurrentStage(null);
                 Assert.Contains(go.GetComponent<Transform>(), main.FindComponentsOfType<Transform>());
             }
             finally { Object.DestroyImmediate(go); }
@@ -54,11 +59,16 @@ namespace UnityEngine.Tests
             try
             {
 #pragma warning disable CS0618
+                // Not of an instance: the object itself (measured for a plain child).
                 Assert.Same(root, PrefabUtility.FindPrefabRoot(root));
-                Assert.Same(root, PrefabUtility.FindPrefabRoot(child));
+                Assert.Same(child, PrefabUtility.FindPrefabRoot(child));
+                Assert.Throws<ArgumentNullException>(() => PrefabUtility.FindPrefabRoot(null));
 #pragma warning restore CS0618
                 Assert.Null(PrefabUtility.GetPropertyModifications(child));
-                Assert.Empty(PrefabUtility.GetObjectOverrides(root, true));
+                Assert.Equal("Provided GameObject is not a Prefab instance", Assert.Throws<ArgumentException>(() => PrefabUtility.GetObjectOverrides(root, true)).Message);
+                Assert.Throws<ArgumentNullException>(() => PrefabUtility.GetObjectOverrides(null));
+                Assert.Throws<ArgumentNullException>(() => PrefabUtility.FindAllInstancesOfPrefab(null));
+                Assert.Equal("FindAllInstancesOfPrefab must be called with a Prefab asset.", Assert.Throws<ArgumentException>(() => PrefabUtility.FindAllInstancesOfPrefab(root)).Message);
             }
             finally { Object.DestroyImmediate(root); }
         }

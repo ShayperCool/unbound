@@ -201,11 +201,8 @@ namespace UnityEditor
         {
             var callback = postprocessModifications;
             if (callback == null) return modifications;
-            foreach (PostprocessModifications handler in callback.GetInvocationList())
-            {
-                try { modifications = handler(modifications) ?? Array.Empty<UndoPropertyModification>(); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            // Each handler takes what the one before returned.
+            foreach (PostprocessModifications handler in callback.GetInvocationList()) modifications = handler(modifications);
             return modifications;
         }
 

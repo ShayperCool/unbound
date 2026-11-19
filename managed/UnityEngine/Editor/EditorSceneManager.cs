@@ -58,12 +58,14 @@ namespace UnityEditor.SceneManagement
 
         /// <summary>The scene culling mask of a scene of the main stage, the default one (measured:
         /// tests/projects/scenesave cull.mask); none for an invalid scene (unmeasured).</summary>
-        public static ulong GetSceneCullingMask(Scene scene) => scene.IsValid() ? StageUtility.GetMainStage().GetSceneCullingMask() : 0;
+        public static ulong GetSceneCullingMask(Scene scene) => scene.IsValid() ? SceneCullingMasks.DefaultSceneCullingMask : 0;
 
         /// <summary>Unbound's Editor opens no preview scenes (Prefab mode, inspector previews):
         /// no scene or object is one's, prefab assets included (measured).</summary>
+        [Unbound.EditorFaithful("Unbound's Editor opens no preview scenes (measured: tests/projects/scenesave preview.scene)")]
         public static bool IsPreviewScene(Scene scene) => false;
 
+        [Unbound.EditorFaithful("Unbound's Editor opens no preview scenes, and a prefab asset's object is in none (measured: tests/projects/scenesave preview.*)")]
         public static bool IsPreviewSceneObject(Object obj) => false;
 
         public static Scene NewScene(NewSceneSetup setup) => NewScene(setup, NewSceneMode.Single);
