@@ -114,7 +114,7 @@ public class StripShadowProbe : MonoBehaviour
                 renderer.sharedMaterial=material;
                 renderer.shadowCastingMode=ShadowCastingMode.TwoSided;
                 var controls=type==LightType.Directional && Environment.GetEnvironmentVariable("STRIP_SHADOW_CASCADES")=="1"
-                    ?new[]{"view0","viewBias","turnedLight","transformZ","cascade2","cascade2Wide","cascade3","cascade4","cascade4Wide","cascade4Ortho"}
+                    ?new[]{"view0","viewBias","turnedLight","transformZ","cascade2","cascade2Wide","cascade3","cascade4","cascade4Wide","cascade4Ortho","cascade3Close","cascade4WideClose"}
                     :new[]{"view0","viewBias","turnedLight","transformZ"};
                 foreach (string control in controls)
                 {
@@ -122,7 +122,9 @@ public class StripShadowProbe : MonoBehaviour
                     asset.shadowCascadeCount=cascaded?int.Parse(control.Substring(7,1)):1;
                     asset.cascade2Split=control=="cascade2Wide"?0.6f:0.25f;
                     asset.cascade3Split=new Vector2(0.2f,0.6f);
-                    asset.cascade4Split=control=="cascade4Wide"?new Vector3(0.2f,0.5f,0.8f):new Vector3(0.067f,0.2f,0.467f);
+                    asset.cascade4Split=control.StartsWith("cascade4Wide")?new Vector3(0.2f,0.5f,0.8f):new Vector3(0.067f,0.2f,0.467f);
+                    // The close-fit controls repeat a stable-fit control with close-fit projection.
+                    QualitySettings.shadowProjection=control.EndsWith("Close")?ShadowProjection.CloseFit:ShadowProjection.StableFit;
                     float bias=control=="view0"?0:0.5f;
                     var alignment=control=="transformZ"?LineAlignment.TransformZ:LineAlignment.View;
                     if(trail){tr.shadowBias=bias;tr.alignment=alignment;}else if(line!=null){line.shadowBias=bias;line.alignment=alignment;}

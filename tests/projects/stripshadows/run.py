@@ -31,7 +31,8 @@ spec.loader.exec_module(compare)
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 PARTS = {'assets': 'Assets', 'packages': 'Packages', 'settings': 'ProjectSettings'}
 CONTROLS = ('view0', 'viewBias', 'turnedLight', 'transformZ')
-CASCADE_CONTROLS = ('cascade2', 'cascade2Wide', 'cascade3', 'cascade4', 'cascade4Wide', 'cascade4Ortho')
+CASCADE_CONTROLS = ('cascade2', 'cascade2Wide', 'cascade3', 'cascade4', 'cascade4Wide', 'cascade4Ortho', 'cascade3Close',
+                    'cascade4WideClose')
 CASCADES = False
 KEYS = [f'{light}.{renderer}.{control}.{suffix}'
         for light in ('Directional', 'Spot', 'Point') for renderer in ('line', 'trail', 'mesh')
@@ -168,20 +169,26 @@ def publish(work):
             (target/(name+'.gz')).write_bytes(gzip.compress((first/name).read_bytes(), mtime=0))
     reference=reference_root(PROBE)
     candidate=work/('reference-candidate-'+str(time.time_ns())) if CASCADES else reference
-    if CASCADES and (not reference.exists() or (reference/'cascade.values.jsonl').exists()):
-        raise RuntimeError('cascade publication requires the earlier reference and no existing cascade controls')
+    if CASCADES and not reference.exists():
+        raise RuntimeError('cascade publication requires the earlier reference')
     editor.publish([work/r for r in ('native1', 'native2')], candidate, capture_names,
                    write, complete=[complete], gpu=True)
     if CASCADES:
         extra=validate_extension(reference,candidate)
         if [json.loads(line)['k'] for line in extra.splitlines()] != CASCADE_KEYS:
             raise RuntimeError('unexpected cascade control records')
+        # Earlier cascade records stay byte-identical and in order; controls are only added.
+        cascades=reference/'cascade.values.jsonl'
+        old=cascades.read_bytes().splitlines(keepends=True) if cascades.exists() else []
+        known={json.loads(line)['k'] for line in old}
+        if [line for line in extra.splitlines(keepends=True) if json.loads(line)['k'] in known] != old:
+            raise RuntimeError('existing cascade records changed, disappeared or moved')
         for image in candidate.glob('*.rgba.gz'):
             target=reference/image.name
             if not target.exists():
                 with target.open('xb') as stream: stream.write(image.read_bytes())
-        with (reference/'cascade.values.jsonl').open('xb') as stream: stream.write(extra)
-        print('published',len(CASCADE_KEYS),'cascade records; every prior reference file unchanged')
+        cascades.write_bytes(extra)
+        print('published',len(CASCADE_KEYS)-len(old),'new cascade records; every prior record and image unchanged')
     return 0
 
 
