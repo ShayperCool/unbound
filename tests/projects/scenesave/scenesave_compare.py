@@ -15,6 +15,7 @@ Every difference is reported. Those named exactly (case, key, reference and actu
 reference's known-gaps.json, each with its reason, are queued; any other difference, or a gap that
 no longer occurs, fails the comparison.
 """
+import difflib
 import json
 import re
 from pathlib import Path
@@ -170,11 +171,13 @@ def compare_file(reference, actual, path):
     mapped = apply_mapping(act_t, mapping, rid_map, prefab)
     if mapped == ref_t:
         return None
-    ref_lines, act_lines = ref_t.split('\n'), mapped.split('\n')
-    for n, (a, b) in enumerate(zip(ref_lines, act_lines)):
-        if a != b:
-            return f'line {n + 1}: reference {a!r}, actual {b!r}'
-    return f'reference has {len(ref_lines)} lines, actual {len(act_lines)}'
+    # Every differing line (a queued gap then names them all, so any further difference is new).
+    out = []
+    matcher = difflib.SequenceMatcher(a=ref_t.split('\n'), b=mapped.split('\n'), autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != 'equal':
+            out.append(f'lines {i1 + 1}-{i2}: reference {matcher.a[i1:i2]!r}, actual {matcher.b[j1:j2]!r}')
+    return '; '.join(out)
 
 
 def load_rows(path):
