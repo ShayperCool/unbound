@@ -522,6 +522,7 @@ mod tests {
                 package("com.example.cached", PackageSource::Registry),
             ],
             missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
         };
         let paths: Vec<String> = project.plugins().into_iter().map(|p| p.path).collect();
         let _ = std::fs::remove_dir_all(&scratch);
@@ -575,6 +576,7 @@ mod tests {
             settings: Settings::default(),
             packages: Vec::new(),
             missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
         };
         let editor = project
             .script_graph(CompileMode::EditorPlayMode, "Standalone")
@@ -648,6 +650,7 @@ mod tests {
             settings: Settings::default(),
             packages: Vec::new(),
             missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
         };
         let editor = project
             .script_graph(CompileMode::EditorPlayMode, "Android")
