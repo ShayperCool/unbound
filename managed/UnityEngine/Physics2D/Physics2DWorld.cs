@@ -1335,9 +1335,14 @@ namespace Unbound.Runtime
             }
             if (IsIgnored(a, b)) return false;
             int layerA = a.m_GameObject.m_Layer, layerB = b.m_GameObject.m_Layer;
+            // An effector's collider mask that leaves the other layer out keeps the pair apart
+            // whatever the colliders' include layers say (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/cookingforcesvideo effector.*.maskAincludeB).
+            bool? effector = Physics2DEffectors.LayerDecision(a, b, layerA, layerB);
+            if (effector == false) return false;
             bool? decisionA = LayerDecision(a, rbA, layerB);
             bool? decisionB = LayerDecision(b, rbB, layerA);
-            if (decisionA == null && decisionB == null) return Physics2DEffectors.LayerDecision(a, b, layerA, layerB) ?? !Physics2D.GetIgnoreLayerCollision(layerA, layerB);
+            if (decisionA == null && decisionB == null) return effector ?? !Physics2D.GetIgnoreLayerCollision(layerA, layerB);
             if (decisionB == null) return decisionA.Value;
             if (decisionA == null) return decisionB.Value;
             if (decisionA.Value == decisionB.Value) return decisionA.Value;
