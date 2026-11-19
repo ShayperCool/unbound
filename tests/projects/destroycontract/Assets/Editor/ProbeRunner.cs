@@ -33,6 +33,7 @@ public static class ProbeRunner
     const string State = "DestroyContractProbe.";
     const double WatchdogSeconds = 600;
     const int SettleTicks = 30;
+    const string EnterVariable = "UNBOUND_PROBE_DESTROYCONTRACT_ENTER";
 
     static bool armed;
     static bool closed;
@@ -82,7 +83,10 @@ public static class ProbeRunner
             SessionState.SetBool(State + "finished", true);
             return;
         }
-        EditorApplication.delayCall += () => Enter("delayCall");
+        // With `EnterVariable` set to `update` Play mode is entered only from Tick, the path the
+        // windowed macOS Editor takes, so one Editor records both entries.
+        if (Environment.GetEnvironmentVariable(EnterVariable) != "update")
+            EditorApplication.delayCall += () => Enter("delayCall");
     }
 
     /// <summary>Enters Play mode once (Record's delayCall, else Tick), naming the path in the

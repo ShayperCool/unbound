@@ -6,6 +6,8 @@
                                                                           passed `check` (strict gate and
                                                                           actual-rsp graph check)
     run.py editor  ... --dry-run                 prints the exact EditorJob, command and inputs; starts nothing
+    run.py editor  ... --enter update            enters Play mode from ProbeRunner's update handler instead
+                                                  of Record's delayCall (a control; publish refuses it)
     run.py check   --release R --label L --repeat X   every strict guard problem of one capture
     run.py publish --release R --label L          both repeats pass and agree byte for byte: copies one
                                                   to Reference/unity-R.jsonl (never overwrites)
@@ -55,6 +57,9 @@ PROGRESS_TIMEOUT = 300
 SHUTDOWN_GRACE = 30
 KILL_GRACE = 10
 VARIABLE = guards.OUTPUT_VARIABLE
+# Selects ProbeRunner's Play mode entry: unset (Record's delayCall) or `update` (its update handler).
+ENTER_VARIABLE = 'UNBOUND_PROBE_DESTROYCONTRACT_ENTER'
+ENTRIES = ('delayCall', 'update')
 SOURCES = ('Assets/Scripts/DestroyContractProbe.cs', 'Assets/Editor/ProbeRunner.cs')
 TOOLS = ('run.py', 'guards.py', 'compare.py', 'analyze.py', 'preflight.py', 'PREDICTIONS.json')
 
@@ -91,7 +96,7 @@ def paths(work, repeat):
     return work/'projects'/repeat, out, out/'capture'
 
 
-def job(work, repeat, release):
+def job(work, repeat, release, enter='delayCall'):
     project, out, capture = paths(work, repeat)
     inputs = {'assets': str(project/'Assets'), 'packages': str(project/'Packages'),
               'settings': str(project/'ProjectSettings'),
@@ -101,7 +106,8 @@ def job(work, repeat, release):
     return EditorJob(project.resolve() if project.exists() else project, out/'editor.log', out,
                      args=[*guarded_editor.DEVICE_ARGS, '-executeMethod', 'ProbeRunner.Record'], batch=False, graphics=True, private_display=False,
                      env={**guarded_editor.display_env(), VARIABLE: str(capture.resolve() if capture.exists() else capture),
-                          'UNBOUND_PROBE_UNITY_VERSION': release},
+                          'UNBOUND_PROBE_UNITY_VERSION': release,
+                          **({ENTER_VARIABLE: 'update'} if enter == 'update' else {})},
                      timeout=HARD_TIMEOUT, shutdown_grace=SHUTDOWN_GRACE, kill_grace=KILL_GRACE,
                      progress_files=(capture/'runner-events.jsonl', capture/'values.jsonl'),
                      progress_timeout=PROGRESS_TIMEOUT, label='destroycontract-'+repeat,
@@ -141,8 +147,8 @@ def git_head():
     return {'commit': result.stdout.strip(), 'probe_clean': status.stdout == ''}
 
 
-def editor(work, repeat, release, preflight, dry_run=False):
-    j = job(work, repeat, release)
+def editor(work, repeat, release, preflight, dry_run=False, enter='delayCall'):
+    j = job(work, repeat, release, enter)
     plan = describe(j)
     if dry_run:
         project, out, _ = paths(work, repeat)
@@ -162,11 +168,13 @@ def editor(work, repeat, release, preflight, dry_run=False):
     if out.exists() or project.exists():
         sys.exit(f'refusing to reuse {out}: a launch is never repeated in a label')
     copy_project(project, release)
+    if repeat == 'native2' and launched_entry(work, 'native1') != enter:
+        sys.exit(f'native1 entered Play mode from {launched_entry(work, "native1")}, not {enter}')
     capture.mkdir(parents=True)
-    j = job(work, repeat, release)
+    j = job(work, repeat, release, enter)
     plan = describe(j)
     (out/'inputs.json').write_text(json.dumps({
-        'release': release, 'repeat': repeat, 'device': DEVICE, 'files': prepared_files(project),
+        'release': release, 'repeat': repeat, 'device': DEVICE, 'enter': enter, 'files': prepared_files(project),
         'sources': {s: sha(PROBE/s) for s in SOURCES}, 'tools': {name: sha(PROBE/name) for name in TOOLS},
         'preflight': str(Path(preflight).resolve()), 'preflight_sha256': sha(preflight),
         'git_head': git_head(), 'plan': plan}, indent=1)+'\n')
@@ -183,6 +191,15 @@ def editor(work, repeat, release, preflight, dry_run=False):
         print(' ', p)
     print(f'{repeat}:', 'passes' if not problems else f'{len(problems)} problems')
     return int(bool(problems))
+
+
+def launched_entry(work, repeat):
+    """The Play mode entry a capture was launched with (captures before the option: delayCall)."""
+    _, out, _ = paths(work, repeat)
+    try:
+        return json.loads((out/'inputs.json').read_text()).get('enter', 'delayCall')
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def artifact_manifest(out):
@@ -223,6 +240,8 @@ def publish(work, release):
     if guarded_editor.DEVICE == 'Metal':
         sys.exit('destroycontract has no Metal reference (README "Metal (macOS)"): the Mac compares with the Linux one')
     for repeat in REPEATS:
+        if launched_entry(work, repeat) != 'delayCall':
+            sys.exit(f'{repeat} entered Play mode from {launched_entry(work, repeat)}; the reference enters from delayCall')
         problems = check_problems(work, repeat, release)
         if problems:
             sys.exit(f'{repeat}: {len(problems)} problems (first: {problems[0]}); not publishing')
@@ -261,6 +280,8 @@ def main():
     parser.add_argument('--repeat', choices=REPEATS)
     parser.add_argument('--preflight', type=Path)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--enter', choices=ENTRIES, default='delayCall',
+                        help="editor: Play mode entry (default Record's delayCall; update: ProbeRunner's update handler)")
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
@@ -273,7 +294,7 @@ def main():
         sys.exit(f'no compatibility profile for {args.release}: {profile_path(args.release)}')
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
-        return editor(work, args.repeat, args.release, args.preflight, args.dry_run)
+        return editor(work, args.repeat, args.release, args.preflight, args.dry_run, args.enter)
     if args.mode == 'check':
         return check(work, args.repeat, args.release)
     if args.mode == 'publish':
