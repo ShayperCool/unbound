@@ -218,6 +218,26 @@ namespace Unbound.Runtime
 
             /// <summary>A sequence item's first field, the dash at the key's indentation
             /// (<c>- key: value</c>); its further fields go at <c>level + 1</c>.</summary>
+            /// <summary>A list of scalars written as they are given (numbers already formatted).</summary>
+            internal void Scalars(string key, IEnumerable<string> values, int level = 1)
+            {
+                int start = m_Out.Length;
+                Indent(level);
+                m_Out.Append(key).Append(":\n");
+                int items = 0;
+                foreach (var value in values)
+                {
+                    Indent(level);
+                    m_Out.Append("- ").Append(value).Append('\n');
+                    items++;
+                }
+                if (items == 0)
+                {
+                    m_Out.Length = start;
+                    Line(level, key, "[]");
+                }
+            }
+
             internal void Item(string key, string value, int level)
             {
                 Indent(level);

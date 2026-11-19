@@ -804,6 +804,25 @@ namespace UnityEngine
             foreach (var item in body.Get("m_BlendShapeWeights")?.Seq() ?? Array.Empty<YNode>()) m_BlendShapeWeights.Add(item.AsFloat());
         }
 
+        /// <summary>What <see cref="ReadSerialized"/> reads (an imported prefab's documents).</summary>
+        internal override void WriteSerialized(Unbound.Runtime.UnityYamlWriter.Writer w)
+        {
+            WriteRendererData(w);
+            w.Int("m_Quality", (int)m_Quality);
+            w.Bool("m_UpdateWhenOffscreen", m_UpdateWhenOffscreen);
+            w.Bool("m_SkinnedMotionVectors", m_SkinnedMotionVectors);
+            w.Ref("m_Mesh", m_Mesh);
+            w.RefList("m_Bones", m_Bones ?? Array.Empty<Transform>());
+            w.Scalars("m_BlendShapeWeights", m_BlendShapeWeights.ConvertAll(Unbound.Runtime.UnityYamlWriter.Writer.Number));
+            w.Ref("m_RootBone", m_RootBone);
+            if (m_AuthoredLocalBounds)
+            {
+                w.Key("m_AABB", 1);
+                w.Vector3("m_Center", m_LocalBounds.center, 2);
+                w.Vector3("m_Extent", m_LocalBounds.extents, 2);
+            }
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (SkinnedMeshRenderer)source;

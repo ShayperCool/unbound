@@ -1158,6 +1158,26 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>What <see cref="ReadSerialized"/> reads (an imported prefab's documents).</summary>
+        internal override void WriteSerialized(Unbound.Runtime.UnityYamlWriter.Writer w)
+        {
+            w.Bool("m_Enabled", m_Enabled);
+            w.Ref("m_Avatar", m_Avatar);
+            w.Ref("m_Controller", m_Controller);
+            w.Int("m_CullingMode", (int)m_CullingMode);
+            w.Int("m_UpdateMode", (int)m_UpdateMode);
+            w.Bool("m_ApplyRootMotion", m_ApplyRootMotion);
+            w.Bool("m_AnimatePhysics", m_AnimatePhysics);
+            w.Bool("m_KeepAnimatorStateOnDisable", m_KeepAnimatorStateOnDisable);
+            w.Bool("m_WriteDefaultValuesOnDisable", m_WriteDefaultValuesOnDisable);
+            w.Bool("m_HasTransformHierarchy", !m_NoHierarchy);
+            if (m_OptimizeOnLoad != null)
+            {
+                w.Bool("m_UnboundOptimizeGameObjects", true);
+                w.Scalars("m_UnboundExtraExposedTransformPaths", Array.ConvertAll(m_OptimizeOnLoad, Unbound.Runtime.UnityYamlWriter.Scalar));
+            }
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (Animator)source;

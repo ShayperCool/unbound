@@ -267,12 +267,50 @@ namespace UnityEngine.Tests
         {
             using var engine = MainThreadCheck.Engine();
             var b = Build();
-            // A SkinnedMeshRenderer derives Renderer's data but has fields of its own.
-            var skinned = b.Child.AddComponent<SkinnedMeshRenderer>();
-            b.File.Objects[999] = skinned;
+            var light = b.Child.AddComponent<Light>();
+            b.File.Objects[999] = light;
             var e = Assert.Throws<NotSupportedException>(() => ImportedPrefabDocuments.Write(b.File, b.Root));
-            Assert.Contains("SkinnedMeshRenderer", e.Message);
+            Assert.Contains("Light", e.Message);
             Assert.Contains(b.File.Path, e.Message);
+        }
+
+        /// <summary>A model's own components (what its postprocessors change): a skinned
+        /// renderer's bones, root bone, mesh, materials and weights and an animator's settings
+        /// read back; references outside the written objects are empty.</summary>
+        [Fact]
+        public void SkinnedRenderersAndAnimatorsReadBackFromTheirDocuments()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var b = Build();
+            var skinned = b.Child.AddComponent<SkinnedMeshRenderer>();
+            skinned.sharedMesh = b.Mesh;
+            skinned.sharedMaterials = new[] { b.Material };
+            skinned.bones = new[] { b.Root.transform, b.Child.transform };
+            skinned.rootBone = b.Root.transform;
+            skinned.quality = SkinQuality.Bone2;
+            skinned.updateWhenOffscreen = true;
+            skinned.skinnedMotionVectors = false;
+            var animator = b.Root.AddComponent<Animator>();
+            animator.applyRootMotion = true;
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            animator.keepAnimatorStateOnDisable = true;
+            b.File.Objects[998] = skinned;
+            b.File.Objects[999] = animator;
+            var docs = Parse(ImportedPrefabDocuments.Write(b.File, b.Root));
+            var skinnedDoc = docs[998].Body;
+            Assert.Equal(137, docs[998].ClassId);
+            Assert.Equal(new[] { IdOf(b.File, b.Root.transform), IdOf(b.File, b.Child.transform) },
+                skinnedDoc.Get("m_Bones").Seq().Select(r => r.AsRef().FileId));
+            var copy = Made(new GameObject("copy")).AddComponent<SkinnedMeshRenderer>();
+            ObjectGraphBuilder.ReadComponent(copy, skinnedDoc, b.File);
+            Assert.Equal((b.Mesh, b.Root.transform, SkinQuality.Bone2, true, false), (copy.sharedMesh, copy.rootBone, copy.quality, copy.updateWhenOffscreen, copy.skinnedMotionVectors));
+            Assert.Equal(new[] { b.Root.transform, b.Child.transform }, copy.bones);
+            Assert.Equal(new[] { b.Material }, copy.sharedMaterials);
+            var read = Made(new GameObject("copy")).AddComponent<Animator>();
+            ObjectGraphBuilder.ReadComponent(read, docs[999].Body, b.File);
+            Assert.Equal((true, AnimatorCullingMode.CullCompletely, AnimatorUpdateMode.UnscaledTime, true),
+                (read.applyRootMotion, read.cullingMode, read.updateMode, read.keepAnimatorStateOnDisable));
         }
 
         [Fact]
