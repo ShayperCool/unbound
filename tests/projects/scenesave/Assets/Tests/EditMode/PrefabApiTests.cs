@@ -16,6 +16,8 @@ using UnityEngine;
 /// </summary>
 public class PrefabApiTests
 {
+    static void OnLog(string message, string stack, LogType type) => ProbeLog.Row("throw.log", type + ": " + message);
+
     static string Name(UnityEngine.Object o) => o == null ? "null" : o.GetType().Name + ":" + o.name;
 
     [Test]
@@ -125,6 +127,29 @@ public class PrefabApiTests
         ProbeLog.Row("postprocess.applied", serialized.ApplyModifiedProperties());
         Undo.FlushUndoRecordObjects();
         ProbeLog.Row("postprocess.position", placed.transform.localPosition.x.ToString("R"));
+        // A handler that records nothing, then one that throws.
+        Undo.PostprocessModifications filter = modifications => Array.Empty<UndoPropertyModification>();
+        Undo.postprocessModifications += filter;
+        var filtered = new SerializedObject(placed.transform);
+        filtered.FindProperty("m_LocalPosition.y").floatValue = 5f;
+        ProbeLog.Try("filter.applied", () => filtered.ApplyModifiedProperties());
+        ProbeLog.Row("filter.position", placed.transform.localPosition.y.ToString("R"));
+        Undo.FlushUndoRecordObjects();
+        ProbeLog.Row("filter.flushed", placed.transform.localPosition.y.ToString("R"));
+        Undo.postprocessModifications -= filter;
+        UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+        Application.logMessageReceived += OnLog;
+        Undo.PostprocessModifications thrower = modifications => throw new InvalidOperationException("probe handler failed");
+        Undo.postprocessModifications += thrower;
+        var thrown = new SerializedObject(placed.transform);
+        thrown.FindProperty("m_LocalPosition.z").floatValue = 6f;
+        ProbeLog.Try("throw.applied", () => thrown.ApplyModifiedProperties());
+        ProbeLog.Row("throw.position", placed.transform.localPosition.z.ToString("R"));
+        ProbeLog.Try("throw.flush", () => { Undo.FlushUndoRecordObjects(); return "done"; });
+        ProbeLog.Row("throw.flushed", placed.transform.localPosition.z.ToString("R"));
+        Undo.postprocessModifications -= thrower;
+        Application.logMessageReceived -= OnLog;
+
         var pointer = typeof(SerializedObject).GetField("m_NativeObjectPtr", BindingFlags.Instance | BindingFlags.NonPublic);
         ProbeLog.Row("nativePtr.field", pointer != null);
         if (pointer != null)
