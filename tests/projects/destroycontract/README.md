@@ -107,11 +107,14 @@ expected to run first (unmeasured with this runner); the `enter` event's detail 
 
 Not recorded on Metal (`publish` refuses there): two identical captures of the 6000.0.71f1 macOS
 Editor on an Apple M2 Pro differ from the Linux reference in the device keys and in 886 `cb.wfeof`
-states, the macOS Editor resuming WaitForEndOfFrame once more, in the first frame. Unresolved
-which of two differences between the recordings causes it: the windowed Editors' first Game-view
-frame (a windowing difference, which AGENTS.md Platforms leaves to the Linux references), or the
-Play mode entry, through the update handler on macOS (inferred: these captures' `enter` events
-predate the entry path detail, and come about 6 s after `record`, as in an activation order capture
-whose event names `update`) and through Record's delayCall on Linux. A Linux capture entering
-from the update handler would separate them. Until then the Mac compares with the Linux
-reference, where Unbound on Metal fails only the two device keys.
+states, the macOS Editor resuming WaitForEndOfFrame once more, in the first frame. The cause is the
+Play mode entry path, not the windowed Editors' first Game-view frame: two byte-identical Linux GPU
+Editor captures entering from the update handler (`run.py editor --enter update`, which
+`publish` refuses) differ from the Linux reference in exactly those 886 `cb.wfeof` states and in
+`points`, which gains a WaitForEndOfFrame resume at step 0, relative frame 1; every other key is
+equal. Unbound enters Play mode as Record's delayCall does and matches the Linux reference, with
+which the Mac compares; there Unbound on Metal fails only the two device keys.
+
+For that Linux capture the batchmode compile fixture of a fresh copy of this probe exited 139
+after its `-quit` (twice); the shader pass count fixture, whose Packages/ and ProjectSettings/ this
+probe copies (`preflight.py`), compiled the preflight instead.
