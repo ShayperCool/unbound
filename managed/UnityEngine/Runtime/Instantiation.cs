@@ -41,6 +41,8 @@ namespace Unbound.Runtime
                 throw new ArgumentException($"Instantiating an object of type {original.GetType().Name} is not supported.");
             }
             clone.m_Name = original is Shader ? original.m_Name : original.m_Name + "(Clone)";
+            // A clip copy wakes once named (Unity 6000.0.71f1, tests/projects/animatorapi stream.instantiateClip).
+            if (clone is AnimationClip clip) UnityEditor.AnimationUtility.ClipAwake(clip);
             return clone;
         }
 

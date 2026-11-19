@@ -207,6 +207,9 @@ namespace UnityEngine
 
         public Keyframe this[int index] => m_Keys[CheckIndex(index)];
 
+        /// <summary>Replaces a key where it is (the Editor's tangent tools change only its tangents and mode).</summary>
+        internal void ReplaceKey(int index, Keyframe key) => m_Keys[index] = key;
+
         public int length => m_Keys.Count;
 
         /// <summary>

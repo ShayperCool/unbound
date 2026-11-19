@@ -60,6 +60,9 @@ namespace Unbound.Runtime.Playables
             /// cannot resolve (null: none): what its first access reports.</summary>
             internal string TransformPath, TransformProperty;
             internal bool Reported;
+            /// <summary>What the handle was bound to (AnimationUtility's stream bindings).</summary>
+            internal string BoundPath, BoundProperty;
+            internal Type BoundType;
         }
 
         internal readonly Animator Animator;
@@ -1661,11 +1664,11 @@ namespace UnityEngine.Animations
             if (type == typeof(Transform))
             {
                 // Transform values are a TransformStreamHandle's; a property handle cannot resolve them.
-                handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = -1, TransformPath = path, TransformProperty = property });
+                handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = -1, TransformPath = path, TransformProperty = property, BoundPath = path, BoundType = type, BoundProperty = property });
                 return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
             }
             int channel = animator.StreamBindings.BindChannel(CurveBinding.ForType(path, property, type), isObjectReference);
-            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, IsObject = isObjectReference });
+            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, IsObject = isObjectReference, BoundPath = path, BoundType = type, BoundProperty = property });
             return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
         }
 
@@ -1674,7 +1677,7 @@ namespace UnityEngine.Animations
             if (animator == null) throw new ArgumentNullException(nameof(animator));
             var handles = AnimatorHandles.Of(animator);
             int channel = animator.StreamBindings.BindCustom(animator, property);
-            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel });
+            handles.Properties.Add(new AnimatorHandles.StreamProperty { Channel = channel, BoundPath = "", BoundType = typeof(Animator), BoundProperty = property });
             return new PropertyStreamHandle { m_AnimatorBindingsVersion = handles.Id, handleIndex = handles.Properties.Count - 1 };
         }
 

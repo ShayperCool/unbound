@@ -509,6 +509,15 @@ namespace UnityEngine
             return new ClipObjectCurve { Binding = c.Binding, Times = times.ToArray(), Values = values.ToArray() };
         }
 
+        /// <summary>The component's clips replaced (AnimationUtility.SetAnimationClips): its
+        /// states are made again from them; the default clip stays.</summary>
+        internal void ReplaceClips(AnimationClip[] clips)
+        {
+            foreach (var s in States.ToArray()) RemoveState(s);
+            m_Animations = new List<AnimationClip>(clips);
+            m_StatesBuilt = false;
+        }
+
         public void RemoveClip(AnimationClip clip)
         {
             if (clip == null) throw new NullReferenceException("clip");

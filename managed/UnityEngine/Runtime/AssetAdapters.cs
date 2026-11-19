@@ -60,7 +60,11 @@ namespace Unbound.Runtime
             Clone<UnityEditor.VFX.VisualEffectResource>(a => a.CloneObject());
 
             // Read and cloned.
-            Read<AnimationClip>((a, b, r) => a.ReadSerialized(b, r));
+            Read<AnimationClip>((a, b, r) =>
+            {
+                a.ReadSerialized(b, r);
+                UnityEditor.AnimationUtility.ClipAwake(a);
+            });
             Clone<AnimationClip>(a => a.CloneObject());
             Read<Cubemap>((a, b, r) => a.ReadSerialized(b, r));
             Clone<Cubemap>(a => a.CloneObject());

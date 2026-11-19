@@ -81,13 +81,27 @@ namespace UnityEditor
         static EditorCurveBinding BindingOf(ClipCurve c) =>
             EditorCurveBinding.FloatCurve(c.Binding.Path, c.Binding.ResolveType(), c.Binding.Attribute);
 
-        /// <summary>The float curves' bindings, by path (the clip's order within one).</summary>
+        /// <summary>The float curves' bindings, by path; within a path a Transform's rotation
+        /// comes before its Euler angles, position and scale, then the clip's other curves in
+        /// its order (Unity 6000.0.71f1, tests/projects/editorui GetCurveBindings and
+        /// tests/projects/animatorapi clip.Run.bindings).</summary>
         public static EditorCurveBinding[] GetCurveBindings(AnimationClip clip)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             // A Humanoid model's clip has its muscle curves, played or not, and as imported.
-            return clip.CurvesAsImported().Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal).ThenBy(p => p.i)
+            return clip.CurvesAsImported().Select((c, i) => (c, i)).OrderBy(p => p.c.Binding.Path, StringComparer.Ordinal)
+                .ThenBy(p => CurveKindOrder(p.c.Binding)).ThenBy(p => p.i)
                 .Select(p => BindingOf(p.c)).ToArray();
+        }
+
+        /// <summary>Where a curve's kind sorts within its path: a Transform's rotation, Euler
+        /// angles, position and scale, then everything else.</summary>
+        static int CurveKindOrder(CurveBinding binding)
+        {
+            if (binding.ClassId != k_TransformClassId) return 4;
+            var attribute = binding.Attribute ?? "";
+            int dot = attribute.LastIndexOf('.');
+            return TransformKind(dot < 0 ? attribute : attribute.Substring(0, dot)) switch { 1 => 0, 2 => 1, 0 => 2, 3 => 3, _ => 4 };
         }
 
         public static EditorCurveBinding[] GetObjectReferenceCurveBindings(AnimationClip clip)
@@ -116,6 +130,11 @@ namespace UnityEditor
         /// ClipLength.*SetEditorCurve*).</summary>
         public static void SetEditorCurve(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
+            SetEditorCurveNoSync(clip, binding, curve);
+        }
+
+        internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
+        {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.RestoreImportedCurves();
             clip.m_Curves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
@@ -125,12 +144,18 @@ namespace UnityEditor
                 clip.m_Curves.Add(new ClipCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Curve = copy });
             }
             clip.m_Version++;
+            CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
 
+        /// <summary>Sets each curve (calling <see cref="onCurveWasModified"/> for each), then calls
+        /// it once for the clip.</summary>
         public static void SetEditorCurves(AnimationClip clip, EditorCurveBinding[] bindings, AnimationCurve[] curves)
         {
-            if (bindings == null || curves == null || bindings.Length != curves.Length) throw new ArgumentException("bindings and curves must have the same length");
-            for (int i = 0; i < bindings.Length; i++) SetEditorCurve(clip, bindings[i], curves[i]);
+            if (bindings == null) throw new ArgumentNullException(nameof(bindings), "bindings must be non-null");
+            if (curves == null) throw new ArgumentNullException(nameof(curves), "curves must be non-null");
+            if (bindings.Length != curves.Length) throw new InvalidOperationException("bindings and curves must be of equal length");
+            for (int i = 0; i < bindings.Length; i++) SetEditorCurveNoSync(clip, bindings[i], curves[i]);
+            CurveWasModified(clip, default, CurveModifiedType.ClipModified);
         }
 
         /// <summary>The path of a transform below a root ("" for the root itself).</summary>
@@ -164,7 +189,7 @@ namespace UnityEditor
             return true;
         }
 
-        static float? SerializedValue(Object target, string propertyName)
+        internal static float? SerializedValue(Object target, string propertyName)
         {
             if (target is Transform t)
             {
@@ -319,6 +344,8 @@ namespace UnityEditor
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.events = events ?? Array.Empty<AnimationEvent>();
+            // The clip changed as a whole; the binding names no curve but has the Object type (measured).
+            CurveWasModified(clip, new EditorCurveBinding { type = typeof(Object) }, CurveModifiedType.ClipModified);
         }
     }
 }

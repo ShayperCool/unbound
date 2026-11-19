@@ -121,7 +121,15 @@ namespace UnityEngine
 
         const float EmptyClipLength = 1f;
 
-        public AnimationClip() { }
+        /// <summary>A new clip wakes at once (AnimationUtility.onCurveWasModified sees it before it
+        /// is named); one the engine loads or copies wakes once it is read or named.</summary>
+        public AnimationClip()
+        {
+            if (!ObjectConstruction.Loading) UnityEditor.AnimationUtility.ClipAwake(this);
+        }
+
+        /// <summary>An engine copy, which wakes when named (Instantiate).</summary>
+        AnimationClip(bool copy) { }
 
         static readonly string[] s_Axes3 = { "x", "y", "z" }, s_Axes4 = { "x", "y", "z", "w" };
 
@@ -849,7 +857,7 @@ namespace UnityEngine
 
         internal AnimationClip Clone()
         {
-            var clip = new AnimationClip
+            var clip = new AnimationClip(copy: true)
             {
                 m_Curves = new List<ClipCurve>(m_Curves),
                 m_ObjectCurves = new List<ClipObjectCurve>(m_ObjectCurves),
