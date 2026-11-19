@@ -61,7 +61,7 @@ namespace UnityEngine.Tests
         }
 
         static Material ProjectEdited() => new Material(ShaderUtil.CreateShaderAsset(
-            "Shader \"Tests/Project Validation " + Guid.NewGuid().ToString("N") + "\"\n{\n    Properties\n    {\n        _Value (\"Value\", Float) = 0\n    }\n"
+            "Shader \"Tests/Project Validation " + Guid.NewGuid().ToString("N") + "\"\n{\n    Properties\n    {\n        _Value (\"Value\", Float) = 0\n        _Tint (\"Tint\", Color) = (1,1,1,1)\n    }\n"
             + "    SubShader { Pass { } }\n    CustomEditor \"UnityEngine.Tests.ValidationTestProjectGUI\"\n}"));
 
         /// <summary>While a project's OnPostprocessMaterial has a model's material, the first
@@ -93,7 +93,7 @@ namespace UnityEngine.Tests
             Assert.Equal("", Keywords(m));
             if (access == "has") m.HasProperty("_Value");
             else if (access == "float") m.GetFloat("_Value");
-            else m.GetColor("_Value");
+            else m.GetColor("_Tint");
             Assert.Equal("PROJECT_VALIDATED", Keywords(m));
             Assert.False(m.m_ValidateOnPropertyAccess);
             m.DisableKeyword("PROJECT_VALIDATED");

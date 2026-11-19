@@ -185,8 +185,11 @@ namespace Unbound.Runtime
             GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
             // Shadows: collected against the G-buffer's depth. The camera's depth texture is the
-            // sampled copy from here on (the motion vectors rebind it too: deferredDepth.*.motion).
+            // sampled copy from here on, also where the motion vectors rebind it
+            // (deferredDepth.motion.*); their moving objects keep testing against the G-buffer's
+            // depth as before (which depth Unity tests them against is unmeasured).
             s_CameraDepth = sampledDepth;
+            s_CameraDepthBuffer = TextureHandles.Of(depth);
             RenderShadows(camera, context, width, height);
             GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 

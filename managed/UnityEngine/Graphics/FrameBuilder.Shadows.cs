@@ -122,6 +122,9 @@ namespace Unbound.Runtime
         }
 
         static RenderTexture s_CameraDepth;
+        /// <summary>The depth buffer the motion vectors' moving objects test against when it is
+        /// not <see cref="s_CameraDepth"/> (0: that one); a deferred camera's G-buffer depth.</summary>
+        static ulong s_CameraDepthBuffer;
 
         /// <summary>The built-in orthographic camera uses one directional shadow map in the
         /// measured rendering profile, independently of the configured cascade count.</summary>
@@ -659,6 +662,7 @@ namespace Unbound.Runtime
             s_ShadowTemporaries.Clear();
             s_LightShadows.Clear();
             s_CameraDepth = null;
+            s_CameraDepthBuffer = 0;
             s_ScreenShadows = false;
             s_ScreenShadowMask = null;
         }

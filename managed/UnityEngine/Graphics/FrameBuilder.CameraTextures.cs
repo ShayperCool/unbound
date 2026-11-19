@@ -187,7 +187,7 @@ namespace Unbound.Runtime
             {
                 // Not sampled while it is the depth buffer.
                 GfxStream.GlobalTexture("_CameraDepthTexture", 0);
-                GfxStream.SetTarget(TextureHandles.Of(texture), TextureHandles.Of(s_CameraDepth));
+                GfxStream.SetTarget(TextureHandles.Of(texture), s_CameraDepthBuffer != 0 ? s_CameraDepthBuffer : TextureHandles.Of(s_CameraDepth));
                 GfxStream.Viewport(new Rect(0, 0, width, height));
             }
             ulong internalPass = motionVectors.Sync();
