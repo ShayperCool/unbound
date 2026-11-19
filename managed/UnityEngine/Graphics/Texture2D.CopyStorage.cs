@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 
 namespace UnityEngine
 {
@@ -25,21 +26,45 @@ namespace UnityEngine
         }
 
         /// <summary>A fitted region of the first level into <paramref name="destination"/>'s, its
-        /// texels' bytes as they are, between formats of one texel size (others copy nothing).</summary>
+        /// texels' bytes as they are, texel by texel (no level-sized arrays: command buffers repeat
+        /// it every execution), between formats of one texel size whose cells Unbound encodes
+        /// (Texture2DTexels.Coded); other pairs copy nothing on the CPU (unmeasured).</summary>
         void CopyRetainedBytes(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)
         {
             int texel = TexelBytes;
-            if (texel == 0 || texel != destination.TexelBytes) return;
+            if (texel == 0 || texel > MaxTexelBytes || texel != destination.TexelBytes
+                || !Texture2DTexels.Coded(m_Format) || !Texture2DTexels.Coded(destination.m_Format)) return;
             if (!EnsureRetainedPixels() || !destination.EnsureRetainedPixels()) return;
-            var from = EncodeLevel(0);
-            var to = destination.EncodeLevel(0);
+            Span<byte> bytes = stackalloc byte[MaxTexelBytes];
+            var cell = bytes.Slice(0, texel);
             for (int row = 0; row < height; row++)
-                Buffer.BlockCopy(from, ((y + row) * m_Width + x) * texel, to,
-                    ((destinationY + row) * destination.m_Width + destinationX) * texel, width * texel);
-            destination.DecodeLevel(to, 0);
+                for (int column = 0; column < width; column++)
+                {
+                    ReadTexelBytes((y + row) * m_Width + x + column, cell);
+                    destination.WriteTexelBytes((destinationY + row) * destination.m_Width + destinationX + column, cell);
+                }
             destination.m_UnreadableRaw = null;
             destination.DropIfNotReadable();
             DropIfNotReadable();
+        }
+
+        /// <summary>The largest texel (RGBAFloat).</summary>
+        const int MaxTexelBytes = 16;
+
+        /// <summary>A first-level texel's bytes in the texture's format.</summary>
+        void ReadTexelBytes(int i, Span<byte> cell)
+        {
+            if (CellStore) { CheckStoreRead(); StoreTexel(0, i).CopyTo(cell); }
+            else if (m_Hdr != null) Texture2DTexels.EncodeFloatCell(m_Format, FloatCell(0, i), cell);
+            else Texture2DTexels.EncodeCell(m_Format, Cell(0, i), cell);
+        }
+
+        /// <summary>Sets a first-level texel from its bytes in the texture's format.</summary>
+        void WriteTexelBytes(int i, ReadOnlySpan<byte> cell)
+        {
+            if (CellStore) { CheckStoreWrite(); cell.CopyTo(StoreTexel(0, i)); }
+            else if (m_Hdr != null) SetFloatCell(0, i, Texture2DTexels.DecodeFloatCell(m_Format, cell));
+            else SetCell(0, i, Texture2DTexels.DecodeCell(m_Format, cell));
         }
 
         internal void CopyRetainedPixels(Texture2D destination, int x, int y, int width, int height, int destinationX, int destinationY)

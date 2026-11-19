@@ -168,6 +168,29 @@ namespace Unbound.Tests
             }
             Assert.Equal("40c814ff4bb139f6569a5eed618383e4",
                 string.Concat(bgraRegion.GetPixelData<byte>(0).ToArray().Select(b => b.ToString("x2"))));
+            // A one-texel-wide column at an offset: the stride is the level's.
+            var column = Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true));
+            var columnBefore = column.GetPixelData<byte>(0).ToArray();
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.CopyTexture(source, 0, 0, 1, 0, 1, 2, column, 0, 0, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            var columnBytes = column.GetPixelData<byte>(0).ToArray();
+            var sourceBytes = source.GetPixelData<byte>(0).ToArray();
+            Assert.Equal(sourceBytes[4..8], columnBytes[0..4]);
+            Assert.Equal(sourceBytes[12..16], columnBytes[8..12]);
+            Assert.Equal(columnBefore[4..8], columnBytes[4..8]);
+            Assert.Equal(columnBefore[12..16], columnBytes[12..16]);
+            // Formats of other texel sizes copy nothing on the CPU (unmeasured).
+            var wide = Keep(new Texture2D(2, 2, TextureFormat.RGBAHalf, false, true));
+            var wideBefore = wide.GetPixels();
+            using (var cmd = new CommandBuffer())
+            {
+                cmd.CopyTexture(rgba, 0, 0, 0, 0, 1, 1, wide, 0, 0, 0, 0);
+                Graphics.ExecuteCommandBuffer(cmd);
+            }
+            Assert.Equal(wideBefore, wide.GetPixels());
         }
     }
 }
