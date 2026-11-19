@@ -1071,6 +1071,12 @@ namespace Unbound.Runtime
                     int human = Unbound.Runtime.Humanoid.HumanClipImport.CurveIndex(name);
                     if (human >= 0)
                     {
+                        // An Animator without a human takes its own body curves (RootT, RootQ) as
+                        // root motion, not as values to write (Unity 6000.0.71f1,
+                        // tests/projects/rootcurves): they bind nothing and are no unsupported curve.
+                        if (!animator.isHuman && ReferenceEquals(go, root)
+                            && human >= Unbound.Runtime.Humanoid.HumanClipImport.RootFirst && human < Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst)
+                            return spec;
                         if (!animator.isHuman) break;
                         return Make(animator, "human:" + name, 0, () => new AccessorGroup(animator, 1,
                             () => new Vector4(Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(human), 0),
