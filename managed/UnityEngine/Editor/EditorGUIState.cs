@@ -778,7 +778,16 @@ namespace UnityEditor
         internal static Texture2D LoadNamed(string name)
         {
             if (string.IsNullOrEmpty(name) || !Names.Contains(name)) return null;
-            if (!s_Loaded.TryGetValue(name, out var tex)) s_Loaded[name] = tex = new Texture2D(1, 1) { name = name };
+            if (!s_Loaded.TryGetValue(name, out var tex)) s_Loaded[name] = tex = Make(name);
+            return tex;
+        }
+
+        /// <summary>A placeholder: one transparent texel (Unbound has no icon pixels to draw).</summary>
+        static Texture2D Make(string name)
+        {
+            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = name };
+            tex.SetPixel(0, 0, Color.clear);
+            tex.Apply();
             return tex;
         }
 
@@ -789,7 +798,7 @@ namespace UnityEditor
             foreach (var c in candidates)
             {
                 if (!Names.Contains(c)) continue;
-                if (!s_Loaded.TryGetValue(c, out var tex)) s_Loaded[c] = tex = new Texture2D(1, 1) { name = c };
+                if (!s_Loaded.TryGetValue(c, out var tex)) s_Loaded[c] = tex = Make(c);
                 return tex;
             }
             if (logError) Debug.LogError($"Unable to load the icon: '{name}'.\nNote that either full project path should be used (with extension) or just the icon name if the icon is located in the following location: 'Assets/Editor Default Resources/Icons/' (without extension, since png is assumed)");

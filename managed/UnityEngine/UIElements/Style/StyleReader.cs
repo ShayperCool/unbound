@@ -233,10 +233,7 @@ namespace Unbound.UIElements
                         if (values[j].IsVarFunction()) ok = ResolveVar(m_Sheet, values, ref j, resolved, new Stack<string>(), true) == Result.Valid;
                         else resolved.Add(new UssValue { sheet = m_Sheet, handle = values[j] });
                     }
-                    bool fits = Unbound.Runtime.Compat.UssValuesValidated
-                        ? UnityEngine.UIElements.StyleSheets.UssValidation.Fits(p.name, new ResolvedParts(resolved))
-                        : ColorsFit(p.name, resolved);
-                    if (ok && resolved.Count > 0 && fits)
+                    if (ok && resolved.Count > 0 && SubstitutionFits(p.name, resolved))
                     {
                         m_Values.AddRange(resolved);
                         count = resolved.Count;
@@ -279,6 +276,16 @@ namespace Unbound.UIElements
         /// transparent) and a var() fallback apply (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/toolapis uss). Other mismatched types are unmeasured and read as before.
         /// </summary>
+        /// <summary>Whether values a var() gave fit the property: its full syntax on the 6000.0 family
+        /// (when the release's syntaxes can be read), else the colour check.</summary>
+        internal static bool SubstitutionFits(string property, List<UssValue> values)
+        {
+            if (Unbound.Runtime.Compat.UssValuesValidated
+                && UnityEngine.UIElements.StyleSheets.UssValidation.Fits(property, new ResolvedParts(values)) is bool fits)
+                return fits;
+            return ColorsFit(property, values);
+        }
+
         static bool ColorsFit(string property, List<UssValue> values)
         {
             if (property.StartsWith("--", StringComparison.Ordinal) || s_MixedColorProperties.Contains(property)) return true;
@@ -630,12 +637,8 @@ namespace Unbound.UIElements
         static Texture2D WarningIconTexture()
         {
             if (s_WarningIcon != null) return s_WarningIcon;
-            // The Editor's own icon object (a placeholder), made transparent once.
-            s_WarningIcon = UnityEditor.EditorIcons.LoadNamed(WarningIcon);
-            if (s_WarningIcon == null) return null;
-            s_WarningIcon.SetPixel(0, 0, Color.clear);
-            s_WarningIcon.Apply();
-            return s_WarningIcon;
+            // The Editor's own icon object (a transparent placeholder).
+            return s_WarningIcon = UnityEditor.EditorIcons.LoadNamed(WarningIcon);
         }
 
         public Background ReadBackground(int index)

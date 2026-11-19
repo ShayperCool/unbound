@@ -95,8 +95,8 @@ namespace UnityEngine.Tests
         {
             if (!Installed()) return;
             using var release = TestRelease.Pin(TestRelease.Measured);
-            Assert.True(UssValidation.Fits("--custom", new Parts()));
-            Assert.False(UssValidation.Fits("width", new Parts()));
+            Assert.True(UssValidation.Fits("--custom", new Parts()) == true);
+            Assert.True(UssValidation.Fits("width", new Parts()) == false);
             // Values as a sheet holds them (as a var() substitution gives them to the style pass).
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
             try
@@ -110,7 +110,7 @@ namespace UnityEngine.Tests
                         {
                             var values = new System.Collections.Generic.List<Unbound.UIElements.UssValue>();
                             foreach (var h in p.values) values.Add(new Unbound.UIElements.UssValue { sheet = sheet, handle = h });
-                            return UssValidation.Fits(property, new Unbound.UIElements.UssReader.ResolvedParts(values));
+                            return UssValidation.Fits(property, new Unbound.UIElements.UssReader.ResolvedParts(values)) == true;
                         }
                     throw new InvalidOperationException(as_);
                 }
@@ -131,6 +131,38 @@ namespace UnityEngine.Tests
                 Assert.False(Fits("flex-direction", "display"));   // an unknown keyword
                 Assert.True(Fits("-unity-slice-left", "-unity-slice-left"));
                 Assert.True(Fits("transition-property", "flex-direction")); // a custom ident
+            }
+            finally
+            {
+                Object.DestroyImmediate(sheet);
+            }
+        }
+
+        /// <summary>The style pass's rule for var() values by release: the full syntax on the
+        /// measured family, the colour check elsewhere, where they disagree (a length for opacity)
+        /// and where they agree (a length for a colour).</summary>
+        [Fact]
+        public void TheStylePassChecksSubstitutionsByTheReleasesRule()
+        {
+            if (!Installed()) return;
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            try
+            {
+                new Unbound.UIElements.UssImporter("test.uss") { validate = false }.Import(sheet, ".a { height: 12px; }");
+                var length = new System.Collections.Generic.List<Unbound.UIElements.UssValue>();
+                foreach (var h in sheet.rules[0].properties[0].values) length.Add(new Unbound.UIElements.UssValue { sheet = sheet, handle = h });
+                using (TestRelease.Pin(TestRelease.Measured))
+                {
+                    Assert.False(Unbound.UIElements.UssReader.SubstitutionFits("opacity", length));
+                    Assert.False(Unbound.UIElements.UssReader.SubstitutionFits("color", length));
+                    Assert.True(Unbound.UIElements.UssReader.SubstitutionFits("width", length));
+                }
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    Assert.True(Unbound.UIElements.UssReader.SubstitutionFits("opacity", length));
+                    Assert.False(Unbound.UIElements.UssReader.SubstitutionFits("color", length));
+                    Assert.True(Unbound.UIElements.UssReader.SubstitutionFits("width", length));
+                }
             }
             finally
             {

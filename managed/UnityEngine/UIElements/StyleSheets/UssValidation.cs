@@ -72,10 +72,11 @@ namespace UnityEngine.UIElements.StyleSheets
         /// <summary>Whether values a style pass resolved (var() substituted) fit the property's
         /// syntax, read by their types (a float is a number or integer, and a zero length; a
         /// dimension a length, percentage, time or angle by its unit; a color or color name a
-        /// color); true for a custom property and when there is no table to check with.</summary>
-        internal static bool Fits(string property, IParts values)
+        /// color); true for a custom property, null when there is no table to check with.</summary>
+        internal static bool? Fits(string property, IParts values)
         {
-            if (property.StartsWith("--", StringComparison.Ordinal) || !LoadTable()) return true;
+            if (property.StartsWith("--", StringComparison.Ordinal)) return true;
+            if (!LoadTable()) return null;
             if (!s_Syntaxes.TryGetValue(property, out var syntax)) return false;
             var node = Parse(syntax);
             if (node == null || values.Count == 0) return false;
