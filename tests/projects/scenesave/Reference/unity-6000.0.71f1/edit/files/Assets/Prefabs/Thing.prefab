@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5859009569414958652}
   - component: {fileID: 1666951092025189640}
-  - component: {fileID: 2037859578849987757}
+  - component: {fileID: 1438351243235777350}
   m_Layer: 0
   m_Name: Part
   m_TagString: Untagged
@@ -54,7 +54,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &2037859578849987757
+--- !u!114 &1438351243235777350
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -77,6 +77,7 @@ MonoBehaviour:
   target: {fileID: 0}
   material: {fileID: 0}
   data: {fileID: 0}
+  peer: {fileID: 0}
 --- !u!1 &5150910721065944833
 GameObject:
   m_ObjectHideFlags: 0
@@ -133,3 +134,4 @@ MonoBehaviour:
   target: {fileID: 0}
   material: {fileID: 0}
   data: {fileID: 0}
+  peer: {fileID: 0}

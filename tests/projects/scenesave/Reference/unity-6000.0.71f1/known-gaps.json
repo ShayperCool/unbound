@@ -152,7 +152,7 @@
     "case": "edit",
     "key": "file:Assets/Scenes/Fresh.unity",
     "reference": "written",
-    "actual": "line 304: reference '  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}', actual '  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}'",
+    "actual": "line 212: reference '  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}', actual '  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}'",
     "reason": "The macOS arm64 Editor rounds the new scene's light rotation Quaternion.Euler(50, -30, 0) to x 0.40821788; the Linux Editor writes 0.40821794, as Unbound does (the Linux-authored scenes of tests/projects hold it). arm64 arithmetic is recorded, not chased; the rest of the file is identical."
   },
   {

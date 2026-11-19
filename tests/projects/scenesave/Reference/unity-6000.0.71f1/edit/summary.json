@@ -4,6 +4,7 @@
   "changed": [
     "Assets/Data/DataQuit.asset",
     "Assets/Data/DataSaved.asset",
+    "Assets/Data/DataUnsaved.asset",
     "Assets/Materials/MatEdit.mat",
     "Assets/Materials/MatQuit.mat",
     "Assets/Prefabs/Made.prefab",

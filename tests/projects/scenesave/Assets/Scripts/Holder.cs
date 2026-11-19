@@ -15,4 +15,5 @@ public class Holder : MonoBehaviour
     public GameObject target;
     public Material material;
     public ProbeData data;
+    public Holder peer;
 }

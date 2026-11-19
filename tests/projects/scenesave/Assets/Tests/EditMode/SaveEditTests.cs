@@ -56,6 +56,17 @@ public class SaveEditTests
         lone.transform.position = new Vector3(7f, 8f, 9f);
         ProbeLog.Try("second.saveScenes.result", () => EditorSceneManager.SaveScenes(new[] { second }));
         ProbeLog.Snapshot("second.saveScenes.file", "Assets/Scenes/Second.unity");
+        lone.transform.position = new Vector3(1f, 1f, 1f);
+        EditorUtility.SetDirty(lone.transform);
+        ProbeLog.Row("second.setDirty.isDirty", second.isDirty);
+        ProbeLog.Try("second.setDirty.save", () => EditorSceneManager.SaveOpenScenes());
+        ProbeLog.Snapshot("second.setDirty.file", "Assets/Scenes/Second.unity");
+        Undo.RecordObject(lone.transform, "move");
+        lone.transform.position = new Vector3(2f, 2f, 2f);
+        Undo.FlushUndoRecordObjects();
+        ProbeLog.Row("second.undo.isDirty", second.isDirty);
+        ProbeLog.Try("second.undo.save", () => EditorSceneManager.SaveOpenScenes());
+        ProbeLog.Snapshot("second.undo.file", "Assets/Scenes/Second.unity");
 
         var fresh = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
         ProbeLog.Row("fresh.isDirty", fresh.isDirty);
@@ -139,6 +150,28 @@ public class SaveEditTests
         instance.transform.position = new Vector3(3f, 0f, 5f);
         instance.GetComponent<Holder>().count = 11;
         instance.transform.Find("Part").gameObject.AddComponent<Holder>().label = "added to instance";
+        // References into the instance: its script and its root GameObject.
+        holder.peer = instance.GetComponent<Holder>();
+        addedHolder.target = instance;
+
+        var panel = new GameObject("Panel", typeof(RectTransform));
+        var panelRect = (RectTransform)panel.transform;
+        panelRect.anchorMin = new Vector2(0.1f, 0.2f);
+        panelRect.anchorMax = new Vector2(0.9f, 0.8f);
+        panelRect.sizeDelta = new Vector2(-10f, 20f);
+        panelRect.pivot = new Vector2(0f, 1f);
+        var item = new GameObject("Item", typeof(RectTransform));
+        item.transform.SetParent(panel.transform, false);
+        ((RectTransform)item.transform).anchoredPosition = new Vector2(5f, -7f);
+
+        // Objects that must not be saved, below a root.
+        var temporary = new GameObject("Temporary") { hideFlags = HideFlags.DontSave };
+        temporary.transform.SetParent(root.transform, false);
+        root.AddComponent<Graph>().hideFlags = HideFlags.DontSave;
+
+        RenderSettings.fog = true;
+        RenderSettings.fogDensity = 0.05f;
+        RenderSettings.ambientIntensity = 1.5f;
     }
 
     static void Prefabs(Scene scene)
@@ -199,6 +232,13 @@ public class SaveEditTests
         AssetDatabase.SaveAssets();
         ProbeLog.Row("asset.save2.saved", ProbeLog.Hash("Assets/Data/DataSaved.asset"));
         ProbeLog.Row("asset.save2.saved.isDirty", EditorUtility.IsDirty(saved));
+
+        var serialized = new SerializedObject(unsaved);
+        serialized.FindProperty("count").intValue = 50;
+        ProbeLog.Row("asset.serialized.applied", serialized.ApplyModifiedProperties());
+        ProbeLog.Row("asset.serialized.isDirty", EditorUtility.IsDirty(unsaved));
+        AssetDatabase.SaveAssets();
+        ProbeLog.Snapshot("asset.serialized.file", "Assets/Data/DataUnsaved.asset");
 
         var quit = AssetDatabase.LoadAssetAtPath<ProbeData>("Assets/Data/DataQuit.asset");
         quit.count = 30;
