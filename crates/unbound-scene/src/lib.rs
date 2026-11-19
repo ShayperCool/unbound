@@ -23,11 +23,17 @@ use unbound_yaml::{Document, Guid};
 pub type Synthesizer =
     Box<dyn Fn(Guid, &std::path::Path) -> Option<Result<Vec<Document>>> + Send + Sync>;
 
+/// Changes the expanded documents of a prefab source (a model's or a prefab file's), as the
+/// Editor's import postprocessors change the import: `None` keeps them.
+pub type Postprocessor =
+    Box<dyn Fn(Guid, &std::path::Path, &[Document]) -> Option<Result<Vec<Document>>> + Send + Sync>;
+
 /// Loads files and expands their prefab instances, keeping recently expanded prefabs for reuse.
 pub struct DocumentLoader<F> {
     /// Finds the file of an asset GUID.
     locate: F,
     synthesize: Option<Synthesizer>,
+    postprocess: Option<Postprocessor>,
     prefabs: Mutex<PrefabCache>,
 }
 
@@ -98,8 +104,38 @@ where
         Self {
             locate,
             synthesize: None,
+            postprocess: None,
             prefabs: Mutex::new(PrefabCache::default()),
         }
+    }
+
+    /// Expanded prefab sources pass through `postprocess` before they are used (and kept).
+    pub fn with_postprocessor(mut self, postprocess: Postprocessor) -> Self {
+        self.postprocess = Some(postprocess);
+        self
+    }
+
+    /// The expanded documents of a prefab source without its own postprocessing (the prefabs it
+    /// nests have theirs): what the postprocessors are given. Not kept.
+    pub fn prefab_unprocessed(&self, guid: Guid) -> Result<Vec<Document>> {
+        let mut stack = Vec::new();
+        self.expand(guid, &mut stack).map(|(_, docs)| docs)
+    }
+
+    fn expand(&self, guid: Guid, stack: &mut Vec<Guid>) -> Result<(PathBuf, Vec<Document>)> {
+        let Some(file) = (self.locate)(guid) else {
+            return Err(MissingPrefab(format!("no asset has guid {guid}")).into());
+        };
+        let synthesized = self.synthesize.as_ref().and_then(|s| s(guid, &file));
+        let docs = match synthesized {
+            Some(docs) => docs.with_context(|| format!("importing {}", file.display()))?,
+            None => read_documents(&file)?,
+        };
+        stack.push(guid);
+        let expanded = flatten(&docs, self, stack);
+        stack.pop();
+        let expanded = expanded.with_context(|| format!("expanding {}", file.display()))?;
+        Ok((file, expanded))
     }
 
     /// Prefab sources that are not YAML files (models) come from `synthesize`.
@@ -157,18 +193,7 @@ where
                 return Err(MissingPrefab(format!("prefab {guid} is missing")).into());
             }
         }
-        let Some(file) = (self.locate)(guid) else {
-            return Err(MissingPrefab(format!("no asset has guid {guid}")).into());
-        };
-        let synthesized = self.synthesize.as_ref().and_then(|s| s(guid, &file));
-        let docs = match synthesized {
-            Some(docs) => docs.with_context(|| format!("importing {}", file.display()))?,
-            None => read_documents(&file)?,
-        };
-        stack.push(guid);
-        let expanded = flatten(&docs, self, stack);
-        stack.pop();
-        let expanded = expanded.with_context(|| format!("expanding {}", file.display()))?;
+        let (file, mut expanded) = self.expand(guid, stack)?;
         if root_is_missing_prefab(&expanded) {
             self.prefabs.lock().unwrap().missing.insert(guid);
             return Err(MissingPrefab(format!(
@@ -176,6 +201,14 @@ where
                 file.display()
             ))
             .into());
+        }
+        if let Some(postprocessed) = self
+            .postprocess
+            .as_ref()
+            .and_then(|p| p(guid, &file, &expanded))
+        {
+            expanded =
+                postprocessed.with_context(|| format!("postprocessing {}", file.display()))?;
         }
         let expanded = Arc::new(expanded);
         self.prefabs.lock().unwrap().insert(guid, expanded.clone());

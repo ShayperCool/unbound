@@ -799,9 +799,90 @@ pub struct ImportedModel {
     pub settings: ModelSettings,
     /// Content of the file that was not imported.
     pub warnings: Vec<String>,
+    /// The nodes with FBX user properties (`OnPostprocessGameObjectWithUserProperties`): the
+    /// node's index and its properties in the file's order.
+    #[serde(default)]
+    pub user_properties: Vec<(u32, Vec<UserProperty>)>,
+    /// The name of the file's single top-level node when it became the root (which is named
+    /// after the file).
+    #[serde(default)]
+    pub root_node_name: Option<String>,
+    /// The meta's fileID table, which [`ImportedModel::hierarchy_file_ids`] takes IDs from.
+    #[serde(default)]
+    pub file_id_table: FileIdTable,
+}
+
+/// A user property of a node (an FBX property flagged as user-defined), with the value
+/// `OnPostprocessGameObjectWithUserProperties` gets.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserProperty {
+    pub name: String,
+    pub value: UserValue,
+}
+
+/// A user property's value by its FBX type (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/assetpostprocessors UserProps.fbx): a boolean, an integer, a number of any
+/// precision as a float, a string, a vector as `(x, y, z, 0)` and a colour with each channel
+/// rounded to 8 bits and alpha 1.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum UserValue {
+    Bool(bool),
+    Int(i32),
+    Float(f32),
+    String(String),
+    Vector([f32; 4]),
+    Color([f32; 4]),
+}
+
+/// An object of a model's hierarchy as a postprocessor left it, for its fileID.
+pub struct HierarchyObject<'a> {
+    pub class_id: i32,
+    pub class_name: &'a str,
+    /// Its GameObject's path below the root (`""` for the root).
+    pub below_root: &'a str,
 }
 
 impl ImportedModel {
+    /// The fileIDs the hierarchy objects get, in this order, as the import gives them after its
+    /// postprocessors: by each object's final path and name (matches the Unity 6000.0.71f1
+    /// Editor, tests/projects/assetpostprocessors fileid.*: a renamed node's objects and an added
+    /// one hash their paths as they are then), the meta's table first. The objects of an
+    /// unchanged hierarchy, given in its depth-first order, get the IDs the import gave them.
+    pub fn hierarchy_file_ids(&self, objects: &[HierarchyObject]) -> Vec<i64> {
+        let mut ids = FileIdAllocator::new(&self.file_id_table);
+        let assets = self
+            .meshes
+            .iter()
+            .map(|m| m.file_id.id)
+            .chain(self.materials.iter().map(|m| m.file_id.id))
+            .chain(self.clips.iter().map(|c| c.file_id.id))
+            .chain(self.avatar.map(|a| a.id));
+        for id in assets {
+            ids.reserve(id);
+        }
+        objects
+            .iter()
+            .map(|o| {
+                let (key, path) = if o.below_root.is_empty() {
+                    (ROOT_NODE_NAME, STABLE_ROOT_PATH.to_string())
+                } else {
+                    let name = o.below_root.rsplit('/').next().unwrap_or(o.below_root);
+                    (name, format!("{STABLE_ROOT_PATH}/{}", o.below_root))
+                };
+                hierarchy_id(
+                    &mut ids,
+                    self.file_id_table.legacy,
+                    self.settings.file_ids_generation,
+                    o.class_id,
+                    o.class_name,
+                    key,
+                    &path,
+                )
+                .0
+            })
+            .collect()
+    }
+
     /// The node whose GameObject or Transform has `file_id`.
     pub fn node_by_file_id(&self, file_id: i64) -> Option<(usize, &ModelNode)> {
         self.nodes
@@ -862,7 +943,8 @@ impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
     // 60: `addColliders` gives every mesh node a MeshCollider.
-    const VERSION: u32 = 60;
+    // 61: the nodes' FBX user properties, the root node's name and the fileID table are kept.
+    const VERSION: u32 = 61;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -892,6 +974,19 @@ impl Importer for ModelImporter {
 /// one with more bytes is first (`a01` before `A1`). Names that differ only in ASCII letter case
 /// or in where leading zeros sit are equal; the sort leaves those where the Editor's `std::sort`
 /// does (`unbound_compat::EditorSort`). Bytes outside ASCII are not measured.
+/// The order a node's children take when the importer sorts the hierarchy by name
+/// (`sortHierarchyByName`), as indices into `names`: what the importer does after the model's
+/// postprocessors ran (matches the Unity 6000.0.71f1 Editor, tests/projects/assetpostprocessors
+/// `*.children`: a child added in OnPostprocessModel sorts among the others, a renamed one by its
+/// new name).
+pub fn hierarchy_name_sort(names: &[&str]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..names.len()).collect();
+    EditorSort::LibStdCxx.sort_by(&mut order, |a, b| {
+        hierarchy_name_order(names[*a], names[*b]).is_lt()
+    });
+    order
+}
+
 fn hierarchy_name_order(a: &str, b: &str) -> std::cmp::Ordering {
     /// Added to the rank of every byte above `9`, so that it ranks after every number: a number
     /// ranks as its value plus `0`, below 2^28 for any chunk of eight digits (also those after a
@@ -1023,7 +1118,7 @@ fn import_with(
         && settings.normals != NormalMode::None
         && settings.normal_calculation != 0
         && settings.normal_smoothing_source < 2;
-    let load = |raw_axes| {
+    let load = |raw_axes, retain_dom| {
         ufbx::load_memory(
             bytes,
             ufbx::LoadOpts {
@@ -1038,8 +1133,9 @@ fn import_with(
                 pivot_handling: ufbx::PivotHandling::Retain,
                 // Missing normals are calculated as the importer does (see `normals`).
                 generate_missing_normals: false,
-                // The DOM identifies each geometry's smoothing layer (see `fbx_smoothing`).
-                retain_dom: reads_fbx_smoothing,
+                // The DOM identifies each geometry's smoothing layer (see `fbx_smoothing`) and
+                // the file's order of user properties.
+                retain_dom,
                 filename: filename.as_ref().into(),
                 // Explicit selection keeps the loader's inputs identical to the cache dependencies.
                 obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
@@ -1049,7 +1145,7 @@ fn import_with(
         .map_err(|e| anyhow!("{}", e.description))
     };
     let baked = !is_obj && settings.bake_axis_conversion;
-    let mut scene = load(baked)?;
+    let mut scene = load(baked, reads_fbx_smoothing)?;
     let static_geometry = scene.anim_stacks.is_empty()
         && scene.skin_deformers.is_empty()
         && scene.blend_deformers.is_empty()
@@ -1076,7 +1172,7 @@ fn import_with(
     // scales. Static Unity imports retain positive source scales and use a different
     // top-level rotation. Read the original local transforms for that measured path.
     if conversion.is_some() && !baked {
-        scene = load(true)?;
+        scene = load(true, reads_fbx_smoothing)?;
     }
 
     let file_unit = if is_obj || scene.settings.unit_meters <= 0.0 {
@@ -1133,6 +1229,9 @@ fn import_with(
             scale,
             settings: settings.clone(),
             warnings,
+            user_properties: Vec::new(),
+            root_node_name: None,
+            file_id_table: table.clone(),
         },
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
@@ -1171,6 +1270,38 @@ fn import_with(
     };
     builder.assign_unique_names(root);
     builder.add_node(root, None, &mut ids);
+    if !std::ptr::eq(root, root_node) {
+        builder.model.root_node_name = Some(root.element.name.to_string());
+    }
+    // User properties in the file's order, which the DOM keeps (ufbx's are by name): the file
+    // is read again with its DOM only when a node has some.
+    let has_user_properties = builder.sources.iter().any(|n| {
+        n.element
+            .props
+            .props
+            .iter()
+            .any(|p| (p.flags & ufbx::PropFlags::USER_DEFINED).any())
+    });
+    if has_user_properties {
+        let with_dom;
+        let dom_scene = if reads_fbx_smoothing || is_obj {
+            &scene
+        } else {
+            with_dom = load(false, true)?;
+            &with_dom
+        };
+        let order = property_order(dom_scene);
+        builder.model.user_properties = builder
+            .sources
+            .iter()
+            .enumerate()
+            .filter_map(|(index, node)| {
+                let names = order.get(&node.element.element_id).map(Vec::as_slice);
+                let properties = node_user_properties(node, names);
+                (!properties.is_empty()).then_some((index as u32, properties))
+            })
+            .collect();
+    }
     builder.model.file_order = builder.file_order(root);
     builder.add_renderers(&mut ids)?;
     if let Some(conversion) = conversion {
@@ -1343,9 +1474,120 @@ struct Builder<'a> {
     rest_pose: Option<(&'a ufbx::Anim, f64)>,
 }
 
+/// The ID of a hierarchy object (`key`: `//RootNode` for the root, else the node's name;
+/// `path`: its GameObject's stable path, see `Builder::stable_path`): the meta's, else by the
+/// meta's layout and `fileIdsGeneration`.
+fn hierarchy_id(
+    ids: &mut FileIdAllocator,
+    legacy: bool,
+    generation: i64,
+    class_id: i32,
+    class_name: &str,
+    key: &str,
+    path: &str,
+) -> (i64, FileIdSource) {
+    if legacy {
+        return ids.id(class_id, key, None);
+    }
+    if generation == 1 {
+        return ids.hashed(class_id, class_name, key);
+    }
+    if class_id == class::GAME_OBJECT {
+        ids.hashed(class_id, class_name, path)
+    } else {
+        ids.hashed(class_id, class_name, &format!("{path}/{class_name}"))
+    }
+}
+
+/// The user properties of a node, in `order` (the names in the file's order) when given, else in
+/// ufbx's (by name).
+fn node_user_properties(node: &ufbx::Node, order: Option<&[String]>) -> Vec<UserProperty> {
+    let mut properties: Vec<UserProperty> = node
+        .element
+        .props
+        .props
+        .iter()
+        .filter(|p| (p.flags & ufbx::PropFlags::USER_DEFINED).any())
+        .filter_map(|p| {
+            let v = &p.value_vec4;
+            // A colour channel as Unity stores it: rounded to 8 bits.
+            let byte = |c: f64| ((c.clamp(0.0, 1.0) * 255.0 + 0.5).floor() / 255.0) as f32;
+            let value = match p.type_ {
+                ufbx::PropType::Boolean => UserValue::Bool(p.value_int != 0),
+                ufbx::PropType::Integer => UserValue::Int(p.value_int as i32),
+                ufbx::PropType::Number => UserValue::Float(v.x as f32),
+                ufbx::PropType::String => UserValue::String(p.value_str.to_string()),
+                ufbx::PropType::Vector
+                | ufbx::PropType::Translation
+                | ufbx::PropType::Rotation
+                | ufbx::PropType::Scaling => {
+                    UserValue::Vector([v.x as f32, v.y as f32, v.z as f32, 0.0])
+                }
+                ufbx::PropType::Color => UserValue::Color([byte(v.x), byte(v.y), byte(v.z), 1.0]),
+                ufbx::PropType::ColorWithAlpha => {
+                    UserValue::Color([byte(v.x), byte(v.y), byte(v.z), byte(v.w)])
+                }
+                // A type ufbx does not name (`float`): by the value the file gives.
+                ufbx::PropType::Unknown => {
+                    let has = |flag: ufbx::PropFlags| (p.flags & flag).any();
+                    if has(ufbx::PropFlags::VALUE_STR) {
+                        UserValue::String(p.value_str.to_string())
+                    } else if has(ufbx::PropFlags::VALUE_VEC3) || has(ufbx::PropFlags::VALUE_VEC4) {
+                        UserValue::Vector([v.x as f32, v.y as f32, v.z as f32, 0.0])
+                    } else if has(ufbx::PropFlags::VALUE_REAL) {
+                        UserValue::Float(v.x as f32)
+                    } else if has(ufbx::PropFlags::VALUE_INT) {
+                        UserValue::Int(p.value_int as i32)
+                    } else {
+                        return None;
+                    }
+                }
+                _ => return None,
+            };
+            Some(UserProperty {
+                name: p.name.to_string(),
+                value,
+            })
+        })
+        .collect();
+    if let Some(order) = order {
+        properties.sort_by_key(|p| {
+            order
+                .iter()
+                .position(|n| *n == p.name)
+                .unwrap_or(usize::MAX)
+        });
+    }
+    properties
+}
+
+/// The names of each node's properties in the file's order, by element id (from the file's
+/// DOM: a node's `Properties70` entries).
+fn property_order(scene: &ufbx::Scene) -> HashMap<u32, Vec<String>> {
+    let mut order = HashMap::new();
+    for node in scene.nodes.iter() {
+        let Some(dom) = node.element.dom_node.as_ref() else {
+            continue;
+        };
+        let Some(props) = dom
+            .children
+            .iter()
+            .find(|c| c.name.as_ref() == "Properties70")
+        else {
+            continue;
+        };
+        let names = props
+            .children
+            .iter()
+            .filter_map(|p| p.values.first().map(|v| v.value_str.to_string()))
+            .collect();
+        order.insert(node.element.element_id, names);
+    }
+    order
+}
+
 impl<'a> Builder<'a> {
-    /// The ID of a hierarchy object (`key`: `//RootNode` for the root, else the node's name;
-    /// `path`: its GameObject's [`Self::stable_path`]).
+    /// The ID of a hierarchy object (see [`hierarchy_id`]).
     fn hierarchy_id(
         &self,
         ids: &mut FileIdAllocator,
@@ -1354,17 +1596,15 @@ impl<'a> Builder<'a> {
         key: &str,
         path: &str,
     ) -> (i64, FileIdSource) {
-        if self.legacy {
-            return ids.id(class_id, key, None);
-        }
-        if self.settings.file_ids_generation == 1 {
-            return ids.hashed(class_id, class_name, key);
-        }
-        if class_id == class::GAME_OBJECT {
-            ids.hashed(class_id, class_name, path)
-        } else {
-            ids.hashed(class_id, class_name, &format!("{path}/{class_name}"))
-        }
+        hierarchy_id(
+            ids,
+            self.legacy,
+            self.settings.file_ids_generation,
+            class_id,
+            class_name,
+            key,
+            path,
+        )
     }
 
     /// A node's hierarchy path under `fileIdsGeneration: 2`: [`STABLE_ROOT_PATH`], then the

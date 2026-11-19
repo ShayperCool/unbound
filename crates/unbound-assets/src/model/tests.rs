@@ -346,6 +346,9 @@ fn bind_pose_conversion_mirrors_and_scales() {
             scale: 2.0,
             settings: builder_settings.clone(),
             warnings: Vec::new(),
+            user_properties: Vec::new(),
+            root_node_name: None,
+            file_id_table: Default::default(),
             clips: Vec::new(),
         },
         unique_names: HashMap::new(),
@@ -2071,4 +2074,148 @@ fn add_colliders_gives_every_mesh_node_a_mesh_collider() {
             .collect()
     };
     assert_eq!(ids_of(&with), ids_of(&without));
+}
+
+fn postprocessor_probe_model(name: &str) -> ImportedModel {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+        "../../tests/projects/assetpostprocessors/Assets/Models/{name}.fbx"
+    ));
+    let settings = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+    ModelImporter::default()
+        .import(&source, &std::fs::read(&source).unwrap(), &settings)
+        .unwrap()
+}
+
+#[test]
+fn user_properties_keep_the_files_order_and_unitys_types() {
+    // tests/projects/assetpostprocessors UserProps.fbx: what
+    // OnPostprocessGameObjectWithUserProperties got for Tagged, Group and Inner in the Editor.
+    let model = postprocessor_probe_model("UserProps");
+    let of = |name: &str| {
+        let index = model.nodes.iter().position(|n| n.name == name).unwrap() as u32;
+        model
+            .user_properties
+            .iter()
+            .find(|(node, _)| *node == index)
+            .map(|(_, p)| p.clone())
+    };
+    let tagged = of("Tagged").unwrap();
+    let names: Vec<&str> = tagged.iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "collider",
+            "count",
+            "weight",
+            "label",
+            "offset",
+            "tint",
+            "animatedWeight",
+            "UDP3DSMAX"
+        ]
+    );
+    let values: Vec<&UserValue> = tagged.iter().map(|p| &p.value).collect();
+    assert_eq!(
+        values,
+        [
+            &UserValue::Bool(true),
+            &UserValue::Int(3),
+            &UserValue::Float(2.5),
+            &UserValue::String("hello".into()),
+            &UserValue::Vector([1.0, 2.0, 3.0, 0.0]),
+            &UserValue::Color([64.0 / 255.0, 128.0 / 255.0, 191.0 / 255.0, 1.0]),
+            &UserValue::Float(0.75),
+            &UserValue::String("key = value".into()),
+        ]
+    );
+    assert_eq!(
+        of("Inner").unwrap(),
+        [
+            UserProperty {
+                name: "speed".into(),
+                value: UserValue::Float(1.5)
+            },
+            UserProperty {
+                name: "collider".into(),
+                value: UserValue::Bool(false)
+            },
+        ]
+    );
+    assert!(of("Group").is_some());
+    assert!(of("Bare").is_none());
+    // Three top-level nodes: the root is the file's own.
+    assert_eq!(model.root_node_name, None);
+}
+
+#[test]
+fn hierarchy_ids_follow_the_paths_postprocessors_leave() {
+    let model = postprocessor_probe_model("UserProps");
+    // The unchanged hierarchy gets the IDs the import gave it.
+    let paths: Vec<String> = (0..model.nodes.len())
+        .map(|i| {
+            let mut names = Vec::new();
+            let mut at = Some(i as u32);
+            while let Some(n) = at {
+                let node = &model.nodes[n as usize];
+                if node.parent.is_none() {
+                    break;
+                }
+                names.push(node.name.clone());
+                at = node.parent;
+            }
+            names.reverse();
+            names.join("/")
+        })
+        .collect();
+    let mut objects = Vec::new();
+    for path in &paths {
+        objects.push(HierarchyObject {
+            class_id: class::GAME_OBJECT,
+            class_name: "GameObject",
+            below_root: path,
+        });
+        objects.push(HierarchyObject {
+            class_id: class::TRANSFORM,
+            class_name: "Transform",
+            below_root: path,
+        });
+    }
+    let expected: Vec<i64> = model
+        .nodes
+        .iter()
+        .flat_map(|n| [n.game_object.id, n.transform.id])
+        .collect();
+    assert_eq!(model.hierarchy_file_ids(&objects), expected);
+    // A renamed node and an added collider: the Editor's IDs (fileid.Assets/Models/UserProps.fbx).
+    let renamed = [
+        HierarchyObject {
+            class_id: class::GAME_OBJECT,
+            class_name: "GameObject",
+            below_root: "BareRenamed",
+        },
+        HierarchyObject {
+            class_id: class::TRANSFORM,
+            class_name: "Transform",
+            below_root: "BareRenamed",
+        },
+        HierarchyObject {
+            class_id: 136,
+            class_name: "CapsuleCollider",
+            below_root: "BareRenamed",
+        },
+        HierarchyObject {
+            class_id: 135,
+            class_name: "SphereCollider",
+            below_root: "Tagged",
+        },
+    ];
+    assert_eq!(
+        model.hierarchy_file_ids(&renamed),
+        [
+            -466_619_223_825_046_069,
+            3_410_639_666_948_554_835,
+            2_355_874_359_483_130_142,
+            8_393_032_865_733_188_997
+        ]
+    );
 }

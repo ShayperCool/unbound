@@ -717,3 +717,46 @@ fn the_first_name_modification_names_and_picks_the_root_even_of_a_child() {
     // The component added to the real root stays on it.
     assert_eq!(ids(by_id(600), "m_Component", Some("component"))[1], 700);
 }
+
+#[test]
+fn postprocessed_prefabs_are_what_instances_expand_and_the_raw_documents_stay() {
+    let dir =
+        std::env::temp_dir().join(format!("unbound-scene-postprocess-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let prefab = dir.join("Enemy.prefab");
+    let scene = dir.join("World.unity");
+    std::fs::write(&prefab, PREFAB).unwrap();
+    std::fs::write(&scene, SCENE).unwrap();
+    let guid = Guid::parse("0000000000000000000000000000abcd").unwrap();
+    let located = prefab.clone();
+    let loader = DocumentLoader::new(move |g| (g == guid).then(|| located.clone()))
+        .with_postprocessor(Box::new(|_, file, docs| {
+            file.extension()?;
+            let mut docs = docs.to_vec();
+            let go = docs.iter_mut().find(|d| d.file_id == 100)?;
+            if let Value::Map(map) = &mut go.body {
+                map.insert("m_Postprocessed", Value::Scalar("1".into()));
+            }
+            Some(Ok(docs))
+        }));
+    let postprocessed = |docs: &[Document], id: i64| {
+        docs.iter()
+            .find(|d| d.file_id == id)
+            .and_then(|d| d.body.get("m_Postprocessed"))
+            .is_some()
+    };
+    assert!(postprocessed(
+        &loader.prefab(guid, &mut Vec::new()).unwrap(),
+        100
+    ));
+    assert!(!postprocessed(
+        &loader.prefab_unprocessed(guid).unwrap(),
+        100
+    ));
+    // A scene's instance expands the postprocessed prefab, its modifications over it.
+    let world = loader.load(&scene).unwrap();
+    assert!(postprocessed(&world, 50 ^ 100));
+    let boss = world.iter().find(|d| d.file_id == 50 ^ 100).unwrap();
+    assert_eq!(boss.body.get("m_Name").unwrap().as_str(), Some("Boss"));
+    std::fs::remove_dir_all(&dir).ok();
+}

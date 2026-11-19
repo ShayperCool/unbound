@@ -123,27 +123,29 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
         db,
-        loader: DocumentLoader::new(locator).with_synthesizer(Box::new(|guid, file| {
-            let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
-                unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
-            });
-            if is_model {
-                return Some(model_documents(guid));
-            }
-            // Binary assets with type trees (NavMeshData the Editor bakes) read by their trees.
-            let is_asset = file
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
-            if !is_asset {
-                // A ScriptedImporter's prefab (a SpeedTree 9 tree): the managed engine runs the
-                // importer and writes the documents of its hierarchy.
-                return unbound_assets::meta::scripted_importer_of(file)
-                    .map(|_| crate::imported_prefabs::documents(guid));
-            }
-            let data = std::fs::read(file).ok()?;
-            unbound_assets::serialized::is_binary(&data)
-                .then(|| unbound_assets::serialized::documents(&data))
-        })),
+        loader: DocumentLoader::new(locator)
+            .with_synthesizer(Box::new(|guid, file| {
+                let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+                    unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
+                });
+                if is_model {
+                    return Some(model_documents(guid));
+                }
+                // Binary assets with type trees (NavMeshData the Editor bakes) read by their trees.
+                let is_asset = file
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
+                if !is_asset {
+                    // A ScriptedImporter's prefab (a SpeedTree 9 tree): the managed engine runs the
+                    // importer and writes the documents of its hierarchy.
+                    return unbound_assets::meta::scripted_importer_of(file)
+                        .map(|_| crate::imported_prefabs::documents(guid));
+                }
+                let data = std::fs::read(file).ok()?;
+                unbound_assets::serialized::is_binary(&data)
+                    .then(|| unbound_assets::serialized::documents(&data))
+            }))
+            .with_postprocessor(Box::new(crate::imported_prefabs::postprocess)),
         resources,
         texture_mip_biases: Default::default(),
         backend: RwLock::new(Arc::new(NullBackend)),
@@ -990,6 +992,111 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             s.loader.invalidate(Some(guid));
             Ok("{}".to_string())
         }
+        "postprocessors" => {
+            // Which imports the editor domain's AssetPostprocessors change (models: the model
+            // callbacks; prefabs: OnPostprocessPrefab); a change forgets the expanded prefabs.
+            #[derive(Deserialize)]
+            struct Request {
+                models: bool,
+                prefabs: bool,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if crate::imported_prefabs::set_postprocessing(r.models, r.prefabs) {
+                s.loader.invalidate(None);
+            }
+            Ok("{}".to_string())
+        }
+        "model-postprocess" => {
+            // What a model's postprocessors are given beyond its prefab: the FBX user properties
+            // of its nodes, by the nodes' GameObjects, the name the root had in the file when it
+            // was its single top-level node, the file's order of the nodes and whether the
+            // importer sorts the hierarchy by name.
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
+            let nodes: Vec<serde_json::Value> = model
+                .user_properties
+                .iter()
+                .filter_map(|(node, properties)| {
+                    let game_object = model.nodes.get(*node as usize)?.game_object.id;
+                    let properties: Vec<serde_json::Value> = properties
+                        .iter()
+                        .map(|p| {
+                            use unbound_assets::model::UserValue;
+                            let (kind, value) = match &p.value {
+                                UserValue::Bool(b) => ("bool", json!(b)),
+                                UserValue::Int(i) => ("int", json!(i)),
+                                UserValue::Float(f) => ("float", json!(f)),
+                                UserValue::String(t) => ("string", json!(t)),
+                                UserValue::Vector(v) => ("vector", json!(v)),
+                                UserValue::Color(c) => ("color", json!(c)),
+                            };
+                            json!({ "name": p.name, "type": kind, "value": value })
+                        })
+                        .collect();
+                    Some(json!({ "gameObject": game_object.to_string(), "properties": properties }))
+                })
+                .collect();
+            // The GameObjects in the file's depth-first order, which the postprocessors see.
+            let file_order: Vec<String> = model
+                .file_order
+                .iter()
+                .filter_map(|i| model.nodes.get(*i as usize))
+                .map(|n| n.game_object.id.to_string())
+                .collect();
+            Ok(json!({
+                "nodes": nodes,
+                "rootNodeName": model.root_node_name,
+                "fileOrder": file_order,
+                "sorted": model.settings.sort_hierarchy_by_name,
+            })
+            .to_string())
+        }
+        "model-child-order" => {
+            // The order the importer sorts children with these names into.
+            #[derive(Deserialize)]
+            struct Request {
+                names: Vec<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let names: Vec<&str> = r.names.iter().map(String::as_str).collect();
+            Ok(json!({ "order": unbound_assets::model::hierarchy_name_sort(&names) }).to_string())
+        }
+        "model-file-ids" => {
+            // The fileIDs of a model's hierarchy objects as its postprocessors left them.
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Object {
+                class_id: i32,
+                class_name: String,
+                path: String,
+            }
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+                objects: Vec<Object>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
+            let objects: Vec<unbound_assets::model::HierarchyObject> = r
+                .objects
+                .iter()
+                .map(|o| unbound_assets::model::HierarchyObject {
+                    class_id: o.class_id,
+                    class_name: &o.class_name,
+                    below_root: &o.path,
+                })
+                .collect();
+            let ids: Vec<String> = model
+                .hierarchy_file_ids(&objects)
+                .iter()
+                .map(|id| id.to_string())
+                .collect();
+            Ok(json!({ "ids": ids }).to_string())
+        }
         "script-reload" => {
             // The reload a locked session deferred (EditorApplication.UnlockReloadAssemblies).
             #[derive(Deserialize)]
@@ -1234,6 +1341,12 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
     }
     if let Some(bundle) = key.strip_prefix("bundle:") {
         return crate::bundles::documents(bundle);
+    }
+    // A model or prefab as its postprocessors get it: expanded, without their changes.
+    if let Some(guid) = key.strip_prefix("raw:") {
+        let guid = Guid::parse(guid).context("bad guid")?;
+        let docs = s.loader.prefab_unprocessed(guid)?;
+        return Ok(unbound_scene::encode_documents(&docs));
     }
     let (file, guid) = if let Some(guid) = Guid::parse(key) {
         s.db.by_guid(guid).map(|a| (a.file.clone(), Some(a.guid)))

@@ -590,6 +590,9 @@ mod tests {
             scale: 1.0,
             settings: ModelSettings::read(&meta),
             warnings: Vec::new(),
+            user_properties: Vec::new(),
+            root_node_name: None,
+            file_id_table: Default::default(),
         }
     }
 
