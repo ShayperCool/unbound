@@ -246,7 +246,7 @@ def compare_runs(reference, actual, cases, report=None):
         if sorted(rs['removed']) != sorted(acs['removed']):
             failures.append({'case': case, 'key': 'removed', 'reference': rs['removed'], 'actual': acs['removed']})
     gaps_file = Path(reference)/'known-gaps.json'
-    gaps = json.loads(gaps_file.read_text()) if gaps_file.exists() else []
+    gaps = [g for g in (json.loads(gaps_file.read_text()) if gaps_file.exists() else []) if g.get('case') in cases]
     if any(not g.get('reason', '').strip() for g in gaps):
         raise ValueError('known gaps need nonempty reasons')
     queued, unexpected = [], []

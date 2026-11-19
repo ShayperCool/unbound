@@ -14,6 +14,12 @@
     "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/EditorTestSupport.cs",
     "managed/UnityEngine/Runtime/Serialization.cs",
+    "managed/UnityEngine/Editor/PrefabQueries.cs",
+    "managed/UnityEngine/Editor/EditorStages.cs",
+    "managed/UnityEngine/Editor/StageUtility.cs",
+    "managed/UnityEngine/Editor/Undo.cs",
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Runtime/PrefabLinks.cs",
     "tests/projects/scenesave/"
   ]
 }

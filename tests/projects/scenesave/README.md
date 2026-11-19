@@ -18,6 +18,13 @@ file the run added, changed or removed.
   made by `SaveAsPrefabAsset`, a prefab edited through `LoadPrefabContents`, an instance applied
   with `ApplyPrefabInstance`; ScriptableObject and material assets edited with and without
   `EditorUtility.SetDirty`, saved by `AssetDatabase.SaveAssets` or left for the Editor's exit.
+- `prefab-api` (Edit Mode, `PrefabApiTests`): the stage and scene queries (current, main and an
+  object's stage, scene culling masks, preview scenes, placing a GameObject in the current stage),
+  an instance's prefab root, the instances of a prefab, an instance's property modifications and
+  object overrides; SetPropertyModifications, ApplyPrefabInstance, ConvertToPrefabInstance and the
+  obsolete CreatePrefab and ReplacePrefab with the prefabInstanceUpdated callbacks they raise;
+  Undo.postprocessModifications on a recorded SerializedObject apply, and a SerializedObject's
+  native pointer before and after Dispose.
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.

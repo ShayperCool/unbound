@@ -1,0 +1,14 @@
+{
+  "case": "prefab-api",
+  "exit": 0,
+  "changed": [
+    "Assets/Prefabs/Created.prefab",
+    "Assets/Prefabs/Created.prefab.meta",
+    "Assets/Prefabs/Thing.prefab",
+    "Assets/Scenes/ApiConverted.unity",
+    "Assets/Scenes/ApiConverted.unity.meta",
+    "Assets/Scenes/ApiSet.unity",
+    "Assets/Scenes/ApiSet.unity.meta"
+  ],
+  "removed": []
+}

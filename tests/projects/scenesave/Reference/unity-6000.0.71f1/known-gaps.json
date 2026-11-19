@@ -182,5 +182,205 @@
     "reference": true,
     "actual": false,
     "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "prefab-api",
+    "key": "apply.mods.count",
+    "reference": [
+      12
+    ],
+    "actual": [
+      11
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "convert.count",
+    "reference": [
+      21
+    ],
+    "actual": [
+      77
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "convert.isInstance",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "convert.mods",
+    "reference": [
+      11
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object."
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "create.prefab",
+    "reference": [
+      "same as create.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "create.result",
+    "reference": [
+      "GameObject:Created"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "replace.prefab",
+    "reference": [
+      "same as replace.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "replace.result",
+    "reference": [
+      "GameObject:Created"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "set.count",
+    "reference": [
+      21
+    ],
+    "actual": [
+      5
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "set.mods.count",
+    "reference": [
+      13
+    ],
+    "actual": [
+      11
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "set.target",
+    "reference": [
+      "GameObject:Placed"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "updated",
+    "reference": [
+      "GameObject:Thing"
+    ],
+    "actual": null,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Prefabs/Created.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Prefabs/Created.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Prefabs/Thing.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Scenes/ApiConverted.unity",
+    "reference": "written",
+    "actual": "after line 475: reference [], actual ['--- !u!1 &1034775010', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 1034775011}', '  - component: {fileID: 1034775012}', '  m_Layer: 0', '  m_Name: Thing', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &1034775011', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1034775010}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 1760313534}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &1034775012', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1034775010}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 77', '  ratio: 0.5', '  precise: 0.25', '  label: plain', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']; after line 567: reference [], actual ['--- !u!1 &1760313533', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 1760313534}', '  m_Layer: 0', '  m_Name: Part', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &1760313534', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1760313533}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 1, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 1034775011}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}']; lines 616-619: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 441630765}'], actual []; lines 623-679: reference ['      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '--- !u!1001 &1955386336', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 5150910721065944833, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_Name', '      value: Thing (1)'], actual []; lines 696-696: reference ['  - {fileID: 1955386336}'], actual ['  - {fileID: 1034775011}']",
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Scenes/ApiSet.unity",
+    "reference": "written",
+    "actual": "lines 616-623: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: count', '      value: 21', '      objectReference: {fileID: 0}', '    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 441630765}'], actual []",
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:apply.prefab",
+    "reference": "written",
+    "actual": "lines 101-101: reference ['  count: 21'], actual ['  count: 5']; lines 112-112: reference ['  peer: {fileID: 0}'], actual []",
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:convert.scene",
+    "reference": "written",
+    "actual": "after line 475: reference [], actual ['--- !u!1 &1034775010', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 1034775011}', '  - component: {fileID: 1034775012}', '  m_Layer: 0', '  m_Name: Thing', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &1034775011', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1034775010}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 1760313534}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &1034775012', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1034775010}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 77', '  ratio: 0.5', '  precise: 0.25', '  label: plain', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']; after line 567: reference [], actual ['--- !u!1 &1760313533', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 1760313534}', '  m_Layer: 0', '  m_Name: Part', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &1760313534', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 1760313533}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 1, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 1034775011}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}']; lines 616-619: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 441630765}'], actual []; lines 623-679: reference ['      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '--- !u!1001 &1955386336', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 5150910721065944833, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_Name', '      value: Thing (1)'], actual []; lines 696-696: reference ['  - {fileID: 1955386336}'], actual ['  - {fileID: 1034775011}']",
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:create.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:replace.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:set.scene",
+    "reference": "written",
+    "actual": "lines 616-623: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: count', '      value: 21', '      objectReference: {fileID: 0}', '    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 441630765}'], actual []",
+    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
   }
 ]
