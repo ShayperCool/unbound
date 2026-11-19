@@ -66,7 +66,11 @@ pub fn script_class(source: &str, file_stem: &str) -> Option<(String, String)> {
     let first = tokens.windows(2).find_map(|w| {
         matches!(w[0], "class" | "struct" | "interface" | "enum" | "record")
             .then_some(w[1])
-            .filter(|name| name.chars().next().is_some_and(|c| c.is_alphabetic() || c == '_'))
+            .filter(|name| {
+                name.chars()
+                    .next()
+                    .is_some_and(|c| c.is_alphabetic() || c == '_')
+            })
     })?;
     let namespace = declared_namespace(source, first)?;
     Some((namespace, first.to_string()))
@@ -124,7 +128,9 @@ fn tokenize(code: &str) -> Vec<&str> {
         let c = bytes[i];
         if c.is_ascii_alphanumeric() || c == b'_' || c >= 0x80 {
             let start = i;
-            while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] >= 0x80) {
+            while i < bytes.len()
+                && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] >= 0x80)
+            {
                 i += 1;
             }
             tokens.push(&code[start..i]);
@@ -145,17 +151,29 @@ mod tests {
     #[test]
     fn a_file_without_its_class_stands_for_its_first_type() {
         let source = "using X;\nnamespace A.B {\n  // class Commented {}\n  public class Layout3 : Base<T> where T : class {}\n  class Other {}\n}";
-        assert_eq!(script_class(source, "Layout"), Some(("A.B".into(), "Layout3".into())));
-        assert_eq!(script_class(source, "Other"), Some(("A.B".into(), "Other".into())));
+        assert_eq!(
+            script_class(source, "Layout"),
+            Some(("A.B".into(), "Layout3".into()))
+        );
+        assert_eq!(
+            script_class(source, "Other"),
+            Some(("A.B".into(), "Other".into()))
+        );
         assert_eq!(script_class("// nothing", "Layout"), None);
     }
 
     #[test]
     fn finds_block_and_file_scoped_namespaces() {
         let block = "using X;\nnamespace Game.Managers {\n  public class CameraController : MonoBehaviour { void A() { } }\n}";
-        assert_eq!(declared_namespace(block, "CameraController").as_deref(), Some("Game.Managers"));
+        assert_eq!(
+            declared_namespace(block, "CameraController").as_deref(),
+            Some("Game.Managers")
+        );
         let file = "namespace TMPro.Examples;\npublic class CameraController {}";
-        assert_eq!(declared_namespace(file, "CameraController").as_deref(), Some("TMPro.Examples"));
+        assert_eq!(
+            declared_namespace(file, "CameraController").as_deref(),
+            Some("TMPro.Examples")
+        );
         let global = "public class Foo { }";
         assert_eq!(declared_namespace(global, "Foo").as_deref(), Some(""));
     }

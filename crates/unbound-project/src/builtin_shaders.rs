@@ -240,7 +240,10 @@ fn check_download_allowed(offline: bool, version: UnityVersion, root: &Path) -> 
 
 /// The install's build revision (`907bc2d768b5`): from the Hub's `modules.json` next to the
 /// editor, else the project's `m_EditorVersionWithRevision` when the project is on that release.
-fn revision(install: &UnityInstall, project_version_txt: Option<&str>) -> Option<String> {
+pub(crate) fn revision(
+    install: &UnityInstall,
+    project_version_txt: Option<&str>,
+) -> Option<String> {
     let hub_dir = install.root()?;
     if let Ok(text) = std::fs::read_to_string(hub_dir.join("modules.json")) {
         // ".../download_unity/<revision>/..."

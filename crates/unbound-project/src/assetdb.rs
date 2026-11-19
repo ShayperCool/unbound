@@ -17,7 +17,7 @@ pub struct Asset {
     pub labels: Vec<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct AssetDb {
     assets: Vec<Asset>,
     by_guid: HashMap<Guid, usize>,
@@ -117,6 +117,32 @@ impl AssetDb {
 
     pub fn iter(&self) -> impl Iterator<Item = &Asset> {
         self.assets.iter()
+    }
+
+    /// Lists `asset`, in place of what had its GUID or its path.
+    pub fn insert(&mut self, asset: Asset) {
+        if let Some(&index) = self.by_guid.get(&asset.guid) {
+            let path = self.assets[index].path.clone();
+            self.remove_path(&path);
+        }
+        self.remove_path(&asset.path);
+        let index = self.assets.len();
+        self.by_guid.insert(asset.guid, index);
+        self.by_path.insert(asset.path.to_ascii_lowercase(), index);
+        self.assets.push(asset);
+    }
+
+    /// Drops the asset at `path` (Unity paths compare case-insensitively), if any.
+    pub fn remove_path(&mut self, path: &str) {
+        let Some(index) = self.by_path.remove(&path.to_ascii_lowercase()) else {
+            return;
+        };
+        let removed = self.assets.swap_remove(index);
+        self.by_guid.remove(&removed.guid);
+        if let Some(moved) = self.assets.get(index) {
+            self.by_guid.insert(moved.guid, index);
+            self.by_path.insert(moved.path.to_ascii_lowercase(), index);
+        }
     }
 }
 

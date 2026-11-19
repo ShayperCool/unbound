@@ -106,6 +106,29 @@ impl Project {
         self.root.join("Library/Unbound")
     }
 
+    /// The asset folders the project holds itself, where the Editor writes (a new asset's `.meta`
+    /// file, edited importer settings): `Assets` and the packages embedded in `Packages/` or kept
+    /// in a local folder. Packages from the registry, the installation or Git are read-only.
+    pub fn editable_roots(&self) -> Vec<&Path> {
+        let mut roots = vec![self.assets.as_path()];
+        roots.extend(
+            self.packages
+                .iter()
+                .filter(|p| matches!(p.source, PackageSource::Embedded | PackageSource::Local))
+                .map(|p| p.root.as_path()),
+        );
+        roots
+    }
+
+    /// The directories of the asset database's roots with the paths Unity gives them
+    /// (`Assets`, `Packages/<name>`).
+    pub fn asset_root_dirs(&self) -> Vec<(&Path, String)> {
+        self.asset_roots()
+            .into_iter()
+            .map(|root| (root.dir, root.virtual_path))
+            .collect()
+    }
+
     fn asset_roots(&self) -> Vec<assetdb::Root<'_>> {
         let mut roots = vec![assetdb::Root {
             dir: &self.assets,
@@ -118,6 +141,30 @@ impl Project {
             });
         }
         roots
+    }
+
+    /// What the Editor writes into `ProjectSettings/ProjectVersion.txt` when it opens a project of
+    /// its own release whose file names the release without its build revision: the release and
+    /// the release with its revision (matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/projectwrites `exit.ProjectSettings/ProjectVersion.txt`). Returns whether it
+    /// wrote. A project of another release is left as it is (the Editor would upgrade it).
+    pub fn complete_version_file(&self) -> Result<bool> {
+        let path = self.root.join("ProjectSettings/ProjectVersion.txt");
+        let text = std::fs::read_to_string(&path)?;
+        if self.version != self.install.version || text.contains("m_EditorVersionWithRevision:") {
+            return Ok(false);
+        }
+        let Some(revision) = builtin_shaders::revision(&self.install, None) else {
+            return Ok(false);
+        };
+        let version = self.version;
+        std::fs::write(
+            &path,
+            format!(
+                "m_EditorVersion: {version}\nm_EditorVersionWithRevision: {version} ({revision})\n"
+            ),
+        )?;
+        Ok(true)
     }
 
     pub fn asset_db(&self) -> AssetDb {

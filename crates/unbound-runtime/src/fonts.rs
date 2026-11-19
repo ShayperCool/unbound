@@ -243,7 +243,8 @@ pub fn open(request: &OpenRequest, unity_data: &Path) -> Result<Json> {
     let mut found = true;
     let (handle, source) = if let Some(guid) = &request.guid {
         let guid = Guid::parse(guid).context("bad guid")?;
-        let asset = s.db.by_guid(guid).context("no such asset")?;
+        let db = s.db();
+        let asset = db.by_guid(guid).context("no such asset")?;
         let meta = std::fs::read_to_string(format!("{}.meta", asset.file.display()))
             .ok()
             .and_then(|text| unbound_yaml::parse_value(&text).ok())

@@ -14,6 +14,29 @@ fn open(args: &ProjectArgs) -> Result<Project> {
     Project::open(&args.project)
 }
 
+/// Opens the project as the Editor opens it for editing or playing: what the Editor writes then
+/// is written (the version file's build revision, a `.meta` for each new file and folder of the
+/// project's own assets). Tools that only read the project (`info`, `doctor`, ...) use [`open`].
+fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
+    let project = open(args)?;
+    project.complete_version_file()?;
+    let context = unbound_assets::new_meta::MetaContext::for_install(
+        &unbound_project::install::playback_engines(&project.install.data),
+    );
+    let imported = unbound_assets::new_meta::import_roots(
+        &project.editable_roots(),
+        &context,
+        unbound_project::assetdb::is_hidden,
+    );
+    if !imported.written.is_empty() {
+        tracing::info!(
+            "imported {} new assets (their .meta files written)",
+            imported.written.len()
+        );
+    }
+    Ok(project)
+}
+
 pub(crate) fn mode(args: &ProjectArgs) -> CompileMode {
     if args.player {
         CompileMode::Player
@@ -1253,7 +1276,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         "playmode" => "PlayMode",
         other => anyhow::bail!("--platform {other}: expected EditMode or PlayMode"),
     };
-    let project = open(args)?;
+    let project = open_in_editor(args)?;
     let results = match test.results {
         Some(path) if path.is_absolute() => path,
         Some(path) => std::env::current_dir()?.join(path),
@@ -1396,7 +1419,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         anyhow::bail!("--fixed-fps {fps}: expected a positive number of frames per second");
     }
     let script = parse_script(&run)?;
-    let project = open(args)?;
+    let project = open_in_editor(args)?;
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,
         None => project.settings.default_screen_for(&args.target),

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::{
     collections::HashMap,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Arc, OnceLock, RwLock},
 };
 use unbound_assets::{AssetCache, SpriteDef, audio::AudioImporter, texture::TextureImporter};
@@ -22,10 +22,17 @@ pub struct RuntimeState {
     pub project_root: PathBuf,
     /// The Unity install's `Editor/Data`: built-in resources (fonts) come from there.
     pub unity_data: PathBuf,
-    pub db: Arc<AssetDb>,
+    /// The asset database; editor APIs that create, move or delete assets update it.
+    db: RwLock<Arc<AssetDb>>,
     loader: DocumentLoader<Locator>,
     /// Lowercased path below a `Resources` folder, without extension → assets.
-    resources: HashMap<String, Vec<Guid>>,
+    resources: RwLock<HashMap<String, Vec<Guid>>>,
+    /// The asset database's roots (`Assets` and each package), as the project scanned them.
+    asset_roots: Vec<(PathBuf, String)>,
+    /// The asset folders the project holds itself (`Project::editable_roots`).
+    editable_roots: Vec<PathBuf>,
+    /// What new `.meta` files depend on (the installation's platform modules).
+    new_meta: unbound_assets::new_meta::MetaContext,
     backend: RwLock<Arc<dyn RenderBackend>>,
     imports: AssetCache,
     /// Imports textures with the active build target's overrides.
@@ -80,6 +87,142 @@ pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
 }
 
+/// The `Resources` keys of every asset of `db`.
+fn resources_of(db: &AssetDb) -> HashMap<String, Vec<Guid>> {
+    let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
+    for asset in db.iter() {
+        if asset.is_folder {
+            continue;
+        }
+        for key in resources_keys(&asset.path) {
+            resources.entry(key).or_default().push(asset.guid);
+        }
+    }
+    resources
+}
+
+impl RuntimeState {
+    /// The asset database as it is now.
+    pub fn db(&self) -> Arc<AssetDb> {
+        self.db.read().unwrap().clone()
+    }
+
+    /// Changes the asset database and what follows from it (the `Resources` index).
+    fn update_db(&self, change: impl FnOnce(&mut AssetDb)) {
+        let mut db = self.db.write().unwrap();
+        change(Arc::make_mut(&mut db));
+        *self.resources.write().unwrap() = resources_of(&db);
+    }
+
+    /// The asset path (`Assets/...`, `Packages/<name>/...`) of a file or folder of the project's
+    /// asset roots, and its root's directory.
+    fn file_of(&self, asset_path: &str) -> Option<PathBuf> {
+        self.asset_roots.iter().find_map(|(dir, root)| {
+            let rest = asset_path.strip_prefix(root.as_str())?;
+            if rest.is_empty() {
+                return Some(dir.clone());
+            }
+            rest.strip_prefix('/').map(|rest| dir.join(rest))
+        })
+    }
+
+    /// Brings the database up to date for the assets at `paths` as the Editor imports them: a
+    /// file or folder without a `.meta` gets one (`main` the main object's file id of a native
+    /// asset an API created), one that is gone leaves the database, and one with a `.meta` is
+    /// listed as its `.meta` says. Returns each path's GUID ("" when it is not an asset).
+    fn import_paths(&self, paths: &[ImportPath]) -> Result<Vec<String>> {
+        let mut found = Vec::with_capacity(paths.len());
+        let mut entries = Vec::with_capacity(paths.len());
+        for request in paths {
+            let file = self
+                .file_of(&request.path)
+                .with_context(|| format!("{} is not in the project's assets", request.path))?;
+            if !file.exists() {
+                entries.push((request.path.clone(), None));
+                found.push(String::new());
+                continue;
+            }
+            let meta = unbound_assets::new_meta::meta_path(&file);
+            if !meta.exists() {
+                anyhow::ensure!(
+                    self.editable_roots
+                        .iter()
+                        .any(|root| file.starts_with(root)),
+                    "{} is in a read-only package: the Editor imports nothing there",
+                    request.path
+                );
+                let importer = match request.main {
+                    Some(main) => unbound_assets::new_meta::NewImporter::NativeFormat { main },
+                    None => unbound_assets::new_meta::importer_for(&file, file.is_dir())
+                        .with_context(|| {
+                            format!(
+                                "Unbound does not know the .meta file the Editor writes for {} yet",
+                                request.path
+                            )
+                        })?,
+                };
+                let guid = unbound_assets::new_meta::new_guid();
+                std::fs::write(
+                    &meta,
+                    unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta),
+                )?;
+            }
+            let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
+            let guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
+            found.push(guid.to_string());
+            entries.push((
+                request.path.clone(),
+                Some(unbound_project::assetdb::Asset {
+                    guid,
+                    path: request.path.clone(),
+                    is_folder: file.is_dir(),
+                    file,
+                    labels,
+                }),
+            ));
+        }
+        self.update_db(|db| {
+            for (path, asset) in entries {
+                db.remove_path(&path);
+                if let Some(asset) = asset {
+                    db.insert(asset);
+                }
+            }
+        });
+        Ok(found)
+    }
+
+    /// AssetDatabase.Refresh: every new file and folder of the project's own assets imported (a
+    /// `.meta` written), and the database scanned again.
+    fn refresh_assets(&self) -> Result<usize> {
+        let written = unbound_assets::new_meta::import_roots(
+            &self.editable_roots,
+            &self.new_meta,
+            unbound_project::assetdb::is_hidden,
+        )
+        .written
+        .len();
+        let roots: Vec<_> = self
+            .asset_roots
+            .iter()
+            .map(|(dir, path)| unbound_project::assetdb::Root {
+                dir,
+                virtual_path: path.clone(),
+            })
+            .collect();
+        let scanned = AssetDb::scan(&roots);
+        self.update_db(|db| *db = scanned);
+        Ok(written)
+    }
+}
+
+#[derive(Deserialize)]
+struct ImportPath {
+    path: String,
+    #[serde(default)]
+    main: Option<i64>,
+}
+
 pub fn set_texture_mip_bias(handle: u64, bias: f32) {
     state()
         .texture_mip_biases
@@ -96,17 +239,8 @@ pub fn release_texture_sampler(handle: u64) {
 /// Sets up the state for a project; once per process.
 pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
     let db = Arc::new(project.asset_db());
-    let locate_db = db.clone();
-    let locator: Locator = Box::new(move |guid| locate_db.by_guid(guid).map(|a| a.file.clone()));
-    let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
-    for asset in db.iter() {
-        if asset.is_folder {
-            continue;
-        }
-        for key in resources_keys(&asset.path) {
-            resources.entry(key).or_default().push(asset.guid);
-        }
-    }
+    let locator: Locator = Box::new(move |guid| state().db().by_guid(guid).map(|a| a.file.clone()));
+    let resources = resources_of(&db);
     let play_mode_atlases = project.settings.play_mode_atlases(
         db.iter()
             .filter(|asset| !asset.is_folder)
@@ -122,7 +256,20 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
     let state = RuntimeState {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
-        db,
+        asset_roots: project
+            .asset_root_dirs()
+            .into_iter()
+            .map(|(dir, path)| (dir.to_path_buf(), path))
+            .collect(),
+        editable_roots: project
+            .editable_roots()
+            .into_iter()
+            .map(Path::to_path_buf)
+            .collect(),
+        new_meta: unbound_assets::new_meta::MetaContext::for_install(
+            &unbound_project::install::playback_engines(&project.install.data),
+        ),
+        db: RwLock::new(db),
         loader: DocumentLoader::new(locator)
             .with_synthesizer(Box::new(|guid, file| {
                 let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
@@ -146,7 +293,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                     .then(|| unbound_assets::serialized::documents(&data))
             }))
             .with_postprocessor(Box::new(crate::imported_prefabs::postprocess)),
-        resources,
+        resources: RwLock::new(resources),
         texture_mip_biases: Default::default(),
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
@@ -322,7 +469,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             Ok(
-                crate::lighting::lighting_data(&s.db, &s.unity_data, &r.guid, r.file_id)?
+                crate::lighting::lighting_data(&s.db(), &s.unity_data, &r.guid, r.file_id)?
                     .to_string(),
             )
         }
@@ -334,7 +481,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 file_id: i64,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(crate::realtime_gi::load(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
+            Ok(crate::realtime_gi::load(&s.db(), &s.unity_data, &r.guid, r.file_id)?.to_string())
         }
         "realtime-gi-bake" => {
             let r: crate::realtime_gi::BakeRequest = serde_json::from_str(request)?;
@@ -357,7 +504,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 file_id: i64,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(crate::lighting::mesh_object(&s.db, &s.unity_data, &r.guid, r.file_id)?.to_string())
+            Ok(
+                crate::lighting::mesh_object(&s.db(), &s.unity_data, &r.guid, r.file_id)?
+                    .to_string(),
+            )
         }
         "load-texture-object" => {
             #[derive(serde::Deserialize)]
@@ -370,7 +520,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             let backend = s.backend.read().unwrap();
             Ok(crate::lighting::load_texture_object(
-                &s.db,
+                &s.db(),
                 &s.unity_data,
                 &r.guid,
                 r.file_id,
@@ -460,9 +610,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         }
         "asset-info" => {
             let r: AssetInfoRequest = serde_json::from_str(request)?;
+            let db = s.db();
             let asset = match (&r.guid, &r.path) {
-                (Some(guid), _) => s.db.by_guid(Guid::parse(guid).context("bad guid")?),
-                (None, Some(path)) => s.db.by_path(path),
+                (Some(guid), _) => db.by_guid(Guid::parse(guid).context("bad guid")?),
+                (None, Some(path)) => db.by_path(path),
                 _ => None,
             }
             .with_context(|| {
@@ -513,34 +664,46 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 } else {
                     format!("{key}/")
                 };
-                for (k, guids) in &s.resources {
+                for (k, guids) in s.resources.read().unwrap().iter() {
                     if k.starts_with(&prefix) || *k == key {
                         found.extend(guids.iter().copied());
                     }
                 }
-            } else if let Some(guids) = s.resources.get(&key) {
+            } else if let Some(guids) = s.resources.read().unwrap().get(&key) {
                 found.extend(guids.iter().copied());
             }
+            let db = s.db();
             let list: Vec<_> = found
                 .into_iter()
-                .filter_map(|g| s.db.by_guid(g))
+                .filter_map(|g| db.by_guid(g))
                 .map(|a| json!({ "guid": a.guid.to_string(), "path": a.path }))
                 .collect();
             Ok(serde_json::Value::Array(list).to_string())
         }
+        "asset-import" => {
+            // Editor APIs that made, moved or deleted asset files: the database follows.
+            #[derive(Deserialize)]
+            struct Request {
+                paths: Vec<ImportPath>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!({ "guids": s.import_paths(&r.paths)? }).to_string())
+        }
+        "asset-refresh" => Ok(json!({ "written": s.refresh_assets()? }).to_string()),
         "asset-list" => {
             // Every asset: what AssetDatabase.GetAllAssetPaths and FindAssets search.
-            let list: Vec<_> =
-                s.db.iter()
-                    .map(|a| {
-                        json!({
-                            "guid": a.guid.to_string(),
-                            "path": a.path,
-                            "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
-                            "labels": a.labels,
-                        })
+            let list: Vec<_> = s
+                .db()
+                .iter()
+                .map(|a| {
+                    json!({
+                        "guid": a.guid.to_string(),
+                        "path": a.path,
+                        "kind": if a.is_folder { "folder" } else { asset_kind(&a.path) },
+                        "labels": a.labels,
                     })
-                    .collect();
+                })
+                .collect();
             Ok(serde_json::Value::Array(list).to_string())
         }
         "asset-script" => {
@@ -550,9 +713,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 guid: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            let asset =
-                s.db.by_guid(Guid::parse(&r.guid).context("bad guid")?)
-                    .context("no such asset")?;
+            let db = s.db();
+            let asset = db
+                .by_guid(Guid::parse(&r.guid).context("bad guid")?)
+                .context("no such asset")?;
             let text = std::fs::read_to_string(&asset.file).unwrap_or_default();
             let script = text
                 .lines()
@@ -592,8 +756,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     .file_id
                     .context("an editor resource request by guid needs a fileId")?;
                 Ok(
-                    crate::editor_resources::builtin_object(&s.db, &s.unity_data, &guid, file_id)?
-                        .to_string(),
+                    crate::editor_resources::builtin_object(
+                        &s.db(),
+                        &s.unity_data,
+                        &guid,
+                        file_id,
+                    )?
+                    .to_string(),
                 )
             } else if let Some(path) = r.path {
                 Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
@@ -661,7 +830,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             let texture = if r.before_compression {
                 let guid = Guid::parse(&r.guid).context("bad guid")?;
-                let asset = s.db.by_guid(guid).context("no such asset")?;
+                let db = s.db();
+                let asset = db.by_guid(guid).context("no such asset")?;
                 let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
                 let importer = TextureImporter {
                     before_compression: true,
@@ -856,7 +1026,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let guid = Guid::parse(&r.guid).context("bad guid")?;
-            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let db = s.db();
+            let asset = db.by_guid(guid).context("no such asset")?;
             let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
             let texture = s
                 .imports
@@ -982,7 +1153,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let guid = Guid::parse(&r.guid).context("bad guid")?;
-            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let db = s.db();
+            let asset = db.by_guid(guid).context("no such asset")?;
             let meta_path = PathBuf::from(format!("{}.meta", asset.file.display()));
             let mut meta = match std::fs::read_to_string(&meta_path) {
                 Ok(text) => unbound_yaml::parse_value(&text)?,
@@ -1354,11 +1526,11 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
         return Ok(unbound_scene::encode_documents(&docs));
     }
     let (file, guid) = if let Some(guid) = Guid::parse(key) {
-        s.db.by_guid(guid).map(|a| (a.file.clone(), Some(a.guid)))
+        s.db().by_guid(guid).map(|a| (a.file.clone(), Some(a.guid)))
     } else if key.starts_with('/') {
         Some((PathBuf::from(key), None))
     } else {
-        s.db.by_path(key).map(|a| (a.file.clone(), Some(a.guid)))
+        s.db().by_path(key).map(|a| (a.file.clone(), Some(a.guid)))
     }
     .with_context(|| format!("no asset {key}"))?;
     // A model loads as the prefab it imports to.
@@ -1393,7 +1565,8 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
     if let Some(model) = s.models.read().unwrap().get(&guid) {
         return Ok(model.clone());
     }
-    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let db = s.db();
+    let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     let model = s
         .imports
@@ -1424,17 +1597,19 @@ fn model_mesh_json(
 fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
     let model = imported_model(guid)?;
     let s = state();
-    let path = s.db.by_guid(guid).map_or("", |a| a.path.as_str());
-    Ok(crate::models::documents(guid, path, &model, &s.db))
+    let db = s.db();
+    let path = db.by_guid(guid).map_or("", |a| a.path.as_str());
+    Ok(crate::models::documents(guid, path, &model, &s.db()))
 }
 
 /// An asset's importer settings: the importer section of its `.meta`, as one document whose type
 /// name is the importer's (`ScriptedImporter`, `TextureImporter`, ...).
 fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     let s = state();
-    let asset =
-        s.db.by_guid(Guid::parse(guid).context("bad guid")?)
-            .with_context(|| format!("no asset {guid}"))?;
+    let db = s.db();
+    let asset = db
+        .by_guid(Guid::parse(guid).context("bad guid")?)
+        .with_context(|| format!("no asset {guid}"))?;
     let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
     let mut meta = unbound_yaml::parse_value(&text)?;
     // The maps of SpeedTree 9 trees: the settings the trees give them, which the Editor saves into
@@ -1546,7 +1721,7 @@ impl RuntimeState {
         let mut index = self.shaders.write().unwrap();
         if index.is_none() {
             let mut map = HashMap::new();
-            for asset in self.db.iter() {
+            for asset in self.db().iter() {
                 if !asset.path.ends_with(".shader") {
                     continue;
                 }
@@ -1691,7 +1866,8 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
         return Ok(info);
     }
     let guid = Guid::parse(guid).context("bad guid")?;
-    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let db = s.db();
+    let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     let importer = s.audio_importer.read().unwrap().clone();
     let imported = s.imports.get_or_import(&importer, &asset.file, &meta)?;
@@ -1852,7 +2028,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         }
     }
     let guid = Guid::parse(guid).context("bad guid")?;
-    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let db = s.db();
+    let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     let importer = texture_importer(s);
     let texture = s.imports.get_or_import(&importer, &asset.file, &meta)?;
@@ -2054,7 +2231,8 @@ fn imported_texture(
         return texture.context("the generated texture was destroyed");
     }
     let guid = Guid::parse(key).context("bad guid")?;
-    let asset = s.db.by_guid(guid).context("no such asset")?;
+    let db = s.db();
+    let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     s.imports
         .get_or_import(&texture_importer(s), &asset.file, &meta)
@@ -2068,7 +2246,7 @@ fn page_set(s: &RuntimeState) -> &crate::sprite_atlases::AtlasSet {
                 .as_ref()
                 .map(|a| a.paths.as_slice())
                 .unwrap_or_default(),
-            &s.db,
+            &s.db(),
             &texture_importer(s),
             &s.imports,
         )

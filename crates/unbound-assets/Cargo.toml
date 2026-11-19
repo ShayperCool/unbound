@@ -44,6 +44,9 @@ lz4_flex = "0.14"
 # reference library compresses them.
 lz4-sys = "1.11"
 rayon.workspace = true
+# New .meta files: the folders they are written for, and GUIDs as random as the Editor's.
+walkdir.workspace = true
+getrandom = "0.3"
 # AssetBundles: LZMA blocks, block-compressed (BC, ETC, ASTC) textures of player data.
 lzma-rs = "0.3"
 texture2ddecoder = "0.1"
