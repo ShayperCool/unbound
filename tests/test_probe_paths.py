@@ -84,6 +84,19 @@ class DeviceReferenceTests(unittest.TestCase):
             self.assertEqual(probe_paths.device_reference_root(self.probe, publishing=True), self.root)
 
 
+class PrivateLabelTests(unittest.TestCase):
+    def test_concurrent_runs_get_their_own_labels(self):
+        with patch.object(probe_paths.time, 'strftime', return_value='check-20261119-101500-'):
+            with patch.object(probe_paths.os, 'getpid', return_value=41):
+                first = probe_paths.private_label()
+            with patch.object(probe_paths.os, 'getpid', return_value=42):
+                second = probe_paths.private_label()
+        self.assertEqual(first, 'check-20261119-101500-41')
+        self.assertNotEqual(first, second)
+        self.assertNotEqual(probe_paths.run_root('p', first), probe_paths.run_root('p', second))
+        self.assertTrue(probe_paths.private_label('gate').startswith('gate-'))
+
+
 class ProjectCopyTests(unittest.TestCase):
     """A run's private project copy: what the run writes stays in it (tests/probe_paths.py)."""
 

@@ -6,6 +6,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 
 DEFAULT_UNITY_VERSION = '6000.0.71f1'
 # The engine's native library in its managed directory (crates/unbound-host/build.rs names it).
@@ -171,6 +172,12 @@ def checkout_project(path):
 
 def run_root(probe, label='current'):
     return validation_cache()/'runs'/Path(probe).name/label
+
+
+def private_label(prefix='check'):
+    """A run label no concurrent run shares (start time and process id), so parallel checks of
+    one probe never remove or overwrite each other's run directory."""
+    return time.strftime(f'{prefix}-%Y%m%d-%H%M%S-') + str(os.getpid())
 
 
 def archived_root(probe, relative=''):

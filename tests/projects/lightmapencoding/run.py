@@ -18,7 +18,7 @@ import sys
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 sys.path.insert(0, str(PROBE))
-from probe_paths import cache_artifact_path, reference_root, run_root  # noqa: E402
+from probe_paths import cache_artifact_path, private_label, reference_root, run_root  # noqa: E402
 from profiles import PROFILES, project  # noqa: E402
 
 RELATIVE, ABSOLUTE = 1e-3, 1e-5
@@ -76,14 +76,14 @@ def compare(profile, expected, actual, residuals):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['check'])
-    parser.add_argument('--label', default='check')
+    parser.add_argument('--label', help='run directory name (default: one of its own per run)')
     parser.add_argument('--profile', action='append', choices=sorted(PROFILES))
     args = parser.parse_args()
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI')
     if not cli:
         parser.error('set UNBOUND or UNBOUND_CLI')
     reference = reference_root(PROBE)
-    work = cache_artifact_path(run_root(PROBE, args.label)).resolve()
+    work = cache_artifact_path(run_root(PROBE, args.label or private_label())).resolve()
     if work.exists():
         shutil.rmtree(work)
     total = failed = residual = 0
