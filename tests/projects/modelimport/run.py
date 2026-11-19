@@ -27,8 +27,8 @@ REPO = PROBE.parents[2]
 # render pipeline's own material preprocessors run.
 SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1, 'URPHookRecord': 1}
 # Profiles staged as URP. URPHookRecord adds Hook/MaterialPostprocessRecord.cs to Assets/Editor:
-# a project postprocessor whose OnPostprocessMaterial reads each material's state (and records
-# the Exotic ones', MaterialStages stage "postprocess") and changes nothing.
+# a project postprocessor whose OnPostprocessMaterial reads and records the Exotic materials'
+# state (MaterialStages stage "postprocess"), leaves the others untouched and changes nothing.
 URP_PROFILES = ('URP', 'URPHookRecord')
 HOOKS = {'URPHookRecord': 'MaterialPostprocessRecord.cs'}
 URP = PROBE.parent/'urp'

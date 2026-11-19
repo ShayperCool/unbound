@@ -416,11 +416,12 @@ namespace UnityEngine
         internal bool m_ValidateOnShaderChange;
 
         /// <summary>Set while a project's OnPostprocessMaterial has a model's material: the first
-        /// read or write of a property value through the Material API (HasProperty and the
-        /// getters measured) validates the material with its shader's editor first; reading its
-        /// shader, GI flags or keywords does not (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/modelimport URPHookRecord: the legacy importer's transparent URP
-        /// materials end opaque).</summary>
+        /// access of a property value through the Material API validates the material with its
+        /// shader's editor first; reading its shader, GI flags or keywords does not (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/modelimport URPHookRecord: the legacy
+        /// importer's transparent URP materials end opaque). Measured for HasProperty, GetFloat
+        /// and GetColor; writes, setting the shader and the typed Has* queries are not
+        /// (writes and a shader change take the same path here, the Has* queries do not).</summary>
         internal bool m_ValidateOnPropertyAccess;
 
         void ValidateOnAccess()

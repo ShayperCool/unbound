@@ -16,12 +16,14 @@ validation sees the emission and GI flags the Editor's own FBX preprocessor (ord
 Shader Graph shader's queue control is validated before the next preprocessor. The recorder has
 no `OnPostprocessMaterial`: the `URPHookRecord` profile (`Reference/.../URPHookRecord.jsonl`) is the
 URP one with `Hook/MaterialPostprocessRecord.cs` in `Assets/Editor`, whose `OnPostprocessMaterial`
-records each Exotic material there (`stages.*.postprocess.*`) and changes nothing itself. Reading a
-material's property values in that callback runs its shader editor's validation, so the legacy
-importer's transparent URP materials end opaque (queue 2000, no `_ALPHAPREMULTIPLY_ON`, Opaque).
-Without such a read nothing changes: an empty callback, and one reading only the shader, the GI
-flags or `shaderKeywords`, gave the URP profile's values (Unity 6000.0.71f1 Editor, repeated
-captures; `HasProperty`, `GetFloat` and `GetColor` each make the change).
+records each Exotic material there (`stages.*.postprocess.*`), leaves the other materials
+untouched and changes nothing itself. Reading a material's property values in that callback runs
+its shader editor's validation, so the legacy importer's transparent Exotic URP materials end
+opaque (queue 2000, no `_ALPHAPREMULTIPLY_ON`, Opaque), while MaterialsLegacy/Cube_Alpha, given to
+the callback without a read, stays transparent (the control). Outside this reference, in repeated
+Unity 6000.0.71f1 Editor captures, an empty callback and ones reading only the shader, the GI
+flags or `shaderKeywords` changed nothing; ones calling only `HasProperty`, only `GetFloat` or
+only `GetColor` made the change. Writes in the callback are not measured.
 
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy

@@ -67,11 +67,12 @@ namespace UnityEngine.Tests
         /// <summary>While a project's OnPostprocessMaterial has a model's material, the first
         /// property value access validates it with its shader's editor, once; reading its shader
         /// or keywords does not (tests/projects/modelimport URPHookRecord; HasProperty, GetFloat
-        /// and GetColor measured). Without the flag nothing is validated (the control).</summary>
+        /// and GetColor measured; writes are not). Without the flag nothing is validated (the
+        /// control).</summary>
         [Theory]
         [InlineData("has")]
         [InlineData("float")]
-        [InlineData("set")]
+        [InlineData("color")]
         public void APropertyAccessDuringAMaterialPostprocessorValidates(string access)
         {
             var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
@@ -92,7 +93,7 @@ namespace UnityEngine.Tests
             Assert.Equal("", Keywords(m));
             if (access == "has") m.HasProperty("_Value");
             else if (access == "float") m.GetFloat("_Value");
-            else m.SetFloat("_Value", 1f);
+            else m.GetColor("_Value");
             Assert.Equal("PROJECT_VALIDATED", Keywords(m));
             Assert.False(m.m_ValidateOnPropertyAccess);
             m.DisableKeyword("PROJECT_VALIDATED");

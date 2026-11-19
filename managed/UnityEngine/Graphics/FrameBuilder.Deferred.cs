@@ -172,16 +172,21 @@ namespace Unbound.Runtime
             // live depth while they read it, and forward-only opaque objects, drawn into the live
             // depth later, never enter it (measured: tests/projects/builtinfx deferredDepth.*, LDR
             // and HDR, from BeforeLighting to AfterEverything).
+            var sampledDepth = depth;
             if (sampledHandle == depthHandle)
-                sampledHandle = TextureHandles.Of(Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt)));
+            {
+                sampledDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+                sampledHandle = TextureHandles.Of(sampledDepth);
+            }
             GfxStream.CopyDepth(depthHandle, sampledHandle);
             GfxStream.GlobalTexture("_CameraGBufferTexture0", g0);
             GfxStream.GlobalTexture("_CameraGBufferTexture1", g1);
             GfxStream.GlobalTexture("_CameraGBufferTexture2", g2);
             GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
-            // Shadows: collected against the G-buffer's depth.
-            s_CameraDepth = depth;
+            // Shadows: collected against the G-buffer's depth. The camera's depth texture is the
+            // sampled copy from here on (the motion vectors rebind it too: deferredDepth.*.motion).
+            s_CameraDepth = sampledDepth;
             RenderShadows(camera, context, width, height);
             GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
