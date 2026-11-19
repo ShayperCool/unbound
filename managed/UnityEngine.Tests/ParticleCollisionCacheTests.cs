@@ -210,5 +210,33 @@ namespace UnityEngine.Tests
             ps.GetParticles(particles);
             Assert.True(Vector3.Dot(particles[0].velocity, normal) > 0f, "no bounce");
         }
+
+        [Fact]
+        public void ACachedContactWithAColliderUnderARigidbodyReportsToTheRigidbodysObject()
+        {
+            const ParticleSystemCollisionQuality quality = ParticleSystemCollisionQuality.Medium;
+            // tests/projects/particlecollision collide/Parent, through the voxel cache: one query a
+            // frame, so the other particles' contacts come from cached planes.
+            QualitySettings.particleRaycastBudget = 1;
+            var ps = Dropping(quality, count: 8);
+            var box = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None).First(b => b.name == "box");
+            var body = new GameObject("body");
+            m_Objects.Add(body);
+            body.AddComponent<Rigidbody>().isKinematic = true;
+            box.transform.SetParent(body.transform, true);
+            Physics.SyncTransforms();
+            var c = ps.collision; c.sendCollisionMessages = true;
+            ps.Play();
+            int toBody = 0, toBox = 0;
+            var events = new List<ParticleCollisionEvent>();
+            for (int frame = 0; frame < 20; frame++)
+            {
+                Frame();
+                toBody += ps.GetCollisionEvents(body, events);
+                toBox += ps.GetCollisionEvents(box.gameObject, events);
+            }
+            Assert.True(toBody > 1, $"{toBody} events reported to the Rigidbody's object");
+            Assert.Equal(0, toBox);
+        }
     }
 }

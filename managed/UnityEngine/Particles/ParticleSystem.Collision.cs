@@ -860,23 +860,34 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Applies field acceleration and the measured sequential velocity relaxation.
-        /// Rotation targets a constant tangential speed, rather than an angular acceleration.</summary>
-        /// <summary>The system has finished a simulation step since it was made: force-field vector
-        /// fields act from its second step on (6000.0.71f1, tests/projects/particlecollision
-        /// field/pullstep and field/late: a particle emitted later is moved in its first step).</summary>
+        /// <summary>The system has finished a simulation step since it was made or restarted:
+        /// force-field vector fields act from its second step on, whether or not it had particles
+        /// (6000.0.71f1, tests/projects/particlecollision field/pullstep, late, rate and shared: a
+        /// particle emitted later is moved in its first step; a fresh system in a field another
+        /// system already used is not, in its first step).</summary>
         bool m_SteppedOnce;
 
-        /// <summary>Whether a field's vector field is in the measured context; reports it otherwise.</summary>
-        bool VectorFieldSupported(ParticleSystemForceField field)
+        /// <summary>Whether a field's vector field is in the measured context (checked once a frame
+        /// per field); reports it otherwise.</summary>
+        static bool VectorFieldSupported(ParticleSystemForceField field)
         {
-            if (field.shape != ParticleSystemForceFieldShape.Box) { ReportUnsupported("vector field of a force field that is not a Box"); return false; }
-            if (field.m_VectorFieldSpeed.mode != ParticleSystemCurveMode.Constant || field.m_VectorFieldAttraction.mode != ParticleSystemCurveMode.Constant)
-            { ReportUnsupported("vector field speed or attraction that is not a constant"); return false; }
-            if ((field.transform.lossyScale - Vector3.one).sqrMagnitude > 1e-10f) { ReportUnsupported("vector field of a scaled force field"); return false; }
-            return true;
+            int frame = Time.frameCount;
+            if (field.m_VectorFieldCheckedFrame == frame) return field.m_VectorFieldSupported;
+            field.m_VectorFieldCheckedFrame = frame;
+            string unsupported =
+                field.shape != ParticleSystemForceFieldShape.Box ? "vector field of a force field that is not a Box"
+                : field.m_VectorFieldSpeed.mode != ParticleSystemCurveMode.Constant || field.m_VectorFieldAttraction.mode != ParticleSystemCurveMode.Constant
+                    ? "vector field speed or attraction that is not a constant"
+                : (field.transform.lossyScale - Vector3.one).sqrMagnitude > 1e-10f ? "vector field of a scaled force field"
+                : field.m_Drag.scalar != 0f || field.m_Drag.IsCurve || field.m_RotationSpeed.scalar != 0f && field.m_RotationAttraction.scalar != 0f
+                    ? "vector field together with drag or rotation in one force field"
+                : null;
+            if (unsupported != null) ReportUnsupported(unsupported);
+            return field.m_VectorFieldSupported = unsupported == null;
         }
 
+        /// <summary>Applies field acceleration and the measured sequential velocity relaxation.
+        /// Rotation targets a constant tangential speed, rather than an angular acceleration.</summary>
         void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt)
         {
             var X = m_ExternalForces;

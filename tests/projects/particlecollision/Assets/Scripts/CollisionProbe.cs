@@ -174,6 +174,69 @@ public class CollisionProbe : MonoBehaviour
         }
     }
 
+    static ParticleSystem FieldSystem(string name, Vector3 at)
+    {
+        var go = new GameObject(name);
+        go.transform.position = at;
+        var ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        var main = ps.main;
+        main.startSpeed = 0f;
+        main.startLifetime = 10f;
+        main.gravityModifier = 0f;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.playOnAwake = false;
+        var emission = ps.emission;
+        emission.enabled = false;
+        var shape = ps.shape;
+        shape.enabled = false;
+        var forces = ps.externalForces;
+        forces.enabled = true;
+        ps.useAutoRandomSeed = false;
+        ps.randomSeed = 5;
+        return ps;
+    }
+
+    static void Record(string key, ParticleSystem ps, Vector3 at)
+    {
+        var particles = new ParticleSystem.Particle[4];
+        int count = ps.GetParticles(particles);
+        Put(key + "/count", count.ToString(CultureInfo.InvariantCulture));
+        if (count > 0) Put(key + "/0", "[" + Vec(particles[0].position - at) + ", " + Vec(particles[0].velocity) + "]");
+    }
+
+    /// One field used by a first system, then a fresh second system in it; a system playing with
+    /// rate emission that starts empty.
+    void FieldControls(Texture3D texture)
+    {
+        var at = new Vector3(200, 50, 0);
+        var fieldGo = new GameObject("SharedField");
+        fieldGo.transform.position = at;
+        var field = fieldGo.AddComponent<ParticleSystemForceField>();
+        field.shape = ParticleSystemForceFieldShape.Box;
+        field.endRange = 2f;
+        field.directionX = field.directionY = field.directionZ = 0f;
+        field.gravity = 0f;
+        field.vectorField = texture;
+        field.vectorFieldSpeed = 3f;
+        field.vectorFieldAttraction = 1f;
+        var emit = new ParticleSystem.EmitParams { position = at, velocity = new Vector3(0.5f, 0f, 0f), startLifetime = 10f, startSize = 0.1f, applyShapeToPosition = false };
+        var first = FieldSystem("shared.first", at);
+        first.Emit(emit, 1);
+        for (int step = 1; step <= 2; step++) { first.Simulate(0.02f, true, false, false); Record("field/shared/first/" + step, first, at); }
+        var second = FieldSystem("shared.second", at);
+        second.Emit(emit, 1);
+        for (int step = 1; step <= 2; step++) { second.Simulate(0.02f, true, false, false); Record("field/shared/second/" + step, second, at); }
+        // Rate emission from an empty start (the particles start at rest at the field's centre).
+        var rate = FieldSystem("rate", at);
+        var emission = rate.emission;
+        emission.enabled = true;
+        emission.rateOverTime = 50f;
+        rate.Play();
+        for (int step = 1; step <= 4; step++) { rate.Simulate(0.02f, true, false, false); Record("field/rate/" + step, rate, at); }
+        rate.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
     IEnumerator Start()
     {
         Time.captureFramerate = 50;
@@ -189,6 +252,7 @@ public class CollisionProbe : MonoBehaviour
         VectorField("negative", -1f, texture, new Vector3(120, 50, 0), 0.02f);
         VectorField("rotated", 1f, texture, new Vector3(140, 50, 0), 0.02f, yaw: 90f);
         VectorField("multiplier", 1f, texture, new Vector3(160, 50, 0), 0.02f, multiplier: 0.5f);
+        FieldControls(texture);
         Put("complete", "\"1\"");
         Finished = true;
     }

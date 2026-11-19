@@ -355,6 +355,7 @@ namespace UnityEngine
                 if (m_TrailList.Count > 0) UpdateTrails();
             }
             finally { m_HasContext = false; }
+            m_SteppedOnce = true;
             // A sub-emitter its parent started this frame stays playing until the frame ends.
             if (m_IsPlaying && m_StopEmitting && m_Count == 0 && !m_StartedByParent)
             {
@@ -1861,7 +1862,6 @@ namespace UnityEngine
             }
             // The step's collision pass answers its hits once all particles moved.
             m_IntegrateSlot = m_RingSlot = -1;
-            m_SteppedOnce = true;
             FlushCollisions(m_Context);
             // Death sub-emitters fire while the dead leave; a cycle back to this system can
             // append particles, which RemoveDeadSlots treats as alive.

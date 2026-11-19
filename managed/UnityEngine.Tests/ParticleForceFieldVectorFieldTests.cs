@@ -135,5 +135,47 @@ namespace UnityEngine.Tests
             var v0 = new Vector3(.5f, 0, 0);
             Near(v0 + (new Vector3(1f, 1f, -2f) - v0) * .6f, Run(1f, Vector3.zero, texture, yaw: 90f)[1]);
         }
+
+        [Fact]
+        public void ASystemThatStartsEmptyIsMovedFromItsSecondStep()
+        {
+            // tests/projects/particlecollision field/rate: rate emission at rest at the field's centre.
+            var fieldObject = new GameObject("vector field");
+            var systemObject = new GameObject("rate particles");
+            try
+            {
+                var field = fieldObject.AddComponent<ParticleSystemForceField>();
+                field.shape = ParticleSystemForceFieldShape.Box;
+                field.endRange = 2f;
+                field.directionX = field.directionY = field.directionZ = 0f;
+                field.gravity = 0f;
+                field.vectorField = Field(new Color(2f / 3f, 1f / 3f, 1f / 3f, 1f));
+                field.vectorFieldSpeed = 3f;
+                field.vectorFieldAttraction = 1f;
+                systemObject.SetActive(false);
+                var ps = systemObject.AddComponent<ParticleSystem>();
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                ps.useAutoRandomSeed = false; ps.randomSeed = 5;
+                var main = ps.main; main.playOnAwake = false; main.startLifetime = 10; main.startSpeed = 0;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                var emission = ps.emission; emission.rateOverTime = 50f;
+                var shape = ps.shape; shape.enabled = false;
+                var external = ps.externalForces; external.enabled = true;
+                systemObject.SetActive(true);
+                ps.Play();
+                var particles = new ParticleSystem.Particle[4];
+                ps.Simulate(.02f, true, false, false);
+                Assert.Equal(1, ps.GetParticles(particles));
+                Near(Vector3.zero, particles[0].velocity);
+                ps.Simulate(.02f, true, false, false);
+                Assert.Equal(2, ps.GetParticles(particles));
+                Near(new Vector3(2f, 1f, 1f) * .6f, particles[0].velocity);
+            }
+            finally
+            {
+                Object.DestroyImmediate(systemObject);
+                Object.DestroyImmediate(fieldObject);
+            }
+        }
     }
 }
