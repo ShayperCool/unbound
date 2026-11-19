@@ -65,8 +65,8 @@ the values below are observations of this release, not documented guarantees:
 * Compiling a controller (its clips, `GetBehaviours`, an Animator taking it) logs an error for each
   parameter a blend tree uses that does not exist and a warning for each state or Any State
   transition left (not muted, solo where a state has solos) without an exit time or a condition.
-* `GetBehaviours` lists, per layer, the state machines' behaviours and then the states'; an
-  Animator machine behaviour's context is the machine and the state of it whose full path hash is
+* `GetBehaviours` lists, per layer, the state machines' behaviours and then the states'; a
+  state machine behaviour's context is the machine and the state in it whose full path hash is
   smallest.
 * Automatic thresholds spread a tree's children evenly from its minimum to its maximum threshold;
   a blend tree's average duration is the mean of its clips' (nested trees flattened).
