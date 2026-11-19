@@ -68,6 +68,28 @@ namespace UnityEditor
                 Note(ObjectChangeKind.ChangeAssetObjectProperties, new ChangeAssetObjectPropertiesEventArgs(AssetGuid(o), Id(o), default), changed);
         }
 
+        /// <summary>The instances of a prefab one change of it updated, in a scene. The stream holds
+        /// their IDs until it is published.</summary>
+        internal static void NoteUpdatedInstances(Scene scene, int[] instanceIds)
+        {
+            if (changesPublished == null) return;
+            var ids = new NativeArray<int>(instanceIds, Allocator.Persistent);
+            s_Owned.Add(ids);
+            Note(ObjectChangeKind.UpdatePrefabInstances, new UpdatePrefabInstancesEventArgs(scene, ids.AsReadOnly()));
+        }
+
+        /// <summary>Arrays the pending changes hold, freed once they are published.</summary>
+        static readonly List<NativeArray<int>> s_Owned = new List<NativeArray<int>>();
+
+        /// <summary>A change of a prefab instance's own properties (its PrefabInstance's), published
+        /// as a change of the object its handle is (measured: tests/projects/scenesave prefab-writes
+        /// removeApply.event).</summary>
+        internal static void NoteInstanceProperties(Object handle, Scene scene)
+        {
+            if (changesPublished == null || handle is null) return;
+            Note(ObjectChangeKind.ChangeGameObjectOrComponentProperties, new ChangeGameObjectOrComponentPropertiesEventArgs(Id(handle), scene));
+        }
+
         static GUID AssetGuid(Object o)
         {
             var path = AssetDatabase.GetAssetPath(o);
@@ -81,11 +103,19 @@ namespace UnityEditor
             var pending = s_Pending.ToArray();
             s_Pending.Clear();
             var handlers = changesPublished;
-            if (handlers == null) return;
+            if (handlers == null)
+            {
+                FreeOwned();
+                return;
+            }
             var events = new List<(ObjectChangeKind, object)>(pending.Length);
             foreach (var (kind, payload, holds) in pending)
                 if (holds == null || holds()) events.Add((kind, payload));
-            if (events.Count == 0) return;
+            if (events.Count == 0)
+            {
+                FreeOwned();
+                return;
+            }
             var stream = ObjectChangeEventStream.Over(events);
             try
             {
@@ -98,7 +128,14 @@ namespace UnityEditor
             finally
             {
                 stream.Release();
+                FreeOwned();
             }
+        }
+
+        static void FreeOwned()
+        {
+            foreach (var ids in s_Owned) ids.Dispose();
+            s_Owned.Clear();
         }
     }
 
@@ -170,6 +207,8 @@ namespace UnityEditor
 
         public void GetChangeGameObjectParentEvent(int eventIdx, out ChangeGameObjectParentEventArgs data) => data = (ChangeGameObjectParentEventArgs)Payload(eventIdx, ObjectChangeKind.ChangeGameObjectParent);
 
+        public void GetUpdatePrefabInstancesEvent(int eventIdx, out UpdatePrefabInstancesEventArgs data) => data = (UpdatePrefabInstancesEventArgs)Payload(eventIdx, ObjectChangeKind.UpdatePrefabInstances);
+
         public ObjectChangeEventStream Clone(Allocator allocator) => Over(new List<(ObjectChangeKind, object)>(Events));
 
         public void Dispose() => Release();
@@ -216,6 +255,8 @@ namespace UnityEditor
             public void PushDestroyGameObjectHierarchyEvent(ref DestroyGameObjectHierarchyEventArgs data) => Events.Add((ObjectChangeKind.DestroyGameObjectHierarchy, data));
 
             public void PushChangeGameObjectParentEvent(ref ChangeGameObjectParentEventArgs data) => Events.Add((ObjectChangeKind.ChangeGameObjectParent, data));
+
+            public void PushUpdatePrefabInstancesEvent(ref UpdatePrefabInstancesEventArgs data) => Events.Add((ObjectChangeKind.UpdatePrefabInstances, data));
         }
     }
 
@@ -417,5 +458,21 @@ namespace UnityEditor
         public int newParentInstanceId => m_NewParentInstanceId;
         public Scene previousScene => m_PreviousScene;
         public Scene newScene => m_NewScene;
+    }
+
+    /// <summary>The instances of a prefab one of its changes updated, in a scene.</summary>
+    public partial struct UpdatePrefabInstancesEventArgs
+    {
+        readonly Scene m_Scene;
+        readonly NativeArray<int>.ReadOnly m_InstanceIds;
+
+        public UpdatePrefabInstancesEventArgs(Scene scene, NativeArray<int>.ReadOnly instanceIds)
+        {
+            m_Scene = scene;
+            m_InstanceIds = instanceIds;
+        }
+
+        public Scene scene => m_Scene;
+        public NativeArray<int>.ReadOnly instanceIds => m_InstanceIds;
     }
 }

@@ -77,7 +77,30 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The scene's file text; null (with an error logged) when a part of it cannot be written.</summary>
-        internal static string Write(SceneData scene) => new SceneWriter(scene).Write();
+        internal static string Write(SceneData scene) => new SceneWriter(WriteTarget.Of(scene)).Write();
+
+        /// <summary>A prefab asset's file text (its hierarchy from <paramref name="target"/>'s root);
+        /// null (with an error logged) when a part of it cannot be written.</summary>
+        internal static string Write(WriteTarget target) => new SceneWriter(target).Write();
+
+        /// <summary>What a hierarchy is written as: a scene's file, or a prefab asset's (one root).</summary>
+        internal sealed class WriteTarget
+        {
+            /// <summary>The project path of the file the hierarchy was read from ("" for none).</summary>
+            internal string Path;
+            /// <summary>The file ids of the objects (those of the file, and those given by saves).</summary>
+            internal Dictionary<Object, long> FileIds;
+            internal Dictionary<Object, long> StrippedIds;
+            internal List<GameObject> Roots;
+            /// <summary>The scene written; null for a prefab.</summary>
+            internal SceneData Scene;
+            internal bool Prefab => Scene == null;
+
+            internal static WriteTarget Of(SceneData scene) => new WriteTarget
+            {
+                Path = scene.Path, FileIds = scene.FileIds, StrippedIds = scene.StrippedIds, Roots = scene.Roots, Scene = scene,
+            };
+        }
 
         /// <summary>Whether the scene can be saved to the path at all (it is loaded, the path names a
         /// scene asset); the reason is logged when not.</summary>
@@ -302,7 +325,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The enabled state a component's document stores (null: it has none).</summary>
-        static bool? Enabled(Component c) => c switch
+        internal static bool? Enabled(Component c) => c switch
         {
             Behaviour b => b.m_Enabled,
             Renderer r => r.m_Enabled,
@@ -312,7 +335,7 @@ namespace Unbound.Runtime
 
         sealed class SceneWriter
         {
-            readonly SceneData m_Scene;
+            readonly WriteTarget m_Target;
             SortedDictionary<long, YTextDocument> m_Out = new SortedDictionary<long, YTextDocument>();
             readonly Dictionary<long, YTextDocument> m_Source = new Dictionary<long, YTextDocument>();
             /// <summary>The file ids of every object written (Unbound's and the file's).</summary>
@@ -336,19 +359,24 @@ namespace Unbound.Runtime
             sealed class InstanceState
             {
                 internal YTextDocument Document;
+                internal PrefabInstanceData Data;
+                /// <summary>Its topmost GameObject.</summary>
+                internal GameObject Root;
+                /// <summary>Its modification list is written from the stored modifications.</summary>
+                internal bool Rebuild;
                 internal readonly List<(long Target, string Path, YText Value, YText Reference)> Changes = new List<(long, string, YText, YText)>();
                 internal readonly List<(long SourceGameObject, long Added)> AddedComponents = new List<(long, long)>();
             }
 
-            internal SceneWriter(SceneData scene)
+            internal SceneWriter(WriteTarget target)
             {
-                m_Scene = scene;
+                m_Target = target;
             }
 
             internal string Write()
             {
                 ReadSource();
-                foreach (var pair in m_Scene.FileIds)
+                foreach (var pair in m_Target.FileIds)
                 {
                     if (pair.Key is null) continue;
                     m_Known.Add(pair.Value);
@@ -361,12 +389,15 @@ namespace Unbound.Runtime
                     if (pair.Key != null && Saved(pair.Key) && ofFile) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
                 }
                 foreach (var id in m_Source.Keys) m_Used.Add(id);
-                foreach (var id in m_Scene.StrippedIds.Values) m_Used.Add(id);
-                m_Used.Add(SceneRootsFileId);
-                for (long id = 1; id <= 4; id++) m_Used.Add(id);
+                foreach (var id in m_Target.StrippedIds.Values) m_Used.Add(id);
+                if (!m_Target.Prefab)
+                {
+                    m_Used.Add(SceneRootsFileId);
+                    for (long id = 1; id <= 4; id++) m_Used.Add(id);
+                }
 
                 var roots = new List<GameObject>();
-                foreach (var root in m_Scene.Roots)
+                foreach (var root in m_Target.Roots)
                     if (root != null && Saved(root)) roots.Add(root);
                 // File ids first: references between objects need them all. The objects of prefab
                 // instances that the written documents reference are known once they are written:
@@ -389,9 +420,35 @@ namespace Unbound.Runtime
                 // The ids the objects have now are theirs from now on (the Editor's saved copy and
                 // later saves agree, tests/projects/scenesave BaseCopy).
                 foreach (var pair in m_Ids)
-                    if (pair.Key != null) m_Scene.FileIds[pair.Key] = pair.Value;
-                var docs = new List<YTextDocument>(m_Out.Values);
+                    if (pair.Key != null) m_Target.FileIds[pair.Key] = pair.Value;
+                foreach (var pair in m_NewInstances) pair.Key.FileId = pair.Value;
+                var docs = m_Target.Prefab ? PrefabOrder(m_Out.Values) : new List<YTextDocument>(m_Out.Values);
                 return UnityYamlText.Write(docs);
+            }
+
+            /// <summary>A prefab's documents in the Editor's order: its GameObjects by file id, each
+            /// followed by its components in its component order, then the rest by file id
+            /// (tests/projects/scenesave).</summary>
+            static List<YTextDocument> PrefabOrder(IEnumerable<YTextDocument> written)
+            {
+                var byId = new SortedDictionary<long, YTextDocument>();
+                foreach (var d in written) byId[d.FileId] = d;
+                var ordered = new List<YTextDocument>(byId.Count);
+                var placed = new HashSet<long>();
+                foreach (var d in byId.Values)
+                {
+                    if (d.ClassId != EngineTypes.GameObjectId || d.Stripped()) continue;
+                    ordered.Add(d);
+                    placed.Add(d.FileId);
+                    foreach (var item in d.Body.Get("m_Component")?.Items ?? new List<YText>())
+                    {
+                        long id = ParseFileId(item.Get("component"));
+                        if (byId.TryGetValue(id, out var c) && placed.Add(id)) ordered.Add(c);
+                    }
+                }
+                foreach (var d in byId.Values)
+                    if (placed.Add(d.FileId)) ordered.Add(d);
+                return ordered;
             }
 
             /// <summary>Writes every document once (the state of a pass starts empty).</summary>
@@ -406,10 +463,10 @@ namespace Unbound.Runtime
                 m_KeptEmbeddedClasses.Clear();
                 m_UnlocatedCount = 0;
                 foreach (var root in roots) WriteHierarchy(root.transform);
-                Settings();
+                if (!m_Target.Prefab) Settings();
                 Instances();
                 KeepUnclaimed();
-                SceneRoots(roots);
+                if (!m_Target.Prefab) SceneRoots(roots);
                 StrippedForReferences();
                 PruneUnreferenced();
             }
@@ -472,12 +529,12 @@ namespace Unbound.Runtime
             /// <summary>A written body, references noted while recording.</summary>
             YText Written(Action<UnityYamlWriter.Writer> write) => Body(write, m_Ids, m_Locations, Record);
 
-            string DisplayPath => m_Scene.Path.Length > 0 ? m_Scene.Path : "the untitled scene";
+            string DisplayPath => m_Target.Path.Length > 0 ? m_Target.Path : "the untitled scene";
 
             void ReadSource()
             {
-                if (m_Scene.Path.Length == 0) return;
-                var file = Path.Combine(ProjectInfo.ProjectPath, m_Scene.Path);
+                if (m_Target.Path.Length == 0) return;
+                var file = Path.Combine(ProjectInfo.ProjectPath, m_Target.Path);
                 if (!File.Exists(file)) return;
                 foreach (var d in UnityYamlText.Parse(File.ReadAllText(file)))
                     m_Source[d.FileId] = d;
@@ -488,9 +545,19 @@ namespace Unbound.Runtime
             static readonly System.Random s_Random = new System.Random();
 
             /// <summary>A new GameObject's file id and the ids after it for its components (the
-            /// Editor's are random below 2^31).</summary>
+            /// Editor's are random below 2^31 in a scene; in a prefab each object's is random,
+            /// tests/projects/scenesave Made.prefab).</summary>
             long NewIds(int count)
             {
+                if (m_Target.Prefab)
+                {
+                    if (count != 0) throw new InvalidOperationException("a prefab's new objects get one id each");
+                    while (true)
+                    {
+                        long id = s_Random.NextInt64(1, long.MaxValue);
+                        if (m_Used.Add(id)) return id;
+                    }
+                }
                 while (true)
                 {
                     long first = s_Random.NextInt64(1, int.MaxValue - count - 1);
@@ -515,7 +582,7 @@ namespace Unbound.Runtime
             {
                 foreach (var d in m_Source.Values)
                     if (d.Stripped()
-                        && ParseFileId(d.Body.Get("m_PrefabInstance")) == link.Instance.FileId
+                        && ParseFileId(d.Body.Get("m_PrefabInstance")) == InstanceFileId(link.Instance)
                         && ParseFileId(d.Body.Get("m_CorrespondingSourceObject")) == link.SourceFileId)
                         return d.FileId;
                 return 0;
@@ -523,12 +590,23 @@ namespace Unbound.Runtime
 
             static PrefabLink Link(Object o) => PrefabLinks.Of(o) is PrefabLink link && link.Instance != null ? link : null;
 
+            /// <summary>The instances that get their first PrefabInstance document this save, with its id.</summary>
+            readonly Dictionary<PrefabInstanceData, long> m_NewInstances = new Dictionary<PrefabInstanceData, long>();
+
+            long InstanceFileId(PrefabInstanceData data) =>
+                data.FileId != 0 ? data.FileId : m_NewInstances.TryGetValue(data, out var id) ? id : 0;
+
             void AssignIds(Transform t)
             {
                 var go = t.gameObject;
                 var link = Link(go);
                 var components = LiveComponents(go);
-                if (link == null)
+                if (link == null && m_Target.Prefab)
+                {
+                    if (!m_Ids.ContainsKey(go)) m_Ids[go] = NewIds(0);
+                    foreach (var c in components) if (!m_Ids.ContainsKey(c)) m_Ids[c] = NewIds(0);
+                }
+                else if (link == null)
                 {
                     int fresh = 0;
                     foreach (var c in components) if (!m_Ids.ContainsKey(c)) fresh++;
@@ -546,6 +624,8 @@ namespace Unbound.Runtime
                 }
                 else
                 {
+                    // A new instance gets its PrefabInstance's file id now (its stand-ins' ids follow it).
+                    if (InstanceFileId(link.Instance) == 0) m_NewInstances[link.Instance] = NewIds(0);
                     // A component added to an instance's GameObject is the scene's own object; a new
                     // one gets its id after the first pass (InstanceIds).
                     foreach (var c in components)
@@ -579,7 +659,7 @@ namespace Unbound.Runtime
                         var componentLink = Link(c);
                         if (componentLink == null)
                         {
-                            if (m_Ids[c] < 0) m_Ids[c] = After(link.Instance.FileId);
+                            if (m_Ids[c] < 0) m_Ids[c] = After(InstanceFileId(link.Instance));
                         }
                         else if (m_Referenced.Contains(c)) Stand(c, componentLink);
                     }
@@ -592,8 +672,8 @@ namespace Unbound.Runtime
             void Stand(Object o, PrefabLink link)
             {
                 long id = FileStripped(link);
-                if (id == 0 && !m_Scene.StrippedIds.TryGetValue(o, out id)) id = After(link.Instance.FileId);
-                m_Scene.StrippedIds[o] = id;
+                if (id == 0 && !m_Target.StrippedIds.TryGetValue(o, out id)) id = After(InstanceFileId(link.Instance));
+                m_Target.StrippedIds[o] = id;
                 m_Used.Add(id);
                 m_Ids[o] = id;
                 m_Stands.Add(o);
@@ -651,7 +731,7 @@ namespace Unbound.Runtime
                 }
                 else
                 {
-                    var state = Instance(link.Instance);
+                    var state = Instance(link.Instance, go);
                     if (state != null)
                     {
                         Modifications(state, go, link);
@@ -742,26 +822,78 @@ namespace Unbound.Runtime
 
             // ------------------------------------------------------------ prefab instances
 
-            InstanceState Instance(PrefabInstanceData data)
+            InstanceState Instance(PrefabInstanceData data, GameObject root)
             {
                 if (m_Instances.TryGetValue(data, out var state)) return state;
-                state = null;
-                if (data.FileId != 0 && m_Source.TryGetValue(data.FileId, out var doc) && doc.ClassId == EngineTypes.PrefabInstanceId)
-                    state = new InstanceState { Document = Clone(doc) };
-                else m_Unwritten.Add("new prefab instances");
+                long id = InstanceFileId(data);
+                if (id != 0 && m_Source.TryGetValue(id, out var doc) && doc.ClassId == EngineTypes.PrefabInstanceId)
+                    state = new InstanceState { Document = Clone(doc), Rebuild = data.Edited };
+                else
+                    state = new InstanceState { Document = NewInstanceDocument(data, id, root), Rebuild = true };
+                state.Data = data;
+                state.Root = root;
                 m_Instances[data] = state;
                 return state;
             }
 
+            /// <summary>A new instance's PrefabInstance document, as the Editor writes one
+            /// (tests/projects/scenesave ApiConverted, WritesFinal): its parent, no removed or added
+            /// objects, its prefab.</summary>
+            YTextDocument NewInstanceDocument(PrefabInstanceData data, long id, GameObject root)
+            {
+                var parent = root.transform.parent;
+                var modification = YText.Map();
+                modification.Add("serializedVersion", Raw("3"));
+                modification.Add("m_TransformParent", FlowValue("{fileID: " + (parent != null && m_Ids.TryGetValue(parent, out var parentId) ? parentId : 0) + "}"));
+                modification.Add("m_Modifications", YText.Seq(flow: true));
+                foreach (var key in new[] { "m_RemovedComponents", "m_RemovedGameObjects", "m_AddedGameObjects", "m_AddedComponents" })
+                    modification.Add(key, YText.Seq(flow: true));
+                var body = YText.Map();
+                body.Add("m_ObjectHideFlags", Raw("0"));
+                body.Add("serializedVersion", Raw("2"));
+                body.Add("m_Modification", modification);
+                body.Add("m_SourcePrefab", FlowValue($"{{fileID: 100100000, guid: {data.SourceGuid}, type: 3}}"));
+                return new YTextDocument
+                {
+                    Header = $"--- !u!{EngineTypes.PrefabInstanceId} &{id}", ClassId = EngineTypes.PrefabInstanceId, FileId = id,
+                    ClassName = "PrefabInstance", Body = body,
+                };
+            }
+
+            /// <summary>The modification list of an instance whose stored modifications changed (or a
+            /// new one): the stored ones in their order, each as the file had it when it did.</summary>
+            void RebuildModifications(InstanceState state, YText list)
+            {
+                var data = state.Data;
+                var file = new Dictionary<(long, string), YText>();
+                foreach (var m in list.Items)
+                    file.TryAdd((ParseFileId(m.Get("target")), m.Get("propertyPath")?.Text ?? ""), m);
+                list.Items.Clear();
+                foreach (var stored in data.Stored)
+                {
+                    if (file.TryGetValue((stored.Target.FileId, stored.Path), out var kept))
+                    {
+                        list.Items.Add(kept.Clone());
+                        continue;
+                    }
+                    var entry = YText.Map();
+                    entry.Add("target", FlowValue(UnityYamlWriter.Writer.ReferenceText(stored.Target.Guid == null
+                        ? new ObjectRef(stored.Target.FileId, data.SourceGuid, 3) : stored.Target)));
+                    entry.Add("propertyPath", Raw(UnityYamlWriter.Scalar(stored.Path)));
+                    entry.Add("value", Raw(UnityYamlWriter.Scalar(stored.Value ?? "")));
+                    YText reference;
+                    if (data.ReferenceObjects.TryGetValue((stored.Target.FileId, stored.Path), out var referenced))
+                        reference = FlowValue(new UnityYamlWriter.Writer(new StringBuilder(), m_Ids, null, Record, m_Locations).ReferenceText(referenced));
+                    else reference = FlowValue(UnityYamlWriter.Writer.ReferenceText(stored.Reference));
+                    if (IsUnlocated(reference)) reference = FlowValue("{fileID: 0}");
+                    entry.Add("objectReference", reference);
+                    list.Items.Add(entry);
+                }
+                list.Flow = list.Items.Count == 0;
+            }
+
             static YTextDocument Clone(YTextDocument d) =>
                 new YTextDocument { Header = d.Header, ClassId = d.ClassId, FileId = d.FileId, ClassName = d.ClassName, Body = d.Body.Clone() };
-
-            /// <summary>Fields no modification holds: the hierarchy and the document's links.</summary>
-            static readonly HashSet<string> s_Structural = new HashSet<string>(StringComparer.Ordinal)
-            {
-                "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_GameObject",
-                "m_Component", "m_Children", "m_Father", "serializedVersion", "m_Script", "m_EditorHideFlags", "m_EditorClassIdentifier",
-            };
 
             /// <summary>Records the written fields of an instance's object that differ from its
             /// source's as modifications (scripts only once their changes were recorded).</summary>
@@ -775,16 +907,19 @@ namespace Unbound.Runtime
                 var current = Fields(o);
                 var original = Fields(source);
                 var before = new Dictionary<string, YText>(StringComparer.Ordinal);
-                foreach (var (path, value) in Flatten(original)) before[path] = value;
-                foreach (var (path, value) in Flatten(current))
+                foreach (var (path, value) in PrefabValues.Flatten(original)) before[path] = value;
+                // A stored modification takes the value the object has now, also one back at its
+                // source's (measured: tests/projects/scenesave prefab-writes sceneSave, the root's
+                // position after RevertPrefabInstance).
+                var stored = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var m in state.Data.Stored)
+                    if (!m.Target.IsNull && m.Target.FileId == link.SourceFileId) stored.Add(m.Path);
+                foreach (var (path, value) in PrefabValues.Flatten(current))
                 {
-                    if (before.TryGetValue(path, out var was) && Same(was, value)) continue;
+                    if (!stored.Contains(path) && before.TryGetValue(path, out var was) && PrefabValues.Same(was, value)) continue;
                     state.Changes.Add((link.SourceFileId, path, value.Kind == YKind.Map ? null : value, value.Kind == YKind.Map ? value : null));
                 }
             }
-
-            static bool Same(YText a, YText b) =>
-                a.Kind == b.Kind && (a.Kind == YKind.Scalar ? a.Raw == b.Raw : UnityYamlText.FlowText(a) == UnityYamlText.FlowText(b));
 
             /// <summary>The fields Unbound writes of an object, references to an instance's objects
             /// written as the source objects they stand for (so an instance and its source compare
@@ -797,53 +932,7 @@ namespace Unbound.Runtime
                     if (l != null) return $"{{fileID: {l.SourceFileId}, guid: {l.SourceGuid}, type: 3}}";
                     return null;
                 }
-                switch (o)
-                {
-                    case GameObject go:
-                        return Body(w => WriteGameObject(w, go, Array.Empty<long>()), m_Ids, m_Locations, Sourced);
-                    case MonoBehaviour mb:
-                        return Body(w => { w.Header(mb); w.Fields(mb, mb.GetType(), 1); }, m_Ids, m_Locations, Sourced);
-                    case Component c:
-                        return Body(w =>
-                        {
-                            // A class's writer writes its enabled state itself.
-                            if (Writable(c.GetType())) c.WriteSerialized(w);
-                            else if (Enabled(c) is bool e) w.Bool("m_Enabled", e);
-                        }, m_Ids, m_Locations, Sourced);
-                }
-                return YText.Map();
-            }
-
-            /// <summary>The values of a body by property path (<c>m_LocalPosition.x</c>,
-            /// <c>list.Array.size</c>, <c>list.Array.data[0]</c>); references stay whole maps.</summary>
-            static List<(string, YText)> Flatten(YText body)
-            {
-                var list = new List<(string, YText)>();
-                void Walk(string prefix, YText v)
-                {
-                    switch (v.Kind)
-                    {
-                        case YKind.Map when v.Flow && v.Get("fileID") != null:
-                            list.Add((prefix, v));
-                            return;
-                        case YKind.Map:
-                            for (int i = 0; i < v.Keys.Count; i++)
-                            {
-                                if (prefix.Length == 0 && s_Structural.Contains(v.Keys[i])) continue;
-                                Walk(prefix.Length == 0 ? v.Keys[i] : prefix + "." + v.Keys[i], v.Values[i]);
-                            }
-                            return;
-                        case YKind.Seq:
-                            list.Add((prefix + ".Array.size", YText.Scalar(v.Items.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))));
-                            for (int i = 0; i < v.Items.Count; i++) Walk(prefix + ".Array.data[" + i + "]", v.Items[i]);
-                            return;
-                        default:
-                            list.Add((prefix, v));
-                            return;
-                    }
-                }
-                Walk("", body);
-                return list;
+                return PrefabValues.Fields(o, Sourced, m_Ids, m_Locations);
             }
 
             void AddedComponent(InstanceState state, Component c, GameObject go, PrefabLink goLink)
@@ -876,7 +965,7 @@ namespace Unbound.Runtime
                 int classId = o is GameObject ? EngineTypes.GameObjectId : o is MonoBehaviour ? MonoBehaviourId : EngineTypes.EngineClassIdOf(o.GetType());
                 var body = YText.Map();
                 body.Add("m_CorrespondingSourceObject", FlowValue($"{{fileID: {link.SourceFileId}, guid: {link.SourceGuid}, type: 3}}"));
-                body.Add("m_PrefabInstance", FlowValue("{fileID: " + link.Instance.FileId + "}"));
+                body.Add("m_PrefabInstance", FlowValue("{fileID: " + InstanceFileId(link.Instance) + "}"));
                 body.Add("m_PrefabAsset", FlowValue("{fileID: 0}"));
                 if (o is MonoBehaviour mb)
                 {
@@ -900,7 +989,8 @@ namespace Unbound.Runtime
                     var modification = state.Document.Body.Get("m_Modification");
                     var list = modification?.Get("m_Modifications");
                     if (list == null) continue;
-                    foreach (var change in state.Changes) SetModification(list, change);
+                    if (state.Rebuild) RebuildModifications(state, list);
+                    foreach (var change in state.Changes) SetModification(list, change, state.Data.SourceGuid);
                     var added = YText.Seq();
                     foreach (var (sourceGo, component) in state.AddedComponents)
                     {
@@ -910,20 +1000,58 @@ namespace Unbound.Runtime
                         entry.Add("addedObject", FlowValue("{fileID: " + component + "}"));
                         added.Items.Add(entry);
                     }
-                    var existing = modification.Get("m_AddedComponents");
-                    if (existing != null && existing.Items.Count > 0 && state.AddedComponents.Count == 0)
-                        m_Unwritten.Add("components removed from prefab instances");
-                    if (state.AddedComponents.Count == 0) added.Flow = true;
+                    // The file's entries for components Unbound did not load (a missing script) stay;
+                    // a loaded one is listed while it is added (one applied to the prefab is the
+                    // prefab's now, tests/projects/scenesave BaseApplied).
+                    foreach (var item in modification.Get("m_AddedComponents")?.Items ?? new List<YText>())
+                    {
+                        long id = ParseFileId(item.Get("addedObject"));
+                        if (!m_Known.Contains(id) && m_Source.ContainsKey(id)) added.Items.Add(item.Clone());
+                    }
+                    if (added.Items.Count == 0) added.Flow = true;
                     modification.Set("m_AddedComponents", added);
+                    RemovedComponents(state, modification);
                     m_Out[state.Document.FileId] = state.Document;
                 }
+            }
+
+            /// <summary>The source components the instance's GameObjects lack: the file's entries
+            /// for those still missing, then each newly removed one (unmeasured: no measured save
+            /// has one), as references to the prefab's components.</summary>
+            void RemovedComponents(InstanceState state, YText modification)
+            {
+                var data = state.Data;
+                var removed = new List<(long FileId, string Guid)>();
+                foreach (var o in PrefabInstances.ObjectsOf(data, state.Root))
+                {
+                    if (o is not GameObject go || PrefabLinks.Source(go) is not GameObject sourceGo) continue;
+                    foreach (var sc in sourceGo.m_Components)
+                        if (sc != null && !sc.m_Destroyed && PrefabInstances.Counterpart(go, sc, data) == null
+                            && m_Locations.TryGet(sc, out var guid, out var fileId, out _))
+                            removed.Add((fileId, guid));
+                }
+                var list = YText.Seq();
+                var listed = new HashSet<long>();
+                foreach (var item in modification.Get("m_RemovedComponents")?.Items ?? new List<YText>())
+                {
+                    long id = ParseFileId(item);
+                    // An entry of a component Unbound does not load stays; a loaded one while it is removed.
+                    bool loaded = AssetDatabaseRuntime.Load(item.Get("guid")?.Text ?? data.SourceGuid, id, typeof(Component)) != null;
+                    if (loaded && !removed.Exists(r => r.FileId == id)) continue;
+                    list.Items.Add(item.Clone());
+                    listed.Add(id);
+                }
+                foreach (var (fileId, guid) in removed)
+                    if (listed.Add(fileId)) list.Items.Add(FlowValue($"{{fileID: {fileId}, guid: {guid}, type: 3}}"));
+                list.Flow = list.Items.Count == 0;
+                modification.Set("m_RemovedComponents", list);
             }
 
             static string SourceGuid(InstanceState state) => state.Document.Body.Get("m_SourcePrefab")?.Get("guid")?.Text ?? "";
 
             /// <summary>Sets a modification's value, else inserts it after the last one of the same or
             /// a smaller target file id (the Editor keeps them ordered by target).</summary>
-            void SetModification(YText list, (long Target, string Path, YText Value, YText Reference) change)
+            void SetModification(YText list, (long Target, string Path, YText Value, YText Reference) change, string sourceGuid)
             {
                 int insertAt = list.Items.Count;
                 for (int i = 0; i < list.Items.Count; i++)
@@ -937,7 +1065,7 @@ namespace Unbound.Runtime
                     }
                     if (target > change.Target && insertAt == list.Items.Count) insertAt = i;
                 }
-                var guid = list.Items.Count > 0 ? list.Items[0].Get("target")?.Get("guid")?.Text : null;
+                var guid = list.Items.Count > 0 ? list.Items[0].Get("target")?.Get("guid")?.Text : sourceGuid;
                 var entry = YText.Map();
                 entry.Add("target", FlowValue($"{{fileID: {change.Target}, guid: {guid}, type: 3}}"));
                 entry.Add("propertyPath", Raw(UnityYamlWriter.Scalar(change.Path)));
@@ -972,7 +1100,7 @@ namespace Unbound.Runtime
                     foreach (var d in m_Source.Values)
                         if (d.ClassId == classId) { doc = Clone(d); break; }
                     doc ??= Defaults.Settings(classId);
-                    if (classId == RenderSettingsId && RenderSettings.InEffectFor(m_Scene))
+                    if (classId == RenderSettingsId && RenderSettings.InEffectFor(m_Target.Scene))
                         Overlay(doc.Body, Written(RenderSettings.WriteSerialized), ref m_UnlocatedCount);
                     if (classId == LightmapSettingsId) LightingSettingsReference(doc.Body);
                     m_Out[doc.FileId] = doc;
@@ -984,7 +1112,7 @@ namespace Unbound.Runtime
             /// fails rather than drop the change.</summary>
             void LightingSettingsReference(YText body)
             {
-                var current = m_Scene.LightingSettings;
+                var current = m_Target.Scene.LightingSettings;
                 // None now may be a reference the file names that did not load: kept.
                 if (current == null) return;
                 var written = FlowValue(current == null ? "{fileID: 0}" : new UnityYamlWriter.Writer(new StringBuilder(), m_Ids, null, null, m_Locations).ReferenceText(current));
@@ -1060,8 +1188,8 @@ namespace Unbound.Runtime
             /// them still is): an instance of a missing prefab has none and stays as read.</summary>
             bool InstanceGone(long instanceId)
             {
-                foreach (var pair in m_Scene.FileIds)
-                    if (pair.Key is not null && Link(pair.Key) is PrefabLink link && link.Instance.FileId == instanceId) return true;
+                foreach (var pair in m_Target.FileIds)
+                    if (pair.Key is not null && Link(pair.Key) is PrefabLink link && InstanceFileId(link.Instance) == instanceId) return true;
                 return false;
             }
 
@@ -1077,7 +1205,7 @@ namespace Unbound.Runtime
                 foreach (var root in roots)
                 {
                     var link = Link(root);
-                    long id = link != null ? link.Instance.FileId : m_Ids[root.transform];
+                    long id = link != null ? InstanceFileId(link.Instance) : m_Ids[root.transform];
                     list.Items.Add(FlowValue("{fileID: " + id + "}"));
                 }
                 if (list.Items.Count == 0) list.Flow = true;

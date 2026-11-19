@@ -50,8 +50,9 @@ namespace UnityEditor.SceneManagement
 
         public static int loadedRootSceneCount => SceneRegistry.Loaded.Count(s => s.IsLoaded);
 
-        [Unbound.EditorFaithful("no preview scene is open: only editor windows (inspector previews, Prefab mode) make them, as in the batch-mode Editor")]
-        public static int previewSceneCount => 0;
+        /// <summary>The preview scenes open: those of prefab contents loaded by script (no editor
+        /// window, inspector preview or Prefab mode makes one, as in the batch-mode Editor).</summary>
+        public static int previewSceneCount => PrefabContents.LoadedCount;
 
         [Unbound.EditorFaithful("scenes only reload from Edit mode (after an asset change), never while playing")]
         public static bool IsReloading(Scene scene) => false;
@@ -60,13 +61,14 @@ namespace UnityEditor.SceneManagement
         /// tests/projects/scenesave cull.mask); none for an invalid scene (unmeasured).</summary>
         public static ulong GetSceneCullingMask(Scene scene) => scene.IsValid() ? SceneCullingMasks.DefaultSceneCullingMask : 0;
 
-        /// <summary>Unbound's Editor opens no preview scenes (Prefab mode, inspector previews):
-        /// no scene or object is one's, prefab assets included (measured).</summary>
-        [Unbound.EditorFaithful("Unbound's Editor opens no preview scenes (measured: tests/projects/scenesave preview.scene)")]
-        public static bool IsPreviewScene(Scene scene) => false;
+        /// <summary>Unbound's Editor opens preview scenes only for prefab contents loaded by script
+        /// (PrefabUtility.LoadPrefabContents, measured: tests/projects/scenesave prefab-writes
+        /// contentsCopy.preview); no scene opened as a document is one, and a prefab asset's object
+        /// is in none (measured: tests/projects/scenesave preview.*).</summary>
+        public static bool IsPreviewScene(Scene scene) => scene.Data?.IsPreview == true;
 
-        [Unbound.EditorFaithful("Unbound's Editor opens no preview scenes, and a prefab asset's object is in none (measured: tests/projects/scenesave preview.*)")]
-        public static bool IsPreviewSceneObject(Object obj) => false;
+        public static bool IsPreviewSceneObject(Object obj) =>
+            (obj as GameObject ?? (obj as Component)?.gameObject) is GameObject go && go.scene.Data?.IsPreview == true;
 
         public static Scene NewScene(NewSceneSetup setup) => NewScene(setup, NewSceneMode.Single);
 
@@ -107,10 +109,51 @@ namespace UnityEditor.SceneManagement
             if (UnityEngine.Application.isPlaying)
                 throw new InvalidOperationException("This cannot be used during play mode, please use SceneManager.LoadScene()/SceneManager.LoadSceneAsync() instead.");
             sceneOpening?.Invoke(scenePath, mode);
+            // The scenes a Single open replaces are closing, then closed as they go.
+            if (mode == OpenSceneMode.Single)
+                foreach (var data in SceneRegistry.Loaded.ToArray())
+                    sceneClosing?.Invoke(new Scene(data.Handle), true);
             var scene = SceneManagerInternal.OpenPath(scenePath, mode != OpenSceneMode.Single);
             sceneOpened?.Invoke(scene, mode);
             return scene;
         }
+
+        /// <summary>
+        /// Reloads a saved scene from its file, its changes discarded (the Test Framework reloads
+        /// the saved scenes a test left dirty). Measured for the only loaded scene
+        /// (tests/projects/scenesave prefab-writes reload*): it opens again as OpenScene opens a
+        /// scene alone (sceneOpening, sceneClosing, sceneClosed, sceneOpened), dirty or not; the
+        /// Scene passed in is no longer valid; one ChangeScene change of the new scene is published;
+        /// the undo history is gone; an untitled scene throws; an invalid one answers false. Another
+        /// scene among several reloads in its place, the active one staying active (unmeasured).
+        /// </summary>
+        internal static bool ReloadScene(Scene scene)
+        {
+            var data = scene.Data;
+            if (data == null) return false;
+            if (string.IsNullOrEmpty(data.Path))
+                throw new ArgumentException("ReloadScene cannot be used with a scene that haven't been saved yet: " + data.Name);
+            if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
+            var loaded = SceneRegistry.Loaded;
+            int index = loaded.IndexOf(data);
+            bool alone = loaded.Count(s => s.IsLoaded) <= 1;
+            bool active = SceneRegistry.Active == data;
+            Undo.ClearAll();
+            Scene reloaded;
+            if (alone) reloaded = OpenScene(data.Path, OpenSceneMode.Single);
+            else
+            {
+                CloseScene(scene, true);
+                reloaded = OpenScene(data.Path, OpenSceneMode.Additive);
+                var opened = reloaded.Data;
+                if (opened != null && index >= 0 && loaded.Remove(opened)) loaded.Insert(Math.Min(index, loaded.Count), opened);
+                if (active && opened != null) SceneRegistry.Active = opened;
+            }
+            ObjectChangeEvents.Note(ObjectChangeKind.ChangeScene, new ChangeSceneEventArgs(reloaded));
+            return true;
+        }
+
+        internal static void Internal_SceneClosed(Scene scene) => sceneClosed?.Invoke(scene);
 
         public static bool CloseScene(Scene scene, bool removeScene)
         {
@@ -201,6 +244,9 @@ namespace UnityEditor.SceneManagement
             if (data == null) return false;
             data.IsDirty = true;
             sceneDirtied?.Invoke(scene);
+            // A change of the scene (measured: tests/projects/scenesave prefab-writes reload.event,
+            // published after the scene was reloaded, so for a scene no longer valid).
+            ObjectChangeEvents.Note(ObjectChangeKind.ChangeScene, new ChangeSceneEventArgs(scene));
             return true;
         }
 

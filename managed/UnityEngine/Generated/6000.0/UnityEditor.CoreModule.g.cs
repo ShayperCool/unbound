@@ -6246,17 +6246,6 @@ namespace UnityEditor
         public static global::UnityEngine.Material material { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ControlPointRenderer.material"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class ConvertToPrefabInstanceSettings
-    {
-        [global::Unbound.Stub] public ConvertToPrefabInstanceSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.ctor"); }
-        public global::UnityEditor.ObjectMatchMode objectMatchMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.objectMatchMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.objectMatchMode"); } }
-        public bool componentsNotMatchedBecomesOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.componentsNotMatchedBecomesOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.componentsNotMatchedBecomesOverride"); } }
-        public bool gameObjectsNotMatchedBecomesOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.gameObjectsNotMatchedBecomesOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.gameObjectsNotMatchedBecomesOverride"); } }
-        public bool recordPropertyOverridesOfMatches { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.recordPropertyOverridesOfMatches"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.recordPropertyOverridesOfMatches"); } }
-        public bool changeRootNameToAssetName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.changeRootNameToAssetName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.changeRootNameToAssetName"); } }
-        public bool logInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.logInfo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ConvertToPrefabInstanceSettings.logInfo"); } }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class CoppaComplianceExtensions
     {
         [global::Unbound.Stub] internal static global::UnityEditor.Connect.COPPACompliance ToCOPPACompliance(this global::UnityEditor.CoppaCompliance coppaCompliance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CoppaComplianceExtensions.ToCOPPACompliance"); return default; }
@@ -16413,11 +16402,6 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] internal ObjectChangeEventStream(global::System.IntPtr events, int eventsCount, global::System.IntPtr payload, int payloadLength) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectChangeEventStream.ctor"); }
         [global::Unbound.Stub] internal void OverrideSafetyHandle(global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle1, global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectChangeEventStream.OverrideSafetyHandle"); }
-        [global::Unbound.Stub] public void GetUpdatePrefabInstancesEvent(int eventIdx, out global::UnityEditor.UpdatePrefabInstancesEventArgs data) { data = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectChangeEventStream.GetUpdatePrefabInstancesEvent"); }
-        unsafe partial struct Builder
-        {
-            [global::Unbound.Stub] public void PushUpdatePrefabInstancesEvent(ref global::UnityEditor.UpdatePrefabInstancesEventArgs data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectChangeEventStream.Builder.PushUpdatePrefabInstancesEvent"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class ObjectCopier
@@ -16622,12 +16606,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public int m_GridSize;
         [global::Unbound.Stub] public void OnAwake() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectListAreaState.OnAwake"); }
         [global::Unbound.Stub] public ObjectListAreaState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ObjectListAreaState.ctor"); }
-    }
-    public enum ObjectMatchMode
-    {
-        NoMatchingPerformed = 0,
-        ByName = 1,
-        ByHierarchy = 2,
     }
     unsafe partial class ObjectNames
     {
@@ -19365,7 +19343,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void ClearPrefabInstanceNonDefaultOverridesCache_Internal(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ClearPrefabInstanceNonDefaultOverridesCache_Internal"); }
         [global::Unbound.Stub] internal static void ClearPrefabInstanceUnusedOverridesCache_Internal(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ClearPrefabInstanceUnusedOverridesCache_Internal"); }
         [global::Unbound.Stub] internal static global::UnityEditor.PrefabUtility.InstanceOverridesInfo GetPrefabInstanceOverridesInfo_Internal(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetPrefabInstanceOverridesInfo_Internal"); return default; }
-        [global::Unbound.Stub] public static void SetPropertyModifications(global::UnityEngine.Object targetPrefab, global::UnityEditor.PropertyModification[] modifications) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SetPropertyModifications"); }
         [global::Unbound.Stub] internal static bool HasApplicableObjectOverridesForTarget(global::UnityEngine.Object targetPrefab, global::UnityEngine.Object applyTarget, bool includeDefaultOverrides) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasApplicableObjectOverridesForTarget"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GameObject FindNearestInstanceOfAsset(global::UnityEngine.Object componentOrGameObjectInstance, global::UnityEngine.Object prefab) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.FindNearestInstanceOfAsset"); return default; }
         [global::Unbound.Stub] public static bool HasPrefabInstanceAnyOverrides(global::UnityEngine.GameObject instanceRoot, bool includeDefaultOverrides) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasPrefabInstanceAnyOverrides"); return default; }
@@ -19396,38 +19373,21 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void ExtractSelectedObjectsFromPrefab() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ExtractSelectedObjectsFromPrefab"); }
         [global::Unbound.Stub] internal static void ExtractMaterialsFromAsset(global::UnityEngine.Object[] targets, string destinationPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ExtractMaterialsFromAsset"); }
         [global::Unbound.Stub] public static void MergePrefabInstance(global::UnityEngine.GameObject instanceRoot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.MergePrefabInstance"); }
-        [global::Unbound.Stub] public static void RevertPrefabInstance(global::UnityEngine.GameObject instanceRoot, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertPrefabInstance"); }
-        [global::Unbound.Stub] public static void ApplyPrefabInstance(global::UnityEngine.GameObject instanceRoot, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyPrefabInstance"); }
-        [global::Unbound.Stub] public static void ApplyPrefabInstances(global::UnityEngine.GameObject[] instanceRoots, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyPrefabInstances"); }
         [global::Unbound.Stub] public static void RemoveUnusedOverrides(global::UnityEngine.GameObject[] prefabInstances, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RemoveUnusedOverrides"); }
         [global::Unbound.Stub] internal static void Internal_CallPrefabInstanceApplying(global::UnityEngine.GameObject instanceRoot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.Internal_CallPrefabInstanceApplying"); }
         [global::Unbound.Stub] internal static void Internal_CallPrefabInstanceApplied(global::UnityEngine.GameObject instanceRoot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.Internal_CallPrefabInstanceApplied"); }
         [global::Unbound.Stub] internal static void RaiseApplyingEvent(global::UnityEditor.SerializedObject serializedObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RaiseApplyingEvent"); }
         [global::Unbound.Stub] internal static void RaiseAppliedEvent(global::UnityEditor.SerializedObject serializedObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RaiseAppliedEvent"); }
-        [global::Unbound.Stub] public static void ApplyPropertyOverride(global::UnityEditor.SerializedProperty instanceProperty, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyPropertyOverride"); }
         [global::Unbound.Stub] internal static global::UnityEditor.PropertyValueOriginInfo GetPropertyValueOriginInfo(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetPropertyValueOriginInfo"); return default; }
         [global::Unbound.Stub] internal static void RevertPropertyOverrides(global::UnityEditor.SerializedProperty[] instanceProperties, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertPropertyOverrides"); }
-        [global::Unbound.Stub] public static void RevertPropertyOverride(global::UnityEditor.SerializedProperty instanceProperty, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal static void RevertPropertyOverride(global::UnityEditor.SerializedProperty instanceProperty, global::UnityEditor.InteractionMode action, bool raiseRevertEvents) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal static bool IsPropertyBeingDrivenByPrefabStage(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.IsPropertyBeingDrivenByPrefabStage"); return default; }
         [global::Unbound.Stub] internal static void RaiseRevertingEvents(global::UnityEditor.SerializedObject serializedObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RaiseRevertingEvents"); }
         [global::Unbound.Stub] internal static void RaiseRevertedEvents(global::UnityEditor.SerializedObject serializedObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RaiseRevertedEvents"); }
-        [global::Unbound.Stub] public static void ApplyObjectOverride(global::UnityEngine.Object instanceComponentOrGameObject, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyObjectOverride"); }
-        [global::Unbound.Stub] public static void RevertObjectOverride(global::UnityEngine.Object instanceComponentOrGameObject, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertObjectOverride"); }
-        [global::Unbound.Stub] public static void ApplyAddedComponent(global::UnityEngine.Component component, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyAddedComponent"); }
-        [global::Unbound.Stub] public static void RevertAddedComponent(global::UnityEngine.Component component, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertAddedComponent"); }
         [global::Unbound.Stub] internal static void RemoveRemovedComponentOverridesWhichAreInvalid(global::UnityEngine.Object prefabInstanceObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RemoveRemovedComponentOverridesWhichAreInvalid"); }
-        [global::Unbound.Stub] public static void ApplyRemovedComponent(global::UnityEngine.GameObject instanceGameObject, global::UnityEngine.Component assetComponent, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyRemovedComponent"); }
-        [global::Unbound.Stub] public static void RevertRemovedComponent(global::UnityEngine.GameObject instanceGameObject, global::UnityEngine.Component assetComponent, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertRemovedComponent"); }
         [global::Unbound.Stub] public static void ApplyRemovedGameObject(global::UnityEngine.GameObject gameObjectInInstance, global::UnityEngine.GameObject assetGameObject, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyRemovedGameObject"); }
-        [global::Unbound.Stub] public static void ApplyAddedGameObject(global::UnityEngine.GameObject gameObject, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyAddedGameObject"); }
-        [global::Unbound.Stub] public static void ApplyAddedGameObjects(global::UnityEngine.GameObject[] gameObjects, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyAddedGameObjects"); }
         [global::Unbound.Stub] internal static bool HasSameParent(global::UnityEngine.GameObject[] gameObjects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasSameParent"); return default; }
         [global::Unbound.Stub] public static void RevertRemovedGameObject(global::UnityEngine.GameObject gameObjectInInstance, global::UnityEngine.GameObject assetGameObject, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertRemovedGameObject"); }
-        [global::Unbound.Stub] public static void RevertAddedGameObject(global::UnityEngine.GameObject gameObject, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.RevertAddedGameObject"); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.AddedComponent> GetAddedComponents(global::UnityEngine.GameObject prefabInstance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetAddedComponents"); return new global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.AddedComponent>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.RemovedComponent> GetRemovedComponents(global::UnityEngine.GameObject prefabInstance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetRemovedComponents"); return new global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.RemovedComponent>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.AddedGameObject> GetAddedGameObjects(global::UnityEngine.GameObject prefabInstance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetAddedGameObjects"); return new global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.AddedGameObject>(); }
         [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.RemovedGameObject> GetRemovedGameObjects(global::UnityEngine.GameObject prefabInstance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetRemovedGameObjects"); return new global::System.Collections.Generic.List<global::UnityEditor.SceneManagement.RemovedGameObject>(); }
         [global::Unbound.Stub] internal static void HandleApplyRevertMenuItems(string thingThatChanged, global::UnityEngine.Object instanceObject, global::UnityEditor.AddApplyMenuItemDelegate addApplyMenuItemAction, global::System.Action<global::UnityEngine.GUIContent> addRevertMenuItemAction, bool isAllDefaultOverridesComparedToOriginalSource = false, int targetCount = 1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HandleApplyRevertMenuItems"); }
         [global::Unbound.Stub] internal static void HandleApplyMenuItems(string thingThatChanged, global::UnityEngine.Object instanceOrAssetObject, global::UnityEditor.AddApplyMenuItemDelegate addApplyMenuItemAction, bool isAllDefaultOverridesComparedToOriginalSource = false, bool includeSelfAsTarget = false, bool includeOriginalSelfAsTarget = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HandleApplyMenuItems"); }
@@ -19438,11 +19398,7 @@ namespace UnityEditor
         [global::System.Obsolete("This method does nothing. Use PrefabUtility.RevertPrefabInstance.")] [global::Unbound.Stub] public static bool ReconnectToLastPrefab(global::UnityEngine.GameObject go) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ReconnectToLastPrefab"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Texture2D GetIconForGameObject(global::UnityEngine.GameObject gameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetIconForGameObject"); return default; }
         [global::System.Obsolete("The concept of creating a completely empty Prefab has been discontinued. You can however use SaveAsPrefabAsset with an empty GameObject.")] [global::Unbound.Stub] public static global::UnityEngine.Object CreateEmptyPrefab(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.CreateEmptyPrefab"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject SavePrefabAsset(global::UnityEngine.GameObject asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SavePrefabAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject SavePrefabAsset(global::UnityEngine.GameObject asset, out bool savedSuccessfully) { savedSuccessfully = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SavePrefabAsset"); return default; }
         [global::Unbound.Stub] internal static void ValidatePath(global::UnityEngine.GameObject instanceRoot, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ValidatePath"); }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject SaveAsPrefabAsset(global::UnityEngine.GameObject instanceRoot, string assetPath, out bool success) { success = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SaveAsPrefabAsset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject SaveAsPrefabAsset(global::UnityEngine.GameObject instanceRoot, string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SaveAsPrefabAsset"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.GameObject SaveAsPrefabAssetAndConnect(global::UnityEngine.GameObject instanceRoot, string assetPath, global::UnityEditor.InteractionMode action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SaveAsPrefabAssetAndConnect"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.GameObject SaveAsPrefabAssetAndConnect(global::UnityEngine.GameObject instanceRoot, string assetPath, global::UnityEditor.InteractionMode action, out bool success) { success = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.SaveAsPrefabAssetAndConnect"); return default; }
         [global::Unbound.Stub] internal static void ApplyPrefabInstance(global::UnityEngine.GameObject instance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ApplyPrefabInstance"); }
@@ -19455,11 +19411,8 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void ReplacePrefabAssetOfPrefabInstance(global::UnityEngine.GameObject prefabInstanceRoot, global::UnityEngine.GameObject prefabAssetRoot, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ReplacePrefabAssetOfPrefabInstance"); }
         [global::Unbound.Stub] public static void ReplacePrefabAssetOfPrefabInstance(global::UnityEngine.GameObject prefabInstanceRoot, global::UnityEngine.GameObject prefabAssetRoot, global::UnityEditor.PrefabReplacingSettings settings, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ReplacePrefabAssetOfPrefabInstance"); }
         [global::Unbound.Stub] internal static void ThrowIfInvalidArgumentsForConvertToPrefabInstance(global::UnityEngine.GameObject plainGameObject, global::UnityEngine.GameObject prefabAssetRoot, bool checkValidAsset, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ThrowIfInvalidArgumentsForConvertToPrefabInstance"); }
-        [global::Unbound.Stub] public static void ConvertToPrefabInstance(global::UnityEngine.GameObject plainGameObject, global::UnityEngine.GameObject prefabAssetRoot, global::UnityEditor.ConvertToPrefabInstanceSettings settings, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ConvertToPrefabInstance"); }
         [global::Unbound.Stub] public static void ConvertToPrefabInstances(global::UnityEngine.GameObject[] plainGameObjects, global::UnityEngine.GameObject prefabAssetRoot, global::UnityEditor.ConvertToPrefabInstanceSettings settings, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ConvertToPrefabInstances"); }
         [global::Unbound.Stub] internal static void InstantiateDraggedPrefabUpon(global::UnityEngine.GameObject draggedUponGameObject, global::UnityEngine.GameObject prefabAssetRoot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.InstantiateDraggedPrefabUpon"); }
-        [global::System.Obsolete("Use SaveAsPrefabAsset with a path instead.")] [global::Unbound.Stub] public static global::UnityEngine.GameObject ReplacePrefab(global::UnityEngine.GameObject go, global::UnityEngine.Object targetPrefab) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ReplacePrefab"); return default; }
-        [global::System.Obsolete("Use SaveAsPrefabAsset or SaveAsPrefabAssetAndConnect with a path instead.")] [global::Unbound.Stub] public static global::UnityEngine.GameObject ReplacePrefab(global::UnityEngine.GameObject go, global::UnityEngine.Object targetPrefab, global::UnityEditor.ReplacePrefabOptions replaceOptions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.ReplacePrefab"); return default; }
         [global::Unbound.Stub] internal static TObject GetCorrespondingConnectedObjectFromSource<TObject>(TObject componentOrGameObject) where TObject : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetCorrespondingConnectedObjectFromSource"); return default; }
         [global::Unbound.Stub] internal static TObject GetCorrespondingObjectFromSourceInAsset<TObject>(TObject instanceOrAsset, global::UnityEngine.Object prefabAssetHandle) where TObject : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetCorrespondingObjectFromSourceInAsset"); return default; }
         [global::Unbound.Stub] public static TObject GetCorrespondingObjectFromSourceAtPath<TObject>(TObject componentOrGameObject, string assetPath) where TObject : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.GetCorrespondingObjectFromSourceAtPath"); return default; }
@@ -19476,8 +19429,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool HasInvalidComponent(global::UnityEngine.GameObject rootOfSearch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasInvalidComponent"); return default; }
         [global::Unbound.Stub] internal static bool HasInvalidComponent(global::UnityEngine.Object componentOrGameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasInvalidComponent"); return default; }
         [global::Unbound.Stub] public static bool IsPartOfPrefabThatCanBeAppliedTo(global::UnityEngine.Object componentOrGameObject) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.IsPartOfPrefabThatCanBeAppliedTo"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.GameObject LoadPrefabContents(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.LoadPrefabContents"); return default; }
-        [global::Unbound.Stub] public static void UnloadPrefabContents(global::UnityEngine.GameObject contentsRoot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.UnloadPrefabContents"); }
         [global::Unbound.Stub] internal static bool CanPropertyBeAppliedToSource(global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.CanPropertyBeAppliedToSource"); return default; }
         [global::Unbound.Stub] internal static bool CanPropertyBeAppliedToTarget(global::UnityEditor.SerializedProperty property, global::UnityEngine.Object applyTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.CanPropertyBeAppliedToTarget"); return default; }
         [global::Unbound.Stub] internal static bool HasApplicableObjectOverrides(global::UnityEngine.Object componentOrGameObjectInInstance, bool includeDefaultOverrides) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PrefabUtility.HasApplicableObjectOverrides"); return default; }
@@ -21081,14 +21032,6 @@ namespace UnityEditor
         [global::Unbound.Stub] protected override void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RendererModuleUI.Init"); }
         [global::Unbound.Stub] public override void OnInspectorGUI(global::UnityEditor.InitialModuleUI initial) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RendererModuleUI.OnInspectorGUI"); }
         [global::Unbound.Stub] public override void OnSceneViewGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RendererModuleUI.OnSceneViewGUI"); }
-    }
-    [global::System.Flags]
-    [global::System.Obsolete("This has turned into the more explicit APIs, SavePrefabAsset, SaveAsPrefabAsset, SaveAsPrefabAssetAndConnect")]
-    public enum ReplacePrefabOptions
-    {
-        Default = 0,
-        ConnectToPrefab = 1,
-        ReplaceNameBased = 2,
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64, AllowMultiple = false, Inherited = false)]
     [global::Unbound.Stub]
@@ -25863,13 +25806,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static global::UnityEngine.Vector2[] GeneratePerTriangleUV(global::UnityEngine.Mesh src, global::UnityEditor.UnwrapParam settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unwrapping.GeneratePerTriangleUV"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::Unbound.Stub] public static bool GenerateSecondaryUVSet(global::UnityEngine.Mesh src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unwrapping.GenerateSecondaryUVSet"); return default; }
         [global::Unbound.Stub] public static bool GenerateSecondaryUVSet(global::UnityEngine.Mesh src, global::UnityEditor.UnwrapParam settings) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Unwrapping.GenerateSecondaryUVSet"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct UpdatePrefabInstancesEventArgs
-    {
-        [global::Unbound.Stub] public UpdatePrefabInstancesEventArgs(global::UnityEngine.SceneManagement.Scene scene, global::Unity.Collections.NativeArray<int>.ReadOnly instanceIds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UpdatePrefabInstancesEventArgs.ctor"); }
-        public global::UnityEngine.SceneManagement.Scene scene { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UpdatePrefabInstancesEventArgs.scene"); return default; } }
-        public global::Unity.Collections.NativeArray<int>.ReadOnly instanceIds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UpdatePrefabInstancesEventArgs.instanceIds"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class UsabilityAnalytics
@@ -42584,27 +42520,6 @@ namespace UnityEditor.Rendering.Settings
 }
 namespace UnityEditor.SceneManagement
 {
-    [global::Unbound.Stub]
-    public unsafe partial class AddedComponent : global::UnityEditor.SceneManagement.PrefabOverride
-    {
-        [global::Unbound.Stub] public override void Apply(string prefabAssetPath, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.Apply"); }
-        [global::Unbound.Stub] public override void Revert(global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.Revert"); }
-        [global::Unbound.Stub] public override global::UnityEngine.Object GetAssetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.GetAssetObject"); return default; }
-        [global::Unbound.Stub] internal override global::UnityEngine.Object GetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.GetObject"); return default; }
-        [global::Unbound.Stub] public AddedComponent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.ctor"); }
-        public global::UnityEngine.Component instanceComponent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.instanceComponent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedComponent.instanceComponent"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AddedGameObject : global::UnityEditor.SceneManagement.PrefabOverride
-    {
-        [global::Unbound.Stub] public override void Apply(string prefabAssetPath, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.Apply"); }
-        [global::Unbound.Stub] public override void Revert(global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.Revert"); }
-        [global::Unbound.Stub] public override global::UnityEngine.Object GetAssetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.GetAssetObject"); return default; }
-        [global::Unbound.Stub] internal override global::UnityEngine.Object GetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.GetObject"); return default; }
-        [global::Unbound.Stub] public AddedGameObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.ctor"); }
-        public global::UnityEngine.GameObject instanceGameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.instanceGameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.instanceGameObject"); } }
-        public int siblingIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.siblingIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.AddedGameObject.siblingIndex"); } }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     internal unsafe partial class AvatarConfigurationStage : global::UnityEditor.SceneManagement.PreviewSceneStage
@@ -42634,7 +42549,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] internal static bool GetPreviewScenesVisibleInHierarchy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetPreviewScenesVisibleInHierarchy"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.SceneManagement.Scene GetDontDestroyOnLoadScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.GetDontDestroyOnLoadScene"); return default; }
         [global::Unbound.Stub] internal static bool IsAuthoringScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.IsAuthoringScene"); return default; }
-        [global::Unbound.Stub] internal static bool ReloadScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ReloadScene"); return default; }
         [global::Unbound.Stub] internal static void ClearOpenScenesChangedOnDisk() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ClearOpenScenesChangedOnDisk"); }
         [global::Unbound.Stub] internal static void SetTargetSceneForNewGameObjects(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.SetTargetSceneForNewGameObjects"); }
         [global::Unbound.Stub] internal static void ClearTargetSceneForNewGameObjects() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.EditorSceneManager.ClearTargetSceneForNewGameObjects"); }
@@ -42795,17 +42709,6 @@ namespace UnityEditor.SceneManagement
         [global::Unbound.Stub] internal override ulong GetSceneCullingMask() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.GetSceneCullingMask"); return default; }
         [global::Unbound.Stub] internal override void SyncSceneViewToStage(global::UnityEditor.SceneView sceneView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.SyncSceneViewToStage"); }
         public override global::UnityEditor.SceneManagement.StageHandle stageHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.PreviewSceneStage.stageHandle"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RemovedComponent : global::UnityEditor.SceneManagement.PrefabOverride
-    {
-        [global::Unbound.Stub] public override void Apply(string prefabAssetPath, global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.Apply"); }
-        [global::Unbound.Stub] public override void Revert(global::UnityEditor.InteractionMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.Revert"); }
-        [global::Unbound.Stub] public override global::UnityEngine.Object GetAssetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.GetAssetObject"); return default; }
-        [global::Unbound.Stub] internal override global::UnityEngine.Object GetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.GetObject"); return default; }
-        [global::Unbound.Stub] public RemovedComponent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.ctor"); }
-        public global::UnityEngine.GameObject containingInstanceGameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.containingInstanceGameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.containingInstanceGameObject"); } }
-        public global::UnityEngine.Component assetComponent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.assetComponent"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SceneManagement.RemovedComponent.assetComponent"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class RemovedGameObject : global::UnityEditor.SceneManagement.PrefabOverride

@@ -1326,6 +1326,17 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             s.loader.invalidate(Some(guid));
             Ok("{}".to_string())
         }
+        "prefab-written" => {
+            // Editor APIs wrote a prefab file: the prefabs and scenes nesting it expand it again.
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            s.loader
+                .invalidate(Some(Guid::parse(&r.guid).context("bad guid")?));
+            Ok("{}".to_string())
+        }
         "postprocessors" => {
             // Which imports the editor domain's AssetPostprocessors change (models: the model
             // callbacks; prefabs: OnPostprocessPrefab); a change forgets the expanded prefabs.

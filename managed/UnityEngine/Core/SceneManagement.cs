@@ -645,6 +645,7 @@ namespace UnityEngine.SceneManagement
             if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));
             data.LoadingState = Scene.LoadingState.Loaded;
             if (parameters.loadSceneMode == LoadSceneMode.Single) Time.LevelLoaded();
+            if (t_EditorOpen) return;
             // The active scene changes before sceneLoaded (measured: tests/projects/editorcallbacks).
             if (SceneRegistry.Active == data && (previousActive != data || reported == PlayModeEntry))
                 SceneManager.Internal_ActiveSceneChanged(reported != PlayModeEntry && previousActive != null
@@ -826,9 +827,19 @@ namespace UnityEngine.SceneManagement
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
             data.OpenedInEditor = opened;
-            Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single));
+            bool editor = opened && !Unbound.Runtime.EditorSession.IsPlaying;
+            bool outer = t_EditorOpen;
+            t_EditorOpen |= editor;
+            try { Perform(data, new LoadSceneParameters(additive ? LoadSceneMode.Additive : LoadSceneMode.Single)); }
+            finally { t_EditorOpen = outer; }
             return new Scene(data.Handle);
         }
+
+        /// <summary>While the Editor opens a scene in Edit mode: no SceneManager callback is raised
+        /// (sceneLoaded, sceneUnloaded, activeSceneChanged); a scene it closes raises
+        /// EditorSceneManager.sceneClosed (measured: tests/projects/scenesave prefab-writes
+        /// setup.scene, reload.scene).</summary>
+        [ThreadStatic] static bool t_EditorOpen;
 
         /// <summary>EditorSceneManager.NewScene: an untitled scene, alone or added.</summary>
         internal static Scene NewEmpty(bool additive)
@@ -934,7 +945,8 @@ namespace UnityEngine.SceneManagement
                 RealtimeGI.SceneUnloaded(data.Handle.Value);
                 // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
                 // it is forgotten after.
-                SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
+                if (t_EditorOpen) UnityEditor.SceneManagement.EditorSceneManager.Internal_SceneClosed(new Scene(data.Handle));
+                else SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
             }
             finally
             {

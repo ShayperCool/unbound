@@ -20,6 +20,12 @@ namespace Unbound.Runtime
         /// <summary>The PrefabInstance's modifications as its file has them, in order: the source
         /// object they target, the property path, the value as text, an object reference as read.</summary>
         internal readonly List<(ObjectRef Target, string Path, string Value, ObjectRef Reference)> Stored = new List<(ObjectRef, string, string, ObjectRef)>();
+        /// <summary>The objects modifications set by PrefabUtility.SetPropertyModifications reference,
+        /// by target file id and path (a scene object has no file id before its scene is saved).</summary>
+        internal readonly Dictionary<(long TargetFileId, string Path), Object> ReferenceObjects = new Dictionary<(long, string), Object>();
+        /// <summary>The stored modifications were changed since the file was read (applied, reverted
+        /// or set): a save writes them, not the file's list.</summary>
+        internal bool Edited;
         Object m_Handle;
 
         /// <summary>The object PrefabUtility.GetPrefabInstanceHandle answers: an object of no

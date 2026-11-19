@@ -103,7 +103,11 @@ namespace UnityEditor
 
         public bool ApplyModifiedPropertiesWithoutUndo() => Apply(recordUndo: false);
 
-        bool Apply(bool recordUndo = false)
+        /// <summary>Applies without marking the targets dirty (a prefab instance taking its
+        /// prefab's values: Unbound's own write, not an edit).</summary>
+        internal bool ApplyQuietly() => Apply(recordUndo: false, dirty: false);
+
+        bool Apply(bool recordUndo = false, bool dirty = true)
         {
             if (!m_Modified) return false;
             // The recorded changes reach Undo.postprocessModifications when Undo's records are
@@ -132,9 +136,18 @@ namespace UnityEditor
             m_Modified = false;
             m_OtherRoots = null;
             // Applying marks the targets dirty (Scripting API, ApplyModifiedProperties; measured:
-            // tests/projects/scenesave asset.serialized).
-            foreach (var target in m_Targets)
-                if (target != null) EditorUtility.SetDirty(target);
+            // tests/projects/scenesave asset.serialized), records the changes of a prefab
+            // instance's objects as its overrides and, recorded for Undo, publishes them
+            // (measured for a script of an instance: tests/projects/scenesave prefab-writes
+            // propRevert.before.mods, propRevert.event).
+            if (dirty)
+                foreach (var target in m_Targets)
+                {
+                    if (target == null) continue;
+                    EditorUtility.SetDirty(target);
+                    if (Unbound.Runtime.PrefabLinks.Of(target) != null) Unbound.Runtime.PrefabRecords.Record(target);
+                    if (recordUndo) ObjectChangeEvents.NoteProperties(target);
+                }
             foreach (var target in m_Targets)
             {
                 if (target == null || !SerializedTree.IsScript(target)) continue;

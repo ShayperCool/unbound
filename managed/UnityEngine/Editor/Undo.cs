@@ -163,6 +163,7 @@ namespace UnityEditor
             {
                 Description = $"{objectToUndo.GetType().Name} '{objectToUndo.name}'", Name = "Destroy Object", Target = objectToUndo,
                 Id = ObjectChangeEvents.Id(objectToUndo), ParentId = go != null ? ObjectChangeEvents.ParentId(go.transform.parent) : 0,
+                OwnerId = objectToUndo is Component component ? ObjectChangeEvents.Id(component.gameObject) : 0,
                 Scene = ObjectChangeEvents.SceneOf(objectToUndo),
             });
             Object.DestroyImmediate(objectToUndo);
@@ -332,7 +333,18 @@ namespace UnityEditor
             foreach (var group in s_Undo.Concat(s_Redo)) group.Operations.RemoveAll(o => o.Concerns(identifier));
         }
 
+        /// <summary>An operation Unbound's own editing code undoes and redoes (a prefab apply).</summary>
+        internal static void RegisterOperation(string name, Action undo, Action redo) =>
+            Add(new CustomOperation { Name = name, UndoAction = undo, RedoAction = redo });
+
         // ------------------------------------------------------------------ operations
+
+        sealed class CustomOperation : Operation
+        {
+            public Action UndoAction, RedoAction;
+            public override void Undo() => UndoAction();
+            public override void Redo() => RedoAction();
+        }
 
         /// <summary>An object's state before an operation; undo restores it (after keeping the
         /// state it replaces for redo).</summary>
@@ -423,16 +435,20 @@ namespace UnityEditor
         {
             public string Description;
             public Object Target;
-            public int Id, ParentId;
+            public int Id, ParentId, OwnerId;
             public Scene Scene;
 
+            /// <summary>A destroyed component changes its GameObject's structure (measured:
+            /// tests/projects/scenesave prefab-writes removeRevert.event).</summary>
             public override void NoteChanges(bool undone)
             {
                 if (!ObjectChangeEvents.Listening || undone) return;
                 if (Target is GameObject)
                     ObjectChangeEvents.Note(ObjectChangeKind.DestroyGameObjectHierarchy, new DestroyGameObjectHierarchyEventArgs(Id, ParentId, Scene));
+                else if (OwnerId != 0)
+                    ObjectChangeEvents.Note(ObjectChangeKind.ChangeGameObjectStructure, new ChangeGameObjectStructureEventArgs(OwnerId, Scene));
                 else
-                    Stubs.NotImplemented("ObjectChangeEvents for a destroyed object that is not a GameObject");
+                    Stubs.NotImplemented("ObjectChangeEvents for a destroyed object that is neither a GameObject nor a component");
             }
 
             public override void Undo() =>

@@ -95,15 +95,17 @@ namespace UnityEditor
             var link = PrefabLinks.Of(targetPrefab);
             if (link?.Instance == null) return null;
             var scene = (targetPrefab is Component c ? c.gameObject : targetPrefab as GameObject)?.scene.Data;
-            var list = new List<PropertyModification>(link.Instance.Stored.Count);
-            foreach (var m in link.Instance.Stored)
+            var stored = new Dictionary<(long, string), ObjectRef>();
+            foreach (var m in link.Instance.Stored) stored.TryAdd((m.Target.FileId, m.Path), m.Reference);
+            var list = new List<PropertyModification>();
+            foreach (var m in PrefabInstances.Modifications(link.Instance))
             {
                 list.Add(new PropertyModification
                 {
                     target = m.Target.IsNull ? null : AssetDatabaseRuntime.Load(m.Target.Guid ?? link.Instance.SourceGuid, m.Target.FileId, typeof(Object)),
                     propertyPath = m.Path,
                     value = m.Value,
-                    objectReference = Resolve(m.Reference, scene),
+                    objectReference = m.Resolved ? m.Reference : Resolve(stored.TryGetValue((m.Target.FileId, m.Path), out var r) ? r : default, scene),
                 });
             }
             return list.ToArray();
@@ -140,11 +142,12 @@ namespace UnityEditor.SceneManagement
             var root = PrefabUtility.GetOutermostPrefabInstanceRoot(prefabInstance);
             var instance = root == null ? null : PrefabLinks.Of(root)?.Instance;
             if (instance == null) return overrides;
+            var modifications = PrefabInstances.Modifications(instance);
             void Add(Object o)
             {
                 var link = PrefabLinks.Of(o);
                 if (link == null || link.Instance != instance) return;
-                foreach (var m in instance.Stored)
+                foreach (var m in modifications)
                 {
                     if (m.Target.IsNull || m.Target.FileId != link.SourceFileId || !string.Equals(m.Target.Guid ?? instance.SourceGuid, link.SourceGuid, StringComparison.OrdinalIgnoreCase)) continue;
                     if (!includeDefaultOverrides && PrefabUtility.IsDefaultOverrideProperty(o, m.Path)) continue;
@@ -178,14 +181,6 @@ namespace UnityEditor.SceneManagement
     public partial class ObjectOverride : PrefabOverride
     {
         public ObjectOverride() { }
-
-        /// <summary>Applying or reverting a single object's overrides writes the prefab or the
-        /// scene's instance: not supported yet (it fails loudly).</summary>
-        public override void Apply(string prefabAssetPath, InteractionMode mode) =>
-            throw new NotSupportedException("Unbound does not apply a single object's prefab overrides yet (ObjectOverride.Apply)");
-
-        public override void Revert(InteractionMode mode) =>
-            throw new NotSupportedException("Unbound does not revert a single object's prefab overrides yet (ObjectOverride.Revert)");
 
         public Object instanceObject { get; set; }
 
