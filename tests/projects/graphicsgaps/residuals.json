@@ -1,0 +1,35 @@
+{
+  "A command buffer draw of a shader with no SubShader in reach draws its first SubShader in the Editor; Unbound's renderer keeps its earlier choice (the error shader for another pipeline's SubShaders, nothing past the LOD limit, measured for camera renders in tests/projects/shaderpasscount). The queries answer from the first SubShader as measured.": [
+    "select.empty.SelF.drawn",
+    "select.lower.SelF.drawn",
+    "select.lod10.drawn"
+  ],
+  "The Editor's keyword space has URP's foveated rendering keyword, declared in a branch for Metal and PS5 only (FoveatedRenderingKeywords.hlsl); Unbound reads the branches active on the running device. Hypothesis, unmeasured: the Editor unites the declarations of every shader platform its installed build targets compile for (iOS here), while a branch for an uninstalled one (Direct3D 11, tests/projects/shaderkeywords D3D_ONLY) declares nothing.": [
+    "keywords.Universal Render Pipeline/Unlit.count",
+    "keywords.Universal Render Pipeline/Unlit.names",
+    "keywords.Universal Render Pipeline/Unlit.flags",
+    "keywords.Universal Render Pipeline/Particles/Lit.count",
+    "keywords.Universal Render Pipeline/Particles/Lit.names",
+    "keywords.Universal Render Pipeline/Particles/Lit.flags",
+    "keywords.Hidden/Universal Render Pipeline/StencilDeferred.count",
+    "keywords.Hidden/Universal Render Pipeline/StencilDeferred.names",
+    "keywords.Hidden/Universal Render Pipeline/StencilDeferred.flags"
+  ],
+  "The Editor loads every project shader as the project opens, so a new pipeline tag reports each loaded shader's undefined Queue again ('Shader Unknown'); Unbound reads a shader when it is first asked for, and the probe asks for its Queue shaders after the pipeline tag last changed.": [
+    "queue.errors.unknown"
+  ],
+  "MeshUtility.Optimize reorders the triangles for the vertex cache and the vertices by first use with Unity's own optimizer, which is not reproduced: Unbound leaves the mesh as it is (the member stays a stub).": [
+    "meshUtility.optimized.vertices",
+    "meshUtility.optimized.uv",
+    "meshUtility.optimized.triangles",
+    "meshUtility.grid.vertices",
+    "meshUtility.grid.triangles"
+  ],
+  "A PerRendererData texture property without a texture reads back the Editor's 'textureExternal' texture through MaterialProperty.textureValue (the material itself answers null); where it comes from is not measured.": [
+    "materialProperty._Per.texture"
+  ],
+  "The physical camera's projection differs from the Editor's in the last bits of m00 and m11 (Unbound computes 2 * focalLength / sensor width; the Editor's arithmetic is not reproduced). Anamorphism changes neither (both captures show the same matrix with it set and at 0).": [
+    "anamorphism.projection",
+    "anamorphism.projection0"
+  ]
+}

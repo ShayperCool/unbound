@@ -890,6 +890,7 @@ namespace UnityEngine
             aperture = body.Float("m_Aperture", m_Aperture);
             barrelClipping = body.Float("m_BarrelClipping", m_BarrelClipping);
             bladeCount = body.Int("m_BladeCount", m_BladeCount);
+            anamorphism = body.Float("m_Anamorphism", m_Anamorphism);
             if (body.Get("m_Curvature") != null) curvature = body.Vector2("m_Curvature");
             focusDistance = body.Float("m_FocusDistance", m_FocusDistance);
             iso = body.Int("m_Iso", m_Iso);

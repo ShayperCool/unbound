@@ -179,14 +179,23 @@ namespace UnityEngine.Rendering
             ProcessRenderRequests(context, camera, renderRequest);
         }
 
+        /// <summary>Whether the pipeline takes the request; an ObjectIdRequest is always taken
+        /// (the Editor's own pass answers it otherwise; Unity's C#).</summary>
         public static bool SupportsRenderRequest<RequestData>(Camera camera, RequestData data)
         {
-            if (GraphicsSettings.currentRenderPipeline == null) return false;
-            if (RenderPipelineManager.currentPipeline == null) RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline);
-            return RenderPipelineManager.currentPipeline?.IsRenderRequestSupported(camera, data) ?? false;
+            bool supported = false;
+            if (GraphicsSettings.currentRenderPipeline != null)
+            {
+                if (RenderPipelineManager.currentPipeline == null) RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline);
+                supported = RenderPipelineManager.currentPipeline?.IsRenderRequestSupported(camera, data) ?? false;
+            }
+            return supported || data is ObjectIdRequest;
         }
 
-        public static void SubmitRenderRequest<RequestData>(Camera camera, RequestData data)
+        public static void SubmitRenderRequest<RequestData>(Camera camera, RequestData data) => camera.SubmitRenderRequest(data);
+
+        /// <summary>The pipeline renders the request (what Camera.SubmitRenderRequest hands it).</summary>
+        internal static void ProcessRenderRequest<RequestData>(Camera camera, RequestData data)
         {
             if (!RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline)) return;
             var context = ScriptableRenderContext.Begin();
@@ -402,6 +411,18 @@ namespace UnityEngine.Rendering
             if (list == null || !m_SettingsMap.TryGetValue(settings.GetType(), out var index)) return false;
             list.RemoveAt(index);
             RecreateSettingsMap();
+            return true;
+        }
+
+        /// <summary>Puts the settings in place of the held settings of their type
+        /// (RenderPipelineGraphicsSettingsEditorUtility.Rebind); false when none is held.</summary>
+        internal bool Replace(IRenderPipelineGraphicsSettings settings)
+        {
+            var list = settingsList;
+            if (list == null || settings == null) return false;
+            if (m_SettingsMap.Count == 0 && list.Count > 0) RecreateSettingsMap();
+            if (!m_SettingsMap.TryGetValue(settings.GetType(), out var index)) return false;
+            list[index] = settings;
             return true;
         }
 

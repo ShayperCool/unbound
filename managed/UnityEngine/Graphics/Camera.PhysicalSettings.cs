@@ -14,7 +14,12 @@ namespace UnityEngine
         int m_Iso = Compat.DefaultConstructorStateMeasured ? 200 : 0;
         float m_ShutterSpeed = Compat.DefaultConstructorStateMeasured ? .005f : 0f;
         StereoTargetEyeMask m_StereoTargetEye = Compat.DefaultConstructorStateMeasured ? StereoTargetEyeMask.Both : 0;
+        float m_Anamorphism;
 
+        /// <summary>Kept between -1 and 1 (NaN stays), copied by CopyFrom; the projection does not
+        /// use it (matches the Unity 6000.0.71f1 Editor, tests/projects/graphicsgaps anamorphism.*;
+        /// a pipeline's depth of field reads it).</summary>
+        public float anamorphism { get => m_Anamorphism; set => m_Anamorphism = Mathf.Clamp(value, -1f, 1f); }
         public float aperture { get => m_Aperture; set => m_Aperture = Mathf.Clamp(value, MinimumAperture, MaximumAperture); }
         public float barrelClipping { get => m_BarrelClipping; set => m_BarrelClipping = Mathf.Clamp01(value); }
         public int bladeCount { get => m_BladeCount; set => m_BladeCount = Mathf.Clamp(value, 3, 11); }
@@ -36,6 +41,7 @@ namespace UnityEngine
             m_BladeCount = other.m_BladeCount; m_Curvature = other.m_Curvature;
             m_FocusDistance = other.m_FocusDistance; m_Iso = other.m_Iso;
             m_ShutterSpeed = other.m_ShutterSpeed; m_StereoTargetEye = other.m_StereoTargetEye;
+            m_Anamorphism = other.m_Anamorphism;
             renderCloudsInSceneView = other.renderCloudsInSceneView;
         }
     }

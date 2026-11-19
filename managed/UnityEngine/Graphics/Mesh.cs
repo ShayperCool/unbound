@@ -182,6 +182,9 @@ namespace UnityEngine
 
         public bool isReadable => m_IsReadable;
 
+        /// <summary>The compression an asset saved from the mesh uses (MeshUtility.SetMeshCompression).</summary>
+        internal UnityEditor.ModelImporterMeshCompression m_MeshCompression;
+
         /// <summary>A script's read of a mesh that is not readable: an error naming
         /// <paramref name="what"/>, and nothing read (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/meshreadable; Mesh.isReadable: a mesh without Read/Write has no

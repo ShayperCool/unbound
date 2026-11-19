@@ -82,6 +82,53 @@ namespace UnityEngine
         }
 
         public static int GetRenderingLayerCount() => s_Names.Length;
+
+        /// <summary>The Tags and Layers settings' edits of the rendering layer names
+        /// (RenderPipelineEditorUtility), in memory, with the Editor's errors: at most 32 names,
+        /// the first (Default) not renamed or removed, any name (empty, a duplicate) taken; null
+        /// is empty (matches the Unity 6000.0.71f1 Editor, tests/projects/graphicsgaps layers.*).</summary>
+        internal static bool TryAddName(string name)
+        {
+            if (s_Names.Length >= maxRenderingLayerSize)
+            {
+                Debug.LogError($"TryAddRenderingLayerName can't add more Rendering Layers because the maximum amount of supported Rendering Layers is {maxRenderingLayerSize}.");
+                return false;
+            }
+            var names = new string[s_Names.Length + 1];
+            Array.Copy(s_Names, names, s_Names.Length);
+            names[^1] = name ?? "";
+            s_Names = names;
+            return true;
+        }
+
+        internal static bool TrySetName(int index, string name)
+        {
+            if (index < 0 || index >= s_Names.Length)
+            {
+                Debug.LogError($"Out of range index for Rendering Layers: {index}. Use index between 0 and {s_Names.Length}");
+                return false;
+            }
+            if (index == 0)
+            {
+                Debug.LogError("Index 0 is reserved for Default Layer and it can't be edited.");
+                return false;
+            }
+            var names = (string[])s_Names.Clone();
+            names[index] = name ?? "";
+            s_Names = names;
+            return true;
+        }
+
+        internal static bool TryRemoveLastName()
+        {
+            if (s_Names.Length < 2)
+            {
+                Debug.LogError("Rendering layers always need at least one default layer. It's not possible to remove the default layer.");
+                return false;
+            }
+            s_Names = s_Names[..^1];
+            return true;
+        }
     }
 
     /// <summary>A display's HDR output: Unbound presents standard dynamic range only, so no

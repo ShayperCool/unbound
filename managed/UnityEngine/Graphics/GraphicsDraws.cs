@@ -525,6 +525,16 @@ namespace UnityEngine
             DrawMeshNow(s_TextureQuad, Matrix4x4.identity);
         }
 
+        /// <summary>What Graphics.DrawTexture and the GUI's textures draw (Unity's C# fills the
+        /// arguments; packages call it directly). The GUI's border widths, colours and corner radii
+        /// are not drawn: the plain rect is, with a warning.</summary>
+        internal static void Internal_DrawTexture(ref Internal_DrawTextureArguments args)
+        {
+            if (args.borderWidths != Vector4.zero || args.cornerRadiuses != Vector4.zero)
+                Unbound.Runtime.Stubs.Ignored("Graphics.Internal_DrawTexture border widths and corner radii", "draws the plain rect");
+            DrawTextureImpl(args.screenRect, args.texture, args.sourceRect, args.leftBorder, args.rightBorder, args.topBorder, args.bottomBorder, args.color, args.mat, args.pass);
+        }
+
         public static void DrawTexture(Rect screenRect, Texture texture, Rect sourceRect, int leftBorder, int rightBorder, int topBorder, int bottomBorder, Color color, Material mat, int pass) =>
             DrawTextureImpl(screenRect, texture, sourceRect, leftBorder, rightBorder, topBorder, bottomBorder, color, mat, pass);
         public static void DrawTexture(Rect screenRect, Texture texture, Rect sourceRect, int leftBorder, int rightBorder, int topBorder, int bottomBorder, Color color, Material mat) =>
@@ -549,5 +559,31 @@ namespace UnityEngine
             DrawTextureImpl(screenRect, texture, new Rect(0, 0, 1, 1), 0, 0, 0, 0, new Color(0.5f, 0.5f, 0.5f, 0.5f), mat, -1);
         public static void DrawTexture(Rect screenRect, Texture texture) =>
             DrawTextureImpl(screenRect, texture, new Rect(0, 0, 1, 1), 0, 0, 0, 0, new Color(0.5f, 0.5f, 0.5f, 0.5f), null, -1);
+    }
+}
+
+namespace UnityEngine
+{
+    /// <summary>The arguments of Graphics.Internal_DrawTexture, as Unity declares them.</summary>
+    [UnityEngine.Bindings.VisibleToOtherModules("UnityEngine.IMGUIModule")]
+    internal partial struct Internal_DrawTextureArguments
+    {
+        public Rect screenRect;
+        public Rect sourceRect;
+        public int leftBorder;
+        public int rightBorder;
+        public int topBorder;
+        public int bottomBorder;
+        public Color leftBorderColor;
+        public Color rightBorderColor;
+        public Color topBorderColor;
+        public Color bottomBorderColor;
+        public Color color;
+        public Vector4 borderWidths;
+        public Vector4 cornerRadiuses;
+        public bool smoothCorners;
+        public int pass;
+        public Texture texture;
+        public Material mat;
     }
 }

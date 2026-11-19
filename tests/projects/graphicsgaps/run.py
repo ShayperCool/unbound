@@ -16,4 +16,4 @@ BASE = (PROBE.parent/'rpglobalsettings', ['Packages', 'ProjectSettings', 'Assets
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(PROBE, 'ProbeRunner.Record', 'GRAPHICS_GAPS_OUT', tolerance=0,
-                              engine_args=['--frames', '10', '--size', '96x64'], batch=False, base=BASE, devices=('opengl', 'vulkan')))
+                              engine_args=['--frames', '10', '--size', '192x108'], batch=False, base=BASE, devices=('opengl', 'vulkan')))

@@ -24,6 +24,19 @@ namespace UnityEditor
 
         public static LightingSettings lightingSettingsDefaults => s_Defaults ??= new LightingSettings();
 
+        /// <summary>Obsolete: OnDemand whatever is set, as Unity's own C# answers (the Unity
+        /// 6000.0.71f1 Editor, tests/projects/graphicsgaps lightmapping.*).</summary>
+        [Obsolete("Lightmapping.giWorkflowMode is obsolete.")]
+        [Unbound.EditorFaithful("Unity's obsolete property answers OnDemand and ignores a set (tests/projects/graphicsgaps)")]
+        public static GIWorkflowMode giWorkflowMode { get => GIWorkflowMode.OnDemand; set { } }
+
+        public enum GIWorkflowMode
+        {
+            Iterative = 0,
+            OnDemand = 1,
+            Legacy = 2,
+        }
+
         /// <summary>The Lighting Data asset the active scene's lighting settings name, one object
         /// per asset (named as its file; the built-in one, which scenes made in Unity 6 name,
         /// "LightingData"), or null when they name none. Matches the Unity 6000.0.71f1 Editor,
