@@ -42,7 +42,10 @@ boolean and enum arrays as hex strings, float and double arrays as sequences; st
 writes them without Unicode (escaped), plain text wrapped past column 80. Material edits dirty the
 asset, script field edits do not; `SaveAssets` writes dirty assets in Edit and Play mode, the
 Editor's exit writes those still dirty. A prefab instance records its engine components' changes
-as modifications (ordered by target file id) and a script's only once recorded.
+as modifications (ordered by target file id) and a script's only once recorded. A scene saved to a
+new path is imported as the Editor imports a new file (tests/projects/projectwrites): its `.meta`
+is the DefaultImporter's; in a release family without measured `.meta` files Unbound writes the
+scene, warns and writes no `.meta`.
 
 The Editor gives new objects random file ids (per session), new managed references ids from its
 clock and new assets random GUIDs, and the Test Framework names its Play Mode scene with a GUID: two
