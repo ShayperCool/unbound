@@ -233,7 +233,10 @@ namespace Unbound.UIElements
                         if (values[j].IsVarFunction()) ok = ResolveVar(m_Sheet, values, ref j, resolved, new Stack<string>(), true) == Result.Valid;
                         else resolved.Add(new UssValue { sheet = m_Sheet, handle = values[j] });
                     }
-                    if (ok && resolved.Count > 0 && UnityEngine.UIElements.StyleSheets.UssValidation.Fits(p.name, new ResolvedParts(resolved)))
+                    bool fits = Unbound.Runtime.Compat.UssValuesValidated
+                        ? UnityEngine.UIElements.StyleSheets.UssValidation.Fits(p.name, new ResolvedParts(resolved))
+                        : ColorsFit(p.name, resolved);
+                    if (ok && resolved.Count > 0 && fits)
                     {
                         m_Values.AddRange(resolved);
                         count = resolved.Count;
@@ -253,6 +256,44 @@ namespace Unbound.UIElements
             }
             SetCurrent();
         }
+
+        /// <summary>The properties whose values are colours alone.</summary>
+        static readonly HashSet<string> s_ColorProperties = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "color", "background-color", "border-color", "border-top-color", "border-right-color",
+            "border-bottom-color", "border-left-color", "-unity-background-image-tint-color", "-unity-text-outline-color",
+        };
+
+        /// <summary>The properties that mix a colour with lengths.</summary>
+        static readonly HashSet<string> s_MixedColorProperties = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "text-shadow", "-unity-text-outline",
+        };
+
+        /// <summary>
+        /// Other release families (no full-syntax check, Compat.UssValuesValidated): whether values a
+        /// var() gave fit the property's colours: a colour property takes colours,
+        /// colour names and keywords only, and other properties no colour. A value that does not
+        /// fit makes the declaration `unset`, as an unresolvable variable does: a length in
+        /// border-color or color and a colour in border-left-width; a named colour (white,
+        /// transparent) and a var() fallback apply (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/toolapis uss). Other mismatched types are unmeasured and read as before.
+        /// </summary>
+        static bool ColorsFit(string property, List<UssValue> values)
+        {
+            if (property.StartsWith("--", StringComparison.Ordinal) || s_MixedColorProperties.Contains(property)) return true;
+            bool colorProperty = s_ColorProperties.Contains(property);
+            foreach (var v in values)
+            {
+                var type = v.handle.valueType;
+                if (colorProperty ? type != StyleValueType.Color && type != StyleValueType.Keyword && !IsColorName(v) : type == StyleValueType.Color)
+                    return false;
+            }
+            return true;
+        }
+
+        static bool IsColorName(UssValue v) =>
+            v.handle.valueType == StyleValueType.Enum && StyleProperties.TryGetColor(v.sheet.ReadAsString(v.handle).ToLowerInvariant(), out _);
 
         /// <summary>
         /// Values a var() gave are checked against the property's syntax by their types; values
@@ -584,13 +625,14 @@ namespace Unbound.UIElements
         const string WarningIcon = "d_console.warnicon";
         static Texture2D s_WarningIcon;
 
-        /// <summary>A transparent texture named as the Editor's warning icon: the name as the Editor
-        /// gives it, no pixels drawn (the icon's own pixels are unmeasured).</summary>
+        /// <summary>The Editor's warning icon, drawing no pixels (the icon's own pixels are
+        /// unmeasured).</summary>
         static Texture2D WarningIconTexture()
         {
             if (s_WarningIcon != null) return s_WarningIcon;
-            if (UnityEditor.EditorIcons.LoadNamed(WarningIcon) == null) return null;
-            s_WarningIcon = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = WarningIcon, hideFlags = HideFlags.HideAndDontSave };
+            // The Editor's own icon object (a placeholder), made transparent once.
+            s_WarningIcon = UnityEditor.EditorIcons.LoadNamed(WarningIcon);
+            if (s_WarningIcon == null) return null;
             s_WarningIcon.SetPixel(0, 0, Color.clear);
             s_WarningIcon.Apply();
             return s_WarningIcon;

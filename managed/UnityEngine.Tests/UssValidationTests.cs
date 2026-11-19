@@ -30,6 +30,7 @@ namespace UnityEngine.Tests
 
         static string Message(string property, string value)
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var r = UssValidation.Validate(property, value);
             Assert.NotNull(r);
             return r.Value.Ok ? null : r.Value.Message + (r.Value.Hint != null ? " -> " + r.Value.Hint : "");
@@ -70,9 +71,19 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnotherFamilyGetsNoImporterCheck()
+        {
+            if (!Installed()) return;
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            Assert.Null(UssValidation.Validate("width", "wide"));
+            Assert.True(Unbound.Runtime.Compat.UssValuesValidated == false);
+        }
+
+        [Fact]
         public void EveryPropertySyntaxOfTheReleaseIsRead()
         {
             if (!Installed()) return;
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.Empty(UssValidation.UnreadSyntaxes());
             Assert.Null(Message("flex", "1 0 auto"));
             Assert.Null(Message("flex-basis", "10px"));
@@ -83,6 +94,7 @@ namespace UnityEngine.Tests
         public void ResolvedValuesAreCheckedByTheirTypes()
         {
             if (!Installed()) return;
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.True(UssValidation.Fits("--custom", new Parts()));
             Assert.False(UssValidation.Fits("width", new Parts()));
             // Values as a sheet holds them (as a var() substitution gives them to the style pass).

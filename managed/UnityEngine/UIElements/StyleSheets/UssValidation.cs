@@ -52,7 +52,7 @@ namespace UnityEngine.UIElements.StyleSheets
             if (node == null) return new Result { Message = "Invalid '" + property + "' property syntax '" + syntax + "'" };
             if (string.IsNullOrEmpty(value)) return new Result { Message = "Expected (" + syntax + ") but found empty value" };
             var m = new Matcher(new TextParts(Split(value)));
-            bool matched = m.Current == "initial" || m.Current.StartsWith("env(", StringComparison.Ordinal) ? m.Step() : m.Match(node);
+            bool matched = m.StartsWide() ? m.Step() : m.Match(node);
             if (!matched)
             {
                 string hint = null;
@@ -75,14 +75,13 @@ namespace UnityEngine.UIElements.StyleSheets
         /// color); true for a custom property and when there is no table to check with.</summary>
         internal static bool Fits(string property, IParts values)
         {
-            if (property.StartsWith("--", StringComparison.Ordinal) || !Unbound.Runtime.Compat.UssValuesValidated || !LoadTable()) return true;
+            if (property.StartsWith("--", StringComparison.Ordinal) || !LoadTable()) return true;
             if (!s_Syntaxes.TryGetValue(property, out var syntax)) return false;
             var node = Parse(syntax);
             if (node == null || values.Count == 0) return false;
             var m = new Matcher(values);
             // As the importer's check: a leading initial or env() fits (unmeasured for substitutions).
-            if (m.Current == "initial" || m.Current != null && m.Current.StartsWith("env(", StringComparison.Ordinal)) return m.Step() && !m.HasCurrent;
-            return m.Match(node) && !m.HasCurrent;
+            return (m.StartsWide() ? m.Step() : m.Match(node)) && !m.HasCurrent;
         }
 
         /// <summary>A value's parts as the matcher reads them.</summary>
@@ -514,6 +513,9 @@ namespace UnityEngine.UIElements.StyleSheets
 
             internal bool HasCurrent => m_Index < m_Parts.Count;
             internal string Current => HasCurrent ? m_Parts.Text(m_Index) : null;
+
+            /// <summary>Whether the value starts with what fits every property: initial, env().</summary>
+            internal bool StartsWide() => Current == "initial" || Current != null && Current.StartsWith("env(", StringComparison.Ordinal);
 
             internal bool Step()
             {

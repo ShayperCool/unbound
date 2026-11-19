@@ -7,6 +7,8 @@
     "managed/UnityEngine/UIElements/Style/StyleResolver.cs",
     "managed/UnityEngine/UIElements/StyleSheets/UssValidation.cs",
     "managed/UnityEngine/UIElements/StyleValues.cs",
-    "managed/UnityEngine/Editor/EditorGUIState.cs"
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs"
   ]
 }
