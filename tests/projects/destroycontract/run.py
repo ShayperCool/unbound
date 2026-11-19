@@ -164,12 +164,12 @@ def editor(work, repeat, release, preflight, dry_run=False, enter='delayCall'):
         first = check_problems(work, 'native1', release)
         if first:
             sys.exit(f'native1 did not pass ({len(first)} problems, first: {first[0]}); the repeat is not admitted')
+    if repeat == 'native2' and launched_entry(work, 'native1') != enter:
+        sys.exit(f'native1 was launched to enter Play mode from {launched_entry(work, "native1")}, not {enter}')
     project, out, capture = paths(work, repeat)
     if out.exists() or project.exists():
         sys.exit(f'refusing to reuse {out}: a launch is never repeated in a label')
     copy_project(project, release)
-    if repeat == 'native2' and launched_entry(work, 'native1') != enter:
-        sys.exit(f'native1 entered Play mode from {launched_entry(work, "native1")}, not {enter}')
     capture.mkdir(parents=True)
     j = job(work, repeat, release, enter)
     plan = describe(j)
@@ -216,6 +216,7 @@ def check_problems(work, repeat, release):
     problems = guards.capture_problems(out, project, release, DEVICE)
     try:
         prepared = json.loads((out/'inputs.json').read_text())
+        problems += guards.entry_problems(out/'capture'/'runner-events.jsonl', prepared.get('enter', 'delayCall'))
         preflight = json.loads(Path(prepared['preflight']).read_text())
         if sha(prepared['preflight']) != prepared['preflight_sha256']:
             problems.append('the preflight record changed after the launch')
@@ -241,7 +242,7 @@ def publish(work, release):
         sys.exit('destroycontract has no Metal reference (README "Metal (macOS)"): the Mac compares with the Linux one')
     for repeat in REPEATS:
         if launched_entry(work, repeat) != 'delayCall':
-            sys.exit(f'{repeat} entered Play mode from {launched_entry(work, repeat)}; the reference enters from delayCall')
+            sys.exit(f'{repeat} was launched to enter Play mode from {launched_entry(work, repeat)}; the reference enters from delayCall')
         problems = check_problems(work, repeat, release)
         if problems:
             sys.exit(f'{repeat}: {len(problems)} problems (first: {problems[0]}); not publishing')

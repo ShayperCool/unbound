@@ -32,8 +32,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnInvalidSceneReadsAsASubSceneAndAValidOneByItsFlag()
         {
-            // Matches the Unity 6000.0.71f1 Editor (tests/projects/defaultstate): the default Scene
-            // and a removed handle read true, a created scene false until set.
+            // The default Scene reads true in the Unity 6000.0.71f1 Editor (tests/projects/defaultstate);
+            // a handle no scene has follows the same rule (unmeasured); a created scene reads false until set.
             Assert.True(default(Scene).isSubScene);
             Assert.True(Handle(int.MaxValue).isSubScene);
             var scene = SceneManager.CreateScene("SubSceneFlag");

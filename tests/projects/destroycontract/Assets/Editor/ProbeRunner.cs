@@ -83,8 +83,8 @@ public static class ProbeRunner
             SessionState.SetBool(State + "finished", true);
             return;
         }
-        // With `EnterVariable` set to `update` Play mode is entered only from Tick, the path the
-        // windowed macOS Editor takes, so one Editor records both entries.
+        // With `EnterVariable` set to `update` Play mode is entered only from Tick (the fallback the
+        // windowed macOS Editor needs), so one Editor records both entries.
         if (Environment.GetEnvironmentVariable(EnterVariable) != "update")
             EditorApplication.delayCall += () => Enter("delayCall");
     }

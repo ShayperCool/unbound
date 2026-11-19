@@ -1032,6 +1032,33 @@ def analyzer_controls(runs, out):
             and rep['delivery']['OnDestroy']['points']['late']['fits'] == ['NEXT_DELAYED'])
 
 
+def entry_controls(out):
+    """The capture gate compares the entry the runner's `enter` event names with the requested one,
+    and publish refuses a capture launched to enter from the update handler."""
+    events = out/'entry-events.jsonl'
+    for observed, requested, ok in (('delayCall', 'delayCall', True), ('update', 'update', True),
+                                    ('update', 'delayCall', False), ('delayCall', 'update', False)):
+        events.write_text(json.dumps({'seq': 0, 'e': 'record'})+'\n'+json.dumps({'seq': 1, 'e': 'enter', 'detail': observed})+'\n')
+        problems = guards.entry_problems(events, requested)
+        control(f'entry: {observed} entered, {requested} requested', 'no problem' if ok else 'a problem', problems,
+                not problems if ok else problems)
+    events.write_text(json.dumps({'seq': 0, 'e': 'record'})+'\n')
+    control('entry: a capture without an enter event is refused', 'a problem', guards.entry_problems(events, 'delayCall'),
+            guards.entry_problems(events, 'delayCall'))
+    work = out/'entry-publish'
+    _, launch, _ = run.paths(work, 'native1')
+    launch.mkdir(parents=True)
+    (launch/'inputs.json').write_text(json.dumps({'enter': 'update'}))
+    with contextlib.redirect_stderr(io.StringIO()):
+        try:
+            run.publish(work, RELEASE)
+            refused = None
+        except SystemExit as stop:
+            refused = str(stop)
+    control('entry: publish refuses an update-entry capture', 'refused', refused,
+            refused is not None and 'update' in refused)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--out', type=Path, required=True)
@@ -1054,6 +1081,7 @@ def main():
             preflight_identity_controls(out)
             compare_controls(normal/'values.jsonl', runs['normal-repeat']['dir']/'values.jsonl', out)
             analyzer_controls(runs, out)
+    entry_controls(out)
     failed = [r for r in results if not r['passed']]
     report = {'scope': 'offline controls with a toy fake lifecycle: emission, schema, protocol, bracket '
                        'instrumentation, gates, preflight identity, comparator and analyzer only; no Unity behaviour, '

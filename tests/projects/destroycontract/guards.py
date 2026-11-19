@@ -495,6 +495,19 @@ def input_problems(directory, release):
     return problems
 
 
+def entry_problems(path, requested):
+    """The Play mode entry the runner's `enter` event names must be the one the launch asked for
+    (ProbeRunner falls back to its update handler when Record's delayCall does not run)."""
+    try:
+        events = [json.loads(line) for line in Path(path).read_text().splitlines()]
+    except (OSError, json.JSONDecodeError) as error:
+        return [f'runner events unreadable: {error}']
+    observed = [e.get('detail') for e in events if e.get('e') == 'enter']
+    if observed != [requested]:
+        return [f'Play mode was entered from {observed}, the launch asked for {requested!r}']
+    return []
+
+
 def runner_event_problems(path):
     """record, enter, finished 0, leave, exit 0 exactly once and in order; contiguous sequence;
     exit is the one closed last event."""
