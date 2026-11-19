@@ -171,13 +171,16 @@ impl Project {
         // The Editor imports a file without a `.meta` (writing one) where files can change: the
         // project's Assets and embedded and local folder packages; in a package it keeps in its
         // cache such a file is ignored.
-        let mutable = std::iter::once(true).chain(
-            self.packages
-                .iter()
-                .map(|p| matches!(p.source, PackageSource::Embedded | PackageSource::Local)),
-        );
-        for (root, mutable) in self.asset_roots().into_iter().zip(mutable) {
-            let walker = walkdir::WalkDir::new(root.dir)
+        let mut roots = vec![(self.assets.as_path(), "Assets".to_string(), true)];
+        roots.extend(self.packages.iter().map(|p| {
+            (
+                p.root.as_path(),
+                format!("Packages/{}", p.name),
+                matches!(p.source, PackageSource::Embedded | PackageSource::Local),
+            )
+        }));
+        for (dir, virtual_path, mutable) in roots {
+            let walker = walkdir::WalkDir::new(dir)
                 .follow_links(true)
                 .into_iter()
                 .filter_entry(|e| {
@@ -190,10 +193,10 @@ impl Project {
                         .extension()
                         .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
                 {
-                    let relative = path.strip_prefix(root.dir).unwrap_or(path);
+                    let relative = path.strip_prefix(dir).unwrap_or(path);
                     dlls.push((
                         path.to_path_buf(),
-                        format!("{}/{}", root.virtual_path, relative.to_string_lossy()),
+                        format!("{virtual_path}/{}", relative.to_string_lossy()),
                         mutable,
                     ));
                 }
@@ -425,6 +428,61 @@ mod tests {
         assert!(without.iter().any(|d| d == "UNITY_6000_0_67"));
     }
 
+    /// A plugin DLL without a `.meta` counts in the project's Assets and an embedded package, not
+    /// in a package the Editor keeps in its cache.
+    #[test]
+    fn plugins_without_a_meta_count_where_the_editor_imports_them() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-plugins-no-meta-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        let dll = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/compilesetup/Assets/Plugins/Dup/ProbeDup.dll");
+        let place = |dir: &Path| {
+            std::fs::create_dir_all(dir).unwrap();
+            std::fs::copy(&dll, dir.join("ProbeDup.dll")).unwrap();
+        };
+        place(&root.join("Assets/Libs"));
+        let package = |name: &str, source: PackageSource| {
+            let dir = scratch.join(name);
+            place(&dir);
+            Package {
+                name: name.into(),
+                version: "1.0.0".into(),
+                source,
+                root: dir,
+                testable: false,
+            }
+        };
+        let data = scratch.join("install/Editor/Data");
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let project = Project {
+            assets: root.join("Assets"),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            install: UnityInstall { data, version },
+            settings: Settings::default(),
+            packages: vec![
+                package("com.example.embedded", PackageSource::Embedded),
+                package("com.example.cached", PackageSource::Registry),
+            ],
+            missing_packages: Vec::new(),
+        };
+        let paths: Vec<String> = project.plugins().into_iter().map(|p| p.path).collect();
+        let _ = std::fs::remove_dir_all(&scratch);
+        assert_eq!(
+            paths,
+            [
+                "Assets/Libs/ProbeDup.dll",
+                "Packages/com.example.embedded/ProbeDup.dll"
+            ]
+        );
+    }
+
     /// In the Editor the predefined assemblies reference the auto-referenced Editor-only
     /// assemblies too (runtime scripts use them under `#if UNITY_EDITOR`); a player build has none
     /// (Unity 6000.0.71f1, tests/projects/compilesetup `assembly.Assembly-CSharp.references`).
@@ -516,6 +574,9 @@ mod tests {
         place("D", "ProbeDup.dll", &v2, android);
         // The older version under another file name, referenced only by name.
         place("E", "Renamed.dll", &v1, explicit);
+        // The same version as C's under another file name: referenced as well (two copies of one
+        // assembly then fail to compile with CS1704, in the Editor too).
+        place("F", "Other.dll", &v2, any);
         std::fs::write(root.join("Assets/A.cs"), "class A {}\n").unwrap();
         std::fs::create_dir_all(root.join("Assets/Explicit")).unwrap();
         std::fs::write(
@@ -552,14 +613,20 @@ mod tests {
                 .map(|p| p.strip_prefix(&root).unwrap().display().to_string())
                 .collect()
         };
-        assert_eq!(names(&editor, "Assembly-CSharp"), ["Assets/C/ProbeDup.dll"]);
+        assert_eq!(
+            names(&editor, "Assembly-CSharp"),
+            ["Assets/C/ProbeDup.dll", "Assets/F/Other.dll"]
+        );
         assert_eq!(
             names(&editor, "Explicit"),
             ["Assets/C/ProbeDup.dll", "Assets/E/Renamed.dll"]
         );
         // For Android the platform's copy is a candidate too, of the same version as C's and
         // later by path.
-        assert_eq!(names(&player, "Assembly-CSharp"), ["Assets/C/ProbeDup.dll"]);
+        assert_eq!(
+            names(&player, "Assembly-CSharp"),
+            ["Assets/C/ProbeDup.dll", "Assets/F/Other.dll"]
+        );
     }
 
     /// Each assembly takes its asmdef folder's csc.rsp, else the project's: the file's defines
