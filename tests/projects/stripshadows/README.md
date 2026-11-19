@@ -53,9 +53,9 @@ it (every earlier record and image byte-identical, in order). Pass `--cascades` 
 above to record, publish or compare this diagnostic. Comparisons compose the full 241-key
 reference in the run cache and remain strict.
 
-The diagnostic matches 217/217 keys (205/217 before the cascades' culling spheres were taken
-into account: one additional atlas tile in `Directional.{line,trail,mesh}.{cascade3,cascade4Wide}`).
-With stable-fit shadow projection a caster is drawn into a directional light's cascades in their
+The diagnostic matches 241/241 keys (205/217 of the earlier keys before the cascades' culling
+spheres were taken into account: one additional atlas tile in
+`Directional.{line,trail,mesh}.{cascade3,cascade4Wide}`). A caster is drawn into a directional light's cascades in their
 order until one cascade's culling sphere holds the caster's whole shadow volume (its bounding
 sphere swept along the light until it leaves the camera's frustum cut at the shadow distance);
 the later cascades leave it out. A cascade also takes a caster only when, in the light's frame,
