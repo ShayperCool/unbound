@@ -8,23 +8,26 @@ root="${MATERIAL_COLOR_TRANSFER_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/unbound/va
 fixture="${MATERIAL_COLOR_TRANSFER_PROJECT:-$PWD/tests/projects/materialcolortransfer}"
 space="${MATERIAL_COLOR_TRANSFER_COLOR_SPACE:-Linear}"
 if [[ "$space" != Linear && "$space" != Gamma ]]; then echo 'color space must be Linear or Gamma' >&2; exit 2; fi
-if [[ "$space" == Gamma ]]; then
- export PROBE_SOURCE="$fixture"
+export MATERIAL_COLOR_TRANSFER_OUT="${MATERIAL_COLOR_TRANSFER_OUT:-$root/${2:-current}/$space}"
+# Every run but `create` (which authors the probe's assets) uses a private copy of the project:
+# the probe edits loaded assets, and Unbound writes project files as the Editor does.
+if [[ "$1" != create ]]; then
+ export PROBE_SOURCE="$fixture" PROBE_COPY="$MATERIAL_COLOR_TRANSFER_OUT.project" PROBE_SPACE="$space"
  fixture="$(python3 - <<'PYCOPY'
 import os
-from pathlib import Path
-import shutil
-source=Path(os.environ['PROBE_SOURCE'])
-target=source/'Library/Unbound/ProbeGamma'
-for part in ('Assets','Packages','ProjectSettings'):
- shutil.copytree(source/part,target/part,dirs_exist_ok=True)
-settings=target/'ProjectSettings/ProjectSettings.asset'
-settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: 0'))
+import sys
+sys.path.insert(0, 'tests')
+from probe_paths import project_copy
+target = project_copy(os.environ['PROBE_SOURCE'], os.environ['PROBE_COPY'], fresh=True)
+if os.environ['PROBE_SPACE'] == 'Gamma':
+    settings = target/'ProjectSettings/ProjectSettings.asset'
+    settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', 'm_ActiveColorSpace: 0'))
 print(target)
 PYCOPY
 )"
+elif [[ "$space" == Gamma ]]; then
+ echo 'create authors the Linear project' >&2; exit 2
 fi
-export MATERIAL_COLOR_TRANSFER_OUT="${MATERIAL_COLOR_TRANSFER_OUT:-$root/${2:-current}/$space}"
 export UNBOUND_MANAGED_DIR="${UNBOUND_MANAGED_DIR:-$root/build/managed}"
 cli="${MATERIAL_COLOR_TRANSFER_CLI:-$PWD/target/release/unbound}"
 export LD_LIBRARY_PATH="${MATERIAL_COLOR_TRANSFER_NATIVE_DIR:-$PWD/target/managed}:${LD_LIBRARY_PATH:-}"

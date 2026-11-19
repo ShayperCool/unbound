@@ -61,6 +61,13 @@ Statuses:
   report     the comparator printed a measurement but has no verdict (some image comparators)
   no recipe  not run; the reason is listed
 
+No run may write into the checkout. Unbound, like the Editor, writes a project's files (.meta
+files, settings, the package lock), so engine steps run on private copies of their projects
+(stage_project) and drivers make their own (tests/probe_paths.py project_copy). A probe whose
+tests/projects/<probe> changed during its run fails with "wrote into the checkout: ..."; when
+anything under tests/projects changed, the run lists every file (`checkout_writes` in the summary)
+and exits 1.
+
 Run output goes to $XDG_CACHE_HOME/unbound/validation/suite/<label>/<probe>/ (one log per step).
 The summary goes to $XDG_CACHE_HOME/unbound/agents/suite/<label>/summary.json. --against compares
 with an earlier summary (default: agents/baseline/ when it exists) and lists every probe whose
@@ -122,9 +129,9 @@ TOOL_TIMEOUT = 1800
 MACOS_ARM64 = sys.platform == 'darwin' and platform.machine() == 'arm64'
 from probe_runtime import (NO_EDITOR, EDITOR_EXIT, EDITOR_MARK, EDITOR_WATCH, Tree,
                            stop_tree, require_process_watch, default_release, probe_release,
-                           python_with_pil, probe_path)
+                           python_with_pil, probe_path, checkout_state, checkout_writes)
 sys.path.insert(0, str(REPO/'tests'))
-from probe_paths import metal_counterpart  # noqa: E402
+from probe_paths import metal_counterpart, project_copy  # noqa: E402
 from runtime_snapshot import (snapshot_runtime, managed_for as snapshot_managed_for,
                               retain, release_reference, cleanup, task_owner, atomic_json)
 
@@ -1153,47 +1160,14 @@ def substitute(value, values):
 
 
 def stage_project(source, work):
-    """Stage a legacy recipe's authored project, preserving immutable package inputs."""
+    """Stage a legacy recipe's authored project privately (tests/probe_paths.py project_copy)."""
     source = Path(source)
     if not source.is_absolute():
         source = REPO/source
     source = source.resolve()
     if not source.is_relative_to(PROJECTS.resolve()) or not (source/'Assets').is_dir():
         return None
-    project = work/'projects'/source.relative_to(PROJECTS.resolve())
-    if not project.exists():
-        project.mkdir(parents=True)
-        for folder in ('Assets', 'Packages', 'ProjectSettings'):
-            if (source/folder).is_dir():
-                shutil.copytree(source/folder, project/folder)
-        # Preserve local package locations when moving their manifest/lock to a run.
-        for filename in ('manifest.json', 'packages-lock.json'):
-            copied = project/'Packages'/filename
-            if not copied.is_file():
-                continue
-            document = json.loads(copied.read_text())
-            changed = False
-            for name, dependency in document.get('dependencies', {}).items():
-                version = dependency.get('version') if isinstance(dependency, dict) else dependency
-                if isinstance(version, str) and version.startswith('file:'):
-                    location = Path(version[5:])
-                    if not location.is_absolute():
-                        absolute = 'file:'+str((source/'Packages'/location).resolve())
-                        if isinstance(dependency, dict):
-                            dependency['version'] = absolute
-                        else:
-                            document['dependencies'][name] = absolute
-                        changed = True
-            if changed:
-                copied.write_text(json.dumps(document, indent=2)+'\n')
-        # Resolved package contents are inputs; mutable engine caches stay private.
-        if (source/'Library/PackageCache').is_dir():
-            (project/'Library').mkdir()
-            (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
-        # Some captures load committed bundle inputs relative to their project root.
-        if (source/'Reference').is_dir():
-            (project/'Reference').symlink_to(source/'Reference', target_is_directory=True)
-    return project
+    return project_copy(source, work/'projects'/source.relative_to(PROJECTS.resolve()))
 
 
 def private_project(argv, work):
@@ -1389,6 +1363,16 @@ def run_probe(name, recipe, context):
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
                   images=collect_images(steps), steps=steps, continuation_summary=' || '.join(continued))
     return result
+
+
+def note_checkout_writes(result, written):
+    """Fail a probe whose run wrote into the checkout's tests/projects/<probe> (`written`, from
+    checkout_writes): probes run on copies of their projects (tests/probe_paths.py project_copy)."""
+    if not written:
+        return result
+    shown = ', '.join(written[:5]) + (f' and {len(written)-5} more' if len(written) > 5 else '')
+    return dict(result, status='fail', checkout_writes=written,
+                summary=f'wrote into the checkout: {shown} || {result.get("summary", "")}'[:1000])
 
 
 def discover():
@@ -1684,6 +1668,9 @@ def main():
     started = time.time()
     results = {}
     lock = threading.Lock()
+    # What the checkout's probe projects held before the run: no run may write into them.
+    checked = PROJECTS.relative_to(REPO).as_posix()
+    before = checkout_state(REPO, (checked,))
     from probe_schedule import parallel_groups
     def exclusive(name):
         spec = gate_spec(PROJECTS/name/GATE_FILE)
@@ -1701,11 +1688,13 @@ def main():
                 except Exception as error:  # a broken recipe must not stop the other probes
                     result = {'probe': name, 'status': 'fail', 'failed_step': 0, 'seconds': 0,
                               'summary': f'suite error: {error!r}'}
+                result = note_checkout_writes(result, checkout_writes(REPO, before, (f'{checked}/{name}',)))
                 with lock:
                     results[name] = result
                     print(f'{result["status"]:9} {name:26} {result["seconds"]:6.0f}s  {result["summary"][:220]}',
                           flush=True)
 
+    written = checkout_writes(REPO, before, (checked,))
     counts = {status: sum(r['status'] == status for r in results.values())
               for status in ('pass', 'fail', 'report', 'no recipe')}
     summary = {'label': label, 'release': next(iter(set(releases.values()))) if len(set(releases.values())) == 1 else None,
@@ -1713,7 +1702,7 @@ def main():
                'work': str(work_root), 'runtime_snapshot': str(runtime.resolve()),
                'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
                'seconds': round(time.time() - started), 'counts': counts,
-               'probes': {name: results[name] for name in sorted(results)}}
+               'probes': {name: results[name] for name in sorted(results)}, 'checkout_writes': written}
     (summary_dir/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
     print(f'suite: {counts["pass"]} pass, {counts["fail"]} fail, {counts["report"]} report, '
           f'{counts["no recipe"]} no recipe in {summary["seconds"]}s; {summary_dir/"summary.json"}', flush=True)
@@ -1731,6 +1720,12 @@ def main():
         print(f'suite: against {path}: ' + (f'{len(changes)} change(s)' if changes else 'no changes'))
         for line in changes:
             print('  ' + line)
+    if written:
+        regressed = True
+        print(f'suite: the run wrote into the checkout\'s {checked} (probes run on copies of their '
+              'projects, tests/probe_paths.py project_copy):', file=sys.stderr)
+        for line in written:
+            print('  ' + line, file=sys.stderr)
     if args.update_baseline:
         promote(summary_dir/'summary.json')
     if task_owner()['branch'] in ('', 'main'):

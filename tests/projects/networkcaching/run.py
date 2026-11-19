@@ -19,6 +19,8 @@ import sys
 import time
 
 fixture = Path(__file__).resolve().parent
+sys.path.insert(0, str(fixture.parents[1]))
+from probe_paths import project_copy  # noqa: E402
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 TIMEOUT = 600
 
@@ -69,7 +71,7 @@ if a.mode == 'editor':
         p.error('editor needs --out')
     out = a.out.resolve()
     editor = a.editor or default_editor(a.release)
-    run(out, [str(editor), '-batchmode', '-projectPath', str(fixture), '-executeMethod', 'ProbeRunner.Record',
+    run(out, [str(editor), '-batchmode', '-projectPath', str(project_copy(fixture, out.with_name(out.name+'-project'), fresh=True)), '-executeMethod', 'ProbeRunner.Record',
               '-logFile', str(out/'editor.log')], 'editor-gpu')
     print('capture:', out/'records.jsonl')
     raise SystemExit(0)
@@ -78,7 +80,7 @@ if not a.unbound:
     p.error('check needs --unbound or $UNBOUND')
 cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/validation/runs'
 work = (a.work or cache/('networkcaching-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))).resolve()
-run(work, [str(a.unbound), 'run', '-p', str(fixture), '--scene', 'Assets/Scenes/Probe.unity',
+run(work, [str(a.unbound), 'run', '-p', str(project_copy(fixture, work.with_name(work.name+'-project'), fresh=True)), '--scene', 'Assets/Scenes/Probe.unity',
            '--headless', '10000000', '--no-watch'], 'engine-cpu')
 reference = fixture/'Reference'/f'unity-{a.release}.jsonl'
 raise SystemExit(subprocess.run([sys.executable, str(fixture/'compare.py'), str(reference), str(work/'records.jsonl')]).returncode)

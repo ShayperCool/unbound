@@ -84,5 +84,59 @@ class DeviceReferenceTests(unittest.TestCase):
             self.assertEqual(probe_paths.device_reference_root(self.probe, publishing=True), self.root)
 
 
+class ProjectCopyTests(unittest.TestCase):
+    """A run's private project copy: what the run writes stays in it (tests/probe_paths.py)."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.source = Path(self.temp.name)/'projects/probe'
+        for folder in ('Assets/Scripts', 'Packages', 'ProjectSettings', 'Reference', 'Library/PackageCache/pkg',
+                       'Library/Unbound'):
+            (self.source/folder).mkdir(parents=True)
+        (self.source/'Assets/Scripts/Probe.cs').write_text('class Probe {}')
+        (self.source/'ProjectSettings/ProjectSettings.asset').write_text('settings')
+        (self.source/'Reference/unity-R.jsonl').write_text('reference')
+        (self.source/'Library/Unbound/cache').write_text('private to the source')
+        (self.source/'run.py').write_text('driver')
+        (self.source/'Packages/manifest.json').write_text(
+            '{"dependencies": {"local": "file:../../local", "registry": "1.0.0"}}')
+
+    def test_a_run_writes_only_its_copy(self):
+        project = probe_paths.project_copy(self.source, Path(self.temp.name)/'run/project')
+        self.assertEqual((project/'Assets/Scripts/Probe.cs').read_text(), 'class Probe {}')
+        # What a run writes into the project, as the Editor writes it, stays in the copy.
+        (project/'Assets/Scripts/Probe.cs.meta').write_text('guid')
+        (project/'ProjectSettings/ProjectSettings.asset').write_text('changed')
+        (project/'Packages/packages-lock.json').write_text('{}')
+        self.assertFalse((self.source/'Assets/Scripts/Probe.cs.meta').exists())
+        self.assertEqual((self.source/'ProjectSettings/ProjectSettings.asset').read_text(), 'settings')
+        self.assertFalse((self.source/'Packages/packages-lock.json').exists())
+        # Inputs only: the references and resolved packages are the source's, the caches are not.
+        self.assertTrue((project/'Reference').is_symlink())
+        self.assertEqual((project/'Reference/unity-R.jsonl').read_text(), 'reference')
+        self.assertTrue((project/'Library/PackageCache').is_symlink())
+        self.assertFalse((project/'Library/Unbound').exists())
+        self.assertFalse((project/'run.py').exists())
+        manifest = (project/'Packages/manifest.json').read_text()
+        self.assertIn('"file:' + str((self.source/'Packages/../../local').resolve()) + '"', manifest)
+        self.assertIn('"registry": "1.0.0"', manifest)
+
+    def test_steps_of_one_run_share_a_copy_and_fresh_replaces_it(self):
+        target = Path(self.temp.name)/'run/project'
+        project = probe_paths.project_copy(self.source, target)
+        (project/'Assets/Scripts/Probe.cs.meta').write_text('guid')
+        self.assertTrue((probe_paths.project_copy(self.source, target)/'Assets/Scripts/Probe.cs.meta').exists())
+        (self.source/'Assets/Scripts/Probe.cs').write_text('class Probe { int changed; }')
+        fresh = probe_paths.project_copy(self.source, target, fresh=True)
+        self.assertFalse((fresh/'Assets/Scripts/Probe.cs.meta').exists())
+        self.assertEqual((fresh/'Assets/Scripts/Probe.cs').read_text(), 'class Probe { int changed; }')
+        self.assertEqual((self.source/'Reference/unity-R.jsonl').read_text(), 'reference')
+
+    def test_the_checkout_is_recognised(self):
+        self.assertTrue(probe_paths.checkout_project(probe_paths.CHECKOUT/'tests/projects/physics'))
+        self.assertFalse(probe_paths.checkout_project(self.source))
+
+
 if __name__ == '__main__':
     unittest.main()

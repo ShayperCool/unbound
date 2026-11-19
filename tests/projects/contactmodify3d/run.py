@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import reference_file, run_root  # noqa: E402
+from probe_paths import project_copy, reference_file, run_root  # noqa: E402
 import editor_runner  # noqa: E402
 
 WORK = run_root(ROOT, 'runs')
@@ -54,7 +54,7 @@ def engine(label):
     out.mkdir(parents=True)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, CONTACT_MODIFY_OUT=str(out/OUT))
-    command = [str(HEAVY), '--kind', 'engine-cpu', 'timeout', '900', cli, 'run', '-p', str(ROOT), '--headless', '30000', '--no-watch']
+    command = [str(HEAVY), '--kind', 'engine-cpu', 'timeout', '900', cli, 'run', '-p', str(project_copy(ROOT, out/'project')), '--headless', '30000', '--no-watch']
     with (out/'engine.log').open('w') as log:
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(label, 'exit', code)

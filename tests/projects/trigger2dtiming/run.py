@@ -12,7 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import reference_file, reference_root, run_root, unity_version, editor_path
+from probe_paths import project_copy, reference_file, reference_root, run_root, unity_version, editor_path
 CLI = os.environ.get('UNBOUND_CLI', os.environ.get('SCENE_SETTINGS_CLI', shutil.which('unbound') or str(REPO/'target/release/unbound')))
 HEAVY = Path.home() / '.cache/compat/with-heavy-job'
 
@@ -48,7 +48,8 @@ def main():
         if not ext:
             out.mkdir(exist_ok=True)
         env[var] = str(out)
-        fixture = project if name in ['timing', 'order'] else REPO/'tests/projects'/name
+        source = project if name in ['timing', 'order'] else REPO/'tests/projects'/name
+        fixture = source if source == project else project_copy(source, work/'projects'/name, fresh=True)
         if a.mode == 'native':
             cmd = [os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode', '-nographics',
                    '-projectPath', str(fixture), '-executeMethod', 'ProbeRunner.Record',
@@ -61,9 +62,9 @@ def main():
         if r.returncode or not out.exists():
             raise SystemExit(f'{stem} failed; see {work}')
         if a.mode == 'regressions':
-            ref = reference_file(fixture) if ext else reference_root(fixture)
+            ref = reference_file(source) if ext else reference_root(source)
             with (work/(stem+'-comparison.txt')).open('w') as log:
-                c = subprocess.run(['python3', str(fixture/'compare.py'), str(ref), str(out)], stdout=log, stderr=subprocess.STDOUT)
+                c = subprocess.run(['python3', str(source/'compare.py'), str(ref), str(out)], stdout=log, stderr=subprocess.STDOUT)
             print('comparison', c.returncode, flush=True)
 
 

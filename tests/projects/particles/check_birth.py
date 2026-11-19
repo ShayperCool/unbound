@@ -16,7 +16,7 @@ import compare
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import run_root  # noqa: E402
+from probe_paths import project_copy, run_root  # noqa: E402
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
         env.setdefault('DISPLAY', ':0')
         cli = os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
         command = [str(Path.home()/'.cache/compat/with-heavy-job'), '--kind', 'engine-gpu',
-                   'timeout', '900', cli, 'run', '-p', str(ROOT), '--frames', '60',
+                   'timeout', '900', cli, 'run', '-p', str(project_copy(ROOT, out/'project')), '--frames', '60',
                    '--size', '320x180', '--no-watch']
         with (out/'engine.log').open('w') as log:
             code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode

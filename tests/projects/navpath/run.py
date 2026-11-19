@@ -55,7 +55,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file, reference_root, run_root, unity_version
+from probe_paths import project_copy, reference_file, reference_root, run_root, unity_version
 from editor_runner import EditorJob, result_problem, run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
@@ -172,7 +172,7 @@ def unbound(args):
     result = out/OUTPUT
     result.unlink(missing_ok=True)
     launcher = Path.home()/'.cache/compat/with-heavy-job'
-    command = [binary, 'run', '-p', str(PROBE), '--no-watch', '--frames', str(FRAMES)]
+    command = [binary, 'run', '-p', str(project_copy(PROBE, out/'project', fresh=True)), '--no-watch', '--frames', str(FRAMES)]
     if launcher.exists():
         command = [str(launcher), '--kind', 'engine-cpu', *command]
     env = dict(os.environ, NAVPATH_PROBE_OUT=str(result), NAVPATH_PROBE_ONLY=args.scenario, NAVPATH_PROBE_PROFILE=args.profile)

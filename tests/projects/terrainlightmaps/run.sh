@@ -24,20 +24,20 @@ export TERRAIN_LIGHTMAP_OUT="$output" UNBOUND_MANAGED_DIR="$managed"
 mkdir -p "$output"
 space="${3:-Linear}"
 if [[ "$space" != Linear && "$space" != Gamma ]]; then echo 'color space must be Linear or Gamma' >&2; exit 2; fi
-# Use a generated project view for the selected color space, leaving authored settings intact.
+# A private copy of the project for the selected color space: authored settings stay intact, and
+# what the run writes (Unbound writes project files as the Editor does) stays in the copy.
 if [[ "${1:-}" == native || "${1:-}" == engine ]]; then
- export TERRAIN_LIGHTMAP_SOURCE="$fixture" TERRAIN_LIGHTMAP_SPACE="$space"
+ export TERRAIN_LIGHTMAP_SOURCE="$fixture" TERRAIN_LIGHTMAP_SPACE="$space" TERRAIN_LIGHTMAP_COPY="$output.project"
  fixture="$(python3 - <<'PY'
 import os
-from pathlib import Path
-import shutil
-source=Path(os.environ['TERRAIN_LIGHTMAP_SOURCE'])
-space=os.environ['TERRAIN_LIGHTMAP_SPACE']
-target=source/'Library/Unbound'/('Probe'+space)
-for part in ('Assets','Packages','ProjectSettings'):
- shutil.copytree(source/part,target/part,dirs_exist_ok=True)
-settings=target/'ProjectSettings/ProjectSettings.asset'
-settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: '+('0' if space=='Gamma' else '1')).replace('m_ActiveColorSpace: 0','m_ActiveColorSpace: '+('0' if space=='Gamma' else '1')))
+import sys
+sys.path.insert(0, 'tests')
+from probe_paths import project_copy
+space = os.environ['TERRAIN_LIGHTMAP_SPACE']
+target = project_copy(os.environ['TERRAIN_LIGHTMAP_SOURCE'], os.environ['TERRAIN_LIGHTMAP_COPY'], fresh=True)
+settings = target/'ProjectSettings/ProjectSettings.asset'
+value = 'm_ActiveColorSpace: ' + ('0' if space == 'Gamma' else '1')
+settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', value).replace('m_ActiveColorSpace: 0', value))
 print(target)
 PY
 )"

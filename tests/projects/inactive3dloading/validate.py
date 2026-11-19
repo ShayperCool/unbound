@@ -5,7 +5,9 @@ import shlex
 import subprocess
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file
+from probe_paths import project_copy, reference_file, run_root
+
+ROOT = Path(__file__).resolve().parent
 
 p = Path(os.environ['TRIGGER_WORK'])
 assert p == Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading'))) / 'validation/engine'
@@ -32,7 +34,7 @@ for name, var in [('joints2d', 'JOINTS2D_PROBE_OUT'), ('effectors', 'EFFECTORS_P
     output = p / name
     output.mkdir(exist_ok=True)
     with (p / (name + '.log')).open('w') as log:
-        run([heavy, 'timeout', '240', cli, 'run', '-p', 'tests/projects/' + name,
+        run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy('tests/projects/' + name, p / 'projects' / name, fresh=True),
              '--headless', '30000', '--no-watch'],
             env=dict(os.environ, **{var: str(output)}), stdout=log, stderr=subprocess.STDOUT)
 for name, var, frames, size in [('graphics', 'GRAPHICS_PROBE_OUT', 30, '960x540'),
@@ -40,13 +42,13 @@ for name, var, frames, size in [('graphics', 'GRAPHICS_PROBE_OUT', 30, '960x540'
                                ('lifecycle', 'LIFECYCLE_PROBE_OUT', 12, '960x540')]:
     output = p / (name + '.json' if name == 'graphics' else name + '.jsonl' if name == 'lifecycle' else name)
     with (p / (name + '.log')).open('w') as log:
-        run([heavy, 'timeout', '240', cli, 'run', '-p', 'tests/projects/' + name,
+        run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy('tests/projects/' + name, p / 'projects' / name, fresh=True),
              '--no-watch', '--frames', str(frames), '--size', size],
             env=dict(os.environ, **{var: str(output)}), stdout=log, stderr=subprocess.STDOUT)
 with (p / 'messages.log').open('w') as log:
     args = shlex.split(subprocess.check_output(['python3', 'tests/projects/messages/compare.py',
                        'args', str(reference_file(Path('tests/projects/messages'), 'jsonl'))], text=True))
-    run([heavy, 'timeout', '240', cli, 'run', '-p', 'tests/projects/messages', '--headless',
+    run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy('tests/projects/messages', p / 'projects/messages', fresh=True), '--headless',
          '445', '--size', '960x540', '--no-watch', *args],
         env=dict(os.environ, MESSAGES_PROBE_OUT=str(p / 'messages.jsonl')),
         stdout=log, stderr=subprocess.STDOUT)

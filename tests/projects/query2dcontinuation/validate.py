@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
-from probe_paths import reference_file, run_root
+from probe_paths import project_copy, reference_file, run_root
 
 FOCUSED = ['clone-placement', 'transform-clone-placement', 'sleep-inactive', 'inactive-sequences',
            'sleep', 'triggers', 'flags', 'trigger-pairs', 'ignore-lifecycle', 'kinematic',
@@ -89,7 +89,7 @@ def main(probe=ROOT, lifecycle=True, motion=False):
         output = trigger_work/name
         output.mkdir(exist_ok=True)
         with (trigger_work/(name+'.log')).open('w') as log:
-            run([heavy, 'timeout', '240', cli, 'run', '-p', REPO/'tests/projects'/name,
+            run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy(REPO/'tests/projects'/name, trigger_work/'projects'/name, fresh=True),
                  '--headless', '30000', '--no-watch'], env=dict(env, **{variable:str(output)}),
                 stdout=log, stderr=subprocess.STDOUT)
     for name, variable, frames, size in [('graphics', 'GRAPHICS_PROBE_OUT', 30, '960x540'),
@@ -97,14 +97,14 @@ def main(probe=ROOT, lifecycle=True, motion=False):
                                          ('lifecycle', 'LIFECYCLE_PROBE_OUT', 12, '960x540')]:
         output = trigger_work/(name+'.json' if name == 'graphics' else name+'.jsonl' if name == 'lifecycle' else name)
         with (trigger_work/(name+'.log')).open('w') as log:
-            run([heavy, 'timeout', '240', cli, 'run', '-p', REPO/'tests/projects'/name,
+            run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy(REPO/'tests/projects'/name, trigger_work/'projects'/name, fresh=True),
                  '--no-watch', '--frames', str(frames), '--size', size], env=dict(env, **{variable:str(output)}),
                 stdout=log, stderr=subprocess.STDOUT)
     message_args = shlex.split(subprocess.check_output(
         [sys.executable, str(REPO/'tests/projects/messages/compare.py'), 'args',
          str(reference_file(REPO/'tests/projects/messages', 'jsonl'))], text=True))
     with (trigger_work/'messages.log').open('w') as log:
-        run([heavy, 'timeout', '240', cli, 'run', '-p', REPO/'tests/projects/messages', '--headless',
+        run([heavy, 'timeout', '240', cli, 'run', '-p', project_copy(REPO/'tests/projects/messages', trigger_work/'projects/messages', fresh=True), '--headless',
              '445', '--size', '960x540', '--no-watch', *message_args],
             env=dict(env, MESSAGES_PROBE_OUT=str(trigger_work/'messages.jsonl')), stdout=log, stderr=subprocess.STDOUT)
     matrix = [sys.executable, REPO/'tests/projects/trigger2dtiming/replay_matrix.py']

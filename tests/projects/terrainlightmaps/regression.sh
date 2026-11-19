@@ -10,4 +10,6 @@ export LD_LIBRARY_PATH="${UNBOUND_NATIVE_DIR:-$cache/build/rust/managed}:${LD_LI
 export UNBOUND_MANAGED_DIR="${TERRAIN_REG_MANAGED:-$cache/build/managed}"
 export TERRAIN_PROBE_OUT="${TERRAIN_REG_OUT:-$cache/current/terrain-regression}"
 mkdir -p "$TERRAIN_PROBE_OUT"
-"$HOME/.cache/compat/with-heavy-job" "$cli" run -p tests/projects/terrain --frames 300 --size 320x180 --no-watch
+# A private copy of the project (tests/probe_paths.py project_copy): Unbound writes project files as the Editor does.
+project="$(python3 -c 'import sys; sys.path.insert(0, "tests"); from probe_paths import project_copy; print(project_copy(sys.argv[1], sys.argv[2], fresh=True))' tests/projects/terrain "$TERRAIN_PROBE_OUT.project")"
+"$HOME/.cache/compat/with-heavy-job" "$cli" run -p "$project" --frames 300 --size 320x180 --no-watch

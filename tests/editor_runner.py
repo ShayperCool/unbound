@@ -49,7 +49,7 @@ import time
 import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from probe_paths import MACOS_ARM64, editor_path  # noqa: E402
+from probe_paths import MACOS_ARM64, checkout_project, editor_path  # noqa: E402
 from private_display import Display  # noqa: E402
 
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
@@ -665,10 +665,15 @@ def log_gpu_problem(log):
 def run(job):
     """Runs `job` through the heavy-job launcher and returns the supervisor's result (on macOS
     arm64 directly, see run_macos). Refuses under $UNBOUND_SUITE_NO_EDITOR: suite and gate runs
-    compare the engine with the committed Reference/ and never start an Editor."""
+    compare the engine with the committed Reference/ and never start an Editor. Refuses a project
+    inside the checkout: the Editor writes its project (.meta files, settings, the package lock),
+    so it runs on a copy (tests/probe_paths.py project_copy)."""
     if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
         raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}) in a suite run '
                          '(UNBOUND_SUITE_NO_EDITOR is set): compare the engine with the committed Reference/')
+    if checkout_project(job.project):
+        raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}) on {job.project}, '
+                         'inside the checkout: run it on a copy (tests/probe_paths.py project_copy)')
     job.out.mkdir(parents=True, exist_ok=True)
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')

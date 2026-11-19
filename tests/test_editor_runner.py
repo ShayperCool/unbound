@@ -418,6 +418,15 @@ class MacosRunTest(unittest.TestCase):
         self.assertIn('exit with 0', er.result_problem(self.root/'e'))
         with self.assertRaises(SystemExit):
             self.run_job(self.job('e', batch=True))
+
+    def test_a_project_of_the_checkout_is_refused(self):
+        # The Editor writes its project: a probe project of the checkout runs on a copy.
+        job = er.EditorJob(Path(er.__file__).resolve().parents[1]/'tests/projects/physics', self.root/'c/editor.log', self.root/'c',
+                           ['-executeMethod', 'P.Record'], editor=self.editor, label='c')
+        with self.assertRaises(SystemExit) as refused:
+            self.run_job(job)
+        self.assertIn('inside the checkout', str(refused.exception))
+        self.assertFalse((self.root/'c').exists())
         with self.assertRaises(SystemExit):
             self.run_job(self.job('v', vulkan=True))
 

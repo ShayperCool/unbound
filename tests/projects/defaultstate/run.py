@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 import editor_runner
-from probe_paths import MACOS_ARM64, device_reference, reference_root, run_root, unity_version, cache_artifact_path
+from probe_paths import MACOS_ARM64, project_copy, device_reference, reference_root, run_root, unity_version, cache_artifact_path
 from compare import rows, entries, compare, check_constructor_stores, host_decided, matches, validate_controls
 
 WORK = run_root(ROOT, 'runs')
@@ -26,7 +26,7 @@ def cli():
 
 def inventory(out):
     out.mkdir(parents=True, exist_ok=False)
-    command = [str(HEAVY), '--kind', 'tool', cli(), 'api-defaults', '-p', str(ROOT)]
+    command = [str(HEAVY), '--kind', 'tool', cli(), 'api-defaults', '-p', str(project_copy(ROOT, out/'inventory-project'))]
     with (out/'inventory.json').open('w') as output, (out/'inventory.log').open('w') as log:
         subprocess.run(command, cwd=REPO, stdout=output, stderr=log, check=True)
     report = json.loads((out/'inventory.json').read_text())

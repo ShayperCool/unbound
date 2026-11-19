@@ -3,7 +3,7 @@
 from pathlib import Path
 import os,pathlib,subprocess,sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file, run_root
+from probe_paths import project_copy, reference_file, run_root
 
 repo=pathlib.Path(__file__).resolve().parents[3]
 ROOT=pathlib.Path(__file__).resolve().parent
@@ -17,7 +17,7 @@ for name,var,frames,ext in cases:
     if not ext: dest.mkdir(exist_ok=True)
     env=dict(os.environ,**{var:str(dest)})
     with (base/(name+'.log')).open('w') as f:
-        code=subprocess.run([str(heavy),'timeout','240',str(cli),'run','-p',str(fixture),'--headless',str(frames),'--no-watch'],env=env,stdout=f,stderr=subprocess.STDOUT).returncode
+        code=subprocess.run([str(heavy),'timeout','240',str(cli),'run','-p',str(project_copy(fixture,base/'projects'/name,fresh=True)),'--headless',str(frames),'--no-watch'],env=env,stdout=f,stderr=subprocess.STDOUT).returncode
     ref=reference_file(fixture, ext) if ext else fixture/'Reference'
     with (base/(name+'-comparison.txt')).open('w') as f:
         compare=subprocess.run(['python3',str(fixture/'compare.py'),str(ref),str(dest)],stdout=f,stderr=subprocess.STDOUT).returncode

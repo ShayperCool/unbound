@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT/'tests'))
-from probe_paths import reference_file, run_root
+from probe_paths import project_copy, reference_file, run_root
 WORK = Path(os.environ.get('LIFECYCLE_WORK', os.environ.get('TRIGGER_WORK', run_root(ROOT/'tests/projects/trigger2dlifecycle')))).resolve()
 HEAVY = str(Path.home()/'.cache/compat/with-heavy-job')
 CLI = os.environ.get('UNBOUND_CLI', os.environ.get('SCENE_SETTINGS_CLI', str(ROOT/'target/release/unbound')))
@@ -47,13 +47,13 @@ def main():
                                       ('lifecycle', 'LIFECYCLE_PROBE_OUT', 12, '960x540')]:
             out = WORK/(name+'.json' if name=='graphics' else name+'.jsonl' if name=='lifecycle' else name)
             with (WORK/(name+'.log')).open('w') as log:
-                run([HEAVY, 'timeout', '240', CLI, 'run', '-p', ROOT/'tests/projects'/name,
+                run([HEAVY, 'timeout', '240', CLI, 'run', '-p', project_copy(ROOT/'tests/projects'/name, WORK/'projects'/name, fresh=True),
                      '--no-watch', '--frames', str(frames), '--size', size],
                     env=dict(os.environ, **{var: str(out)}), stdout=log, stderr=subprocess.STDOUT)
         args = shlex.split(subprocess.check_output(['python3', str(ROOT/'tests/projects/messages/compare.py'), 'args',
                                                     str(reference_file(ROOT/'tests/projects/messages', 'jsonl'))], text=True))
         with (WORK/'messages.log').open('w') as log:
-            run([HEAVY, 'timeout', '240', CLI, 'run', '-p', ROOT/'tests/projects/messages', '--headless', '445',
+            run([HEAVY, 'timeout', '240', CLI, 'run', '-p', project_copy(ROOT/'tests/projects/messages', WORK/'projects/messages', fresh=True), '--headless', '445',
                  '--size', '960x540', '--no-watch', *args], env=dict(os.environ, MESSAGES_PROBE_OUT=str(WORK/'messages.jsonl')),
                 stdout=log, stderr=subprocess.STDOUT)
     if a.group == 'tests':

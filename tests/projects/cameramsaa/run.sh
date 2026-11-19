@@ -8,26 +8,27 @@ fixture="${CAMERA_MSAA_PROJECT:-$PWD/tests/projects/cameramsaa}"
 space="${CAMERA_MSAA_COLOR_SPACE:-Linear}"
 if [[ "${1:-}" == gamma ]]; then space=Gamma; fi
 if [[ "$space" != Linear && "$space" != Gamma ]]; then echo 'color space must be Linear or Gamma' >&2; exit 2; fi
-if [[ "$space" == Gamma ]]; then
- export PROBE_SOURCE="$fixture"
- fixture="$(python3 - <<'PYCOPY'
-import os
-from pathlib import Path
-import shutil
-source=Path(os.environ['PROBE_SOURCE'])
-target=source/'Library/Unbound/ProbeGamma'
-for part in ('Assets','Packages','ProjectSettings'):
- shutil.copytree(source/part,target/part,dirs_exist_ok=True)
-settings=target/'ProjectSettings/ProjectSettings.asset'
-settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: 0'))
-print(target)
-PYCOPY
-)"
-fi
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/cameramsaa"
 profile="$space"
 if [[ "${CAMERA_MSAA_FOCUSED:-0}" == 1 ]]; then profile="Focused$space"; fi
 output="${CAMERA_MSAA_OUTPUT:-$cache/${2:-current}/$profile}"
+# Every run but the authoring modes (create, linear) uses a private copy of the project: Unbound
+# writes project files as the Editor does.
+if [[ "$1" != create && "$1" != linear ]]; then
+ export PROBE_SOURCE="$fixture" PROBE_COPY="$output.project" PROBE_SPACE="$space"
+ fixture="$(python3 - <<'PYCOPY'
+import os
+import sys
+sys.path.insert(0, 'tests')
+from probe_paths import project_copy
+target = project_copy(os.environ['PROBE_SOURCE'], os.environ['PROBE_COPY'], fresh=True)
+if os.environ['PROBE_SPACE'] == 'Gamma':
+    settings = target/'ProjectSettings/ProjectSettings.asset'
+    settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', 'm_ActiveColorSpace: 0'))
+print(target)
+PYCOPY
+)"
+fi
 export CAMERA_MSAA_OUT="$output" UNBOUND_MANAGED_DIR="${UNBOUND_MANAGED_DIR:-$cache/build/managed}"
 cli="${CAMERA_MSAA_CLI:-$PWD/target/release/unbound}"
 export LD_LIBRARY_PATH="${UNBOUND_NATIVE_DIR:-$PWD/target/managed}:${LD_LIBRARY_PATH:-}"

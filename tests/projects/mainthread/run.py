@@ -20,7 +20,7 @@ import sys
 
 PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
-from probe_paths import reference_file, run_root, unity_version  # noqa: E402
+from probe_paths import project_copy, reference_file, run_root, unity_version  # noqa: E402
 from editor_runner import EditorJob, jsonl_complete, publish as publish_reference, run, summary  # noqa: E402
 
 REPEATS = ('native1', 'native2')
@@ -58,7 +58,8 @@ def publish():
 
 def unbound(out, cli):
     cli = cli or os.environ.get('UNBOUND') or 'unbound'
-    command = [cli, 'run', '-p', str(PROBE), '--headless', '30', '--no-watch']
+    project = project_copy(PROBE, Path(out).resolve().parent/'project', fresh=True)
+    command = [cli, 'run', '-p', str(project), '--headless', '30', '--no-watch']
     if LAUNCHER.exists():
         command = [str(LAUNCHER), '--kind', 'engine-cpu', *command]
     return subprocess.call(command, env={**os.environ, 'MAINTHREAD_PROBE_OUT': str(Path(out).resolve())})
