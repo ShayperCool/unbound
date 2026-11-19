@@ -150,13 +150,17 @@
 {"k":"texture.Assets/Trees/Billboard_Color.png.mip3","v":"b06336ccf67f902d first=RGBA(148, 162, 132, 129)"}
 {"k":"texture.Assets/Trees/Billboard_Color.png.mip4","v":"9eab61f731f6f645 first=RGBA(148, 146, 129, 120)"}
 {"k":"importer.Assets/Tex/Plain.png","v":"TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=0 srgb=1 compression=1 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
-{"k":"meta.Assets/Tex/Plain.png","v":"534fcb8db92ec2e9"}
+{"k":"meta.Assets/Tex/Plain.png","v":"ce9c0cd96278d3a5"}
+{"k":"meta.Assets/Tex/Plain.png.platforms","v":"the installed modules"}
 {"k":"importer.Assets/Tex/Shrink.png","v":"TextureImporter missing=0 type=0 max=32 filter=0 wrap=1 mips=0 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
-{"k":"meta.Assets/Tex/Shrink.png","v":"1064e1517c4bfadc"}
+{"k":"meta.Assets/Tex/Shrink.png","v":"b09500a7d0f870ca"}
+{"k":"meta.Assets/Tex/Shrink.png.platforms","v":"the installed modules"}
 {"k":"importer.Assets/Tex/Invert.png","v":"TextureImporter missing=0 type=0 max=2048 filter=1 wrap=0 mips=1 readable=1 srgb=1 compression=0 npot=1 alphaIsTransparency=0 alphaSource=1 aniso=1 spriteMode=0 ppu=100"}
-{"k":"meta.Assets/Tex/Invert.png","v":"05d7b9489bcb7489"}
+{"k":"meta.Assets/Tex/Invert.png","v":"9ae7806cdf384e46"}
+{"k":"meta.Assets/Tex/Invert.png.platforms","v":"the installed modules"}
 {"k":"importer.Assets/Tex/Sprite.png","v":"TextureImporter missing=0 type=8 max=2048 filter=1 wrap=1 mips=0 readable=0 srgb=1 compression=1 npot=0 alphaIsTransparency=1 alphaSource=1 aniso=1 spriteMode=1 ppu=50"}
-{"k":"meta.Assets/Tex/Sprite.png","v":"4e8fece793a44fa2"}
+{"k":"meta.Assets/Tex/Sprite.png","v":"83d8b52e80d67df8"}
+{"k":"meta.Assets/Tex/Sprite.png.platforms","v":"the installed modules"}
 {"k":"importer.Assets/Models/Materials.fbx","v":"ModelImporter missing=0 scale=2 fileScale=1 anim=1 materials=1 readable=1 collider=1 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}
 {"k":"meta.Assets/Models/Materials.fbx","v":"8f7d9aa45418c024"}
 {"k":"importer.Assets/Models/Animated.fbx","v":"ModelImporter missing=0 scale=1 fileScale=1 anim=1 materials=2 readable=0 collider=0 rig=2 blendShapes=1 meshCompression=0 normals=0 cameras=1 lights=1 uv2=0"}

@@ -95,9 +95,11 @@ UNBOUND=/path/to/unbound python3 tests/projects/assetpostprocessors/run.py gate
 
 Values compare exactly (tolerance 0). The folder `.meta` files are committed so that both sides
 see them (an asset without one has `importSettingsMissing` set in the Editor); the context's build
-target is left out (it is the Editor's platform).
+target is left out (it is the Editor's platform). A `.meta` digest leaves out the per-platform
+entries of the installation's platform modules, which a texture's `.meta` lists as the
+installation has them (`meta.*.platforms` says whether it lists exactly those).
 
-Unbound on macOS, 2026-11-19: 359/536 values, 0 failures and 177 recorded residuals
+Unbound on macOS, 2026-11-19: 363/540 values, 0 failures and 177 recorded residuals
 (`residuals.json`, eight causes): OnPreprocessAsset is given only the assets Unbound imports (not
 folders, scenes or materials), the single sprite's generated ID in a rewritten `.meta` (the
 settings preprocessors change are written as the Editor writes them), the Play mode domain's

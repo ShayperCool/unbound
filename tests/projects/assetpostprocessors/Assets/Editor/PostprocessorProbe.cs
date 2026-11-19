@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
@@ -169,6 +170,34 @@ public static class PostprocessorProbe
             .Append(text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n")).Append("\"}\n");
     }
 
+    static readonly Regex s_PlatformEntry = new Regex("(?m)^( *)- serializedVersion: [0-9]+\n\\1  buildTarget: (?!DefaultTexturePlatform\\b|Standalone\\b)(\\S+)\n(?:\\1  .*\n)*");
+
+    /// <summary>A .meta file's digest without the per-platform entries of the installation's
+    /// platform modules, which a texture's .meta lists as the installation has them; whether it
+    /// lists exactly those is recorded apart (`.platforms`).</summary>
+    static void RecordMeta(string path)
+    {
+        var text = File.ReadAllText(path + ".meta");
+        var listed = new List<string>();
+        text = s_PlatformEntry.Replace(text, m => { listed.Add(m.Groups[2].Value); return ""; });
+        Put("meta." + path, Hash(Encoding.UTF8.GetBytes(text)));
+        if (text.Contains("platformSettings:"))
+            Put("meta." + path + ".platforms", listed.SequenceEqual(InstalledPlatforms()) ? "the installed modules" : "differ: " + string.Join(",", listed));
+    }
+
+    /// <summary>The platform modules of this Editor installation, in the build settings' order,
+    /// by the names texture settings give them.</summary>
+    static IEnumerable<string> InstalledPlatforms()
+    {
+        var platforms = new (BuildTargetGroup group, BuildTarget target, string name)[]
+        {
+            (BuildTargetGroup.Android, BuildTarget.Android, "Android"), (BuildTargetGroup.iOS, BuildTarget.iOS, "iOS"),
+            (BuildTargetGroup.WebGL, BuildTarget.WebGL, "WebGL"), (BuildTargetGroup.WSA, BuildTarget.WSAPlayer, "Windows Store Apps"),
+            (BuildTargetGroup.tvOS, BuildTarget.tvOS, "tvOS"), (BuildTargetGroup.VisionOS, BuildTarget.VisionOS, "VisionOS"),
+        };
+        return platforms.Where(p => BuildPipeline.IsBuildTargetSupported(p.group, p.target)).Select(p => p.name);
+    }
+
     static string Hash(IEnumerable<byte> bytes)
     {
         ulong h = 14695981039346656037UL;
@@ -210,7 +239,7 @@ public static class PostprocessorProbe
         foreach (var path in Textures.Concat(Models).Concat(Clips))
         {
             Guard("importer." + path, () => Put("importer." + path, PPLog.Settings(AssetImporter.GetAtPath(path))));
-            Guard("meta." + path, () => Put("meta." + path, Hash(File.ReadAllBytes(path + ".meta"))));
+            Guard("meta." + path, () => RecordMeta(path));
         }
         RecordEvents();
         Put("timeline", string.Join(" | ", s_Timeline));
