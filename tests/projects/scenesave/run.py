@@ -58,7 +58,9 @@ def copy_project(destination):
 
 def run_case(kind, case, out, cli=None):
     platform, test_filter = CASES[case]
-    work = Path(tempfile.mkdtemp(prefix=f'scenesave-{case}-'))
+    scratch = run_root(PROBE, 'work')
+    scratch.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix=f'{case}-', dir=scratch))
     project = work/'scenesave'
     copy_project(project)
     rows = work/'rows.jsonl'
