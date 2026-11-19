@@ -684,6 +684,18 @@ def pair_controls(normal_dir, out):
     control('pair refused: a repeat compiled another graph than the preflight', 'graph: ... differs', refusal,
             refusal and refusal.startswith('native2') and 'differs from the preflight-compiled graph' in refusal)
 
+    def entered(path, detail):
+        events = [json.loads(line) for line in path.read_text().splitlines()]
+        for e in events:
+            if e.get('e') == 'enter':
+                e['detail'] = detail
+        path.write_text(''.join(json.dumps(e)+'\n' for e in events))
+    root = pair('fell-back', lambda root: entered(root/'native2/capture/runner-events.jsonl', 'update'))
+    code, refusal = publish(root, work/'fell-back-reference.jsonl')
+    control('pair refused: a delayCall launch whose runner entered from the update handler', 'native2: ... entered from',
+            refusal, refusal and refusal.startswith('native2') and 'Play mode was entered from' in refusal
+            and not (work/'fell-back-reference.jsonl').exists())
+
     project = work/'graph/project'
     fake_graph(project, record, dag='99999999.dag')
     problems = guards.graph_problems(project, record)
@@ -736,6 +748,21 @@ def pair_controls(normal_dir, out):
     graph_first = pair('admit-f', lambda root: fake_graph(root/'projects/native1', record,
                                                             change=lambda a, t: t+'-define:EXTRA\n'))
     admit('native2 after a native1 whose graph differs from the preflight', graph_first, 'native2', good, 'native1 did not pass')
+    fell_back = pair('admit-g', lambda root: entered(root/'native1/capture/runner-events.jsonl', 'update'))
+    admit('native2 after a native1 that entered from another path than requested', fell_back, 'native2', good,
+          'native1 did not pass')
+
+    def update_first(root):
+        inputs = json.loads((root/'native1/inputs.json').read_text())
+        (root/'native1/inputs.json').write_text(json.dumps(dict(inputs, enter='update')))
+        entered(root/'native1/capture/runner-events.jsonl', 'update')
+        shutil.rmtree(root/'native2')
+        shutil.rmtree(root/'projects/native2')
+    mixed = pair('admit-h', update_first)
+    admit('a delayCall native2 after an update native1', mixed, 'native2', good, 'native1 was launched to enter Play mode from update')
+    control('admission refused before the copy: no native2 project or output is left', [False, False],
+            [(mixed/'projects/native2').exists(), (mixed/'native2').exists()],
+            not (mixed/'projects/native2').exists() and not (mixed/'native2').exists())
     with contextlib.redirect_stdout(io.StringIO()) as printed, mock.patch.object(run, 'run', no_launch):
         code = run.editor(work/'dry', 'native1', RELEASE, None, dry_run=True)
     plan = json.loads(printed.getvalue())

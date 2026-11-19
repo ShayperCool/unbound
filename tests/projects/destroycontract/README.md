@@ -114,8 +114,9 @@ requires the `enter` event to name the requested entry) differ from the Linux re
 those 886 `cb.wfeof` states and in `points`, which gains a WaitForEndOfFrame resume at step 0,
 relative frame 1; every other key is equal. That the macOS captures entered from the update handler
 is inferred (their `enter` events predate the entry path detail, and come about 6 s after `record`,
-as in an activation order capture whose event names `update`). Unbound enters Play mode as Record's delayCall does and matches the Linux reference, with
-which the Mac compares; there Unbound on Metal fails only the two device keys.
+as in an activation order capture whose event names `update`). Unbound enters Play mode as
+Record's delayCall does and matches the Linux reference, with which the Mac compares; there
+Unbound on Metal fails only the two device keys.
 
 For that Linux capture the batchmode compile fixture of a fresh copy of this probe exited 139
 after its `-quit` (twice); the shader pass count fixture, whose Packages/ and ProjectSettings/ this
