@@ -1,0 +1,2 @@
+.broken-ok { width: 30px; }
+.broken-hex { color: #12345; }

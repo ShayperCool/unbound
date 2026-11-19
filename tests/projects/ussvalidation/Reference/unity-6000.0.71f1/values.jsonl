@@ -1,0 +1,67 @@
+{"k":"import.logs","v":"Warning: Assets/Resources/Invalid.uss (line 2): warning: Expected (<length-percentage> | auto) but found '10' |     width: 10 -> Property expects a unit. Did you forget to add px or %? | Warning: Assets/Resources/Invalid.uss (line 3): warning: Expected (<length-percentage> | auto) but found 'wide' |     width: wide | Warning: Assets/Resources/Invalid.uss (line 4): warning: Expected end of value but found '20px' |     width: 10px 20px | Warning: Assets/Resources/Invalid.uss (line 6): warning: Expected (<length-percentage> | auto) but found 'wide' |     width: wide | Warning: Assets/Resources/Invalid.uss (line 7): warning: Expected (<color>) but found 'notacolor' |     color: notacolor -> Unsupported color 'notacolor'. | Warning: Assets/Resources/Invalid.uss (line 8): warning: Expected (<color>) but found 'rgb(1,2)' |     color: rgb(1,2) -> Unsupported color 'rgb(1,2)'. | Warning: Assets/Resources/Invalid.uss (line 8): warning: Unknown function 'rgb' in declaration 'color: rgb' | Warning: Assets/Resources/Invalid.uss (line 10): warning: Expected (column | row | column-reverse | row-reverse) but found 'diagonal' |     flex-direction: diagonal | Warning: Assets/Resources/Invalid.uss (line 12): warning: Expected (normal | nowrap | pre | pre-wrap) but found 'nowrapx' |     white-space: nowrapx | Warning: Assets/Resources/Invalid.uss (line 13): warning: Expected (flex | none) but found 'grid' |     display: grid | Warning: Assets/Resources/Invalid.uss (line 14): warning: Expected (<resource> | <url> | none) but found '12px' |     background-image: 12px | Warning: Assets/Resources/Invalid.uss (line 16): warning: Expected (<time>#) but found '2' |     transition-duration: 2 -> Property expects a unit. Did you forget to add s or ms? | Warning: Assets/Resources/Invalid.uss (line 17): warning: Expected (none | <single-transition-property>#) but found '12px' |     transition-property: 12px | Warning: Assets/Resources/Invalid.uss (line 18): warning: Expected (<easing-function>#) but found 'ease-wobble' |     transition-timing-function: ease-wobble | Warning: Assets/Resources/Invalid.uss (line 19): warning: Expected end of value but found 'wobble' |     transition: width 1s wobble | Warning: Assets/Resources/Invalid.uss (line 22): warning: Unknown property 'colr' (did you mean 'color'?) |     colr: red | Warning: Assets/Resources/Invalid.uss (line 23): warning: Expected (<integer>) but found '1.5' |     -unity-slice-left: 1.5 | Warning: Assets/Resources/Invalid.uss (line 24): warning: Expected (<number>) but found 'half' |     opacity: half | Warning: Assets/Resources/Invalid.uss (line 25): warning: Expected (normal | italic | bold | bold-and-italic) but found 'wavy' |     -unity-font-style: wavy | Warning: Assets/Resources/Invalid.uss (line 26): warning: Expected end of value but found 'black' |     border-color: red green blue yellow black | Error: Assets/Resources/Broken.uss (line 2): error: USS parsing error: An unexpected error occurred. | Warning: Assets/Resources/Errors.uss (line 2): warning: Expected (<length-percentage> | auto) but found '10' |     width: 10 -> Property expects a unit. Did you forget to add px or %? | Error: Assets/Resources/Errors.uss (line 2): error: Unsupported unit: '10' | Warning: Assets/Resources/Errors.uss (line 3): warning: Expected (<time>#) but found '1' |     transition-duration: 1 -> Property expects a unit. Did you forget to add s or ms? | Error: Assets/Resources/Errors.uss (line 3): error: Unsupported unit: '1' | Error: Assets/Resources/Errors.uss (line 4): error: Variable 'my-var' is missing '--' prefix"}
+{"k":"broken.loaded","v":true}
+{"k":"errors.loaded","v":true}
+{"k":"start.logs","v":""}
+{"k":"style.len-unit","v":"10"}
+{"k":"style.len-unit.logs","v":""}
+{"k":"style.len-word","v":"0"}
+{"k":"style.len-word.logs","v":"Error: Trying to read value of type Dimension while reading a value of type Enum"}
+{"k":"style.len-many","v":"10"}
+{"k":"style.len-many.logs","v":""}
+{"k":"style.len-ok","v":"30"}
+{"k":"style.len-ok.logs","v":""}
+{"k":"style.override","v":"0"}
+{"k":"style.override.logs","v":"Error: Trying to read value of type Dimension while reading a value of type Enum"}
+{"k":"style.color-bad","v":"(0, 0, 0, 0)"}
+{"k":"style.color-bad.logs","v":""}
+{"k":"style.color-fn","v":"(0, 0, 0, 1)"}
+{"k":"style.color-fn.logs","v":"Exception: ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection. / Parameter name: index"}
+{"k":"style.color-ok","v":"(0, 0, 0, 1)"}
+{"k":"style.color-ok.logs","v":""}
+{"k":"style.enum-bad","v":"Column"}
+{"k":"style.enum-bad.logs","v":""}
+{"k":"style.enum-ok","v":"Row"}
+{"k":"style.enum-ok.logs","v":""}
+{"k":"style.kw-bad","v":"Normal"}
+{"k":"style.kw-bad.logs","v":""}
+{"k":"style.kw-display","v":"Flex"}
+{"k":"style.kw-display.logs","v":""}
+{"k":"style.url-bad","v":"d_console.warnicon"}
+{"k":"style.url-bad.logs","v":"Warning: Invalid value for image texture Dimension"}
+{"k":"style.url-ok","v":"none"}
+{"k":"style.url-ok.logs","v":""}
+{"k":"style.time-unit","v":"[2Second]"}
+{"k":"style.time-unit.logs","v":""}
+{"k":"style.trans-prop","v":"[]"}
+{"k":"style.trans-prop.logs","v":""}
+{"k":"style.trans-ease","v":"[Ease]"}
+{"k":"style.trans-ease.logs","v":""}
+{"k":"style.trans-short","v":"[all] / [Ease]"}
+{"k":"style.trans-short.logs","v":""}
+{"k":"style.var-ok","v":"12"}
+{"k":"style.var-ok.logs","v":""}
+{"k":"style.var-fallback","v":"0"}
+{"k":"style.var-fallback.logs","v":""}
+{"k":"style.unknown","v":"(0.105882354, 0.105882354, 0.105882354, 1)"}
+{"k":"style.unknown.logs","v":""}
+{"k":"style.int-bad","v":"1"}
+{"k":"style.int-bad.logs","v":""}
+{"k":"style.num-bad","v":"0"}
+{"k":"style.num-bad.logs","v":"Error: Trying to read value of type Float while reading a value of type Enum"}
+{"k":"style.font-bad","v":"Normal"}
+{"k":"style.font-bad.logs","v":""}
+{"k":"style.many-colors","v":"(1, 0, 0, 1) (1, 1, 0, 1)"}
+{"k":"style.many-colors.logs","v":""}
+{"k":"style.broken-ok","v":"20"}
+{"k":"style.broken-ok.logs","v":""}
+{"k":"style.broken-hex","v":"(0.105882354, 0.105882354, 0.105882354, 1)"}
+{"k":"style.broken-hex.logs","v":""}
+{"k":"style.errors-ok","v":"20"}
+{"k":"style.errors-ok.logs","v":""}
+{"k":"style.errors-unit","v":"20"}
+{"k":"style.errors-unit.logs","v":""}
+{"k":"style.errors-time","v":"[0Second]"}
+{"k":"style.errors-time.logs","v":""}
+{"k":"style.errors-var","v":"(0.105882354, 0.105882354, 0.105882354, 1)"}
+{"k":"style.errors-var.logs","v":""}
+{"k":"complete","v":true}

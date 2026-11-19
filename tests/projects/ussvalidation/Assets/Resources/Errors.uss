@@ -1,0 +1,4 @@
+.errors-ok { width: 30px; }
+.errors-unit { width: 10qq; }
+.errors-time { transition-duration: 1q; }
+.errors-var { color: var(my-var); }

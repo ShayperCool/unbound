@@ -1,0 +1,26 @@
+.cell { position: absolute; left: 0; top: 0; width: 20px; height: 20px; }
+.len-unit { width: 10; }
+.len-word { width: wide; }
+.len-many { width: 10px 20px; }
+.len-ok { width: 30px; }
+.override { width: 40px; width: wide; }
+.color-bad { color: notacolor; }
+.color-fn { color: rgb(1, 2); }
+.color-ok { color: #ff0000; }
+.enum-bad { flex-direction: diagonal; }
+.enum-ok { flex-direction: row; }
+.kw-bad { white-space: nowrapx; }
+.kw-display { display: grid; }
+.url-bad { background-image: 12px; }
+.url-ok { background-image: none; }
+.time-unit { transition-duration: 2; }
+.trans-prop { transition-property: 12px; }
+.trans-ease { transition-timing-function: ease-wobble; }
+.trans-short { transition: width 1s wobble; }
+.var-ok { --my-var: 12px; width: var(--my-var); }
+.var-fallback { width: var(--missing, wide); }
+.unknown { colr: red; }
+.int-bad { -unity-slice-left: 1.5; }
+.num-bad { opacity: half; }
+.font-bad { -unity-font-style: wavy; }
+.many-colors { border-color: red green blue yellow black; }

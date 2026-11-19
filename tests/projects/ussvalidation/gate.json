@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/ussvalidation/run.py gate"],
+  "summary": "ussvalidation: .*",
+  "engine_paths": [
+    "managed/UnityEngine/UIElements/StyleSheets/UssParser.cs",
+    "managed/UnityEngine/UIElements/Style/StyleReader.cs",
+    "managed/UnityEngine/UIElements/Style/StyleResolver.cs"
+  ]
+}
