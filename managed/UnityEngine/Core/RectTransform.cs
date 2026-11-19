@@ -277,6 +277,18 @@ namespace UnityEngine
             m_Pivot = body.Get("m_Pivot") != null ? body.Vector2("m_Pivot") : new Vector2(0.5f, 0.5f);
         }
 
+        /// <summary>The Transform's fields, then those <see cref="ReadSerialized"/> reads, as a
+        /// RectTransform's document has them.</summary>
+        internal override void WriteSerialized(Unbound.Runtime.UnityYamlWriter.Writer w)
+        {
+            base.WriteSerialized(w);
+            w.Vector2("m_AnchorMin", m_AnchorMin);
+            w.Vector2("m_AnchorMax", m_AnchorMax);
+            w.Vector2("m_AnchoredPosition", m_AnchoredPosition);
+            w.Vector2("m_SizeDelta", m_SizeDelta);
+            w.Vector2("m_Pivot", m_Pivot);
+        }
+
         public enum Edge
         {
             Left = 0,

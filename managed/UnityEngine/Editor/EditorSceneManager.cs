@@ -116,6 +116,7 @@ namespace UnityEditor.SceneManagement
         public static bool SaveScene(Scene scene, [DefaultValue("\"\"")] string dstScenePath, [DefaultValue("false")] bool saveAsCopy)
         {
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
+            Undo.FlushDirtiness();
             var data = scene.Data;
             if (data == null) return false;
             var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
@@ -139,6 +140,7 @@ namespace UnityEditor.SceneManagement
         {
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
+            Undo.FlushDirtiness();
             bool all = true;
             foreach (var s in scenes)
                 if (s.Data is SceneData data && data.IsDirty) all &= SaveScene(s);
@@ -157,13 +159,25 @@ namespace UnityEditor.SceneManagement
         public static bool SaveModifiedScenesIfUserWantsTo(Scene[] scenes)
         {
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
+            Undo.FlushDirtiness();
             var modified = new List<string>();
             foreach (var s in scenes)
                 if (s.Data is SceneData data && data.IsDirty) modified.Add(data.Name.Length > 0 ? data.Name : "Untitled");
             if (modified.Count == 0) return true;
             var names = string.Concat(modified.Select(n => "\n " + n));
+            // The scene dialog's own text, with the batch-mode Editor's suffix (EditorUtility.DisplayDialog's
+            // measured assertion has none).
             Debug.LogAssertion($"Cancelling DisplayDialog: Scene(s) Have Been Modified Do you want to save the changes you made in the scenes:{names}\n\nYour changes will be lost if you don't save them.\nThis should not be called in batch mode.");
             return false;
+        }
+
+        /// <summary>A change to one of the scene's objects (EditorUtility.SetDirty): the scene is
+        /// dirty, sceneDirtied raised when it was not.</summary>
+        internal static void Dirty(SceneData data)
+        {
+            if (data.IsDirty || !data.IsLoaded) return;
+            data.IsDirty = true;
+            sceneDirtied?.Invoke(new Scene(data.Handle));
         }
 
         public static bool MarkSceneDirty(Scene scene)

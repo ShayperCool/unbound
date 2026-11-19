@@ -425,14 +425,23 @@ namespace UnityEngine
 
         internal override void WriteSerialized(UnityYamlWriter.Writer w)
         {
-            w.Int("serializedVersion", 2);
+            // A RectTransform's document has no version line (tests/projects/scenesave).
+            if (!(this is RectTransform)) w.Int("serializedVersion", 2);
             w.Quaternion("m_LocalRotation", m_LocalRotation);
             w.Vector3("m_LocalPosition", m_LocalPosition);
             w.Vector3("m_LocalScale", m_LocalScale);
             w.Bool("m_ConstrainProportionsScale", m_ConstrainProportionsScale);
-            w.RefList("m_Children", m_Children);
+            w.RefList("m_Children", SavedChildren());
             w.Ref("m_Father", m_Parent);
             w.Vector3("m_LocalEulerAnglesHint", m_LocalEulerAnglesHint);
+        }
+
+        /// <summary>The children a saved file lists: not those of GameObjects that are not saved
+        /// (HideFlags.DontSaveInEditor).</summary>
+        IEnumerable<Transform> SavedChildren()
+        {
+            foreach (var child in m_Children)
+                if ((child.gameObject.HideFlagsNoThrow & HideFlags.DontSaveInEditor) == 0) yield return child;
         }
 
         // ------------------------------------------------------------------ space conversion

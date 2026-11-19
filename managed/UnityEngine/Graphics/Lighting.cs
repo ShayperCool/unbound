@@ -424,6 +424,39 @@ namespace UnityEngine
                     s_SceneSettings.Remove(stale);
         }
 
+        /// <summary>Whether the settings in effect are the scene's (its RenderSettings document then
+        /// holds them as they are now).</summary>
+        internal static bool InEffectFor(SceneData scene) => scene != null && s_SettingsScene == scene;
+
+        /// <summary>The fields of a scene's RenderSettings document <see cref="Read"/> reads back,
+        /// from the settings in effect (the sun, the spot cookie, the indirect specular color and
+        /// the baked environment keep the file's).</summary>
+        internal static void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            w.Bool("m_Fog", s_Fog);
+            w.Color("m_FogColor", s_FogColor);
+            w.Int("m_FogMode", (int)s_FogMode);
+            w.Float("m_FogDensity", s_FogDensity);
+            w.Float("m_LinearFogStart", s_FogStart);
+            w.Float("m_LinearFogEnd", s_FogEnd);
+            w.Color("m_AmbientSkyColor", s_AmbientSky);
+            w.Color("m_AmbientEquatorColor", s_AmbientEquator);
+            w.Color("m_AmbientGroundColor", s_AmbientGround);
+            w.Float("m_AmbientIntensity", s_AmbientIntensity);
+            w.Int("m_AmbientMode", (int)s_AmbientMode);
+            w.Color("m_SubtractiveShadowColor", s_SubtractiveShadowColor);
+            w.Ref("m_SkyboxMaterial", s_Skybox);
+            w.Float("m_HaloStrength", s_HaloStrength);
+            w.Float("m_FlareStrength", s_FlareStrength);
+            w.Float("m_FlareFadeSpeed", s_FlareFadeSpeed);
+            w.Ref("m_HaloTexture", s_HaloTexture);
+            w.Int("m_DefaultReflectionMode", (int)s_DefaultReflectionMode);
+            w.Int("m_DefaultReflectionResolution", s_DefaultReflectionResolution);
+            w.Int("m_ReflectionBounces", s_ReflectionBounces);
+            w.Float("m_ReflectionIntensity", s_ReflectionIntensity);
+            w.Ref("m_CustomReflection", s_CustomReflection);
+        }
+
         /// <summary>Reads a scene's RenderSettings document.</summary>
         internal static void Read(YNode b, IReferenceResolver resolver)
         {

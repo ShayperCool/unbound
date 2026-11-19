@@ -50,10 +50,18 @@ namespace Unbound.Runtime
                 return false;
             }
             if (text == null) return false;
-            var file = Path.Combine(ProjectInfo.ProjectPath, path);
-            Directory.CreateDirectory(Path.GetDirectoryName(file));
-            File.WriteAllText(file, text);
-            NewAssetMeta.Write(path, NewAssetMeta.DefaultImporter);
+            try
+            {
+                var file = Path.Combine(ProjectInfo.ProjectPath, path);
+                Directory.CreateDirectory(Path.GetDirectoryName(file));
+                File.WriteAllText(file, text);
+                NewAssetMeta.Write(path, NewAssetMeta.DefaultImporter);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError($"Unbound: {path} is not saved: {e.Message}");
+                return false;
+            }
             return true;
         }
 
@@ -156,11 +164,25 @@ namespace Unbound.Runtime
             }
             if (written.Kind == YKind.Seq)
                 for (int i = 0; i < written.Items.Count; i++)
-                    written.Items[i] = Resolve(written.Items[i], old != null && old.Kind == YKind.Seq && i < old.Items.Count ? old.Items[i] : null, ref unlocated);
+                    written.Items[i] = Resolve(written.Items[i], OldItem(written.Items[i], old, i), ref unlocated);
             else if (written.Kind == YKind.Map && !written.Flow)
                 for (int i = 0; i < written.Keys.Count; i++)
                     written.Values[i] = Resolve(written.Values[i], old?.Kind == YKind.Map ? old.Get(written.Keys[i]) : null, ref unlocated);
             return written;
+        }
+
+        /// <summary>The file's item standing where a written one does: of a list of one-entry maps (a
+        /// material's property lists) the one of the same key, else the one at the same index.</summary>
+        static YText OldItem(YText item, YText old, int index)
+        {
+            if (old == null || old.Kind != YKind.Seq) return null;
+            if (item.Kind == YKind.Map && !item.Flow && item.Keys.Count == 1)
+            {
+                foreach (var candidate in old.Items)
+                    if (candidate.Kind == YKind.Map && candidate.Keys.Count == 1 && candidate.Keys[0] == item.Keys[0]) return candidate;
+                return null;
+            }
+            return index < old.Items.Count ? old.Items[index] : null;
         }
 
         /// <summary>Puts <paramref name="written"/>'s entries into <paramref name="body"/>: a block map
@@ -194,18 +216,9 @@ namespace Unbound.Runtime
             }
         }
 
-        static readonly Dictionary<Type, bool> s_Writable = new Dictionary<Type, bool>();
-
         /// <summary>Whether the class itself declares its writer (a derived class reads fields its
         /// base's writer does not write).</summary>
-        internal static bool Writable(Type type)
-        {
-            if (s_Writable.TryGetValue(type, out var writable)) return writable;
-            var method = type.GetMethod(nameof(Component.WriteSerialized), BindingFlags.Instance | BindingFlags.NonPublic);
-            writable = method != null && method.DeclaringType == type;
-            s_Writable[type] = writable;
-            return writable;
-        }
+        internal static bool Writable(Type type) => ImportedPrefabDocuments.Writable(type);
 
         /// <summary>The fields of a GameObject's document after its header.</summary>
         internal static void WriteGameObject(UnityYamlWriter.Writer w, GameObject go, IEnumerable<long> components)
@@ -240,7 +253,7 @@ namespace Unbound.Runtime
         sealed class SceneWriter
         {
             readonly SceneData m_Scene;
-            readonly SortedDictionary<long, YTextDocument> m_Out = new SortedDictionary<long, YTextDocument>();
+            SortedDictionary<long, YTextDocument> m_Out = new SortedDictionary<long, YTextDocument>();
             readonly Dictionary<long, YTextDocument> m_Source = new Dictionary<long, YTextDocument>();
             /// <summary>The file ids of every object written (Unbound's and the file's).</summary>
             readonly Dictionary<Object, long> m_Ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
@@ -253,6 +266,8 @@ namespace Unbound.Runtime
             readonly SortedSet<string> m_Unwritten = new SortedSet<string>(StringComparer.Ordinal);
             readonly AssetDatabaseRuntime.Locations m_Locations = new AssetDatabaseRuntime.Locations();
             int m_UnlocatedCount;
+            /// <summary>Ids for the first pass of objects whose ids come after it.</summary>
+            long m_Provisional;
 
             sealed class InstanceState
             {
@@ -282,14 +297,16 @@ namespace Unbound.Runtime
 
                 var roots = new List<GameObject>();
                 foreach (var root in m_Scene.Roots)
-                    if (root != null && (root.HideFlagsNoThrow & HideFlags.DontSaveInEditor) == 0) roots.Add(root);
-                // File ids first: references between objects need them all.
+                    if (root != null && Saved(root)) roots.Add(root);
+                // File ids first: references between objects need them all. The objects of prefab
+                // instances that the written documents reference are known once they are written:
+                // a first pass finds them, their stand-ins get ids, the second pass writes.
                 foreach (var root in roots) AssignIds(root.transform);
-                foreach (var root in roots) WriteHierarchy(root.transform);
-                Settings();
-                KeepUnclaimed();
-                Instances();
-                SceneRoots(roots);
+                m_Recording = true;
+                Pass(roots);
+                m_Recording = false;
+                foreach (var root in roots) InstanceIds(root.transform);
+                Pass(roots);
                 if (m_Unwritten.Count > 0)
                 {
                     Debug.LogError($"Unbound: {DisplayPath} is not saved: Unbound cannot write {string.Join(", ", m_Unwritten)} yet.");
@@ -306,6 +323,70 @@ namespace Unbound.Runtime
                 var docs = new List<YTextDocument>(m_Out.Values);
                 return UnityYamlText.Write(docs);
             }
+
+            /// <summary>Writes every document once (the state of a pass starts empty).</summary>
+            void Pass(List<GameObject> roots)
+            {
+                m_Out = new SortedDictionary<long, YTextDocument>();
+                m_LiveGameObjects.Clear();
+                m_Instances.Clear();
+                m_KeptAsRead.Clear();
+                m_Unwritten.Clear();
+                m_UnlocatedCount = 0;
+                foreach (var root in roots) WriteHierarchy(root.transform);
+                Settings();
+                Instances();
+                KeepUnclaimed();
+                SceneRoots(roots);
+                StrippedForReferences();
+                PruneStripped();
+            }
+
+            /// <summary>Drops the stripped documents nothing written references (as an instance's
+            /// stand-in for an added component goes once the component is applied to the prefab,
+            /// tests/projects/scenesave BaseApplied); a stand-in referenced by another kept one stays.</summary>
+            void PruneStripped()
+            {
+                while (true)
+                {
+                    var referenced = new HashSet<long>();
+                    void Walk(YText v)
+                    {
+                        switch (v.Kind)
+                        {
+                            case YKind.Map when v.Flow:
+                                if (v.Get("guid") == null) referenced.Add(ParseFileId(v));
+                                break;
+                            case YKind.Map:
+                                foreach (var child in v.Values) Walk(child);
+                                break;
+                            case YKind.Seq:
+                                foreach (var child in v.Items) Walk(child);
+                                break;
+                        }
+                    }
+                    foreach (var d in m_Out.Values) Walk(d.Body);
+                    var unused = new List<long>();
+                    foreach (var d in m_Out.Values)
+                        if (d.Stripped() && !referenced.Contains(d.FileId)) unused.Add(d.FileId);
+                    if (unused.Count == 0) return;
+                    foreach (var id in unused) m_Out.Remove(id);
+                }
+            }
+
+            /// <summary>While the first pass runs: the objects of prefab instances written
+            /// documents reference.</summary>
+            bool m_Recording;
+            readonly HashSet<Object> m_Referenced = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+
+            string Record(Object o)
+            {
+                if (m_Recording && Link(o) != null) m_Referenced.Add(o);
+                return null;
+            }
+
+            /// <summary>A written body, references noted while recording.</summary>
+            YText Written(Action<UnityYamlWriter.Writer> write) => Body(write, m_Ids, m_Locations, Record);
 
             string DisplayPath => m_Scene.Path.Length > 0 ? m_Scene.Path : "the untitled scene";
 
@@ -345,11 +426,11 @@ namespace Unbound.Runtime
                 return id;
             }
 
-            /// <summary>The file's stripped document of the instance's GameObject (0: none).</summary>
+            /// <summary>The file's stripped document of the instance's object (0: none).</summary>
             long FileStripped(PrefabLink link)
             {
                 foreach (var d in m_Source.Values)
-                    if (d.Stripped() && d.ClassId == EngineTypes.GameObjectId
+                    if (d.Stripped()
                         && ParseFileId(d.Body.Get("m_PrefabInstance")) == link.Instance.FileId
                         && ParseFileId(d.Body.Get("m_CorrespondingSourceObject")) == link.SourceFileId)
                         return d.FileId;
@@ -381,24 +462,67 @@ namespace Unbound.Runtime
                 }
                 else
                 {
-                    // A component added to an instance's GameObject is the scene's own object, named
-                    // with the stripped document of its GameObject; new ones take the ids after the
-                    // PrefabInstance's (measured for one instance: its stripped GameObject, then the
-                    // component).
+                    // A component added to an instance's GameObject is the scene's own object; a new
+                    // one gets its id after the first pass (InstanceIds).
                     foreach (var c in components)
-                    {
-                        if (Link(c) != null || m_Ids.ContainsKey(c)) continue;
-                        if (!m_Scene.StrippedIds.ContainsKey(go) && FileStripped(link) == 0) m_Scene.StrippedIds[go] = After(link.Instance.FileId);
-                        m_Ids[c] = After(link.Instance.FileId);
-                    }
+                        if (Link(c) == null && !m_Ids.ContainsKey(c)) m_Ids[c] = --m_Provisional;
                 }
-                for (int i = 0; i < t.childCount; i++) AssignIds(t.GetChild(i));
+                for (int i = 0; i < t.childCount; i++)
+                    if (Saved(t.GetChild(i).gameObject)) AssignIds(t.GetChild(i));
             }
 
+            /// <summary>
+            /// The ids of an instance's objects that need documents: a stripped stand-in for each one
+            /// written documents reference, for the GameObject of a component added to it and for
+            /// the GameObject of a referenced script; an added component's own. The file's stand-ins
+            /// keep theirs; new ones take the ids after the PrefabInstance's, in hierarchy order (a
+            /// GameObject, its components, then its children; measured for one instance:
+            /// tests/projects/scenesave, its root and script referenced, a component added to a child).
+            /// </summary>
+            void InstanceIds(Transform t)
+            {
+                var go = t.gameObject;
+                var link = Link(go);
+                if (link != null)
+                {
+                    var components = LiveComponents(go);
+                    bool needed = m_Referenced.Contains(go);
+                    foreach (var c in components)
+                        if (Link(c) == null || (c is MonoBehaviour && m_Referenced.Contains(c))) needed = true;
+                    if (needed) Stand(go, link);
+                    foreach (var c in components)
+                    {
+                        var componentLink = Link(c);
+                        if (componentLink == null)
+                        {
+                            if (m_Ids[c] < 0) m_Ids[c] = After(link.Instance.FileId);
+                        }
+                        else if (m_Referenced.Contains(c)) Stand(c, componentLink);
+                    }
+                }
+                for (int i = 0; i < t.childCount; i++)
+                    if (Saved(t.GetChild(i).gameObject)) InstanceIds(t.GetChild(i));
+            }
+
+            /// <summary>The id of the stripped document standing for an instance's object.</summary>
+            void Stand(Object o, PrefabLink link)
+            {
+                long id = FileStripped(link);
+                if (id == 0 && !m_Scene.StrippedIds.TryGetValue(o, out id)) id = After(link.Instance.FileId);
+                m_Scene.StrippedIds[o] = id;
+                m_Used.Add(id);
+                m_Ids[o] = id;
+                m_Stands.Add(o);
+            }
+
+            /// <summary>The instance objects that have stripped documents this save.</summary>
+            readonly HashSet<Object> m_Stands = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+
+            /// <summary>The GameObject's components that are saved (live, not HideFlags.DontSave).</summary>
             static List<Component> LiveComponents(GameObject go)
             {
                 var list = new List<Component>(go.m_Components.Count);
-                foreach (var c in go.m_Components) if (c != null && !c.m_Destroyed) list.Add(c);
+                foreach (var c in go.m_Components) if (c != null && !c.m_Destroyed && Saved(c)) list.Add(c);
                 return list;
             }
 
@@ -437,7 +561,7 @@ namespace Unbound.Runtime
                     long goId = m_Ids[go];
                     m_LiveGameObjects.Add(goId);
                     var body = Base(goId, EngineTypes.GameObjectId, "GameObject") ?? throw new InvalidOperationException("no GameObject document");
-                    Overlay(body, Body(w => WriteGameObject(w, go, ComponentIds(goId, components)), m_Ids, m_Locations), ref m_UnlocatedCount);
+                    Overlay(body, Written(w => WriteGameObject(w, go, ComponentIds(goId, components))), ref m_UnlocatedCount);
                     Document(go, goId, EngineTypes.GameObjectId, "GameObject", body);
                     foreach (var c in components) WriteComponent(c, go);
                 }
@@ -458,6 +582,7 @@ namespace Unbound.Runtime
                 for (int i = 0; i < t.childCount; i++)
                 {
                     var child = t.GetChild(i);
+                    if (!Saved(child.gameObject)) continue;
                     if (link != null && Link(child.gameObject) == null)
                         m_Unwritten.Add("GameObjects added to prefab instances");
                     WriteHierarchy(child);
@@ -491,7 +616,7 @@ namespace Unbound.Runtime
                 var type = c.GetType();
                 if (c is MonoBehaviour)
                 {
-                    var written = Resolve(Body(w => w.ScriptBody(c), m_Ids, m_Locations), Base(id, MonoBehaviourId, null), ref m_UnlocatedCount);
+                    var written = Resolve(Written(w => w.ScriptBody(c)), Base(id, MonoBehaviourId, null), ref m_UnlocatedCount);
                     Document(c, id, MonoBehaviourId, "MonoBehaviour", written);
                     return;
                 }
@@ -505,9 +630,30 @@ namespace Unbound.Runtime
                 }
                 body.Set("m_GameObject", FlowValue("{fileID: " + m_Ids[go].ToString(System.Globalization.CultureInfo.InvariantCulture) + "}"));
                 if (Enabled(c) is bool enabled && body.Get("m_Enabled") != null) body.Set("m_Enabled", Raw(enabled ? "1" : "0"));
-                if (Writable(type)) Overlay(body, Body(c.WriteSerialized, m_Ids, m_Locations), ref m_UnlocatedCount);
-                else if (!(c is Behaviour && body.Keys.Count <= 6)) m_KeptAsRead.Add(className);
+                if (Writable(type)) Overlay(body, Written(c.WriteSerialized), ref m_UnlocatedCount);
+                else if (HasFields(body))
+                {
+                    // A new one would be saved with the release's defaults whatever was set on it.
+                    if (!m_Known.Contains(id))
+                    {
+                        m_Unwritten.Add($"new {className} components");
+                        return;
+                    }
+                    m_KeptAsRead.Add(className);
+                }
                 Document(c, id, classId, className, body);
+            }
+
+            /// <summary>The document fields every component has (no state of its class).</summary>
+            static readonly HashSet<string> s_ComponentHeader = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_GameObject", "m_Enabled",
+            };
+
+            static bool HasFields(YText body)
+            {
+                foreach (var key in body.Keys) if (!s_ComponentHeader.Contains(key)) return true;
+                return false;
             }
 
             // ------------------------------------------------------------ prefab instances
@@ -618,37 +764,47 @@ namespace Unbound.Runtime
             void AddedComponent(InstanceState state, Component c, GameObject go, PrefabLink goLink)
             {
                 long id = m_Ids[c];
-                long stripped = StrippedGameObject(state, go, goLink);
                 state.AddedComponents.Add((goLink.SourceFileId, id));
                 if (c is MonoBehaviour)
                 {
-                    var written = Resolve(Body(w => w.ScriptBody(c), m_Ids, m_Locations), Base(id, MonoBehaviourId, null), ref m_UnlocatedCount);
-                    written.Set("m_GameObject", FlowValue("{fileID: " + stripped + "}"));
+                    var written = Resolve(Written(w => w.ScriptBody(c)), Base(id, MonoBehaviourId, null), ref m_UnlocatedCount);
+                    written.Set("m_GameObject", FlowValue("{fileID: " + m_Ids[go] + "}"));
                     Document(c, id, MonoBehaviourId, "MonoBehaviour", written);
                     return;
                 }
                 m_Unwritten.Add($"{c.GetType().Name} components added to prefab instances");
             }
 
-            /// <summary>The stripped document standing for an instance's GameObject (the file's, else
-            /// a new one).</summary>
-            long StrippedGameObject(InstanceState state, GameObject go, PrefabLink link)
+            /// <summary>The stripped document standing for an instance's object: the file's, else a
+            /// new one (a script's names its script and the stand-in of its GameObject, as Unity's
+            /// stripped MonoBehaviour documents do).</summary>
+            void StandDocument(Object o)
             {
-                long id = FileStripped(link);
-                if (id != 0)
+                long id = m_Ids[o];
+                if (m_Out.ContainsKey(id)) return;
+                if (m_Source.TryGetValue(id, out var file) && file.Stripped())
                 {
-                    m_Out[id] = Clone(m_Source[id]);
-                    return id;
+                    m_Out[id] = Clone(file);
+                    return;
                 }
-                if (!m_Scene.StrippedIds.TryGetValue(go, out id)) m_Scene.StrippedIds[go] = id = After(state.Document.FileId);
-                m_Used.Add(id);
-                if (m_Out.ContainsKey(id)) return id;
+                var link = Link(o);
+                int classId = o is GameObject ? EngineTypes.GameObjectId : o is MonoBehaviour ? MonoBehaviourId : EngineTypes.EngineClassIdOf(o.GetType());
                 var body = YText.Map();
                 body.Add("m_CorrespondingSourceObject", FlowValue($"{{fileID: {link.SourceFileId}, guid: {link.SourceGuid}, type: 3}}"));
-                body.Add("m_PrefabInstance", FlowValue("{fileID: " + state.Document.FileId + "}"));
+                body.Add("m_PrefabInstance", FlowValue("{fileID: " + link.Instance.FileId + "}"));
                 body.Add("m_PrefabAsset", FlowValue("{fileID: 0}"));
-                m_Out[id] = new YTextDocument { Header = $"--- !u!1 &{id} stripped", ClassId = EngineTypes.GameObjectId, FileId = id, ClassName = "GameObject", Body = body };
-                return id;
+                if (o is MonoBehaviour mb)
+                {
+                    var go = mb.gameObject;
+                    body.Add("m_GameObject", FlowValue("{fileID: " + (m_Stands.Contains(go) ? m_Ids[go] : 0) + "}"));
+                    body.Add("m_Enabled", Raw("1"));
+                    body.Add("m_EditorHideFlags", Raw("0"));
+                    body.Add("m_Script", FlowValue(new UnityYamlWriter.Writer(new StringBuilder(), m_Ids, null, null, m_Locations).ReferenceText(MonoScript.FromType(mb.GetType()))));
+                    body.Add("m_Name", Raw(""));
+                    body.Add("m_EditorClassIdentifier", Raw(""));
+                }
+                var className = o is GameObject ? "GameObject" : o is MonoBehaviour ? "MonoBehaviour" : o.GetType().Name;
+                m_Out[id] = new YTextDocument { Header = $"--- !u!{classId} &{id} stripped", ClassId = classId, FileId = id, ClassName = className, Body = body };
             }
 
             void Instances()
@@ -731,32 +887,73 @@ namespace Unbound.Runtime
                     foreach (var d in m_Source.Values)
                         if (d.ClassId == classId) { doc = Clone(d); break; }
                     doc ??= Defaults.Settings(classId);
+                    if (classId == RenderSettingsId && RenderSettings.InEffectFor(m_Scene))
+                        Overlay(doc.Body, Written(RenderSettings.WriteSerialized), ref m_UnlocatedCount);
+                    if (classId == LightmapSettingsId) LightingSettingsReference(doc.Body);
                     m_Out[doc.FileId] = doc;
                 }
+            }
+
+            /// <summary>The scene's Lighting Settings as it has them now (Lightmapping.lightingSettings
+            /// assigns them): written when they are an asset or the scene's own object, else the save
+            /// fails rather than drop the change.</summary>
+            void LightingSettingsReference(YText body)
+            {
+                var current = m_Scene.LightingSettings;
+                // None now may be a reference the file names that did not load: kept.
+                if (current == null) return;
+                var written = FlowValue(current == null ? "{fileID: 0}" : new UnityYamlWriter.Writer(new StringBuilder(), m_Ids, null, null, m_Locations).ReferenceText(current));
+                var old = body.Get("m_LightingSettings");
+                if (old != null && UnityYamlText.FlowText(old) == UnityYamlText.FlowText(written)) return;
+                if (written.Raw == UnityYamlWriter.Writer.UnlocatedReference || ParseFileId(written) == 0)
+                {
+                    m_Unwritten.Add("Lighting Settings that are no asset of the project");
+                    return;
+                }
+                body.Set("m_LightingSettings", written);
             }
 
             /// <summary>The file's documents Unbound made no object of: kept while their GameObject is.</summary>
             void KeepUnclaimed()
             {
+                // Instances whose objects Unbound made none of (a missing prefab) stay as read.
+                foreach (var d in m_Source.Values)
+                    if (d.ClassId == EngineTypes.PrefabInstanceId && !m_Out.ContainsKey(d.FileId) && !InstanceGone(d.FileId))
+                        m_Out[d.FileId] = Clone(d);
                 foreach (var d in m_Source.Values)
                 {
-                    if (m_Out.ContainsKey(d.FileId) || m_Known.Contains(d.FileId)) continue;
-                    if (d.ClassId == SceneRootsId || d.ClassId == EngineTypes.PrefabInstanceId || SceneSettings.IsSettingsClass(d.ClassId)) continue;
+                    if (m_Out.ContainsKey(d.FileId)) continue;
                     if (d.Stripped())
                     {
-                        // A prefab instance's stand-in: kept with its instance.
-                        if (m_Source.TryGetValue(ParseFileId(d.Body.Get("m_PrefabInstance")), out _)) m_Out[d.FileId] = Clone(d);
+                        // A prefab instance's stand-in (references and other instances' modifications
+                        // name it): kept with its instance.
+                        if (m_Out.TryGetValue(ParseFileId(d.Body.Get("m_PrefabInstance")), out var instance) && instance.ClassId == EngineTypes.PrefabInstanceId)
+                            m_Out[d.FileId] = Clone(d);
                         continue;
                     }
+                    if (m_Known.Contains(d.FileId)) continue;
+                    if (d.ClassId == SceneRootsId || d.ClassId == EngineTypes.PrefabInstanceId || SceneSettings.IsSettingsClass(d.ClassId)) continue;
                     if (d.ClassId == EngineTypes.GameObjectId) continue;
                     var owner = d.Body.Get("m_GameObject");
                     if (owner != null && !m_LiveGameObjects.Contains(ParseFileId(owner)) && !IsStrippedKept(ParseFileId(owner))) continue;
                     m_Out[d.FileId] = Clone(d);
                 }
-                // Instances whose objects Unbound made none of (a missing prefab) stay as read.
-                foreach (var d in m_Source.Values)
-                    if (d.ClassId == EngineTypes.PrefabInstanceId && !m_Out.ContainsKey(d.FileId) && !InstanceGone(d.FileId))
-                        m_Out[d.FileId] = Clone(d);
+            }
+
+            /// <summary>The stand-ins of this save's instance objects; a reference to an object of an
+            /// instance Unbound does not write fails the save.</summary>
+            void StrippedForReferences()
+            {
+                foreach (var o in m_Stands)
+                {
+                    if (o == null) continue;
+                    if (!m_Instances.TryGetValue(Link(o).Instance, out var state) || state == null)
+                    {
+                        m_Unwritten.Add("references to objects of prefab instances it does not write");
+                        continue;
+                    }
+                    StandDocument(o);
+                }
             }
 
             bool IsStrippedKept(long id) => m_Out.TryGetValue(id, out var d) && d.Stripped();
@@ -797,6 +994,9 @@ namespace Unbound.Runtime
                 };
             }
         }
+
+        /// <summary>Whether the object is saved with its scene (not HideFlags.DontSaveInEditor).</summary>
+        static bool Saved(Object o) => (o.HideFlagsNoThrow & HideFlags.DontSaveInEditor) == 0;
 
         static bool Stripped(this YTextDocument d) => d.Header.EndsWith(" stripped", StringComparison.Ordinal);
     }
