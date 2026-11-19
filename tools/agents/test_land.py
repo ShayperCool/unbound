@@ -173,6 +173,56 @@ class GatePriorityTests(unittest.TestCase):
                 self.assertEqual(gate.env.get('UNBOUND_LAND_GATE'), '1' if priority else None)
 
 
+class GateCheckoutTests(unittest.TestCase):
+    """A gate step that writes into the checkout fails the gate and lists every file."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        git = lambda *args: subprocess.run(['git', *args], cwd=self.root, check=True, capture_output=True)
+        git('init', '-q')
+        (self.root/'tests/projects/a/Assets').mkdir(parents=True)
+        (self.root/'tests/projects/a/Assets/Probe.cs').write_text('class Probe {}')
+        git('add', '.')
+        git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'probe')
+        self.gate = land.Gate(self.root, 'HEAD', [], False, self.root/'gate.log')
+
+    def write_meta(self):
+        (self.root/'tests/projects/a/Assets/Probe.cs.meta').write_text('guid')
+
+    def test_a_step_that_wrote_into_the_checkout_fails_the_gate(self):
+        with mock.patch.object(self.gate, 'steps', side_effect=self.write_meta), \
+             contextlib.redirect_stderr(io.StringIO()) as error:
+            with self.assertRaises(SystemExit) as failed:
+                self.gate.run()
+        self.assertEqual(failed.exception.code, 5)
+        self.assertIn('?? tests/projects/a/Assets/Probe.cs.meta', error.getvalue())
+        log = (self.root/'gate.log').read_text()
+        self.assertIn('wrote into the checkout', log)
+        self.assertNotIn('gate passed', log)
+        # The file stays for inspection.
+        self.assertTrue((self.root/'tests/projects/a/Assets/Probe.cs.meta').is_file())
+
+    def test_a_failing_gate_keeps_its_failure_and_reports_the_writes(self):
+        class ProbeFailed(Exception):
+            pass
+
+        def fail():
+            self.write_meta()
+            raise ProbeFailed()
+        with mock.patch.object(self.gate, 'steps', side_effect=fail), \
+             contextlib.redirect_stderr(io.StringIO()) as error:
+            with self.assertRaises(ProbeFailed):
+                self.gate.run()
+        self.assertIn('?? tests/projects/a/Assets/Probe.cs.meta', error.getvalue())
+
+    def test_a_clean_gate_passes(self):
+        with mock.patch.object(self.gate, 'steps'):
+            self.gate.run()
+        self.assertIn('gate passed', (self.root/'gate.log').read_text())
+
+
 class GateTimingTests(unittest.TestCase):
     def test_steps_and_phases_are_timestamped_in_their_logs(self):
         with tempfile.TemporaryDirectory() as temporary:

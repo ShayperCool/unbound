@@ -120,6 +120,38 @@ def probe_release(command, root, environment=None):
     return releases.pop() if releases else default_release()
 
 
+def checkout_state(root, paths=('.',)):
+    """The checkout's uncommitted and untracked (not ignored) files under `paths` (relative to
+    `root`): {path: (git status, content digest)}. Probe runs work on copies of their projects
+    (tests/probe_paths.py project_copy), as Unbound and the Editor write a project's files;
+    checkout_writes compares two states to find a run that wrote into the checkout anyway. A
+    directory outside any Git checkout (a test's scratch tree) has no state: {}."""
+    if not any((directory/'.git').exists() for directory in (Path(root).resolve(), *Path(root).resolve().parents)):
+        return {}
+    listed = subprocess.run(['git', '-c', 'status.renames=false', '--no-optional-locks', 'status',
+                             '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=all',
+                             '--', *paths], cwd=root, capture_output=True, check=True).stdout
+    state = {}
+    for entry in filter(None, listed.split(b'\0')):
+        path = os.fsdecode(entry[3:])
+        file = Path(root)/path
+        digest = (hashlib.sha256(file.read_bytes()).hexdigest()
+                  if file.is_file() and not file.is_symlink() else None)
+        state[path] = (entry[:2].decode(), digest)
+    return state
+
+
+def checkout_writes(root, before, paths=('.',)):
+    """The files under `paths` a run created, changed or removed since checkout_state `before`:
+    sorted 'XY path' lines in git's porcelain form (' D' for a file the run restored)."""
+    after = checkout_state(root, paths)
+    inside = lambda path: any(p in ('.', '') or path == p or path.startswith(p.rstrip('/')+'/') for p in paths)
+    changed = [f'{after[path][0]} {path}' for path in sorted(after) if before.get(path) != after[path]]
+    restored = [f'{before[path][0]} {path} (restored)' for path in sorted(before)
+                if path not in after and inside(path)]
+    return changed + restored
+
+
 # ps's dates and column words follow the locale and the time zone: fix both, so that a start
 # time is always five words and stays the same while a run's zone changes.
 PS_ENVIRONMENT = {'LC_ALL': 'C', 'TZ': 'UTC0'}

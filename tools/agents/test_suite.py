@@ -1396,5 +1396,57 @@ class PartialRecipeTests(unittest.TestCase):
             sys.path.pop(0)
 
 
+class CheckoutGuardTests(unittest.TestCase):
+    """No probe run may write into the checkout (probe_runtime.checkout_state/checkout_writes)."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        git = lambda *args: subprocess.run(['git', *args], cwd=self.root, check=True, capture_output=True)
+        git('init', '-q')
+        for name in ('a/Assets/Kept.cs', 'a/Assets/Edited.cs', 'a/Assets/Removed.cs', 'b/Assets/Other.cs'):
+            path = self.root/'tests/projects'/name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(name)
+        (self.root/'.gitignore').write_text('Library/\n')
+        git('add', '.')
+        git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'probes')
+        # A developer's uncommitted edit and untracked file, present before the run.
+        (self.root/'tests/projects/a/Assets/Edited.cs').write_text('uncommitted edit')
+        (self.root/'tests/projects/a/Assets/Untracked.cs').write_text('untracked')
+
+    def test_every_file_a_run_wrote_is_listed(self):
+        before = probe_runtime.checkout_state(self.root, ('tests/projects',))
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects',)), [])
+        projects = self.root/'tests/projects'
+        (projects/'a/Assets/Kept.cs.meta').write_text('guid')                 # created
+        (projects/'a/Assets/Edited.cs').write_text('uncommitted edit, then the run')  # already dirty
+        (projects/'a/Assets/Removed.cs').unlink()                            # removed
+        (projects/'a/Library').mkdir()
+        (projects/'a/Library/cache').write_text('ignored')                   # ignored: not the checkout's
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects',)),
+                         [' M tests/projects/a/Assets/Edited.cs', '?? tests/projects/a/Assets/Kept.cs.meta',
+                          ' D tests/projects/a/Assets/Removed.cs'])
+        # Only the named paths: another probe's project is checked on its own.
+        self.assertEqual(probe_runtime.checkout_writes(self.root, before, ('tests/projects/b',)), [])
+        # A run that restores a file to its committed text changed it too.
+        (projects/'a/Assets/Edited.cs').write_text('a/Assets/Edited.cs')
+        self.assertIn(' M tests/projects/a/Assets/Edited.cs (restored)',
+                      probe_runtime.checkout_writes(self.root, before, ('tests/projects/a',)))
+
+    def test_a_tree_outside_any_checkout_has_no_state(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            self.assertEqual(probe_runtime.checkout_state(scratch), {})
+
+    def test_a_probe_that_wrote_into_the_checkout_fails(self):
+        passed = {'probe': 'a', 'status': 'pass', 'summary': '3/3 match'}
+        self.assertIs(suite.note_checkout_writes(passed, []), passed)
+        failed = suite.note_checkout_writes(passed, ['?? tests/projects/a/Assets/Kept.cs.meta'])
+        self.assertEqual(failed['status'], 'fail')
+        self.assertEqual(failed['checkout_writes'], ['?? tests/projects/a/Assets/Kept.cs.meta'])
+        self.assertTrue(failed['summary'].startswith('wrote into the checkout: ?? tests/projects/a/Assets/Kept.cs.meta || 3/3 match'))
+
+
 if __name__ == '__main__':
     unittest.main()

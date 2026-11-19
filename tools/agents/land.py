@@ -28,6 +28,9 @@ Gate:
     time as the API checks and managed tests: after the build's runtime is frozen for the probes
     and after gen-stubs, because `cargo test` may relink the build and build scripts watch
     managed/. The first failing of the two lanes stops the other;
+  - the checkout stays as it was: a gate step that writes into it fails the gate, with every
+    file it created, changed or removed listed (probes and tests run on copies of their projects,
+    tests/probe_paths.py project_copy);
   - each --probe command, in a bounded parallel driver pool with exclusive recipe barriers,
     which must exit 0. $UNBOUND names the built CLI and
     $UNBOUND_PROBE_UNITY_VERSION the release: the exported value, else the release of the probe
@@ -74,7 +77,7 @@ import threading
 import tomllib
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '7'
+GATE_VERSION = '8'
 # Driver concurrency only; each driver still admits its heavy jobs through the shared pool.
 EXPLICIT_PROBE_WORKERS = 16
 AUTO_PROBE_BUDGET_SECONDS = 600
@@ -97,7 +100,8 @@ STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR, probe_path,
-                           EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree)
+                           EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree,
+                           checkout_state, checkout_writes)
 from probe_schedule import parallel_groups
 from runtime_snapshot import snapshot_runtime, pin_main, atomic_json, release_reference
 from slot import changed_paths, hidden_index_paths, inside_any, live_process_paths, slot_root
@@ -567,6 +571,33 @@ class Gate:
 
     def run(self):
         self.note('gate started')
+        # No gate step may write into the checkout (probes run on copies of their projects).
+        before = checkout_state(self.worktree)
+        try:
+            self.steps()
+        except BaseException:
+            self.check_checkout(before, failing=True)
+            raise
+        self.check_checkout(before)
+        self.note('gate passed')
+
+    def check_checkout(self, before, failing=False):
+        """Fail the gate (or, when it already fails, report) for every file of the checkout a step
+        created, changed or removed. The files stay for inspection."""
+        written = checkout_writes(self.worktree, before)
+        if not written:
+            return
+        message = ('gate steps wrote into the checkout; probes and tests run on copies of their '
+                   'projects (tests/probe_paths.py project_copy), as Unbound and the Editor write '
+                   'project files:\n  ' + '\n  '.join(written))
+        with self.log.open('a') as out:
+            out.write('\nland: ' + message + '\n')
+        if failing:
+            print('land: ' + message, file=sys.stderr, flush=True)
+        else:
+            die(5, message)
+
+    def steps(self):
         changed = self.changed if self.changed is not None else git(
             'diff', '--name-only', '--no-renames', f'{self.base}...HEAD', cwd=self.worktree).splitlines()
         guard = subprocess.run([sys.executable, str(HERE/'oracle_guard.py'), self.base, 'HEAD'],
@@ -620,7 +651,6 @@ class Gate:
             self.note('automatic probe selection started')
             self.automatic = automatic_checks(self.worktree, changed, self.probes, full=self.full)
         self.run_automatic_probes()
-        self.note('gate passed')
 
     def rust_tests(self, command):
         """Rust tests with their own log beside the .NET lane; their result line goes to the gate log."""

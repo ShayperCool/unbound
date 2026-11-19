@@ -125,6 +125,10 @@ tools/validation/README.md for why that is unsafe).
      `tools/agents/runtime_snapshot.py create --cli <build-cli> --destination <run>/runtime`,
      then use that reference's `unbound` and `managed/`. A rebuilt artifact gets a new run
      reference. Keep project `Library/Unbound`, captures and logs private to the run.
+   - Unbound, like the Editor, writes a project's files, so every engine or Editor run of a probe
+     uses a private copy of its project (`tests/probe_paths.py` `project_copy`; `suite.py` stages
+     direct engine steps itself, and `editor_runner.py` refuses a project inside the checkout).
+     `suite.py` and `land.py` fail a run that created, changed or removed a file of the checkout.
      See [Shared probe runtimes](../validation/README.md#shared-probe-runtimes).
    - Build, run the engine, run the Editor and run tests as often as you need. There are no budgets;
      the job pool bounds the machine.
