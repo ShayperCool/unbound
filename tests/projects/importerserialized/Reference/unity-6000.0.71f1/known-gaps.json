@@ -1,0 +1,92 @@
+[
+  {
+    "key": "edit/importer.spritesheet",
+    "reference": "Sheet_a,Sheet_renamed,Sheet_c",
+    "actual": "",
+    "reason": "TextureImporter.spritesheet (obsolete) is still a generated stub (it needs SpriteMetaData hand-written); the SerializedObject edit itself reaches the importer (edit/again.name)."
+  },
+  {
+    "key": "schema/Plain/m_Output.textureImportInstructions.uncompressedFormat",
+    "reference": "uncompressedFormat|int|0|2|-|editable|visible|3",
+    "actual": "uncompressedFormat|int|0|2|-|editable|visible|4",
+    "reason": "The import's uncompressed fallback format: RGB24 for an opaque Default texture, RGBA32 for the sprites; the rule is not measured, so Unbound reads the tree's default."
+  },
+  {
+    "key": "schema/Plain/m_Output.textureImportInstructions.usageMode",
+    "reference": "usageMode|int|0|2|-|editable|visible|0",
+    "actual": "usageMode|int|0|2|-|editable|visible|6",
+    "reason": "The import's TextureUsageMode: 0 for the Default texture, 6 for the sprites; the rule is not measured, so Unbound reads the tree's default."
+  },
+  {
+    "key": "value/Plain/m_Output.textureImportInstructions.uncompressedFormat",
+    "reference": "0|int|3",
+    "actual": "0|int|4",
+    "reason": "The import's uncompressed fallback format: RGB24 for an opaque Default texture, RGBA32 for the sprites; the rule is not measured, so Unbound reads the tree's default."
+  },
+  {
+    "key": "value/Plain/m_Output.textureImportInstructions.usageMode",
+    "reference": "0|int|0",
+    "actual": "0|int|6",
+    "reason": "The import's TextureUsageMode: 0 for the Default texture, 6 for the sprites; the rule is not measured, so Unbound reads the tree's default."
+  },
+  {
+    "key": "value/Plain/m_UsedFileIDs.Array.data[0]",
+    "reference": "0|long|2800000",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Plain/m_UsedFileIDs.Array.size",
+    "reference": "12|ArraySize|1",
+    "actual": "12|ArraySize|0",
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Sheet/m_UsedFileIDs.Array.data[0]",
+    "reference": "0|long|-614674155174322089",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Sheet/m_UsedFileIDs.Array.data[1]",
+    "reference": "0|long|-510640322400115626",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Sheet/m_UsedFileIDs.Array.data[2]",
+    "reference": "0|long|-566874324973520379",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Sheet/m_UsedFileIDs.Array.data[3]",
+    "reference": "0|long|2800000",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Sheet/m_UsedFileIDs.Array.size",
+    "reference": "12|ArraySize|4",
+    "actual": "12|ArraySize|0",
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Single/m_UsedFileIDs.Array.data[0]",
+    "reference": "0|long|21300000",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Single/m_UsedFileIDs.Array.data[1]",
+    "reference": "0|long|2800000",
+    "actual": null,
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  },
+  {
+    "key": "value/Single/m_UsedFileIDs.Array.size",
+    "reference": "12|ArraySize|2",
+    "actual": "12|ArraySize|0",
+    "reason": "The file IDs the import used (the texture's 2800000 and each sprite's) are the import's, not the .meta's; Unbound gives none. Their order is not measured (the sheet's three sprites are not in ascending or creation order)."
+  }
+]

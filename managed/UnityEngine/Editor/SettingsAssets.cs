@@ -70,7 +70,8 @@ namespace Unbound.Runtime
     internal static class TypeTreeTargets
     {
         internal static ITypeTreeTarget Of(Object o) =>
-            (ITypeTreeTarget)SettingsAssets.Of(o) ?? (o is Material material ? new MaterialTypeTree(material) : null);
+            (ITypeTreeTarget)SettingsAssets.Of(o) ?? (o is Material material ? new MaterialTypeTree(material)
+                : o is UnityEditor.AssetImporter importer ? ImporterTypeTree.Of(importer) : null);
     }
 
     /// <summary>A file of ProjectSettings/: its object (as AssetDatabase loads it), its text as
