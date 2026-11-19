@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -65,9 +66,42 @@ namespace UnityEngine.Tests
             var a = Body("A", at + new Vector2(-0.5f, -1f), LayerA);
             var b = Body("B", at + new Vector2(0.5f, 1f), LayerB);
             b.GetComponent<Collider2D>().includeLayers = 1 << EffectorLayer;
+            // The same for a body whose Rigidbody2D includes the effector's layer (the rule's
+            // other include layers).
+            var c = Body("C", at + new Vector2(0.5f, -1f), LayerB);
+            c.includeLayers = 1 << EffectorLayer;
             for (int i = 0; i < 10; i++) Physics2D.Simulate(Dt);
             Assert.True(a.linearVelocity.x > 0.1f);
             Assert.Equal(0f, b.linearVelocity.x);
+            Assert.Equal(0f, c.linearVelocity.x);
+        }
+
+        const string ForceLayers = "Collider2D.forceSendLayers / forceReceiveLayers";
+
+        static int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == ForceLayers).Value;
+
+        /// <summary>Force layers that leave layers out are kept but not applied to contacts: setting
+        /// or reading them is reported; Everything (the default) is not.</summary>
+        [Fact]
+        public void ForceLayersLeavingLayersOutAreReported()
+        {
+            var collider = Make("Forces", new Vector2(0f, 3100f), LayerA).AddComponent<CircleCollider2D>();
+            int before = Hits();
+            collider.forceReceiveLayers = -1;
+            collider.forceSendLayers = -1;
+            Assert.Equal(before, Hits());
+            collider.forceReceiveLayers = ~(1 << EffectorLayer);
+            Assert.Equal(before + 1, Hits());
+            Assert.Equal(~(1 << EffectorLayer), collider.forceReceiveLayers.value);
+
+            var read = Make("Read", new Vector2(0f, 3200f), LayerA).AddComponent<CircleCollider2D>();
+            Unbound.Runtime.ObjectGraphBuilder.ReadComponent(read, TestYaml.DocumentBody(
+                "CircleCollider2D:\n  m_ForceSendLayers:\n    serializedVersion: 2\n    m_Bits: 4294967295\n  m_ForceReceiveLayers:\n    serializedVersion: 2\n    m_Bits: 4294967295\n"), new Unbound.Runtime.LoadedFile());
+            Assert.Equal(before + 1, Hits());
+            Unbound.Runtime.ObjectGraphBuilder.ReadComponent(read, TestYaml.DocumentBody(
+                "CircleCollider2D:\n  m_ForceSendLayers:\n    serializedVersion: 2\n    m_Bits: 4294966271\n"), new Unbound.Runtime.LoadedFile());
+            Assert.Equal(before + 2, Hits());
+            Assert.Equal(~(1 << LayerB), read.forceSendLayers.value);
         }
     }
 }

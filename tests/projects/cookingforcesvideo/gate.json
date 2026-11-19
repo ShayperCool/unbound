@@ -6,9 +6,12 @@
   "engine_paths": [
     "managed/UnityEngine/Physics/Collider.cs",
     "native/unbound_physx.cpp",
-    "managed/UnityEngine/Physics2D/Effector2D.cs",
+    "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
+    "managed/UnityEngine/Physics2D/Physics2DEffectors.cs",
+    "managed/UnityEngine/Physics2D/Effectors2D.cs",
+    "managed/UnityEngine/Physics2D/VolumeEffectors2D.cs",
     "managed/UnityEngine/Physics2D/Collider2D.cs",
     "managed/UnityEngine/Video/VideoPlayer.cs",
-    "managed/UnityEngine/Video/VideoClip.cs"
+    "crates/unbound-runtime/src/video.rs"
   ]
 }
