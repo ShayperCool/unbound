@@ -42,6 +42,7 @@ namespace UssValidationProbe
             ("unknown", s => C(s.color)), ("int-bad", s => s.unitySliceLeft.ToString(Inv)), ("num-bad", s => F(s.opacity)),
             ("font-bad", s => s.unityFontStyleAndWeight.ToString()),
             ("many-colors", s => C(s.borderTopColor) + " " + C(s.borderLeftColor)),
+            ("kw-inherit", s => F(s.width)), ("kw-unset", s => C(s.color)), ("flex-ok", s => F(s.flexGrow) + " " + s.flexBasis.ToString()),
             ("broken-ok", s => F(s.width)), ("broken-hex", s => C(s.color)),
             ("errors-ok", s => F(s.width)), ("errors-unit", s => F(s.width)),
             ("errors-time", s => Join(s.transitionDuration.Select(t => t.value.ToString("R", Inv) + t.unit))), ("errors-var", s => C(s.color)),

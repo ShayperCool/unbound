@@ -24,3 +24,6 @@
 .num-bad { opacity: half; }
 .font-bad { -unity-font-style: wavy; }
 .many-colors { border-color: red green blue yellow black; }
+.kw-inherit { width: inherit; }
+.kw-unset { color: unset; }
+.flex-ok { flex: 1 0 auto; flex-basis: 10px; }
