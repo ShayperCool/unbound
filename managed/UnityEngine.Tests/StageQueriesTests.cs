@@ -88,6 +88,76 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(go); }
         }
 
+        sealed class Messages : ILogHandler
+        {
+            internal readonly List<string> Values = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args) => Values.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Values.Add(exception.Message);
+        }
+
+        [Fact]
+        public void PostprocessHandlersChainAndAThrowingOneDoesNotStopTheApply()
+        {
+            var go = new GameObject("chained");
+            var previous = Debug.unityLogger.logHandler;
+            var messages = new Messages();
+            var order = new List<string>();
+            Undo.PostprocessModifications first = m => { order.Add("first " + m.Length); return Array.Empty<UndoPropertyModification>(); };
+            Undo.PostprocessModifications second = m => { order.Add("second " + m.Length); throw new InvalidOperationException("handler failed"); };
+            Undo.postprocessModifications += first;
+            Undo.postprocessModifications += second;
+            try
+            {
+                Debug.unityLogger.logHandler = messages;
+                var serialized = new SerializedObject(go.transform);
+                serialized.FindProperty("m_LocalPosition.z").floatValue = 4f;
+                Assert.True(serialized.ApplyModifiedProperties());
+                // The second handler got what the first returned; its exception is logged.
+                Assert.Equal(new[] { "first 1", "second 0" }, order);
+                Assert.Contains("handler failed", messages.Values);
+                Assert.Equal(4f, go.transform.localPosition.z);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                Undo.postprocessModifications -= first;
+                Undo.postprocessModifications -= second;
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void AnInstancesDefaultOverridesComeInTheEditorsOrder()
+        {
+            var root = new GameObject("Root");
+            root.transform.localPosition = new Vector3(1f, 0.5f, -2f);
+            root.transform.localRotation = new Quaternion(0f, 0.70710677f, 0f, 0.70710677f);
+            var ui = new GameObject("Panel", typeof(RectTransform));
+            ((RectTransform)ui.transform).sizeDelta = new Vector2(30f, 40f);
+            try
+            {
+                var paths = new List<string>();
+                var values = new List<string>();
+                foreach (var (target, path) in PrefabUtility.DefaultOverrides(root))
+                {
+                    paths.Add(path);
+                    values.Add(PrefabUtility.DefaultOverrideValue(target, path));
+                }
+                Assert.Equal(new[] { "m_LocalPosition.x", "m_LocalPosition.y", "m_LocalPosition.z", "m_LocalRotation.w", "m_LocalRotation.x", "m_LocalRotation.y", "m_LocalRotation.z", "m_LocalEulerAnglesHint.x", "m_LocalEulerAnglesHint.y", "m_LocalEulerAnglesHint.z", "m_Name" }, paths);
+                var q = root.transform.localRotation;
+                Assert.Equal(new[] { "1", "0.5", "-2", FloatText.Format(q.w), "0", FloatText.Format(q.y), "0", "0", "0", "0", "Root" }, values);
+                var uiPaths = new List<string>();
+                foreach (var (target, path) in PrefabUtility.DefaultOverrides(ui)) uiPaths.Add(path + "=" + PrefabUtility.DefaultOverrideValue(target, path));
+                Assert.Contains("m_SizeDelta.x=30", uiPaths);
+                Assert.Equal("m_Name=Panel", uiPaths[^1]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(ui);
+            }
+        }
+
         [Fact]
         public void ARecordedApplyPassesItsChangesToPostprocessModifications()
         {

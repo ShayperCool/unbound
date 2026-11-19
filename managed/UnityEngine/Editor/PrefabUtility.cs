@@ -253,17 +253,18 @@ namespace UnityEditor
             return clone;
         }
 
-        /// <summary>The overrides an instance always has: the root's name and its local pose.</summary>
-        static IEnumerable<(Object Target, string Path)> DefaultOverrides(GameObject root)
+        /// <summary>The overrides an instance always has: its root's local pose, then the root's
+        /// name (the order of the Editor's PrefabInstance documents, tests/projects/scenesave).</summary>
+        internal static IEnumerable<(Object Target, string Path)> DefaultOverrides(GameObject root)
         {
-            yield return (root, "m_Name");
             var t = root.transform;
             foreach (var path in t is RectTransform ? RectTransformDefaults : TransformDefaults)
                 yield return (t, path);
+            yield return (root, "m_Name");
         }
 
         /// <summary>A default override's value as text: the source's name or local pose component.</summary>
-        static string DefaultOverrideValue(Object target, string path)
+        internal static string DefaultOverrideValue(Object target, string path)
         {
             if (path == "m_Name") return target.name;
             var dot = path.IndexOf('.');

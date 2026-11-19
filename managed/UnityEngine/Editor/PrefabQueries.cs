@@ -8,20 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor
 {
-    /// <summary>A modification a prefab instance makes to a property of its source prefab: the
-    /// source object, the property's path and its value (text, or an object reference).</summary>
-    [Serializable]
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    public sealed partial class PropertyModification
-    {
-        public Object target;
-        public string propertyPath;
-        public string value;
-        public Object objectReference;
-
-        public PropertyModification() { }
-    }
-
     public enum InteractionMode
     {
         AutomatedAction = 0,
@@ -55,7 +41,7 @@ namespace UnityEditor
         [Obsolete("Use GetOutermostPrefabInstanceRoot if source is a Prefab instance or source.transform.root.gameObject if source is a Prefab Asset object.")]
         public static GameObject FindPrefabRoot(GameObject source)
         {
-            if (source is null) throw new ArgumentNullException(nameof(source));
+            if (source == null) throw new ArgumentNullException(nameof(source));
             return IsPartOfPrefabInstance(source) ? GetOutermostPrefabInstanceRoot(source) : source;
         }
 
@@ -76,7 +62,7 @@ namespace UnityEditor
         /// tests/projects/scenesave instances.*).</summary>
         static void CheckPrefabRoot(GameObject prefabRoot)
         {
-            if (prefabRoot is null) throw new ArgumentNullException(nameof(prefabRoot));
+            if (prefabRoot == null) throw new ArgumentNullException(nameof(prefabRoot));
             if (!IsPartOfPrefabAsset(prefabRoot)) throw new ArgumentException("FindAllInstancesOfPrefab must be called with a Prefab asset.");
             if (prefabRoot.transform.parent != null) throw new ArgumentException("FindAllInstancesOfPrefab must be called with a root Prefab GameObject.");
         }
@@ -148,7 +134,7 @@ namespace UnityEditor.SceneManagement
         public static List<ObjectOverride> GetObjectOverrides(GameObject prefabInstance, bool includeDefaultOverrides = false)
         {
             // Measured: tests/projects/scenesave overrides.null, overrides.plain.
-            if (prefabInstance is null) throw new ArgumentNullException(nameof(prefabInstance));
+            if (prefabInstance == null) throw new ArgumentNullException(nameof(prefabInstance));
             if (!PrefabUtility.IsPartOfPrefabInstance(prefabInstance)) throw new ArgumentException("Provided GameObject is not a Prefab instance");
             var overrides = new List<ObjectOverride>();
             var root = PrefabUtility.GetOutermostPrefabInstanceRoot(prefabInstance);
@@ -160,7 +146,7 @@ namespace UnityEditor.SceneManagement
                 if (link == null || link.Instance != instance) return;
                 foreach (var m in instance.Stored)
                 {
-                    if (m.Target.FileId != link.SourceFileId || !string.Equals(m.Target.Guid ?? instance.SourceGuid, link.SourceGuid, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (m.Target.IsNull || m.Target.FileId != link.SourceFileId || !string.Equals(m.Target.Guid ?? instance.SourceGuid, link.SourceGuid, StringComparison.OrdinalIgnoreCase)) continue;
                     if (!includeDefaultOverrides && PrefabUtility.IsDefaultOverrideProperty(o, m.Path)) continue;
                     overrides.Add(new ObjectOverride { instanceObject = o });
                     return;

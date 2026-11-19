@@ -106,7 +106,13 @@ namespace UnityEditor
         bool Apply(bool recordUndo = false)
         {
             if (!m_Modified) return false;
-            if (recordUndo && Undo.postprocessModifications != null) Undo.InvokePostprocessModifications(Modifications());
+            if (recordUndo && Undo.postprocessModifications != null)
+            {
+                // A handler's exception is logged; the apply goes on (the Editor's handlers run from
+                // its native apply).
+                try { Undo.InvokePostprocessModifications(Modifications()); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 var target = m_Targets[i];

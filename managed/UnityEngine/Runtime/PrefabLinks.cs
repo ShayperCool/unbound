@@ -41,6 +41,7 @@ namespace Unbound.Runtime
         {
             foreach (var stored in Stored)
             {
+                if (stored.Target.IsNull) continue;
                 var m = (Guid: stored.Target.Guid ?? SourceGuid, stored.Target.FileId, stored.Path);
                 if (m.FileId != fileId || !string.Equals(m.Guid, guid, StringComparison.OrdinalIgnoreCase)) continue;
                 if (m.Path.Length == path.Length ? m.Path == path : m.Path.Length > path.Length && m.Path[path.Length] == '.' && m.Path.StartsWith(path, StringComparison.Ordinal))
@@ -110,8 +111,8 @@ namespace Unbound.Runtime
             };
             foreach (var m in body.Get("m_Modification")?.Get("m_Modifications")?.Seq() ?? Array.Empty<YNode>())
             {
-                var target = m.Ref("target");
-                if (!target.IsNull) data.Stored.Add((target, m.Str("propertyPath"), m.Str("value"), m.Ref("objectReference")));
+                // Every entry, one whose target is gone included (it is listed with none).
+                data.Stored.Add((m.Ref("target"), m.Str("propertyPath"), m.Str("value"), m.Ref("objectReference")));
             }
             return data;
         }
