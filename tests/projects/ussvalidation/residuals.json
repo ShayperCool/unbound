@@ -1,0 +1,3 @@
+{
+  "A color function with too few arguments (rgb(1, 2), which the importer keeps with its warnings): the Editor's style pass throws on it (ArgumentOutOfRangeException) and the sheet's next color rule (#ff0000) reads black; Unbound reads the default color and the next rule's red. The Editor's cause is not established; listed in docs/COMPATIBILITY_GAPS.md": ["style.color-fn", "style.color-fn.logs", "style.color-ok"]
+}
