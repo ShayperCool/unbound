@@ -159,8 +159,8 @@ namespace UnityEngine.Tests
             Assert.All(draws, d => Assert.Same(a, AlphaOf(d)));
         }
 
-        /// <summary>Control: a renderer with other rect clipping starts a run of its own (clipped
-        /// batches are not measured).</summary>
+        /// <summary>Control: a renderer with other rect clipping keeps its own alpha texture
+        /// (renderers under different clip rects are not measured).</summary>
         [Fact]
         public void OtherRectClippingStartsARunWithItsOwnAlphaTexture()
         {
@@ -269,16 +269,25 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheEtc1CanvasMaterialIsItsOwn()
         {
-            // The test domain has no built-in shaders: one under the built-in name stands in.
+            // The test domain has no built-in shaders: stand-ins under the built-in names, removed after.
+            Shader standInEtc1 = null, standInDefault = null;
             if (Shader.Find("UI/DefaultETC1") == null)
-                Shader.Register(ShaderUtil.CreateShaderAsset("Shader \"UI/DefaultETC1\" { SubShader { Pass { } } }"));
+                Shader.Register(standInEtc1 = ShaderUtil.CreateShaderAsset("Shader \"UI/DefaultETC1\" { SubShader { Pass { } } }"));
             if (Shader.Find("UI/Default") == null)
-                Shader.Register(ShaderUtil.CreateShaderAsset("Shader \"UI/Default\" { SubShader { Pass { } } }"));
-            var etc1 = Canvas.GetETC1SupportedCanvasMaterial();
-            Assert.Equal("ETC1 Supported UI Material", etc1.name);
-            Assert.Equal("UI/DefaultETC1", etc1.shader.name);
-            Assert.Same(etc1, Canvas.GetETC1SupportedCanvasMaterial());
-            Assert.NotSame(Canvas.GetDefaultCanvasMaterial(), etc1);
+                Shader.Register(standInDefault = ShaderUtil.CreateShaderAsset("Shader \"UI/Default\" { SubShader { Pass { } } }"));
+            try
+            {
+                var etc1 = Canvas.GetETC1SupportedCanvasMaterial();
+                Assert.Equal("ETC1 Supported UI Material", etc1.name);
+                Assert.Equal("UI/DefaultETC1", etc1.shader.name);
+                Assert.Same(etc1, Canvas.GetETC1SupportedCanvasMaterial());
+                Assert.NotSame(Canvas.GetDefaultCanvasMaterial(), etc1);
+            }
+            finally
+            {
+                Shader.Unregister(standInEtc1);
+                Shader.Unregister(standInDefault);
+            }
         }
     }
 }

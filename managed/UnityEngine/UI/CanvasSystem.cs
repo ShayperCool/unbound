@@ -473,9 +473,11 @@ namespace Unbound.Runtime
         /// <summary>The alpha textures a canvas walk has given batches. Renderers under one canvas
         /// with the same single material, texture and rect clipping draw with the alpha texture of
         /// the first of them, whatever the others set and whatever is drawn between them, overlapping
-        /// draws included (matches the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders canvas
-        /// `shared*` and batches `apart.*`, `over.*`, `mask.*`). Renderers with another clip rect or
-        /// softness keep their own (unmeasured).</summary>
+        /// draws included, and clipped by one RectMask2D (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/uialphaborders canvas `shared*` and batches `apart.*`, `over.*`, `mask.*`).
+        /// "First" is in drawing order; in every measured case it is also the shallowest, so the
+        /// canvas's depth order is not told apart. Unmeasured: renderers with another clip rect or
+        /// softness (they keep their own) and stencil Masks' pop draws between them.</summary>
         sealed class AlphaBatches
         {
             readonly struct Key : IEquatable<Key>

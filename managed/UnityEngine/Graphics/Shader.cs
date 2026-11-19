@@ -389,6 +389,13 @@ namespace UnityEngine
                 s_ByName[shader.m_Name] = shader;
         }
 
+        /// <summary>Forgets a shader <see cref="Register"/> named (tests replace built-ins with stand-ins).</summary>
+        internal static void Unregister(Shader shader)
+        {
+            if (shader != null && s_ByName.TryGetValue(shader.m_Name, out var known) && ReferenceEquals(known, shader))
+                s_ByName.Remove(shader.m_Name);
+        }
+
         // ------------------------------------------------------------------ property ids
 
         public static int PropertyToID(string name)
