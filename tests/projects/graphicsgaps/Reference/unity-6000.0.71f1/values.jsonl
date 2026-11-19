@@ -1,0 +1,1187 @@
+{"k":"startup.logs","v":"Warning: GPUResidentDrawer The current platform does not support UnityEngine.Rendering.BatchBufferTarget"}
+{"k":"context.device","v":"OpenGLCore"}
+{"k":"context.pipeline","v":"ProbeURP"}
+{"k":"context.globalRenderPipeline","v":"UniversalPipeline"}
+{"k":"context.globalMaximumLOD","v":"2147483647"}
+{"k":"context.supportsSparseTextures","v":"true"}
+{"k":"context.supportsTextureWrapMirrorOnce","v":"1"}
+{"k":"context.brgBufferTarget","v":"ConstantBuffer"}
+{"k":"context.logs","v":"0"}
+{"k":"select.subshaderCount","v":"2,2,3,4,3,3,3"}
+{"k":"select.default.SelA.queue","v":"2001"}
+{"k":"select.default.SelA.passCount","v":"1"}
+{"k":"select.default.SelA.mat.queue","v":"2001"}
+{"k":"select.default.SelA.mat.passCount","v":"1"}
+{"k":"select.default.SelA.tag","v":"a0"}
+{"k":"select.default.SelA.tagFallbacks","v":"a0"}
+{"k":"select.default.SelA.other","v":"none"}
+{"k":"select.default.SelA.otherFallbacks","v":"none"}
+{"k":"select.default.SelA.drawn","v":"10,0"}
+{"k":"select.default.SelB.queue","v":"2450"}
+{"k":"select.default.SelB.passCount","v":"1"}
+{"k":"select.default.SelB.mat.queue","v":"2450"}
+{"k":"select.default.SelB.mat.passCount","v":"1"}
+{"k":"select.default.SelB.tag","v":"b0"}
+{"k":"select.default.SelB.tagFallbacks","v":"b0"}
+{"k":"select.default.SelB.other","v":"none"}
+{"k":"select.default.SelB.otherFallbacks","v":"none"}
+{"k":"select.default.SelB.drawn","v":"30,0"}
+{"k":"select.default.SelC.queue","v":"2451"}
+{"k":"select.default.SelC.passCount","v":"2"}
+{"k":"select.default.SelC.mat.queue","v":"2451"}
+{"k":"select.default.SelC.mat.passCount","v":"2"}
+{"k":"select.default.SelC.tag","v":"c1"}
+{"k":"select.default.SelC.tagFallbacks","v":"c0"}
+{"k":"select.default.SelC.other","v":"none"}
+{"k":"select.default.SelC.otherFallbacks","v":"none"}
+{"k":"select.default.SelC.drawn","v":"60,0"}
+{"k":"select.default.SelD.queue","v":"3200"}
+{"k":"select.default.SelD.passCount","v":"2"}
+{"k":"select.default.SelD.mat.queue","v":"3200"}
+{"k":"select.default.SelD.mat.passCount","v":"2"}
+{"k":"select.default.SelD.tag","v":"d1"}
+{"k":"select.default.SelD.tagFallbacks","v":"d0"}
+{"k":"select.default.SelD.other","v":"none"}
+{"k":"select.default.SelD.otherFallbacks","v":"none"}
+{"k":"select.default.SelD.drawn","v":"90,0"}
+{"k":"select.default.SelE.queue","v":"2100"}
+{"k":"select.default.SelE.passCount","v":"1"}
+{"k":"select.default.SelE.mat.queue","v":"2100"}
+{"k":"select.default.SelE.mat.passCount","v":"1"}
+{"k":"select.default.SelE.tag","v":"e0"}
+{"k":"select.default.SelE.tagFallbacks","v":"e0"}
+{"k":"select.default.SelE.other","v":"none"}
+{"k":"select.default.SelE.otherFallbacks","v":"none"}
+{"k":"select.default.SelE.drawn","v":"120,0"}
+{"k":"select.default.SelF.queue","v":"2800"}
+{"k":"select.default.SelF.passCount","v":"3"}
+{"k":"select.default.SelF.mat.queue","v":"2800"}
+{"k":"select.default.SelF.mat.passCount","v":"3"}
+{"k":"select.default.SelF.tag","v":"ff0"}
+{"k":"select.default.SelF.tagFallbacks","v":"f0"}
+{"k":"select.default.SelF.other","v":"none"}
+{"k":"select.default.SelF.otherFallbacks","v":"none"}
+{"k":"select.default.SelF.drawn","v":"170,0"}
+{"k":"select.default.SelH.queue","v":"2010"}
+{"k":"select.default.SelH.passCount","v":"2"}
+{"k":"select.default.SelH.mat.queue","v":"2010"}
+{"k":"select.default.SelH.mat.passCount","v":"2"}
+{"k":"select.default.SelH.tag","v":"none"}
+{"k":"select.default.SelH.tagFallbacks","v":"h0"}
+{"k":"select.default.SelH.other","v":"none"}
+{"k":"select.default.SelH.otherFallbacks","v":"o0"}
+{"k":"select.default.SelH.drawn","v":"190,0"}
+{"k":"select.default.logs","v":"0"}
+{"k":"select.empty.globalRenderPipeline","v":""}
+{"k":"select.empty.SelA.queue","v":"3000"}
+{"k":"select.empty.SelA.passCount","v":"2"}
+{"k":"select.empty.SelA.mat.queue","v":"3000"}
+{"k":"select.empty.SelA.mat.passCount","v":"2"}
+{"k":"select.empty.SelA.tag","v":"a1"}
+{"k":"select.empty.SelA.tagFallbacks","v":"a0"}
+{"k":"select.empty.SelA.other","v":"none"}
+{"k":"select.empty.SelA.otherFallbacks","v":"none"}
+{"k":"select.empty.SelA.drawn","v":"20,0"}
+{"k":"select.empty.SelB.queue","v":"2450"}
+{"k":"select.empty.SelB.passCount","v":"1"}
+{"k":"select.empty.SelB.mat.queue","v":"2450"}
+{"k":"select.empty.SelB.mat.passCount","v":"1"}
+{"k":"select.empty.SelB.tag","v":"b0"}
+{"k":"select.empty.SelB.tagFallbacks","v":"b0"}
+{"k":"select.empty.SelB.other","v":"none"}
+{"k":"select.empty.SelB.otherFallbacks","v":"none"}
+{"k":"select.empty.SelB.drawn","v":"30,0"}
+{"k":"select.empty.SelC.queue","v":"1000"}
+{"k":"select.empty.SelC.passCount","v":"3"}
+{"k":"select.empty.SelC.mat.queue","v":"1000"}
+{"k":"select.empty.SelC.mat.passCount","v":"3"}
+{"k":"select.empty.SelC.tag","v":"c2"}
+{"k":"select.empty.SelC.tagFallbacks","v":"c0"}
+{"k":"select.empty.SelC.other","v":"none"}
+{"k":"select.empty.SelC.otherFallbacks","v":"none"}
+{"k":"select.empty.SelC.drawn","v":"70,0"}
+{"k":"select.empty.SelD.queue","v":"3300"}
+{"k":"select.empty.SelD.passCount","v":"3"}
+{"k":"select.empty.SelD.mat.queue","v":"3300"}
+{"k":"select.empty.SelD.mat.passCount","v":"3"}
+{"k":"select.empty.SelD.tag","v":"d2"}
+{"k":"select.empty.SelD.tagFallbacks","v":"d0"}
+{"k":"select.empty.SelD.other","v":"none"}
+{"k":"select.empty.SelD.otherFallbacks","v":"none"}
+{"k":"select.empty.SelD.drawn","v":"100,0"}
+{"k":"select.empty.SelE.queue","v":"2300"}
+{"k":"select.empty.SelE.passCount","v":"3"}
+{"k":"select.empty.SelE.mat.queue","v":"2300"}
+{"k":"select.empty.SelE.mat.passCount","v":"3"}
+{"k":"select.empty.SelE.tag","v":"ef0"}
+{"k":"select.empty.SelE.tagFallbacks","v":"e0"}
+{"k":"select.empty.SelE.other","v":"none"}
+{"k":"select.empty.SelE.otherFallbacks","v":"none"}
+{"k":"select.empty.SelE.drawn","v":"140,0"}
+{"k":"select.empty.SelF.queue","v":"2600"}
+{"k":"select.empty.SelF.passCount","v":"1"}
+{"k":"select.empty.SelF.mat.queue","v":"2600"}
+{"k":"select.empty.SelF.mat.passCount","v":"1"}
+{"k":"select.empty.SelF.tag","v":"f0"}
+{"k":"select.empty.SelF.tagFallbacks","v":"f0"}
+{"k":"select.empty.SelF.other","v":"none"}
+{"k":"select.empty.SelF.otherFallbacks","v":"none"}
+{"k":"select.empty.SelF.drawn","v":"150,0"}
+{"k":"select.empty.SelH.queue","v":"2010"}
+{"k":"select.empty.SelH.passCount","v":"2"}
+{"k":"select.empty.SelH.mat.queue","v":"2010"}
+{"k":"select.empty.SelH.mat.passCount","v":"2"}
+{"k":"select.empty.SelH.tag","v":"none"}
+{"k":"select.empty.SelH.tagFallbacks","v":"h0"}
+{"k":"select.empty.SelH.other","v":"none"}
+{"k":"select.empty.SelH.otherFallbacks","v":"o0"}
+{"k":"select.empty.SelH.drawn","v":"190,0"}
+{"k":"select.empty.logs","v":"0"}
+{"k":"select.hd.globalRenderPipeline","v":"HDRenderPipeline"}
+{"k":"select.hd.SelA.queue","v":"3000"}
+{"k":"select.hd.SelA.passCount","v":"2"}
+{"k":"select.hd.SelA.mat.queue","v":"3000"}
+{"k":"select.hd.SelA.mat.passCount","v":"2"}
+{"k":"select.hd.SelA.tag","v":"a1"}
+{"k":"select.hd.SelA.tagFallbacks","v":"a0"}
+{"k":"select.hd.SelA.other","v":"none"}
+{"k":"select.hd.SelA.otherFallbacks","v":"none"}
+{"k":"select.hd.SelA.drawn","v":"20,0"}
+{"k":"select.hd.SelB.queue","v":"2450"}
+{"k":"select.hd.SelB.passCount","v":"1"}
+{"k":"select.hd.SelB.mat.queue","v":"2450"}
+{"k":"select.hd.SelB.mat.passCount","v":"1"}
+{"k":"select.hd.SelB.tag","v":"b0"}
+{"k":"select.hd.SelB.tagFallbacks","v":"b0"}
+{"k":"select.hd.SelB.other","v":"none"}
+{"k":"select.hd.SelB.otherFallbacks","v":"none"}
+{"k":"select.hd.SelB.drawn","v":"30,0"}
+{"k":"select.hd.SelC.queue","v":"2005"}
+{"k":"select.hd.SelC.passCount","v":"1"}
+{"k":"select.hd.SelC.mat.queue","v":"2005"}
+{"k":"select.hd.SelC.mat.passCount","v":"1"}
+{"k":"select.hd.SelC.tag","v":"c0"}
+{"k":"select.hd.SelC.tagFallbacks","v":"c0"}
+{"k":"select.hd.SelC.other","v":"none"}
+{"k":"select.hd.SelC.otherFallbacks","v":"none"}
+{"k":"select.hd.SelC.drawn","v":"50,0"}
+{"k":"select.hd.SelD.queue","v":"3300"}
+{"k":"select.hd.SelD.passCount","v":"3"}
+{"k":"select.hd.SelD.mat.queue","v":"3300"}
+{"k":"select.hd.SelD.mat.passCount","v":"3"}
+{"k":"select.hd.SelD.tag","v":"d2"}
+{"k":"select.hd.SelD.tagFallbacks","v":"d0"}
+{"k":"select.hd.SelD.other","v":"none"}
+{"k":"select.hd.SelD.otherFallbacks","v":"none"}
+{"k":"select.hd.SelD.drawn","v":"100,0"}
+{"k":"select.hd.SelE.queue","v":"2300"}
+{"k":"select.hd.SelE.passCount","v":"3"}
+{"k":"select.hd.SelE.mat.queue","v":"2300"}
+{"k":"select.hd.SelE.mat.passCount","v":"3"}
+{"k":"select.hd.SelE.tag","v":"ef0"}
+{"k":"select.hd.SelE.tagFallbacks","v":"e0"}
+{"k":"select.hd.SelE.other","v":"none"}
+{"k":"select.hd.SelE.otherFallbacks","v":"none"}
+{"k":"select.hd.SelE.drawn","v":"140,0"}
+{"k":"select.hd.SelF.queue","v":"2600"}
+{"k":"select.hd.SelF.passCount","v":"1"}
+{"k":"select.hd.SelF.mat.queue","v":"2600"}
+{"k":"select.hd.SelF.mat.passCount","v":"1"}
+{"k":"select.hd.SelF.tag","v":"f0"}
+{"k":"select.hd.SelF.tagFallbacks","v":"f0"}
+{"k":"select.hd.SelF.other","v":"none"}
+{"k":"select.hd.SelF.otherFallbacks","v":"none"}
+{"k":"select.hd.SelF.drawn","v":"150,0"}
+{"k":"select.hd.SelH.queue","v":"2900"}
+{"k":"select.hd.SelH.passCount","v":"1"}
+{"k":"select.hd.SelH.mat.queue","v":"2900"}
+{"k":"select.hd.SelH.mat.passCount","v":"1"}
+{"k":"select.hd.SelH.tag","v":"h0"}
+{"k":"select.hd.SelH.tagFallbacks","v":"h0"}
+{"k":"select.hd.SelH.other","v":"o0"}
+{"k":"select.hd.SelH.otherFallbacks","v":"o0"}
+{"k":"select.hd.SelH.drawn","v":"180,0"}
+{"k":"select.hd.logs","v":"0"}
+{"k":"select.list.globalRenderPipeline","v":"UniversalPipeline,Foo"}
+{"k":"select.list.SelA.queue","v":"2001"}
+{"k":"select.list.SelA.passCount","v":"1"}
+{"k":"select.list.SelA.mat.queue","v":"2001"}
+{"k":"select.list.SelA.mat.passCount","v":"1"}
+{"k":"select.list.SelA.tag","v":"a0"}
+{"k":"select.list.SelA.tagFallbacks","v":"a0"}
+{"k":"select.list.SelA.other","v":"none"}
+{"k":"select.list.SelA.otherFallbacks","v":"none"}
+{"k":"select.list.SelA.drawn","v":"10,0"}
+{"k":"select.list.SelB.queue","v":"2450"}
+{"k":"select.list.SelB.passCount","v":"1"}
+{"k":"select.list.SelB.mat.queue","v":"2450"}
+{"k":"select.list.SelB.mat.passCount","v":"1"}
+{"k":"select.list.SelB.tag","v":"b0"}
+{"k":"select.list.SelB.tagFallbacks","v":"b0"}
+{"k":"select.list.SelB.other","v":"none"}
+{"k":"select.list.SelB.otherFallbacks","v":"none"}
+{"k":"select.list.SelB.drawn","v":"30,0"}
+{"k":"select.list.SelC.queue","v":"2451"}
+{"k":"select.list.SelC.passCount","v":"2"}
+{"k":"select.list.SelC.mat.queue","v":"2451"}
+{"k":"select.list.SelC.mat.passCount","v":"2"}
+{"k":"select.list.SelC.tag","v":"c1"}
+{"k":"select.list.SelC.tagFallbacks","v":"c0"}
+{"k":"select.list.SelC.other","v":"none"}
+{"k":"select.list.SelC.otherFallbacks","v":"none"}
+{"k":"select.list.SelC.drawn","v":"60,0"}
+{"k":"select.list.SelD.queue","v":"3200"}
+{"k":"select.list.SelD.passCount","v":"2"}
+{"k":"select.list.SelD.mat.queue","v":"3200"}
+{"k":"select.list.SelD.mat.passCount","v":"2"}
+{"k":"select.list.SelD.tag","v":"d1"}
+{"k":"select.list.SelD.tagFallbacks","v":"d0"}
+{"k":"select.list.SelD.other","v":"none"}
+{"k":"select.list.SelD.otherFallbacks","v":"none"}
+{"k":"select.list.SelD.drawn","v":"90,0"}
+{"k":"select.list.SelE.queue","v":"2100"}
+{"k":"select.list.SelE.passCount","v":"1"}
+{"k":"select.list.SelE.mat.queue","v":"2100"}
+{"k":"select.list.SelE.mat.passCount","v":"1"}
+{"k":"select.list.SelE.tag","v":"e0"}
+{"k":"select.list.SelE.tagFallbacks","v":"e0"}
+{"k":"select.list.SelE.other","v":"none"}
+{"k":"select.list.SelE.otherFallbacks","v":"none"}
+{"k":"select.list.SelE.drawn","v":"120,0"}
+{"k":"select.list.SelF.queue","v":"2700"}
+{"k":"select.list.SelF.passCount","v":"2"}
+{"k":"select.list.SelF.mat.queue","v":"2700"}
+{"k":"select.list.SelF.mat.passCount","v":"2"}
+{"k":"select.list.SelF.tag","v":"f1"}
+{"k":"select.list.SelF.tagFallbacks","v":"f0"}
+{"k":"select.list.SelF.other","v":"none"}
+{"k":"select.list.SelF.otherFallbacks","v":"none"}
+{"k":"select.list.SelF.drawn","v":"160,0"}
+{"k":"select.list.SelH.queue","v":"2010"}
+{"k":"select.list.SelH.passCount","v":"2"}
+{"k":"select.list.SelH.mat.queue","v":"2010"}
+{"k":"select.list.SelH.mat.passCount","v":"2"}
+{"k":"select.list.SelH.tag","v":"none"}
+{"k":"select.list.SelH.tagFallbacks","v":"h0"}
+{"k":"select.list.SelH.other","v":"none"}
+{"k":"select.list.SelH.otherFallbacks","v":"o0"}
+{"k":"select.list.SelH.drawn","v":"190,0"}
+{"k":"select.list.logs","v":"0"}
+{"k":"select.listSpaced.globalRenderPipeline","v":"Foo, UniversalPipeline"}
+{"k":"select.listSpaced.SelA.queue","v":"3000"}
+{"k":"select.listSpaced.SelA.passCount","v":"2"}
+{"k":"select.listSpaced.SelA.mat.queue","v":"3000"}
+{"k":"select.listSpaced.SelA.mat.passCount","v":"2"}
+{"k":"select.listSpaced.SelA.tag","v":"a1"}
+{"k":"select.listSpaced.SelA.tagFallbacks","v":"a0"}
+{"k":"select.listSpaced.SelA.other","v":"none"}
+{"k":"select.listSpaced.SelA.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelA.drawn","v":"20,0"}
+{"k":"select.listSpaced.SelB.queue","v":"2450"}
+{"k":"select.listSpaced.SelB.passCount","v":"1"}
+{"k":"select.listSpaced.SelB.mat.queue","v":"2450"}
+{"k":"select.listSpaced.SelB.mat.passCount","v":"1"}
+{"k":"select.listSpaced.SelB.tag","v":"b0"}
+{"k":"select.listSpaced.SelB.tagFallbacks","v":"b0"}
+{"k":"select.listSpaced.SelB.other","v":"none"}
+{"k":"select.listSpaced.SelB.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelB.drawn","v":"30,0"}
+{"k":"select.listSpaced.SelC.queue","v":"1000"}
+{"k":"select.listSpaced.SelC.passCount","v":"3"}
+{"k":"select.listSpaced.SelC.mat.queue","v":"1000"}
+{"k":"select.listSpaced.SelC.mat.passCount","v":"3"}
+{"k":"select.listSpaced.SelC.tag","v":"c2"}
+{"k":"select.listSpaced.SelC.tagFallbacks","v":"c0"}
+{"k":"select.listSpaced.SelC.other","v":"none"}
+{"k":"select.listSpaced.SelC.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelC.drawn","v":"70,0"}
+{"k":"select.listSpaced.SelD.queue","v":"3100"}
+{"k":"select.listSpaced.SelD.passCount","v":"1"}
+{"k":"select.listSpaced.SelD.mat.queue","v":"3100"}
+{"k":"select.listSpaced.SelD.mat.passCount","v":"1"}
+{"k":"select.listSpaced.SelD.tag","v":"d0"}
+{"k":"select.listSpaced.SelD.tagFallbacks","v":"d0"}
+{"k":"select.listSpaced.SelD.other","v":"none"}
+{"k":"select.listSpaced.SelD.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelD.drawn","v":"80,0"}
+{"k":"select.listSpaced.SelE.queue","v":"2300"}
+{"k":"select.listSpaced.SelE.passCount","v":"3"}
+{"k":"select.listSpaced.SelE.mat.queue","v":"2300"}
+{"k":"select.listSpaced.SelE.mat.passCount","v":"3"}
+{"k":"select.listSpaced.SelE.tag","v":"ef0"}
+{"k":"select.listSpaced.SelE.tagFallbacks","v":"e0"}
+{"k":"select.listSpaced.SelE.other","v":"none"}
+{"k":"select.listSpaced.SelE.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelE.drawn","v":"140,0"}
+{"k":"select.listSpaced.SelF.queue","v":"2700"}
+{"k":"select.listSpaced.SelF.passCount","v":"2"}
+{"k":"select.listSpaced.SelF.mat.queue","v":"2700"}
+{"k":"select.listSpaced.SelF.mat.passCount","v":"2"}
+{"k":"select.listSpaced.SelF.tag","v":"f1"}
+{"k":"select.listSpaced.SelF.tagFallbacks","v":"f0"}
+{"k":"select.listSpaced.SelF.other","v":"none"}
+{"k":"select.listSpaced.SelF.otherFallbacks","v":"none"}
+{"k":"select.listSpaced.SelF.drawn","v":"160,0"}
+{"k":"select.listSpaced.SelH.queue","v":"2010"}
+{"k":"select.listSpaced.SelH.passCount","v":"2"}
+{"k":"select.listSpaced.SelH.mat.queue","v":"2010"}
+{"k":"select.listSpaced.SelH.mat.passCount","v":"2"}
+{"k":"select.listSpaced.SelH.tag","v":"none"}
+{"k":"select.listSpaced.SelH.tagFallbacks","v":"h0"}
+{"k":"select.listSpaced.SelH.other","v":"none"}
+{"k":"select.listSpaced.SelH.otherFallbacks","v":"o0"}
+{"k":"select.listSpaced.SelH.drawn","v":"190,0"}
+{"k":"select.listSpaced.logs","v":"0"}
+{"k":"select.lower.globalRenderPipeline","v":"universalpipeline"}
+{"k":"select.lower.SelA.queue","v":"3000"}
+{"k":"select.lower.SelA.passCount","v":"2"}
+{"k":"select.lower.SelA.mat.queue","v":"3000"}
+{"k":"select.lower.SelA.mat.passCount","v":"2"}
+{"k":"select.lower.SelA.tag","v":"a1"}
+{"k":"select.lower.SelA.tagFallbacks","v":"a0"}
+{"k":"select.lower.SelA.other","v":"none"}
+{"k":"select.lower.SelA.otherFallbacks","v":"none"}
+{"k":"select.lower.SelA.drawn","v":"20,0"}
+{"k":"select.lower.SelB.queue","v":"2450"}
+{"k":"select.lower.SelB.passCount","v":"1"}
+{"k":"select.lower.SelB.mat.queue","v":"2450"}
+{"k":"select.lower.SelB.mat.passCount","v":"1"}
+{"k":"select.lower.SelB.tag","v":"b0"}
+{"k":"select.lower.SelB.tagFallbacks","v":"b0"}
+{"k":"select.lower.SelB.other","v":"none"}
+{"k":"select.lower.SelB.otherFallbacks","v":"none"}
+{"k":"select.lower.SelB.drawn","v":"30,0"}
+{"k":"select.lower.SelC.queue","v":"1000"}
+{"k":"select.lower.SelC.passCount","v":"3"}
+{"k":"select.lower.SelC.mat.queue","v":"1000"}
+{"k":"select.lower.SelC.mat.passCount","v":"3"}
+{"k":"select.lower.SelC.tag","v":"c2"}
+{"k":"select.lower.SelC.tagFallbacks","v":"c0"}
+{"k":"select.lower.SelC.other","v":"none"}
+{"k":"select.lower.SelC.otherFallbacks","v":"none"}
+{"k":"select.lower.SelC.drawn","v":"70,0"}
+{"k":"select.lower.SelD.queue","v":"3300"}
+{"k":"select.lower.SelD.passCount","v":"3"}
+{"k":"select.lower.SelD.mat.queue","v":"3300"}
+{"k":"select.lower.SelD.mat.passCount","v":"3"}
+{"k":"select.lower.SelD.tag","v":"d2"}
+{"k":"select.lower.SelD.tagFallbacks","v":"d0"}
+{"k":"select.lower.SelD.other","v":"none"}
+{"k":"select.lower.SelD.otherFallbacks","v":"none"}
+{"k":"select.lower.SelD.drawn","v":"100,0"}
+{"k":"select.lower.SelE.queue","v":"2300"}
+{"k":"select.lower.SelE.passCount","v":"3"}
+{"k":"select.lower.SelE.mat.queue","v":"2300"}
+{"k":"select.lower.SelE.mat.passCount","v":"3"}
+{"k":"select.lower.SelE.tag","v":"ef0"}
+{"k":"select.lower.SelE.tagFallbacks","v":"e0"}
+{"k":"select.lower.SelE.other","v":"none"}
+{"k":"select.lower.SelE.otherFallbacks","v":"none"}
+{"k":"select.lower.SelE.drawn","v":"140,0"}
+{"k":"select.lower.SelF.queue","v":"2600"}
+{"k":"select.lower.SelF.passCount","v":"1"}
+{"k":"select.lower.SelF.mat.queue","v":"2600"}
+{"k":"select.lower.SelF.mat.passCount","v":"1"}
+{"k":"select.lower.SelF.tag","v":"f0"}
+{"k":"select.lower.SelF.tagFallbacks","v":"f0"}
+{"k":"select.lower.SelF.other","v":"none"}
+{"k":"select.lower.SelF.otherFallbacks","v":"none"}
+{"k":"select.lower.SelF.drawn","v":"150,0"}
+{"k":"select.lower.SelH.queue","v":"2010"}
+{"k":"select.lower.SelH.passCount","v":"2"}
+{"k":"select.lower.SelH.mat.queue","v":"2010"}
+{"k":"select.lower.SelH.mat.passCount","v":"2"}
+{"k":"select.lower.SelH.tag","v":"none"}
+{"k":"select.lower.SelH.tagFallbacks","v":"h0"}
+{"k":"select.lower.SelH.other","v":"none"}
+{"k":"select.lower.SelH.otherFallbacks","v":"o0"}
+{"k":"select.lower.SelH.drawn","v":"190,0"}
+{"k":"select.lower.logs","v":"0"}
+{"k":"select.foo.globalRenderPipeline","v":"Foo"}
+{"k":"select.foo.SelA.queue","v":"3000"}
+{"k":"select.foo.SelA.passCount","v":"2"}
+{"k":"select.foo.SelA.mat.queue","v":"3000"}
+{"k":"select.foo.SelA.mat.passCount","v":"2"}
+{"k":"select.foo.SelA.tag","v":"a1"}
+{"k":"select.foo.SelA.tagFallbacks","v":"a0"}
+{"k":"select.foo.SelA.other","v":"none"}
+{"k":"select.foo.SelA.otherFallbacks","v":"none"}
+{"k":"select.foo.SelA.drawn","v":"20,0"}
+{"k":"select.foo.SelB.queue","v":"2450"}
+{"k":"select.foo.SelB.passCount","v":"1"}
+{"k":"select.foo.SelB.mat.queue","v":"2450"}
+{"k":"select.foo.SelB.mat.passCount","v":"1"}
+{"k":"select.foo.SelB.tag","v":"b0"}
+{"k":"select.foo.SelB.tagFallbacks","v":"b0"}
+{"k":"select.foo.SelB.other","v":"none"}
+{"k":"select.foo.SelB.otherFallbacks","v":"none"}
+{"k":"select.foo.SelB.drawn","v":"30,0"}
+{"k":"select.foo.SelC.queue","v":"1000"}
+{"k":"select.foo.SelC.passCount","v":"3"}
+{"k":"select.foo.SelC.mat.queue","v":"1000"}
+{"k":"select.foo.SelC.mat.passCount","v":"3"}
+{"k":"select.foo.SelC.tag","v":"c2"}
+{"k":"select.foo.SelC.tagFallbacks","v":"c0"}
+{"k":"select.foo.SelC.other","v":"none"}
+{"k":"select.foo.SelC.otherFallbacks","v":"none"}
+{"k":"select.foo.SelC.drawn","v":"70,0"}
+{"k":"select.foo.SelD.queue","v":"3300"}
+{"k":"select.foo.SelD.passCount","v":"3"}
+{"k":"select.foo.SelD.mat.queue","v":"3300"}
+{"k":"select.foo.SelD.mat.passCount","v":"3"}
+{"k":"select.foo.SelD.tag","v":"d2"}
+{"k":"select.foo.SelD.tagFallbacks","v":"d0"}
+{"k":"select.foo.SelD.other","v":"none"}
+{"k":"select.foo.SelD.otherFallbacks","v":"none"}
+{"k":"select.foo.SelD.drawn","v":"100,0"}
+{"k":"select.foo.SelE.queue","v":"2300"}
+{"k":"select.foo.SelE.passCount","v":"3"}
+{"k":"select.foo.SelE.mat.queue","v":"2300"}
+{"k":"select.foo.SelE.mat.passCount","v":"3"}
+{"k":"select.foo.SelE.tag","v":"ef0"}
+{"k":"select.foo.SelE.tagFallbacks","v":"e0"}
+{"k":"select.foo.SelE.other","v":"none"}
+{"k":"select.foo.SelE.otherFallbacks","v":"none"}
+{"k":"select.foo.SelE.drawn","v":"140,0"}
+{"k":"select.foo.SelF.queue","v":"2700"}
+{"k":"select.foo.SelF.passCount","v":"2"}
+{"k":"select.foo.SelF.mat.queue","v":"2700"}
+{"k":"select.foo.SelF.mat.passCount","v":"2"}
+{"k":"select.foo.SelF.tag","v":"f1"}
+{"k":"select.foo.SelF.tagFallbacks","v":"f0"}
+{"k":"select.foo.SelF.other","v":"none"}
+{"k":"select.foo.SelF.otherFallbacks","v":"none"}
+{"k":"select.foo.SelF.drawn","v":"160,0"}
+{"k":"select.foo.SelH.queue","v":"2010"}
+{"k":"select.foo.SelH.passCount","v":"2"}
+{"k":"select.foo.SelH.mat.queue","v":"2010"}
+{"k":"select.foo.SelH.mat.passCount","v":"2"}
+{"k":"select.foo.SelH.tag","v":"none"}
+{"k":"select.foo.SelH.tagFallbacks","v":"h0"}
+{"k":"select.foo.SelH.other","v":"none"}
+{"k":"select.foo.SelH.otherFallbacks","v":"o0"}
+{"k":"select.foo.SelH.drawn","v":"190,0"}
+{"k":"select.foo.logs","v":"0"}
+{"k":"select.both.globalRenderPipeline","v":"HDRenderPipeline,UniversalPipeline"}
+{"k":"select.both.SelA.queue","v":"2001"}
+{"k":"select.both.SelA.passCount","v":"1"}
+{"k":"select.both.SelA.mat.queue","v":"2001"}
+{"k":"select.both.SelA.mat.passCount","v":"1"}
+{"k":"select.both.SelA.tag","v":"a0"}
+{"k":"select.both.SelA.tagFallbacks","v":"a0"}
+{"k":"select.both.SelA.other","v":"none"}
+{"k":"select.both.SelA.otherFallbacks","v":"none"}
+{"k":"select.both.SelA.drawn","v":"10,0"}
+{"k":"select.both.SelB.queue","v":"2450"}
+{"k":"select.both.SelB.passCount","v":"1"}
+{"k":"select.both.SelB.mat.queue","v":"2450"}
+{"k":"select.both.SelB.mat.passCount","v":"1"}
+{"k":"select.both.SelB.tag","v":"b0"}
+{"k":"select.both.SelB.tagFallbacks","v":"b0"}
+{"k":"select.both.SelB.other","v":"none"}
+{"k":"select.both.SelB.otherFallbacks","v":"none"}
+{"k":"select.both.SelB.drawn","v":"30,0"}
+{"k":"select.both.SelC.queue","v":"2005"}
+{"k":"select.both.SelC.passCount","v":"1"}
+{"k":"select.both.SelC.mat.queue","v":"2005"}
+{"k":"select.both.SelC.mat.passCount","v":"1"}
+{"k":"select.both.SelC.tag","v":"c0"}
+{"k":"select.both.SelC.tagFallbacks","v":"c0"}
+{"k":"select.both.SelC.other","v":"none"}
+{"k":"select.both.SelC.otherFallbacks","v":"none"}
+{"k":"select.both.SelC.drawn","v":"50,0"}
+{"k":"select.both.SelD.queue","v":"3200"}
+{"k":"select.both.SelD.passCount","v":"2"}
+{"k":"select.both.SelD.mat.queue","v":"3200"}
+{"k":"select.both.SelD.mat.passCount","v":"2"}
+{"k":"select.both.SelD.tag","v":"d1"}
+{"k":"select.both.SelD.tagFallbacks","v":"d0"}
+{"k":"select.both.SelD.other","v":"none"}
+{"k":"select.both.SelD.otherFallbacks","v":"none"}
+{"k":"select.both.SelD.drawn","v":"90,0"}
+{"k":"select.both.SelE.queue","v":"2100"}
+{"k":"select.both.SelE.passCount","v":"1"}
+{"k":"select.both.SelE.mat.queue","v":"2100"}
+{"k":"select.both.SelE.mat.passCount","v":"1"}
+{"k":"select.both.SelE.tag","v":"e0"}
+{"k":"select.both.SelE.tagFallbacks","v":"e0"}
+{"k":"select.both.SelE.other","v":"none"}
+{"k":"select.both.SelE.otherFallbacks","v":"none"}
+{"k":"select.both.SelE.drawn","v":"120,0"}
+{"k":"select.both.SelF.queue","v":"2600"}
+{"k":"select.both.SelF.passCount","v":"1"}
+{"k":"select.both.SelF.mat.queue","v":"2600"}
+{"k":"select.both.SelF.mat.passCount","v":"1"}
+{"k":"select.both.SelF.tag","v":"f0"}
+{"k":"select.both.SelF.tagFallbacks","v":"f0"}
+{"k":"select.both.SelF.other","v":"none"}
+{"k":"select.both.SelF.otherFallbacks","v":"none"}
+{"k":"select.both.SelF.drawn","v":"150,0"}
+{"k":"select.both.SelH.queue","v":"2900"}
+{"k":"select.both.SelH.passCount","v":"1"}
+{"k":"select.both.SelH.mat.queue","v":"2900"}
+{"k":"select.both.SelH.mat.passCount","v":"1"}
+{"k":"select.both.SelH.tag","v":"h0"}
+{"k":"select.both.SelH.tagFallbacks","v":"h0"}
+{"k":"select.both.SelH.other","v":"o0"}
+{"k":"select.both.SelH.otherFallbacks","v":"o0"}
+{"k":"select.both.SelH.drawn","v":"180,0"}
+{"k":"select.both.logs","v":"0"}
+{"k":"select.lod200.queue","v":"2200"}
+{"k":"select.lod200.mat.queue","v":"2200"}
+{"k":"select.lod200.tag","v":"e1"}
+{"k":"select.lod200.drawn","v":"130,0"}
+{"k":"select.lod75.queue","v":"2300"}
+{"k":"select.lod75.mat.queue","v":"2300"}
+{"k":"select.lod75.tag","v":"ef0"}
+{"k":"select.lod75.drawn","v":"140,0"}
+{"k":"select.lod10.queue","v":"2100"}
+{"k":"select.lod10.mat.queue","v":"2100"}
+{"k":"select.lod10.tag","v":"e0"}
+{"k":"select.lod10.drawn","v":"120,0"}
+{"k":"select.global150.queue","v":"2200"}
+{"k":"select.restored.queue","v":"2100"}
+{"k":"select.lod.logs","v":"0"}
+{"k":"builtin.urp.Skybox/Procedural.queue","v":"1000"}
+{"k":"builtin.urp.Skybox/Procedural.passCount","v":"1"}
+{"k":"builtin.urp.Skybox/Procedural.subshaderCount","v":"1"}
+{"k":"builtin.urp.Skybox/Procedural.mat.queue","v":"1000"}
+{"k":"builtin.urp.Skybox/Procedural.renderType","v":"Background"}
+{"k":"builtin.urp.Skybox/Procedural.renderTypeFallbacks","v":"Background"}
+{"k":"builtin.urp.Skybox/Procedural.queueTag","v":"Background"}
+{"k":"builtin.urp.Skybox/Procedural.pipelineTag","v":"none"}
+{"k":"builtin.urp.Skybox/6 Sided.queue","v":"1000"}
+{"k":"builtin.urp.Skybox/6 Sided.passCount","v":"6"}
+{"k":"builtin.urp.Skybox/6 Sided.subshaderCount","v":"1"}
+{"k":"builtin.urp.Skybox/6 Sided.mat.queue","v":"1000"}
+{"k":"builtin.urp.Skybox/6 Sided.renderType","v":"Background"}
+{"k":"builtin.urp.Skybox/6 Sided.renderTypeFallbacks","v":"Background"}
+{"k":"builtin.urp.Skybox/6 Sided.queueTag","v":"Background"}
+{"k":"builtin.urp.Skybox/6 Sided.pipelineTag","v":"none"}
+{"k":"builtin.urp.Standard.queue","v":"2000"}
+{"k":"builtin.urp.Standard.passCount","v":"5"}
+{"k":"builtin.urp.Standard.subshaderCount","v":"3"}
+{"k":"builtin.urp.Standard.mat.queue","v":"2000"}
+{"k":"builtin.urp.Standard.renderType","v":"Opaque"}
+{"k":"builtin.urp.Standard.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Standard.queueTag","v":"none"}
+{"k":"builtin.urp.Standard.pipelineTag","v":"none"}
+{"k":"builtin.urp.Unlit/Transparent.queue","v":"3000"}
+{"k":"builtin.urp.Unlit/Transparent.passCount","v":"1"}
+{"k":"builtin.urp.Unlit/Transparent.subshaderCount","v":"1"}
+{"k":"builtin.urp.Unlit/Transparent.mat.queue","v":"3000"}
+{"k":"builtin.urp.Unlit/Transparent.renderType","v":"Transparent"}
+{"k":"builtin.urp.Unlit/Transparent.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.urp.Unlit/Transparent.queueTag","v":"Transparent"}
+{"k":"builtin.urp.Unlit/Transparent.pipelineTag","v":"none"}
+{"k":"builtin.urp.Unlit/Texture.queue","v":"2000"}
+{"k":"builtin.urp.Unlit/Texture.passCount","v":"1"}
+{"k":"builtin.urp.Unlit/Texture.subshaderCount","v":"1"}
+{"k":"builtin.urp.Unlit/Texture.mat.queue","v":"2000"}
+{"k":"builtin.urp.Unlit/Texture.renderType","v":"Opaque"}
+{"k":"builtin.urp.Unlit/Texture.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Unlit/Texture.queueTag","v":"none"}
+{"k":"builtin.urp.Unlit/Texture.pipelineTag","v":"none"}
+{"k":"builtin.urp.Sprites/Default.queue","v":"3000"}
+{"k":"builtin.urp.Sprites/Default.passCount","v":"1"}
+{"k":"builtin.urp.Sprites/Default.subshaderCount","v":"1"}
+{"k":"builtin.urp.Sprites/Default.mat.queue","v":"3000"}
+{"k":"builtin.urp.Sprites/Default.renderType","v":"Transparent"}
+{"k":"builtin.urp.Sprites/Default.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.urp.Sprites/Default.queueTag","v":"Transparent"}
+{"k":"builtin.urp.Sprites/Default.pipelineTag","v":"none"}
+{"k":"builtin.urp.UI/Default.queue","v":"3000"}
+{"k":"builtin.urp.UI/Default.passCount","v":"1"}
+{"k":"builtin.urp.UI/Default.subshaderCount","v":"1"}
+{"k":"builtin.urp.UI/Default.mat.queue","v":"3000"}
+{"k":"builtin.urp.UI/Default.renderType","v":"Transparent"}
+{"k":"builtin.urp.UI/Default.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.urp.UI/Default.queueTag","v":"Transparent"}
+{"k":"builtin.urp.UI/Default.pipelineTag","v":"none"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.queue","v":"2000"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.passCount","v":"4"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.subshaderCount","v":"2"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.mat.queue","v":"2000"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.renderType","v":"Opaque"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.queueTag","v":"none"}
+{"k":"builtin.urp.Legacy Shaders/Diffuse.pipelineTag","v":"none"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.queue","v":"3000"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.passCount","v":"3"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.subshaderCount","v":"2"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.mat.queue","v":"3000"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.renderType","v":"Transparent"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.queueTag","v":"Transparent"}
+{"k":"builtin.urp.Legacy Shaders/Transparent/Diffuse.pipelineTag","v":"none"}
+{"k":"builtin.urp.Particles/Standard Unlit.queue","v":"2000"}
+{"k":"builtin.urp.Particles/Standard Unlit.passCount","v":"5"}
+{"k":"builtin.urp.Particles/Standard Unlit.subshaderCount","v":"2"}
+{"k":"builtin.urp.Particles/Standard Unlit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Particles/Standard Unlit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Particles/Standard Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Particles/Standard Unlit.queueTag","v":"none"}
+{"k":"builtin.urp.Particles/Standard Unlit.pipelineTag","v":"none"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.queue","v":"2000"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.passCount","v":"3"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.subshaderCount","v":"1"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.mat.queue","v":"2000"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.renderType","v":"none"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.renderTypeFallbacks","v":"none"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.queueTag","v":"none"}
+{"k":"builtin.urp.Hidden/InternalErrorShader.pipelineTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.passCount","v":"8"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.subshaderCount","v":"3"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Lit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.passCount","v":"6"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.subshaderCount","v":"3"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Unlit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.passCount","v":"8"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.subshaderCount","v":"3"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Simple Lit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.passCount","v":"8"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.subshaderCount","v":"4"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Baked Lit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.passCount","v":"6"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.subshaderCount","v":"5"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Lit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.passCount","v":"5"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.subshaderCount","v":"3"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.mat.queue","v":"2000"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.queueTag","v":"none"}
+{"k":"builtin.urp.Universal Render Pipeline/Particles/Unlit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.queue","v":"1900"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.passCount","v":"7"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.subshaderCount","v":"3"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.mat.queue","v":"1900"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.queueTag","v":"Geometry-100"}
+{"k":"builtin.urp.Universal Render Pipeline/Terrain/Lit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.queue","v":"2450"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.passCount","v":"9"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.subshaderCount","v":"2"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.mat.queue","v":"2450"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.renderType","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.queueTag","v":"AlphaTest"}
+{"k":"builtin.urp.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.pipelineTag","v":"UniversalPipeline"}
+{"k":"builtin.urp.logs","v":"0"}
+{"k":"builtin.none.Skybox/Procedural.queue","v":"1000"}
+{"k":"builtin.none.Skybox/Procedural.passCount","v":"1"}
+{"k":"builtin.none.Skybox/Procedural.subshaderCount","v":"1"}
+{"k":"builtin.none.Skybox/Procedural.mat.queue","v":"1000"}
+{"k":"builtin.none.Skybox/Procedural.renderType","v":"Background"}
+{"k":"builtin.none.Skybox/Procedural.renderTypeFallbacks","v":"Background"}
+{"k":"builtin.none.Skybox/Procedural.queueTag","v":"Background"}
+{"k":"builtin.none.Skybox/Procedural.pipelineTag","v":"none"}
+{"k":"builtin.none.Skybox/6 Sided.queue","v":"1000"}
+{"k":"builtin.none.Skybox/6 Sided.passCount","v":"6"}
+{"k":"builtin.none.Skybox/6 Sided.subshaderCount","v":"1"}
+{"k":"builtin.none.Skybox/6 Sided.mat.queue","v":"1000"}
+{"k":"builtin.none.Skybox/6 Sided.renderType","v":"Background"}
+{"k":"builtin.none.Skybox/6 Sided.renderTypeFallbacks","v":"Background"}
+{"k":"builtin.none.Skybox/6 Sided.queueTag","v":"Background"}
+{"k":"builtin.none.Skybox/6 Sided.pipelineTag","v":"none"}
+{"k":"builtin.none.Standard.queue","v":"2000"}
+{"k":"builtin.none.Standard.passCount","v":"5"}
+{"k":"builtin.none.Standard.subshaderCount","v":"3"}
+{"k":"builtin.none.Standard.mat.queue","v":"2000"}
+{"k":"builtin.none.Standard.renderType","v":"Opaque"}
+{"k":"builtin.none.Standard.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Standard.queueTag","v":"none"}
+{"k":"builtin.none.Standard.pipelineTag","v":"none"}
+{"k":"builtin.none.Unlit/Transparent.queue","v":"3000"}
+{"k":"builtin.none.Unlit/Transparent.passCount","v":"1"}
+{"k":"builtin.none.Unlit/Transparent.subshaderCount","v":"1"}
+{"k":"builtin.none.Unlit/Transparent.mat.queue","v":"3000"}
+{"k":"builtin.none.Unlit/Transparent.renderType","v":"Transparent"}
+{"k":"builtin.none.Unlit/Transparent.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.none.Unlit/Transparent.queueTag","v":"Transparent"}
+{"k":"builtin.none.Unlit/Transparent.pipelineTag","v":"none"}
+{"k":"builtin.none.Unlit/Texture.queue","v":"2000"}
+{"k":"builtin.none.Unlit/Texture.passCount","v":"1"}
+{"k":"builtin.none.Unlit/Texture.subshaderCount","v":"1"}
+{"k":"builtin.none.Unlit/Texture.mat.queue","v":"2000"}
+{"k":"builtin.none.Unlit/Texture.renderType","v":"Opaque"}
+{"k":"builtin.none.Unlit/Texture.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Unlit/Texture.queueTag","v":"none"}
+{"k":"builtin.none.Unlit/Texture.pipelineTag","v":"none"}
+{"k":"builtin.none.Sprites/Default.queue","v":"3000"}
+{"k":"builtin.none.Sprites/Default.passCount","v":"1"}
+{"k":"builtin.none.Sprites/Default.subshaderCount","v":"1"}
+{"k":"builtin.none.Sprites/Default.mat.queue","v":"3000"}
+{"k":"builtin.none.Sprites/Default.renderType","v":"Transparent"}
+{"k":"builtin.none.Sprites/Default.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.none.Sprites/Default.queueTag","v":"Transparent"}
+{"k":"builtin.none.Sprites/Default.pipelineTag","v":"none"}
+{"k":"builtin.none.UI/Default.queue","v":"3000"}
+{"k":"builtin.none.UI/Default.passCount","v":"1"}
+{"k":"builtin.none.UI/Default.subshaderCount","v":"1"}
+{"k":"builtin.none.UI/Default.mat.queue","v":"3000"}
+{"k":"builtin.none.UI/Default.renderType","v":"Transparent"}
+{"k":"builtin.none.UI/Default.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.none.UI/Default.queueTag","v":"Transparent"}
+{"k":"builtin.none.UI/Default.pipelineTag","v":"none"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.queue","v":"2000"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.passCount","v":"4"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.subshaderCount","v":"2"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.mat.queue","v":"2000"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.renderType","v":"Opaque"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.queueTag","v":"none"}
+{"k":"builtin.none.Legacy Shaders/Diffuse.pipelineTag","v":"none"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.queue","v":"3000"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.passCount","v":"3"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.subshaderCount","v":"2"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.mat.queue","v":"3000"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.renderType","v":"Transparent"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.renderTypeFallbacks","v":"Transparent"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.queueTag","v":"Transparent"}
+{"k":"builtin.none.Legacy Shaders/Transparent/Diffuse.pipelineTag","v":"none"}
+{"k":"builtin.none.Particles/Standard Unlit.queue","v":"2000"}
+{"k":"builtin.none.Particles/Standard Unlit.passCount","v":"5"}
+{"k":"builtin.none.Particles/Standard Unlit.subshaderCount","v":"2"}
+{"k":"builtin.none.Particles/Standard Unlit.mat.queue","v":"2000"}
+{"k":"builtin.none.Particles/Standard Unlit.renderType","v":"Opaque"}
+{"k":"builtin.none.Particles/Standard Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Particles/Standard Unlit.queueTag","v":"none"}
+{"k":"builtin.none.Particles/Standard Unlit.pipelineTag","v":"none"}
+{"k":"builtin.none.Hidden/InternalErrorShader.queue","v":"2000"}
+{"k":"builtin.none.Hidden/InternalErrorShader.passCount","v":"3"}
+{"k":"builtin.none.Hidden/InternalErrorShader.subshaderCount","v":"1"}
+{"k":"builtin.none.Hidden/InternalErrorShader.mat.queue","v":"2000"}
+{"k":"builtin.none.Hidden/InternalErrorShader.renderType","v":"none"}
+{"k":"builtin.none.Hidden/InternalErrorShader.renderTypeFallbacks","v":"none"}
+{"k":"builtin.none.Hidden/InternalErrorShader.queueTag","v":"none"}
+{"k":"builtin.none.Hidden/InternalErrorShader.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.subshaderCount","v":"3"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Lit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.subshaderCount","v":"3"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Unlit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.subshaderCount","v":"3"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Simple Lit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.subshaderCount","v":"4"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Baked Lit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.subshaderCount","v":"5"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Lit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.subshaderCount","v":"3"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Particles/Unlit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.subshaderCount","v":"3"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Terrain/Lit.pipelineTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.passCount","v":"1"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.subshaderCount","v":"2"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.mat.queue","v":"2000"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.renderType","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.renderTypeFallbacks","v":"Opaque"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.queueTag","v":"none"}
+{"k":"builtin.none.Universal Render Pipeline/Nature/SpeedTree8_PBRLit.pipelineTag","v":"none"}
+{"k":"builtin.none.logs","v":"0"}
+{"k":"queue.SelQ0","v":"2000"}
+{"k":"queue.SelQ1","v":"2000"}
+{"k":"queue.SelQ2","v":"2000"}
+{"k":"queue.SelQ3","v":"3000"}
+{"k":"queue.SelQ4","v":"2000"}
+{"k":"queue.SelQ5","v":"2000"}
+{"k":"queue.SelQ6","v":"9000"}
+{"k":"queue.SelQ7","v":"2000"}
+{"k":"queue.SelQ8","v":"2000"}
+{"k":"queue.SelQ9","v":"1999"}
+{"k":"queue.SelQ10","v":"2000"}
+{"k":"queue.SelQ11","v":"2000"}
+{"k":"queue.SelQ12","v":"2001"}
+{"k":"queue.logs","v":"0"}
+{"k":"keywords.Probe/KwOwn.count","v":"9"}
+{"k":"keywords.Probe/KwOwn.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,B_ON,A_ON,C_ON,D_ON,E_ON"}
+{"k":"keywords.Probe/KwOwn.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,B_ON:UserDefined:o,A_ON:UserDefined,C_ON:UserDefined:o,D_ON:UserDefined:o:d,E_ON:UserDefined"}
+{"k":"keywords.Probe/KwPlain.count","v":"8"}
+{"k":"keywords.Probe/KwPlain.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,C_ON,D_ON,B_ON,E_ON"}
+{"k":"keywords.Probe/KwPlain.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,C_ON:UserDefined:o,D_ON:UserDefined:o:d,B_ON:UserDefined,E_ON:UserDefined"}
+{"k":"keywords.Probe/KwFall.count","v":"8"}
+{"k":"keywords.Probe/KwFall.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,C_ON,D_ON,B_ON,E_ON"}
+{"k":"keywords.Probe/KwFall.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,C_ON:UserDefined:o,D_ON:UserDefined:o:d,B_ON:UserDefined,E_ON:UserDefined"}
+{"k":"keywords.Universal Render Pipeline/Particles/Lit.count","v":"52"}
+{"k":"keywords.Universal Render Pipeline/Particles/Lit.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,_MAIN_LIGHT_SHADOWS,_MAIN_LIGHT_SHADOWS_CASCADE,_MAIN_LIGHT_SHADOWS_SCREEN,_ADDITIONAL_LIGHTS_VERTEX,_ADDITIONAL_LIGHTS,_FORWARD_PLUS,EVALUATE_SH_MIXED,EVALUATE_SH_VERTEX,_FOVEATED_RENDERING_NON_UNIFORM_RASTER,PROBE_VOLUMES_L1,PROBE_VOLUMES_L2,LIGHTMAP_SHADOW_MIXING,DOTS_INSTANCING_ON,FOG_LINEAR,FOG_EXP,FOG_EXP2,INSTANCING_ON,PROCEDURAL_INSTANCING_ON,_NORMALMAP,_RECEIVE_SHADOWS_OFF,_FLIPBOOKBLENDING_ON,_SOFTPARTICLES_ON,_FADING_ON,_DISTORTION_ON,_ADDITIONAL_LIGHT_SHADOWS,_REFLECTION_PROBE_BLENDING,_REFLECTION_PROBE_BOX_PROJECTION,_SHADOWS_SOFT,_SHADOWS_SOFT_LOW,_SHADOWS_SOFT_MEDIUM,_SHADOWS_SOFT_HIGH,_SCREEN_SPACE_OCCLUSION,_LIGHT_COOKIES,DEBUG_DISPLAY,_SURFACE_TYPE_TRANSPARENT,_EMISSION,_METALLICSPECGLOSSMAP,_ALPHAPREMULTIPLY_ON,_ALPHAMODULATE_ON,_ALPHATEST_ON,_COLOROVERLAY_ON,_COLORCOLOR_ON,_COLORADDSUBDIFF_ON,_GBUFFER_NORMALS_OCT,_RENDER_PASS_ENABLED,_SPECGLOSSMAP,_SPECULAR_COLOR,_GLOSSINESS_FROM_BASE_ALPHA"}
+{"k":"keywords.Universal Render Pipeline/Particles/Lit.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,_MAIN_LIGHT_SHADOWS:UserDefined:o,_MAIN_LIGHT_SHADOWS_CASCADE:UserDefined:o,_MAIN_LIGHT_SHADOWS_SCREEN:UserDefined:o,_ADDITIONAL_LIGHTS_VERTEX:UserDefined:o,_ADDITIONAL_LIGHTS:UserDefined:o,_FORWARD_PLUS:UserDefined:o,EVALUATE_SH_MIXED:UserDefined:o,EVALUATE_SH_VERTEX:UserDefined:o,_FOVEATED_RENDERING_NON_UNIFORM_RASTER:UserDefined:o:d,PROBE_VOLUMES_L1:UserDefined:o,PROBE_VOLUMES_L2:UserDefined:o,LIGHTMAP_SHADOW_MIXING:UserDefined:o,DOTS_INSTANCING_ON:UserDefined:o,FOG_LINEAR:UserDefined:o,FOG_EXP:UserDefined:o,FOG_EXP2:UserDefined:o,INSTANCING_ON:UserDefined:o,PROCEDURAL_INSTANCING_ON:UserDefined:o,_NORMALMAP:UserDefined,_RECEIVE_SHADOWS_OFF:UserDefined,_FLIPBOOKBLENDING_ON:UserDefined,_SOFTPARTICLES_ON:UserDefined,_FADING_ON:UserDefined,_DISTORTION_ON:UserDefined,_ADDITIONAL_LIGHT_SHADOWS:UserDefined:o,_REFLECTION_PROBE_BLENDING:UserDefined:o,_REFLECTION_PROBE_BOX_PROJECTION:UserDefined:o,_SHADOWS_SOFT:UserDefined:o,_SHADOWS_SOFT_LOW:UserDefined:o,_SHADOWS_SOFT_MEDIUM:UserDefined:o,_SHADOWS_SOFT_HIGH:UserDefined:o,_SCREEN_SPACE_OCCLUSION:UserDefined:o,_LIGHT_COOKIES:UserDefined:o,DEBUG_DISPLAY:UserDefined:o,_SURFACE_TYPE_TRANSPARENT:UserDefined,_EMISSION:UserDefined,_METALLICSPECGLOSSMAP:UserDefined,_ALPHAPREMULTIPLY_ON:UserDefined,_ALPHAMODULATE_ON:UserDefined,_ALPHATEST_ON:UserDefined,_COLOROVERLAY_ON:UserDefined,_COLORCOLOR_ON:UserDefined,_COLORADDSUBDIFF_ON:UserDefined,_GBUFFER_NORMALS_OCT:UserDefined:o,_RENDER_PASS_ENABLED:UserDefined:o,_SPECGLOSSMAP:UserDefined,_SPECULAR_COLOR:UserDefined,_GLOSSINESS_FROM_BASE_ALPHA:UserDefined"}
+{"k":"keywords.Hidden/Universal Render Pipeline/StencilDeferred.count","v":"29"}
+{"k":"keywords.Hidden/Universal Render Pipeline/StencilDeferred.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,_SPOT,_FOVEATED_RENDERING_NON_UNIFORM_RASTER,_POINT,_LIGHT_LAYERS,_ADDITIONAL_LIGHT_SHADOWS,_SHADOWS_SOFT,_SHADOWS_SOFT_LOW,_SHADOWS_SOFT_MEDIUM,_SHADOWS_SOFT_HIGH,LIGHTMAP_SHADOW_MIXING,SHADOWS_SHADOWMASK,_GBUFFER_NORMALS_OCT,_DEFERRED_MIXED_LIGHTING,_SCREEN_SPACE_OCCLUSION,_RENDER_PASS_ENABLED,_LIGHT_COOKIES,_MAIN_LIGHT_SHADOWS,_MAIN_LIGHT_SHADOWS_CASCADE,_MAIN_LIGHT_SHADOWS_SCREEN,_DEFERRED_MAIN_LIGHT,_DEFERRED_FIRST_LIGHT,FOG_LINEAR,FOG_EXP,FOG_EXP2,DOTS_INSTANCING_ON"}
+{"k":"keywords.Hidden/Universal Render Pipeline/StencilDeferred.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,_SPOT:UserDefined:o,_FOVEATED_RENDERING_NON_UNIFORM_RASTER:UserDefined:o:d,_POINT:UserDefined:o,_LIGHT_LAYERS:UserDefined:o,_ADDITIONAL_LIGHT_SHADOWS:UserDefined:o,_SHADOWS_SOFT:UserDefined:o,_SHADOWS_SOFT_LOW:UserDefined:o,_SHADOWS_SOFT_MEDIUM:UserDefined:o,_SHADOWS_SOFT_HIGH:UserDefined:o,LIGHTMAP_SHADOW_MIXING:UserDefined:o,SHADOWS_SHADOWMASK:UserDefined:o,_GBUFFER_NORMALS_OCT:UserDefined:o,_DEFERRED_MIXED_LIGHTING:UserDefined:o,_SCREEN_SPACE_OCCLUSION:UserDefined:o,_RENDER_PASS_ENABLED:UserDefined:o,_LIGHT_COOKIES:UserDefined:o,_MAIN_LIGHT_SHADOWS:UserDefined:o,_MAIN_LIGHT_SHADOWS_CASCADE:UserDefined:o,_MAIN_LIGHT_SHADOWS_SCREEN:UserDefined:o,_DEFERRED_MAIN_LIGHT:UserDefined:o,_DEFERRED_FIRST_LIGHT:UserDefined:o,FOG_LINEAR:UserDefined:o,FOG_EXP:UserDefined:o,FOG_EXP2:UserDefined:o,DOTS_INSTANCING_ON:UserDefined:o"}
+{"k":"keywords.Universal Render Pipeline/Unlit.count","v":"23"}
+{"k":"keywords.Universal Render Pipeline/Unlit.names","v":"STEREO_INSTANCING_ON,UNITY_SINGLE_PASS_STEREO,STEREO_MULTIVIEW_ON,STEREO_CUBEMAP_RENDER_ON,DEBUG_DISPLAY,LOD_FADE_CROSSFADE,DOTS_INSTANCING_ON,FOG_LINEAR,FOG_EXP,FOG_EXP2,INSTANCING_ON,_SCREEN_SPACE_OCCLUSION,_DBUFFER_MRT1,_DBUFFER_MRT2,_DBUFFER_MRT3,_WRITE_RENDERING_LAYERS,_SURFACE_TYPE_TRANSPARENT,_ALPHATEST_ON,_ALPHAMODULATE_ON,_GBUFFER_NORMALS_OCT,EDITOR_VISUALIZATION,_FOVEATED_RENDERING_NON_UNIFORM_RASTER,_ADD_PRECOMPUTED_VELOCITY"}
+{"k":"keywords.Universal Render Pipeline/Unlit.flags","v":"STEREO_INSTANCING_ON:BuiltinDefault:o,UNITY_SINGLE_PASS_STEREO:BuiltinDefault:o,STEREO_MULTIVIEW_ON:BuiltinDefault:o,STEREO_CUBEMAP_RENDER_ON:BuiltinDefault:o,DEBUG_DISPLAY:UserDefined:o,LOD_FADE_CROSSFADE:UserDefined:o,DOTS_INSTANCING_ON:UserDefined:o,FOG_LINEAR:UserDefined:o,FOG_EXP:UserDefined:o,FOG_EXP2:UserDefined:o,INSTANCING_ON:UserDefined:o,_SCREEN_SPACE_OCCLUSION:UserDefined:o,_DBUFFER_MRT1:UserDefined:o,_DBUFFER_MRT2:UserDefined:o,_DBUFFER_MRT3:UserDefined:o,_WRITE_RENDERING_LAYERS:UserDefined:o,_SURFACE_TYPE_TRANSPARENT:UserDefined,_ALPHATEST_ON:UserDefined,_ALPHAMODULATE_ON:UserDefined,_GBUFFER_NORMALS_OCT:UserDefined:o,EDITOR_VISUALIZATION:UserDefined:o,_FOVEATED_RENDERING_NON_UNIFORM_RASTER:UserDefined:o:d,_ADD_PRECOMPUTED_VELOCITY:UserDefined"}
+{"k":"keywords.Probe/KwOwn.enabled.A_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.valid.A_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.enabled.B_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.valid.B_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.enabled.C_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.valid.C_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.enabled.D_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.valid.D_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.enabled.E_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.valid.E_ON","v":"true"}
+{"k":"keywords.Probe/KwOwn.enabledKeywords","v":"B_ON,A_ON,C_ON,D_ON,E_ON"}
+{"k":"keywords.Probe/KwOwn.shaderKeywords","v":"A_ON,B_ON,C_ON,D_ON,E_ON"}
+{"k":"keywords.Probe/KwPlain.enabled.A_ON","v":"false"}
+{"k":"keywords.Probe/KwPlain.valid.A_ON","v":"false"}
+{"k":"keywords.Probe/KwPlain.enabled.B_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.valid.B_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.enabled.C_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.valid.C_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.enabled.D_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.valid.D_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.enabled.E_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.valid.E_ON","v":"true"}
+{"k":"keywords.Probe/KwPlain.enabledKeywords","v":"C_ON,D_ON,B_ON,E_ON"}
+{"k":"keywords.Probe/KwPlain.shaderKeywords","v":"B_ON,C_ON,D_ON,E_ON,A_ON"}
+{"k":"keywords.logs","v":"1 Error: Local keyword A_ON doesn't exist in the shader."}
+{"k":"sparse.tileWidth","v":"128"}
+{"k":"sparse.tileHeight","v":"128"}
+{"k":"sparse.isCreated","v":"true"}
+{"k":"sparse.mipmapCount","v":"1"}
+{"k":"sparse.graphicsFormat","v":"R8G8B8A8_UNorm"}
+{"k":"sparse.loaded","v":"255,0,0,255"}
+{"k":"sparse.unloaded","v":"0,0,0,0"}
+{"k":"sparse.logs","v":"0"}
+{"k":"anamorphism.default","v":"0"}
+{"k":"anamorphism.set0.5","v":"0.5"}
+{"k":"anamorphism.set2","v":"1"}
+{"k":"anamorphism.set-2","v":"-1"}
+{"k":"anamorphism.set-0.25","v":"-0.25"}
+{"k":"anamorphism.setNaN","v":"NaN"}
+{"k":"anamorphism.copy","v":"0.5"}
+{"k":"anamorphism.projection","v":"2.77777743,0,0,0,0,4.938271,0,0,0,0,-1.0006001,-1,0,0,-0.60018003,0"}
+{"k":"anamorphism.projection0","v":"2.77777743,0,0,0,0,4.938271,0,0,0,0,-1.0006001,-1,0,0,-0.60018003,0"}
+{"k":"anamorphism.logs","v":"0"}
+{"k":"lightmapping.giWorkflowMode","v":"OnDemand"}
+{"k":"lightmapping.giWorkflowMode.set","v":"OnDemand"}
+{"k":"lightmapping.logs","v":"0"}
+{"k":"materialProperty.count","v":"13"}
+{"k":"materialProperty._Color.displayName","v":"Color"}
+{"k":"materialProperty._Color.type","v":"Color"}
+{"k":"materialProperty._Color.flags","v":"None"}
+{"k":"materialProperty._Color.float","v":"0"}
+{"k":"materialProperty._Color.int","v":"0"}
+{"k":"materialProperty._Color.color","v":"1,0.5,0.25,1"}
+{"k":"materialProperty._Color.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Color.range","v":"0.5,0.25"}
+{"k":"materialProperty._Color.textureDimension","v":"Any"}
+{"k":"materialProperty._Color.texture","v":"null"}
+{"k":"materialProperty._Color.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Color.mixed","v":"false"}
+{"k":"materialProperty._Color.targets","v":"1"}
+{"k":"materialProperty._Emis.displayName","v":"Emission"}
+{"k":"materialProperty._Emis.type","v":"Color"}
+{"k":"materialProperty._Emis.flags","v":"HDR"}
+{"k":"materialProperty._Emis.float","v":"0"}
+{"k":"materialProperty._Emis.int","v":"0"}
+{"k":"materialProperty._Emis.color","v":"0,0,0,0"}
+{"k":"materialProperty._Emis.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Emis.range","v":"0,0"}
+{"k":"materialProperty._Emis.textureDimension","v":"Any"}
+{"k":"materialProperty._Emis.texture","v":"null"}
+{"k":"materialProperty._Emis.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Emis.mixed","v":"false"}
+{"k":"materialProperty._Emis.targets","v":"1"}
+{"k":"materialProperty._Vec.displayName","v":"Vector"}
+{"k":"materialProperty._Vec.type","v":"Vector"}
+{"k":"materialProperty._Vec.flags","v":"None"}
+{"k":"materialProperty._Vec.float","v":"0"}
+{"k":"materialProperty._Vec.int","v":"0"}
+{"k":"materialProperty._Vec.color","v":"0,0,0,1"}
+{"k":"materialProperty._Vec.vector","v":"1,2,3,4"}
+{"k":"materialProperty._Vec.range","v":"2,3"}
+{"k":"materialProperty._Vec.textureDimension","v":"Any"}
+{"k":"materialProperty._Vec.texture","v":"null"}
+{"k":"materialProperty._Vec.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Vec.mixed","v":"false"}
+{"k":"materialProperty._Vec.targets","v":"1"}
+{"k":"materialProperty._Flt.displayName","v":"Float"}
+{"k":"materialProperty._Flt.type","v":"Float"}
+{"k":"materialProperty._Flt.flags","v":"None"}
+{"k":"materialProperty._Flt.float","v":"0.5"}
+{"k":"materialProperty._Flt.int","v":"0"}
+{"k":"materialProperty._Flt.color","v":"0,0,0,1"}
+{"k":"materialProperty._Flt.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Flt.range","v":"0,0"}
+{"k":"materialProperty._Flt.textureDimension","v":"Any"}
+{"k":"materialProperty._Flt.texture","v":"null"}
+{"k":"materialProperty._Flt.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Flt.mixed","v":"false"}
+{"k":"materialProperty._Flt.targets","v":"1"}
+{"k":"materialProperty._Rng.displayName","v":"Range"}
+{"k":"materialProperty._Rng.type","v":"Range"}
+{"k":"materialProperty._Rng.flags","v":"None"}
+{"k":"materialProperty._Rng.float","v":"1"}
+{"k":"materialProperty._Rng.int","v":"0"}
+{"k":"materialProperty._Rng.color","v":"0,0,0,1"}
+{"k":"materialProperty._Rng.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Rng.range","v":"0,2"}
+{"k":"materialProperty._Rng.textureDimension","v":"Any"}
+{"k":"materialProperty._Rng.texture","v":"null"}
+{"k":"materialProperty._Rng.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Rng.mixed","v":"false"}
+{"k":"materialProperty._Rng.targets","v":"1"}
+{"k":"materialProperty._Int.displayName","v":"Int"}
+{"k":"materialProperty._Int.type","v":"Float"}
+{"k":"materialProperty._Int.flags","v":"None"}
+{"k":"materialProperty._Int.float","v":"3"}
+{"k":"materialProperty._Int.int","v":"0"}
+{"k":"materialProperty._Int.color","v":"0,0,0,1"}
+{"k":"materialProperty._Int.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Int.range","v":"0,0"}
+{"k":"materialProperty._Int.textureDimension","v":"Any"}
+{"k":"materialProperty._Int.texture","v":"null"}
+{"k":"materialProperty._Int.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Int.mixed","v":"false"}
+{"k":"materialProperty._Int.targets","v":"1"}
+{"k":"materialProperty._Integer.displayName","v":"Integer"}
+{"k":"materialProperty._Integer.type","v":"Int"}
+{"k":"materialProperty._Integer.flags","v":"None"}
+{"k":"materialProperty._Integer.float","v":"0"}
+{"k":"materialProperty._Integer.int","v":"7"}
+{"k":"materialProperty._Integer.color","v":"0,0,0,1"}
+{"k":"materialProperty._Integer.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Integer.range","v":"0,0"}
+{"k":"materialProperty._Integer.textureDimension","v":"Any"}
+{"k":"materialProperty._Integer.texture","v":"null"}
+{"k":"materialProperty._Integer.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Integer.mixed","v":"false"}
+{"k":"materialProperty._Integer.targets","v":"1"}
+{"k":"materialProperty._Tex.displayName","v":"Tex"}
+{"k":"materialProperty._Tex.type","v":"Texture"}
+{"k":"materialProperty._Tex.flags","v":"NoScaleOffset"}
+{"k":"materialProperty._Tex.float","v":"0"}
+{"k":"materialProperty._Tex.int","v":"0"}
+{"k":"materialProperty._Tex.color","v":"0,0,0,1"}
+{"k":"materialProperty._Tex.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Tex.range","v":"0,0"}
+{"k":"materialProperty._Tex.textureDimension","v":"Tex2D"}
+{"k":"materialProperty._Tex.texture","v":"null"}
+{"k":"materialProperty._Tex.scaleOffset","v":"1,1,0,0"}
+{"k":"materialProperty._Tex.mixed","v":"false"}
+{"k":"materialProperty._Tex.targets","v":"1"}
+{"k":"materialProperty._Tex3.displayName","v":"Tex3"}
+{"k":"materialProperty._Tex3.type","v":"Texture"}
+{"k":"materialProperty._Tex3.flags","v":"None"}
+{"k":"materialProperty._Tex3.float","v":"0"}
+{"k":"materialProperty._Tex3.int","v":"0"}
+{"k":"materialProperty._Tex3.color","v":"0,0,0,1"}
+{"k":"materialProperty._Tex3.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Tex3.range","v":"0,0"}
+{"k":"materialProperty._Tex3.textureDimension","v":"Tex3D"}
+{"k":"materialProperty._Tex3.texture","v":"null"}
+{"k":"materialProperty._Tex3.scaleOffset","v":"2,3,0,0"}
+{"k":"materialProperty._Tex3.mixed","v":"false"}
+{"k":"materialProperty._Tex3.targets","v":"1"}
+{"k":"materialProperty._Cube.displayName","v":"Cube"}
+{"k":"materialProperty._Cube.type","v":"Texture"}
+{"k":"materialProperty._Cube.flags","v":"None"}
+{"k":"materialProperty._Cube.float","v":"0"}
+{"k":"materialProperty._Cube.int","v":"0"}
+{"k":"materialProperty._Cube.color","v":"0,0,0,1"}
+{"k":"materialProperty._Cube.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Cube.range","v":"0,0"}
+{"k":"materialProperty._Cube.textureDimension","v":"Cube"}
+{"k":"materialProperty._Cube.texture","v":"null"}
+{"k":"materialProperty._Cube.scaleOffset","v":"1,1,0,0"}
+{"k":"materialProperty._Cube.mixed","v":"false"}
+{"k":"materialProperty._Cube.targets","v":"1"}
+{"k":"materialProperty._Per.displayName","v":"Per"}
+{"k":"materialProperty._Per.type","v":"Texture"}
+{"k":"materialProperty._Per.flags","v":"PerRendererData"}
+{"k":"materialProperty._Per.float","v":"0"}
+{"k":"materialProperty._Per.int","v":"0"}
+{"k":"materialProperty._Per.color","v":"0,0,0,1"}
+{"k":"materialProperty._Per.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Per.range","v":"0,0"}
+{"k":"materialProperty._Per.textureDimension","v":"Tex2D"}
+{"k":"materialProperty._Per.texture","v":"textureExternal"}
+{"k":"materialProperty._Per.scaleOffset","v":"1,1,0,0"}
+{"k":"materialProperty._Per.mixed","v":"false"}
+{"k":"materialProperty._Per.targets","v":"1"}
+{"k":"materialProperty._Tog.displayName","v":"Toggle"}
+{"k":"materialProperty._Tog.type","v":"Float"}
+{"k":"materialProperty._Tog.flags","v":"None"}
+{"k":"materialProperty._Tog.float","v":"1"}
+{"k":"materialProperty._Tog.int","v":"0"}
+{"k":"materialProperty._Tog.color","v":"0,0,0,1"}
+{"k":"materialProperty._Tog.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Tog.range","v":"0,0"}
+{"k":"materialProperty._Tog.textureDimension","v":"Any"}
+{"k":"materialProperty._Tog.texture","v":"null"}
+{"k":"materialProperty._Tog.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Tog.mixed","v":"false"}
+{"k":"materialProperty._Tog.targets","v":"1"}
+{"k":"materialProperty._Hid.displayName","v":"Hidden"}
+{"k":"materialProperty._Hid.type","v":"Float"}
+{"k":"materialProperty._Hid.flags","v":"HideInInspector"}
+{"k":"materialProperty._Hid.float","v":"0"}
+{"k":"materialProperty._Hid.int","v":"0"}
+{"k":"materialProperty._Hid.color","v":"0,0,0,1"}
+{"k":"materialProperty._Hid.vector","v":"0,0,0,0"}
+{"k":"materialProperty._Hid.range","v":"0,0"}
+{"k":"materialProperty._Hid.textureDimension","v":"Any"}
+{"k":"materialProperty._Hid.texture","v":"null"}
+{"k":"materialProperty._Hid.scaleOffset","v":"0,0,0,0"}
+{"k":"materialProperty._Hid.mixed","v":"false"}
+{"k":"materialProperty._Hid.targets","v":"1"}
+{"k":"materialProperty.both","v":"_Color:mixed,_Emis,_Vec,_Flt:mixed,_Rng,_Int,_Integer,_Tex,_Tex3,_Cube,_Per,_Tog,_Hid"}
+{"k":"materialProperty.one","v":"0.75"}
+{"k":"materialProperty.oneMixed","v":"true"}
+{"k":"materialProperty.missing","v":"null"}
+{"k":"materialProperty.write","v":"1.5"}
+{"k":"materialProperty.writeTexture","v":"UnityRed"}
+{"k":"materialProperty.vectorRange","v":"2,3"}
+{"k":"materialProperty.vectorValue","v":"9,8,7,6"}
+{"k":"materialProperty.material._Tex","v":"null"}
+{"k":"materialProperty.material._Per","v":"null"}
+{"k":"materialProperty.material._Cube","v":"null"}
+{"k":"materialProperty.logs","v":"0"}
+{"k":"meshUtility.compression","v":"Off"}
+{"k":"meshUtility.compression.set","v":"Medium"}
+{"k":"meshUtility.vertices.set","v":"0,0;5,5;1,0;0,1;4,5;5,4"}
+{"k":"meshUtility.optimized.vertices","v":"5,5;4,5;5,4;0,0;0,1;1,0"}
+{"k":"meshUtility.optimized.uv","v":"1,1;0.8,1;1,0.8;0,0;0,1;1,0"}
+{"k":"meshUtility.optimized.triangles","v":"0,1,2,3,4,5"}
+{"k":"meshUtility.grid.vertices","v":"0,2;0,3;1,3;1,2;0,1;2,3;1,1;0,0;1,0;2,2;3,3;2,1;2,0;3,2;4,3;4,2;3,1;3,0;4,1;4,0"}
+{"k":"meshUtility.grid.triangles","v":"0,1,2,0,2,3,4,0,3,3,2,5,4,3,6,7,4,6,7,6,8,3,5,9,6,3,9,9,5,10,8,6,11,6,9,11,8,11,12,9,10,13,11,9,13,13,10,14,13,14,15,12,11,16,11,13,16,16,13,15,12,16,17,16,15,18,17,16,18,17,18,19"}
+{"k":"meshUtility.logs","v":"0"}
+{"k":"objectId.supports","v":"true"}
+{"k":"objectId.depth.defaults","v":"0,Unknown,0,True"}
+{"k":"objectId.depth.result","v":"6"}
+{"k":"objectId.depth.mapping","v":"null,idBack:MeshRenderer,idB:MeshRenderer,idD:MeshRenderer,idA:MeshRenderer,idC:MeshRenderer"}
+{"k":"objectId.depth.pixel.a","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.b","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.c","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.back","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.d","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.background","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.ids","v":"0:4096"}
+{"k":"objectId.depth.logs","v":"0"}
+{"k":"objectId.noDepth.defaults","v":"0,Unknown,0,True"}
+{"k":"objectId.noDepth.result","v":"6"}
+{"k":"objectId.noDepth.mapping","v":"null,idBack:MeshRenderer,idB:MeshRenderer,idD:MeshRenderer,idA:MeshRenderer,idC:MeshRenderer"}
+{"k":"objectId.noDepth.pixel.a","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.b","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.c","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.back","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.d","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.background","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.ids","v":"0:4096"}
+{"k":"objectId.noDepth.logs","v":"1 Warning: ObjectId Render Request submitted without a depth stencil, which can produce results that are not depth tested correctly"}
+{"k":"objectId.standard.supports","v":"true"}
+{"k":"objectId.standard.logs","v":"0"}
+{"k":"objectId.null.exception","v":"ArgumentException: SubmitRenderRequests is invoked with invalid renderRequests"}
+{"k":"objectId.null.logs","v":"0"}
+{"k":"layers.start","v":"3 Default,Layer 1,Layer 2 defined Default,Layer 1,Layer 2"}
+{"k":"layers.pipelineType","v":"UnityEngine.Rendering.Universal.UniversalRenderPipeline"}
+{"k":"layers.pipelineType.material","v":"null"}
+{"k":"layers.pipelineType.base.exception","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"layers.activeMax","v":"32"}
+{"k":"layers.add","v":"true"}
+{"k":"layers.add.state","v":"4 Default,Layer 1,Layer 2,ProbeAdded defined Default,Layer 1,Layer 2,ProbeAdded"}
+{"k":"layers.addEmpty","v":"true"}
+{"k":"layers.addDuplicate","v":"true"}
+{"k":"layers.addDuplicate.state","v":"6 Default,Layer 1,Layer 2,ProbeAdded,,Layer 1 defined Default,Layer 1,Layer 2,ProbeAdded,Layer 1"}
+{"k":"layers.set0","v":"false"}
+{"k":"layers.set1","v":"true"}
+{"k":"layers.setLast","v":"true"}
+{"k":"layers.setPast","v":"false"}
+{"k":"layers.setNegative","v":"false"}
+{"k":"layers.setNull","v":"true"}
+{"k":"layers.set.state","v":"6 Default,Renamed,,ProbeAdded,,Last defined Default,Renamed,ProbeAdded,Last"}
+{"k":"layers.mask","v":"10"}
+{"k":"layers.nameToLayer","v":"3"}
+{"k":"layers.set.logs","v":"5 Warning: The class named 'UnityEngine.Rendering.RenderPipelineAsset' is abstract. The script class can't be abstract! | Warning: The class named 'UnityEngine.Rendering.RenderPipelineAsset' is abstract. The script class can't be abstract! | Error: Index 0 is reserved for Default Layer and it can't be edited. | Error: Out of range index for Rendering Layers: 6. Use index between 0 and 6 | Error: Out of range index for Rendering Layers: -1. Use index between 0 and 6"}
+{"k":"layers.filled","v":"26 32"}
+{"k":"layers.addPastMax","v":"false"}
+{"k":"layers.fill.logs","v":"1 Error: TryAddRenderingLayerName can't add more Rendering Layers because the maximum amount of supported Rendering Layers is 32."}
+{"k":"layers.removed.state","v":"1 Default defined Default"}
+{"k":"layers.removeDefault","v":"false"}
+{"k":"layers.remove.logs","v":"1 Error: Rendering layers always need at least one default layer. It's not possible to remove the default layer."}
+{"k":"rebind.before","v":"DefaultVolumeProfile"}
+{"k":"rebind.after","v":"ProbeProfile"}
+{"k":"rebind.same","v":"true"}
+{"k":"rebind.unchanged","v":"true"}
+{"k":"rebind.logs","v":"0"}
+{"k":"cameraUtils.filter.results","v":"True,True"}
+{"k":"cameraUtils.hidden.bits","v":"0"}
+{"k":"cameraUtils.hiddenB.bits","v":"2"}
+{"k":"cameraUtils.filterHidden.results","v":"True,True"}
+{"k":"cameraUtils.hiddenLength.exception","v":"ArgumentException: Unexpected resultBits Span length. The expected length of resultBits Span should be equal to the formula: (rendererIDs.Length + 63) / 64"}
+{"k":"cameraUtils.logs","v":"0"}
+{"k":"end.logs","v":"0"}
+{"k":"queue.errors","v":"Error: Shader Probe/SelQ0 uses undefined Queue: 'Bogus' | Error: Shader Probe/SelQ1 uses undefined Queue: 'Geometry+-3' | Error: Shader Probe/SelQ2 uses undefined Queue: ' Transparent' | Error: Shader Probe/SelQ4 uses undefined Queue: '2000.5' | Error: Shader Probe/SelQ5 uses undefined Queue: 'Geometry + 1' | Error: Shader Probe/SelQ7 uses undefined Queue: '-5' | Error: Shader Probe/SelQ8 uses undefined Queue: '2450'"}
+{"k":"queue.errors.unknown","v":"Error: Shader Unknown uses undefined Queue: ' Transparent' | Error: Shader Unknown uses undefined Queue: '-5' | Error: Shader Unknown uses undefined Queue: '2000.5' | Error: Shader Unknown uses undefined Queue: '2450' | Error: Shader Unknown uses undefined Queue: 'Bogus' | Error: Shader Unknown uses undefined Queue: 'Geometry + 1' | Error: Shader Unknown uses undefined Queue: 'Geometry+-3'"}
+{"k":"complete","v":true}

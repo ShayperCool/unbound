@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/graphicsgaps/run.py gate"
+  ],
+  "summary": "graphicsgaps.*: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/ShaderPasses.cs",
+    "managed/UnityEngine/Graphics/ShaderDeclarations.cs",
+    "managed/UnityEngine/Graphics/ShaderLab.cs",
+    "managed/UnityEngine/Graphics/Shader.cs",
+    "managed/UnityEngine/Graphics/SparseTexture.cs",
+    "managed/UnityEngine/Graphics/ObjectIdRequests.cs",
+    "managed/UnityEngine/Editor/MaterialProperty.cs",
+    "managed/UnityEngine/Editor/RenderPipelineEditorUtility.cs",
+    "crates/unbound/src/declarations.rs",
+    "crates/unbound-app/src/shaderlab.rs"
+  ]
+}
