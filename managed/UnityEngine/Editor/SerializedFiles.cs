@@ -191,10 +191,6 @@ namespace Unbound.Runtime
                 m_Locations = locations;
             }
 
-            /// <summary>A writer for the next document of the same file (managed reference ids are
-            /// per document).</summary>
-            internal Writer ForDocument() => new Writer(m_Out, m_Ids, m_Assets, m_Located, m_References, m_Locations);
-
             void Indent(int level) => m_Out.Append(' ', level * 2);
 
             // Typed fields of native objects, at the document's top level unless a level is given.

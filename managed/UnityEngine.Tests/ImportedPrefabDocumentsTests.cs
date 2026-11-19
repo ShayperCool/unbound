@@ -267,11 +267,54 @@ namespace UnityEngine.Tests
         {
             using var engine = MainThreadCheck.Engine();
             var b = Build();
+            // A class without its own writer (the test's precondition).
+            Assert.False(ImportedPrefabDocuments.Writable(typeof(AudioSource)));
             var source = b.Child.AddComponent<AudioSource>();
             b.File.Objects[999] = source;
             var e = Assert.Throws<NotSupportedException>(() => ImportedPrefabDocuments.Write(b.File, b.Root));
             Assert.Contains("AudioSource", e.Message);
             Assert.Contains(b.File.Path, e.Message);
+        }
+
+        /// <summary>A disabled light or camera stays disabled in the documents (their writers write
+        /// the enabled state).</summary>
+        [Fact]
+        public void DisabledLightsAndCamerasAreWrittenDisabled()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var b = Build();
+            var light = b.Child.AddComponent<Light>();
+            light.enabled = false;
+            var camera = b.Child.AddComponent<Camera>();
+            camera.enabled = false;
+            b.File.Objects[998] = light;
+            b.File.Objects[999] = camera;
+            var docs = Parse(ImportedPrefabDocuments.Write(b.File, b.Root));
+            Assert.Equal(0, docs[998].Body.Int("m_Enabled", 1));
+            Assert.Equal(0, docs[999].Body.Int("m_Enabled", 1));
+        }
+
+        /// <summary>Every class with its own writer whose components have an enabled state writes
+        /// it (a scene save's prefab modifications take it from the writer).</summary>
+        [Fact]
+        public void EveryWriterOfAnEnabledStateWritesIt()
+        {
+            using var engine = MainThreadCheck.Engine();
+            var go = new GameObject("writers");
+            try
+            {
+                foreach (var type in typeof(Component).Assembly.GetTypes())
+                {
+                    if (type.IsAbstract || !typeof(Component).IsAssignableFrom(type) || typeof(MonoBehaviour).IsAssignableFrom(type)) continue;
+                    if (!(typeof(Behaviour).IsAssignableFrom(type) || typeof(Renderer).IsAssignableFrom(type) || typeof(Collider).IsAssignableFrom(type))) continue;
+                    if (!ImportedPrefabDocuments.Writable(type)) continue;
+                    var c = go.GetComponent(type) ?? go.AddComponent(type);
+                    if (c == null) continue;
+                    var body = SceneFiles.Body(c.WriteSerialized, new Dictionary<Object, long>(ReferenceEqualityComparer.Instance), new AssetDatabaseRuntime.Locations());
+                    Assert.True(body.Get("m_Enabled") != null, type.Name + " writes no m_Enabled");
+                }
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         /// <summary>A model's own components (what its postprocessors change): a skinned
