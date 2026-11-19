@@ -385,12 +385,14 @@ namespace Unbound.Runtime
             internal static Culler ForCamera(Camera camera, Vector3 position, Vector3 forward) =>
                 new Culler(camera.projectionMatrix * camera.worldToCameraMatrix, position, forward, camera.layerCullDistances, camera.layerCullSpherical);
 
-            /// <summary>Renderers whose bounds are those Unity culls with (mesh and sprite
-            /// renderers, and an effect's renderer: its bounds are the ones its graph gives its
-            /// systems, whatever its particles do) or cover everything they draw (particle
-            /// renderers that can bound their draw); others are drawn whether culled or not.</summary>
+            /// <summary>Renderers whose bounds are those Unity culls with (mesh, sprite, line and
+            /// trail renderers, tests/projects/animatorapi bounds.*, and an effect's renderer: its
+            /// bounds are the ones its graph gives its systems, whatever its particles do) or cover
+            /// everything they draw (particle renderers that can bound their draw); others are
+            /// drawn whether culled or not. Animation culling reads the same visibility.</summary>
             internal static bool TrustsBounds(Renderer renderer) =>
                 renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer || renderer is UnityEngine.VFX.VFXRenderer ||
+                renderer is LineRenderer || renderer is TrailRenderer ||
                 renderer is SkinnedMeshRenderer skin && skin.HasMeasuredCullingBounds ||
                 renderer is ParticleSystemRenderer particles && (particles.NothingToDraw || particles.CullingBoundsCoverDraw);
 

@@ -195,7 +195,6 @@ namespace UnityEngine
         bool m_Loop;
         SpriteMaskInteraction m_MaskInteraction;
         readonly LineStrip m_Strip = new LineStrip();
-        readonly List<Vector3> m_World = new List<Vector3>();
         readonly LineRenderMeshes m_Meshes = new LineRenderMeshes();
 
         public LineRenderer() { InitializeStripDefaults(); }
@@ -346,18 +345,6 @@ namespace UnityEngine
                 : LineDrawing.Space(this, m_Parameters, drawCamera, frame, false, inputToWorld, worldToOutput);
         }
 
-        List<Vector3> WorldPoints()
-        {
-            m_World.Clear();
-            if (m_UseWorldSpace) m_World.AddRange(m_Positions);
-            else
-            {
-                var m = transform.localToWorldMatrix;
-                for (int i = 0; i < m_Positions.Count; i++) m_World.Add(m.MultiplyPoint3x4(m_Positions[i]));
-            }
-            return m_World;
-        }
-
         public void BakeMesh(Mesh mesh, [Internal.DefaultValue("false")] bool useTransform = false) => BakeMesh(mesh, Camera.main, useTransform);
 
         public void BakeMesh(Mesh mesh, Camera camera, [Internal.DefaultValue("false")] bool useTransform = false)
@@ -372,8 +359,25 @@ namespace UnityEngine
             m_Strip.WriteTo(mesh, streaming: false);
         }
 
+        /// <summary>The line's box in the space its positions are in (world or local): the
+        /// positions' box grown by the width multiplier (not its curve); one position gives an
+        /// empty box there, none an empty box at the transform's position taken in that space
+        /// (Unity 6000.0.71f1, tests/projects/animatorapi bounds.line.*). The other space's
+        /// bounds are that box transformed.</summary>
+        Bounds SpaceBounds()
+        {
+            if (m_Positions.Count == 0) return new Bounds(transform.position, Vector3.zero);
+            var b = new Bounds(m_Positions[0], Vector3.zero);
+            if (m_Positions.Count == 1) return b;
+            for (int i = 1; i < m_Positions.Count; i++) b.Encapsulate(m_Positions[i]);
+            b.Expand(Mathf.Abs(m_Parameters.WidthMultiplier));
+            return b;
+        }
+
         internal override Bounds GetLocalBounds() =>
-            LineDrawing.BoundsOf(WorldPoints(), Mathf.Abs(m_Parameters.WidthMultiplier), transform.worldToLocalMatrix);
+            m_UseWorldSpace ? TransformBounds(SpaceBounds(), transform.worldToLocalMatrix) : SpaceBounds();
+
+        internal override Bounds GetWorldBounds() => m_UseWorldSpace ? SpaceBounds() : base.GetWorldBounds();
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {

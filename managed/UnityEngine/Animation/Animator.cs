@@ -602,10 +602,15 @@ namespace UnityEngine
         /// count, with updateWhenOffscreen on or off; one visible renderer of several is enough).
         /// Root-space skinned bounds and their remaining limitations are handled by the renderer
         /// (measured, tests/projects/skinnedbounds).</item>
-        /// <item>Every other enabled renderer in an active hierarchy (particle, line, trail, ...)
-        /// counts as visible: their bounds are approximate in Unbound and their effect on animation
-        /// culling is unmeasured. Reported once (stub report "Animation culling with approximate
-        /// renderer bounds").</item>
+        /// <item>Line and trail renderers, and particle renderers whose culling bounds cover what
+        /// they draw, decide by isVisible too: cameras cull them by the bounds Unity gives them
+        /// (<see cref="FrameBuilder.Culler.TrustsBounds"/>; line and trail bounds measured,
+        /// tests/projects/animatorapi bounds.*).</item>
+        /// <item>Every other enabled renderer in an active hierarchy (a particle renderer whose
+        /// bounds do not cover its trails or minimum particle size, billboard, tilemap, sprite
+        /// shape) counts as visible: cameras draw them whether culled or not, so their
+        /// visibility is not Unity's. Reported once (stub report "Animation culling with
+        /// approximate renderer bounds").</item>
         /// </list>
         /// </summary>
         internal static bool AnyRendererVisible(GameObject root)
@@ -621,10 +626,10 @@ namespace UnityEngine
                 if (Unbound.Runtime.Compat.SkinnedBoundsMeasured && renderer is SkinnedMeshRenderer measuredSkin)
                     measuredSkin.ReportBoundsLimitation();
                 if (renderer.isVisible) return true;
-                if (!HasExactCullingBounds(renderer) && renderer.enabled && root.activeInHierarchy)
+                if (!(renderer is SkinnedMeshRenderer) && !FrameBuilder.Culler.TrustsBounds(renderer) && renderer.enabled && root.activeInHierarchy)
                 {
                     Unbound.Runtime.Stubs.Ignored("Animation culling with approximate renderer bounds",
-                        "counts particle, line and trail renderers as visible while they are enabled (their culling bounds are approximate in Unbound)");
+                        "counts particle renderers with trails or a minimum size, billboard, tilemap and sprite shape renderers as visible while they are enabled (cameras draw them whether culled or not)");
                     return true;
                 }
             }
@@ -637,9 +642,6 @@ namespace UnityEngine
             }
             return false;
         }
-
-        static bool HasExactCullingBounds(Renderer renderer) =>
-            renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer || renderer is SkinnedMeshRenderer;
 
         /// <summary>As Unity's: the animated properties go back to their defaults (the values the
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
