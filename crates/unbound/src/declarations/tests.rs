@@ -939,7 +939,10 @@ fn fallback_keywords_follow_the_shaders_own() {
             })
             .collect::<Vec<_>>()
     };
-    assert_eq!(space("Tests/Own"), ["B_ON", "A_ON:l", "C_ON", "D_ON:d", "E_ON:l"]);
+    assert_eq!(
+        space("Tests/Own"),
+        ["B_ON", "A_ON:l", "C_ON", "D_ON:d", "E_ON:l"]
+    );
     assert_eq!(space("Tests/Plain"), ["C_ON", "D_ON:d", "B_ON:l", "E_ON:l"]);
     assert_eq!(space("Tests/Fall"), ["C_ON", "D_ON:d", "B_ON:l", "E_ON:l"]);
 }

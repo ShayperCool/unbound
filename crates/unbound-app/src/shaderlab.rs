@@ -1928,7 +1928,10 @@ pub fn runs_under(tag: Option<&str>, pipeline: &str) -> bool {
             .find(|t| t.eq_ignore_ascii_case(part))
             .copied()
             .unwrap_or(part);
-        if pipeline.split(',').any(|active| !active.is_empty() && active == name) {
+        if pipeline
+            .split(',')
+            .any(|active| !active.is_empty() && active == name)
+        {
             return true;
         }
     }
@@ -1951,18 +1954,29 @@ mod tests {
             (Some(" UniversalPipeline"), "Foo, UniversalPipeline", true),
             (Some("universalpipeline"), "UniversalPipeline", true),
             (Some("UniversalPipeline"), "universalpipeline", false),
-            (Some("UniversalPipeline,HDRenderPipeline"), "HDRenderPipeline", true),
+            (
+                Some("UniversalPipeline,HDRenderPipeline"),
+                "HDRenderPipeline",
+                true,
+            ),
             (Some("foo"), "Foo", false),
             (Some(" "), "", false),
         ] {
-            assert_eq!(runs_under(tag, pipeline), runs, "{tag:?} under {pipeline:?}");
+            assert_eq!(
+                runs_under(tag, pipeline),
+                runs,
+                "{tag:?} under {pipeline:?}"
+            );
         }
         let mut lab = ShaderLab::parse(
             r#"Shader "T" { SubShader { Tags { "RenderPipeline"="HDRenderPipeline,UniversalPipeline" } Pass { ColorMask R } } SubShader { Pass { ColorMask G } } }"#,
         )
         .unwrap();
         lab.select("UniversalPipeline");
-        assert_eq!(lab.tags.get("RenderPipeline").map(String::as_str), Some("HDRenderPipeline,UniversalPipeline"));
+        assert_eq!(
+            lab.tags.get("RenderPipeline").map(String::as_str),
+            Some("HDRenderPipeline,UniversalPipeline")
+        );
         lab.select(" UniversalPipeline");
         assert!(lab.tags.get("RenderPipeline").is_none());
     }
