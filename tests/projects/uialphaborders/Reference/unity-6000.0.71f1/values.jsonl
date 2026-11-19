@@ -26,5 +26,7 @@
 {"k":"etc1Material","v":["ETC1 Supported UI Material","UI/DefaultETC1"]}
 {"k":"etc1Material.same","v":true}
 {"k":"etc1Material.isDefault","v":false}
+{"k":"batches.mask.steps.hasRectClipping","v":true}
+{"k":"batches.mask.half.hasRectClipping","v":true}
 {"k":"batches.screen","v":[320,180]}
 {"k":"complete","v":true}

@@ -21,7 +21,7 @@ solid background (64, 76, 89) in a 320x180 game view and reads the screen at the
   of a sprite with a secondary texture named `_AlphaTex`, and of a plain transparent sprite.
 - `batches.png`: renderers of one UI/DefaultETC1 material and texture with the stepped then the
   half alpha texture: beside a draw of another material that does not overlap them, around one
-  that overlaps both, and both under one RectMask2D.
+  that overlaps both, and as RawImages clipped by one RectMask2D (`hasRectClipping` recorded).
 - `values.jsonl`: Canvas.GetETC1SupportedCanvasMaterial (name, shader, the same object, the
   default material or not); the sprites' texture formats, `associatedAlphaSplitTexture`, secondary textures
   and the materials the Image and SpriteRenderer draw with.
@@ -33,9 +33,10 @@ solid background (64, 76, 89) in a 320x180 game view and reads the screen at the
 | Canvas.GetETC1SupportedCanvasMaterial | The material for ETC1 split alpha. | "ETC1 Supported UI Material" with UI/DefaultETC1, the same object each call, not the default UI material. |
 | Sprite.associatedAlphaSplitTexture | The alpha texture made for ETC1 split alpha; null when none. | Null for every sprite: the Editor imports a Split Alpha Channel texture as ETC_RGB4 without its alpha and makes no alpha texture; with the sRGB flag on, the linear project's ETC2 promotion keeps the alpha as ETC2_RGBA8. A secondary texture named `_AlphaTex` is used by neither Image nor SpriteRenderer. |
 
-Unbound matches every value. Images: imgui within 1/255, canvas within 3/255 and batches within 2/255 on the split-alpha sprites (`image_limits.json` lists the residuals and
+Unbound matches every value. Images: imgui within 1/255, canvas within 3/255 on the split-alpha sprites, batches exactly (`image_limits.json` lists the residuals and
 their causes). Unmeasured: other graphics devices and drivers, a gamma project, `GUI.matrix`
-rotation with radiuses, renderers under different clip rects, player builds' split alpha.
+rotation with radiuses, renderers under different clip rects, stencil Masks between them, depth order against drawing
+order, player builds' split alpha.
 
 ```sh
 python3 tests/projects/uialphaborders/run.py record --label native-a

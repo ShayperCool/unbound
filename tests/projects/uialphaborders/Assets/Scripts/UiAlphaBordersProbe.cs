@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections;
 using System.IO;
 using System.Text;
@@ -69,6 +70,8 @@ public class UiAlphaBordersProbe : MonoBehaviour
         var first = Canvases();
         yield return Capture("canvas");
         Destroy(first.gameObject);
+        // The batches capture shows canvas draws only.
+        foreach (var sprite in FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)) Destroy(sprite.gameObject);
         yield return null;
         Batches();
         yield return Capture("batches");
@@ -179,13 +182,20 @@ public class UiAlphaBordersProbe : MonoBehaviour
         ((RectTransform)overHalf.transform).anchoredPosition = new Vector2(44 + 40, 100);
         var maskRect = Place(canvas, "mask", 0, 60, typeof(RectMask2D));
         maskRect.sizeDelta = new Vector2(320, Cell);
+        // RawImages (maskable graphics) under the mask, so their renderers are rect clipped.
         var masked = new Material(shader);
+        var clipped = new List<CanvasRenderer>();
         foreach (var (name, column, alpha) in new[] { ("mask.steps", 0, m_Steps), ("mask.half", 1, m_Half) })
         {
-            var r = Bare(canvas, name, column, 60, masked, alpha);
-            r.transform.SetParent(maskRect, true);
+            var raw = Place(canvas, name, 4 + 40 * column, 60, typeof(RawImage)).GetComponent<RawImage>();
+            raw.transform.SetParent(maskRect, true);
+            raw.texture = m_Quads;
+            raw.material = masked;
+            raw.canvasRenderer.SetAlphaTexture(alpha);
+            clipped.Add(raw.canvasRenderer);
         }
         Canvas.ForceUpdateCanvases();
+        foreach (var r in clipped) Value("batches." + r.name + ".hasRectClipping", r.hasRectClipping.ToString().ToLowerInvariant());
     }
 
     /// <summary>A bare CanvasRenderer drawing the quadrant texture with <paramref name="material"/>.</summary>

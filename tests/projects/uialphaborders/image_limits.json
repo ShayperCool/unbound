@@ -10,11 +10,5 @@
   "worst": 1,
   "over8": 0,
   "reason": "About 7400 pixels of the translucent rounded and blit draws over the opaque blue bases (third row) differ by 1/255: rounding of the blend of a half-transparent tint (cause not resolved). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
- },
- "batches.png": {
-  "mean": 0.04,
-  "worst": 2,
-  "over8": 0,
-  "reason": "The split-alpha sprites' SpriteRenderers the canvas step leaves on screen (third row): pixels within 2/255, from Unbound's own ETC encoders as in canvas.png. Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
  }
 }
