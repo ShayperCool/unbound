@@ -224,6 +224,9 @@ namespace UnityEditor
             return session;
         }
 
+        /// <summary>The asset's import in progress, if any.</summary>
+        internal static ImportSession ExistingSession(string path) => s_Sessions.TryGetValue(path, out var session) ? session : null;
+
         /// <summary>The asset's import is done: a later one makes new postprocessors.</summary>
         internal static void EndSession(string path) => s_Sessions.Remove(path);
 
@@ -245,9 +248,10 @@ namespace UnityEditor
         internal static void EnsurePreprocessed(string path, string kind)
         {
             if (path == null || !s_Preprocessed.Add(path)) return;
+            // A prefab has no preprocessor of its own: OnPreprocessAsset alone.
             string own = kind switch { "texture" => "OnPreprocessTexture", "model" => "OnPreprocessModel", "audio" => "OnPreprocessAudio", _ => null };
-            if (own == null) return;
-            if (Hooks("OnPreprocessAsset").Count == 0 && Hooks(own).Count == 0 && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
+            if (own == null && kind != "prefab") return;
+            if (Hooks("OnPreprocessAsset").Count == 0 && (own == null || Hooks(own).Count == 0) && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
             Preprocess(path, kind);
         }
@@ -313,8 +317,7 @@ namespace UnityEditor
                 return;
             }
             var session = Session(path);
-            if (hooks.Count > 0 && BlockFormats.BlockBytes(texture.format) > 0)
-                PostprocessBeforeCompression(session, hooks, texture);
+            if (hooks.Count > 0 && PostprocessBeforeCompression(session, hooks, texture)) { }
             else if (hooks.Count > 0)
             {
                 bool readable = texture.m_IsReadable;
@@ -342,9 +345,12 @@ namespace UnityEditor
         /// tests/projects/assetpostprocessors Plain.png and Sprite.png), then compresses what the
         /// postprocessors left. Unbound's import is compressed already: the postprocessors get a
         /// texture of the pixels before compression, and pixels they change are compressed into
-        /// the import's format.</summary>
-        static void PostprocessBeforeCompression(ImportSession session, List<(int, Type, MethodInfo)> hooks, Texture2D texture)
+        /// the import's format. Returns false, having done nothing, for an import that is not of an
+        /// 8-bit block format Unbound compresses (a crunched or HDR one: those get the import as it
+        /// is, unmeasured).</summary>
+        static bool PostprocessBeforeCompression(ImportSession session, List<(int, Type, MethodInfo)> hooks, Texture2D texture)
         {
+            if (!BeforeCompressionApplies(texture.format)) return false;
             var levels = new List<Color32[]>();
             bool alpha = true;
             try
@@ -354,6 +360,8 @@ namespace UnityEditor
                     using var json = JsonDocument.Parse(Native.Call("texture-pixels",
                         JsonSerializer.Serialize(new { guid = texture.m_AssetGuid, mip, beforeCompression = true })));
                     var root = json.RootElement;
+                    // Float pixels (an HDR source of an 8-bit block format) are not given so.
+                    if (root.GetProperty("format").GetInt32() != 0) return false;
                     alpha = root.GetProperty("hasAlpha").GetBoolean();
                     var rgba = Convert.FromBase64String(root.GetProperty("rgba").GetString());
                     var level = new Color32[rgba.Length / 4];
@@ -364,8 +372,7 @@ namespace UnityEditor
             catch (Exception e)
             {
                 Debug.LogWarning($"Unbound: {session.Path}: its OnPostprocessTexture gets the compressed import ({e.Message})");
-                AssetPostprocessorHooks.Run(hooks, session, new object[] { texture });
-                return;
+                return false;
             }
             var subject = new Texture2D(texture.width, texture.height, alpha ? TextureFormat.RGBA32 : TextureFormat.RGB24, levels.Count, !texture.isDataSRGB)
             {
@@ -375,50 +382,87 @@ namespace UnityEditor
                 wrapModeV = texture.wrapModeV,
                 wrapModeW = texture.wrapModeW,
                 anisoLevel = texture.anisoLevel,
+                mipMapBias = texture.mipMapBias,
             };
             try
             {
                 for (int mip = 0; mip < levels.Count; mip++) subject.SetPixels32(levels[mip], mip);
                 AssetPostprocessorHooks.Run(hooks, session, new object[] { subject });
-                bool changed = false;
-                for (int mip = 0; mip < levels.Count && !changed; mip++)
+                // The sampler settings a postprocessor set are the import's.
+                texture.filterMode = subject.filterMode;
+                texture.wrapModeU = subject.wrapModeU;
+                texture.wrapModeV = subject.wrapModeV;
+                texture.wrapModeW = subject.wrapModeW;
+                texture.anisoLevel = subject.anisoLevel;
+                texture.mipMapBias = subject.mipMapBias;
+                if (subject.width != texture.width || subject.height != texture.height || subject.mipmapCount != levels.Count)
                 {
-                    var now = subject.GetPixels32(mip);
-                    for (int i = 0; i < now.Length && !changed; i++)
-                        changed = !now[i].Equals(levels[mip][i]);
+                    Debug.LogWarning($"Unbound: {session.Path}: a size or mip map count its OnPostprocessTexture gave the texture is not kept (unsupported); the import keeps its own");
+                    return true;
                 }
-                if (changed) Recompress(texture, subject);
+                if (Changed(subject, levels)) Recompress(session.Path, texture, subject);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, texture);
             }
             finally
             {
                 Object.DestroyImmediate(subject);
             }
+            return true;
         }
 
-        /// <summary>The pixels a postprocessor changed, compressed into the import's format.</summary>
-        static void Recompress(Texture2D texture, Texture2D pixels)
+        /// <summary>Whether a texture of this imported format gets its pixels before compression:
+        /// an 8-bit block format Unbound compresses (not crunched, not HDR).</summary>
+        internal static bool BeforeCompressionApplies(TextureFormat format) =>
+            BlockFormats.BlockBytes(format) > 0 && !BlockFormats.IsCrunch(format) && format != TextureFormat.BC6H && !BlockFormats.IsAstcHdr(format);
+
+        static bool Changed(Texture2D subject, List<Color32[]> levels)
+        {
+            for (int mip = 0; mip < levels.Count; mip++)
+            {
+                var now = subject.GetPixels32(mip);
+                if (now.Length != levels[mip].Length) return true;
+                for (int i = 0; i < now.Length; i++)
+                    if (!now[i].Equals(levels[mip][i])) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The pixels a postprocessor changed, compressed into the import's format; a
+        /// failure leaves the import as it was, with a warning.</summary>
+        static void Recompress(string path, Texture2D texture, Texture2D pixels)
         {
             var blocks = new List<byte>();
-            for (int mip = 0; mip < texture.mipmapCount; mip++)
+            try
             {
-                var level = pixels.GetPixels32(mip);
-                var rgba = new byte[level.Length * 4];
-                for (int i = 0; i < level.Length; i++)
+                for (int mip = 0; mip < texture.mipmapCount; mip++)
                 {
-                    rgba[4 * i] = level[i].r;
-                    rgba[4 * i + 1] = level[i].g;
-                    rgba[4 * i + 2] = level[i].b;
-                    rgba[4 * i + 3] = level[i].a;
+                    var level = pixels.GetPixels32(mip);
+                    var rgba = new byte[level.Length * 4];
+                    for (int i = 0; i < level.Length; i++)
+                    {
+                        rgba[4 * i] = level[i].r;
+                        rgba[4 * i + 1] = level[i].g;
+                        rgba[4 * i + 2] = level[i].b;
+                        rgba[4 * i + 3] = level[i].a;
+                    }
+                    using var json = JsonDocument.Parse(Native.Call("texture-compress-blocks", JsonSerializer.Serialize(new
+                    {
+                        format = (int)texture.format,
+                        width = Math.Max(1, texture.width >> mip),
+                        height = Math.Max(1, texture.height >> mip),
+                        import = true,
+                        data = Convert.ToBase64String(rgba),
+                    })));
+                    blocks.AddRange(Convert.FromBase64String(json.RootElement.GetProperty("blocks").GetString()));
                 }
-                using var json = JsonDocument.Parse(Native.Call("texture-compress-blocks", JsonSerializer.Serialize(new
-                {
-                    format = (int)texture.format,
-                    width = Math.Max(1, texture.width >> mip),
-                    height = Math.Max(1, texture.height >> mip),
-                    import = true,
-                    data = Convert.ToBase64String(rgba),
-                })));
-                blocks.AddRange(Convert.FromBase64String(json.RootElement.GetProperty("blocks").GetString()));
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: {path}: the pixels its OnPostprocessTexture set are not kept: compressing them to {texture.format} failed ({e.Message})");
+                return;
             }
             bool readable = texture.m_IsReadable;
             texture.m_IsReadable = true;

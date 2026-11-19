@@ -307,6 +307,26 @@ namespace UnityEngine.Tests
             Assert.Equal((b.Mesh, b.Root.transform, SkinQuality.Bone2, true, false), (copy.sharedMesh, copy.rootBone, copy.quality, copy.updateWhenOffscreen, copy.skinnedMotionVectors));
             Assert.Equal(new[] { b.Root.transform, b.Child.transform }, copy.bones);
             Assert.Equal(new[] { b.Material }, copy.sharedMaterials);
+            // A legacy rig's Animation.
+            var clip = Made(new AnimationClip { name = "Walk", legacy = true });
+            b.File.Objects[997] = clip;
+            var legacy = Made(new GameObject("Legacy"));
+            legacy.transform.SetParent(b.Root.transform, false);
+            b.File.Objects[995] = legacy;
+            b.File.Objects[994] = legacy.transform;
+            var animation = legacy.AddComponent<Animation>();
+            animation.clip = clip;
+            animation.AddClip(clip, clip.name);
+            animation.playAutomatically = false;
+            animation.wrapMode = WrapMode.Loop;
+            animation.cullingType = AnimationCullingType.BasedOnRenderers;
+            b.File.Objects[996] = animation;
+            docs = Parse(ImportedPrefabDocuments.Write(b.File, b.Root));
+            var played = Made(new GameObject("copy")).AddComponent<Animation>();
+            ObjectGraphBuilder.ReadComponent(played, docs[996].Body, b.File);
+            Assert.Equal((clip, false, WrapMode.Loop, AnimationCullingType.BasedOnRenderers),
+                (played.clip, played.playAutomatically, played.wrapMode, played.cullingType));
+            Assert.Equal(1, played.GetClipCount());
             var read = Made(new GameObject("copy")).AddComponent<Animator>();
             ObjectGraphBuilder.ReadComponent(read, docs[999].Body, b.File);
             Assert.Equal((true, AnimatorCullingMode.CullCompletely, AnimatorUpdateMode.UnscaledTime, true),

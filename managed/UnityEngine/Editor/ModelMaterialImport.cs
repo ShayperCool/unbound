@@ -56,7 +56,10 @@ namespace Unbound.Runtime
                 else if (s_Deferring != null && s_Deferring == assetPath)
                     s_Deferred[material] = description;
                 else
-                    Describe(AssetPostprocessing.Session(assetPath), description, material);
+                    // In the model's import (its postprocessors' objects), else one of its own
+                    // (a copy a scene's expansion reads).
+                    Describe(AssetPostprocessing.ExistingSession(assetPath) ?? new ImportSession(assetPath, new AssetImportContext(assetPath), null),
+                        description, material);
             }
         }
 

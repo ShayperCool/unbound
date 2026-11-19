@@ -73,9 +73,10 @@ pub fn set_postprocessing(models: bool, prefabs: bool) -> bool {
 }
 
 /// The documents of a prefab source after the managed engine's import postprocessors, from its
-/// expanded documents: `None` when no postprocessor changes this kind of import (or the file is
-/// neither a model nor a prefab: a ScriptedImporter's prefab gets none, measured in the Unity
-/// 6000.0.71f1 Editor, tests/projects/assetpostprocessors Calm.st9).
+/// expanded documents. `None` when no postprocessor is called on this kind of import, when they
+/// failed (logged), and for a file that is neither a model nor a prefab (a ScriptedImporter's
+/// prefab gets none: measured in the Unity 6000.0.71f1 Editor, tests/projects/assetpostprocessors
+/// Calm.st9).
 pub fn postprocess(
     guid: Guid,
     file: &Path,
@@ -92,7 +93,17 @@ pub fn postprocess(
     if !active {
         return None;
     }
-    Some(postprocessed(guid, expanded))
+    // A failure keeps the expansion without the postprocessors' changes (instances still expand).
+    match postprocessed(guid, expanded) {
+        Ok(docs) => Some(Ok(docs)),
+        Err(error) => {
+            tracing::warn!(
+                "{}: expanded without its postprocessors' changes: {error:#}",
+                file.display()
+            );
+            None
+        }
+    }
 }
 
 fn postprocessed(guid: Guid, expanded: &[Document]) -> Result<Vec<Document>> {

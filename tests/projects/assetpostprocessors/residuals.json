@@ -1,5 +1,5 @@
 {
-  "Unbound runs OnPreprocessAsset only for the textures, models and audio clips it imports; the Editor's import of the opened project also gives it folders, scenes and materials (Unbound does not import those)": [
+  "Unbound runs OnPreprocessAsset only for the assets it imports (textures, models, audio clips, prefabs and ScriptedImporter assets); the Editor's import of the opened project also gives it folders, scenes and materials (Unbound does not import those)": [
     "events.Assets/Audio.00",
     "events.Assets/Audio.01",
     "events.Assets/Audio.02",

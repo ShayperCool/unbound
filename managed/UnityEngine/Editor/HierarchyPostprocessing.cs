@@ -59,12 +59,16 @@ namespace UnityEditor
         /// <summary>Whether the postprocessors change prefab imports.</summary>
         internal static bool Prefabs => PrefabHooks.Count > 0;
 
-        /// <summary>Tells the native expansion which imports the postprocessors change.</summary>
+        /// <summary>Whether a prefab's import calls a postprocessor (OnPreprocessAsset, which every
+        /// asset's import starts with, or OnPostprocessPrefab).</summary>
+        static bool PrefabImportsCalled => Prefabs || AssetPostprocessing.Hooks("OnPreprocessAsset").Count > 0;
+
+        /// <summary>Tells the native expansion which imports the postprocessors are called on.</summary>
         internal static void Announce()
         {
             try
             {
-                Native.Call("postprocessors", "{\"models\":" + (Models ? "true" : "false") + ",\"prefabs\":" + (Prefabs ? "true" : "false") + "}");
+                Native.Call("postprocessors", "{\"models\":" + (Models ? "true" : "false") + ",\"prefabs\":" + (PrefabImportsCalled ? "true" : "false") + "}");
             }
             catch (Exception e)
             {
@@ -82,6 +86,14 @@ namespace UnityEditor
             // Importing makes objects, which only the main thread may.
             if (!PlayerLoopDriver.IsMainThread)
                 throw new InvalidOperationException("a model's or prefab's postprocessors run on the main thread only");
+            // A prefab whose import only OnPreprocessAsset is called on: nothing changes.
+            var info = AssetDatabaseRuntime.Info(guid);
+            if (info?.Kind == "prefab" && !Prefabs)
+            {
+                AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab");
+                AssetPostprocessing.EndSession(info.Path);
+                return "";
+            }
             var file = AssetDatabaseRuntime.LoadFile(guid) ?? throw new InvalidOperationException("the asset did not import");
             return file.PostprocessAnswer ?? "";
         }
@@ -98,12 +110,21 @@ namespace UnityEditor
                 var before = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
                 // Other files' objects the documents reference, found once for the pass.
                 var located = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
+                // Components Unbound cannot write: their fields, to tell whether a postprocessor
+                // changed them.
+                var unwritable = new Dictionary<Object, string>(ReferenceEqualityComparer.Instance);
                 foreach (var o in HierarchyObjects(root))
+                {
                     before[o] = ImportedPrefabDocuments.Document(o, oldIds[o], oldIds, assets, located);
+                    if (before[o] == null) unwritable[o] = Fields(o);
+                }
                 List<Material> dropped;
                 using (ScriptedImports.Scope())
-                    dropped = model ? RunModel(file, root, session) : RunPrefab(root, session);
+                    dropped = model ? RunModel(file, root, session) : RunPrefab(file, root, session);
                 file.PostprocessAnswer = Changes(file, root, model, oldIds, assets, before, dropped, located);
+                foreach (var (o, fields) in unwritable)
+                    if (o != null && Fields(o) != fields && s_Unkept.Add(o.GetType()))
+                        Debug.LogWarning($"Unbound: {file.Path}: a postprocessor changed its {o.GetType().Name} '{o.name}', which cannot be written as a document yet: scene and prefab instances of the asset keep the import's (reported once per class)");
             }
             catch (Exception e)
             {
@@ -112,13 +133,43 @@ namespace UnityEditor
             }
             finally
             {
+                // A material whose description waited for the pass is made even when it failed.
+                foreach (var o in file.Objects.Values)
+                    if (o is Material m && ModelMaterialImport.TakeDeferred(m) is MaterialDescription description)
+                        ModelMaterialImport.Describe(session, description, m);
                 AssetPostprocessing.EndSession(file.Path);
             }
         }
 
-        static List<Material> RunPrefab(GameObject root, ImportSession session)
+        static readonly HashSet<Type> s_Unkept = new HashSet<Type>();
+
+        /// <summary>The values of an object's fields (and of the arrays and lists they hold), to
+        /// compare an object before and after the callbacks: references by identity.</summary>
+        internal static string Fields(Object o)
         {
-            AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPreprocessAsset"), session, Array.Empty<object>());
+            var sb = new StringBuilder();
+            for (var type = o.GetType(); type != null && type != typeof(Object); type = type.BaseType)
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    var value = field.GetValue(o);
+                    Append(sb, value);
+                    if (value is System.Collections.IEnumerable items && !(value is string))
+                        foreach (var item in items) Append(sb, item);
+                    sb.Append(';');
+                }
+            return sb.ToString();
+        }
+
+        static void Append(StringBuilder sb, object value)
+        {
+            if (value == null) sb.Append("null,");
+            else if (value.GetType().IsValueType || value is string) sb.Append(value).Append(',');
+            else sb.Append('#').Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value)).Append(',');
+        }
+
+        static List<Material> RunPrefab(LoadedFile file, GameObject root, ImportSession session)
+        {
+            AssetPostprocessing.EnsurePreprocessed(file.Path, "prefab");
             AssetPostprocessorHooks.Run(PrefabHooks, session, new object[] { root });
             return new List<Material>();
         }

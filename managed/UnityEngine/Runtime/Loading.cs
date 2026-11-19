@@ -716,6 +716,8 @@ namespace Unbound.Runtime
         static readonly Dictionary<string, LoadedFile> s_Files = new Dictionary<string, LoadedFile>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
         static readonly HashSet<string> s_Loading = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Models and prefabs whose documents are being read for their postprocessors.</summary>
+        static readonly HashSet<string> s_ReadingForPostprocessors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Loaders of imported asset kinds (textures, audio, ...), by kind name.</summary>
         internal static readonly Dictionary<string, Func<AssetInfo, LoadedFile>> Importers = new Dictionary<string, Func<AssetInfo, LoadedFile>>();
@@ -847,7 +849,10 @@ namespace Unbound.Runtime
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
             if (!s_Loading.Add(guid))
             {
-                Debug.LogError($"Unbound: asset {guid} references itself while loading.");
+                if (s_ReadingForPostprocessors.Contains(guid))
+                    Debug.LogError($"Unbound: asset {guid} is referenced by a prefab it nests while its postprocessors' import reads it; the reference is empty (not supported yet).");
+                else
+                    Debug.LogError($"Unbound: asset {guid} references itself while loading.");
                 return null;
             }
             bool read = false;
@@ -886,12 +891,21 @@ namespace Unbound.Runtime
                         // When postprocessors change this kind of import, they get the documents
                         // without their changes and run on the objects.
                         bool postprocessed = model ? UnityEditor.HierarchyPostprocessing.Models : UnityEditor.HierarchyPostprocessing.Prefabs;
+                        List<YDocument> documents;
+                        // While its documents are read (the prefabs it nests imported on the way),
+                        // the asset has no objects a reference could take.
+                        if (postprocessed) s_ReadingForPostprocessors.Add(guid);
+                        try { documents = Native.LoadDocuments(postprocessed ? "raw:" + guid : guid); }
+                        finally { s_ReadingForPostprocessors.Remove(guid); }
                         using (postprocessed && model ? ModelMaterialImport.Defer(info.Path) : null)
-                            file = ObjectGraphBuilder.Build(Native.LoadDocuments(postprocessed ? "raw:" + guid : guid), info.Path, guid,
-                                ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
+                            file = ObjectGraphBuilder.Build(documents, info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         if (model) ModelMaterialImport.UsePipelineDefault(file);
                         if (postprocessed) UnityEditor.HierarchyPostprocessing.Run(file, model);
-                        else if (model) UnityEditor.AssetPostprocessing.EndSession(info.Path);
+                        else
+                        {
+                            if (!model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab");
+                            UnityEditor.AssetPostprocessing.EndSession(info.Path);
+                        }
                         break;
                     }
                     case "yaml":

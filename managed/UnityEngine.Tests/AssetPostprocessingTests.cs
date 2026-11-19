@@ -269,12 +269,48 @@ namespace UnityEngine.Tests
                 s_AllAssetsCalls.FindAll(c => c.StartsWith("A ") || c.StartsWith("Z ") || c == "B" || c == "Y"));
         }
 
+        [Fact]
+        public void PixelsBeforeCompressionAreGivenForTheBlockFormatsUnboundCompresses()
+        {
+            Assert.True(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.DXT1));
+            Assert.True(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.DXT5));
+            Assert.True(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.BC7));
+            Assert.True(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.ETC2_RGBA8));
+            Assert.True(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.ASTC_6x6));
+            // Crunched and HDR imports, and uncompressed ones, keep the import as it is.
+            Assert.False(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.DXT1Crunched));
+            Assert.False(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.ETC2_RGBA8Crunched));
+            Assert.False(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.BC6H));
+            Assert.False(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.ASTC_HDR_4x4));
+            Assert.False(AssetPostprocessing.BeforeCompressionApplies(TextureFormat.RGBA32));
+        }
+
+        [Fact]
+        public void AComponentsFieldsTellWhetherAPostprocessorChangedIt()
+        {
+            // A component Unbound cannot write as a document: a change is reported, not lost silently.
+            var go = new GameObject("Lit");
+            try
+            {
+                var light = go.AddComponent<Light>();
+                var before = HierarchyPostprocessing.Fields(light);
+                Assert.Equal(before, HierarchyPostprocessing.Fields(light));
+                light.range = light.range + 3;
+                Assert.NotEqual(before, HierarchyPostprocessing.Fields(light));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
         static readonly List<string> s_ImportCalls = new List<string>();
 
         sealed class CountingPostprocessor : AssetPostprocessor
         {
             int m_Calls;
-            void OnPreprocessModel() => s_ImportCalls.Add("count " + ++m_Calls + " " + assetPath);
+            // Not a message name: the editor domain's other tests must not see a preprocessor.
+            void Count() => s_ImportCalls.Add("count " + ++m_Calls + " " + assetPath);
             Object Give() { s_ImportCalls.Add("give"); return s_Given; }
         }
 
@@ -295,7 +331,7 @@ namespace UnityEngine.Tests
             // import; a later import makes new ones. OnAssignMaterialModel stops at the first
             // postprocessor that returns something.
             s_ImportCalls.Clear();
-            var count = new List<(int, Type, System.Reflection.MethodInfo)> { Hook<CountingPostprocessor>("OnPreprocessModel") };
+            var count = new List<(int, Type, System.Reflection.MethodInfo)> { Hook<CountingPostprocessor>("Count") };
             var import = new ImportSession("Assets/M.fbx", null, null);
             AssetPostprocessorHooks.Run(count, import, Array.Empty<object>());
             AssetPostprocessorHooks.Run(count, import, Array.Empty<object>());

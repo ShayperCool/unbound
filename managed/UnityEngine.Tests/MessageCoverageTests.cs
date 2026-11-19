@@ -301,16 +301,16 @@ namespace UnityEngine.Tests
         /// mode"; OnDrawGizmos*: no Scene view, no Game view gizmos, Unbound's choice).</summary>
         static readonly (string Page, string Name, Delivery Class)[] s_Documented =
         {
-            (AssetPostprocessorPage, "OnPostprocessMeshHierarchy", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnAssignMaterialModel", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnPostprocessMaterial", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnPostprocessAnimation", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnPostprocessModel", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnPostprocessGameObjectWithUserProperties", Delivery.NotSent),
+            (AssetPostprocessorPage, "OnPostprocessMeshHierarchy", Delivery.Sent),
+            (AssetPostprocessorPage, "OnAssignMaterialModel", Delivery.Sent),
+            (AssetPostprocessorPage, "OnPostprocessMaterial", Delivery.Sent),
+            (AssetPostprocessorPage, "OnPostprocessAnimation", Delivery.Sent),
+            (AssetPostprocessorPage, "OnPostprocessModel", Delivery.Sent),
+            (AssetPostprocessorPage, "OnPostprocessGameObjectWithUserProperties", Delivery.Sent),
             (AssetPostprocessorPage, "OnPostprocessGameObjectWithAnimatedUserProperties", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPreprocessCameraDescription", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPreprocessLightDescription", Delivery.NotSent),
-            (AssetPostprocessorPage, "OnPostprocessPrefab", Delivery.NotSent),
+            (AssetPostprocessorPage, "OnPostprocessPrefab", Delivery.Sent),
             (AssetPostprocessorPage, "OnPostprocessTexture2DArray", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPostprocessTexture3D", Delivery.NotSent),
             (AssetPostprocessorPage, "OnPreprocessSpeedTree", Delivery.NotSent),
@@ -413,7 +413,7 @@ namespace UnityEngine.Tests
         {
             Assert.Equal(89, s_Documented.Length);
             Assert.Equal(s_Documented.Length, s_Documented.Select(d => (d.Page, d.Name)).Distinct().Count());
-            Assert.Equal(70, s_Documented.Count(d => d.Class == Delivery.Sent));
+            Assert.Equal(77, s_Documented.Count(d => d.Class == Delivery.Sent));
             Assert.Equal(4, s_Documented.Count(d => d.Class == Delivery.EditorAbsent));
 
             var listed = ListedNames();

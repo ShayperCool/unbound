@@ -1167,6 +1167,21 @@ namespace UnityEngine
             if (bounds != null) m_UserBounds = new Bounds(bounds.Vector3("m_Center"), bounds.Vector3("m_Extent") * 2f);
         }
 
+        /// <summary>What <see cref="ReadSerialized"/> reads (an imported prefab's documents).</summary>
+        internal override void WriteSerialized(Unbound.Runtime.UnityYamlWriter.Writer w)
+        {
+            w.Bool("m_Enabled", m_Enabled);
+            w.Ref("m_Animation", m_Animation);
+            w.RefList("m_Animations", m_Animations);
+            w.Int("m_WrapMode", (int)m_WrapMode);
+            w.Bool("m_PlayAutomatically", m_PlayAutomatically);
+            w.Bool("m_AnimatePhysics", m_AnimatePhysics);
+            w.Int("m_CullingType", (int)m_CullingType);
+            w.Key("m_UserAABB", 1);
+            w.Vector3("m_Center", m_UserBounds.center, 2);
+            w.Vector3("m_Extent", m_UserBounds.extents, 2);
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (Animation)source;
