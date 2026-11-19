@@ -694,10 +694,12 @@ namespace Unbound.Runtime
                 if (EditorSession.IsPlaying && !s_EditorExit) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
                 Application.Internal_Quitting();
             }
-            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown); }
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => AssetFiles.SaveDirty()); }
         }
 
-        internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins)
+        /// <param name="saveAssets">The Editor's exit writes the assets still dirty (measured:
+        /// tests/projects/scenesave, Edit and Play mode edits), after Play mode has ended.</param>
+        internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins, Action saveAssets = null)
         {
             try
             {
@@ -710,6 +712,8 @@ namespace Unbound.Runtime
             }
             finally
             {
+                try { saveAssets?.Invoke(); }
+                catch (Exception e) { Debug.LogException(e); }
                 try { savePreferences(); }
                 finally { shutdownPlugins(); }
             }

@@ -427,8 +427,8 @@ namespace UnityEditor
     {
         static readonly Dictionary<int, int> s_DirtyCounts = new Dictionary<int, int>();
 
-        /// <summary>Marks an object changed (the Editor saves dirty assets and scenes; Unbound
-        /// writes nothing back, so dirtiness is only counted).</summary>
+        /// <summary>Marks an object changed: a dirty asset is written by AssetDatabase.SaveAssets
+        /// and the Editor's exit (<see cref="AssetFiles"/>).</summary>
         public static void SetDirty(Object target)
         {
             if (target is null) throw new ArgumentNullException(nameof(target));
@@ -439,6 +439,9 @@ namespace UnityEditor
         }
 
         static readonly HashSet<int> s_Dirty = new HashSet<int>();
+
+        /// <summary>The instance IDs of the dirty objects.</summary>
+        internal static IEnumerable<int> DirtyIds => s_Dirty;
 
         public static bool IsDirty(Object target) => target != null && IsDirty(target.GetInstanceID());
 

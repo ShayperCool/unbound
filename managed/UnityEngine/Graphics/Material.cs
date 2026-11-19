@@ -347,7 +347,7 @@ namespace UnityEngine
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
             m_GIFlags = source.m_GIFlags;
-            MarkDirty();
+            MarkChanged();
         }
 
         /// <summary>HashSet.UnionWith without its boxed enumerator (copies made per change of a
@@ -359,7 +359,17 @@ namespace UnityEngine
 
         internal Object CloneObject() => new Material(this);
 
+        /// <summary>A change made through the API: also an Editor change of a material asset, which
+        /// the Editor then saves (AssetDatabase.SaveAssets, its exit; measured in
+        /// tests/projects/scenesave: a property set by script dirties the asset in Edit and Play mode).</summary>
         internal void MarkDirty()
+        {
+            MarkChanged();
+            if (IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        /// <summary>A change of the material's state that is no edit (reading it, inheriting from its parent).</summary>
+        internal void MarkChanged()
         {
             m_Dirty = true;
             m_Version++;
@@ -797,7 +807,7 @@ namespace UnityEngine
                     m_DoubleSidedGI = parent.m_DoubleSidedGI;
                     m_GIFlags = parent.m_GIFlags;
                 }
-                MarkDirty();
+                MarkChanged();
             }
             finally { m_Inheriting = false; }
         }
@@ -1676,7 +1686,7 @@ namespace UnityEngine
                 m_InheritedVersion = -1;
             }
             AddTextureNames();
-            MarkDirty();
+            MarkChanged();
             // A material sub-asset of an imported model: made by its importer.
             if (body.Get("m_UnboundMaterialImport") is YNode import && import.Kind == YKind.Map)
                 ModelMaterialImport.Apply(this, import, resolver);

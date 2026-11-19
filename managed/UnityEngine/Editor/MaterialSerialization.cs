@@ -29,7 +29,7 @@ namespace Unbound.Runtime
 
         public TypeTreeNode[] Tree => s_Tree;
 
-        public YText Body => m_Body ??= Write(m_Material);
+        public YText Body => m_Body ??= Write(m_Material, Ref);
 
         public string RootTypeName => "Material";
 
@@ -110,7 +110,29 @@ namespace Unbound.Runtime
             return list;
         }
 
-        static YText Write(Material m)
+        /// <summary>The fields a material's file stores that Unbound models, laid out as its .mat
+        /// file has them (the saved property sheet's lists as sequences of one-entry maps), with
+        /// references as <paramref name="reference"/> writes them.</summary>
+        internal static YText FileBody(Material m, Func<Object, YText> reference)
+        {
+            var body = Write(m, reference);
+            var saved = body.Get("m_SavedProperties");
+            for (int i = 0; i < saved.Keys.Count; i++)
+            {
+                var sheet = saved.Values[i];
+                var list = YText.Seq(flow: sheet.Keys.Count == 0);
+                for (int k = 0; k < sheet.Keys.Count; k++)
+                {
+                    var entry = YText.Map();
+                    entry.Add(sheet.Keys[k], sheet.Values[k]);
+                    list.Items.Add(entry);
+                }
+                saved.Values[i] = list;
+            }
+            return body;
+        }
+
+        static YText Write(Material m, Func<Object, YText> Ref)
         {
             var body = YText.Map();
             body.Add("m_ObjectHideFlags", Number((uint)m.hideFlags));

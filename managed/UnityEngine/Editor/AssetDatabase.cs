@@ -325,13 +325,18 @@ namespace UnityEditor
         [Unbound.EditorFaithful("the asset list follows Unbound's project watcher: nothing is left to import")]
         public static void Refresh(ImportAssetOptions options) { }
 
-        /// <summary>Writes edited settings assets (in Edit mode, as the Editor). Unbound's other assets
-        /// change on disk only through their own APIs.</summary>
-        public static void SaveAssets() => SettingsAssets.Save();
+        /// <summary>Writes edited settings assets (in Edit mode, as the Editor) and the files of dirty
+        /// assets (<see cref="AssetFiles"/>).</summary>
+        public static void SaveAssets()
+        {
+            SettingsAssets.Save();
+            AssetFiles.SaveDirty();
+        }
 
         public static void SaveAssetIfDirty(Object obj)
         {
             if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
+            else if (obj != null && EditorUtility.IsDirty(obj)) AssetFiles.SaveDirty(obj);
         }
 
         public static void SaveAssetIfDirty(GUID guid)
