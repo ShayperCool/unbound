@@ -154,7 +154,8 @@ class ProjectCopyTests(unittest.TestCase):
         subprocess.run(['git', 'init', '-q'], cwd=self.source, check=True)
         (self.source/'.gitignore').write_text('Evidence*/\n')
         (self.source/'Evidence-old').mkdir()
-        project = probe_paths.project_copy(self.source, Path(self.temp.name)/'run/project')
+        with patch.object(probe_paths, 'CHECKOUT', self.source.resolve()):
+            project = probe_paths.project_copy(self.source, Path(self.temp.name)/'run/project')
         self.assertFalse((project/'Evidence-old').exists())
         self.assertTrue((project/'Content').is_symlink())
 

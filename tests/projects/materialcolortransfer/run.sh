@@ -20,7 +20,7 @@ sys.path.insert(0, 'tests')
 from probe_paths import project_copy
 # An Editor run resolves packages into its Library: no link to the source's PackageCache.
 target = project_copy(os.environ['PROBE_SOURCE'], os.environ['PROBE_COPY'], fresh=True,
-                      package_cache=os.environ['PROBE_MODE'] not in ('native'))
+                      package_cache=os.environ['PROBE_MODE'] != 'native')
 if os.environ['PROBE_SPACE'] == 'Gamma':
     settings = target/'ProjectSettings/ProjectSettings.asset'
     settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 1', 'm_ActiveColorSpace: 0'))

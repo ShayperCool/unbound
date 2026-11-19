@@ -145,10 +145,12 @@ def project_copy(source, project, fresh=False, package_cache=True):
                if not (entry.name in PROJECT_FOLDERS or entry.name in GENERATED or entry.name.startswith('.')
                        or entry.suffix in ('.csproj', '.sln'))]
     ignored = set()
-    if entries and inside_git_checkout(source):
+    if entries and checkout_project(source):
         # Ignored leftovers (earlier run output) are not inputs: a run must not write through them.
         listed = subprocess.run(['git', 'check-ignore', '-z', '--stdin'], cwd=source, capture_output=True,
                                 input=b'\0'.join(os.fsencode(entry.name) for entry in entries))
+        if listed.returncode not in (0, 1):  # 1: nothing ignored
+            raise RuntimeError(f'git check-ignore failed in {source}: {listed.stderr.decode(errors="replace")}')
         ignored = {os.fsdecode(name) for name in listed.stdout.split(b'\0') if name}
     for entry in entries:
         if entry.name not in ignored:

@@ -674,9 +674,10 @@ def run(job):
     if checkout_project(job.project):
         raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}) on {job.project}, '
                          'inside the checkout: run it on a copy (tests/probe_paths.py project_copy)')
-    if (Path(job.project)/'Library/PackageCache').exists() and checkout_project(Path(job.project)/'Library/PackageCache'):
+    if (Path(job.project)/'Library/PackageCache').is_symlink():
         raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}): its Library/PackageCache '
-                         'is inside the checkout; an Editor copy has its own (project_copy package_cache=False)')
+                         'is a link, which the Editor would write through; an Editor copy has its own '
+                         '(project_copy package_cache=False)')
     job.out.mkdir(parents=True, exist_ok=True)
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')
