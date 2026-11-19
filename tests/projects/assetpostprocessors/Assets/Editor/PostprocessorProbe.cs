@@ -173,8 +173,9 @@ public static class PostprocessorProbe
     static readonly Regex s_PlatformEntry = new Regex("(?m)^( *)- serializedVersion: [0-9]+\n\\1  buildTarget: (?!DefaultTexturePlatform\\b|Standalone\\b)(\\S+)\n(?:\\1  .*\n)*");
 
     /// <summary>A .meta file's digest without the per-platform entries of the installation's
-    /// platform modules, which a texture's .meta lists as the installation has them; whether it
-    /// lists exactly those is recorded apart (`.platforms`).</summary>
+    /// platform modules, which a texture's .meta written by the Editor lists as the installation
+    /// has them; whether it lists none or exactly those is recorded apart (`.platforms`; the
+    /// committed .meta files list none).</summary>
     static void RecordMeta(string path)
     {
         var text = File.ReadAllText(path + ".meta");
@@ -182,7 +183,7 @@ public static class PostprocessorProbe
         text = s_PlatformEntry.Replace(text, m => { listed.Add(m.Groups[2].Value); return ""; });
         Put("meta." + path, Hash(Encoding.UTF8.GetBytes(text)));
         if (text.Contains("platformSettings:"))
-            Put("meta." + path + ".platforms", listed.SequenceEqual(InstalledPlatforms()) ? "the installed modules" : "differ: " + string.Join(",", listed));
+            Put("meta." + path + ".platforms", listed.Count == 0 ? "none" : listed.SequenceEqual(InstalledPlatforms()) ? "the installed modules" : "differ: " + string.Join(",", listed));
     }
 
     /// <summary>The platform modules of this Editor installation, in the build settings' order,
