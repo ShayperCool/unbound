@@ -218,11 +218,23 @@ namespace UnityEngine.Tests
                 Assert.Contains("m_Mesh: {fileID: 500}", text);
                 Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
                 Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+                // A new path gets the file and a .meta (the scene itself keeps its path here).
+                Assert.True(SceneFiles.Save(scene, Path.Combine(project, "Assets/New/Copy.unity")));
+                Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/New/Copy.unity")));
+                Assert.StartsWith("fileFormatVersion: 2\nguid: ", File.ReadAllText(Path.Combine(project, "Assets/New/Copy.unity.meta")));
+                Assert.Empty(Directory.GetFiles(Path.Combine(project, "Assets/New"), "*.unbound-save"));
 
                 // A mesh made by script is embedded by the Editor; Unbound refuses the save.
                 filter.sharedMesh = new Mesh();
                 Assert.Null(SceneFiles.Write(scene));
                 Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects made by script"));
+                // One marked DontSave is not saved: the reference is written as none.
+                filter.sharedMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
+                var unsaved = SceneFiles.Write(scene);
+                Assert.NotNull(unsaved);
+                Assert.Contains("m_Mesh: {fileID: 0}", unsaved);
+                // The embedded mesh nothing references any more is not written.
+                Assert.DoesNotContain("--- !u!43 &500", unsaved);
                 filter.sharedMesh = mesh;
 
                 // A new component Unbound has no writer for would be saved with the release's defaults.

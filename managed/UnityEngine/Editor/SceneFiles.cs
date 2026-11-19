@@ -40,18 +40,30 @@ namespace Unbound.Runtime
         /// with the extension.</summary>
         internal static bool IsAssetPath(string path, string extension)
         {
-            var p = path.Replace('\\', '/');
+            var p = ProjectRelative(path).Replace('\\', '/');
             var parts = p.Split('/');
             if (Array.IndexOf(parts, "..") >= 0 || !p.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return false;
             if (p.StartsWith("Assets/", StringComparison.Ordinal)) return true;
             return parts.Length > 2 && parts[0] == "Packages" && Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, "Packages", parts[1]));
         }
 
+        /// <summary>A path inside the project made relative to it (others are returned as given).</summary>
+        internal static string ProjectRelative(string path)
+        {
+            if (!Path.IsPathRooted(path)) return path;
+            var project = Path.GetFullPath(ProjectInfo.ProjectPath).TrimEnd('/') + "/";
+            var full = Path.GetFullPath(path);
+            return full.StartsWith(project, StringComparison.Ordinal) ? full.Substring(project.Length) : path;
+        }
+
         /// <summary>Replaces a file's text whole: written beside it, then moved over it, so a failed
         /// write leaves the file as it was.</summary>
         internal static void WriteFile(string file, string text)
         {
-            var temporary = file + ".unbound-save";
+            // A linked file is written where it links to; the temporary file's leading dot keeps the
+            // Editor's asset database from importing it.
+            if (File.Exists(file) && new FileInfo(file).ResolveLinkTarget(true) is FileSystemInfo target) file = target.FullName;
+            var temporary = Path.Combine(Path.GetDirectoryName(file), "." + Path.GetFileName(file) + ".unbound-save");
             try
             {
                 File.WriteAllText(temporary, text);
@@ -69,7 +81,9 @@ namespace Unbound.Runtime
 
         /// <summary>Writes the scene to <paramref name="path"/> (project-relative), with a new
         /// .meta when the file is new; false, with the reason logged, when it cannot be written.</summary>
-        internal static bool Save(SceneData scene, string path)
+        /// <summary>Whether the scene can be saved to the path at all (it is loaded, the path names a
+        /// scene asset); the reason is logged when not.</summary>
+        internal static bool CanSave(SceneData scene, string path)
         {
             if (!scene.IsLoaded)
             {
@@ -81,6 +95,13 @@ namespace Unbound.Runtime
                 Debug.LogError($"Unbound: {path} is not saved: a scene is saved under Assets/ (or an embedded package) with the .unity extension.");
                 return false;
             }
+            return true;
+        }
+
+        internal static bool Save(SceneData scene, string path)
+        {
+            if (!CanSave(scene, path)) return false;
+            path = ProjectRelative(path);
             string text;
             try { text = Write(scene); }
             catch (NotSupportedException e)
@@ -300,6 +321,8 @@ namespace Unbound.Runtime
             /// <summary>The file ids the scene's objects had when they were read or last saved.</summary>
             readonly HashSet<long> m_Known = new HashSet<long>();
             readonly Dictionary<long, Object> m_KnownObjects = new Dictionary<long, Object>();
+            /// <summary>The documents of embedded objects written this pass.</summary>
+            readonly HashSet<long> m_Embedded = new HashSet<long>();
             readonly HashSet<long> m_LiveGameObjects = new HashSet<long>();
             readonly Dictionary<PrefabInstanceData, InstanceState> m_Instances = new Dictionary<PrefabInstanceData, InstanceState>();
             readonly SortedSet<string> m_KeptAsRead = new SortedSet<string>(StringComparer.Ordinal);
@@ -356,7 +379,7 @@ namespace Unbound.Runtime
                 if (m_UnlocatedCount > 0)
                     Debug.LogWarning($"Unbound: {DisplayPath} is saved with {m_UnlocatedCount} references to assets Unbound cannot name (built-in or imported objects it has no location of) written as none.");
                 if (m_KeptAsRead.Count > 0)
-                    Debug.LogWarning($"Unbound: {DisplayPath} is saved with its {string.Join(", ", m_KeptAsRead)} components as they were read or made new: Unbound does not write their fields yet, so changes to them are not saved.");
+                    Debug.LogWarning($"Unbound: {DisplayPath} is saved with its {string.Join(", ", m_KeptAsRead)} objects as they were read: Unbound does not write their fields yet, so changes to them are not saved.");
                 // The ids the objects have now are theirs from now on (the Editor's saved copy and
                 // later saves agree, tests/projects/scenesave BaseCopy).
                 foreach (var pair in m_Ids)
@@ -373,6 +396,7 @@ namespace Unbound.Runtime
                 m_Instances.Clear();
                 m_KeptAsRead.Clear();
                 m_Unwritten.Clear();
+                m_Embedded.Clear();
                 m_UnlocatedCount = 0;
                 foreach (var root in roots) WriteHierarchy(root.transform);
                 Settings();
@@ -380,13 +404,15 @@ namespace Unbound.Runtime
                 KeepUnclaimed();
                 SceneRoots(roots);
                 StrippedForReferences();
-                PruneStripped();
+                PruneUnreferenced();
             }
 
             /// <summary>Drops the stripped documents nothing written references (as an instance's
             /// stand-in for an added component goes once the component is applied to the prefab,
-            /// tests/projects/scenesave BaseApplied); a stand-in referenced by another kept one stays.</summary>
-            void PruneStripped()
+            /// tests/projects/scenesave BaseApplied), and so the embedded objects (unmeasured: the
+            /// Editor saves what the scene's objects reference); one referenced by another kept one
+            /// stays.</summary>
+            void PruneUnreferenced()
             {
                 while (true)
                 {
@@ -409,7 +435,7 @@ namespace Unbound.Runtime
                     foreach (var d in m_Out.Values) Walk(d.Body);
                     var unused = new List<long>();
                     foreach (var d in m_Out.Values)
-                        if (d.Stripped() && !referenced.Contains(d.FileId)) unused.Add(d.FileId);
+                        if ((d.Stripped() || m_Embedded.Contains(d.FileId)) && !referenced.Contains(d.FileId)) unused.Add(d.FileId);
                     if (unused.Count == 0) return;
                     foreach (var id in unused) m_Out.Remove(id);
                 }
@@ -425,7 +451,8 @@ namespace Unbound.Runtime
                 if (m_Recording && Link(o) != null) m_Referenced.Add(o);
                 // An object made by script (a Mesh, a Material) that a scene object references is
                 // embedded in the scene by the Editor; Unbound does not embed new objects yet.
-                if (!o.IsPersistentAsset && !m_Ids.ContainsKey(o) && o is not GameObject && o is not Component)
+                // Objects marked DontSave are written as none, as the Editor writes them.
+                if (!o.IsPersistentAsset && !m_Ids.ContainsKey(o) && o is not GameObject && o is not Component && Saved(o))
                     m_Unwritten.Add($"{o.GetType().Name} objects made by script that the scene references (the Editor embeds them in the scene)");
                 return null;
             }
@@ -977,10 +1004,14 @@ namespace Unbound.Runtime
                     if (m_KnownObjects.TryGetValue(d.FileId, out var known))
                     {
                         // An object of the file outside the hierarchy (an embedded Mesh, Material or
-                        // Lighting Settings) is kept while it lives, as the file has it.
+                        // Lighting Settings) is written while it lives: its fields when Unbound has a
+                        // writer for its class, else as the file has it. One nothing written
+                        // references goes (PruneUnreferenced).
                         if (known == null || known is GameObject || known is Component) continue;
-                        if (EditorUtility.IsDirty(known)) m_KeptAsRead.Add(known.GetType().Name);
-                        m_Out[d.FileId] = Clone(d);
+                        var doc = Clone(d);
+                        if (!NativeDocuments.Write(doc, known, m_Ids, m_Locations, ref m_UnlocatedCount)) m_KeptAsRead.Add(known.GetType().Name);
+                        m_Out[d.FileId] = doc;
+                        m_Embedded.Add(d.FileId);
                         continue;
                     }
                     if (d.ClassId == SceneRootsId || d.ClassId == EngineTypes.PrefabInstanceId || SceneSettings.IsSettingsClass(d.ClassId)) continue;
@@ -1082,6 +1113,30 @@ namespace Unbound.Runtime
             var meta = Path.Combine(ProjectInfo.ProjectPath, assetPath + ".meta");
             if (File.Exists(meta)) return;
             File.WriteAllText(meta, "fileFormatVersion: 2\nguid: " + Guid.NewGuid().ToString("N") + "\n" + importer);
+        }
+    }
+
+    /// <summary>The document of an object Unbound writes whole or in part outside a scene's
+    /// hierarchy (an asset file's object, an object embedded in a scene).</summary>
+    internal static class NativeDocuments
+    {
+        /// <summary>Writes the object's fields into its document: a script object's whole body, a
+        /// material's modeled fields over the file's; false (the document kept as read) for other
+        /// classes.</summary>
+        internal static bool Write(YTextDocument doc, Object o, Dictionary<Object, long> ids, AssetDatabaseRuntime.Locations locations, ref int unlocated)
+        {
+            if (SerializedTree.IsScript(o))
+            {
+                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.ScriptBody(o), ids, locations), doc.Body, ref unlocated);
+                return true;
+            }
+            if (o is Material material)
+            {
+                var writer = new UnityYamlWriter.Writer(new StringBuilder(), ids, null, null, locations);
+                SceneFiles.Overlay(doc.Body, MaterialTypeTree.FileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))), ref unlocated);
+                return true;
+            }
+            return false;
         }
     }
 }

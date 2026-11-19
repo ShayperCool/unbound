@@ -87,14 +87,7 @@ namespace Unbound.Runtime
             foreach (var doc in docs)
             {
                 if (!loaded.Objects.TryGetValue(doc.FileId, out var o) || o == null) continue;
-                if (SerializedTree.IsScript(o))
-                    doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.ScriptBody(o), ids, locations), doc.Body, ref unlocated);
-                else if (o is Material material)
-                {
-                    var writer = new UnityYamlWriter.Writer(new StringBuilder(), ids, null, null, locations);
-                    SceneFiles.Overlay(doc.Body, MaterialTypeTree.FileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))), ref unlocated);
-                }
-                else if (dirty.Contains(o)) keptAsRead.Add(o.GetType().Name);
+                if (!NativeDocuments.Write(doc, o, ids, locations, ref unlocated) && dirty.Contains(o)) keptAsRead.Add(o.GetType().Name);
             }
             if (keptAsRead.Count > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is saved with its {string.Join(", ", keptAsRead)} objects as they were read: Unbound does not write their fields yet, so changes to them are not saved.");

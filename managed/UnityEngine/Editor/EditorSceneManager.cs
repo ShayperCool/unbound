@@ -120,7 +120,8 @@ namespace UnityEditor.SceneManagement
             var data = scene.Data;
             if (data == null) return false;
             var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
-            if (string.IsNullOrEmpty(path)) return false;
+            if (string.IsNullOrEmpty(path) || !SceneFiles.CanSave(data, path)) return false;
+            path = SceneFiles.ProjectRelative(path);
             sceneSaving?.Invoke(scene, path);
             if (!SceneFiles.Save(data, path)) return false;
             if (!saveAsCopy)
