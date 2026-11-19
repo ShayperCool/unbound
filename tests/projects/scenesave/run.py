@@ -27,10 +27,10 @@ from probe_paths import editor_path, reference_root, run_root  # noqa: E402
 import scenesave_compare  # noqa: E402
 
 CASES = {
-    'edit': ('EditMode', 'SaveEditTests'),
+    'edit': ('EditMode', 'SaveEditTests.SaveFlow'),
     'play-nosave': ('PlayMode', 'SavePlayTests.NoSave'),
     'play-save': ('PlayMode', 'SavePlayTests.Save'),
-    'prefab-api': ('EditMode', 'PrefabApiTests'),
+    'prefab-api': ('EditMode', 'PrefabApiTests.PrefabApi'),
 }
 SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}

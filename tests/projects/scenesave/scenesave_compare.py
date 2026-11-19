@@ -100,6 +100,13 @@ def map_ids(reference, actual):
                         images.add(r[1])
                         break
             break
+    # Documents with no counterpart (a difference): placeholder ids after the reference's, in an
+    # order of their content, so a reported difference reads the same in every run.
+    unmatched = [d for d in act_docs if d[1] not in mapping]
+    unmatched.sort(key=lambda d: (d[0], signature(d, {}, False)))
+    base = max([d[1] for d in ref_docs] + [0])
+    for k, d in enumerate(unmatched):
+        mapping[d[1]] = base + 1 + k
     rid_map = {}
     by_id = {d[1]: d for d in ref_docs}
     for d in act_docs:
@@ -164,6 +171,11 @@ def compare_file(reference, actual, path):
         return 'differs (binary)'
     if not ref_t.startswith('%YAML'):
         return 'differs'
+    # The final line break belongs to the file, not to its last document (a reordered prefab
+    # would move it).
+    if ref_t.endswith('\n') != act_t.endswith('\n'):
+        return 'the final line break differs'
+    ref_t, act_t = ref_t.rstrip('\n'), act_t.rstrip('\n')
     prefab = ref_t.count('\n--- !u!1 &') > 0 and '\n--- !u!1660057539 ' not in ref_t and '\nOcclusionCullingSettings:' not in ref_t
     if not in_order(act_t, prefab):
         return 'documents not in the Editor\'s order'
