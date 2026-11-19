@@ -5,6 +5,7 @@ using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Internal;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.SceneManagement
 {
@@ -54,6 +55,16 @@ namespace UnityEditor.SceneManagement
 
         [Unbound.EditorFaithful("scenes only reload from Edit mode (after an asset change), never while playing")]
         public static bool IsReloading(Scene scene) => false;
+
+        /// <summary>The scene culling mask of a scene of the main stage, the default one (measured:
+        /// tests/projects/scenesave cull.mask); none for an invalid scene (unmeasured).</summary>
+        public static ulong GetSceneCullingMask(Scene scene) => scene.IsValid() ? StageUtility.GetMainStage().GetSceneCullingMask() : 0;
+
+        /// <summary>Unbound's Editor opens no preview scenes (Prefab mode, inspector previews):
+        /// no scene or object is one's, prefab assets included (measured).</summary>
+        public static bool IsPreviewScene(Scene scene) => false;
+
+        public static bool IsPreviewSceneObject(Object obj) => false;
 
         public static Scene NewScene(NewSceneSetup setup) => NewScene(setup, NewSceneMode.Single);
 

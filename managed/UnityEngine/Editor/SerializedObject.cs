@@ -41,8 +41,14 @@ namespace UnityEditor
                 if (objs[i] == null) throw new ArgumentException($"Object at index {i} is null");
             m_Targets = (Object[])objs.Clone();
             m_Context = context;
+            m_NativeObjectPtr = new IntPtr(System.Threading.Interlocked.Increment(ref s_NextNativeObject));
             Read();
         }
+
+        /// <summary>Non-zero while the object is usable, zero once disposed (measured:
+        /// tests/projects/scenesave nativePtr; editor code checks it to tell a disposed one).</summary>
+        internal IntPtr m_NativeObjectPtr;
+        static long s_NextNativeObject;
 
         void Read()
         {
@@ -93,13 +99,14 @@ namespace UnityEditor
         [global::System.@ObsoleteAttribute("UpdateIfDirtyOrScript has been deprecated. Use UpdateIfRequiredOrScript instead.", false)]
         public void UpdateIfDirtyOrScript() => UpdateIfRequiredOrScript();
 
-        public bool ApplyModifiedProperties() => Apply();
+        public bool ApplyModifiedProperties() => Apply(recordUndo: true);
 
-        public bool ApplyModifiedPropertiesWithoutUndo() => Apply();
+        public bool ApplyModifiedPropertiesWithoutUndo() => Apply(recordUndo: false);
 
-        bool Apply()
+        bool Apply(bool recordUndo = false)
         {
             if (!m_Modified) return false;
+            if (recordUndo && Undo.postprocessModifications != null) Undo.InvokePostprocessModifications(Modifications());
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 var target = m_Targets[i];
@@ -137,6 +144,54 @@ namespace UnityEditor
 
         static void CallOnValidate(Object target) => ScriptMessages.Validate(target);
 
+        /// <summary>The changes an apply records for Undo: per target, each changed property's value
+        /// before and after (Undo.postprocessModifications sees them; measured:
+        /// tests/projects/scenesave postprocess).</summary>
+        UndoPropertyModification[] Modifications()
+        {
+            var changed = new List<SerializedNode>();
+            void Leaves(SerializedNode node)
+            {
+                if (!node.Dirty && !node.Replaced) return;
+                if (node.Children.Count == 0) { changed.Add(node); return; }
+                foreach (var child in node.Children) Leaves(child);
+            }
+            Leaves(m_UnboundRoot);
+            var list = new List<UndoPropertyModification>();
+            foreach (var target in m_Targets)
+            {
+                if (target == null) continue;
+                var tree = TypeTreeTargets.Of(target);
+                var before = tree != null ? TypeTreeSerialized.BuildRoot(tree, target) : SerializedTree.BuildRoot(target, callbacks: false);
+                foreach (var node in changed)
+                {
+                    var old = SerializedTree.Find(before, node.Path);
+                    list.Add(new UndoPropertyModification
+                    {
+                        previousValue = Modification(target, node.Path, old == null ? null : SerializedTree.GetValue(old)),
+                        currentValue = Modification(target, node.Path, SerializedTree.GetValue(node)),
+                    });
+                }
+            }
+            return list.ToArray();
+        }
+
+        static PropertyModification Modification(Object target, string path, object value) => new PropertyModification
+        {
+            target = target,
+            propertyPath = path,
+            value = value is Object ? "" : value switch
+            {
+                null => "",
+                bool b => b ? "1" : "0",
+                float f => FloatText.Format(f),
+                double d => FloatText.Format(d),
+                IFormattable x => x.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+                _ => value.ToString(),
+            },
+            objectReference = value as Object,
+        };
+
         public void SetIsDifferentCacheDirty() => m_OtherRoots = null;
 
         public void CopyFromSerializedProperty(SerializedProperty prop)
@@ -163,9 +218,9 @@ namespace UnityEditor
             return true;
         }
 
-        [Unbound.EditorFaithful("a managed tree: nothing native to release")]
+        [Unbound.EditorFaithful("a managed tree: nothing native to release, it only stops being usable")]
         [global::UnityEngine.@ThreadAndSerializationSafeAttribute]
-        public void Dispose() { }
+        public void Dispose() => m_NativeObjectPtr = IntPtr.Zero;
 
         /// <summary>The trees of the other targets, read on demand to compare values.</summary>
         internal SerializedNode[] OtherRoots()

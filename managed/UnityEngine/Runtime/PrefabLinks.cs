@@ -19,6 +19,9 @@ namespace Unbound.Runtime
         internal bool SourceMissing;
         /// <summary>The modified properties: the source object they target and the property path.</summary>
         internal readonly List<(string Guid, long FileId, string Path)> Modifications = new List<(string, long, string)>();
+        /// <summary>The PrefabInstance's modifications as its file has them, in order (values as text,
+        /// object references as read).</summary>
+        internal readonly List<(ObjectRef Target, string Path, string Value, ObjectRef Reference)> Stored = new List<(ObjectRef, string, string, ObjectRef)>();
         Object m_Handle;
 
         /// <summary>The object PrefabUtility.GetPrefabInstanceHandle answers: an object of no
@@ -110,6 +113,7 @@ namespace Unbound.Runtime
             {
                 var target = m.Ref("target");
                 if (!target.IsNull) data.Modifications.Add((target.Guid, target.FileId, m.Str("propertyPath")));
+                data.Stored.Add((target, m.Str("propertyPath"), m.Str("value"), m.Ref("objectReference")));
             }
             return data;
         }

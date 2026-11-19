@@ -1,0 +1,192 @@
+using System;
+using System.Collections.Generic;
+using Unbound.Runtime;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
+
+namespace UnityEditor
+{
+    /// <summary>A modification a prefab instance makes to a property of its source prefab: the
+    /// source object, the property's path and its value (text, or an object reference).</summary>
+    public sealed partial class PropertyModification
+    {
+        public Object target;
+        public string propertyPath;
+        public string value;
+        public Object objectReference;
+
+        public PropertyModification() { }
+    }
+
+    public enum InteractionMode
+    {
+        AutomatedAction = 0,
+        UserAction = 1,
+    }
+
+    /// <summary>A property change an edit records for Undo: the value before and after.</summary>
+    public partial struct UndoPropertyModification
+    {
+        public PropertyModification previousValue;
+        public PropertyModification currentValue;
+    }
+
+    /// <summary>
+    /// The prefab queries editor code and packages ask, as the Unity 6000.0.71f1 Editor answers them
+    /// (tests/projects/scenesave prefab-api): an instance's root, the instances of a prefab, the
+    /// modifications its PrefabInstance holds (any object of an instance answers the instance's
+    /// list, in its file's order, each target being the source prefab's object; null for an object
+    /// of no instance) and its object overrides (the objects those modifications target, default
+    /// overrides only when asked: the instance root's name and pose).
+    /// </summary>
+    public sealed partial class PrefabUtility
+    {
+        public delegate void PrefabInstanceUpdated(GameObject instance);
+
+        /// <summary>Called with each instance root a prefab change updated.</summary>
+        public static PrefabInstanceUpdated prefabInstanceUpdated;
+
+        [Obsolete("Use GetOutermostPrefabInstanceRoot if source is a Prefab instance or source.transform.root.gameObject if source is a Prefab Asset object.")]
+        public static GameObject FindPrefabRoot(GameObject source) => RootOf(source);
+
+        /// <summary>The instance's outermost root for an object of a prefab instance, else the root
+        /// of its hierarchy (measured: a plain root answers itself).</summary>
+        internal static GameObject GetRootGameObject(Object componentOrGameObject) => RootOf(GameObjectOf(componentOrGameObject));
+
+        static GameObject RootOf(GameObject source)
+        {
+            if (source == null) return null;
+            return IsPartOfPrefabInstance(source) ? GetOutermostPrefabInstanceRoot(source) : source.transform.root.gameObject;
+        }
+
+        public static GameObject[] FindAllInstancesOfPrefab(GameObject prefabRoot) => Instances(prefabRoot, null);
+
+        public static GameObject[] FindAllInstancesOfPrefab(GameObject prefabRoot, Scene scene) => Instances(prefabRoot, scene.Data);
+
+        /// <summary>The instance roots of the prefab in the loaded scenes (or one of them), in
+        /// hierarchy order.</summary>
+        static GameObject[] Instances(GameObject prefabRoot, SceneData only)
+        {
+            var found = new List<GameObject>();
+            if (prefabRoot == null || !AssetDatabaseRuntime.TryGetLocation(prefabRoot, out var guid, out _)) return found.ToArray();
+            void Walk(Transform t)
+            {
+                var go = t.gameObject;
+                var link = PrefabLinks.Of(go);
+                if (link?.Instance != null && IsAnyPrefabInstanceRoot(go) && string.Equals(link.Instance.SourceGuid, guid, StringComparison.OrdinalIgnoreCase))
+                    found.Add(go);
+                for (int i = 0; i < t.childCount; i++) Walk(t.GetChild(i));
+            }
+            foreach (var scene in SceneRegistry.Loaded)
+            {
+                if (!scene.IsLoaded || (only != null && scene != only)) continue;
+                foreach (var root in scene.Roots) if (root != null) Walk(root.transform);
+            }
+            return found.ToArray();
+        }
+
+        public static PropertyModification[] GetPropertyModifications(Object targetPrefab)
+        {
+            var link = PrefabLinks.Of(targetPrefab);
+            if (link?.Instance == null) return null;
+            var scene = (targetPrefab is Component c ? c.gameObject : targetPrefab as GameObject)?.scene.Data;
+            var list = new List<PropertyModification>(link.Instance.Stored.Count);
+            foreach (var m in link.Instance.Stored)
+            {
+                list.Add(new PropertyModification
+                {
+                    target = m.Target.IsNull ? null : AssetDatabaseRuntime.Load(m.Target.Guid ?? link.Instance.SourceGuid, m.Target.FileId, typeof(Object)),
+                    propertyPath = m.Path,
+                    value = m.Value,
+                    objectReference = Resolve(m.Reference, scene),
+                });
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>A modification's object reference: an object of the instance's scene by its file
+        /// id, else an asset.</summary>
+        static Object Resolve(ObjectRef reference, SceneData scene)
+        {
+            if (reference.IsNull) return null;
+            if (reference.IsLocal) return scene == null ? null : SceneRegistry.FindByFileId(scene.Path, reference.FileId);
+            try { return AssetDatabaseRuntime.Load(reference.Guid, reference.FileId, typeof(Object)); }
+            catch (Exception) { return null; }
+        }
+
+        public static List<ObjectOverride> GetObjectOverrides(GameObject prefabInstance, bool includeDefaultOverrides = false) =>
+            PrefabOverridesUtility.GetObjectOverrides(prefabInstance, includeDefaultOverrides);
+    }
+}
+
+namespace UnityEditor.SceneManagement
+{
+    internal partial class PrefabOverridesUtility
+    {
+        /// <summary>The objects of the instance (in hierarchy order: a GameObject, then its components)
+        /// that its modifications target; an object whose modifications are all default overrides
+        /// only with <paramref name="includeDefaultOverrides"/>.</summary>
+        public static List<ObjectOverride> GetObjectOverrides(GameObject prefabInstance, bool includeDefaultOverrides = false)
+        {
+            var overrides = new List<ObjectOverride>();
+            var root = prefabInstance == null ? null : PrefabUtility.GetOutermostPrefabInstanceRoot(prefabInstance);
+            var instance = root == null ? null : PrefabLinks.Of(root)?.Instance;
+            if (instance == null) return overrides;
+            void Add(Object o)
+            {
+                var link = PrefabLinks.Of(o);
+                if (link == null || link.Instance != instance) return;
+                foreach (var m in instance.Stored)
+                {
+                    if (m.Target.FileId != link.SourceFileId) continue;
+                    if (!includeDefaultOverrides && PrefabUtility.IsDefaultOverrideProperty(o, m.Path)) continue;
+                    overrides.Add(new ObjectOverride { instanceObject = o });
+                    return;
+                }
+            }
+            void Walk(Transform t)
+            {
+                Add(t.gameObject);
+                foreach (var c in t.gameObject.GetComponents<Component>()) if (c != null) Add(c);
+                for (int i = 0; i < t.childCount; i++) Walk(t.GetChild(i));
+            }
+            Walk(root.transform);
+            return overrides;
+        }
+    }
+
+    /// <summary>An override of a prefab instance.</summary>
+    public abstract partial class PrefabOverride
+    {
+        public abstract void Apply(string prefabAssetPath, InteractionMode mode);
+
+        public abstract void Revert(InteractionMode mode);
+
+        public abstract Object GetAssetObject();
+
+        internal abstract Object GetObject();
+    }
+
+    public partial class ObjectOverride : PrefabOverride
+    {
+        public ObjectOverride() { }
+
+        /// <summary>Applying or reverting a single object's overrides writes the prefab or the
+        /// scene's instance: not supported yet (it fails loudly).</summary>
+        public override void Apply(string prefabAssetPath, InteractionMode mode) =>
+            throw new NotSupportedException("Unbound does not apply a single object's prefab overrides yet (ObjectOverride.Apply)");
+
+        public override void Revert(InteractionMode mode) =>
+            throw new NotSupportedException("Unbound does not revert a single object's prefab overrides yet (ObjectOverride.Revert)");
+
+        public Object instanceObject { get; set; }
+
+        public PrefabOverride coupledOverride { get; set; }
+
+        public override Object GetAssetObject() => PrefabLinks.Source(instanceObject);
+
+        internal override Object GetObject() => instanceObject;
+    }
+}

@@ -191,6 +191,24 @@ namespace UnityEditor
             });
         }
 
+        public delegate UndoPropertyModification[] PostprocessModifications(UndoPropertyModification[] modifications);
+
+        /// <summary>Called with the property changes a recorded edit (SerializedObject's
+        /// ApplyModifiedProperties) makes; what it returns is what Undo records.</summary>
+        public static PostprocessModifications postprocessModifications;
+
+        internal static UndoPropertyModification[] InvokePostprocessModifications(UndoPropertyModification[] modifications)
+        {
+            var callback = postprocessModifications;
+            if (callback == null) return modifications;
+            foreach (PostprocessModifications handler in callback.GetInvocationList())
+            {
+                try { modifications = handler(modifications) ?? Array.Empty<UndoPropertyModification>(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            return modifications;
+        }
+
         public static void FlushUndoRecordObjects()
         {
             willFlushUndoRecord?.Invoke();
