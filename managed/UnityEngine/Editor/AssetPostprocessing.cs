@@ -60,8 +60,6 @@ namespace UnityEditor
         static readonly Dictionary<string, List<(int Order, Type Type, MethodInfo Method)>> s_Hooks =
             new Dictionary<string, List<(int, Type, MethodInfo)>>(StringComparer.Ordinal);
 
-        /// <summary>The instance callback <paramref name="name"/> of every loaded postprocessor, in
-        /// calling order (found once per session).</summary>
         /// <summary>Makes <paramref name="hooks"/> the postprocessors of <paramref name="name"/>
         /// until the scope ends (tests: the domain's own stay unseen).</summary>
         internal static IDisposable HooksForTests(string name, List<(int Order, Type Type, MethodInfo Method)> hooks)
@@ -78,6 +76,8 @@ namespace UnityEditor
             public void Dispose() => m_Action();
         }
 
+        /// <summary>The instance callback <paramref name="name"/> of every loaded postprocessor, in
+        /// calling order (found once per session).</summary>
         internal static List<(int Order, Type Type, MethodInfo Method)> Hooks(string name, params Type[] parameters)
         {
             if (!s_Hooks.TryGetValue(name, out var hooks))

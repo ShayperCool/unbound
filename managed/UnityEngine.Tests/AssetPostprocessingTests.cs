@@ -304,6 +304,10 @@ namespace UnityEngine.Tests
                 var main = particles.main;
                 main.startSpeed = 5f;
                 Assert.NotEqual(unchanged, HierarchyPostprocessing.Fields(particles));
+                // Deep values (a burst count's curve keys) read the same twice.
+                var emission = particles.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, new ParticleSystem.MinMaxCurve(2f, AnimationCurve.Linear(0f, 0f, 1f, 1f), AnimationCurve.Linear(0f, 1f, 1f, 3f))) });
+                Assert.Equal(HierarchyPostprocessing.Fields(particles), HierarchyPostprocessing.Fields(particles));
             }
             finally
             {

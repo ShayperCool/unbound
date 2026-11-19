@@ -157,8 +157,9 @@ namespace UnityEditor
             return sb.ToString();
         }
 
-        /// <summary>How deep plain objects a component holds are followed (its modules, their
-        /// curves and gradients).</summary>
+        /// <summary>How deep plain objects (of reference types) a component holds are followed: its
+        /// modules, their curves and gradients. Values (structs) are always followed: they cannot
+        /// form cycles, and a boxed copy has no identity to compare.</summary>
         const int FieldDepth = 6;
 
         static void AppendFields(StringBuilder sb, object o, Type stop, HashSet<object> seen, int depth)
@@ -195,7 +196,7 @@ namespace UnityEditor
                 sb.Append(value).Append(',');
                 return;
             }
-            if (depth >= FieldDepth || (!type.IsValueType && !seen.Add(value)))
+            if (!type.IsValueType && (depth >= FieldDepth || !seen.Add(value)))
             {
                 sb.Append('#').Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value)).Append(',');
                 return;
