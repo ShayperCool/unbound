@@ -174,13 +174,18 @@ impl Plugin {
     }
 }
 
-/// Reads a DLL's `.meta`; `None` when it is not a managed assembly.
+/// Reads a DLL's `.meta`; `None` when it is not a managed assembly. A DLL without a `.meta` yet
+/// (a build step just copied it in) is a plugin with the default settings, as the Editor imports
+/// it; a `.meta` that does not parse leaves the DLL out.
 pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
     if !is_managed_assembly(file) {
         return None;
     }
-    let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
-    let meta = unbound_yaml::parse_value(&meta).ok()?;
+    let meta = match std::fs::read_to_string(format!("{}.meta", file.display())) {
+        Ok(text) => unbound_yaml::parse_value(&text).ok()?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Value::default(),
+        Err(_) => return None,
+    };
     let mut plugin = plugin_from_meta(file, path, &meta);
     plugin.identity = crate::assembly_identity::read(file);
     Some(plugin)
@@ -284,6 +289,23 @@ mod tests {
         );
         assert!(p.compatible_with("Editor"));
         assert!(p.compatible_with("Android"));
+    }
+
+    /// A DLL without a `.meta` yet is a plugin for every platform, as the Editor imports it.
+    #[test]
+    fn a_dll_without_a_meta_is_a_plugin_with_the_default_settings() {
+        let dir = std::env::temp_dir().join(format!("unbound-no-meta-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("ProbeDup.dll");
+        let probe = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/compilesetup/Assets/Plugins/Dup/ProbeDup.dll");
+        std::fs::copy(probe, &file).unwrap();
+        let plugin = read_plugin(&file, "Assets/ProbeDup.dll".into());
+        std::fs::remove_dir_all(&dir).unwrap();
+        let plugin = plugin.expect("a plugin");
+        assert!(plugin.compatible_with("Editor") && plugin.compatible_with("Android"));
+        assert!(!plugin.explicitly_referenced && !plugin.analyzer);
+        assert_eq!(plugin.identity.map(|i| i.name).as_deref(), Some("ProbeDup"));
     }
 
     #[test]
