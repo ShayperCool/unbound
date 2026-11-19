@@ -1745,11 +1745,23 @@ namespace UnityEditor.Animations
             MaxThreshold = body.Float("m_MaxThreshold", 1f);
         }
 
+        /// <summary>Whether a child loops; an empty tree answers true (Unity 6000.0.71f1,
+        /// tests/projects/defaultstate BlendTree).</summary>
         internal override bool GetIsLooping()
         {
+            if (Children.Count == 0) return true;
             foreach (var c in Children)
                 if (c.motion != null && c.motion.isLooping) return true;
             return false;
+        }
+
+        /// <summary>Whether every child is a human motion: an empty tree is (Unity 6000.0.71f1,
+        /// tests/projects/defaultstate BlendTree; trees with children are unmeasured).</summary>
+        internal override bool GetIsHumanMotion()
+        {
+            foreach (var c in Children)
+                if (c.motion == null || !c.motion.isHumanMotion) return false;
+            return true;
         }
     }
 }
