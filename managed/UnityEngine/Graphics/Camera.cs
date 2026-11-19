@@ -922,6 +922,7 @@ namespace UnityEngine
         internal override void WriteSerialized(UnityYamlWriter.Writer w)
         {
             int mode = m_UsePhysicalProperties ? 2 : m_SerializedProjectionMode == 2 ? 1 : m_SerializedProjectionMode;
+            w.Bool("m_Enabled", m_Enabled);
             w.Int("m_ClearFlags", (int)m_ClearFlags);
             w.Color("m_BackGroundColor", m_BackgroundColor);
             w.Int("m_projectionMatrixMode", mode);

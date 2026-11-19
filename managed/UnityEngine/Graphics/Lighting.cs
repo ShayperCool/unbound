@@ -219,6 +219,7 @@ namespace UnityEngine
         /// <summary>The fields <see cref="ReadSerialized"/> reads, as a scene's Light document has them.</summary>
         internal override void WriteSerialized(UnityYamlWriter.Writer w)
         {
+            w.Bool("m_Enabled", m_Enabled);
             w.Int("m_Type", (int)m_Type);
             w.Color("m_Color", m_Color);
             w.Float("m_Intensity", m_Intensity);

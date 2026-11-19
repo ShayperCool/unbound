@@ -267,10 +267,10 @@ namespace UnityEngine.Tests
         {
             using var engine = MainThreadCheck.Engine();
             var b = Build();
-            var light = b.Child.AddComponent<Light>();
-            b.File.Objects[999] = light;
+            var source = b.Child.AddComponent<AudioSource>();
+            b.File.Objects[999] = source;
             var e = Assert.Throws<NotSupportedException>(() => ImportedPrefabDocuments.Write(b.File, b.Root));
-            Assert.Contains("Light", e.Message);
+            Assert.Contains("AudioSource", e.Message);
             Assert.Contains(b.File.Path, e.Message);
         }
 

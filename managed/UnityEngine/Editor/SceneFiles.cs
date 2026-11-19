@@ -806,8 +806,9 @@ namespace Unbound.Runtime
                     case Component c:
                         return Body(w =>
                         {
-                            if (Enabled(c) is bool e) w.Bool("m_Enabled", e);
+                            // A class's writer writes its enabled state itself.
                             if (Writable(c.GetType())) c.WriteSerialized(w);
+                            else if (Enabled(c) is bool e) w.Bool("m_Enabled", e);
                         }, m_Ids, m_Locations, Sourced);
                 }
                 return YText.Map();
