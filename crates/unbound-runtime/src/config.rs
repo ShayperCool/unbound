@@ -234,7 +234,7 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             "responseFileDefines": script.response_file.as_ref().map(|r| &r.defines),
         }));
     }
-    for plugin in &plugins {
+    for plugin in unbound_project::plugins::loaded_plugins(&plugins) {
         let Some(name) = plugin.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };

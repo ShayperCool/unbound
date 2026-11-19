@@ -185,7 +185,16 @@ pub fn read_plugin(file: &Path, path: String, mutable: bool) -> Option<Plugin> {
     }
     let meta = match std::fs::read_to_string(format!("{}.meta", file.display())) {
         Ok(text) => unbound_yaml::parse_value(&text).ok()?,
-        Err(e) if mutable && e.kind() == std::io::ErrorKind::NotFound => Value::default(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            if !mutable {
+                // The Editor's warning for such a file.
+                tracing::warn!(
+                    "Asset {path} has no meta file, but it's in an immutable folder. The asset will be ignored."
+                );
+                return None;
+            }
+            Value::default()
+        }
         Err(_) => return None,
     };
     let mut plugin = plugin_from_meta(file, path, &meta);
@@ -232,6 +241,37 @@ fn managed_importer(meta: &Value) -> Value {
     meta.get("PluginImporter").cloned().unwrap_or_else(|| {
         unbound_yaml::parse_value("platformData:\n  Any:\n    enabled: 1\n").unwrap_or_default()
     })
+}
+
+/// The plugin DLLs that load at run time, of `files` (those the script assemblies reference): one
+/// per declared assembly name, the highest version, as the Editor binds an assembly that
+/// compiled against a lower version under another file name (Unity 6000.0.71f1,
+/// tests/projects/compilesetup `plugins.alias.*`). Of several of the same version the first in
+/// `files` is taken (unmeasured); a file whose identity cannot be read goes by its file name.
+pub fn loaded_plugins<'f>(files: impl IntoIterator<Item = &'f PathBuf>) -> Vec<&'f PathBuf> {
+    let mut chosen: Vec<(&PathBuf, Option<[u16; 4]>)> = Vec::new();
+    let mut by_name: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for file in files {
+        let identity = crate::assembly_identity::read(file);
+        let version = identity.as_ref().map(|i| i.version);
+        let name = identity.map_or_else(
+            || {
+                file.file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default()
+            },
+            |i| i.name,
+        );
+        match by_name.get(&name) {
+            Some(&slot) if version > chosen[slot].1 => chosen[slot] = (file, version),
+            Some(_) => {}
+            None => {
+                by_name.insert(name, chosen.len());
+                chosen.push((file, version));
+            }
+        }
+    }
+    chosen.into_iter().map(|(file, _)| file).collect()
 }
 
 /// A PE file with a CLI header (data directory 14).
@@ -311,6 +351,20 @@ mod tests {
         assert!(plugin.compatible_with("Editor") && plugin.compatible_with("Android"));
         assert!(!plugin.explicitly_referenced && !plugin.analyzer);
         assert_eq!(plugin.identity.map(|i| i.name).as_deref(), Some("ProbeDup"));
+    }
+
+    /// At run time one copy of an assembly loads, its highest version, whichever file name the
+    /// assemblies that reference it name (Unity 6000.0.71f1, tests/projects/compilesetup).
+    #[test]
+    fn the_highest_version_of_an_assembly_name_loads() {
+        let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/compilesetup");
+        let v1 = probe.join("Assets/Plugins/Alias/ProbeAlias.dll");
+        let v2 = probe.join("Packages/com.probe.setup/Plugins/ProbeAliasNew.dll");
+        let other = probe.join("Assets/Plugins/Same/ProbeSame.dll");
+        let files = [v1.clone(), other.clone(), v2.clone()];
+        assert_eq!(loaded_plugins(&files), [&v2, &other]);
+        let reversed = [v2.clone(), v1.clone()];
+        assert_eq!(loaded_plugins(&reversed), [&v2]);
     }
 
     #[test]
