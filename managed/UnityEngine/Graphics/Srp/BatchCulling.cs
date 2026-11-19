@@ -420,8 +420,9 @@ namespace Unbound.Runtime
         /// the capture has one visible command of the default queue) whose material draws, in a list of
         /// <paramref name="lightModes"/> (null: none, an override material draws instead), a pass that defines no DOTS_INSTANCING_ON variant (measured: tests/projects/brg
         /// errors, Probe/NoDots, in the Editor's log; the pass is not drawn, which the renderer
-        /// decides). Logged when the commands are read, each distinct message once (the Editor
-        /// delivers it after the frame); a pass whose variants are not known logs nothing.
+        /// decides). Queued when the commands are read and logged at the frame's end
+        /// (<see cref="DeliverErrors"/>), each distinct message once, as the Editor delivers it
+        /// after the frame; a pass whose variants are not known logs nothing.
         /// Procedural commands name mesh 0 ("&lt;null&gt;"), as the Editor's do
         /// (tests/projects/brg procedural_ids).</summary>
         internal static void LogMissingDotsPasses(List<string> lightModes, RenderQueueRange queues, Material material, BatchMaterialID materialId, Mesh mesh, BatchMeshID meshId, BatchID batchId)

@@ -29,7 +29,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Made)
                 if (go != null) Object.DestroyImmediate(go);
             foreach (var scene in m_Scenes)
-                if (scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+                if (scene.isLoaded) SceneOperations.Unload(scene);
             s_Events.Clear();
         }
 

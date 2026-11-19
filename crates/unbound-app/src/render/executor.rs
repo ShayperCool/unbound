@@ -4396,7 +4396,7 @@ impl UnityRenderer {
         if sub.count == 0 {
             return planned;
         }
-        // The indices read as another list topology, and only the first ones (`DrawShape`).
+        // The indices read as another topology, and only the first ones (`DrawShape`).
         if let Some(topology) = shape.topology {
             sub.topology = topology;
         }
