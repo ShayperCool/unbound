@@ -9,6 +9,10 @@ namespace Unbound.Runtime
     {
         [ThreadStatic] static Request t_Request;
 
+        /// <summary>The loader is constructing an engine object it will read into: the object
+        /// wakes once read, not in its constructor.</summary>
+        [ThreadStatic] internal static bool Loading;
+
         sealed class Request
         {
             internal readonly Object Instance;

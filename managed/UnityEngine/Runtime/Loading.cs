@@ -341,6 +341,15 @@ namespace Unbound.Runtime
         internal static int RootOrder(YNode body) => body.Int("m_RootOrder");
         internal static void ReadBehaviour(Behaviour component, YNode body) => component.m_Enabled = body.Bool("m_Enabled", true);
         internal static void ReadName(Object target, YNode body) => target.m_Name = body.Str("m_Name");
+
+        /// <summary>An asset file's object keeps the flags the file gives it (a controller's or a
+        /// timeline's objects are hidden in the hierarchy, Unity 6000.0.71f1,
+        /// tests/projects/animatorapi read.dump.*).</summary>
+        static void ReadHideFlags(Object target, YNode body)
+        {
+            int flags = body.Int("m_ObjectHideFlags");
+            if (flags != 0) target.SetHideFlagsQuietly((HideFlags)flags);
+        }
         internal static IEnumerable<ObjectRef> ComponentReferences(YNode body)
         {
             foreach (var item in ComponentOrder(body)) yield return item.Ref("component");
@@ -423,16 +432,24 @@ namespace Unbound.Runtime
                 }
                 if (!typeof(ScriptableObject).IsAssignableFrom(type)) return null;
                 var so = ScriptableObject.CreateInstanceWithoutCallbacks(type);
-                if (so != null) ReadName(so, doc.Body);
+                if (so != null)
+                {
+                    ReadName(so, doc.Body);
+                    ReadHideFlags(so, doc.Body);
+                }
                 return so;
             }
             var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
             if (engine == null || typeof(Component).IsAssignableFrom(engine)) return null;
-            var asset = (Object)Activator.CreateInstance(engine, nonPublic: true);
+            Object asset;
+            ObjectConstruction.Loading = true;
+            try { asset = (Object)Activator.CreateInstance(engine, nonPublic: true); }
+            finally { ObjectConstruction.Loading = false; }
             // A class whose wrappers made by scripts stay uncreated (a VisualEffectAsset made
             // with `new` equals null, as in the Editor) still loads live: the engine's own object.
             if (asset.IsUncreated) asset = ObjectConstruction.CreateWithBacking(engine);
             ReadName(asset, doc.Body);
+            ReadHideFlags(asset, doc.Body);
             return asset;
         }
 

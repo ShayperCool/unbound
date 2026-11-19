@@ -87,6 +87,26 @@ pub fn scripted_importer_of(file: &std::path::Path) -> Option<(String, i64)> {
     runs_as_scripted_importer(&guid, file_id).then_some((guid, file_id))
 }
 
+/// The main object's file id a native-format asset's `.meta` names (`NativeFormatImporter`'s
+/// `mainObjectFileID`): Unity's main object of a `.controller`, `.asset`, `.mat`, ... whatever
+/// the order of the file's documents (a controller's sub-objects have random, often smaller,
+/// file ids); `None` without a readable `.meta` or for other importers.
+pub fn main_object_file_id(file: &std::path::Path) -> Option<i64> {
+    let mut path = file.as_os_str().to_owned();
+    path.push(".meta");
+    let meta = std::fs::read_to_string(path).ok()?;
+    main_object_file_id_in(&meta)
+}
+
+fn main_object_file_id_in(meta: &str) -> Option<i64> {
+    let mut lines = meta.lines().skip_while(|l| *l != "NativeFormatImporter:");
+    lines.next()?;
+    lines
+        .take_while(|l| l.starts_with(' '))
+        .find_map(|l| l.strip_prefix("  mainObjectFileID: "))
+        .and_then(|v| v.trim().parse().ok())
+}
+
 /// The importer section of a parsed `.meta` (`TextureImporter`, ...), or [`Value::Null`].
 pub fn importer<'a>(meta: &'a Value, name: &str) -> &'a Value {
     static NULL: Value = Value::Null;
@@ -305,6 +325,17 @@ impl<'a> FileIdAllocator<'a> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn main_object_file_id_comes_from_the_native_format_importer() {
+        let meta = "fileFormatVersion: 2\nguid: 0123\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 9100000\n  userData: \n";
+        assert_eq!(super::main_object_file_id_in(meta), Some(9100000));
+        let other = "fileFormatVersion: 2\nguid: 0123\nDefaultImporter:\n  mainObjectFileID: 5\n";
+        assert_eq!(super::main_object_file_id_in(other), None);
+        let missing = "fileFormatVersion: 2\nNativeFormatImporter:\n  externalObjects: {}\n";
+        assert_eq!(super::main_object_file_id_in(missing), None);
+    }
+
     use super::*;
 
     #[test]

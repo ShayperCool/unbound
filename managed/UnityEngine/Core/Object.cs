@@ -126,10 +126,14 @@ namespace UnityEngine
 
         /// <summary>Sets the flags without what setting <see cref="hideFlags"/> does besides (a
         /// GameObject passing them to its components): for copies that take each object's own.</summary>
-        internal void CopyHideFlags(Object from)
+        internal void CopyHideFlags(Object from) => SetHideFlagsQuietly(from.HideFlagsNoThrow);
+
+        /// <summary>Sets the flags without what setting <see cref="hideFlags"/> does besides (a
+        /// loaded object takes its file's).</summary>
+        internal void SetHideFlagsQuietly(HideFlags flags)
         {
-            if (m_SharedIdentity == null) m_HideFlags = from.HideFlagsNoThrow;
-            else m_SharedIdentity.Flags = from.HideFlagsNoThrow;
+            if (m_SharedIdentity == null) m_HideFlags = flags;
+            else m_SharedIdentity.Flags = flags;
         }
 
         public int GetInstanceID()

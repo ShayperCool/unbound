@@ -164,7 +164,10 @@ namespace UnityEditor
 
         public static bool IsMainAsset(Object obj) => obj != null && AssetDatabaseRuntime.TryGetLocation(obj, out var guid, out _) && AssetDatabaseRuntime.LoadMain(guid, null) == obj;
 
-        public static bool IsSubAsset(Object obj) => obj != null && obj.IsPersistentAsset && !IsMainAsset(obj);
+        /// <summary>A visible object of an asset file other than its main one; objects hidden in
+        /// the hierarchy (a controller's state machines, states, transitions, behaviours) are not
+        /// sub-assets (Unity 6000.0.71f1, tests/projects/animatorapi).</summary>
+        public static bool IsSubAsset(Object obj) => obj != null && obj.IsPersistentAsset && !IsMainAsset(obj) && (obj.hideFlags & HideFlags.HideInHierarchy) == 0;
 
         public static bool IsNativeAsset(Object obj)
         {

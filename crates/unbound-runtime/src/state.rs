@@ -483,7 +483,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 asset_kind(&asset.path)
             };
             let main = if kind == "yaml" {
-                first_file_id(&asset.file).unwrap_or(0)
+                unbound_assets::meta::main_object_file_id(&asset.file)
+                    .or_else(|| first_file_id(&asset.file))
+                    .unwrap_or(0)
             } else {
                 0
             };
