@@ -203,7 +203,7 @@ namespace UnityEngine.Tests
             Assert.False(operation.isDone);
             Assert.True(subject != null && scene.IsLoaded);
             Assert.Empty(Calls);
-            SceneManagerInternal.ProcessPending();
+            SceneOperations.Complete(operation);
             Assert.True(operation.isDone && subject == null && !scene.IsLoaded);
             Assert.Equal(new[] { "subject.OnDisable", "subject.OnDestroy", "completed" }, Calls);
         }

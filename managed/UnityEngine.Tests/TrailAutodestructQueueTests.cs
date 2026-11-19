@@ -355,9 +355,8 @@ namespace UnityEngine.Tests
             Collect(trail);
             var scene = SceneManager.CreateScene("queued trail unload");
             SceneManager.MoveGameObjectToScene(go, scene);
-            SceneManager.UnloadSceneAsync(scene);
             // The unload is queued to the scripting point that completes it (Compat.DestroyPhasesMeasured).
-            SceneManagerInternal.ProcessPending();
+            SceneOperations.Unload(scene);
             Assert.True(go.m_Destroyed);
             // Play-mode exit likewise destroys roots before resetting the scene registry. A stale
             // target reference must be harmless across clock resets and replacement allocations.
