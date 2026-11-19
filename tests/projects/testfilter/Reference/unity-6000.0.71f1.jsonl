@@ -1,0 +1,14 @@
+{"case": "all", "exit": 0, "tests": [["Other.Alpha.One", "Passed"], ["Other.Gamma.One", "Passed"], ["Probe.Alpha.One", "Passed"], ["Probe.Alpha.Two", "Passed"], ["Probe.AlphaExtra.One", "Passed"], ["Probe.Beta.Hidden", "Skipped"], ["Probe.Beta.One", "Passed"], ["Probe.Beta.Sum(1)", "Passed"], ["Probe.Beta.Sum(2)", "Passed"], ["Probe.Beta.Two", "Passed"]]}
+{"case": "class-name", "exit": 0, "tests": [["Other.Alpha.One", "Passed"], ["Probe.Alpha.One", "Passed"], ["Probe.Alpha.Two", "Passed"], ["Probe.AlphaExtra.One", "Passed"]]}
+{"case": "full-name", "exit": 0, "tests": [["Probe.Alpha.One", "Passed"]]}
+{"case": "anchored-fixture", "exit": 0, "tests": [["Probe.Alpha.One", "Passed"], ["Probe.Alpha.Two", "Passed"]]}
+{"case": "list", "exit": 0, "tests": [["Other.Gamma.One", "Passed"], ["Probe.Alpha.One", "Passed"]]}
+{"case": "exclusion", "exit": 0, "tests": [["Other.Gamma.One", "Passed"], ["Probe.Beta.Hidden", "Skipped"], ["Probe.Beta.One", "Passed"], ["Probe.Beta.Sum(1)", "Passed"], ["Probe.Beta.Sum(2)", "Passed"], ["Probe.Beta.Two", "Passed"]]}
+{"case": "assembly-name", "exit": 0, "tests": [["Probe.Alpha.One", "Passed"], ["Probe.Alpha.Two", "Passed"], ["Probe.AlphaExtra.One", "Passed"], ["Probe.Beta.Hidden", "Skipped"], ["Probe.Beta.One", "Passed"], ["Probe.Beta.Sum(1)", "Passed"], ["Probe.Beta.Sum(2)", "Passed"], ["Probe.Beta.Two", "Passed"]]}
+{"case": "parameterized", "exit": 0, "tests": []}
+{"case": "parameterized-escaped", "exit": 0, "tests": [["Probe.Beta.Sum(2)", "Passed"]]}
+{"case": "explicit", "exit": 0, "tests": [["Probe.Beta.Hidden", "Passed"]]}
+{"case": "no-match", "exit": 0, "tests": []}
+{"case": "category", "exit": 0, "tests": [["Other.Gamma.One", "Passed"], ["Probe.Beta.One", "Passed"]]}
+{"case": "filter-and-category", "exit": 0, "tests": [["Probe.Beta.One", "Passed"]]}
+{"case": "assemblies", "exit": 0, "tests": [["Other.Alpha.One", "Passed"], ["Other.Gamma.One", "Passed"]]}

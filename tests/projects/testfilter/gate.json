@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/testfilter/run.py check --release $UNBOUND_PROBE_UNITY_VERSION"],
+  "summary": "testfilter: [0-9]+/[0-9]+ cases match",
+  "engine_paths": [
+    "crates/unbound/src/commands.rs",
+    "managed/Unbound.Host/FrameworkShims.cs"
+  ]
+}
