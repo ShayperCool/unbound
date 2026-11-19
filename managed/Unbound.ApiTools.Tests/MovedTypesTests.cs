@@ -51,6 +51,7 @@ public static class Consumer
     public static string Generic() => typeof(Box<int>).Name;
     public static string Legacy() => typeof(O.Legacy).FullName;
     public static string Vanished() => typeof(Gone.Space.Vanished).FullName;
+    public static string Rooted() => typeof(global::Old.Space.Moved).FullName;
     public static string VanishedCall() => Gone.Space.Vanished.Where();
 }
 namespace Old.Inner
@@ -110,6 +111,7 @@ namespace Old
                 Assert.Equal("New.Space.Legacy", Call("Legacy"));
                 Assert.Equal("New.Space.Vanished", Call("Vanished"));
                 Assert.Equal("New.Space.Vanished", Call("VanishedCall"));
+                Assert.Equal("New.Space.Moved", Call("Rooted"));
                 var assembly = consumer.Assembly;
                 string Named(string type) => (string)assembly.GetType(type)!.GetMethod("Name")!.Invoke(null, null)!;
                 Assert.Equal("New.Space.Moved", Named("Old.Inner.Relative"));
@@ -127,6 +129,8 @@ namespace Old
     [InlineData("Unity.Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Manual); }")]
     // Moved types of assemblies whose name does not start with "Unity" are not considered.
     [InlineData("Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Moved); }")]
+    // `global::Moved` names the global namespace only, not the usings' namespaces (CS0400).
+    [InlineData("Unity.Moved.Target", true, "using Old.Space; public static class C { static object M() => typeof(global::Moved); }")]
     public void OtherwiseTheNameStaysMissing(string targetName, bool updates, string consumer)
     {
         var root = TestAssemblies.TempDir();
@@ -134,7 +138,7 @@ namespace Old
         {
             var package = new CompilerService().Compile(Setup(root, targetName, consumer, updates)).Assemblies.Single(a => a.Name == "Package");
             Assert.Equal("failed", package.Status);
-            Assert.Contains(package.Errors, e => e.Id == "CS0234");
+            Assert.Contains(package.Errors, e => e.Id is "CS0234" or "CS0400");
         }
         finally { Directory.Delete(root, recursive: true); }
     }

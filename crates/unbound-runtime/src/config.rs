@@ -72,6 +72,23 @@ pub fn ensure_facades(project: &Project, runtime: &ManagedRuntime) -> Result<Fac
     )
 }
 
+/// The plugin DLLs the game loads, as `view` names them, each with its asset GUID: every copy of
+/// an assembly, since scripts are named through the GUID of the copy a scene or prefab used (the
+/// managed side binds each assembly name to its highest version).
+fn plugin_assemblies(plugins: &BTreeSet<PathBuf>, view: impl Fn(&Path) -> PathBuf) -> Vec<Json> {
+    plugins
+        .iter()
+        .filter_map(|plugin| {
+            let name = plugin.file_stem()?.to_str()?;
+            Some(json!({
+                "name": name,
+                "dll": view(plugin),
+                "pluginGuid": meta_guid(plugin),
+            }))
+        })
+        .collect()
+}
+
 fn meta_guid(file: &Path) -> Option<String> {
     read_meta_guid(Path::new(&format!("{}.meta", file.display()))).map(|g| g.to_string())
 }
@@ -234,18 +251,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             "responseFileDefines": script.response_file.as_ref().map(|r| &r.defines),
         }));
     }
-    // Every copy is listed (its GUID names its scripts); the managed side binds each assembly
-    // name to its highest version.
-    for plugin in &plugins {
-        let Some(name) = plugin.file_stem().and_then(|s| s.to_str()) else {
-            continue;
-        };
-        assemblies.push(json!({
-            "name": name,
-            "dll": crate::view::to_view(project, plugin),
-            "pluginGuid": meta_guid(plugin),
-        }));
-    }
+    assemblies.extend(plugin_assemblies(&plugins, |p| {
+        crate::view::to_view(project, p)
+    }));
 
     let settings = &project.settings;
     let build_scenes: Vec<Json> = settings
@@ -768,6 +776,39 @@ pub fn read_settings_inputs(project: &Project) {
 /// Script execution order, shared by startup and importer diagnostics.
 pub fn execution_order(meta: &Value) -> Option<i64> {
     meta.get("MonoImporter")?.get("executionOrder")?.as_i64()
+}
+
+#[cfg(test)]
+mod plugin_list_tests {
+    use super::*;
+
+    /// Two copies of one assembly (ProbeAlias 1.0.0.0 and 2.0.0.0 under another file name) are
+    /// both listed with their GUIDs: scripts named through either copy resolve.
+    #[test]
+    fn every_copy_of_a_plugin_assembly_is_listed_with_its_guid() {
+        let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/compilesetup");
+        let v1 = probe.join("Assets/Plugins/Alias/ProbeAlias.dll");
+        let v2 = probe.join("Packages/com.probe.setup/Plugins/ProbeAliasNew.dll");
+        let plugins: BTreeSet<PathBuf> = [v1.clone(), v2.clone()].into_iter().collect();
+        let listed = plugin_assemblies(&plugins, Path::to_path_buf);
+        let entries: Vec<(String, Option<String>)> = listed
+            .iter()
+            .map(|e| {
+                (
+                    e["name"].as_str().unwrap().to_string(),
+                    e["pluginGuid"].as_str().map(String::from),
+                )
+            })
+            .collect();
+        assert_eq!(
+            entries,
+            [
+                ("ProbeAlias".to_string(), meta_guid(&v1)),
+                ("ProbeAliasNew".to_string(), meta_guid(&v2)),
+            ]
+        );
+        assert!(entries.iter().all(|(_, guid)| guid.is_some()));
+    }
 }
 
 #[cfg(test)]

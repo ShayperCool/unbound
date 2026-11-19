@@ -352,7 +352,7 @@ namespace Unbound.Runtime
             /// <summary>The assembly each name binds to: of plugin copies that declare one name
             /// the highest version, also for assemblies that compiled against another copy
             /// (Unity 6000.0.71f1, tests/projects/compilesetup <c>plugins.alias.*</c>); of the
-            /// same version the first listed.</summary>
+            /// same version the first listed (unmeasured).</summary>
             internal static Dictionary<string, GameAssembly> BoundByName(IReadOnlyList<GameAssembly> assemblies)
             {
                 var bound = new Dictionary<string, GameAssembly>(StringComparer.OrdinalIgnoreCase);
@@ -362,7 +362,10 @@ namespace Unbound.Runtime
                     var identity = Identity(a);
                     var name = identity?.Name ?? a.Name;
                     var version = identity?.Version ?? new Version();
-                    if (bound.ContainsKey(name) && version <= versions[name]) continue;
+                    // Among plugin copies the highest version (the first of equal ones); otherwise
+                    // (a script assembly) the last listed, as before plugins had versions here.
+                    if (bound.TryGetValue(name, out var have) && have.PluginGuid != null && a.PluginGuid != null
+                        && version <= versions[name]) continue;
                     bound[name] = a;
                     versions[name] = version;
                 }
