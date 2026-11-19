@@ -14,12 +14,46 @@ fn open(args: &ProjectArgs) -> Result<Project> {
     Project::open(&args.project)
 }
 
+/// The `Packages/packages-lock.json` the Package Manager writes when a project has none (unless
+/// the manifest turns the lock off), when every package resolved: a lock missing one would hold
+/// the project to what Unbound found.
+fn write_package_lock(project: &Project) {
+    let packages = project.root.join("Packages");
+    let lock = packages.join("packages-lock.json");
+    if lock.exists() || !packages.join("manifest.json").exists() {
+        return;
+    }
+    let disabled = std::fs::read(packages.join("manifest.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .is_some_and(|manifest| manifest["enableLockFile"] == serde_json::Value::Bool(false));
+    if disabled {
+        return;
+    }
+    if !project.missing_packages.is_empty() {
+        tracing::warn!("Packages/packages-lock.json is not written: some packages did not resolve");
+        return;
+    }
+    match unbound_project::packages::lock_text(&project.root, &project.packages) {
+        Ok(Some(text)) => {
+            if let Err(e) = std::fs::write(&lock, text) {
+                tracing::warn!("writing {}: {e}", lock.display());
+            }
+        }
+        Ok(None) => tracing::warn!(
+            "Packages/packages-lock.json is not written: Unbound does not record Git or tarball packages there yet"
+        ),
+        Err(e) => tracing::warn!("Packages/packages-lock.json is not written: {e:#}"),
+    }
+}
+
 /// Opens the project as the Editor opens it for editing or playing: what the Editor writes then
 /// is written (the version file's build revision, a `.meta` for each new file and folder of the
 /// project's own assets). Tools that only read the project (`info`, `doctor`, ...) use [`open`].
 fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
     let project = open(args)?;
     project.complete_version_file()?;
+    write_package_lock(&project);
     let context = unbound_assets::new_meta::MetaContext::for_install(
         &unbound_project::install::playback_engines(&project.install.data),
     );

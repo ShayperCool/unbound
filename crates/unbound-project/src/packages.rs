@@ -105,6 +105,160 @@ struct PackageJson {
     dependencies: BTreeMap<String, String>,
 }
 
+/// A JSON object's members in the order its text lists them (serde_json's maps sort them).
+struct Ordered(Vec<(String, String)>);
+
+impl<'de> Deserialize<'de> for Ordered {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Members;
+        impl<'de> serde::de::Visitor<'de> for Members {
+            type Value = Ordered;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("an object of strings")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Ordered, A::Error> {
+                let mut members = Vec::new();
+                while let Some(member) = map.next_entry::<String, String>()? {
+                    members.push(member);
+                }
+                Ok(Ordered(members))
+            }
+        }
+        deserializer.deserialize_map(Members)
+    }
+}
+
+/// What a package's `package.json` asks for, in its own order.
+fn package_dependencies(root: &Path) -> Vec<(String, String)> {
+    #[derive(Deserialize)]
+    struct Dependencies {
+        #[serde(default)]
+        dependencies: Option<Ordered>,
+    }
+    std::fs::read(root.join("package.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Dependencies>(&bytes).ok())
+        .and_then(|json| json.dependencies)
+        .map_or_else(Vec::new, |ordered| ordered.0)
+}
+
+/// The `Packages/packages-lock.json` the Package Manager writes for the project's `packages`:
+/// each package by name (the engine's modules last), with its version (an embedded package's folder as `file:<folder>`, a
+/// local one's manifest path), its depth from the manifest, its source and its `package.json`'s
+/// dependencies in that file's order, and a registry package's registry; two-space JSON with LF
+/// endings (matches the Unity 6000.0.71f1 Editor, tests/projects/projectwrites
+/// `exit.Packages/packages-lock.json`, and the locks the Editor wrote in tests/projects). A
+/// project with a Git or local tarball package gets none: the lock records what was fetched (a
+/// commit, a hash), which Unbound does not know when there was no lock.
+pub fn lock_text(project: &Path, packages: &[Package]) -> Result<Option<String>> {
+    let manifest: Manifest = serde_json::from_slice(
+        &std::fs::read(project.join("Packages/manifest.json")).context("Packages/manifest.json")?,
+    )?;
+    if packages
+        .iter()
+        .any(|p| matches!(p.source, PackageSource::Git | PackageSource::LocalTarball))
+    {
+        return Ok(None);
+    }
+    let by_name: BTreeMap<&str, &Package> = packages.iter().map(|p| (p.name.as_str(), p)).collect();
+    // Depths: the manifest's dependencies at 0, then what each asks for, breadth first.
+    let mut depth: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut level: Vec<&str> = manifest
+        .dependencies
+        .keys()
+        .map(String::as_str)
+        .filter(|name| by_name.contains_key(name))
+        .collect();
+    let mut d = 0;
+    while !level.is_empty() {
+        let mut next = Vec::new();
+        for name in level {
+            if depth.contains_key(name) {
+                continue;
+            }
+            depth.insert(name, d);
+            for (dependency, _) in package_dependencies(&by_name[name].root) {
+                if let Some((key, _)) = by_name.get_key_value(dependency.as_str()) {
+                    next.push(*key);
+                }
+            }
+        }
+        level = next;
+        d += 1;
+    }
+    // Embedded packages are the project's own: depth 0 whether or not the manifest names them.
+    for p in packages
+        .iter()
+        .filter(|p| p.source == PackageSource::Embedded)
+    {
+        depth.insert(p.name.as_str(), 0);
+    }
+    let quote = |s: &str| serde_json::to_string(s).expect("a string");
+    let mut out = String::from("{\n  \"dependencies\": {");
+    let mut first = true;
+    // By name, the engine's module packages after all others.
+    let mut order: Vec<(&&str, &&Package)> = by_name.iter().collect();
+    order.sort_by_key(|(name, _)| (name.starts_with("com.unity.modules."), **name));
+    for (name, package) in order {
+        let Some(&depth) = depth.get(name) else {
+            continue;
+        };
+        let (version, source) = match package.source {
+            PackageSource::Embedded => (
+                format!(
+                    "file:{}",
+                    package
+                        .root
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                ),
+                "embedded",
+            ),
+            PackageSource::Local => (
+                manifest
+                    .dependencies
+                    .get(*name)
+                    .cloned()
+                    .unwrap_or_else(|| package.version.clone()),
+                "local",
+            ),
+            PackageSource::BuiltIn => (package.version.clone(), "builtin"),
+            _ => (package.version.clone(), "registry"),
+        };
+        out.push_str(if first { "\n" } else { ",\n" });
+        first = false;
+        out.push_str(&format!(
+            "    {}: {{\n      \"version\": {},\n      \"depth\": {depth},\n      \"source\": {},\n      \"dependencies\": {{",
+            quote(name),
+            quote(&version),
+            quote(source)
+        ));
+        let dependencies = package_dependencies(&package.root);
+        for (i, (dependency, wanted)) in dependencies.iter().enumerate() {
+            out.push_str(if i == 0 { "\n" } else { ",\n" });
+            out.push_str(&format!("        {}: {}", quote(dependency), quote(wanted)));
+        }
+        out.push_str(if dependencies.is_empty() {
+            "}"
+        } else {
+            "\n      }"
+        });
+        if source == "registry" {
+            out.push_str(&format!(
+                ",\n      \"url\": {}",
+                quote(manifest.registry_for(name))
+            ));
+        }
+        out.push_str("\n    }");
+    }
+    out.push_str("\n  }\n}\n");
+    Ok(Some(out))
+}
+
 /// The package directories the user named (`--packages`, `UNBOUND_PACKAGES`, and the older
 /// `UNBOUND_PACKAGE_CACHES`): folders of `<name>` or `<name>@<version>` packages, searched first.
 pub fn user_package_dirs() -> Vec<PathBuf> {
@@ -848,6 +1002,99 @@ fn find_in_caches(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Rewrites each lock the Editor wrote for a probe project from that project's manifest and
+    /// packages (each package's `package.json` asking for what its lock entry lists), and expects
+    /// the Editor's bytes: entry order, depths, sources, registries and layout.
+    #[test]
+    fn lock_files_are_written_as_the_editor_writes_them() {
+        let projects = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects");
+        for probe in [
+            "gameinterop",
+            "avoidance",
+            "gamepad",
+            "urp",
+            "buildplayerhandlers",
+        ] {
+            let project = projects.join(probe);
+            let committed =
+                std::fs::read_to_string(project.join("Packages/packages-lock.json")).unwrap();
+            let lock: serde_json::Value = serde_json::from_str(&committed).unwrap();
+            let scratch =
+                std::env::temp_dir().join(format!("unbound-lock-{probe}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&scratch);
+            std::fs::create_dir_all(scratch.join("Packages")).unwrap();
+            std::fs::copy(
+                project.join("Packages/manifest.json"),
+                scratch.join("Packages/manifest.json"),
+            )
+            .unwrap();
+            let entries = Ordered::deserialize(&lock["dependencies"]).ok();
+            assert!(entries.is_none(), "objects of objects are not strings");
+            let mut packages = Vec::new();
+            for (name, entry) in lock["dependencies"].as_object().unwrap() {
+                let source = entry["source"].as_str().unwrap();
+                let version = entry["version"].as_str().unwrap();
+                let root = match source {
+                    "embedded" => scratch
+                        .join("Packages")
+                        .join(version.strip_prefix("file:").unwrap()),
+                    _ => scratch.join("cache").join(name),
+                };
+                std::fs::create_dir_all(&root).unwrap();
+                // The dependencies in the lock's order, which is the package.json's.
+                let start = committed.find(&format!("\"{name}\": {{")).unwrap();
+                let block = &committed[start..];
+                let deps = &block
+                    [block.find("\"dependencies\": {").unwrap()..block.find('}').unwrap() + 1];
+                std::fs::write(
+                    root.join("package.json"),
+                    format!("{{\"name\": \"{name}\", \"version\": \"{version}\", {deps}}}"),
+                )
+                .unwrap();
+                packages.push(Package {
+                    name: name.clone(),
+                    version: version.to_string(),
+                    source: match source {
+                        "embedded" => PackageSource::Embedded,
+                        "builtin" => PackageSource::BuiltIn,
+                        "registry" => PackageSource::Registry,
+                        other => panic!("{probe}: no {other} packages expected"),
+                    },
+                    root,
+                    testable: false,
+                });
+            }
+            // Resolution order is not the lock's.
+            packages.reverse();
+            assert_eq!(
+                lock_text(&scratch, &packages).unwrap().as_deref(),
+                Some(committed.as_str()),
+                "{probe}"
+            );
+            std::fs::remove_dir_all(&scratch).unwrap();
+        }
+    }
+
+    #[test]
+    fn a_git_package_leaves_the_lock_unwritten() {
+        let scratch = std::env::temp_dir().join(format!("unbound-lock-git-{}", std::process::id()));
+        std::fs::create_dir_all(scratch.join("Packages")).unwrap();
+        std::fs::write(
+            scratch.join("Packages/manifest.json"),
+            "{\"dependencies\": {\"a\": \"https://x/a.git\"}}",
+        )
+        .unwrap();
+        let git = Package {
+            name: "a".into(),
+            version: "1.0.0".into(),
+            source: PackageSource::Git,
+            root: scratch.join("a"),
+            testable: false,
+        };
+        assert_eq!(lock_text(&scratch, &[git]).unwrap(), None);
+        std::fs::remove_dir_all(&scratch).unwrap();
+    }
 
     fn header(name: &str, size: usize, kind: u8, magic: &[u8; 8], prefix: &str) -> Vec<u8> {
         let mut h = vec![0u8; 512];
