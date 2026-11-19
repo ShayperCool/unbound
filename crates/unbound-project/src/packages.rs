@@ -34,7 +34,7 @@ pub struct Package {
     pub version: String,
     pub source: PackageSource,
     pub root: PathBuf,
-    /// Listed in the manifest's `testables`.
+    /// Its test assemblies build: listed in the manifest's `testables`, or embedded.
     pub testable: bool,
 }
 
@@ -330,7 +330,10 @@ pub fn resolve(
         }
         match found {
             Some((root, source, version)) => resolution.packages.push(Package {
-                testable: manifest.testables.contains(&name),
+                // Unity 6000.0.71f1 builds an embedded package's test assemblies without a
+                // `testables` entry, a local folder's or tarball's not (tests/projects/compilesetup
+                // `assemblies`).
+                testable: source == PackageSource::Embedded || manifest.testables.contains(&name),
                 name,
                 version,
                 source,
@@ -970,6 +973,28 @@ mod tests {
         let locked = versions(&resolve(&project, &install, measured).unwrap());
         assert_eq!(locked["com.example.dep"], "1.0.0");
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Test assemblies build for an embedded package and those the manifest lists in `testables`.
+    #[test]
+    fn embedded_and_listed_packages_are_testable() {
+        let root = std::env::temp_dir().join(format!("unbound-testables-{}", std::process::id()));
+        let (project, install) = minimum_project(&root);
+        write(
+            &project.join("Packages/manifest.json"),
+            r#"{"dependencies": {"com.example.direct": "1.0.0"}, "testables": ["com.example.free"]}"#,
+        );
+        let resolution = resolve(&project, &install, PackageResolutionRules::default()).unwrap();
+        let _ = std::fs::remove_dir_all(&root);
+        let testable: BTreeMap<&str, bool> = resolution
+            .packages
+            .iter()
+            .map(|p| (p.name.as_str(), p.testable))
+            .collect();
+        assert!(testable["com.example.embedded"]);
+        assert!(testable["com.example.free"]);
+        assert!(!testable["com.example.dep"]);
+        assert!(!testable["com.example.direct"]);
     }
 
     #[test]
