@@ -148,6 +148,51 @@ namespace UnityEngine.Tests
             Assert.Equal(-1f, Value(wind, 0).z, 6);
         }
 
+        /// <summary>A local wind whose spherical wind cancels the directional one exactly has no
+        /// direction (NaN, as in the Editor: tests/projects/speedtree9wind `Opposed`) while its
+        /// strength still eases to zero, and it keeps none once the spherical wind has gone: it
+        /// never becomes the asset's wind again; a spherical wind that leaves some wind is a
+        /// control, which returns to the asset's wind.</summary>
+        [Fact]
+        public void ExactlyCancellingWindsLeaveALocalWindWithoutDirection()
+        {
+            var config = Config();
+            var asset = new SpeedTreeWindState();
+            int frame = 1;
+            for (; frame < 60; frame++) asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
+            var cancelled = new SpeedTreeWindState();
+            var weakened = new SpeedTreeWindState();
+            cancelled.Begin(asset, Vector3.zero, ref config, true);
+            weakened.Begin(asset, new Vector3(0f, 0f, 0.5f), ref config, true);
+            float strength = Value(asset, 0).w;
+            for (int i = 0; i < 5; i++, frame++)
+            {
+                asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
+                cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.back, asset, ref config);
+                weakened.UpdateLocal(frame * Dt, Vector3.forward, new Vector3(0f, 0f, -0.5f), asset, ref config);
+            }
+            var none = Value(cancelled, 0);
+            Assert.True(float.IsNaN(none.x) && float.IsNaN(none.y) && float.IsNaN(none.z), none.ToString());
+            Assert.InRange(none.w, 0f, strength - 1e-3f);
+            var some = Value(weakened, 0);
+            Assert.False(float.IsNaN(some.x) || float.IsNaN(some.y) || float.IsNaN(some.z), some.ToString());
+            Assert.Equal(1f, some.z, 5);
+
+            // The spherical wind goes.
+            bool cancelledArrived = false, weakenedArrived = false;
+            for (int i = 0; i < 600; i++, frame++)
+            {
+                asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
+                cancelledArrived |= cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, ref config);
+                weakenedArrived |= weakened.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, ref config);
+            }
+            Assert.False(cancelledArrived);
+            Assert.True(weakenedArrived);
+            none = Value(cancelled, 0);
+            Assert.True(float.IsNaN(none.x) && float.IsNaN(Value(cancelled, 3).x), none.ToString());
+            Assert.Equal(Value(asset, 0).w, none.w, 5);
+        }
+
         sealed class Warnings : ILogHandler
         {
             internal readonly System.Collections.Generic.List<string> Messages = new System.Collections.Generic.List<string>();

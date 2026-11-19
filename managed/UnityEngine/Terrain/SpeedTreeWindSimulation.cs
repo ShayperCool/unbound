@@ -142,9 +142,10 @@ namespace UnityEngine
             float length = MathF.Sqrt((wind.x * wind.x + wind.y * wind.y) + wind.z * wind.z);
             fixed (SpeedTreeWindConfig9* c = &config)
             {
-                // A spherical wind that cancels the directional one exactly leaves the direction
-                // as it is.
-                if (length > 0f) SetDirection(time, Divide(wind, length), c->directionResponse);
+                // The winds at the tree normalized: a spherical wind that cancels the directional
+                // one exactly gives no direction (NaN, matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/speedtree9wind `Opposed`).
+                SetDirection(time, Divide(wind, length), c->directionResponse);
                 SetStrength(time, length, c->strengthResponse);
                 Advance(time);
                 Array.Copy(from.m_Noise, m_Noise, m_Noise.Length);
@@ -167,7 +168,10 @@ namespace UnityEngine
             bool reached = (spherical.x * spherical.x + spherical.y * spherical.y) + spherical.z * spherical.z != 0f;
             var wind = new Vector3(directional.x + spherical.x, directional.y + spherical.y, directional.z + spherical.z);
             float length = MathF.Sqrt((wind.x * wind.x + wind.y * wind.y) + wind.z * wind.z);
-            var direction = length > 0f ? Divide(wind, length) : wind;
+            // While a spherical zone reaches the tree, the winds at it normalized (NaN when they
+            // cancel exactly: tests/projects/speedtree9wind `Opposed`); out of reach toward the
+            // directional wind, which keeps its direction when there is none.
+            var direction = reached || length > 0f ? Divide(wind, length) : wind;
             fixed (SpeedTreeWindConfig9* c = &config)
             {
                 SetDirection(time, direction, c->directionResponse);
@@ -190,7 +194,9 @@ namespace UnityEngine
         }
 
         /// <summary>Whether each part's noise position is within <see cref="Close"/> of the other
-        /// wind's.</summary>
+        /// wind's. A NaN position (a local wind left without direction) never is: such a local
+        /// wind is never given up, as in the Unity 6000.0.71f1 Editor
+        /// (tests/projects/speedtree9wind `Opposed` after its zone has gone).</summary>
         bool SameNoise(SpeedTreeWindState other)
         {
             for (int part = 0; part < m_Noise.Length; part++)
@@ -198,7 +204,7 @@ namespace UnityEngine
                 var a = m_Noise[part];
                 var b = other.m_Noise[part];
                 float dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
-                if ((dz * dz + dy * dy) + dx * dx > CloseSquared) return false;
+                if (!((dz * dz + dy * dy) + dx * dx <= CloseSquared)) return false;
             }
             return true;
         }
@@ -559,8 +565,11 @@ namespace UnityEngine
         }
 
         /// <summary>Advances the local winds after their assets' winds. A local wind that has
-        /// become its asset's wind again gives up one tree a frame (its first; the order is
-        /// unmeasured); one whose asset is gone gives up all of them.</summary>
+        /// become its asset's wind again gives up one tree a frame (its first; Unity's order is
+        /// unmeasured, and the constants tests/projects/speedtree9wind records do not show it:
+        /// they are the same with the last tree given up first, as a tree that leaves takes an
+        /// asset's wind within <see cref="SpeedTreeWindState.Close"/> of its local wind); one
+        /// whose asset is gone gives up all of them.</summary>
         static void UpdateLocals(float time)
         {
             for (int i = 0; i < s_Locals.Count; i++)
@@ -772,7 +781,10 @@ namespace UnityEngine
         {
             if (s_Trees.Count == 0 || !s_Trees.TryGetValue(renderer.m_GameObject, out var tree)) return properties;
             var asset = tree.windAsset;
-            // A destroyed asset's wind is no longer advanced: the tree draws without wind.
+            // A tree without a wind asset (or whose asset is destroyed, whose wind is no longer
+            // advanced) binds no wind constants. In the Unity 6000.0.71f1 Editor such a draw
+            // reads the constants an earlier draw left (tests/projects/speedtree9wind `Windless`,
+            // a recorded residual: the draw order is the renderer's); here it reads none.
             if (asset == null) return properties;
             if (s_AnyWind) tree.m_DrawnWithWind = true;
             var wind = WindOf(tree, renderer, asset);

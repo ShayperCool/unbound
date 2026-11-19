@@ -54,8 +54,26 @@ second level's renderer moved 6 units along x (`SplitGroup`, frame 790) and a sp
 reaches only that second level's bounds (800): the drawn level gets a local wind, so a group's trees
 are reached by their levels' bounds together, levels it does not draw included; beside it a tree
 (`Cancelled`, 790) that two spherical zones at one place with main winds 1 and -1 reach (810): their
-winds cancel exactly at the tree and it gets no local wind (it keeps its asset's wind). The earlier
-rows of the reference are unchanged (two identical captures, 16252 rows).
+winds cancel exactly at the tree and it gets no local wind (it keeps its asset's wind).
+
+From frame 870 (to 1100): `Opposed`, a tree that a directional zone (875, main wind 1 along +z) and
+a spherical zone 5 units along +z of it (880, main wind 1) reach, so the spherical wind cancels
+the directional one exactly at the tree, with its twin `OpposedTwin` (another tree of its asset,
+out of reach) as the control, and `Windless`, a tree whose wind asset is set to none. `Opposed`
+gets a local wind with no direction: its wind vector is NaN (and the NaN reaches the noise
+positions) while its strength eases as for any local wind. The zone then moves 3 units along x
+(950), still reaching the tree, so the winds no longer cancel, and goes (1000): the local wind's
+strength follows, but its direction and noise positions stay NaN, and it never becomes the
+asset's wind again (to frame 1100). `Windless` binds no wind: its draw reads what the draw before
+it left (here exactly `Opposed`'s constants); Unbound draws it without wind constants (zeros), a
+recorded residual (`residuals.json`). Two identical captures (OpenGL Core, NVIDIA driver, 25195
+rows); the earlier 16252 rows are unchanged. On arm64 a NaN that
+Unbound computes keeps the default NaN's positive sign (`7fc00000`, x86 gives `ffc00000`), so
+on the Mac the gate also lists `Opposed`'s NaN rows.
+
+Not measured: the order in which the trees of a local wind that has become its asset's wind
+again leave it (the recorded constants are the same whichever leaves first), and the constants
+outside Play mode (Unbound renders in Play mode only).
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)
