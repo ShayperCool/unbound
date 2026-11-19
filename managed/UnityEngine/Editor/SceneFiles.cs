@@ -79,8 +79,6 @@ namespace Unbound.Runtime
         /// <summary>The scene's file text; null (with an error logged) when a part of it cannot be written.</summary>
         internal static string Write(SceneData scene) => new SceneWriter(scene).Write();
 
-        /// <summary>Writes the scene to <paramref name="path"/> (project-relative), with a new
-        /// .meta when the file is new; false, with the reason logged, when it cannot be written.</summary>
         /// <summary>Whether the scene can be saved to the path at all (it is loaded, the path names a
         /// scene asset); the reason is logged when not.</summary>
         internal static bool CanSave(SceneData scene, string path)
@@ -98,6 +96,8 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>Writes the scene to <paramref name="path"/>, with a new .meta when the file is
+        /// new; false, with the reason logged, when it cannot be written.</summary>
         internal static bool Save(SceneData scene, string path)
         {
             if (!CanSave(scene, path)) return false;
@@ -321,8 +321,11 @@ namespace Unbound.Runtime
             /// <summary>The file ids the scene's objects had when they were read or last saved.</summary>
             readonly HashSet<long> m_Known = new HashSet<long>();
             readonly Dictionary<long, Object> m_KnownObjects = new Dictionary<long, Object>();
-            /// <summary>The documents of embedded objects written this pass.</summary>
+            /// <summary>The documents of embedded objects written this pass, and the embedded objects
+            /// the last pass dropped (nothing referenced them).</summary>
             readonly HashSet<long> m_Embedded = new HashSet<long>();
+            readonly HashSet<Object> m_Pruned = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            readonly Dictionary<long, string> m_KeptEmbeddedClasses = new Dictionary<long, string>();
             readonly HashSet<long> m_LiveGameObjects = new HashSet<long>();
             readonly Dictionary<PrefabInstanceData, InstanceState> m_Instances = new Dictionary<PrefabInstanceData, InstanceState>();
             readonly SortedSet<string> m_KeptAsRead = new SortedSet<string>(StringComparer.Ordinal);
@@ -352,7 +355,8 @@ namespace Unbound.Runtime
                     if (pair.Key is null) continue;
                     m_Known.Add(pair.Value);
                     m_KnownObjects[pair.Value] = pair.Key;
-                    if (pair.Key != null) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
+                    // An object no longer saved (DontSave) is referenced as none, as a new one is.
+                    if (pair.Key != null && Saved(pair.Key)) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
                 }
                 foreach (var id in m_Source.Keys) m_Used.Add(id);
                 foreach (var id in m_Scene.StrippedIds.Values) m_Used.Add(id);
@@ -384,6 +388,13 @@ namespace Unbound.Runtime
                 // later saves agree, tests/projects/scenesave BaseCopy).
                 foreach (var pair in m_Ids)
                     if (pair.Key != null) m_Scene.FileIds[pair.Key] = pair.Value;
+                // An embedded object the file no longer holds is no object of it: a later reference
+                // to it is refused like one to an object made by script.
+                foreach (var pruned in m_Pruned)
+                {
+                    m_Scene.FileIds.Remove(pruned);
+                    m_Ids.Remove(pruned);
+                }
                 var docs = new List<YTextDocument>(m_Out.Values);
                 return UnityYamlText.Write(docs);
             }
@@ -397,6 +408,8 @@ namespace Unbound.Runtime
                 m_KeptAsRead.Clear();
                 m_Unwritten.Clear();
                 m_Embedded.Clear();
+                m_Pruned.Clear();
+                m_KeptEmbeddedClasses.Clear();
                 m_UnlocatedCount = 0;
                 foreach (var root in roots) WriteHierarchy(root.transform);
                 Settings();
@@ -436,9 +449,15 @@ namespace Unbound.Runtime
                     var unused = new List<long>();
                     foreach (var d in m_Out.Values)
                         if ((d.Stripped() || m_Embedded.Contains(d.FileId)) && !referenced.Contains(d.FileId)) unused.Add(d.FileId);
-                    if (unused.Count == 0) return;
-                    foreach (var id in unused) m_Out.Remove(id);
+                    if (unused.Count == 0) break;
+                    foreach (var id in unused)
+                    {
+                        m_Out.Remove(id);
+                        if (m_Embedded.Contains(id) && m_KnownObjects.TryGetValue(id, out var gone)) m_Pruned.Add(gone);
+                    }
                 }
+                foreach (var pair in m_KeptEmbeddedClasses)
+                    if (m_Out.ContainsKey(pair.Key)) m_KeptAsRead.Add(pair.Value);
             }
 
             /// <summary>While the first pass runs: the objects of prefab instances written
@@ -1007,9 +1026,12 @@ namespace Unbound.Runtime
                         // Lighting Settings) is written while it lives: its fields when Unbound has a
                         // writer for its class, else as the file has it. One nothing written
                         // references goes (PruneUnreferenced).
-                        if (known == null || known is GameObject || known is Component) continue;
+                        if (known == null || known is GameObject || known is Component || !Saved(known)) continue;
                         var doc = Clone(d);
-                        if (!NativeDocuments.Write(doc, known, m_Ids, m_Locations, ref m_UnlocatedCount)) m_KeptAsRead.Add(known.GetType().Name);
+                        // One kept as read is named, when dirty, once it survives pruning (as an asset
+                        // file's object is named).
+                        if (!NativeDocuments.Write(doc, known, m_Ids, m_Locations, ref m_UnlocatedCount, Record) && EditorUtility.IsDirty(known))
+                            m_KeptEmbeddedClasses[d.FileId] = known.GetType().Name;
                         m_Out[d.FileId] = doc;
                         m_Embedded.Add(d.FileId);
                         continue;
@@ -1123,16 +1145,18 @@ namespace Unbound.Runtime
         /// <summary>Writes the object's fields into its document: a script object's whole body, a
         /// material's modeled fields over the file's; false (the document kept as read) for other
         /// classes.</summary>
-        internal static bool Write(YTextDocument doc, Object o, Dictionary<Object, long> ids, AssetDatabaseRuntime.Locations locations, ref int unlocated)
+        /// <param name="references">Overrides how references are written (a scene's checks).</param>
+        internal static bool Write(YTextDocument doc, Object o, Dictionary<Object, long> ids, AssetDatabaseRuntime.Locations locations, ref int unlocated,
+            Func<Object, string> references = null)
         {
             if (SerializedTree.IsScript(o))
             {
-                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.ScriptBody(o), ids, locations), doc.Body, ref unlocated);
+                doc.Body = SceneFiles.Resolve(SceneFiles.Body(w => w.ScriptBody(o), ids, locations, references), doc.Body, ref unlocated);
                 return true;
             }
             if (o is Material material)
             {
-                var writer = new UnityYamlWriter.Writer(new StringBuilder(), ids, null, null, locations);
+                var writer = new UnityYamlWriter.Writer(new StringBuilder(), ids, null, references, locations);
                 SceneFiles.Overlay(doc.Body, MaterialTypeTree.FileBody(material, r => SceneFiles.FlowValue(writer.ReferenceText(r))), ref unlocated);
                 return true;
             }

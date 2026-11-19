@@ -13,6 +13,16 @@ namespace UnityEngine.Tests
         public int count;
     }
 
+    public class SavedMeshHolder : ScriptableObject
+    {
+        public Mesh mesh;
+    }
+
+    public class SavedHolderUser : MonoBehaviour
+    {
+        public SavedMeshHolder holder;
+    }
+
     /// <summary>
     /// What makes a scene or an asset need saving, and what saving refuses, as the Unity 6000.0.71f1
     /// Editor and its Scripting API have it (tests/projects/scenesave: SetDirty and a flushed Undo
@@ -262,6 +272,91 @@ namespace UnityEngine.Tests
                 Assert.False(SceneFiles.Save(scene, "Assets/Saved.unity"));
                 scene.IsLoaded = true;
                 Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+            }
+            finally
+            {
+                Close(scene, previous);
+                ProjectInfo.ProjectPath = previousProject;
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
+        public void AnEmbeddedObjectDroppedFromTheFileIsNoObjectOfItAnyMore()
+        {
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                var mesh = new Mesh { name = "embedded" };
+                scene.FileIds[mesh] = 500;
+                var filter = new GameObject("holder").AddComponent<MeshFilter>();
+                filter.sharedMesh = null;
+                Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                Assert.DoesNotContain("--- !u!43 &500", File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+                // Referenced again, it is an object made by script the Editor would embed: refused.
+                filter.sharedMesh = mesh;
+                m_Messages.Values.Clear();
+                Assert.False(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects made by script"));
+            }
+            finally
+            {
+                Close(scene, previous);
+                ProjectInfo.ProjectPath = previousProject;
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
+        public void AnEmbeddedObjectsReferencesAreCheckedAsTheScenesAre()
+        {
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!114 &600\nMonoBehaviour:\n  m_Name: embedded\n  mesh: {fileID: 0}\n");
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                var holder = ScriptableObject.CreateInstance<SavedMeshHolder>();
+                holder.name = "embedded";
+                scene.FileIds[holder] = 600;
+                var user = new GameObject("user").AddComponent<SavedHolderUser>();
+                user.holder = holder;
+                var text = SceneFiles.Write(scene);
+                Assert.Contains("holder: {fileID: 600}", text);
+                Assert.Contains("--- !u!114 &600", text);
+                holder.mesh = new Mesh();
+                m_Messages.Values.Clear();
+                Assert.Null(SceneFiles.Write(scene));
+                Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects made by script"));
+            }
+            finally
+            {
+                Close(scene, previous);
+                ProjectInfo.ProjectPath = previousProject;
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
+        public void ALinkedSceneFileIsWrittenWhereItLinksTo()
+        {
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                var target = Path.Combine(project, "Shared.unity");
+                File.WriteAllText(target, "old");
+                var link = Path.Combine(project, "Assets/Linked.unity");
+                File.CreateSymbolicLink(link, target);
+                Assert.True(SceneFiles.Save(scene, "Assets/Linked.unity"));
+                Assert.NotNull(new FileInfo(link).LinkTarget);
+                Assert.StartsWith("%YAML 1.1", File.ReadAllText(target));
+                Assert.Empty(Directory.GetFiles(project, "*.unbound-save", SearchOption.AllDirectories));
             }
             finally
             {
