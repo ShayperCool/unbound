@@ -168,7 +168,15 @@ impl Project {
     /// Every managed plugin DLL of the project and its packages.
     pub fn plugins(&self) -> Vec<plugins::Plugin> {
         let mut dlls = Vec::new();
-        for root in self.asset_roots() {
+        // The Editor imports a file without a `.meta` (writing one) where files can change: the
+        // project's Assets and embedded and local folder packages; in a package it keeps in its
+        // cache such a file is ignored.
+        let mutable = std::iter::once(true).chain(
+            self.packages
+                .iter()
+                .map(|p| matches!(p.source, PackageSource::Embedded | PackageSource::Local)),
+        );
+        for (root, mutable) in self.asset_roots().into_iter().zip(mutable) {
             let walker = walkdir::WalkDir::new(root.dir)
                 .follow_links(true)
                 .into_iter()
@@ -186,13 +194,14 @@ impl Project {
                     dlls.push((
                         path.to_path_buf(),
                         format!("{}/{}", root.virtual_path, relative.to_string_lossy()),
+                        mutable,
                     ));
                 }
             }
         }
         let mut plugins: Vec<_> = dlls
             .into_par_iter()
-            .filter_map(|(file, path)| plugins::read_plugin(&file, path))
+            .filter_map(|(file, path, mutable)| plugins::read_plugin(&file, path, mutable))
             .collect();
         plugins.sort_by(|a, b| a.path.cmp(&b.path));
         plugins
@@ -471,11 +480,12 @@ mod tests {
         assert!(player.get("EditorAuto").is_none());
     }
 
-    /// Plugins with one assembly name: every assembly references one of them, the highest version
-    /// among those enabled for the platform, by name and by file name, also through
-    /// `precompiledReferences` (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`).
+    /// Plugins with one assembly name: of those with one file name an assembly references the
+    /// highest version enabled for the platform; a lower version under another file name is still
+    /// referenced by that name (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`,
+    /// `assembly.Probe.Explicit*.plugins`).
     #[test]
-    fn plugins_with_one_assembly_name_bind_the_highest_version() {
+    fn plugins_of_one_file_name_bind_the_highest_version() {
         let scratch = std::env::temp_dir().join(format!(
             "unbound-plugin-versions-{}-{:?}",
             std::process::id(),
@@ -487,7 +497,8 @@ mod tests {
         let v1 = probe.join("Assets/Plugins/Dup/ProbeDup.dll");
         let v2 = probe.join("Packages/com.probe.setup/Plugins/ProbeDup.dll");
         let any = "PluginImporter:\n  platformData:\n    Any:\n      enabled: 1\n";
-        let no_editor = "PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n    Android:\n      enabled: 1\n";
+        let explicit = "PluginImporter:\n  isExplicitlyReferenced: 1\n  platformData:\n    Any:\n      enabled: 1\n";
+        let android = "PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n    Android:\n      enabled: 1\n";
         let place = |dir: &str, name: &str, from: &Path, importer: &str| {
             let file = root.join("Assets").join(dir).join(name);
             std::fs::create_dir_all(file.parent().unwrap()).unwrap();
@@ -498,11 +509,13 @@ mod tests {
             )
             .unwrap();
         };
-        // The older version first by path, the newer one under another file name.
+        // The older version first by path.
         place("A", "ProbeDup.dll", &v1, any);
-        place("B", "Renamed.dll", &v2, any);
-        // A newer version the Editor platform does not take: it does not count.
-        place("C", "ProbeDup.dll", &v2, no_editor);
+        place("C", "ProbeDup.dll", &v2, any);
+        // The newest for Android only: in the Editor it is no candidate.
+        place("D", "ProbeDup.dll", &v2, android);
+        // The older version under another file name, referenced only by name.
+        place("E", "Renamed.dll", &v1, explicit);
         std::fs::write(root.join("Assets/A.cs"), "class A {}\n").unwrap();
         std::fs::create_dir_all(root.join("Assets/Explicit")).unwrap();
         std::fs::write(
@@ -539,12 +552,14 @@ mod tests {
                 .map(|p| p.strip_prefix(&root).unwrap().display().to_string())
                 .collect()
         };
-        assert_eq!(names(&editor, "Assembly-CSharp"), ["Assets/B/Renamed.dll"]);
-        // Only the newest is left, so the old file's name finds nothing.
-        assert_eq!(names(&editor, "Explicit"), ["Assets/B/Renamed.dll"]);
-        // On Android the platform's copy is a candidate too: it has the same (highest) version
-        // as Renamed.dll and comes later by path.
-        assert_eq!(names(&player, "Assembly-CSharp"), ["Assets/B/Renamed.dll"]);
+        assert_eq!(names(&editor, "Assembly-CSharp"), ["Assets/C/ProbeDup.dll"]);
+        assert_eq!(
+            names(&editor, "Explicit"),
+            ["Assets/C/ProbeDup.dll", "Assets/E/Renamed.dll"]
+        );
+        // For Android the platform's copy is a candidate too, of the same version as C's and
+        // later by path.
+        assert_eq!(names(&player, "Assembly-CSharp"), ["Assets/C/ProbeDup.dll"]);
     }
 
     /// Each assembly takes its asmdef folder's csc.rsp, else the project's: the file's defines

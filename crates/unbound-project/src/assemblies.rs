@@ -10,7 +10,7 @@
 //!   `defineConstraints` fail. Predefined assemblies reference every auto-referenced assembly
 //!   (an Editor-only one included, where it builds);
 //!   every assembly references the auto-referenced plugins unless `overrideReferences` is set,
-//!   one per assembly name: the highest version (see [`one_per_assembly`]).
+//!   one per file name, the highest version of an assembly name first (see [`one_per_file_name`]).
 //! * Each assembly takes its response file's options (see [`crate::response_files`]).
 use crate::{
     assetdb::is_hidden,
@@ -471,7 +471,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     let logged_duplicates = std::cell::RefCell::new(HashSet::new());
     // The managed plugins an assembly with these defines may reference.
     let available = |defines: &[String]| -> Vec<&Plugin> {
-        let (kept, ignored) = one_per_assembly(
+        let (kept, ignored) = one_per_file_name(
             input
                 .plugins
                 .iter()
@@ -633,16 +633,20 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
 }
 
 /// The precompiled plugins of `candidates` (enabled for the platform, define constraints met) an
-/// assembly references, as the Editor narrows them: one per assembly name, the highest version,
-/// and then one per file name (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`). Which
-/// of several of the same version the Editor keeps is not specified (it changes with the
-/// project's other plugins); here the first by path. Returns the plugins kept, in the order of
-/// the first of their name, and each one left out of a different version with the one used.
-fn one_per_assembly<'p>(
+/// assembly may reference, one per file name, as the Editor narrows them (Unity 6000.0.71f1,
+/// tests/projects/compilesetup `plugins.*`, `assembly.Probe.Explicit*.plugins`): of the plugins
+/// that declare one assembly name the highest version comes first, the others after every first
+/// one (the Editor logs those of a lower version), and of several with one file name the first
+/// is taken. Copies of one assembly under different file names are all referenced (the Editor
+/// then fails with CS1704, as the compile here does). Which of several of the same version and
+/// file name the Editor takes is not specified (it changed with the project's other plugins);
+/// here the first by path. Returns the plugins and each lower version with the one first.
+fn one_per_file_name<'p>(
     candidates: impl Iterator<Item = &'p Plugin>,
 ) -> (Vec<&'p Plugin>, Vec<(&'p Plugin, &'p Plugin)>) {
-    let mut kept: Vec<&Plugin> = Vec::new();
-    let mut ignored = Vec::new();
+    let mut first: Vec<&Plugin> = Vec::new();
+    let mut later: Vec<&Plugin> = Vec::new();
+    let mut lower = Vec::new();
     let mut by_name: HashMap<&str, usize> = HashMap::new();
     for plugin in candidates {
         // A DLL whose identity cannot be read goes by its file name.
@@ -651,22 +655,29 @@ fn one_per_assembly<'p>(
             .as_ref()
             .map_or(plugin.file_name(), |i| i.name.as_str());
         let Some(&slot) = by_name.get(name) else {
-            by_name.insert(name, kept.len());
-            kept.push(plugin);
+            by_name.insert(name, first.len());
+            first.push(plugin);
             continue;
         };
         let version = |p: &Plugin| p.identity.as_ref().map(|i| i.version);
-        let (old, new) = (version(kept[slot]), version(plugin));
+        let (old, new) = (version(first[slot]), version(plugin));
         if new > old {
-            ignored.push((plugin, kept[slot]));
-            kept[slot] = plugin;
-        } else if new < old {
-            ignored.push((kept[slot], plugin));
+            lower.push((plugin, first[slot]));
+            later.push(std::mem::replace(&mut first[slot], plugin));
+        } else {
+            if new < old {
+                lower.push((first[slot], plugin));
+            }
+            later.push(plugin);
         }
     }
     let mut file_names = HashSet::new();
-    kept.retain(|p| file_names.insert(p.file_name()));
-    (kept, ignored)
+    let plugins = first
+        .into_iter()
+        .chain(later)
+        .filter(|p| file_names.insert(p.file_name()))
+        .collect();
+    (plugins, lower)
 }
 
 /// The line the Editor logs for a plugin it leaves out for a newer one of the same name.
