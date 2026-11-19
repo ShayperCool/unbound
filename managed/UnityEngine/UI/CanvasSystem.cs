@@ -30,6 +30,14 @@ namespace Unbound.Runtime
 
         static Material s_Etc1Material;
 
+        /// <summary>Forgets the cached default and ETC1 canvas materials (tests that stand in for
+        /// the built-in UI shaders).</summary>
+        internal static void ForgetCanvasMaterialsForTests()
+        {
+            s_Etc1Material = null;
+            s_DefaultMaterial = null;
+        }
+
         /// <summary>Canvas.GetETC1SupportedCanvasMaterial: a material of its own, "ETC1 Supported UI
         /// Material" with UI/DefaultETC1, the same object on every call (matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/uialphaborders etc1Material*).</summary>

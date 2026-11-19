@@ -162,7 +162,7 @@ namespace UnityEngine.Tests
         /// <summary>Control: a renderer with other rect clipping keeps its own alpha texture
         /// (renderers under different clip rects are not measured).</summary>
         [Fact]
-        public void OtherRectClippingStartsARunWithItsOwnAlphaTexture()
+        public void OtherRectClippingKeepsItsOwnAlphaTexture()
         {
             var main = MakeTexture("main");
             var a = MakeTexture("alpha a");
@@ -180,7 +180,7 @@ namespace UnityEngine.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void AnotherClipRectOrSoftnessStartsARunWithItsOwnAlphaTexture(bool softness)
+        public void AnotherClipRectOrSoftnessKeepsItsOwnAlphaTexture(bool softness)
         {
             var main = MakeTexture("main");
             var a = MakeTexture("alpha a");
@@ -287,7 +287,26 @@ namespace UnityEngine.Tests
             {
                 Shader.Unregister(standInEtc1);
                 Shader.Unregister(standInDefault);
+                if (standInEtc1 != null || standInDefault != null) CanvasSystem.ForgetCanvasMaterialsForTests();
             }
+        }
+
+        /// <summary>Renderers clipped by the same rect share the first one's alpha texture (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/uialphaborders batches mask.*).</summary>
+        [Fact]
+        public void RenderersUnderTheSameClipRectTakeTheFirstAlphaTexture()
+        {
+            var main = MakeTexture("main");
+            var a = MakeTexture("alpha a");
+            var first = Renderer("first", main);
+            first.SetAlphaTexture(a);
+            first.EnableRectClipping(new Rect(0f, 0f, 50f, 50f));
+            var second = Renderer("second", main);
+            second.SetAlphaTexture(MakeTexture("alpha b"));
+            second.EnableRectClipping(new Rect(0f, 0f, 50f, 50f));
+            var draws = Draws();
+            Assert.Equal(2, draws.Count);
+            Assert.All(draws, d => Assert.Same(a, AlphaOf(d)));
         }
     }
 }
