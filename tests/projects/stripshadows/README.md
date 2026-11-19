@@ -43,13 +43,15 @@ a culling result. Legacy shadow settings supply their own split planes when no r
 split exists. Array lifetime, exclusions, fallback planes, touching and unknown/nonfinite
 bounds, and profile scope also have managed controls.
 
-The separate `--cascades` diagnostic adds 72 records and 36 images for two, three and four
-directional cascades, changed two/four split ratios, and an orthographic four-cascade control,
-for each strip type and the regular mesh. Two NVIDIA Editor repeats preserve every earlier
+The separate `--cascades` diagnostic adds 96 records and 48 images for two, three and four
+directional cascades, changed two/four split ratios, an orthographic four-cascade control, and
+the three-cascade and wide four-cascade controls again with close-fit shadow projection
+(`cascade3Close`, `cascade4WideClose`), for each strip type and the regular mesh. Two NVIDIA Editor repeats preserve every earlier
 record and image byte. Publication stores only the new controls in `cascade.values.jsonl`;
-the earlier reference files stay unchanged. Pass `--cascades` to each command above to
-record, publish or compare this diagnostic. Comparisons compose the full 217-key reference
-in the run cache and remain strict.
+the earlier reference files stay unchanged, and a later publication may only add controls to
+it (every earlier record and image byte-identical, in order). Pass `--cascades` to each command
+above to record, publish or compare this diagnostic. Comparisons compose the full 241-key
+reference in the run cache and remain strict.
 
 The diagnostic matches 217/217 keys (205/217 before the cascades' culling spheres were taken
 into account: one additional atlas tile in `Directional.{line,trail,mesh}.{cascade3,cascade4Wide}`).
@@ -59,8 +61,12 @@ sphere swept along the light until it leaves the camera's frustum cut at the sha
 the later cascades leave it out. A cascade also takes a caster only when, in the light's frame,
 the caster's bounding sphere reaches the cascade's sphere across the light and is not wholly
 beyond it along the light; the cascades' culling planes then apply as before. The holding sphere's
-radius is the culling sphere's times the split's blend culling factor (URP gives 1). Unmeasured:
-close-fit projection (Unbound keeps every cascade there), other blend culling factors. Both the
+radius is the culling sphere's times the split's blend culling factor (URP gives 1). The
+close-fit controls draw exactly the atlases of their stable-fit controls in the Editor (two
+NVIDIA repeats, every earlier record and image unchanged): `QualitySettings.shadowProjection`
+does not change this culling (Unbound used to keep every cascade with close fit). Unmeasured:
+blend culling factors other than 1, which URP never passes (it sets 1 for every cascade); only a
+pipeline's own split data can. Both the
 default gate and `--cascades` are strict gate commands.
 
 SRP lists retain renderers whose coarse bounds are unmeasured, including non-rigid skins,

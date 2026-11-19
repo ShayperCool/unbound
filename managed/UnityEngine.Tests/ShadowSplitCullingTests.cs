@@ -55,8 +55,8 @@ namespace UnityEngine.Tests
         /// whose shadow stays inside the first cascade's sphere is left out of the second; one
         /// reaching past it is drawn into both; a caster beside every sphere into none. A blend
         /// culling factor of 0 lets the cascades share every caster; an excluded first cascade
-        /// holds nothing; a scaled light keeps the same frame; bounds that are not finite are left
-        /// to the planes.</summary>
+        /// holds nothing; a scaled light keeps the same frame; close-fit shadow projection culls
+        /// the same; bounds that are not finite are left to the planes.</summary>
         [Fact]
         public void ACasterInsideAnEarlierCascadesSphereLeavesTheLaterOnes()
         {
@@ -126,6 +126,10 @@ namespace UnityEngine.Tests
                 data.Lights[0]=scaled;
                 Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
                 Assert.True(ShadowCasterCulling.SeesSplit(data,0,1,between,default));
+                // Close-fit projection: the same spheres hold the caster.
+                QualitySettings.shadowProjection=ShadowProjection.CloseFit;
+                Assert.False(ShadowCasterCulling.SeesSplit(data,0,1,held,default));
+                Assert.True(ShadowCasterCulling.SeesSplit(data,0,0,held,default));
             }
             finally
             {

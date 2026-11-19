@@ -71,8 +71,9 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// Whether a directional light's cascade <paramref name="split"/> takes a caster by the
-        /// cascades' culling spheres (Unity 6000.0.71f1 with stable-fit shadow projection,
-        /// tests/projects/stripshadows --cascades). In the light's frame (its right and up axes
+        /// cascades' culling spheres (Unity 6000.0.71f1, tests/projects/stripshadows --cascades;
+        /// QualitySettings.shadowProjection does not change it: the close-fit controls draw the
+        /// same atlas as their stable-fit ones). In the light's frame (its right and up axes
         /// across, its direction along), each cascade not excluded takes the caster's bounding
         /// sphere (its bounds' center, the length of their extents) when, across, the centers are
         /// no farther apart than the two radii together and, along the light, the caster's center
@@ -83,15 +84,14 @@ namespace Unbound.Runtime
         /// sphere that holds it is the culling sphere with its radius times the split's
         /// shadowCascadeBlendCullingFactor (the documented multiplier: lower values let cascades
         /// share more casters; URP gives 1, the measured case). With one cascade, or splits that
-        /// are not a directional light's, every cascade takes it; close-fit projection takes every
-        /// cascade too (unmeasured: the probe measures stable fit). Bounds that are not finite, and
+        /// are not a directional light's, every cascade takes it. Bounds that are not finite, and
         /// splits without a culling sphere (a pipeline's own splits; unmeasured), are left to the
         /// culling planes.
         /// </summary>
         static bool InCascadeSphere(CullingData data, int light, in LightShadowCasterCullingInfo info, int split, Bounds bounds)
         {
             int count = info.splitRange.length;
-            if (count <= 1 || count > MaxCascades || QualitySettings.shadowProjection != ShadowProjection.StableFit) return true;
+            if (count <= 1 || count > MaxCascades) return true;
             if ((uint)light >= (uint)data.Lights.Length || data.Lights[light].lightType != LightType.Directional) return true;
             if (info.splitRange.start < 0 || info.splitRange.start + count > data.ShadowSplits.Count) return true;
             var extent = bounds.extents;
