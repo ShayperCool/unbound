@@ -199,6 +199,7 @@ fn run(
         project: project.clone(),
         lighting,
         tree_textures: tree_textures.clone(),
+        before_compression: false,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),

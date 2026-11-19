@@ -1270,6 +1270,10 @@ pub struct TextureImporter {
     /// The textures the project's SpeedTree 9 trees use, which import with the settings the
     /// trees give them.
     pub tree_textures: std::sync::Arc<crate::speedtree9_textures::TreeTextures>,
+    /// Import as `OnPostprocessTexture` gets the texture: its pixels before any compression
+    /// (stored RGB24 or RGBA32, matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/assetpostprocessors Plain.png and Sprite.png), the rest as imported.
+    pub before_compression: bool,
 }
 
 impl Default for TextureImporter {
@@ -1282,6 +1286,7 @@ impl Default for TextureImporter {
             project: ProjectCompression::default(),
             lighting: unbound_compat::LightingEncodings::default(),
             tree_textures: Default::default(),
+            before_compression: false,
         }
     }
 }
@@ -1290,6 +1295,12 @@ impl TextureImporter {
     /// The settings a `.meta` imports with for this importer's build target and project.
     pub fn settings(&self, meta: &Value) -> TextureSettings {
         let mut settings = TextureSettings::read(meta, &self.build_target);
+        if self.before_compression {
+            settings.uncompressed = true;
+            settings.explicit_format = None;
+            settings.compression = 0;
+            settings.crunched = false;
+        }
         // A linear project's sRGB ETC Crunch selection needs the alpha-capable ETC2 archive.
         if self.project.encoders.measured_import_encoders
             && self.build_target == "Android"
@@ -1516,8 +1527,13 @@ impl Importer for TextureImporter {
     fn options_key(&self) -> String {
         // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}+workers{}+{}+{:?}",
+            "{}{}{}{}{}+workers{}+{}+{:?}",
             self.build_target,
+            if self.before_compression {
+                "+before-compression"
+            } else {
+                ""
+            },
             if self.compress { "+bc7" } else { "" },
             if self.gamma { "+gamma" } else { "" },
             if self.normal_maps_xyz { "+xyz" } else { "" },

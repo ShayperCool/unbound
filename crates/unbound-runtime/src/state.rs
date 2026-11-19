@@ -640,15 +640,30 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             // volume's level holds all its depth slices), rows bottom first, retaining float
             // precision.
             #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
             struct Request {
                 guid: String,
                 #[serde(default)]
                 mip: usize,
                 #[serde(default)]
                 layer: Option<usize>,
+                /// The pixels before any compression (what OnPostprocessTexture is given).
+                #[serde(default)]
+                before_compression: bool,
             }
             let r: Request = serde_json::from_str(request)?;
-            let texture = imported_texture(s, &r.guid)?;
+            let texture = if r.before_compression {
+                let guid = Guid::parse(&r.guid).context("bad guid")?;
+                let asset = s.db.by_guid(guid).context("no such asset")?;
+                let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+                let importer = TextureImporter {
+                    before_compression: true,
+                    ..texture_importer(s)
+                };
+                s.imports.get_or_import(&importer, &asset.file, &meta)?
+            } else {
+                imported_texture(s, &r.guid)?
+            };
             let mip = match r.layer {
                 // Without a layer: the n-th stored level, as 2D textures always asked.
                 None => texture.mips.get(r.mip),
@@ -659,7 +674,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 unbound_assets::texture::TextureFormat::Rgba8 => 0,
                 unbound_assets::texture::TextureFormat::Rgba32F => 2,
             };
-            Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "rgba": crate::models::base64(&mip.data) }).to_string())
+            Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "hasAlpha": texture.has_alpha,
+                "rgba": crate::models::base64(&mip.data) }).to_string())
         }
         "texture-raw" => {
             // An imported block-compressed texture's mip chain as stored (none for others).
@@ -787,6 +803,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 data: String,
                 #[serde(default, rename = "highQuality")]
                 high_quality: bool,
+                /// With the import's encoder (pixels a texture's postprocessor changed).
+                #[serde(default)]
+                import: bool,
             }
             let r: Request = serde_json::from_str(request)?;
             let format = unbound_assets::texture::BlockFormat::from_unity_format(r.format)
@@ -809,7 +828,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .project
                 .encoders
                 .measured_runtime_encoder;
-            let blocks = if measured {
+            let blocks = if measured && !r.import {
                 unbound_assets::texture::compress_runtime_level(
                     format,
                     &rgba,
