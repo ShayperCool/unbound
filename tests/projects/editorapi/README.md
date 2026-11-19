@@ -6,9 +6,9 @@ records all requested event subscriptions, 30 idle frames, queries, constructors
 disconnected messaging, thread checks, reflected client requirements and an active Undo
 control. No crash is requested. Messaging controls stop if a peer is connected.
 
-The comparison retains every missing, extra and differing row. Three exact differences
-are named in `Reference/unity-6000.0.71f1/known-gaps.json`: two rows describe the missing
-toolbar UI, and one records missing Undo change-stream publication.
+The comparison retains every missing, extra and differing row. Two exact differences
+are named in `Reference/unity-6000.0.71f1/known-gaps.json`; both describe the missing toolbar
+UI.
 A changed actual value, changed reference value, missing row, extra row or improved queued
 row fails until its gap is reviewed. `report.json` keeps the full raw comparison alongside
 queued, unexpected and stale entries. Nothing is removed from the reference comparison.
@@ -18,9 +18,9 @@ queued, unexpected and stale entries. Nothing is removed from the reference comp
 - All 19 events accept duplicate subscriptions and removal without diagnostics and stay
   quiet during the recorded idle frames. The active control changes a transform after
   `Undo.RecordObject`, flushes the record and receives one `ObjectChangeEvents` callback
-  in the Editor. Unbound retains real subscribers and explicitly reports unsupported Undo
-  payload production when a listener is present. It does not synthesize an empty stream.
-  The opaque type retains the measured 96-byte storage and eight-byte alignment. A complete producer, payload lifetime and accessor implementation remain a follow-up.
+  in the Editor. Unbound retains real subscribers, and an undoable change publishes its change
+  stream, so the control matches. The opaque type retains the measured 96-byte storage and
+  eight-byte alignment.
 - Editability uses package metadata. The built-in package file, its loaded TextAsset,
   directory and metadata file are non-editable; an embedded package is editable. A
   read-only scene file, missing files and paths outside asset folders remain editable
@@ -78,7 +78,7 @@ describes the singleton and message subscriptions. The no-peer and worker-thread
 here are measured observations. The documented
 [ObjectChangeEvents callback](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ObjectChangeEvents-changesPublished.html)
 publishes undoable changes once per frame and lends the stream only for callback duration.
-The active divergent-state control (`event.undo.published`) now matches: an undo publishes one stream.
+The active control (`event.undo.published`) receives one stream for the recorded undo.
 [CreatingMetadata](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.Profiling.Memory.MemoryProfiler.CreatingMetadata.html)
 allows subscribers to supply a description when a snapshot is taken; this probe tests storage
 and subscription, and does not request a snapshot.
