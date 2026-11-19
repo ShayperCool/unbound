@@ -195,7 +195,8 @@ namespace UnityEngine
             if (!CrossesPlane(plane, h.end, h.velocity, h.dt, out h.contact, out h.normal, out var collider)) return false;
             h.other = CollisionReceiver(collider);
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
-            if (m_Collision.colliderForce != 0f && collider != null) ReportColliderForce(collider.attachedRigidbody);
+            if (m_Collision.colliderForce != 0f && collider != null)
+                ApplyColliderForce(collider.attachedRigidbody, h.contact, h.normal, h.velocity, h.lookupSize, c);
             return true;
         }
 

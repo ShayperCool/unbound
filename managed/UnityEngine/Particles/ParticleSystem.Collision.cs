@@ -88,6 +88,8 @@ namespace UnityEngine
         {
             internal int slot;
             internal Vector3 contact, normal, velocity, end, before, eventSize;
+            /// <summary>A cache lookup's particle size as the collision sees it (its collider force).</summary>
+            internal Vector3 lookupSize;
             internal GameObject other;
             internal int colliderId;
             internal float dt, speedModifier, ageBefore;
@@ -152,7 +154,7 @@ namespace UnityEngine
                 if (!found) return false;
                 other = CollisionReceiver(hit);
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
-                if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
+                if (C.colliderForce != 0f && hit != null) ApplyColliderForce(hit.attachedRigidbody, contact, normal, velocity, size, c);
             }
 
             h.contact = contact;
@@ -179,6 +181,7 @@ namespace UnityEngine
                 m_PendingCollisions[m_PendingCollisionCount++] = new PendingCollision
                 {
                     slot = m_IntegrateSlot, lookup = true, velocity = velocity, end = p.m_Position, dt = dt, speedModifier = speedModifier,
+                    lookupSize = size,
                 };
                 deferred = true;
                 return true;
@@ -408,18 +411,29 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>colliderForce: the 6000.0 docs say only that it is "How much force is
-        /// applied to a Collider when hit by particles" and that the three multiply flags scale
-        /// it by the collision angle ("Grazing angles will generate less force than a head-on
-        /// collision"), the particle speed and the particle size. They give no formula, force
-        /// mode, direction or point of application, so no force is applied: a collision that
-        /// would push a body (a Rigidbody that physics affects, i.e. not kinematic) is reported
-        /// instead.</summary>
-        static void ReportColliderForce(Rigidbody body)
+        /// <summary>Volume of a sphere per cubed diameter (π/6): a particle's size factor.</summary>
+        const float SphereVolumePerCubedDiameter = Mathf.PI / 6f;
+
+        /// <summary>colliderForce: a particle that hits a collider of a Rigidbody pushes it at the
+        /// contact, along the particle's velocity, with the force for one physics step; the force
+        /// is multiplied by the cosine of the angle between the velocity and the surface normal,
+        /// by the particle's speed and by the volume of the sphere of the particle's size, as their
+        /// flags ask (Unity 6000.0.71f1, tests/projects/particlerender force/*). A size that differs
+        /// per axis takes the ellipsoid's volume (unmeasured). Kinematic bodies do not move.</summary>
+        void ApplyColliderForce(Rigidbody body, Vector3 contact, Vector3 normal, Vector3 velocity, Vector3 size, in StepContext c)
         {
             if (body == null || body.isKinematic) return;
-            Unbound.Runtime.Stubs.Ignored("ParticleSystem.CollisionModule.colliderForce",
-                "is not applied: particle collisions do not push Rigidbodies (the force formula, mode and direction are undocumented)");
+            var worldVelocity = c.SimToWorld.MultiplyVector(velocity);
+            float speed = worldVelocity.magnitude;
+            if (!(speed > 0f)) return;
+            var direction = worldVelocity / speed;
+            var C = m_Collision;
+            float force = C.colliderForce;
+            if (C.multiplyColliderForceByCollisionAngle)
+                force *= Mathf.Abs(Vector3.Dot(direction, c.SimToWorld.MultiplyVector(normal).normalized));
+            if (C.multiplyColliderForceByParticleSpeed) force *= speed;
+            if (C.multiplyColliderForceByParticleSize) force *= SphereVolumePerCubedDiameter * size.x * size.y * size.z;
+            body.AddForceAtPosition(direction * force, c.SimToWorld.MultiplyPoint3x4(contact), ForceMode.Force);
         }
 
         /// <summary>The systems handing a Collision or Trigger event of one of their particles
