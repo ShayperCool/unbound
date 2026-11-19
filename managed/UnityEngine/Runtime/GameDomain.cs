@@ -140,8 +140,13 @@ namespace Unbound.Runtime
                     Debug.LogError($"Unbound: could not load assembly {a.Name}: {e.Message}");
                     continue;
                 }
-                s_Assemblies.Add(assembly);
-                s_SourcePaths[assembly] = a.SourcePath ?? a.Dll;
+                // Copies of one plugin assembly load as one (the highest version): each copy's
+                // scripts are indexed under its own GUID.
+                if (s_Context.Binds(a))
+                {
+                    s_Assemblies.Add(assembly);
+                    s_SourcePaths[assembly] = a.SourcePath ?? a.Dll;
+                }
                 IndexScripts(assembly, a);
             }
         }
@@ -327,7 +332,7 @@ namespace Unbound.Runtime
             return BitConverter.ToInt32(hash, 0);
         }
 
-        sealed class GameLoadContext : AssemblyLoadContext
+        internal sealed class GameLoadContext : AssemblyLoadContext
         {
             readonly string m_FacadeDir;
             readonly Dictionary<string, GameAssembly> m_ByName = new Dictionary<string, GameAssembly>(StringComparer.OrdinalIgnoreCase);
@@ -340,9 +345,32 @@ namespace Unbound.Runtime
             internal GameLoadContext(string name, string facadeDir, IReadOnlyList<GameAssembly> assemblies) : base(name, isCollectible: false)
             {
                 m_FacadeDir = facadeDir;
-                foreach (var a in assemblies) m_ByName[IdentityName(a)] = a;
+                foreach (var pair in BoundByName(assemblies)) m_ByName[pair.Key] = pair.Value;
                 Resolving += ResolveFrameworkAssembly;
             }
+
+            /// <summary>The assembly each name binds to: of plugin copies that declare one name
+            /// the highest version, also for assemblies that compiled against another copy
+            /// (Unity 6000.0.71f1, tests/projects/compilesetup <c>plugins.alias.*</c>); of the
+            /// same version the first listed.</summary>
+            internal static Dictionary<string, GameAssembly> BoundByName(IReadOnlyList<GameAssembly> assemblies)
+            {
+                var bound = new Dictionary<string, GameAssembly>(StringComparer.OrdinalIgnoreCase);
+                var versions = new Dictionary<string, Version>(StringComparer.OrdinalIgnoreCase);
+                foreach (var a in assemblies)
+                {
+                    var identity = Identity(a);
+                    var name = identity?.Name ?? a.Name;
+                    var version = identity?.Version ?? new Version();
+                    if (bound.ContainsKey(name) && version <= versions[name]) continue;
+                    bound[name] = a;
+                    versions[name] = version;
+                }
+                return bound;
+            }
+
+            /// <summary>Whether <paramref name="a"/> is the copy its name binds to.</summary>
+            internal bool Binds(GameAssembly a) => m_ByName.TryGetValue(IdentityName(a), out var bound) && ReferenceEquals(bound, a);
 
             /// <summary>.NET Framework assemblies .NET lacks (System.Web, ...) come from the release's
             /// Mono, as they do in the Editor; asked only when nothing else has the assembly.</summary>
@@ -355,16 +383,18 @@ namespace Unbound.Runtime
 
             /// <summary>The name an assembly is bound by: its own (a plugin DLL's file can be named
             /// otherwise, `log4netPlastic.dll` holding `log4net`), as Unity binds plugins.</summary>
-            internal static string IdentityName(GameAssembly a)
+            internal static string IdentityName(GameAssembly a) => Identity(a)?.Name ?? a.Name;
+
+            static AssemblyName Identity(GameAssembly a)
             {
-                if (a.Dll == null || !File.Exists(a.Dll)) return a.Name;
+                if (a.Dll == null || !File.Exists(a.Dll)) return null;
                 try
                 {
-                    return AssemblyName.GetAssemblyName(a.Dll).Name ?? a.Name;
+                    return AssemblyName.GetAssemblyName(a.Dll);
                 }
                 catch (Exception)
                 {
-                    return a.Name;
+                    return null;
                 }
             }
 

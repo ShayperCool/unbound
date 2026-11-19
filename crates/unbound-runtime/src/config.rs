@@ -234,7 +234,9 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
             "responseFileDefines": script.response_file.as_ref().map(|r| &r.defines),
         }));
     }
-    for plugin in unbound_project::plugins::loaded_plugins(&plugins) {
+    // Every copy is listed (its GUID names its scripts); the managed side binds each assembly
+    // name to its highest version.
+    for plugin in &plugins {
         let Some(name) = plugin.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
