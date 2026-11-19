@@ -23,19 +23,27 @@ namespace UnityEditor
     {
         /// <summary>Deletes the asset file at the path with its .meta (as the Scripting API
         /// documents: true once removed, false when nothing is there); the Test Framework deletes
-        /// the scene it saved for a Play Mode run so. Folders are not deleted yet: refused, and
-        /// said so.</summary>
+        /// the scene it saved for a Play Mode run so. Folders and paths outside Assets/ (package
+        /// files) are not deleted yet: refused, and said so.</summary>
         public static bool DeleteAsset(string path)
         {
             if (string.IsNullOrEmpty(path)) return false;
-            var file = System.IO.Path.Combine(ProjectInfo.ProjectPath, path);
+            // Only a project-relative path under Assets/ names an asset Unbound may delete (an
+            // absolute or escaping path, the project's settings or a package's files are none).
+            var normalized = path.Replace('\\', '/');
+            if (!normalized.StartsWith("Assets/", System.StringComparison.Ordinal) || System.Array.IndexOf(normalized.Split('/'), "..") >= 0)
+            {
+                Debug.LogError($"Unbound does not delete {path}: only assets under Assets/ are deleted yet.");
+                return false;
+            }
+            var file = System.IO.Path.Combine(ProjectInfo.ProjectPath, normalized);
             if (System.IO.Directory.Exists(file))
             {
                 Debug.LogError($"Unbound does not delete folders yet: {path} is left as it is.");
                 return false;
             }
             if (!System.IO.File.Exists(file)) return false;
-            var guid = AssetPathToGUID(path);
+            var guid = Unbound.Runtime.Native.IsReady ? AssetPathToGUID(normalized) : null;
             System.IO.File.Delete(file);
             if (System.IO.File.Exists(file + ".meta")) System.IO.File.Delete(file + ".meta");
             if (!string.IsNullOrEmpty(guid)) Unbound.Runtime.AssetDatabaseRuntime.Invalidate(guid);

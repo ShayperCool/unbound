@@ -67,6 +67,19 @@ namespace UnityEditor
             operation.NoteChanges(undone: false);
             s_Redo.Clear();
             Current(true).Operations.Add(operation);
+            if (operation is StateOperation state) s_Unflushed.Add(state);
+        }
+
+        /// <summary>Recordings whose object may have changed since: a flush marks the changed ones
+        /// dirty (EditorUtility.SetDirty), which dirties their scene (measured:
+        /// tests/projects/scenesave second.undo).</summary>
+        static readonly List<StateOperation> s_Unflushed = new List<StateOperation>();
+
+        /// <summary>Marks the objects recorded since the last flush dirty when they changed.</summary>
+        internal static void FlushDirtiness()
+        {
+            foreach (var state in s_Unflushed) state.DirtyIfChanged();
+            s_Unflushed.Clear();
         }
 
         public static int GetCurrentGroup() => s_Current;
@@ -181,6 +194,7 @@ namespace UnityEditor
         public static void FlushUndoRecordObjects()
         {
             willFlushUndoRecord?.Invoke();
+            FlushDirtiness();
         }
 
         // ------------------------------------------------------------------ undo, redo
@@ -318,6 +332,11 @@ namespace UnityEditor
             }
 
             public override bool Concerns(Object o) => m_Target == o;
+
+            internal void DirtyIfChanged()
+            {
+                if (m_Target != null && !m_Before.SameAs(ObjectState.Capture(m_Target))) EditorUtility.SetDirty(m_Target);
+            }
 
             /// <summary>A recording publishes a change only when the object changed by the time the
             /// changes are published, an undo or redo only when the states it swaps differ (not

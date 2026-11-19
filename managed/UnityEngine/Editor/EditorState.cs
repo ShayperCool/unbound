@@ -436,6 +436,13 @@ namespace UnityEditor
             int id = target.GetInstanceID();
             s_DirtyCounts[id] = (s_DirtyCounts.TryGetValue(id, out var n) ? n : 0) + 1;
             s_Dirty.Add(id);
+            // An object of a scene dirties its scene in Edit mode (Scripting API, SetDirty;
+            // measured: tests/projects/scenesave second.setDirty).
+            if (!EditorApplication.isPlaying && !target.IsPersistentAsset)
+            {
+                var go = target as GameObject ?? (target as Component)?.gameObject;
+                if (go != null && SceneRegistry.Get(go.m_Scene) is SceneData scene) SceneManagement.EditorSceneManager.Dirty(scene);
+            }
         }
 
         static readonly HashSet<int> s_Dirty = new HashSet<int>();

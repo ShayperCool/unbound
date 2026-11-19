@@ -1041,18 +1041,8 @@ namespace Unbound.Runtime
             var inv = CultureInfo.InvariantCulture;
             switch (value)
             {
-                case float f:
-                {
-                    var s = f.ToString("R", inv);
-                    if (s.IndexOf('E') >= 0) s = ((decimal)f).ToString(inv);
-                    return s;
-                }
-                case double d:
-                {
-                    var s = d.ToString("R", inv);
-                    if (s.IndexOf('E') >= 0) s = d.ToString("0.###################################", inv);
-                    return s;
-                }
+                case float f: return FloatText.Format(f);
+                case double d: return FloatText.Format(d);
                 case bool b: return b ? "1" : "0";
                 case null: return "0";
                 default: return Convert.ToString(value, inv);

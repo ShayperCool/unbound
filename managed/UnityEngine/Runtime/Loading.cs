@@ -842,7 +842,6 @@ namespace Unbound.Runtime
         internal static bool IsTakePreview(Object o) =>
             o is AnimationClip && (o.HideFlagsNoThrow & HideFlags.HideInHierarchy) != 0;
 
-        /// <summary>Where a loaded asset object comes from.</summary>
         /// <summary>Built-in resources by the references that named them (a saved file names them alike).</summary>
         static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>> s_Builtins =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>>();
@@ -891,6 +890,7 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Where a loaded asset object comes from.</summary>
         internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
         {
             if (obj is not null && s_Builtins.TryGetValue(obj, out var builtin))

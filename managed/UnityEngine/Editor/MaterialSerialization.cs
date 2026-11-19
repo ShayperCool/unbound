@@ -116,6 +116,13 @@ namespace Unbound.Runtime
         internal static YText FileBody(Material m, Func<Object, YText> reference)
         {
             var body = Write(m, reference);
+            // Not modeled: the file keeps its own.
+            foreach (var kept in new[] { "m_BuildTextureStacks", "m_AllowLocking" })
+            {
+                int at = body.Keys.IndexOf(kept);
+                body.Keys.RemoveAt(at);
+                body.Values.RemoveAt(at);
+            }
             var saved = body.Get("m_SavedProperties");
             for (int i = 0; i < saved.Keys.Count; i++)
             {

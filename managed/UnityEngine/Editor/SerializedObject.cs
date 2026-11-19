@@ -118,6 +118,10 @@ namespace UnityEditor
             SerializedTree.ClearDirty(m_UnboundRoot);
             m_Modified = false;
             m_OtherRoots = null;
+            // Applying marks the targets dirty (Scripting API, ApplyModifiedProperties; measured:
+            // tests/projects/scenesave asset.serialized).
+            foreach (var target in m_Targets)
+                if (target != null) EditorUtility.SetDirty(target);
             foreach (var target in m_Targets)
             {
                 if (target == null || !SerializedTree.IsScript(target)) continue;

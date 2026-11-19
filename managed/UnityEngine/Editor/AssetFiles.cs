@@ -24,6 +24,7 @@ namespace Unbound.Runtime
         /// object only, when it is dirty).</summary>
         internal static void SaveDirty(Object only = null)
         {
+            Undo.FlushDirtiness();
             var dirty = new List<int>(EditorUtility.DirtyIds);
             var byGuid = new Dictionary<string, List<Object>>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in dirty)
@@ -59,11 +60,18 @@ namespace Unbound.Runtime
                 foreach (var o in dirty) EditorUtility.ClearDirty(o);
                 return;
             }
+            var text = File.ReadAllText(info.File);
+            var docs = text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal) ? UnityYamlText.Parse(text) : null;
+            if (docs == null || !dirty.TrueForAll(o => loaded.Objects.ContainsValue(o) && docs.Exists(d => loaded.Objects.TryGetValue(d.FileId, out var x) && ReferenceEquals(x, o))))
+            {
+                // A binary serialized file (or one whose documents do not hold the objects) is left as it is.
+                Debug.LogError($"Unbound: {info.Path} is not saved: Unbound writes Unity's text serialization only, and this file is not in it.");
+                return;
+            }
             var ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
             foreach (var p in loaded.Objects)
                 if (p.Value is not null) ids[p.Value] = p.Key;
             var locations = new AssetDatabaseRuntime.Locations();
-            var docs = UnityYamlText.Parse(File.ReadAllText(info.File));
             var keptAsRead = new SortedSet<string>(StringComparer.Ordinal);
             int unlocated = 0;
             foreach (var doc in docs)
