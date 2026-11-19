@@ -1,0 +1,9 @@
+{
+  "case": "play-save",
+  "exit": 0,
+  "changed": [
+    "Assets/Data/DataPlayDirty.asset",
+    "Assets/Materials/MatPlaySaved.mat"
+  ],
+  "removed": []
+}

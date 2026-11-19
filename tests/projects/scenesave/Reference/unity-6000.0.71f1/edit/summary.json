@@ -1,0 +1,26 @@
+{
+  "case": "edit",
+  "exit": 2,
+  "changed": [
+    "Assets/Data/DataQuit.asset",
+    "Assets/Data/DataSaved.asset",
+    "Assets/Materials/MatEdit.mat",
+    "Assets/Materials/MatQuit.mat",
+    "Assets/Prefabs/Made.prefab",
+    "Assets/Prefabs/Made.prefab.meta",
+    "Assets/Prefabs/Thing.prefab",
+    "Assets/Scenes/Base.unity",
+    "Assets/Scenes/BaseApplied.unity",
+    "Assets/Scenes/BaseApplied.unity.meta",
+    "Assets/Scenes/BaseCopy.unity",
+    "Assets/Scenes/BaseCopy.unity.meta",
+    "Assets/Scenes/BaseMoved.unity",
+    "Assets/Scenes/BaseMoved.unity.meta",
+    "Assets/Scenes/BaseRecorded.unity",
+    "Assets/Scenes/BaseRecorded.unity.meta",
+    "Assets/Scenes/Fresh.unity",
+    "Assets/Scenes/Fresh.unity.meta",
+    "Assets/Scenes/Second.unity"
+  ],
+  "removed": []
+}

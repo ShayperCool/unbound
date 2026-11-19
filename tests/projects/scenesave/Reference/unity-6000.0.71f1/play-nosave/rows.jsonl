@@ -1,0 +1,8 @@
+{"key": "play.data.isDirty", "value": false}
+{"key": "play.dirty.isDirty", "value": true}
+{"key": "play.material.isDirty", "value": true}
+{"key": "play.markDirty.result", "value": "throws InvalidOperationException: This cannot be used during play mode."}
+{"key": "play.saveScene.result", "value": "throws InvalidOperationException: This cannot be used during play mode."}
+{"key": "play.saveOpen.result", "value": "throws InvalidOperationException: This cannot be used during play mode."}
+{"key": "play.end.data", "value": "7097e34cf888d1efdf166f1508456820886138ff28ce012eeda9c2c1bce4fd20"}
+{"key": "play.end.material", "value": "0c8248f71809bb05c2addb0d285ce6015b3ebdc2032e96e6a99fc742f48381a1"}

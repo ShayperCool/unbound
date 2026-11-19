@@ -1,0 +1,19 @@
+{
+  "commands": [
+    "python3 tests/projects/scenesave/run.py gate --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "\\d+/\\d+ rows and files identical; \\d+ queued differences; \\d+ unexpected; \\d+ stale",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SceneFiles.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/SerializedFiles.cs",
+    "managed/UnityEngine/Editor/UnityYamlText.cs",
+    "managed/UnityEngine/Editor/EditorSceneManager.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs",
+    "managed/UnityEngine/Editor/PrefabUtility.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/EditorTestSupport.cs",
+    "managed/UnityEngine/Runtime/Serialization.cs",
+    "tests/projects/scenesave/"
+  ]
+}

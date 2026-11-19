@@ -1,0 +1,186 @@
+[
+  {
+    "case": "edit",
+    "key": "prefab.apply.file",
+    "reference": [
+      "same as prefab.apply.file"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.apply.isDirty",
+    "reference": [
+      false
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.apply.result",
+    "reference": [
+      "done"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.apply.saveResult",
+    "reference": [
+      true
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.apply.scene",
+    "reference": [
+      "same as prefab.apply.scene"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.contents.file",
+    "reference": [
+      "same as prefab.contents.file"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.contents.instanceCount",
+    "reference": [
+      12
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.contents.instanceLabel",
+    "reference": [
+      "edited contents"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.contents.result",
+    "reference": [
+      "Thing"
+    ],
+    "actual": null,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.made.file",
+    "reference": [
+      "same as prefab.made.file"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.made.result",
+    "reference": [
+      "Made"
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object"
+    ],
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.section",
+    "reference": [
+      "done"
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object"
+    ],
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Prefabs/Made.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Prefabs/Made.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Prefabs/Thing.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Scenes/BaseApplied.unity",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Scenes/BaseApplied.unity.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:Assets/Scenes/Fresh.unity",
+    "reference": "written",
+    "actual": "line 304: reference '  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}', actual '  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}'",
+    "reason": "The macOS arm64 Editor rounds the new scene's light rotation Quaternion.Euler(50, -30, 0) to x 0.40821788; the Linux Editor writes 0.40821794, as Unbound does (the Linux-authored scenes of tests/projects hold it). arm64 arithmetic is recorded, not chased; the rest of the file is identical."
+  },
+  {
+    "case": "edit",
+    "key": "file:snapshot:prefab.apply.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:snapshot:prefab.apply.scene",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:snapshot:prefab.contents.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  },
+  {
+    "case": "edit",
+    "key": "file:snapshot:prefab.made.file",
+    "reference": true,
+    "actual": false,
+    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+  }
+]
