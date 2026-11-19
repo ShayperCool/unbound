@@ -147,6 +147,18 @@ VideoClipImporter:
             Assert.Equal("eng", clip.GetAudioLanguage(0));
         }
 
+        /// <summary>tests/projects/cookingforcesvideo video.*.player.before: a player given a clip
+        /// controls all its audio tracks (two; none for a clip without audio).</summary>
+        [Fact]
+        public void APlayerGivenAClipControlsEachOfItsAudioTracks()
+        {
+            var player = Player();
+            player.clip = Import(TwoTracks);
+            Assert.Equal(2, player.controlledAudioTrackCount);
+            player.clip = Import(VideoOnly);
+            Assert.Equal(0, player.controlledAudioTrackCount);
+        }
+
         [Fact]
         public void TrackWithoutLanguageAnswersEmptyString()
         {

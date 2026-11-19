@@ -272,7 +272,14 @@ namespace UnityEngine.Video
                 if (m_Clip != value)
                 {
                     m_Clip = value;
-                    if (value != null) m_Source = VideoSource.VideoClip;
+                    if (value != null)
+                    {
+                        m_Source = VideoSource.VideoClip;
+                        // The player takes control of every audio track of the clip it is given
+                        // (matches the Unity 6000.0.71f1 Editor, tests/projects/cookingforcesvideo
+                        // video.*.player.before: two tracks, none).
+                        m_ControlledAudioTrackCount = (ushort)Math.Min(value.audioTrackCount, controlledAudioTrackMaxCount);
+                    }
                     Release();
                 }
             }
