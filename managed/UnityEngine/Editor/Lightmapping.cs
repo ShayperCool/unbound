@@ -26,7 +26,7 @@ namespace UnityEditor
 
         /// <summary>Obsolete: OnDemand whatever is set, as Unity's own C# answers (the Unity
         /// 6000.0.71f1 Editor, tests/projects/graphicsgaps lightmapping.*).</summary>
-        [Obsolete("Lightmapping.giWorkflowMode is obsolete.")]
+        [Obsolete("Lightmapping.giWorkflowMode is obsolete.", false)]
         [Unbound.EditorFaithful("Unity's obsolete property answers OnDemand and ignores a set (tests/projects/graphicsgaps)")]
         public static GIWorkflowMode giWorkflowMode { get => GIWorkflowMode.OnDemand; set { } }
 

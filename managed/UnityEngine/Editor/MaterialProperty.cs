@@ -14,6 +14,7 @@ namespace UnityEditor
     /// dimension Any. Matches the Unity 6000.0.71f1 Editor, tests/projects/graphicsgaps
     /// materialProperty.*.
     /// </summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public sealed partial class MaterialProperty
     {
         UnityEngine.Object[] m_Targets;
@@ -55,7 +56,7 @@ namespace UnityEditor
             NonModifiableTextureData = 64,
         }
 
-        [Obsolete("Use UnityEngine.Rendering.TextureDimension instead.")]
+        [Obsolete("Use UnityEngine.Rendering.TextureDimension instead.", false)]
         public enum TexDim
         {
             Unknown = -1,
