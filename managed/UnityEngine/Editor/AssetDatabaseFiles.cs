@@ -46,6 +46,8 @@ namespace UnityEditor
             public string[] Labels { get; set; }
             /// <summary>Why the path was not imported (no .meta is written for it).</summary>
             public string Error { get; set; }
+            /// <summary>The GUID of an asset a refresh found gone.</summary>
+            public string Removed { get; set; }
         }
 
         sealed class ImportResult
@@ -65,7 +67,7 @@ namespace UnityEditor
             var assets = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-import", json), s_Json)?.Assets ?? Array.Empty<Imported>();
             var guids = new string[list.Count];
             // A large batch is listed again from the engine when next asked (cheaper than each edit).
-            bool relist = list.Count <= 64;
+            bool relist = list.Count <= RelistLimit;
             for (int i = 0; i < list.Count; i++)
             {
                 var asset = i < assets.Length ? assets[i] : null;
@@ -80,6 +82,10 @@ namespace UnityEditor
             if (!relist) Invalidate();
             return guids;
         }
+
+        /// <summary>The most paths whose listing entries are edited in place; more are listed again
+        /// from the engine when next asked.</summary>
+        const int RelistLimit = 64;
 
         /// <summary>The listing's entry for a path as an import left it.</summary>
         static void Relist(string path, Imported asset)
@@ -125,6 +131,10 @@ namespace UnityEditor
         /// package the project holds; never a root itself, nor a registry or built-in package.</summary>
         internal static bool Editable(string path) =>
             AssetPaths.Editable(Roots.Select(r => (r.Path, r.Editable)), path);
+
+        /// <summary>Whether a path is in a package the project does not hold (built-in, registry, Git).</summary>
+        static bool InReadOnlyPackage(string path) =>
+            Roots.Any(r => !r.Editable && path.StartsWith(r.Path + "/", StringComparison.OrdinalIgnoreCase));
 
         static void Refused(string operation, string path) =>
             Debug.LogError($"{operation}: '{path}' is not in the project's own assets (Assets/, or a package embedded or kept locally); nothing is written there.");
@@ -186,13 +196,19 @@ namespace UnityEditor
                 s_PendingRefresh = true;
                 return;
             }
-            var assets = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-refresh", "{}"), s_Json)?.Assets ?? Array.Empty<Imported>();
-            foreach (var asset in assets)
+            var changes = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-refresh", "{}"), s_Json)?.Assets ?? Array.Empty<Imported>();
+            foreach (var change in changes)
             {
-                if (!string.IsNullOrEmpty(asset.Error)) Debug.LogWarning("Unbound: " + asset.Error);
-                else if (assets.Length <= 64) Relist(asset.Path, asset);
+                // An asset gone from disk is remembered as deleted (tests/projects/projectwrites 07.outside).
+                if (!string.IsNullOrEmpty(change.Removed))
+                {
+                    s_DeletedGuidByPath[change.Path] = change.Removed;
+                    s_DeletedPathByGuid[change.Removed] = change.Path;
+                    AssetDatabaseRuntime.Invalidate(change.Removed);
+                }
+                if (changes.Length <= RelistLimit) Relist(change.Path, change);
             }
-            if (assets.Length > 64) Invalidate();
+            if (changes.Length > RelistLimit) Invalidate();
         }
 
         /// <summary>Holds back imports (Refresh, ImportAsset of new files) until the matching
@@ -338,12 +354,7 @@ namespace UnityEditor
             copied.Add(assetPath);
         }
 
-        static void CopyAll(string source, string target)
-        {
-            Directory.CreateDirectory(target);
-            foreach (var file in Directory.EnumerateFiles(source)) File.Copy(file, Path.Combine(target, Path.GetFileName(file)));
-            foreach (var directory in Directory.EnumerateDirectories(source)) CopyAll(directory, Path.Combine(target, Path.GetFileName(directory)));
-        }
+        static void CopyAll(string source, string target) => Trash.CopyAll(source, target);
 
         public static bool CopyAssets(string[] paths, string[] newPaths)
         {
@@ -379,7 +390,12 @@ namespace UnityEditor
             oldPath = Normalize(oldPath);
             newPath = Normalize(newPath);
             foreach (var end in new[] { oldPath, newPath })
-                if (!Editable(end)) return $"Cannot move asset. {end} is an immutable path.";
+            {
+                if (Editable(end)) continue;
+                if (InReadOnlyPackage(end)) return $"Cannot move asset. {end} is an immutable path.";
+                Refused("AssetDatabase.MoveAsset", end);
+                return $"Cannot move asset. {end} is not an asset of the project's own.";
+            }
             var moved = TreeOf(oldPath);
             var source = FileOf(oldPath);
             var target = FileOf(newPath);
@@ -466,9 +482,13 @@ namespace UnityEditor
         static bool Remove(string path, bool trash)
         {
             if (string.IsNullOrEmpty(path) || !Exists(path)) return false;
-            // An asset of a read-only package is not deleted: false, nothing logged
-            // (tests/projects/projectwrites 06.readonly).
-            if (!Editable(path)) return false;
+            if (!Editable(path))
+            {
+                // An asset of a read-only package is not deleted: false, nothing logged
+                // (tests/projects/projectwrites 06.readonly); other paths are said so.
+                if (!InReadOnlyPackage(path)) Refused(trash ? "AssetDatabase.MoveAssetToTrash" : "AssetDatabase.DeleteAsset", path);
+                return false;
+            }
             var removed = TreeOf(path);
             foreach (var p in removed)
             {
@@ -512,7 +532,9 @@ namespace UnityEditor
             }
             var meta = FileOf(path) + ".meta";
             if (!File.Exists(meta)) return;
-            try { File.WriteAllText(meta, AssetPaths.WithLabels(File.ReadAllText(meta), labels)); }
+            // A script's .meta written again gets its importer's section (09.labels.script).
+            var section = path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? ScriptMetaSection : null;
+            try { File.WriteAllText(meta, AssetPaths.WithLabels(File.ReadAllText(meta), labels, section)); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 Debug.LogError($"AssetDatabase.SetLabels: writing {path}.meta: {e.Message}");
@@ -522,6 +544,13 @@ namespace UnityEditor
         }
 
         public static void ClearLabels(Object obj) => SetLabels(obj, Array.Empty<string>());
+
+        static string s_ScriptMetaSection;
+
+        /// <summary>The MonoImporter section a script's .meta gets when it is written again
+        /// (empty for a release family whose files are not measured).</summary>
+        static string ScriptMetaSection => s_ScriptMetaSection ??=
+            JsonDocument.Parse(Native.Call("script-meta-section", "{}")).RootElement.GetProperty("section").GetString() ?? "";
     }
 }
 
@@ -566,7 +595,8 @@ namespace Unbound.Runtime
             }
         }
 
-        static void CopyAll(string source, string target)
+        /// <summary>A folder copied file by file (a move across volumes, a copy of a folder plug-in).</summary>
+        internal static void CopyAll(string source, string target)
         {
             Directory.CreateDirectory(target);
             foreach (var f in Directory.EnumerateFiles(source)) File.Copy(f, Path.Combine(target, Path.GetFileName(f)));

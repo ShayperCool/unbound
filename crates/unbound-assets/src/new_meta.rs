@@ -137,6 +137,11 @@ impl MetaContext {
     }
 }
 
+/// The importer section the Editor writes into a C# script's `.meta` when it writes the file
+/// again (setting its labels, for one): the MonoImporter at its defaults (tests/projects/projectwrites
+/// 09.labels.script). A new script's `.meta` has none.
+pub const MONO_IMPORTER_SECTION: &str = "MonoImporter:\n  externalObjects: {}\n  serializedVersion: 2\n  defaultReferences: []\n  executionOrder: 0\n  icon: {instanceID: 0}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
+
 /// The per-platform entry of a texture's settings at its defaults, for the platform `name`.
 pub fn texture_platform_entry(name: &str) -> String {
     include_str!("new_meta/texture_platform.yaml").replace("{platform}", name)

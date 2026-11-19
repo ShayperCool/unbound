@@ -50,7 +50,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AGuidIsReplacedWithTheFilesLineEndings()
+        public void AGuidIsReplacedAndTheFileWrittenWithLf()
         {
             const string old = "0123456789abcdef0123456789abcdef", fresh = "fedcba9876543210fedcba9876543210";
             Assert.Equal($"fileFormatVersion: 2\nguid: {fresh}\nDefaultImporter:\n", AssetPaths.WithGuid($"fileFormatVersion: 2\nguid: {old}\nDefaultImporter:\n", fresh));
@@ -73,6 +73,23 @@ namespace UnityEngine.Tests
             var crlf = meta.Replace("\n", "\r\n");
             Assert.Equal(meta.Replace("TextureImporter:", "labels:\n- a\nTextureImporter:"), AssetPaths.WithLabels(crlf, new[] { "a" }));
             Assert.Equal(meta, AssetPaths.WithLabels(crlf, null));
+            // Labels are written as given, unquoted, as the Editor writes them.
+            Assert.Contains("- #x\n- a: b\n", AssetPaths.WithLabels(meta, new[] { "a: b", "#x" }));
+        }
+
+        /// <summary>A script's .meta ends after its GUID; written again it gets its importer's
+        /// section (tests/projects/projectwrites 09.labels.script).</summary>
+        [Fact]
+        public void AScriptsMetaWrittenAgainGetsItsSection()
+        {
+            const string script = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef";
+            const string section = "MonoImporter:\n  externalObjects: {}\n";
+            Assert.Equal("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nlabels:\n- script\n" + section,
+                AssetPaths.WithLabels(script, new[] { "script" }, section));
+            Assert.Equal("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\n" + section, AssetPaths.WithLabels(script, null, section));
+            // A .meta that has its section keeps it as it is.
+            var textMeta = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextScriptImporter:\n  userData: \n";
+            Assert.Equal(textMeta, AssetPaths.WithLabels(textMeta, null, section));
         }
 
         [Fact]

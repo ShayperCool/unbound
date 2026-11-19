@@ -413,6 +413,11 @@ public static class ProjectWritesProbe
         AssetDatabase.StartAssetEditing();
         try
         {
+            // A file no importer claims beside an ordinary one in the same batch.
+            Write("Assets/New/Odd.xyz", "odd\n");
+            Write("Assets/New/Even.txt", "even\n");
+            AssetDatabase.ImportAsset("Assets/New/Odd.xyz");
+            AssetDatabase.ImportAsset("Assets/New/Even.txt");
             Write("Assets/New/Batch.txt", "batch\n");
             AssetDatabase.ImportAsset("Assets/New/Batch.txt");
             Snap("07.batch.inside", "Assets/New/Batch.txt.meta");
@@ -426,6 +431,22 @@ public static class ProjectWritesProbe
         }
         Snap("07.batch.after", "Assets/New/Batch.txt.meta");
         Snap("07.batch.after", "Assets/Made/Batched.asset.meta");
+        Snap("07.batch.after", "Assets/New/Even.txt.meta");
+        Put("07.batch.after.even", AssetDatabase.AssetPathToGUID("Assets/New/Even.txt").Length == 32);
+        // Files changed outside the AssetDatabase: Refresh finds a deleted one, a copied one with
+        // its .meta, and a .meta whose labels changed.
+        var deleted = AssetDatabase.AssetPathToGUID("Assets/New/Batch.txt");
+        System.IO.File.Delete("Assets/New/Batch.txt");
+        System.IO.File.Delete("Assets/New/Batch.txt.meta");
+        System.IO.File.Copy("Assets/New/Even.txt", "Assets/New/Copied.txt");
+        System.IO.File.WriteAllText("Assets/New/Copied.txt.meta", "fileFormatVersion: 2\nguid: 9d4f3e0c9b2d4e5f8a7b6c5d4e3f2a10\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n");
+        System.IO.File.WriteAllText("Assets/New/Even.txt.meta", Read("Assets/New/Even.txt.meta").Replace("TextScriptImporter:", "labels:\n- outside\nTextScriptImporter:"));
+        AssetDatabase.Refresh();
+        Put("07.outside.deleted", AssetDatabase.AssetPathToGUID("Assets/New/Batch.txt", AssetPathToGUIDOptions.OnlyExistingAssets));
+        Put("07.outside.deletedPath", AssetDatabase.GUIDToAssetPath(deleted));
+        Put("07.outside.copied", AssetDatabase.AssetPathToGUID("Assets/New/Copied.txt"));
+        Put("07.outside.copiedFound", string.Join(",", AssetDatabase.FindAssets("Copied")));
+        Put("07.outside.labels", AssetDatabase.GetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/New/Even.txt")));
     }
 
     static void ImporterChange()
@@ -461,6 +482,12 @@ public static class ProjectWritesProbe
         Snap("09.labels.asset", "Assets/Made/Data.asset.meta");
         AssetDatabase.ClearLabels(texture);
         Snap("09.labels.cleared", "Assets/New/Tex.png.meta");
+        // A script's .meta ends after its GUID; labels YAML would read otherwise.
+        AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Startup.cs"), new[] { "script" });
+        Snap("09.labels.script", "Assets/Startup/Startup.cs.meta");
+        AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Notes.txt"), new[] { "#x", "a: b", "[y]", "plain label" });
+        Snap("09.labels.quoted", "Assets/Startup/Notes.txt.meta");
+        Put("09.labels.quoted.get", AssetDatabase.GetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Notes.txt")));
     }
 
     static void Preprocessor()

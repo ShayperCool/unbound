@@ -9,8 +9,8 @@ namespace Unbound.Runtime
     /// <summary>
     /// The rules of project paths and of the <c>.meta</c> and asset text edits the AssetDatabase
     /// makes, as the Editor makes them (tests/projects/projectwrites): free names, which paths are
-    /// assets of the project's own, and GUID, label and name edits that keep the file's line
-    /// endings.
+    /// assets of the project's own, and GUID, label and name edits (a <c>.meta</c> written again
+    /// has LF endings).
     /// </summary>
     internal static class AssetPaths
     {
@@ -35,10 +35,10 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A name the asset database skips, as the engine's (a leading '.', a trailing
-        /// '~', <c>cvs</c>, <c>.tmp</c> files).</summary>
+        /// '~', <c>cvs</c> in any case, <c>.tmp</c> files).</summary>
         internal static bool HiddenName(string name) =>
             name.StartsWith(".", StringComparison.Ordinal) || name.EndsWith("~", StringComparison.Ordinal)
-            || string.Equals(name, "cvs", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(name, "cvs", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".tmp", StringComparison.Ordinal);
 
         /// <summary>Whether a project path has a hidden name below its root.</summary>
         internal static bool Hidden(string path) => path.Split('/').Skip(1).Any(HiddenName);
@@ -71,8 +71,8 @@ namespace Unbound.Runtime
 
         static readonly Regex s_GuidLine = new Regex("^guid: [0-9a-fA-F]{32}(?=\\r?$)", RegexOptions.Multiline);
 
-        /// <summary>A <c>.meta</c> text with another GUID, its line endings kept; null when it has
-        /// no GUID line.</summary>
+        /// <summary>A <c>.meta</c> text with another GUID, with LF endings; null when it has no
+        /// GUID line.</summary>
         internal static string WithGuid(string meta, string guid)
         {
             // The Editor writes .meta files with LF (tests/projects/projectwrites 06.crlf).
@@ -83,19 +83,24 @@ namespace Unbound.Runtime
 
         static readonly Regex s_LabelsBlock = new Regex("^labels:\\r?\\n(?:- [^\\r\\n]*\\r?\\n)*", RegexOptions.Multiline);
 
-        /// <summary>A <c>.meta</c> text with these labels: after its GUID line, in ordinal order,
-        /// repeats kept; none: no labels block; LF endings, as the Editor writes the file again
+        static readonly Regex s_ImporterSection = new Regex("^[A-Za-z]+:\\s*$", RegexOptions.Multiline);
+
+        /// <summary>A <c>.meta</c> text with these labels: after its GUID line, as written (the
+        /// Editor writes them unquoted), in ordinal order, repeats kept; none: no labels block. The
+        /// file is written again as the Editor writes it: LF endings, and a <c>.meta</c> without an
+        /// importer section (a script's) gets <paramref name="missingSection"/>
         /// (tests/projects/projectwrites 09.labels, 06.crlf).</summary>
-        internal static string WithLabels(string meta, string[] labels)
+        internal static string WithLabels(string meta, string[] labels, string missingSection = null)
         {
             var text = s_LabelsBlock.Replace(meta.Replace("\r\n", "\n"), "", 1);
-            const string newline = "\n";
+            if (text.Length > 0 && !text.EndsWith("\n", StringComparison.Ordinal)) text += "\n";
+            if (!string.IsNullOrEmpty(missingSection) && !s_ImporterSection.IsMatch(text)) text += missingSection;
             var sorted = (labels ?? Array.Empty<string>()).Where(l => !string.IsNullOrEmpty(l)).OrderBy(l => l, StringComparer.Ordinal).ToArray();
             if (sorted.Length == 0) return text;
-            var block = new StringBuilder("labels:").Append(newline);
-            foreach (var label in sorted) block.Append("- ").Append(label).Append(newline);
+            var block = new StringBuilder("labels:\n");
+            foreach (var label in sorted) block.Append("- ").Append(label).Append('\n');
             var guid = s_GuidLine.Match(text);
-            int at = guid.Success ? Math.Min(guid.Index + guid.Length + 1, text.Length) : text.Length;
+            int at = guid.Success ? guid.Index + guid.Length + 1 : text.Length;
             return text.Insert(at, block.ToString());
         }
 
