@@ -7,7 +7,8 @@
 //!   `Assembly-CSharp-Editor[-firstpass]` (an `Editor` folder) or `Assembly-CSharp`.
 //!   Package scripts outside every asmdef are not compiled.
 //! * An assembly builds for the Editor unless its platforms exclude it, and is dropped when its
-//!   `defineConstraints` fail. Predefined assemblies reference every auto-referenced assembly;
+//!   `defineConstraints` fail. Predefined assemblies reference every auto-referenced assembly
+//!   (an Editor-only one included, where it builds);
 //!   every assembly references the auto-referenced plugins unless `overrideReferences` is set,
 //!   one per assembly name: the highest version (see [`one_per_assembly`]).
 //! * Each assembly takes its response file's options (see [`crate::response_files`]).
@@ -557,12 +558,14 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         });
     }
 
-    // Predefined assemblies reference every auto-referenced assembly they may see.
-    let auto: Vec<(String, bool)> = definitions
+    // Predefined assemblies reference every auto-referenced assembly that builds, the Editor-only
+    // ones too when they build (for Play mode: runtime scripts use them under `#if UNITY_EDITOR`;
+    // Unity 6000.0.71f1, tests/projects/compilesetup `assembly.Assembly-CSharp.references`).
+    let auto: Vec<String> = definitions
         .iter()
         .enumerate()
         .filter(|(i, d)| included[*i] && d.json.auto_referenced)
-        .map(|(_, d)| (d.json.name.clone(), d.json.is_editor_only()))
+        .map(|(_, d)| d.json.name.clone())
         .collect();
     for (kind, mut sources) in predefined_sources {
         if kind.is_editor() && input.mode == CompileMode::Player {
@@ -572,11 +575,7 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         defines.extend(input.profile.language_defines().iter().cloned());
         dedup(&mut defines);
         let mut references = implicit_references(kind.name(), kind.is_editor(), false);
-        references.extend(
-            auto.iter()
-                .filter(|(_, editor_only)| kind.is_editor() || !editor_only)
-                .map(|(name, _)| name.clone()),
-        );
+        references.extend(auto.iter().cloned());
         let earlier: &[Predefined] = match kind {
             Predefined::FirstPass => &[],
             Predefined::EditorFirstPass => &[Predefined::FirstPass],

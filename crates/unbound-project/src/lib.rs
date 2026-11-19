@@ -415,6 +415,61 @@ mod tests {
         assert!(without.iter().any(|d| d == "UNITY_6000_0_67"));
     }
 
+    /// In the Editor the predefined assemblies reference the auto-referenced Editor-only
+    /// assemblies too (runtime scripts use them under `#if UNITY_EDITOR`); a player build has none
+    /// (Unity 6000.0.71f1, tests/projects/compilesetup `assembly.Assembly-CSharp.references`).
+    #[test]
+    fn predefined_assemblies_reference_editor_only_assemblies_in_the_editor() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-editor-only-refs-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        let write = |path: &str, text: &str| {
+            let file = root.join(path);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, text).unwrap();
+        };
+        write("Assets/A.cs", "class A {}\n");
+        for (name, auto) in [("EditorAuto", true), ("EditorHidden", false)] {
+            write(
+                &format!("Assets/{name}/{name}.asmdef"),
+                &format!(
+                    r#"{{"name": "{name}", "includePlatforms": ["Editor"], "autoReferenced": {auto}}}"#
+                ),
+            );
+            write(&format!("Assets/{name}/{name}.cs"), "class B {}\n");
+        }
+        write("Assets/Runtime/Runtime.asmdef", r#"{"name": "Runtime"}"#);
+        write("Assets/Runtime/R.cs", "class R {}\n");
+        let data = scratch.join("install/Editor/Data");
+        std::fs::create_dir_all(data.join("Managed/UnityEngine")).unwrap();
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let project = Project {
+            assets: root.join("Assets"),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            install: UnityInstall { data, version },
+            settings: Settings::default(),
+            packages: Vec::new(),
+            missing_packages: Vec::new(),
+        };
+        let editor = project
+            .script_graph(CompileMode::EditorPlayMode, "Standalone")
+            .unwrap();
+        let player = project
+            .script_graph(CompileMode::Player, "Standalone")
+            .unwrap();
+        let _ = std::fs::remove_dir_all(&scratch);
+        let references = |graph: &Graph| graph.get("Assembly-CSharp").unwrap().references.clone();
+        assert_eq!(references(&editor), ["EditorAuto", "Runtime"]);
+        assert_eq!(references(&player), ["Runtime"]);
+        assert!(player.get("EditorAuto").is_none());
+    }
+
     /// Plugins with one assembly name: every assembly references one of them, the highest version
     /// among those enabled for the platform, by name and by file name, also through
     /// `precompiledReferences` (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`).
