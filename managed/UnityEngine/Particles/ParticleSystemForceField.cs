@@ -37,9 +37,9 @@ namespace UnityEngine
         public ParticleSystem.MinMaxCurve vectorFieldAttraction { get => m_VectorFieldAttraction.Get(); set => m_VectorFieldAttraction.Set(value); }
         public Texture3D vectorField { get; set; }
 
-        /// <summary>The frame the particle systems last checked this field's vector field, and
-        /// whether it is in the context they apply.</summary>
-        internal int m_VectorFieldCheckedFrame = -1;
+        /// <summary>The particle step that last checked this field's vector field, and whether it
+        /// is in the context the systems apply.</summary>
+        internal int m_VectorFieldCheckedStep = -1;
         internal bool m_VectorFieldSupported;
         Texture3D m_TexelSource;
         uint m_TexelVersion;

@@ -26,7 +26,7 @@ were byte-identical.
 Unbound: 212/214 with 2 recorded residuals (`residuals.json`: 2D world collision, unsupported).
 Unbound applies the vector field in the measured context only (a Box field without scale, with
 constant speed and attraction, without drag or rotation) and reports the others as unsupported;
-a restarted system starts over (inferred). Unmeasured: those cases, imported vector field assets.
+a restart without live particles starts over (inferred), one with live particles does not (unmeasured). Unmeasured: those cases, imported vector field assets.
 
 ```sh
 python3 tests/projects/particlecollision/run.py editor --release 6000.0.71f1 --label L

@@ -1204,9 +1204,10 @@ namespace UnityEngine
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
             m_NoiseSumEnabled = false;
             m_NoiseScroll = 0f;
-            // A new playback's first step is again one vector fields do not act in (inferred:
-            // measured for a system's first step after it was made).
-            m_SteppedOnce = false;
+            // A new playback without live particles starts like a fresh system, whose first step
+            // vector fields do not act in (inferred from the measured fresh system); one that
+            // keeps live particles keeps acting (unmeasured).
+            if (m_Count == 0) m_SteppedOnce = false;
             m_Time = 0f;
             m_TotalTime = 0f;
             m_CullingMissed = 0f;

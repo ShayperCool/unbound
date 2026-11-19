@@ -324,8 +324,12 @@ namespace UnityEngine
         /// <summary>One simulation step: existing particles age and move (those whose remaining
         /// lifetime drops below zero die), then the step's new particles are emitted, each advanced by
         /// the part of the step it has lived.</summary>
+        /// <summary>Counts every system's steps: per-field checks are made once a step.</summary>
+        internal static int s_StepSerial;
+
         internal void Step(float dt, float distance)
         {
+            s_StepSerial++;
             if (m_Trails.enabled || HasAliveTrails) m_TrailTime += dt;
             m_LastStepDt = dt;
             m_CustomStartRun = false;

@@ -24,7 +24,7 @@ namespace UnityEngine.Tests
             return texture;
         }
 
-        static Vector3[] Run(float attraction, Vector3 start, Texture3D texture, System.Action<Texture3D> between = null, float yaw = 0f, bool late = false)
+        static Vector3[] Run(float attraction, Vector3 start, Texture3D texture, System.Action<Texture3D> between = null, float yaw = 0f, bool late = false, float drag = 0f)
         {
             var fieldObject = new GameObject("vector field");
             var systemObject = new GameObject("vector field particles");
@@ -36,6 +36,7 @@ namespace UnityEngine.Tests
                 field.endRange = 2f;
                 field.directionX = field.directionY = field.directionZ = 0f;
                 field.gravity = 0f;
+                field.drag = drag;
                 field.vectorField = texture;
                 field.vectorFieldSpeed = 3f;
                 field.vectorFieldAttraction = attraction;
@@ -176,6 +177,40 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(systemObject);
                 Object.DestroyImmediate(fieldObject);
             }
+        }
+
+        sealed class Warnings : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            internal readonly System.Collections.Generic.List<string> Logged = new System.Collections.Generic.List<string>();
+            internal Warnings(ILogHandler inner) { m_Inner = inner; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) Logged.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(System.Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
+        [Fact]
+        public void AVectorFieldWithDragIsReportedAndNotApplied()
+        {
+            // Unmeasured: drag in the same field. The drag still acts; the vector field does not.
+            var handler = Debug.unityLogger.logHandler;
+            var warnings = new Warnings(handler);
+            Debug.unityLogger.logHandler = warnings;
+            try
+            {
+                var texture = Field(new Color(2f / 3f, 1f / 3f, 1f / 3f, 1f));
+                var withDrag = Run(1f, Vector3.zero, texture, drag: .5f);
+                // Drag only slows the particle along x; nothing pulls it toward the texel's y and z.
+                Assert.Equal(0f, withDrag[2].y, 5);
+                Assert.Equal(0f, withDrag[2].z, 5);
+                Assert.True(withDrag[2].x < .5f);
+                Assert.True(warnings.Logged.Count == 0 || warnings.Logged.Exists(w => w.Contains("vector field together with drag or rotation")),
+                    string.Join("; ", warnings.Logged));
+            }
+            finally { Debug.unityLogger.logHandler = handler; }
         }
     }
 }

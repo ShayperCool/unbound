@@ -867,19 +867,21 @@ namespace UnityEngine
         /// system already used is not, in its first step).</summary>
         bool m_SteppedOnce;
 
-        /// <summary>Whether a field's vector field is in the measured context (checked once a frame
+        /// <summary>Whether a field's vector field is in the measured context (checked once a step
         /// per field); reports it otherwise.</summary>
         static bool VectorFieldSupported(ParticleSystemForceField field)
         {
-            int frame = Time.frameCount;
-            if (field.m_VectorFieldCheckedFrame == frame) return field.m_VectorFieldSupported;
-            field.m_VectorFieldCheckedFrame = frame;
+            int step = s_StepSerial;
+            if (field.m_VectorFieldCheckedStep == step) return field.m_VectorFieldSupported;
+            field.m_VectorFieldCheckedStep = step;
             string unsupported =
                 field.shape != ParticleSystemForceFieldShape.Box ? "vector field of a force field that is not a Box"
                 : field.m_VectorFieldSpeed.mode != ParticleSystemCurveMode.Constant || field.m_VectorFieldAttraction.mode != ParticleSystemCurveMode.Constant
                     ? "vector field speed or attraction that is not a constant"
                 : (field.transform.lossyScale - Vector3.one).sqrMagnitude > 1e-10f ? "vector field of a scaled force field"
-                : field.m_Drag.scalar != 0f || field.m_Drag.IsCurve || field.m_RotationSpeed.scalar != 0f && field.m_RotationAttraction.scalar != 0f
+                : field.m_Drag.mode != ParticleSystemCurveMode.Constant || field.m_Drag.scalar != 0f
+                  || field.m_RotationSpeed.mode != ParticleSystemCurveMode.Constant || field.m_RotationAttraction.mode != ParticleSystemCurveMode.Constant
+                  || field.m_RotationSpeed.scalar != 0f && field.m_RotationAttraction.scalar != 0f
                     ? "vector field together with drag or rotation in one force field"
                 : null;
             if (unsupported != null) ReportUnsupported(unsupported);
