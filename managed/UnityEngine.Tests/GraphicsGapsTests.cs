@@ -55,18 +55,17 @@ namespace Unbound.Tests
             Assert.Equal(new Color32(0, 0, 0, 0), (Color32)texture.Tiles.GetPixel(10, 10));
             texture.UnloadTile(1, 0, 0);
             Assert.Equal(new Color32(0, 0, 0, 0), (Color32)texture.Tiles.GetPixel(200, 10));
-            // A material given the texture once keeps its handle: the tiles changed afterwards
-            // are sent as the next frame renders, without another bind.
+            // A material given the texture once keeps its handle: a tile changed afterwards is
+            // sent at once, under that handle.
             var material = new Material(Shader.Find("Unlit/Texture") ?? ShaderUtil.CreateShaderAsset("Shader \"Tests/SparseUser\" { SubShader { Pass { } } }"));
             material.mainTexture = texture;
             material.Sync();
-            uint sent = texture.Tiles.updateCount;
+            var tiles = texture.Tiles;
+            ulong handle = TextureHandles.Of(texture);
+            uint sent = tiles.updateCount;
             texture.UpdateTile(0, 1, 0, Enumerable.Repeat(new Color32(0, 255, 0, 255), 128 * 128).ToArray());
-            SparseTexture.SendChanged();
-            Assert.True(texture.Tiles.updateCount > sent);
-            uint again = texture.Tiles.updateCount;
-            SparseTexture.SendChanged();
-            Assert.Equal(again, texture.Tiles.updateCount);
+            Assert.True(tiles.updateCount > sent);
+            Assert.Equal(handle, TextureHandles.Of(texture));
             // A tile past the texture is no tile: nothing changes.
             texture.UpdateTile(5, 5, 0, new Color32[128 * 128]);
             Assert.Throws<ArgumentException>(() => texture.UpdateTile(0, 0, 0, new Color32[3]));

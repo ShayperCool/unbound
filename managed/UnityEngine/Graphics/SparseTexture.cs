@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine.Experimental.Rendering;
 
@@ -22,12 +21,7 @@ namespace UnityEngine
         const int TileBytes = 65536;
 
         Texture2D m_Tiles;
-        /// <summary>Tiles changed since the texture was last sent: it is sent once, when a draw
-        /// binds it or as the next frame renders (a game streams many tiles a frame, and
-        /// materials and globals keep the texture they were given), under the same handle.</summary>
-        bool m_TilesChanged;
-        bool m_Listed;
-        static readonly List<SparseTexture> s_Changed = new List<SparseTexture>();
+
         GraphicsFormat m_GraphicsFormat;
         int m_TileWidth, m_TileHeight;
 
@@ -142,45 +136,13 @@ namespace UnityEngine
             Changed();
         }
 
-        /// <summary>The texture holding the tiles (null when creation failed), sent with the tiles
-        /// changed since the last bind: what draws bind.</summary>
-        internal Texture2D Tiles
-        {
-            get
-            {
-                Send();
-                return m_Tiles;
-            }
-        }
+        /// <summary>The texture holding the tiles (null when creation failed): what draws bind.</summary>
+        internal Texture2D Tiles => m_Tiles;
 
-        void Send()
-        {
-            if (!m_TilesChanged || m_Tiles == null) return;
-            m_TilesChanged = false;
-            m_Tiles.Apply(false, false);
-        }
-
-        void Changed()
-        {
-            m_TilesChanged = true;
-            if (m_Listed) return;
-            m_Listed = true;
-            s_Changed.Add(this);
-        }
-
-        /// <summary>Sends every sparse texture whose tiles changed since it was last sent (once a
-        /// frame, before its cameras render).</summary>
-        internal static void SendChanged()
-        {
-            if (s_Changed.Count == 0) return;
-            foreach (var texture in s_Changed)
-            {
-                if (texture is null) continue;
-                texture.m_Listed = false;
-                if (texture != null) texture.Send();
-            }
-            s_Changed.Clear();
-        }
+        /// <summary>Sends the texture with its changed tiles, under its handle (materials and
+        /// globals that hold it see them, and every later draw does, in order). The whole texture
+        /// is sent: the renderer has no upload of a part of a texture yet.</summary>
+        void Changed() => m_Tiles.Apply(false, false);
 
         internal override void OnSamplerChanged()
         {
