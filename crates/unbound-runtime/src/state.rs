@@ -1299,7 +1299,13 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         s.db.by_guid(Guid::parse(guid).context("bad guid")?)
             .with_context(|| format!("no asset {guid}"))?;
     let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
-    let meta = unbound_yaml::parse_value(&text)?;
+    let mut meta = unbound_yaml::parse_value(&text)?;
+    // The maps of SpeedTree 9 trees: the settings the trees give them, which the Editor saves into
+    // their .meta files (the texture import reads the same).
+    let tree_textures = s.texture_importer.read().unwrap().tree_textures.clone();
+    if let Some(applied) = tree_textures.apply(&asset.file, &meta) {
+        meta = applied;
+    }
     // A .meta that names no importer (hand-written ones, such as Firebase's manifests) gets the
     // one the Editor picks for the file's extension, with default settings.
     let (type_name, body) = meta

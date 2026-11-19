@@ -1496,7 +1496,8 @@ impl Importer for TextureImporter {
     // 45: cubemaps are block-compressed as the build target stores them, faces top-down.
     // 46: BC6H imports' pixels are what their blocks decode to (floats).
     // 47: the maps of SpeedTree 9 trees import with the settings the trees give them.
-    const VERSION: u32 = 48;
+    // 49: a SpeedTree 9 tree's normal map is also marked linear (its import settings' hash).
+    const VERSION: u32 = 49;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);

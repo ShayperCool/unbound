@@ -1,11 +1,11 @@
 //! The import settings the Editor gives the textures SpeedTree 9 trees use (Unity 6000.0's
 //! SpeedTree 9 asset postprocessor, which runs whenever a `.st9` file is imported): for each of the
 //! tree's materials, its colour map imports with alpha as transparency and mip maps preserving
-//! alpha-test coverage at a reference value of 0.1, its normal map as a normal map, and its extra
-//! map without sRGB. The Editor saves those settings into the textures' `.meta` files; Unbound
-//! writes no authored file, so a texture import applies them to its own reading of the `.meta`
-//! (the other settings stay as the `.meta` says), with the trees that use it as dependencies of
-//! its cache entry.
+//! alpha-test coverage at a reference value of 0.1, its normal map as a normal map (without sRGB),
+//! and its extra map without sRGB. The Editor saves those settings into the textures' `.meta`
+//! files; Unbound writes no authored file, so a texture import and the texture's
+//! `TextureImporter` apply them to their own reading of the `.meta` (the other settings stay as
+//! the `.meta` says), with the trees that use it as dependencies of its cache entry.
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -109,7 +109,10 @@ impl TreeTextures {
             );
         }
         if roles.normal {
+            // Made a normal map as the type's setter does: no sRGB (the Editor's .meta of a tree's
+            // normal map, tests/projects/assetpostprocessors rule.Assets/Trees/Bark_Normal.png).
             set(importer, "textureType", NORMAL_MAP_TYPE);
+            set(child(importer, "mipmaps"), "sRGBTexture", "0");
         }
         if roles.extra {
             set(child(importer, "mipmaps"), "sRGBTexture", "0");
@@ -361,6 +364,16 @@ mod tests {
         assert_eq!(
             normal.get("TextureImporter").unwrap().get("textureType"),
             Some(&Value::Scalar("1".into()))
+        );
+        let normal = textures.apply(&dir.join("Normal.png"), &meta).unwrap();
+        assert_eq!(
+            normal
+                .get("TextureImporter")
+                .unwrap()
+                .get("mipmaps")
+                .unwrap()
+                .get("sRGBTexture"),
+            Some(&Value::Scalar("0".into()))
         );
         assert!(textures.apply(&dir.join("Other.png"), &meta).is_none());
         // A file a scripted importer imports keeps its settings.

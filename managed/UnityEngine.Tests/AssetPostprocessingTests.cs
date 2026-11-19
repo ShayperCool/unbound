@@ -147,6 +147,31 @@ namespace UnityEngine.Tests
             Assert.False(sprite.sRGBTexture);
             Assert.Equal(FilterMode.Bilinear, settings.filterMode);
             Assert.Equal(SpriteMeshType.Tight, settings.spriteMeshType);
+            Assert.Equal(0.5f, sprite.alphaTestReferenceValue);
+            Assert.False(sprite.mipMapsPreserveCoverage);
+        }
+
+        [Fact]
+        public void MinusOneReadsAsTheTypesDefaultAndAMissingWrapKeyAsTheOlderWrapMode()
+        {
+            // As the import reads them: a -1 is the type's default even beside an older wrapMode
+            // (here Clamp), a missing wrap key takes that wrapMode.
+            var plain = (TextureImporter)AssetImporter.FromMeta("Assets/R.png", "7123456789abcdef0123456789abcdef", "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  textureSettings:\n    filterMode: -1\n    aniso: -1\n    wrapMode: 1\n    wrapU: -1\n    wrapV: 2\n" +
+                    "  mipmaps:\n    mipMapsPreserveCoverage: 1\n    alphaTestReferenceValue: 0.1\n  textureType: 0\n  userData: \n"));
+            Assert.Equal(FilterMode.Bilinear, plain.filterMode);
+            Assert.Equal(1, plain.anisoLevel);
+            Assert.Equal(TextureWrapMode.Repeat, plain.wrapModeU);
+            Assert.Equal(TextureWrapMode.Mirror, plain.wrapModeV);
+            Assert.Equal(TextureWrapMode.Clamp, plain.wrapModeW);
+            Assert.True(plain.mipMapsPreserveCoverage);
+            Assert.Equal(0.1f, plain.alphaTestReferenceValue);
+            var settings = new TextureImporterSettings();
+            plain.ReadTextureSettings(settings);
+            Assert.Equal(TextureWrapMode.Repeat, settings.wrapModeU);
+            Assert.Equal(TextureWrapMode.Clamp, settings.wrapModeW);
+            Assert.Equal(0.1f, settings.alphaTestReferenceValue);
+            Assert.True(settings.mipMapsPreserveCoverage);
         }
 
         [Fact]
