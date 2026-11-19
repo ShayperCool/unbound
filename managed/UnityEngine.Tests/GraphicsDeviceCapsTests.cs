@@ -213,10 +213,9 @@ namespace Unbound.Tests
             foreach (var d in differences) m_Output.WriteLine(d);
             var expected = new List<string>
             {
-                // Not done by Unbound's renderer (no foveation, HDR output or sparse textures).
+                // Not done by Unbound's renderer (no foveation or HDR output).
                 "foveatedRenderingCaps: NonUniformRaster -> None",
                 "hdrDisplaySupportFlags: Supported, RuntimeSwitchable, AutomaticTonemapping -> None",
-                "supportsSparseTextures: True -> False",
             };
             expected.AddRange(s_NotDrawn);
             Assert.Equal(Sorted(expected), Sorted(differences));

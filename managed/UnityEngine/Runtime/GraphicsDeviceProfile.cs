@@ -130,7 +130,7 @@ namespace Unbound.Runtime
         /// themselves; both are true on Metal only and change together.</summary>
         internal bool Packs4444Targets { get; init; }
         /// <summary>SystemInfo.supportsTextureWrapMirrorOnce: 1 where the Editor's device answers
-        /// it (Unbound samples MirrorOnce as Mirror there, warned), 0 on Metal.</summary>
+        /// it, 0 on Metal.</summary>
         internal int TextureWrapMirrorOnce { get; init; } = 1;
         /// <summary>The compressed formats the device refuses for a Texture3D, by the name its
         /// error gives the format (Metal: PVRTC, ETC and EAC, tests/projects/nativegfx

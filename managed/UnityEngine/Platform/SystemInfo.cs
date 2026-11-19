@@ -201,22 +201,23 @@ namespace UnityEngine
         public static bool supportsHardwareQuadTopology => false;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supports32bitsIndexBuffer => true;
-        public static bool supportsSparseTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsSparseTextures", "answers false, what Unbound's renderer does (the Editor answers true with ARB_sparse_texture): games take their fallback path"); return false; } }
+        /// <summary>Every device the Editor runs here answers true (OpenGL Core and Vulkan:
+        /// tests/projects/graphicsgaps context.*; Metal: tests/projects/urp device-metal);
+        /// <see cref="SparseTexture"/> keeps its tiles in an ordinary texture.</summary>
+        [Unbound.EditorFaithful("the Editor's OpenGLCore, Vulkan and Metal devices answer true (tests/projects/graphicsgaps, urp device-metal); SparseTexture is implemented")]
+        public static bool supportsSparseTextures => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static int supportedRenderTargetCount => 8;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsSeparatedRenderTargetsBlend => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static int supportsMultisampledTextures => 1;
-        public static int supportsTextureWrapMirrorOnce
-        {
-            get
-            {
-                int answer = Device.TextureWrapMirrorOnce;
-                if (answer != 0) Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsTextureWrapMirrorOnce", "is claimed, but MirrorOnce samples as Mirror");
-                return answer;
-            }
-        }
+        /// <summary>The Editor's device's answer (1 on OpenGL Core and Vulkan, tests/projects/graphicsgaps
+        /// context.*; 0 on Metal). The renderer samples MirrorOnce with the device's
+        /// mirror-clamp-to-edge addressing (tests/projects/samplerstates), and warns once where the
+        /// device offers none.</summary>
+        [Unbound.EditorFaithful("the Editor's device answers this (tests/projects/graphicsgaps, urp device-metal), and the renderer samples MirrorOnce natively")]
+        public static int supportsTextureWrapMirrorOnce => Device.TextureWrapMirrorOnce;
         [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
         public static bool usesReversedZBuffer => Device.ReversedZ;
         [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]

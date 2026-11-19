@@ -358,6 +358,15 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey, reversed_z: bool) 
     }
     let bias = f32::from_bits(key.lod_bias_bits);
     let native_mirror_clamp = device.native_sampler_mirror_clamp() == Some(true);
+    let mirror_once = [key.wrap_u, key.wrap_v, key.wrap_w].contains(&3);
+    if mirror_once && !native_mirror_clamp {
+        static WARNED: std::sync::Once = std::sync::Once::new();
+        WARNED.call_once(|| {
+            tracing::warn!(
+                "Unbound: TextureWrapMode.MirrorOnce samples as Mirror: this graphics device offers no mirror-clamp-to-edge addressing"
+            )
+        });
+    }
     let mirror_clamp =
         [key.wrap_u, key.wrap_v, key.wrap_w].map(|mode| mode == 3 && native_mirror_clamp);
     if bias == 0.0

@@ -1025,6 +1025,7 @@ namespace Unbound.Runtime
             if (texture.IsExternalTexture) return texture.EnsureExternalUploaded();
             if (texture is UnityEngine.Texture2D t2d) return t2d.EnsureUploaded();
             if (texture is UnityEngine.RenderTexture rt) return rt.EnsureCreated();
+            if (texture is UnityEngine.SparseTexture sparse) return sparse.Tiles != null ? sparse.Tiles.EnsureUploaded() : 0;
             return texture.m_NativeHandle;
         }
     }
