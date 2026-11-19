@@ -43,8 +43,11 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   Keep `unbound api-check` and the default-state probe clean. Each exception needs an exact
   release-specific allow-list entry with a nonempty reason; queued defaults retain their raw
   discrepancies and counts until their module is fixed.
-- Never write to a Unity project's authored files (`Assets/`, `Packages/`, `ProjectSettings/`) except
-  through explicit, Unity-compatible edits. Anything Unbound produces goes to
+- Unbound writes a Unity project's files (`Assets/`, `Packages/`, `ProjectSettings/`) where, when
+  and how the Editor writes them: a new asset's `.meta`, importer settings and labels, settings
+  changed through editor APIs, the package lock, assets editor APIs create, copy, move or delete.
+  Measure each case against the Editor (what is written, when, byte format, line endings) and
+  write nothing the Editor would not write. What Unbound produces for itself goes to
   `<project>/Library/Unbound/` (per-project cache) or the global cache (`$XDG_CACHE_HOME/unbound`).
 - Every behaviour that differs between Unity releases goes through the compatibility profile
   (`compat` crate / `Unbound.Compat` on the managed side). Never hard-code a single release's behaviour

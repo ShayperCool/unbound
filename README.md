@@ -74,8 +74,11 @@ unbound api-gaps -p <project>             # Unity API the project uses that Unbo
 `--player` to compile as a player. `unbound <command> --help` lists every option, including the
 scripted input (`--tap`, `--type`, `--press`, ...) and the screenshots used for automated runs.
 
-Unbound never writes to a project's `Assets/`, `Packages/` or `ProjectSettings/`. Its caches go
-to `<project>/Library/Unbound/` and `~/.cache/unbound/` (`$XDG_CACHE_HOME/unbound`). PlayerPrefs
+Unbound writes a project's files where the Unity Editor would: opening a project gives each new
+file and folder its `.meta` and writes `Packages/packages-lock.json` when there is none, and what
+editor scripts change through the AssetDatabase, importers and settings APIs is saved as the
+Editor saves it. Its own caches go to `<project>/Library/Unbound/` and `~/.cache/unbound/`
+(`$XDG_CACHE_HOME/unbound`). PlayerPrefs
 and `Application.persistentDataPath` are the Editor's own unless you pass `--player-prefs` or
 `--persistent-data-path`.
 

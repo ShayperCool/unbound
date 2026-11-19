@@ -387,6 +387,18 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   documents; scenes loaded in Play mode keep none, as in the Editor), finalizer exceptions logged instead of ending the process,
   delegates passed to native code kept alive, .NET Framework-only reflection-emit calls redirected
   to shims, and game assemblies loaded from files so `Assembly.Location` names one.
+* **Project files**: Unbound writes a project's files as the Editor writes them
+  (tests/projects/projectwrites). `unbound run` and `unbound test` open a project as the Editor
+  does: each file and folder without a `.meta` in the project's editable roots (`Assets/`, embedded
+  and local packages) gets the one its importer's defaults make (`unbound_assets::new_meta`: a new
+  random GUID; an extension whose importer is not measured is reported and gets none), a missing
+  `packages-lock.json` is written (`unbound_project::packages::lock_text`) and `ProjectVersion.txt`
+  gets its release's build revision. The runtime's asset database follows what editor APIs do on
+  disk (`asset-import`, `asset-refresh`): AssetDatabase creates, copies, moves, renames, deletes and
+  labels assets (`AssetDatabaseFiles.cs`, `AssetDatabaseCreate.cs`), importers save their settings
+  into the `.meta` text in place (`ImporterMetaFiles.cs`), and settings APIs edit the
+  `ProjectSettings/*.asset` text, written by SaveAssets and at quit in Edit mode
+  (`SettingsAssets.Edit`).
 * **Editor API**: the UnityEditor API packages call is implemented without UI, answering as an
   interactive Editor with no windows open (no scene views, no selection, no players connected).
   State the Editor keeps in files goes to the per-project cache (`Library/Unbound/EditorFiles`,
