@@ -18,6 +18,14 @@ namespace UnityEditor.SceneManagement
 
         public virtual StageHandle stageHandle => StageHandle.Main;
 
+        /// <summary>A stage is the Editor's own object: hidden and never saved (a new MainStage reads
+        /// hideFlags HideAndDontSave in the 6000.0.71f1 Editor, tests/projects/defaultstate; which
+        /// callback sets it is not measured).</summary>
+        protected virtual void OnEnable()
+        {
+            if (Unbound.Runtime.Compat.DefaultConstructorStateMeasured) hideFlags = HideFlags.HideAndDontSave;
+        }
+
         /// <summary>Puts a root GameObject in one of the stage's scenes.</summary>
         internal abstract void PlaceGameObjectInStage(GameObject rootGameObject);
 
@@ -81,8 +89,6 @@ namespace UnityEditor.SceneManagement
 
         internal override ulong GetSceneCullingMask() => SceneCullingMasks.MainStageSceneViewObjects;
 
-        public override StageHandle stageHandle => StageHandle.Main;
-
         /// <summary>A root not in one of the main stage's scenes goes to the active scene; one that
         /// is stays, and so does a GameObject with a parent or none (measured: tests/projects/scenesave
         /// stage.place*, no exception).</summary>
@@ -119,7 +125,9 @@ namespace UnityEditor.SceneManagement
         GameObject m_ContentsRoot;
         GameObject m_OpenedFromInstanceObject;
         Mode m_Mode;
-        string m_AssetPath = "";
+        // A PrefabStage made with CreateInstance has no asset path: null (6000.0.71f1 Editor,
+        // tests/projects/defaultstate); unmeasured releases keep "".
+        string m_AssetPath = Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? null : "";
 
         public enum Mode
         {
