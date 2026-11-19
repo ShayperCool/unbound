@@ -168,7 +168,13 @@ namespace Unbound.Runtime
             }
             GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);
-            if (sampledHandle != depthHandle) GfxStream.CopyDepth(depthHandle, sampledHandle);
+            // The sampled depth is a copy of the G-buffer's, made once here: the lights test the
+            // live depth while they read it, and forward-only opaque objects, drawn into the live
+            // depth later, never enter it (measured: tests/projects/builtinfx deferredDepth.*, LDR
+            // and HDR, from BeforeLighting to AfterEverything).
+            if (sampledHandle == depthHandle)
+                sampledHandle = TextureHandles.Of(Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt)));
+            GfxStream.CopyDepth(depthHandle, sampledHandle);
             GfxStream.GlobalTexture("_CameraGBufferTexture0", g0);
             GfxStream.GlobalTexture("_CameraGBufferTexture1", g1);
             GfxStream.GlobalTexture("_CameraGBufferTexture2", g2);
@@ -229,15 +235,9 @@ namespace Unbound.Runtime
             if (lights.Count > 0)
             {
                 // The lights test the G-buffer's stencil and depth, bound as their depth buffer,
-                // and read its depth from a copy (a texture is not sampled while it is drawn into).
-                // (A target's depth is drawn with already: its copy is the sampled one.)
-                ulong sampled = sampledHandle;
-                if (sampledHandle == depthHandle)
-                {
-                    sampled = TextureHandles.Of(Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt)));
-                    GfxStream.CopyDepth(depthHandle, sampled);
-                }
-                GfxStream.GlobalTexture("_CameraDepthTexture", sampled);
+                // and read its depth from the sampled copy (a texture is not sampled while it is
+                // drawn into).
+                GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
                 GfxStream.SetTarget(lightHandle, depthHandle);
                 GfxStream.Viewport(viewport);
             }

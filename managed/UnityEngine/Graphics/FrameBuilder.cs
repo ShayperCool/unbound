@@ -1732,10 +1732,8 @@ namespace Unbound.Runtime
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
                 int forwardOpaque = 0;
-                // A deferred camera drawing with its target's depth samples deferredDepth, a copy.
                 bool ownTargetDepth = false;
                 ulong depthAttachment = 0;
-                RenderTexture deferredDepth = null;
                 if (deferred)
                 {
                     // An LDR camera drawing into a target with a depth buffer draws its G-buffer
@@ -1750,7 +1748,6 @@ namespace Unbound.Runtime
                         && DrawsWithTargetDepth(camera.allowHDR, cameraTarget, width, height);
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
                     depthAttachment = TextureHandles.Of(ownTargetDepth ? cameraTarget : gbufferDepth);
-                    deferredDepth = gbufferDepth;
                     // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above),
                     // over a cleared stencil (a pooled buffer may hold another camera's G-buffer
                     // marks, which the lights test).
@@ -1785,14 +1782,6 @@ namespace Unbound.Runtime
                     EmitItems(forwardOpaque, transparent, !deferred && !vertexLit
                         ? RenderDispatchContext.BuiltinForwardOpaque : RenderDispatchContext.Unknown);
                     RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
-                    // The sampled depth takes the forward opaque objects too, as the pooled
-                    // G-buffer depth, drawn into and sampled, has them from here on.
-                    if (ownTargetDepth)
-                    {
-                        GfxStream.CopyDepth(depthAttachment, TextureHandles.Of(deferredDepth));
-                        GfxStream.SetTarget(TextureHandles.Of(sceneTarget), depthAttachment);
-                        GfxStream.Viewport(viewport);
-                    }
                 }
                 // The sky's events come with the sky alone (measured: none with a solid color or
                 // without a skybox material).
