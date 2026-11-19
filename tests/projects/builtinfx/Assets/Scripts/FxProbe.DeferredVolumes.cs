@@ -92,6 +92,7 @@ public partial class FxProbe
         DeferredEventDraws("hdr", true);
         DeferredDepth("ldr", false);
         DeferredDepth("hdr", true);
+        DeferredDepth("motion", true, DepthTextureMode.MotionVectors);
     }
 
     /// <summary>What a deferred camera's sampled depth (_CameraDepthTexture) holds at each camera
@@ -101,8 +102,9 @@ public partial class FxProbe
     /// (Probe/Color, no deferred pass) and a deferred sphere in front of the floor
     /// (<c>deferredDepth.&lt;camera&gt;.&lt;event&gt;.&lt;point&gt;</c>: the copy's linear depth
     /// and far-plane mark at the cube, the sphere and the floor beside them), for an LDR and an
-    /// HDR camera that clear to a solid colour.</summary>
-    void DeferredDepth(string name, bool hdr)
+    /// HDR camera that clear to a solid colour, and an HDR one with motion vectors
+    /// (<c>motion</c>).</summary>
+    void DeferredDepth(string name, bool hdr, DepthTextureMode mode = DepthTextureMode.None)
     {
         string key = "deferredDepth." + name;
         try
@@ -115,6 +117,7 @@ public partial class FxProbe
             var camera = MakeCamera();
             camera.renderingPath = RenderingPath.DeferredShading;
             camera.allowHDR = hdr;
+            camera.depthTextureMode = mode;
             Vector2Int At(Vector3 p)
             {
                 var s = camera.WorldToScreenPoint(p);
