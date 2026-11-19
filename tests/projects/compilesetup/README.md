@@ -7,16 +7,25 @@ plugins, the local tarball package and the `.meta` files from `PluginSources/` a
 
 `Assets/Scripts/CompileSetupProbe.cs` writes, in Play mode:
 
-* `plugins.*`: precompiled plugins that declare the same assembly name. `ProbeDup` 1.0.0.0 in
-  `Assets/Plugins/Dup` and 2.0.0.0 in the embedded package `com.probe.setup` (its `.meta` has no
-  importer settings); `ProbeSame` 1.0.0.0 in `Assets/Plugins/Same` and in the package; `ProbeOrder`
-  1.0.0.0 in `Assets/Plugins/Order1` and `Order2`. Rows give the constant the scripts compiled
-  against and the value of the loaded copy. Measured: the highest version is the one every
+* `plugins.*`, `assembly.Probe.Explicit*.plugins`: precompiled plugins that declare the same
+  assembly name. `ProbeDup` 1.0.0.0 in `Assets/Plugins/Dup` and 2.0.0.0 in the embedded package
+  `com.probe.setup` (its `.meta` has no importer settings); `ProbeSame` 1.0.0.0 in
+  `Assets/Plugins/Same` and in the package; `ProbeOrder` 1.0.0.0 in `Assets/Plugins/Order1` and
+  `Order2`; `ProbeAlias` 1.0.0.0 as `Assets/Plugins/Alias/ProbeAlias.dll` and 2.0.0.0 as the
+  package's `ProbeAliasNew.dll`, both with Auto Reference off, named by `Probe.Explicit`
+  (`ProbeAlias.dll`, `ProbeDup.dll`) and `Probe.ExplicitNew` (`ProbeAliasNew.dll`). Rows give the
+  constant the scripts compiled against, the value of the loaded copy and what each assembly
+  references. Measured: an assembly references one plugin per file name; of the plugins of one
+  assembly name the highest version comes first, so it is the one of its file name every
   assembly references and loads (the Editor logs "Duplicate assembly 'ProbeDup.dll' with
-  different versions detected, using '…' and ignoring '…'."); of copies with the same version it
-  references one, silently, and loads the same one. Which one is not specified: it changed with
-  the project's other plugins between captures (a pair whose GUIDs and paths were ordered either
-  way picked different copies), so the rows record only that compile and run time agree.
+  different versions detected, using '…' and ignoring '…'.", also for `ProbeAliasNew.dll` over
+  `ProbeAlias.dll`), while a lower version under another file name is still referenced by that
+  name (`Probe.Explicit` gets `ProbeAlias.dll`; an assembly that references both files does not
+  compile, CS1704, seen in a capture with both auto-referenced). Of copies of the same version
+  and file name the Editor references one, silently, and loads the same one. Which one is not
+  specified: it changed with the project's other plugins between captures (a pair whose GUIDs
+  and paths were ordered either way picked different copies), so the rows record only that
+  compile and run time agree.
 * `assemblies`, `assembly.<name>.*`: `CompilationPipeline.GetAssemblies(AssembliesType.Editor)`
   for the probe's assemblies: flags, references among them, plugins (package plugins by project
   path, same-version copies by file name). Measured: the predefined assemblies reference every
@@ -37,4 +46,5 @@ plugins, the local tarball package and the `.meta` files from `PluginSources/` a
   the project's `Library/PackageCache/` without asking; other files need consent, which batch
   mode declines (seen for the same packages through a symbolic link, whose paths the compiler
   then names absolutely; `run.py` records from the resolved run directory). Not measured: updates
-  of member names (`(UnityUpgradable)` obsolete messages), which change warnings only here.
+  of member names (`(UnityUpgradable)` obsolete messages), which change warnings only here, and
+  a using directive of a namespace that no longer exists (the probe's old namespace still has a type).

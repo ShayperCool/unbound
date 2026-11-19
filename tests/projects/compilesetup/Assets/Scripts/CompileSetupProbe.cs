@@ -86,7 +86,7 @@ public class CompileSetupProbe : MonoBehaviour
         string Plugin(string path)
         {
             var name = Path.GetFileName(path);
-            return name == "ProbeDup.dll" ? path.Replace('\\', '/').Replace(project, "") : name;
+            return name == "ProbeDup.dll" || name.StartsWith("ProbeAlias") ? path.Replace('\\', '/').Replace(project, "") : name;
         }
         var assemblies = CompilationPipeline.GetAssemblies(AssembliesType.Editor).Where(a => Ours(a.name)).OrderBy(a => a.name, StringComparer.Ordinal).ToArray();
         Row("assemblies", string.Join(",", assemblies.Select(a => a.name)));

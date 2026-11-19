@@ -3,7 +3,7 @@
 {"k":"plugins.dup.version","v":"2.0.0.0"}
 {"k":"plugins.same.consistent","v":"True"}
 {"k":"plugins.order.consistent","v":"True"}
-{"k":"assemblies","v":"Assembly-CSharp,Assembly-CSharp-Editor,Probe.AssetsTests,Probe.Consumer,Probe.Setup.Editor,Probe.Setup.EditorHidden,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
+{"k":"assemblies","v":"Assembly-CSharp,Assembly-CSharp-Editor,Probe.AssetsTests,Probe.Consumer,Probe.Explicit,Probe.ExplicitNew,Probe.Setup.Editor,Probe.Setup.EditorHidden,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
 {"k":"assembly.Assembly-CSharp.flags","v":"None"}
 {"k":"assembly.Assembly-CSharp.references","v":"Probe.AssetsTests,Probe.Consumer,Probe.Setup.Editor,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
 {"k":"assembly.Assembly-CSharp.plugins","v":"Packages/com.probe.setup/Plugins/ProbeDup.dll,ProbeOrder.dll,ProbeSame.dll"}
@@ -16,6 +16,12 @@
 {"k":"assembly.Probe.Consumer.flags","v":"None"}
 {"k":"assembly.Probe.Consumer.references","v":""}
 {"k":"assembly.Probe.Consumer.plugins","v":"Packages/com.probe.setup/Plugins/ProbeDup.dll,ProbeOrder.dll,ProbeSame.dll"}
+{"k":"assembly.Probe.Explicit.flags","v":"None"}
+{"k":"assembly.Probe.Explicit.references","v":""}
+{"k":"assembly.Probe.Explicit.plugins","v":"Assets/Plugins/Alias/ProbeAlias.dll,Packages/com.probe.setup/Plugins/ProbeDup.dll"}
+{"k":"assembly.Probe.ExplicitNew.flags","v":"None"}
+{"k":"assembly.Probe.ExplicitNew.references","v":""}
+{"k":"assembly.Probe.ExplicitNew.plugins","v":"Packages/com.probe.setup/Plugins/ProbeAliasNew.dll"}
 {"k":"assembly.Probe.Setup.Editor.flags","v":"EditorAssembly"}
 {"k":"assembly.Probe.Setup.Editor.references","v":""}
 {"k":"assembly.Probe.Setup.Editor.plugins","v":"Packages/com.probe.setup/Plugins/ProbeDup.dll,ProbeOrder.dll,ProbeSame.dll"}

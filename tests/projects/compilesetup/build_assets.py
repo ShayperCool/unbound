@@ -9,7 +9,8 @@ reference assembly, deterministically.
 Plugins sharing an assembly name (README.md): ProbeDup 1.0.0.0 in Assets/Plugins/Dup and 2.0.0.0
 in the embedded package, whose `.meta` has no importer settings; ProbeSame 1.0.0.0 in
 Assets/Plugins/Same and in the embedded package; ProbeOrder 1.0.0.0 in Assets/Plugins/Order1
-(GUID ff...) and Assets/Plugins/Order2 (GUID 00...)."""
+(GUID ff...) and Assets/Plugins/Order2 (GUID 00...); ProbeAlias 1.0.0.0 as Assets/Plugins/Alias/ProbeAlias.dll
+and 2.0.0.0 as the package's ProbeAliasNew.dll, both with Auto Reference off."""
 import gzip
 import hashlib
 import io
@@ -26,7 +27,8 @@ import probe_paths  # noqa: E402
 
 PACKAGE = HERE/'Packages/com.probe.setup'
 TARBALLS = ['com.probe.consumer']
-# (source, output, `.meta` GUID or None for a path-derived one, importer settings or not)
+# (source, output, `.meta` GUID or None for a path-derived one, importer settings or not or
+# 'explicit' for Auto Reference off)
 PLUGINS = [
     ('ProbeDup.v1.cs', HERE/'Assets/Plugins/Dup/ProbeDup.dll', None, True),
     ('ProbeDup.v2.cs', PACKAGE/'Plugins/ProbeDup.dll', None, False),
@@ -34,6 +36,10 @@ PLUGINS = [
     ('ProbeSame.Package.cs', PACKAGE/'Plugins/ProbeSame.dll', None, True),
     ('ProbeOrder.Order1.cs', HERE/'Assets/Plugins/Order1/ProbeOrder.dll', 'f'*32, True),
     ('ProbeOrder.Order2.cs', HERE/'Assets/Plugins/Order2/ProbeOrder.dll', '0'*31+'1', True),
+    # One assembly name under two file names (version 2 is ProbeAlias.dll renamed), referenced
+    # only where an assembly names them: both in one assembly do not compile (CS1704).
+    ('ProbeAlias.v1.cs', HERE/'Assets/Plugins/Alias/ProbeAlias.dll', None, 'explicit'),
+    ('ProbeAlias.v2.cs', PACKAGE/'Plugins/ProbeAliasNew.dll', None, 'explicit'),
 ]
 
 PLUGIN_IMPORTER = '''PluginImporter:
@@ -106,9 +112,14 @@ def csc():
 
 
 def build(source, output):
+    """Compiles `source` into `output`; the assembly is named after the source's first part (the
+    file can be named otherwise: ProbeAliasNew.dll holds ProbeAlias)."""
     output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(csc() + ['-nologo', '-noconfig', '-nostdlib', '-deterministic', '-optimize+', '-debug-',
-                            '-target:library', f'-out:{output}', f'-r:{netstandard()}', str(source)], check=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        built = Path(tmp)/(source.name.split('.')[0]+'.dll')
+        subprocess.run(csc() + ['-nologo', '-noconfig', '-nostdlib', '-deterministic', '-optimize+', '-debug-',
+                                '-target:library', f'-out:{built}', f'-r:{netstandard()}', str(source)], check=True)
+        shutil.copyfile(built, output)
 
 
 def guid_of(relative):
@@ -159,7 +170,10 @@ def main():
     for source, output, guid, settings in PLUGINS:
         build(HERE/'PluginSources'/source, output)
         relative = str(output.relative_to(HERE))
-        meta = f'fileFormatVersion: 2\nguid: {guid or guid_of(relative)}\n' + (PLUGIN_IMPORTER if settings else '')
+        importer = PLUGIN_IMPORTER if settings else ''
+        if settings == 'explicit':
+            importer = importer.replace('isExplicitlyReferenced: 0', 'isExplicitlyReferenced: 1')
+        meta = f'fileFormatVersion: 2\nguid: {guid or guid_of(relative)}\n' + importer
         output.with_name(output.name+'.meta').write_text(meta)
         plugin_files.add(output)
     for name in TARBALLS:
