@@ -58,6 +58,14 @@ public sealed class AssemblySpec
     /// <summary>The response file's arguments (<c>csc.rsp</c>), after the request's own options;
     /// its references are among <see cref="Plugins"/>.</summary>
     public List<string> ResponseArguments { get; set; } = new();
+    /// <summary>The response file's references under an <c>extern alias</c>.</summary>
+    public List<AliasedReference> AliasedReferences { get; set; } = new();
+}
+
+public sealed class AliasedReference
+{
+    public string Alias { get; set; } = "";
+    public string Path { get; set; } = "";
 }
 
 /// <summary>An engine module whose built-in package the project does not have.</summary>

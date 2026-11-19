@@ -137,4 +137,45 @@ public static class Extra
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    /// <summary>A quoted value with spaces stays one argument; a reference under an alias is
+    /// reachable through extern alias; an edited rule set compiles again.</summary>
+    [Fact]
+    public void QuotedValuesAliasesAndRuleSetEdits()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var lib = Path.Combine(root, "Lib.cs");
+            File.WriteAllText(lib, "public static class Lib { public const int V = 5; }\n");
+            var libRequest = Request(root, lib);
+            libRequest.Assemblies[0].Name = "AliasLib";
+            var built = Assert.Single(new CompilerService().Compile(libRequest).Assemblies);
+            Assert.Equal("compiled", built.Status);
+
+            var file = Path.Combine(root, "Probe.cs");
+            File.WriteAllText(file, "extern alias Old;\npublic static class Probe { public const int V = Old::Lib.V; static void M() { int unused = 1; } }\n");
+            var rules = Path.Combine(root, "Code Rules", "a.ruleset");
+            Directory.CreateDirectory(Path.GetDirectoryName(rules)!);
+            void Rules(string action) => File.WriteAllText(rules,
+                "<RuleSet Name=\"r\" ToolsVersion=\"16.0\"><Rules AnalyzerId=\"Microsoft.CodeAnalysis.CSharp\" RuleNamespace=\"Microsoft.CodeAnalysis.CSharp\">"
+                + "<Rule Id=\"CS0219\" Action=\"" + action + "\" /></Rules></RuleSet>");
+            CompileRequest WithRules()
+            {
+                var request = Request(root, file, "-ruleset:\"" + rules + "\"", "-nowarn:\"CS0168, CS0414\"");
+                request.Assemblies[0].AliasedReferences.Add(new AliasedReference { Alias = "Old", Path = built.Dll! });
+                return request;
+            }
+            Rules("Error");
+            var service = new CompilerService();
+            var strict = Assert.Single(service.Compile(WithRules()).Assemblies);
+            Assert.Equal("failed", strict.Status);
+            Assert.Contains(strict.Errors, e => e.Id == "CS0219");
+            Rules("None");
+            var relaxed = Assert.Single(service.Compile(WithRules()).Assemblies);
+            Assert.Equal("compiled", relaxed.Status);
+            Assert.DoesNotContain(relaxed.WarningList, w => w.Id == "CS0219");
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
 }

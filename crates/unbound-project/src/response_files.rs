@@ -24,6 +24,8 @@ pub struct ResponseFile {
     pub defines: Vec<String>,
     /// `-r`/`-reference` assemblies, resolved.
     pub references: Vec<PathBuf>,
+    /// `-r:alias=path` assemblies: referenced under the alias (`extern alias`), resolved.
+    pub aliased: Vec<(String, PathBuf)>,
     /// Every other argument, in order, as the compiler takes it.
     pub arguments: Vec<String>,
     /// References that could not be resolved, with the Editor's wording.
@@ -76,7 +78,7 @@ pub fn parse(
                         .filter(|s| !s.is_empty())
                         .map(str::to_string),
                 );
-                out.arguments.push(token);
+                out.arguments.push(quoted(token));
             }
             Some("r" | "reference") => {
                 let parts: Vec<&str> = value.split([';', ',']).collect();
@@ -88,9 +90,15 @@ pub fn parse(
                     );
                 } else {
                     // `alias=path` names the path after the alias.
-                    let reference = parts[0].rsplit_once('=').map_or(parts[0], |(_, p)| p);
+                    let (alias, reference) = match parts[0].split_once('=') {
+                        Some((alias, reference)) => (Some(alias), reference),
+                        None => (None, parts[0]),
+                    };
                     match resolve(reference, project, system_directories) {
-                        Some(p) => out.references.push(p),
+                        Some(p) => match alias {
+                            Some(alias) => out.aliased.push((alias.to_string(), p)),
+                            None => out.references.push(p),
+                        },
                         None => out.errors.push(format!(
                             "{}: not parsed correctly: {reference} could not be found as a system library.\n\
                              If this was meant as a user reference please provide the relative path from \
@@ -100,10 +108,22 @@ pub fn parse(
                     }
                 }
             }
-            _ => out.arguments.push(token),
+            _ => out.arguments.push(quoted(token)),
         }
     }
     out
+}
+
+/// An argument as the compiler reads it from a line of its own: a value with whitespace, whose
+/// quotes [`tokens`] removed, quoted again.
+fn quoted(token: String) -> String {
+    if !token.contains(char::is_whitespace) {
+        return token;
+    }
+    match token.find(':') {
+        Some(i) => format!("{}:\"{}\"", &token[..i], &token[i + 1..]),
+        None => format!("\"{token}\""),
+    }
 }
 
 fn resolve(reference: &str, project: &Path, system_directories: &[PathBuf]) -> Option<PathBuf> {
@@ -191,18 +211,17 @@ mod tests {
         std::fs::write(system.join("System.Web.dll"), b"").unwrap();
         let rsp = parse(
             "-define:A;B\n-d:C,D\n/define:E\n-D:F\n-unsafe\n-r:Assets/Libs/Ref.dll\n\
-             -reference:alias=System.Web.dll\n-r:Missing.dll\n-r:A.dll;B.dll\n-nowarn:CS0219\n-langversion:10",
+             -reference:alias=System.Web.dll\n-r:Missing.dll\n-r:A.dll;B.dll\n-nowarn:CS0219\n-langversion:10\n\
+             -ruleset:\"Assets/Code Rules/a.ruleset\"\n-nowarn:'CS0219, CS0414'",
             &project.join("Assets/csc.rsp"),
             project,
             &[system.clone()],
         );
         assert_eq!(rsp.defines, ["A", "B", "C", "D", "E"]);
+        assert_eq!(rsp.references, [project.join("Assets/Libs/Ref.dll")]);
         assert_eq!(
-            rsp.references,
-            [
-                project.join("Assets/Libs/Ref.dll"),
-                system.join("System.Web.dll")
-            ]
+            rsp.aliased,
+            [("alias".to_string(), system.join("System.Web.dll"))]
         );
         assert_eq!(
             rsp.arguments,
@@ -213,7 +232,9 @@ mod tests {
                 "-D:F",
                 "-unsafe",
                 "-nowarn:CS0219",
-                "-langversion:10"
+                "-langversion:10",
+                "-ruleset:\"Assets/Code Rules/a.ruleset\"",
+                "-nowarn:\"CS0219, CS0414\""
             ]
         );
         assert_eq!(rsp.errors.len(), 2);

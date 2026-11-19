@@ -49,8 +49,17 @@ pub struct AssemblySpec {
     /// Compiled with optimizations (`/optimize+`).
     pub optimize: bool,
     /// The response file's arguments, after the request's own options (its references are
-    /// among `plugins`).
+    /// among `plugins`, those with an alias in `aliased_references`).
     pub response_arguments: Vec<String>,
+    pub aliased_references: Vec<AliasedReference>,
+}
+
+/// A reference under an `extern alias` (`-r:alias=path` of a response file).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AliasedReference {
+    pub alias: String,
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -313,6 +322,15 @@ impl Project {
                     .as_ref()
                     .map(|r| r.arguments.clone())
                     .unwrap_or_default(),
+                aliased_references: a
+                    .response_file
+                    .iter()
+                    .flat_map(|r| &r.aliased)
+                    .map(|(alias, path)| AliasedReference {
+                        alias: alias.clone(),
+                        path: path.clone(),
+                    })
+                    .collect(),
             })
             .collect();
         let engine_references = self.engine_references(mode);

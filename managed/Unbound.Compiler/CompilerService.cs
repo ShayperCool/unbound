@@ -144,13 +144,18 @@ public sealed partial class CompilerService
                 references.Add(FileRef(path));
             foreach (var path in spec.Plugins)
                 references.Add(FileRef(path));
+            foreach (var aliased in spec.AliasedReferences)
+            {
+                var (identity, reference) = FileRef(aliased.Path);
+                references.Add(($"{identity}:alias={aliased.Alias}", reference.WithAliases(new[] { aliased.Alias })));
+            }
             foreach (var dependency in dependencies)
             {
                 var interfaceRef = _states[dependency.Name].Interface!;
                 references.Add(($"{dependency.Name}:{dependency.InterfaceHash}", interfaceRef));
             }
 
-            var key = Key(spec, request, sources, references);
+            var key = Key(spec, request, sources, references, commandLine.RuleSet);
             if (state.Key == key && state.Result != null && File.Exists(state.Result.Dll))
             {
                 return Done(state.Result, "unchanged", watch);
@@ -357,11 +362,14 @@ public sealed partial class CompilerService
     /// the release's language version, the assembly's unsafe and optimization flags, the release's
     /// arguments, then the response file's (a later option wins: Unity 6000.0.71f1,
     /// tests/projects/gameinterop rsp.*).</summary>
-    sealed record Options(CSharpParseOptions Parse, CSharpCompilationOptions Compilation, List<Diagnostic> Errors, List<string> Ignored);
+    sealed record Options(CSharpParseOptions Parse, CSharpCompilationOptions Compilation, List<Diagnostic> Errors, List<string> Ignored, string? RuleSet);
 
     /// <summary>Options that change what the compiler does but that Unbound does not apply.</summary>
     static readonly string[] s_IgnoredOptions = { "analyzer", "a", "additionalfile", "resource", "res", "linkresource", "linkres",
-        "link", "l", "addmodule", "keyfile", "keycontainer", "delaysign", "publicsign", "win32res", "win32icon", "win32manifest", "doc", "generatedfilesout" };
+        "link", "l", "addmodule", "keyfile", "keycontainer", "delaysign", "publicsign", "win32res", "win32icon", "win32manifest", "doc", "generatedfilesout",
+        "features", "analyzerconfig", "globalconfig", "platform", "target", "t", "recurse", "lib", "main", "m", "out", "o", "refout", "refonly",
+        "pathmap", "embed", "modulename", "nostdlib", "noconfig", "appconfig", "subsystemversion", "baseaddress", "filealign", "highentropyva",
+        "sourcelink", "instrument", "errorlog", "reportanalyzer", "skipanalyzers" };
 
     static Options CommandLine(AssemblySpec spec, CompileRequest request)
     {
@@ -409,7 +417,7 @@ public sealed partial class CompilerService
                 warningLevel: c.WarningLevel,
                 specificDiagnosticOptions: diagnostics,
                 assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default);
-        return new Options(parse, compilation, errors, ignored);
+        return new Options(parse, compilation, errors, ignored, parsed.RuleSetPath);
     }
 
     (string Identity, MetadataReference Reference) FileRef(string path)
@@ -429,9 +437,12 @@ public sealed partial class CompilerService
         AssemblySpec spec,
         CompileRequest request,
         List<(string Path, SourceFile File)> sources,
-        List<(string Identity, MetadataReference Reference)> references)
+        List<(string Identity, MetadataReference Reference)> references,
+        string? ruleSet)
     {
         var builder = new StringBuilder();
+        // A rule set file's contents decide diagnostics: an edit of it compiles again.
+        if (ruleSet != null) builder.Append("ruleset ").Append(File.Exists(ruleSet) ? Hash(File.ReadAllBytes(ruleSet)) : "missing").Append('\n');
         builder.Append(CompilerIdentity).Append('\n');
         builder.Append(spec.Name).Append('\n');
         builder.Append(request.LanguageVersion).Append('\n');

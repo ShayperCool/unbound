@@ -180,7 +180,13 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
         {
             let known = project_plugins
                 .get_or_insert_with(|| project.plugins().into_iter().map(|p| p.file).collect());
-            plugins.extend(r.references.iter().filter(|p| known.contains(*p)).cloned());
+            plugins.extend(
+                r.references
+                    .iter()
+                    .chain(r.aliased.iter().map(|(_, p)| p))
+                    .filter(|p| known.contains(*p))
+                    .cloned(),
+            );
         }
         let scripts: Vec<Json> = script
             .sources
