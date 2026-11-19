@@ -1667,13 +1667,10 @@ namespace UnityEngine
             // A playback's first update simulates; so does its second, offscreen or not.
             if (frame <= m_CullingGraceFrame) return CullingState.Simulated;
             var renderer = CullingRenderer;
-            if (renderer == null || !renderer.enabled)
-            {
-                if (CullingSimulates)
-                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode without a renderer",
-                        "keeps simulating a system without an enabled ParticleSystemRenderer (its culling is not decided)");
-                return CullingState.Simulated;
-            }
+            // A system without a ParticleSystemRenderer, or with a disabled one, is never culled:
+            // it simulates every frame under every culling mode (Unity 6000.0.71f1,
+            // tests/projects/particlerender norender/*).
+            if (renderer == null || !renderer.enabled) return CullingState.Simulated;
             if (renderer.isVisible)
             {
                 if (!renderer.CullingBoundsCoverDraw && CullingSimulates)
