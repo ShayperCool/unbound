@@ -1420,6 +1420,25 @@ namespace Unbound.Runtime
             foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
         }
 
+        /// <summary>An asset an editor API wrote from live objects (AssetDatabase.CreateAsset): its
+        /// file is loaded as <paramref name="main"/>, which becomes the asset's main object.</summary>
+        internal static LoadedFile Adopt(string guid, string path, Object main, long mainFileId)
+        {
+            Invalidate(guid);
+            var file = new LoadedFile { Guid = guid, Path = path, MainObject = main };
+            s_Files[guid] = file;
+            AddObject(file, main, mainFileId);
+            return file;
+        }
+
+        /// <summary>A live object made part of a loaded asset file (AssetDatabase.AddObjectToAsset).</summary>
+        internal static void AddObject(LoadedFile file, Object o, long fileId)
+        {
+            file.Objects[fileId] = o;
+            s_Objects[(file.Guid, fileId)] = o;
+            o.IsPersistentAsset = true;
+        }
+
         /// <summary>Forgets one file so that the next load reads it again (hot reload of content).</summary>
         internal static void Invalidate(string guid)
         {

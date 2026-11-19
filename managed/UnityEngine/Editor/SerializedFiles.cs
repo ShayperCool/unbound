@@ -130,11 +130,18 @@ namespace Unbound.Runtime
     {
         internal static string Write(Object[] objects)
         {
-            var sb = new StringBuilder("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
             var ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
             long next = 1;
             foreach (var o in objects)
                 if (o != null && !ids.ContainsKey(o)) ids[o] = next++;
+            return Write(objects, ids);
+        }
+
+        /// <summary>The objects' documents in the given order, each under its file id in
+        /// <paramref name="ids"/> (references between them by those ids).</summary>
+        internal static string Write(Object[] objects, Dictionary<Object, long> ids)
+        {
+            var sb = new StringBuilder("%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
             foreach (var o in objects)
             {
                 if (o == null) continue;

@@ -51,19 +51,27 @@ namespace UnityEditor
         {
             if (SettingsAssets.ByGuid(guid) is SettingsFile settings) return settings.AssetPath;
             _ = Entries;
-            return guid != null && s_ByGuid.TryGetValue(guid, out var e) ? e.Path : "";
+            return guid != null && s_ByGuid.TryGetValue(guid, out var e) ? e.Path : DeletedPath(guid);
         }
 
         public static string GUIDToAssetPath(GUID guid) => GUIDToAssetPath(guid.ToString());
 
-        public static string AssetPathToGUID(string path)
+        public static string AssetPathToGUID(string path) => AssetPathToGUID(path, AssetPathToGUIDOptions.IncludeRecentlyDeletedAssets);
+
+        /// <summary>The asset's GUID; by default also a recently deleted asset's
+        /// (<see cref="AssetPathToGUIDOptions.IncludeRecentlyDeletedAssets"/>).</summary>
+        public static string AssetPathToGUID(string path, AssetPathToGUIDOptions options)
+        {
+            var guid = ExistingGuid(path);
+            return guid.Length > 0 || options == AssetPathToGUIDOptions.OnlyExistingAssets ? guid : DeletedGuid(path?.Replace('\\', '/'));
+        }
+
+        static string ExistingGuid(string path)
         {
             if (SettingsAssets.AtPath(path) is SettingsFile settings) return settings.Guid;
             _ = Entries;
             return path != null && s_ByPath.TryGetValue(path.Replace('\\', '/'), out var e) ? e.Guid : "";
         }
-
-        public static string AssetPathToGUID(string path, AssetPathToGUIDOptions options) => AssetPathToGUID(path);
 
         public static GUID GUIDFromAssetPath(string path) => new GUID(AssetPathToGUID(path));
 
@@ -311,29 +319,13 @@ namespace UnityEditor
         /// <summary>The labels the asset's .meta lists.</summary>
         public static string[] GetLabels(Object obj) => (string[])(EntryOf(obj)?.Labels ?? Array.Empty<string>()).Clone();
 
-        /// <summary>Changes the labels for this session; Unbound does not write .meta files.</summary>
-        public static void SetLabels(Object obj, string[] labels)
-        {
-            var e = EntryOf(obj);
-            if (e != null) e.Labels = labels?.Distinct().ToArray() ?? Array.Empty<string>();
-        }
-
-        public static void ClearLabels(Object obj) => SetLabels(obj, Array.Empty<string>());
-
-        // Refresh imports what changed on disk; the asset list follows the project's own scan
-        // (Unbound's watcher), so there is nothing to drop here: Unity's Refresh is cheap when
-        // nothing changed, and editor code calls it often.
-        [Unbound.EditorFaithful("the asset list follows Unbound's project watcher: nothing is left to import")]
-        public static void Refresh() { }
-
-        [Unbound.EditorFaithful("the asset list follows Unbound's project watcher: nothing is left to import")]
-        public static void Refresh(ImportAssetOptions options) { }
-
-        /// <summary>Writes edited settings assets (in Edit mode, as the Editor) and the files of dirty
-        /// assets (<see cref="AssetFiles"/>).</summary>
+        /// <summary>Writes edited settings assets (in Edit mode, as the Editor), the assets
+        /// CreateAsset made whose objects changed (in both modes, as the Editor) and the files of
+        /// the other dirty assets (<see cref="AssetFiles"/>).</summary>
         public static void SaveAssets()
         {
             SettingsAssets.Save();
+            SaveCreated();
             AssetFiles.SaveDirty();
         }
 
@@ -349,11 +341,6 @@ namespace UnityEditor
             if (!string.IsNullOrEmpty(path)) SaveAssetIfDirty(LoadMainAssetAtPath(path));
         }
 
-        [Unbound.EditorFaithful("Unbound imports nothing on demand, so there is no import batch to hold back")]
-        public static void StartAssetEditing() { }
-
-        [Unbound.EditorFaithful("Unbound imports nothing on demand, so there is no import batch to hold back")]
-        public static void StopAssetEditing() { }
 
         public static void ImportAsset(string path) => ImportAsset(path, ImportAssetOptions.Default);
 
@@ -364,6 +351,14 @@ namespace UnityEditor
         /// imported.during). A loaded asset is not imported again.</summary>
         public static void ImportAsset(string path, ImportAssetOptions options)
         {
+            // A file or folder the database does not list yet is imported: its .meta written
+            // (tests/projects/projectwrites 02.import).
+            var normalized = path?.Replace('\\', '/').TrimEnd('/');
+            if (!string.IsNullOrEmpty(normalized) && ExistingGuid(normalized).Length == 0 && Exists(normalized))
+            {
+                ImportNew(normalized);
+                return;
+            }
             if ((options & ImportAssetOptions.ForceUpdate) != 0)
             {
                 if (VisualEffectImports.Reimport(path)) return;

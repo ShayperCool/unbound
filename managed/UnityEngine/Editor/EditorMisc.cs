@@ -277,6 +277,19 @@ namespace UnityEditor
             if (assertUnsupportedPlatforms) Debug.LogError($"Unable to find the playback engine of {target}: its module is not installed.");
             return "";
         }
+
+        /// <summary>Whether this installation builds the target: the Editor's own standalone
+        /// player always, another platform when its support module is installed (the
+        /// installation's fact, as BuildPlatforms reads it).</summary>
+        public static bool IsBuildTargetSupported(BuildTargetGroup buildTargetGroup, BuildTarget target)
+        {
+            var host = OperatingSystem.IsMacOS() ? BuildTarget.StandaloneOSX
+                : OperatingSystem.IsWindows() ? BuildTarget.StandaloneWindows64
+                : BuildTarget.StandaloneLinux64;
+            if (target == host) return true;
+            var directory = GetPlaybackEngineDirectory(target, BuildOptions.None, false);
+            return directory.Length > 0 && Directory.Exists(directory);
+        }
     }
 
     [global::System.@ObsoleteAttribute("PrefabType no longer tells everything about Prefab instance.")] public enum PrefabType
