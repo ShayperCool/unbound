@@ -190,17 +190,28 @@ public sealed partial class CompilerService
             using var peStream = new MemoryStream();
             using var pdbStream = new MemoryStream();
             using var refStream = new MemoryStream();
-            var failedStage = FailedEarlyStage(compilation);
-            var emit = failedStage != null ? null : compilation.Emit(
-                peStream,
-                pdbStream,
-                metadataPEStream: refStream,
-                options: new EmitOptions(
-                    debugInformationFormat: DebugInformationFormat.PortablePdb,
-                    // The name the PDB is stored under next to the DLL, where the runtime looks for
-                    // the symbols of stack traces.
-                    pdbFilePath: key + ".pdb",
-                    includePrivateMembers: false));
+            EmitResult? Emit(CSharpCompilation c, out IReadOnlyList<Diagnostic>? early)
+            {
+                early = FailedEarlyStage(c);
+                if (early != null) return null;
+                peStream.SetLength(0);
+                pdbStream.SetLength(0);
+                refStream.SetLength(0);
+                return c.Emit(
+                    peStream,
+                    pdbStream,
+                    metadataPEStream: refStream,
+                    options: new EmitOptions(
+                        debugInformationFormat: DebugInformationFormat.PortablePdb,
+                        // The name the PDB is stored under next to the DLL, where the runtime looks
+                        // for the symbols of stack traces.
+                        pdbFilePath: key + ".pdb",
+                        includePrivateMembers: false));
+            }
+            var emit = Emit(compilation, out var failedStage);
+            if ((emit == null || !emit.Success) && spec.UpdatesMovedTypes
+                && MovedTypes.Update(compilation, failedStage ?? emit!.Diagnostics) is { } updated)
+                emit = Emit(updated, out failedStage);
             foreach (var option in commandLine.Ignored)
             {
                 result.Warnings++;

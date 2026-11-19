@@ -55,6 +55,9 @@ public sealed class AssemblySpec
     /// <summary>Compiled with optimizations (<c>/optimize+</c>): the Editor's Release code
     /// optimization, or a package that cannot be edited.</summary>
     public bool Optimize { get; set; }
+    /// <summary>A package the Editor keeps in its package cache, whose sources its script updater
+    /// rewrites without asking (<see cref="MovedTypes"/>).</summary>
+    public bool UpdatesMovedTypes { get; set; }
     /// <summary>The response file's arguments (<c>csc.rsp</c>), after the request's own options;
     /// its references are among <see cref="Plugins"/>.</summary>
     public List<string> ResponseArguments { get; set; } = new();

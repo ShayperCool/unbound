@@ -1,0 +1,111 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Runtime.Loader;
+using Unbound.Compiler;
+using Xunit;
+
+namespace Unbound.ApiTools.Tests;
+
+/// <summary>A package in the Editor's package cache that names types by where they moved from
+/// compiles against them where they are now, as the Editor's script updater rewrites it
+/// (Unity 6000.0.71f1, tests/projects/compilesetup <c>call.converter</c>); other assemblies, types
+/// that do not update automatically and assemblies outside "Unity*" are left failing.</summary>
+public class MovedTypesTests
+{
+    const string Attribute = @"
+namespace UnityEngine.Scripting.APIUpdating
+{
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public class MovedFromAttribute : System.Attribute
+    {
+        public MovedFromAttribute(bool autoUpdateAPI, string sourceNamespace = null, string sourceAssembly = null, string sourceClassName = null) { }
+    }
+}
+";
+    const string Target = @"
+using UnityEngine.Scripting.APIUpdating;
+namespace New.Space
+{
+    [MovedFrom(true, ""Old.Space"")] public class Moved { public static string Where() => typeof(Moved).FullName; }
+    [MovedFrom(true, ""Old.Space"", null, ""OldName"")] public class Renamed { }
+    [MovedFrom(true, ""Old.Space"")] public class Box<T> { }
+    [MovedFrom(false, ""Old.Space"")] public class Manual { }
+}
+namespace Old.Space { public class Stays { } }
+";
+    const string Consumer = @"
+using O = Old.Space;
+using Old.Space;
+public static class Consumer
+{
+    public static string Aliased() => typeof(O.Moved).FullName;
+    public static string Called() => Old.Space.Moved.Where();
+    public static string Renamed() => typeof(OldName).FullName;
+    public static string Generic() => typeof(Box<int>).Name;
+}
+";
+
+    static CompileRequest Setup(string root, string targetName, string consumer, bool updates)
+    {
+        File.WriteAllText(Path.Combine(root, "Attribute.cs"), Attribute);
+        File.WriteAllText(Path.Combine(root, "Target.cs"), Target);
+        File.WriteAllText(Path.Combine(root, "Consumer.cs"), consumer);
+        var request = new CompileRequest { CacheDir = Path.Combine(root, "cache"), LanguageVersion = "latest" };
+        request.BclReferences.AddRange(((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator));
+        request.Assemblies.Add(new AssemblySpec { Name = targetName, Sources = { Path.Combine(root, "Attribute.cs"), Path.Combine(root, "Target.cs") } });
+        request.Assemblies.Add(new AssemblySpec
+        {
+            Name = "Package",
+            Sources = { Path.Combine(root, "Consumer.cs") },
+            References = { targetName },
+            UpdatesMovedTypes = updates,
+        });
+        return request;
+    }
+
+    [Fact]
+    public void APackageNamingMovedTypesByTheirOldPlaceCompilesAgainstTheirNewOne()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var results = new CompilerService().Compile(Setup(root, "Unity.Moved.Target", Consumer, updates: true)).Assemblies;
+            var package = results.Single(a => a.Name == "Package");
+            Assert.All(results, r => Assert.True(r.Status != "failed" || r.Name == "Package", r.Name + ": " + string.Join("\n", r.Errors.Select(e => e.Message))));
+            Assert.True(package.Status == "compiled", string.Join("\n", package.Errors.Select(e => e.Line + ":" + e.Column + " " + e.Message)));
+            var context = new AssemblyLoadContext("moved-types", isCollectible: true);
+            try
+            {
+                context.LoadFromAssemblyPath(results.Single(a => a.Name == "Unity.Moved.Target").Dll!);
+                var consumer = context.LoadFromAssemblyPath(package.Dll!).GetType("Consumer")!;
+                string Call(string method) => (string)consumer.GetMethod(method)!.Invoke(null, null)!;
+                Assert.Equal("New.Space.Moved", Call("Aliased"));
+                Assert.Equal("New.Space.Moved", Call("Called"));
+                Assert.Equal("New.Space.Renamed", Call("Renamed"));
+                Assert.Equal("Box`1", Call("Generic"));
+            }
+            finally { context.Unload(); }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    // An assembly outside the package cache: the Editor asks before it changes such files.
+    [InlineData("Unity.Moved.Target", false, "public static class C { static object M() => typeof(Old.Space.Moved); }")]
+    // A type that does not update automatically.
+    [InlineData("Unity.Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Manual); }")]
+    // Moved types of assemblies whose name does not start with "Unity" are not considered.
+    [InlineData("Moved.Target", true, "public static class C { static object M() => typeof(Old.Space.Moved); }")]
+    public void OtherwiseTheNameStaysMissing(string targetName, bool updates, string consumer)
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var package = new CompilerService().Compile(Setup(root, targetName, consumer, updates)).Assemblies.Single(a => a.Name == "Package");
+            Assert.Equal("failed", package.Status);
+            Assert.Contains(package.Errors, e => e.Id == "CS0234");
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+}

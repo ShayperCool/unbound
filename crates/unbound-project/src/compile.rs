@@ -48,6 +48,10 @@ pub struct AssemblySpec {
     pub skip_code_gen: bool,
     /// Compiled with optimizations (`/optimize+`).
     pub optimize: bool,
+    /// A package the Editor keeps in its package cache: when such an assembly fails to compile
+    /// for a type it names by a place the type moved from, the Editor's script updater rewrites
+    /// the sources without asking (see `MovedTypes` in the compiler service).
+    pub updates_moved_types: bool,
     /// The response file's arguments, after the request's own options (its references are
     /// among `plugins`, those with an alias in `aliased_references`).
     pub response_arguments: Vec<String>,
@@ -282,6 +286,12 @@ impl Project {
             })
             .map(|p| p.root.as_path())
             .collect();
+        let in_package_cache = |a: &crate::ScriptAssembly| {
+            !a.sources.is_empty()
+                && a.sources
+                    .iter()
+                    .all(|s| immutable.iter().any(|root| s.file.starts_with(root)))
+        };
         let assemblies = graph
             .assemblies
             .iter()
@@ -312,11 +322,8 @@ impl Project {
                 editor_only: a.editor_only,
                 net_standard: a.net_standard,
                 skip_code_gen: self.profile.data.skip_code_gen.iter().any(|s| *s == a.name),
-                optimize: optimization == CodeOptimization::Release
-                    || (!a.sources.is_empty()
-                        && a.sources
-                            .iter()
-                            .all(|s| immutable.iter().any(|root| s.file.starts_with(root)))),
+                optimize: optimization == CodeOptimization::Release || in_package_cache(a),
+                updates_moved_types: in_package_cache(a),
                 response_arguments: a
                     .response_file
                     .as_ref()
