@@ -77,12 +77,15 @@ static class MovedTypes
         };
         if (qualifier != null)
         {
-            // Bound as a namespace or type name: in an expression that does not compile, the
-            // qualifier itself is not bound.
-            var symbol = model.GetSpeculativeSymbolInfo(qualifier.SpanStart, SyntaxFactory.ParseName(qualifier.ToString()),
-                SpeculativeBindingOption.BindAsTypeOrNamespace).Symbol;
-            if (symbol is IAliasSymbol alias) symbol = alias.Target;
-            return (name.Parent!, symbol is INamespaceSymbol ns ? new[] { ns.ToDisplayString() } : Array.Empty<string>());
+            // A namespace named through an alias, else by its name, which may be relative to the
+            // enclosing namespaces.
+            if (qualifier is IdentifierNameSyntax id
+                && model.GetSpeculativeAliasInfo(qualifier.SpanStart, id, SpeculativeBindingOption.BindAsTypeOrNamespace) is { Target: INamespaceSymbol target })
+                return (name.Parent!, new[] { target.ToDisplayString() });
+            var written = qualifier.ToString().Replace("global::", "");
+            var qualified = new List<string> { written };
+            qualified.AddRange(name.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Select(n => n.Name + "." + written));
+            return (name.Parent!, qualified);
         }
         var places = new List<string>();
         foreach (var node in name.Ancestors())

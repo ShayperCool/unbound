@@ -204,7 +204,7 @@ public sealed partial class CompilerService
                     options: new EmitOptions(
                         debugInformationFormat: DebugInformationFormat.PortablePdb,
                         // The name the PDB is stored under next to the DLL, where the runtime looks
-                        // for the symbols of stack traces.
+                        // for the file and line information of stack traces.
                         pdbFilePath: key + ".pdb",
                         includePrivateMembers: false));
             }
