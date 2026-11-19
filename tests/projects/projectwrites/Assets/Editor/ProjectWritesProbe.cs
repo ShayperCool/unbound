@@ -143,6 +143,7 @@ public static class ProjectWritesProbe
             Put(step + "." + path + ".platforms", string.Join(",", s_Platforms) == string.Join(",", Installed()) ? "the installed modules" : "differ: " + string.Join(",", s_Platforms));
     }
 
+    // The same list and entry pattern as tests/projects/assetpostprocessors (PostprocessorProbe.cs); keep them in step.
     /// <summary>The platform modules of this Editor installation, in the build settings' order,
     /// by the names texture settings give them.</summary>
     static IEnumerable<string> Installed()
