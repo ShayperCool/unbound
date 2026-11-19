@@ -233,7 +233,7 @@ namespace Unbound.UIElements
                         if (values[j].IsVarFunction()) ok = ResolveVar(m_Sheet, values, ref j, resolved, new Stack<string>(), true) == Result.Valid;
                         else resolved.Add(new UssValue { sheet = m_Sheet, handle = values[j] });
                     }
-                    if (ok && resolved.Count > 0 && ColorsFit(p.name, resolved))
+                    if (ok && resolved.Count > 0 && UnityEngine.UIElements.StyleSheets.UssValidation.Fits(p.name, new ResolvedParts(resolved)))
                     {
                         m_Values.AddRange(resolved);
                         count = resolved.Count;
@@ -254,42 +254,60 @@ namespace Unbound.UIElements
             SetCurrent();
         }
 
-        /// <summary>The properties whose values are colours alone.</summary>
-        static readonly HashSet<string> s_ColorProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "color", "background-color", "border-color", "border-top-color", "border-right-color",
-            "border-bottom-color", "border-left-color", "-unity-background-image-tint-color", "-unity-text-outline-color",
-        };
-
-        /// <summary>The properties that mix a colour with lengths.</summary>
-        static readonly HashSet<string> s_MixedColorProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "text-shadow", "-unity-text-outline",
-        };
-
         /// <summary>
-        /// Whether values a var() gave fit the property's colours: a colour property takes colours,
-        /// colour names and keywords only, and other properties no colour. A value that does not
-        /// fit makes the declaration `unset`, as an unresolvable variable does: a length in
-        /// border-color or color and a colour in border-left-width; a named colour (white,
-        /// transparent) and a var() fallback apply (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/toolapis uss). Other mismatched types are unmeasured and read as before.
+        /// Values a var() gave are checked against the property's syntax by their types; values
+        /// that do not fit make the declaration `unset`, as an unresolvable variable does (matches the
+        /// Unity 6000.0.71f1 Editor: tests/projects/toolapis uss, a length in a colour property and a
+        /// colour in a width; tests/projects/ussvalidation var-fallback, a fallback word for a length).
         /// </summary>
-        static bool ColorsFit(string property, List<UssValue> values)
+        sealed class ResolvedParts : UnityEngine.UIElements.StyleSheets.UssValidation.IParts
         {
-            if (property.StartsWith("--", StringComparison.Ordinal) || s_MixedColorProperties.Contains(property)) return true;
-            bool colorProperty = s_ColorProperties.Contains(property);
-            foreach (var v in values)
-            {
-                var type = v.handle.valueType;
-                if (colorProperty ? type != StyleValueType.Color && type != StyleValueType.Keyword && !IsColorName(v) : type == StyleValueType.Color)
-                    return false;
-            }
-            return true;
-        }
+            readonly List<UssValue> m_Values;
+            internal ResolvedParts(List<UssValue> values) => m_Values = values;
+            public int Count => m_Values.Count;
+            public string Text(int index) => m_Values[index].sheet.ReadAsString(m_Values[index].handle);
+            public bool IsVariable(int index) => false;
+            public bool IsComma(int index) => m_Values[index].handle.valueType == StyleValueType.CommaSeparator;
 
-        static bool IsColorName(UssValue v) =>
-            v.handle.valueType == StyleValueType.Enum && StyleProperties.TryGetColor(v.sheet.ReadAsString(v.handle).ToLowerInvariant(), out _);
+            public bool Keyword(int index, string keyword)
+            {
+                var v = m_Values[index];
+                if (v.handle.valueType == StyleValueType.Keyword)
+                    return ((StyleValueKeyword)v.handle.valueIndex).ToString().ToLowerInvariant() == keyword.ToLowerInvariant();
+                return v.handle.valueType == StyleValueType.Enum && v.sheet.ReadEnum(v.handle) == keyword.ToLowerInvariant();
+            }
+
+            public bool Data(int index, string type)
+            {
+                var v = m_Values[index];
+                var t = v.handle.valueType;
+                switch (type)
+                {
+                    case "number":
+                    case "integer":
+                        return t == StyleValueType.Float;
+                    case "length":
+                    case "percentage":
+                        if (t == StyleValueType.Float) return Mathf.Approximately(0f, v.sheet.ReadFloat(v.handle));
+                        return t == StyleValueType.Dimension && v.sheet.ReadDimension(v.handle).unit == (type == "length" ? Dimension.Unit.Pixel : Dimension.Unit.Percent);
+                    case "time":
+                        return t == StyleValueType.Dimension && v.sheet.ReadDimension(v.handle).unit is Dimension.Unit.Second or Dimension.Unit.Millisecond;
+                    case "angle":
+                        if (t == StyleValueType.Float) return Mathf.Approximately(0f, v.sheet.ReadFloat(v.handle));
+                        return t == StyleValueType.Dimension && v.sheet.ReadDimension(v.handle).unit is Dimension.Unit.Degree or Dimension.Unit.Gradian or Dimension.Unit.Radian or Dimension.Unit.Turn;
+                    case "color":
+                        return t == StyleValueType.Color || t == StyleValueType.Enum && StyleProperties.TryGetColor(v.sheet.ReadAsString(v.handle).ToLowerInvariant(), out _);
+                    case "resource":
+                        return t == StyleValueType.ResourcePath;
+                    case "url":
+                        return t == StyleValueType.AssetReference || t == StyleValueType.ScalableImage;
+                    case "custom-ident":
+                        return t == StyleValueType.Enum && UnityEngine.UIElements.StyleSheets.UssValidation.IsCustomIdent(v.sheet.ReadAsString(v.handle));
+                    default:
+                        return false;
+                }
+            }
+        }
 
         enum Result { Valid, Invalid, NotFound }
 
@@ -563,6 +581,8 @@ namespace Unbound.UIElements
             }
         }
 
+        const string WarningIcon = "d_console.warnicon";
+
         public Background ReadBackground(int index)
         {
             var v = GetValue(index);
@@ -571,7 +591,13 @@ namespace Unbound.UIElements
                 if (v.handle.valueIndex != (int)StyleValueKeyword.None) Debug.LogWarning("Invalid keyword for image source " + (StyleValueKeyword)v.handle.valueIndex);
                 return default;
             }
-            if (!TryGetImage(v, dpiScaling, out var image)) return default;
+            // An image the value does not give is the Editor's warning icon (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/ussvalidation url-bad).
+            if (!TryGetImage(v, dpiScaling, out var image))
+            {
+                var icon = UnityEditor.EditorIcons.LoadNamed(WarningIcon);
+                return icon != null ? Background.FromTexture2D(icon) : default;
+            }
             return image;
         }
 

@@ -899,7 +899,9 @@ namespace UnityEngine.UIElements
         public StylePropertyName(string name)
         {
             id = Unbound.UIElements.StyleProperties.IdOf(name);
-            this.name = id != StyleSheets.StylePropertyId.Unknown || !string.IsNullOrEmpty(name) ? name : null;
+            // A name that is not a style property's is none (as the release's constructor has it:
+            // tests/projects/ussvalidation trans-prop).
+            this.name = id != StyleSheets.StylePropertyId.Unknown ? name : null;
         }
 
         public static bool IsNullOrEmpty(StylePropertyName propertyName) => propertyName.id == StyleSheets.StylePropertyId.Unknown;

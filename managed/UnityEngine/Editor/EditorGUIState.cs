@@ -774,6 +774,14 @@ namespace UnityEditor
             }
         }
 
+        /// <summary>The icon of exactly this name (a skin's prefix included), or null.</summary>
+        internal static Texture2D LoadNamed(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !Names.Contains(name)) return null;
+            if (!s_Loaded.TryGetValue(name, out var tex)) s_Loaded[name] = tex = new Texture2D(1, 1) { name = name };
+            return tex;
+        }
+
         internal static Texture2D Load(string name, bool logError)
         {
             if (string.IsNullOrEmpty(name)) return null;

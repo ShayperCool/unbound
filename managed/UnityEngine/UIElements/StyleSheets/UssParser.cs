@@ -25,6 +25,21 @@ namespace Unbound.UIElements
         readonly string m_AssetPath;
         readonly List<string> m_Errors = new List<string>();
         readonly List<string> m_Warnings = new List<string>();
+        /// <summary>The errors and warnings in the order the importer met them, as it logs them.</summary>
+        readonly List<(bool Error, string Text)> m_Log = new List<(bool, string)>();
+        bool m_ParseFailed;
+
+        void Error(string text)
+        {
+            m_Errors.Add(text);
+            m_Log.Add((true, text));
+        }
+
+        void Warning(string text)
+        {
+            m_Warnings.Add(text);
+            m_Log.Add((false, text));
+        }
 
         readonly List<float> m_Floats = new List<float>();
         readonly List<Dimension> m_Dimensions = new List<Dimension>();
@@ -60,8 +75,12 @@ namespace Unbound.UIElements
             }
             catch (UssSyntaxException e)
             {
-                m_Errors.Add($"{m_AssetPath} (line {m_Line}): USS parsing error: {e.Message}");
+                Error($"{m_AssetPath} (line {m_Line}): error: USS parsing error: {e.Message}");
+                m_ParseFailed = true;
             }
+            // A sheet the parser cannot read reports that alone: nothing of it is checked (matches
+            // the Unity 6000.0.71f1 Editor, tests/projects/ussvalidation Broken.uss).
+            if (m_ParseFailed) m_Log.RemoveAll(entry => !entry.Error);
             if (m_Errors.Count == 0)
             {
                 asset.floats = m_Floats.ToArray();
@@ -90,8 +109,11 @@ namespace Unbound.UIElements
             asset.contentHash = Encoding.UTF8.GetByteCount(m_Text) == 0 ? 0 : StableHash(m_Text);
             asset.importedWithErrors = m_Errors.Count > 0;
             asset.importedWithWarnings = m_Warnings.Count > 0;
-            foreach (var e in m_Errors) Debug.LogError(e);
-            foreach (var w in m_Warnings) Debug.LogWarning(w);
+            foreach (var (error, message) in m_Log)
+            {
+                if (error) Debug.LogError(message);
+                else Debug.LogWarning(message);
+            }
         }
 
         static int StableHash(string s)
@@ -182,7 +204,7 @@ namespace Unbound.UIElements
                 }
                 if (Cur == ';') Advance();
                 StyleSheet imported = resolveImport?.Invoke(href);
-                if (imported == null) m_Warnings.Add($"{m_AssetPath} (line {m_Line}): could not resolve @import {href}");
+                if (imported == null) Warning($"{m_AssetPath} (line {m_Line}): could not resolve @import {href}");
                 m_Imports.Add(new StyleSheet.ImportStruct { styleSheet = imported, mediaQueries = media.ToArray() });
                 return;
             }
@@ -195,7 +217,7 @@ namespace Unbound.UIElements
                 else if (Cur == ';' && depth == 0) { Advance(); return; }
                 Advance();
             }
-            m_Warnings.Add($"{m_AssetPath}: unsupported at-rule @{name} (from offset {start}) ignored");
+            Warning($"{m_AssetPath}: unsupported at-rule @{name} (from offset {start}) ignored");
         }
 
         void ParseRule()
@@ -248,7 +270,7 @@ namespace Unbound.UIElements
                 if (Cur == ';') Advance();
                 var property = new StyleProperty { name = name, line = propLine };
                 m_Values = new List<StyleValueHandle>();
-                ParseValue(valueText, propLine, name);
+                ParseValue(valueText, propLine, name, validate: true);
                 property.values = m_Values.ToArray();
                 properties.Add(property);
             }
@@ -422,12 +444,12 @@ namespace Unbound.UIElements
             {
                 if (!ParseSimpleSelector(compound, out var parts) || Array.Exists(parts, p => p.type == StyleSelectorType.Unknown))
                 {
-                    m_Errors.Add($"{m_AssetPath} (line {m_Line}): Unsupported selector format: '{compound}'");
+                    Error($"{m_AssetPath} (line {m_Line}): Unsupported selector format: '{compound}'");
                     return;
                 }
                 if (Array.Exists(parts, p => p.type == StyleSelectorType.RecursivePseudoClass))
                 {
-                    m_Errors.Add($"{m_AssetPath} (line {m_Line}): Recursive selector detected: '{compound}'");
+                    Error($"{m_AssetPath} (line {m_Line}): Recursive selector detected: '{compound}'");
                     return;
                 }
                 selectors.Add(new StyleSelector { parts = parts, previousRelationship = previous });
@@ -585,12 +607,75 @@ namespace Unbound.UIElements
             return terms;
         }
 
-        void ParseValue(string text, int line, string propertyName)
+        void ParseValue(string text, int line, string propertyName, bool validate = false)
         {
             int i = 0;
             var terms = Lex(text, ref i, false);
+            if (validate) Validate(propertyName, ValueText(terms), line);
             foreach (var term in terms) VisitTerm(term, line, propertyName);
         }
+
+        /// <summary>The declaration checked against its property's syntax (UssValidation): a
+        /// warning with the declaration and a hint; the declaration stays (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/ussvalidation).</summary>
+        void Validate(string propertyName, string value, int line)
+        {
+            var result = UssValidation.Validate(propertyName, value);
+            if (result is not { Ok: false } r) return;
+            var text = $"{m_AssetPath} (line {line}): warning: {r.Message}\n    {propertyName}: {value}";
+            if (!string.IsNullOrEmpty(r.Hint)) text += " -> " + r.Hint;
+            Warning(text);
+        }
+
+        static string FormatNumber(float f) => Unbound.MonoNumberFormat.Format(f, null, CultureInfo.InvariantCulture);
+
+        /// <summary>A value as Unity's importer writes it for its messages: terms apart by a space, a
+        /// comma and the term after it by ", ", a function's arguments by a bare comma, a number with
+        /// the units USS knows (an unknown unit is left out).</summary>
+        static string ValueText(List<Term> terms)
+        {
+            var sb = new StringBuilder();
+            for (int k = 0; k < terms.Count; k++)
+            {
+                var t = terms[k];
+                if (t.Kind == TermKind.Comma) { sb.Append(','); continue; }
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(TermText(t));
+            }
+            return sb.ToString();
+        }
+
+        static string TermText(Term t)
+        {
+            switch (t.Kind)
+            {
+                case TermKind.Number:
+                    return FormatNumber(t.Number) + (Array.IndexOf(s_Units, t.Unit) >= 0 ? t.Unit : "");
+                case TermKind.Hash:
+                    return "#" + t.Text;
+                case TermKind.String:
+                    return "\"" + t.Text + "\"";
+                case TermKind.Url:
+                    return "url(" + t.Text + ")";
+                case TermKind.Function:
+                {
+                    var sb = new StringBuilder(t.Text).Append('(');
+                    bool first = true;
+                    foreach (var a in t.Args ?? new List<Term>())
+                    {
+                        if (a.Kind == TermKind.Comma) { sb.Append(','); first = true; continue; }
+                        if (!first) sb.Append(' ');
+                        sb.Append(TermText(a));
+                        first = false;
+                    }
+                    return sb.Append(')').ToString();
+                }
+                default:
+                    return t.Text;
+            }
+        }
+
+        static readonly string[] s_Units = { "", "px", "%", "s", "ms", "deg", "grad", "rad", "turn" };
 
         static readonly Dictionary<string, StyleValueKeyword> s_Keywords = BuildKeywords();
 
@@ -621,7 +706,9 @@ namespace Unbound.UIElements
                         case "rad": AddDimension(new Dimension(term.Number, Dimension.Unit.Radian)); return;
                         case "turn": AddDimension(new Dimension(term.Number, Dimension.Unit.Turn)); return;
                     }
-                    m_Errors.Add($"{m_AssetPath} (line {line}): Unsupported unit: '{Unbound.MonoNumberFormat.Format(term.Number, null, CultureInfo.InvariantCulture)}{term.Unit}'");
+                    // As Unity's importer has the value: the number alone (matches the Unity 6000.0.71f1
+                    // Editor, tests/projects/ussvalidation errors-*).
+                    Error($"{m_AssetPath} (line {line}): error: Unsupported unit: '{FormatNumber(term.Number)}'");
                     return;
                 case TermKind.Ident:
                     if (term.Text == "inherit") { AddKeyword(StyleValueKeyword.Inherit); return; }
@@ -634,7 +721,8 @@ namespace Unbound.UIElements
                     return;
                 case TermKind.Hash:
                     if (TryHexColor(term.Text, out var color)) { AddColor(color); return; }
-                    m_Errors.Add($"{m_AssetPath} (line {line}): USS parsing error: invalid color #{term.Text}");
+                    Error($"{m_AssetPath} (line {line}): error: USS parsing error: An unexpected error occurred.");
+                    m_ParseFailed = true;
                     return;
                 case TermKind.Url:
                     VisitUrl(term.Text, line, propertyName);
@@ -643,7 +731,7 @@ namespace Unbound.UIElements
                     VisitFunction(term, line, propertyName);
                     return;
             }
-            m_Errors.Add($"{m_AssetPath} (line {line}): Unsupported term: '{term.Text}'");
+            Error($"{m_AssetPath} (line {line}): Unsupported term: '{term.Text}'");
         }
 
         static bool TryHexColor(string hex, out Color color)
@@ -693,7 +781,7 @@ namespace Unbound.UIElements
             {
                 if (args.Count == 0 || (args[0].Kind != TermKind.String && args[0].Kind != TermKind.Ident))
                 {
-                    m_Errors.Add($"{m_AssetPath} (line {line}): Missing function argument: resource");
+                    Error($"{m_AssetPath} (line {line}): Missing function argument: resource");
                     return;
                 }
                 AddString(args[0].Text, StyleValueType.ResourcePath);
@@ -701,7 +789,7 @@ namespace Unbound.UIElements
             }
             if (args.Count == 0)
             {
-                m_Errors.Add($"{m_AssetPath} (line {line}): Missing function argument: {term.Text}");
+                Error($"{m_AssetPath} (line {line}): Missing function argument: {term.Text}");
                 return;
             }
             StyleValueFunction function;
@@ -711,7 +799,7 @@ namespace Unbound.UIElements
                 case "env": function = StyleValueFunction.Env; break;
                 case "linear-gradient": function = StyleValueFunction.LinearGradient; break;
                 default:
-                    m_Warnings.Add($"{m_AssetPath} (line {line}): Unknown function {term.Text} in property {propertyName}");
+                    Warning($"{m_AssetPath} (line {line}): warning: Unknown function '{term.Text}' in declaration '{propertyName}: {term.Text}'");
                     return;
             }
             if (function == StyleValueFunction.Var && !ValidVar(args, line)) return;
@@ -725,22 +813,22 @@ namespace Unbound.UIElements
             var first = args[0];
             if (first.Kind != TermKind.Ident || string.IsNullOrEmpty(first.Text))
             {
-                m_Errors.Add($"{m_AssetPath} (line {line}): var() needs a variable name");
+                Error($"{m_AssetPath} (line {line}): var() needs a variable name");
                 return false;
             }
             if (!first.Text.StartsWith("--", StringComparison.Ordinal) || first.Text.Length < 3)
             {
-                m_Errors.Add($"{m_AssetPath} (line {line}): invalid variable name '{first.Text}'");
+                Error($"{m_AssetPath} (line {line}): error: Variable '{first.Text}' is missing '--' prefix");
                 return false;
             }
             if (args.Count > 1 && args[1].Kind != TermKind.Comma)
             {
-                m_Errors.Add($"{m_AssetPath} (line {line}): unexpected token in var()");
+                Error($"{m_AssetPath} (line {line}): unexpected token in var()");
                 return false;
             }
             if (args.Count == 2)
             {
-                m_Errors.Add($"{m_AssetPath} (line {line}): empty function argument in var()");
+                Error($"{m_AssetPath} (line {line}): empty function argument in var()");
                 return false;
             }
             return true;
@@ -752,7 +840,7 @@ namespace Unbound.UIElements
             if (obj == null)
             {
                 AddString(url, StyleValueType.MissingAssetReference);
-                m_Warnings.Add($"{m_AssetPath} (line {line}): Invalid asset path: '{url}'");
+                Warning($"{m_AssetPath} (line {line}): Invalid asset path: '{url}'");
                 return;
             }
             AddAsset(obj);
