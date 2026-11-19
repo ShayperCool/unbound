@@ -176,7 +176,8 @@ def compare_file(reference, actual, path):
     matcher = difflib.SequenceMatcher(a=ref_t.split('\n'), b=mapped.split('\n'), autojunk=False)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag != 'equal':
-            out.append(f'lines {i1 + 1}-{i2}: reference {matcher.a[i1:i2]!r}, actual {matcher.b[j1:j2]!r}')
+            where = f'lines {i1 + 1}-{i2}' if i2 > i1 else f'after line {i1}'
+            out.append(f'{where}: reference {matcher.a[i1:i2]!r}, actual {matcher.b[j1:j2]!r}')
     return '; '.join(out)
 
 
