@@ -21,6 +21,8 @@ namespace UnityEngine
         const int TileBytes = 65536;
 
         Texture2D m_Tiles;
+        /// <summary>The texels are 8-bit RGBA: the tiles are the texture's pixels.</summary>
+        bool m_Rgba8;
 
         GraphicsFormat m_GraphicsFormat;
         int m_TileWidth, m_TileHeight;
@@ -127,11 +129,21 @@ namespace UnityEngine
                 wrapModeV = wrapModeV,
                 anisoLevel = anisoLevel,
             };
-            // Every tile starts unloaded: zero.
-            for (int mip = 0; mip < m_Tiles.mipmapCount; mip++)
+            // Every tile starts unloaded: zero. A texture of 8-bit RGBA texels keeps them as its
+            // pixels, which an update sends as they are (no copy of the texture per update).
+            m_Rgba8 = texel == 4 && !GraphicsFormatUtility.IsHDRFormat(format) && GraphicsFormatUtility.GetComponentCount(format) == 4;
+            if (m_Rgba8)
             {
-                var pixels = m_Tiles.GetPixelData<byte>(mip);
-                for (int i = 0; i < pixels.Length; i++) pixels[i] = 0;
+                for (int mip = 0; mip < m_Tiles.mipmapCount; mip++)
+                    m_Tiles.SetPixels32(new Color32[Math.Max(1, width >> mip) * Math.Max(1, height >> mip)], mip);
+            }
+            else
+            {
+                for (int mip = 0; mip < m_Tiles.mipmapCount; mip++)
+                {
+                    var pixels = m_Tiles.GetPixelData<byte>(mip);
+                    for (int i = 0; i < pixels.Length; i++) pixels[i] = 0;
+                }
             }
             Changed();
         }
@@ -141,7 +153,8 @@ namespace UnityEngine
 
         /// <summary>Sends the texture with its changed tiles, under its handle (materials and
         /// globals that hold it see them, and every later draw does, in order). The whole texture
-        /// is sent: the renderer has no upload of a part of a texture yet.</summary>
+        /// is sent: the renderer has no upload of a part of a texture yet. 8-bit RGBA texels of
+        /// one mip go as they are; other formats and mip chains are copied for the send.</summary>
         void Changed() => m_Tiles.Apply(false, false);
 
         internal override void OnSamplerChanged()
@@ -184,9 +197,24 @@ namespace UnityEngine
             if (!TileRect(tileX, tileY, miplevel, out int x, out int y, out int w, out int h)) return;
             int texel = (int)GraphicsFormatUtility.GetBlockSize(m_GraphicsFormat);
             int mipWidth = Math.Max(1, m_Width >> miplevel);
-            var pixels = m_Tiles.GetPixelData<byte>(miplevel);
             // No data unloads the tile: its texels are zero again.
             if (data != null && data.Length < w * h * texel) throw new ArgumentException("SparseTexture.UpdateTileRaw: the data is smaller than the tile.");
+            if (m_Rgba8)
+            {
+                var colors = new Color32[w * h];
+                if (data != null)
+                    for (int row = 0; row < h; row++)
+                        for (int col = 0; col < w; col++)
+                        {
+                            int at = (row * w + col) * 4;
+                            colors[row * w + col] = new Color32(data[at], data[at + 1], data[at + 2], data[at + 3]);
+                        }
+                m_Tiles.SetPixels32(x, y, w, h, colors, miplevel);
+                Changed();
+                IncrementUpdateCount();
+                return;
+            }
+            var pixels = m_Tiles.GetPixelData<byte>(miplevel);
             for (int row = 0; row < h; row++)
             {
                 int target = ((y + row) * mipWidth + x) * texel;

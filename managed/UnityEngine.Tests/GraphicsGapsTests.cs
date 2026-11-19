@@ -66,6 +66,12 @@ namespace Unbound.Tests
             texture.UpdateTile(0, 1, 0, Enumerable.Repeat(new Color32(0, 255, 0, 255), 128 * 128).ToArray());
             Assert.True(tiles.updateCount > sent);
             Assert.Equal(handle, TextureHandles.Of(texture));
+            var blue = new byte[128 * 128 * 4];
+            for (int i = 0; i < blue.Length; i += 4) { blue[i + 2] = 255; blue[i + 3] = 255; }
+            texture.UpdateTileRaw(1, 1, 0, blue);
+            Assert.Equal(new Color32(0, 0, 255, 255), (Color32)texture.Tiles.GetPixel(200, 200));
+            texture.UnloadTile(1, 1, 0);
+            Assert.Equal(new Color32(0, 0, 0, 0), (Color32)texture.Tiles.GetPixel(200, 200));
             // A tile past the texture is no tile: nothing changes.
             texture.UpdateTile(5, 5, 0, new Color32[128 * 128]);
             Assert.Throws<ArgumentException>(() => texture.UpdateTile(0, 0, 0, new Color32[3]));
