@@ -13,6 +13,44 @@ namespace UnityEngine.Tests
         static string Repo([System.Runtime.CompilerServices.CallerFilePath] string source = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source), "..", ".."));
 
+        /// <summary>A path a refresh could not import (its .meta lost the GUID line) keeps its
+        /// listing entry and is reported; a control path gone from disk is dropped from the
+        /// listing and still answered as recently deleted.</summary>
+        [Fact]
+        public void ARefreshKeepsWhatItCouldNotImportAndDropsWhatIsGone()
+        {
+            const string broken = "0000000000000000000000000000000a", gone = "0000000000000000000000000000000b";
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                UnityEditor.AssetDatabase.List("[{\"guid\":\"" + broken + "\",\"path\":\"Assets/Broken.txt\",\"kind\":\"text\"},"
+                    + "{\"guid\":\"" + gone + "\",\"path\":\"Assets/Gone.txt\",\"kind\":\"text\"}]");
+                UnityEditor.AssetDatabase.ApplyRefresh("{\"assets\":[{\"path\":\"Assets/Broken.txt\",\"guid\":\"\",\"error\":\"Assets/Broken.txt.meta has no guid\"},"
+                    + "{\"path\":\"Assets/Gone.txt\",\"guid\":\"\",\"removed\":\"" + gone + "\"}]}");
+                Assert.Equal(broken, UnityEditor.AssetDatabase.AssetPathToGUID("Assets/Broken.txt", UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets));
+                Assert.Equal("Assets/Broken.txt", UnityEditor.AssetDatabase.GUIDToAssetPath(broken));
+                Assert.Equal(new[] { "Warning: Unbound: Assets/Broken.txt.meta has no guid" }, logs.Lines);
+                Assert.Equal("", UnityEditor.AssetDatabase.AssetPathToGUID("Assets/Gone.txt", UnityEditor.AssetPathToGUIDOptions.OnlyExistingAssets));
+                Assert.Equal(gone, UnityEditor.AssetDatabase.AssetPathToGUID("Assets/Gone.txt"));
+                Assert.Equal("Assets/Gone.txt", UnityEditor.AssetDatabase.GUIDToAssetPath(gone));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                UnityEditor.AssetDatabase.Invalidate();
+            }
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(System.Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(logType + ": " + string.Format(format, args));
+        }
+
         [Fact]
         public void UniqueNamesTakeTheFirstFreeNumberAndReplaceANumberTheNameHas()
         {

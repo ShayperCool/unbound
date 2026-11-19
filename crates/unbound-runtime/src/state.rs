@@ -310,6 +310,10 @@ impl RuntimeState {
             .map(|path| ImportPath { path, main: None })
             .collect();
         let results = self.import_paths(&requests);
+        let gone: HashMap<&str, Guid> = gone
+            .iter()
+            .map(|asset| (asset.path.as_str(), asset.guid))
+            .collect();
         let listed: std::collections::HashSet<String> = results
             .iter()
             .filter_map(|r| {
@@ -324,8 +328,11 @@ impl RuntimeState {
             .zip(results)
             .map(|(request, mut result)| {
                 result["path"] = json!(request.path);
-                if let Some(asset) = gone.iter().find(|a| a.path == request.path) {
-                    let guid = asset.guid.to_string();
+                if let Some(guid) = gone
+                    .get(request.path.as_str())
+                    .filter(|_| result.get("error").is_none())
+                {
+                    let guid = guid.to_string();
                     if !listed.contains(&guid) {
                         result["removed"] = json!(guid);
                     }

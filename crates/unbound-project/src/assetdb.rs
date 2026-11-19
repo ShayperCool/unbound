@@ -155,7 +155,8 @@ pub fn changes(
     roots: &[Root<'_>],
     is_folder_plugin: impl Fn(&Path) -> bool,
 ) -> (Vec<String>, Vec<Asset>) {
-    let mut changed = Vec::new();
+    // The walk lists the `.meta` files in name order; they are read in parallel, as `scan` does.
+    let mut metas = Vec::new();
     for root in roots {
         let mut walker = walkdir::WalkDir::new(root.dir)
             .follow_links(true)
@@ -177,15 +178,19 @@ pub fn changes(
             }
             let relative = file.strip_prefix(root.dir).unwrap_or(&file);
             let path = format!("{}/{}", root.virtual_path, relative.to_string_lossy());
-            let (guid, labels) = read_meta_header(entry.path());
+            metas.push((path, entry.into_path()));
+        }
+    }
+    let changed = metas
+        .into_par_iter()
+        .filter_map(|(path, meta)| {
+            let (guid, labels) = read_meta_header(&meta);
             let same = db.by_path(&path).is_some_and(|known| {
                 Some(known.guid) == guid && known.labels == labels && known.path == path
             });
-            if !same {
-                changed.push(path);
-            }
-        }
-    }
+            (!same).then_some(path)
+        })
+        .collect();
     let gone = db
         .iter()
         .filter(|asset| {

@@ -58,8 +58,9 @@ namespace UnityEditor
             public string Owner { get; set; }
         }
 
-        /// <summary>What the Editor says when a .meta repeats another asset's GUID (its first line
-        /// measured: tests/projects/projectwrites 07.batch.logs).</summary>
+        /// <summary>What the Editor says when a .meta repeats another asset's GUID
+        /// (tests/projects/projectwrites 07.batch.logs, which keeps the first line; the whole
+        /// message as the reference runs' Editor log has it).</summary>
         static void SayConflict(string path, Imported asset)
         {
             if (asset?.Conflict == null) return;
@@ -213,9 +214,22 @@ namespace UnityEditor
                 s_PendingRefresh = true;
                 return;
             }
-            var changes = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-refresh", "{}"), s_Json)?.Assets ?? Array.Empty<Imported>();
+            ApplyRefresh(Native.Call("asset-refresh", "{}"));
+        }
+
+        /// <summary>The listing brought up to date with what a refresh found changed.</summary>
+        internal static void ApplyRefresh(string json)
+        {
+            var changes = JsonSerializer.Deserialize<ImportResult>(json, s_Json)?.Assets ?? Array.Empty<Imported>();
             foreach (var change in changes)
             {
+                // A path the engine could not import (a .meta without a GUID line, ...) keeps its
+                // listing entry, as the engine keeps its asset.
+                if (!string.IsNullOrEmpty(change.Error))
+                {
+                    Debug.LogWarning("Unbound: " + change.Error);
+                    continue;
+                }
                 SayConflict(change.Path, change);
                 // An asset gone from disk is remembered as deleted (tests/projects/projectwrites 07.outside).
                 if (!string.IsNullOrEmpty(change.Removed))

@@ -33,15 +33,21 @@ namespace UnityEditor
             get
             {
                 if (s_Entries != null) return s_Entries;
-                s_Entries = JsonSerializer.Deserialize<List<Entry>>(Native.Call("asset-list", "{}"), s_Json) ?? new List<Entry>();
-                s_ByGuid = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
-                s_ByPath = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
-                foreach (var e in s_Entries)
-                {
-                    s_ByGuid[e.Guid] = e;
-                    s_ByPath[e.Path] = e;
-                }
+                List(Native.Call("asset-list", "{}"));
                 return s_Entries;
+            }
+        }
+
+        /// <summary>The listing taken from the engine's answer to <c>asset-list</c>.</summary>
+        internal static void List(string json)
+        {
+            s_Entries = JsonSerializer.Deserialize<List<Entry>>(json, s_Json) ?? new List<Entry>();
+            s_ByGuid = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+            s_ByPath = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+            foreach (var e in s_Entries)
+            {
+                s_ByGuid[e.Guid] = e;
+                s_ByPath[e.Path] = e;
             }
         }
 
