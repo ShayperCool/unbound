@@ -10,9 +10,13 @@ namespace UnityEditor.SceneManagement
 {
     /// <summary>
     /// The Editor's scene management. Scenes open from their files and new untitled scenes are
-    /// created as in the Editor; saving keeps a scene's new path and clears its dirty flag but
-    /// writes nothing (Unbound never writes a project's scenes), so a scene "saved" to a new path
-    /// lives in memory only. Dialogs asking to save modified scenes answer yes without saving.
+    /// created as in the Editor; saving writes the scene's file as the Editor does
+    /// (<see cref="SceneFiles"/>). Measured in the Unity 6000.0.71f1 Editor
+    /// (tests/projects/scenesave): SaveScene writes the scene whether or not it is dirty, a copy
+    /// keeps the scene's path, a new path becomes the scene's; SaveScenes and SaveOpenScenes write
+    /// only the dirty ones; scripts changing objects do not dirty a scene; in Play mode saving and
+    /// MarkSceneDirty throw. The dialog asking to save modified scenes is cancelled with the
+    /// batch-mode Editor's assertion, so nothing is saved and the caller is told to stop.
     /// </summary>
     public sealed partial class EditorSceneManager : SceneManager
     {
@@ -63,12 +67,18 @@ namespace UnityEditor.SceneManagement
             {
                 var previous = SceneRegistry.Active;
                 SceneRegistry.Active = scene.Data;
+                // As the Editor's new scene (tests/projects/scenesave Fresh.unity): a camera drawn
+                // first and a warm directional light with soft shadows.
                 var camera = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" };
                 camera.transform.position = new Vector3(0f, 1f, -10f);
+                camera.GetComponent<Camera>().depth = -1f;
                 var light = new GameObject("Directional Light", typeof(Light));
-                light.transform.SetPositionAndRotation(new Vector3(0f, 3f, 0f), Quaternion.Euler(50f, -30f, 0f));
+                var angles = new Vector3(50f, -30f, 0f);
+                light.transform.SetPositionAndRotation(new Vector3(0f, 3f, 0f), Quaternion.Euler(angles));
+                light.transform.SetLocalEulerHint(angles);
                 var l = light.GetComponent<Light>();
                 l.type = LightType.Directional;
+                l.color = new Color(1f, 0.95686275f, 0.8392157f, 1f);
                 l.shadows = LightShadows.Soft;
                 if (mode == NewSceneMode.Additive && previous != null) SceneRegistry.Active = previous;
             }
@@ -105,11 +115,13 @@ namespace UnityEditor.SceneManagement
 
         public static bool SaveScene(Scene scene, [DefaultValue("\"\"")] string dstScenePath, [DefaultValue("false")] bool saveAsCopy)
         {
+            if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             var data = scene.Data;
             if (data == null) return false;
             var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
             if (string.IsNullOrEmpty(path)) return false;
             sceneSaving?.Invoke(scene, path);
+            if (!SceneFiles.Save(data, path)) return false;
             if (!saveAsCopy)
             {
                 data.Path = path;
@@ -120,32 +132,45 @@ namespace UnityEditor.SceneManagement
             return true;
         }
 
+        const string PlayModeRefusal = "This cannot be used during play mode.";
+
+        /// <summary>Saves the dirty ones of the scenes.</summary>
         public static bool SaveScenes(Scene[] scenes)
         {
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
+            if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             bool all = true;
-            foreach (var s in scenes) all &= SaveScene(s);
+            foreach (var s in scenes)
+                if (s.Data is SceneData data && data.IsDirty) all &= SaveScene(s);
             return all;
         }
 
-        public static bool SaveOpenScenes() => SaveScenes(SceneRegistry.Loaded.Where(s => s.Path.Length > 0).Select(s => new Scene(s.Handle)).ToArray());
+        public static bool SaveOpenScenes() => SaveScenes(SceneRegistry.Loaded.Where(s => s.IsLoaded).Select(s => new Scene(s.Handle)).ToArray());
 
-        public static bool SaveCurrentModifiedScenesIfUserWantsTo()
-        {
-            Stubs.Ignored("EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo", "asks nothing and saves nothing (answered as if nothing needed saving)");
-            return true;
-        }
+        public static bool SaveCurrentModifiedScenesIfUserWantsTo() =>
+            SaveModifiedScenesIfUserWantsTo(SceneRegistry.Loaded.Select(s => new Scene(s.Handle)).ToArray());
 
+        /// <summary>With modified scenes, the dialog asking to save them is cancelled as the
+        /// batch-mode Editor cancels it (its assertion measured in tests/projects/scenesave for one
+        /// scene; each scene's name is one line of the message): nothing is saved and the answer is
+        /// false, to stop what asked.</summary>
         public static bool SaveModifiedScenesIfUserWantsTo(Scene[] scenes)
         {
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
-            return true;
+            var modified = new List<string>();
+            foreach (var s in scenes)
+                if (s.Data is SceneData data && data.IsDirty) modified.Add(data.Name.Length > 0 ? data.Name : "Untitled");
+            if (modified.Count == 0) return true;
+            var names = string.Concat(modified.Select(n => "\n " + n));
+            Debug.LogAssertion($"Cancelling DisplayDialog: Scene(s) Have Been Modified Do you want to save the changes you made in the scenes:{names}\n\nYour changes will be lost if you don't save them.\nThis should not be called in batch mode.");
+            return false;
         }
 
         public static bool MarkSceneDirty(Scene scene)
         {
+            if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             var data = scene.Data;
-            if (data == null || UnityEngine.Application.isPlaying) return false;
+            if (data == null) return false;
             data.IsDirty = true;
             sceneDirtied?.Invoke(scene);
             return true;

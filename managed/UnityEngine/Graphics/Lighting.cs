@@ -216,6 +216,49 @@ namespace UnityEngine
             enableSpotReflector = body.Bool("m_EnableSpotReflector", enableSpotReflector);
         }
 
+        /// <summary>The fields <see cref="ReadSerialized"/> reads, as a scene's Light document has them.</summary>
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            w.Int("m_Type", (int)m_Type);
+            w.Color("m_Color", m_Color);
+            w.Float("m_Intensity", m_Intensity);
+            w.Float("m_Range", m_Range);
+            w.Float("m_SpotAngle", m_SpotAngle);
+            w.Float("m_InnerSpotAngle", m_InnerSpotAngle);
+            w.Float("m_CookieSize", m_CookieSize);
+            w.Key("m_Shadows", 1);
+            w.Int("m_Type", (int)m_Shadows, 2);
+            w.Int("m_Resolution", (int)m_ShadowResolution, 2);
+            w.Int("m_CustomResolution", m_ShadowCustomResolution, 2);
+            w.Float("m_Strength", m_ShadowStrength, 2);
+            w.Float("m_Bias", m_ShadowBias, 2);
+            w.Float("m_NormalBias", m_ShadowNormalBias, 2);
+            w.Float("m_NearPlane", m_ShadowNearPlane, 2);
+            w.Matrix("m_CullingMatrixOverride", m_ShadowMatrixOverride, 2);
+            w.Bool("m_UseCullingMatrixOverride", m_UseShadowMatrixOverride, 2);
+            w.Ref("m_Cookie", m_Cookie);
+            w.Bool("m_DrawHalo", m_DrawHalo);
+            w.Ref("m_Flare", m_Flare);
+            w.Int("m_RenderMode", (int)m_RenderMode);
+            w.Mask("m_CullingMask", m_CullingMask);
+            w.Int("m_RenderingLayerMask", m_RenderingLayerMask);
+            w.Int("m_Lightmapping", (int)m_Lightmapping);
+            w.Int("m_LightShadowCasterMode", (int)m_LightShadowCasterMode);
+            w.Vector2("m_AreaSize", m_AreaSize);
+            w.Float("m_BounceIntensity", m_BounceIntensity);
+            w.Float("m_ColorTemperature", m_ColorTemperature);
+            w.Bool("m_UseColorTemperature", m_UseColorTemperature);
+            w.Vector4("m_BoundingSphereOverride", m_BoundingSphereOverride);
+            w.Bool("m_UseBoundingSphereOverride", m_UseBoundingSphereOverride);
+            w.Bool("m_UseViewFrustumForShadowCasterCull", m_UseViewFrustumForShadowCasterCull);
+            w.Bool("m_ForceVisible", m_ForceVisible);
+            w.Float("m_ShadowRadius", m_ShadowRadius);
+            w.Float("m_ShadowAngle", m_ShadowAngle);
+            w.Int("m_LightUnit", (int)lightUnit);
+            w.Float("m_LuxAtDistance", luxAtDistance);
+            w.Bool("m_EnableSpotReflector", enableSpotReflector);
+        }
+
         /// <summary>A scriptable pipeline's light color (VisibleLight.finalColor): color times
         /// intensity, in the project's color space.</summary>
         internal Color SrpFinalColor(bool linear) => ScaledColor(m_Intensity, linear);

@@ -884,7 +884,8 @@ namespace UnityEngine
             m_FarClipPlane = body.Float("far clip plane", 1000f);
             m_FieldOfView = body.Float("field of view", 60f);
             // m_projectionMatrixMode 2 is "physical properties based".
-            m_UsePhysicalProperties = body.Int("m_projectionMatrixMode", 1) == 2;
+            m_SerializedProjectionMode = body.Int("m_projectionMatrixMode", 1);
+            m_UsePhysicalProperties = m_SerializedProjectionMode == 2;
             m_FocalLength = body.Float("m_FocalLength", 50f);
             aperture = body.Float("m_Aperture", m_Aperture);
             barrelClipping = body.Float("m_BarrelClipping", m_BarrelClipping);
@@ -911,6 +912,47 @@ namespace UnityEngine
             useOcclusionCulling = body.Bool("m_OcclusionCulling", true);
             m_AllowDynamicResolution = body.Bool("m_AllowDynamicResolution");
             forceIntoRenderTexture = body.Bool("m_ForceIntoRT");
+        }
+
+        /// <summary>The projection mode the camera's document gave (0 explicit, 1 implicit, 2 from
+        /// physical properties): written back as read unless physical properties were turned on or off.</summary>
+        int m_SerializedProjectionMode = 1;
+
+        /// <summary>The fields <see cref="ReadSerialized"/> reads, as a scene's Camera document has them.</summary>
+        internal override void WriteSerialized(UnityYamlWriter.Writer w)
+        {
+            int mode = m_UsePhysicalProperties ? 2 : m_SerializedProjectionMode == 2 ? 1 : m_SerializedProjectionMode;
+            w.Int("m_ClearFlags", (int)m_ClearFlags);
+            w.Color("m_BackGroundColor", m_BackgroundColor);
+            w.Int("m_projectionMatrixMode", mode);
+            w.Int("m_GateFitMode", (int)m_GateFit);
+            w.Int("m_Iso", iso);
+            w.Float("m_ShutterSpeed", shutterSpeed);
+            w.Float("m_Aperture", aperture);
+            w.Float("m_FocusDistance", focusDistance);
+            w.Float("m_FocalLength", m_FocalLength);
+            w.Int("m_BladeCount", bladeCount);
+            w.Vector2("m_Curvature", curvature);
+            w.Float("m_BarrelClipping", barrelClipping);
+            w.Vector2("m_SensorSize", m_SensorSize);
+            w.Vector2("m_LensShift", m_LensShift);
+            w.Rect("m_NormalizedViewPortRect", m_NormalizedViewPortRect);
+            w.Float("near clip plane", m_NearClipPlane);
+            w.Float("far clip plane", m_FarClipPlane);
+            w.Float("field of view", m_FieldOfView);
+            w.Bool("orthographic", m_Orthographic);
+            w.Float("orthographic size", m_OrthographicSize);
+            w.Float("m_Depth", m_Depth);
+            w.Mask("m_CullingMask", m_CullingMask);
+            w.Int("m_RenderingPath", (int)m_RenderingPath);
+            w.Ref("m_TargetTexture", m_TargetTexture);
+            w.Int("m_TargetDisplay", m_TargetDisplay);
+            w.Int("m_TargetEye", (int)stereoTargetEye);
+            w.Bool("m_HDR", m_AllowHDR);
+            w.Bool("m_AllowMSAA", m_AllowMSAA);
+            w.Bool("m_AllowDynamicResolution", m_AllowDynamicResolution);
+            w.Bool("m_ForceIntoRT", forceIntoRenderTexture);
+            w.Bool("m_OcclusionCulling", useOcclusionCulling);
         }
     }
 

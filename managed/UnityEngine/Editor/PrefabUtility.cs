@@ -303,7 +303,12 @@ namespace UnityEditor
             return link != null && link.Instance.Modifies(link.SourceGuid, link.SourceFileId, path);
         }
 
-        public static void RecordPrefabInstancePropertyModifications(Object targetObject) =>
-            Stubs.Ignored("PrefabUtility.RecordPrefabInstancePropertyModifications", "is not honoured yet: Play mode edits are not recorded as overrides");
+        /// <summary>The object's script fields are overrides from now on: a scene save records
+        /// those that differ from the prefab (<see cref="SceneFiles"/>; measured: without it a
+        /// script's change to an instance is not saved). It does not dirty the scene (measured).</summary>
+        public static void RecordPrefabInstancePropertyModifications(Object targetObject)
+        {
+            PrefabRecords.Record(targetObject);
+        }
     }
 }

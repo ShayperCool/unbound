@@ -10,6 +10,8 @@ namespace Unbound.Runtime
     /// prefab it instantiates and the properties it modifies.</summary>
     internal sealed class PrefabInstanceData
     {
+        /// <summary>The file id of its PrefabInstance document (0 for an instance no file holds).</summary>
+        internal long FileId;
         internal string SourceGuid;
         internal bool InAsset;
         /// <summary>The engine made the instance's objects as placeholders: its prefab is missing or
@@ -90,6 +92,7 @@ namespace Unbound.Runtime
             {
                 if (doc.Stripped || doc.ClassId != EngineTypes.PrefabInstanceId) continue;
                 var data = ReadInstance(doc.Body, inAsset);
+                data.FileId = doc.FileId;
                 (instances ??= new Dictionary<long, PrefabInstanceData>())[doc.FileId] = data;
             }
             return instances;

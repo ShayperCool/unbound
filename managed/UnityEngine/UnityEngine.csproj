@@ -20,6 +20,8 @@
     <EmbeddedResource Include="Runtime/Data/*.json" LogicalName="Unbound.%(Filename)%(Extension)" />
     <!-- Unity's class table by release, the probe's Editor reference (tests/projects/classids). -->
     <EmbeddedResource Include="../../tests/projects/classids/Reference/unity-*.jsonl" LogicalName="Unbound.class-ids-%(Filename)%(Extension)" />
+    <!-- The documents of new objects and scenes by release family (tests/projects/scenesave). -->
+    <EmbeddedResource Include="../../tests/projects/scenesave/Reference/unity-6000.0.71f1/defaults.unity" LogicalName="Unbound.default-documents-6000.0.unity" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Unbound.ReaderFields/Unbound.ReaderFields.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

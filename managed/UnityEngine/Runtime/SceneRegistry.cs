@@ -35,6 +35,9 @@ namespace Unbound.Runtime
         /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
         /// objects by them).</summary>
         internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
+        /// <summary>The file ids of the stripped documents standing for prefab instances'
+        /// GameObjects in the scene's file (a component added to one names it).</summary>
+        internal readonly Dictionary<Object, long> StrippedIds = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
         /// <summary>The scene's Lighting Settings (its LightmapSettings' m_LightingSettings, or
         /// what UnityEditor.Lightmapping assigned since); null: none.</summary>
         internal LightingSettings LightingSettings;
