@@ -68,7 +68,8 @@ namespace UnityEditor
         internal static readonly PlayerSettings Project = new PlayerSettings { name = "ProjectSettings" };
 
         /// <summary><c>activeInputHandler</c>: 0 Input Manager, 1 Input System package, 2 both. A
-        /// change applies in memory only (Unity applies it after a restart).</summary>
+        /// change is saved into ProjectSettings.asset as the Editor saves settings and takes effect
+        /// in the next session (Unity applies it after a restart).</summary>
         internal static int s_ActiveInputHandler;
     }
 

@@ -86,6 +86,8 @@ namespace UnityEditor
             }
             folders.Reverse();
             Import(folders.Append(path).Select(p => new ImportRequest { Path = p }));
+            // The import runs the asset's preprocessors (whose settings changes its .meta keeps).
+            AssetPostprocessing.EnsurePreprocessed(path, Kind(path));
         }
 
         [Unbound.EditorFaithful("tests/projects/projectwrites 01.refresh: new files and folders get their .meta, the database is scanned again")]

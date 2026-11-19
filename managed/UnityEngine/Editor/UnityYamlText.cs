@@ -131,14 +131,7 @@ namespace Unbound.Runtime
             char quote = '\0';
             foreach (var raw in text.Split('\n'))
             {
-                if (quote != '\0')
-                {
-                    // A quoted scalar over several lines (blank ones included) is one line's value.
-                    var open = lines[lines.Count - 1];
-                    open.Text += "\n" + raw;
-                    if (Closes(raw, 0, quote)) quote = '\0';
-                    continue;
-                }
+                if (Continues(lines, raw, ref quote)) continue;
                 if (raw.StartsWith("%", StringComparison.Ordinal)) continue;
                 if (raw.StartsWith("--- ", StringComparison.Ordinal))
                 {
@@ -147,15 +140,32 @@ namespace Unbound.Runtime
                     ParseHeader(raw, current);
                     continue;
                 }
-                if (raw.Length == 0 || current == null) continue;
-                int indent = 0;
-                while (indent < raw.Length && raw[indent] == ' ') indent++;
-                var line = new Line { Indent = indent, Text = raw.Substring(indent) };
-                lines.Add(line);
-                quote = OpenQuote(line.Text);
+                if (current != null) Add(lines, raw, ref quote);
             }
             Flush();
             return docs;
+        }
+
+        /// <summary>Adds a line of a block (none for a blank one); <paramref name="quote"/> says
+        /// whether it opens a quoted scalar the next lines continue.</summary>
+        static void Add(List<Line> lines, string raw, ref char quote)
+        {
+            if (raw.Length == 0) return;
+            int indent = 0;
+            while (indent < raw.Length && raw[indent] == ' ') indent++;
+            var line = new Line { Indent = indent, Text = raw.Substring(indent) };
+            lines.Add(line);
+            quote = OpenQuote(line.Text);
+        }
+
+        /// <summary>Whether <paramref name="raw"/> continues an open quoted scalar: a quoted scalar
+        /// over several lines (blank ones included) is one line's value.</summary>
+        static bool Continues(List<Line> lines, string raw, ref char quote)
+        {
+            if (quote == '\0') return false;
+            lines[lines.Count - 1].Text += "\n" + raw;
+            if (Closes(raw, 0, quote)) quote = '\0';
+            return true;
         }
 
         /// <summary>The quote of a quoted scalar the line's value starts and does not close
@@ -181,6 +191,25 @@ namespace Unbound.Runtime
                 return true;
             }
             return false;
+        }
+
+        /// <summary>A file that is one block map at its top level (a <c>.meta</c> file).</summary>
+        internal static YText ParseTopLevel(string text)
+        {
+            var lines = new List<Line>();
+            char quote = '\0';
+            foreach (var raw in text.Split('\n'))
+                if (!Continues(lines, raw, ref quote)) Add(lines, raw, ref quote);
+            int at = 0;
+            return ParseMap(lines, ref at, 0, null);
+        }
+
+        /// <summary><see cref="ParseTopLevel"/>'s map written back.</summary>
+        internal static string WriteTopLevel(YText map)
+        {
+            var sb = new StringBuilder();
+            WriteMap(sb, map, 0);
+            return sb.ToString();
         }
 
         static void ParseHeader(string header, YTextDocument doc)

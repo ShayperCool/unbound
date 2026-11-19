@@ -49,7 +49,8 @@ namespace UnityEditor
         }
 
         /// <summary>The importer of an asset, with its settings from the .meta (one instance per
-        /// path, as in the Editor). Changes made to it stay in memory: Unbound does not write .meta files.</summary>
+        /// path, as in the Editor). Changes are saved into the .meta as the Editor saves them
+        /// (ImporterMeta: SaveAndReimport, WriteImportSettingsIfDirty, an import's preprocessors).</summary>
         public static AssetImporter GetAtPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;

@@ -452,6 +452,14 @@ namespace UnityEditor
 
     public sealed partial class EditorSettings : Object
     {
+        /// <summary>The root namespace of new scripts: the file's, saved there as the Editor saves
+        /// settings (SettingsAssets.Edit; tests/projects/projectwrites 12.editorsettings).</summary>
+        public static string projectGenerationRootNamespace
+        {
+            get => SettingsAssets.Value("EditorSettings", "m_ProjectGenerationRootNamespace");
+            set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_ProjectGenerationRootNamespace", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+        }
+
         static volatile bool s_Loaded;
         static readonly object s_LoadLock = new object();
         static bool s_EnterPlayModeOptionsEnabled;

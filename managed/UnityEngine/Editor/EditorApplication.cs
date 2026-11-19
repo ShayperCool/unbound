@@ -260,8 +260,27 @@ namespace UnityEditor
     /// <summary>Player settings of the project, as Play mode code reads them.</summary>
     public sealed partial class PlayerSettings : Object
     {
-        public static string companyName { get => ProjectInfo.CompanyName; set => ProjectInfo.CompanyName = value; }
-        public static string productName { get => ProjectInfo.ProductName; set => ProjectInfo.ProductName = value; }
+        /// <summary>The project's names: in effect at once, saved into ProjectSettings.asset as the
+        /// Editor saves settings (SettingsAssets.Edit).</summary>
+        public static string companyName
+        {
+            get => ProjectInfo.CompanyName;
+            set
+            {
+                ProjectInfo.CompanyName = value;
+                SettingsAssets.Edit("ProjectSettings", body => body.Set("companyName", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+            }
+        }
+
+        public static string productName
+        {
+            get => ProjectInfo.ProductName;
+            set
+            {
+                ProjectInfo.ProductName = value;
+                SettingsAssets.Edit("ProjectSettings", body => body.Set("productName", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+            }
+        }
 
         /// <summary>The project's GUID (ProjectSettings productGUID, hex in Unity's order: the low
         /// nibble of each byte first) (measured: tests/projects/editorload player.product_guid).</summary>
@@ -329,8 +348,8 @@ namespace UnityEditor
         [global::System.@ObsoleteAttribute("Use GetScriptingDefineSymbols(NamedBuildTarget buildTarget) instead")] public static string GetScriptingDefineSymbolsForGroup(BuildTargetGroup targetGroup) =>
             GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup));
 
-        /// <summary>A target's scripting defines for this run (ProjectSettings is not written; a restarted
-        /// session keeps them). New defines for the active target compile the scripts with them and
+        /// <summary>A target's scripting defines (saved into ProjectSettings.asset in Edit mode as
+        /// the Editor saves settings; a restarted session keeps them). New defines for the active target compile the scripts with them and
         /// reload them between frames; another target's, or the same defines again, compile nothing
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/compileevents).</summary>
         public static void SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget buildTarget, string defines)
@@ -338,6 +357,15 @@ namespace UnityEditor
             string name = buildTarget.TargetName ?? "";
             string before = GetScriptingDefineSymbols(buildTarget);
             s_SetDefines[name] = defines ?? "";
+            // Saved into ProjectSettings.asset as the Editor saves settings (SettingsAssets.Edit).
+            SettingsAssets.Edit("ProjectSettings", body =>
+            {
+                var map = body.Get("scriptingDefineSymbols");
+                if (map == null || map.Kind != YKind.Map) return;
+                map.Flow = false;
+                map.Raw = null;
+                map.Set(name, YText.Scalar(UnityYamlWriter.Scalar(defines ?? "")));
+            });
             Native.Call("scripting-defines", System.Text.Json.JsonSerializer.Serialize(new { group = name, defines = defines ?? "" }));
             bool active = name == UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettingsInfo.ActiveGroup).TargetName;
             if (active && !SameDefines(before, defines)) Native.Call("request-script-compilation", "{}");

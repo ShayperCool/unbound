@@ -750,7 +750,13 @@ namespace Unbound.Runtime
                 yield return new NativeField
                 {
                     Name = "activeInputHandler", Type = typeof(int), Shape = Shape.Int, TypeName = "int",
-                    Get = o => PlayerSettings.s_ActiveInputHandler, Set = (o, v) => PlayerSettings.s_ActiveInputHandler = (int)v,
+                    Get = o => PlayerSettings.s_ActiveInputHandler,
+                    Set = (o, v) =>
+                    {
+                        PlayerSettings.s_ActiveInputHandler = (int)v;
+                        SettingsAssets.Edit("ProjectSettings", body => body.Set("activeInputHandler",
+                            YText.Scalar(((int)v).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+                    },
                 };
             }
             else if (target is UnityEditor.LightingDataAsset)

@@ -496,7 +496,14 @@ namespace UnityEditor
         public float globalScale
         {
             get { CheckImporterState("get_globalScale"); return MetaSettings.Float(m_Settings, "meshes.globalScale", 1); }
-            set { CheckImporterState("set_globalScale"); MetaSettings.SetFloat(m_Settings, "meshes.globalScale", value); Changed(); }
+            set
+            {
+                CheckImporterState("set_globalScale");
+                MetaSettings.SetFloat(m_Settings, "meshes.globalScale", value);
+                // The human description keeps the model's scale too (tests/projects/projectwrites 08.importer.model).
+                MetaSettings.SetFloat(m_Settings, "humanDescription.globalScale", value);
+                Changed();
+            }
         }
 
         public bool useFileScale

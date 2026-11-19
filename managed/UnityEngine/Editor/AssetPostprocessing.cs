@@ -260,6 +260,9 @@ namespace UnityEditor
                 if (AssetDatabase.Kind(path) == "model") EnsurePreprocessed(path, "model");
         }
 
+        /// <summary>The asset is imported again: its preprocessors run again before that import.</summary>
+        internal static void ForgetPreprocessed(string path) => s_Preprocessed.Remove(path);
+
         /// <summary>Runs an asset's preprocessors once per session, before its import.</summary>
         internal static void EnsurePreprocessed(string path, string kind, string guid = null)
         {
@@ -305,6 +308,9 @@ namespace UnityEditor
             // Settings set to the values they had are the .meta's: the import stays the file's.
             var settings = MetaSettings.ToJson(importer.m_Settings);
             if (settings == importer.m_ImportedSettings) return;
+            // The Editor saves the settings the preprocessors changed into the .meta
+            // (tests/projects/assetpostprocessors meta.*, tests/projects/projectwrites 10.preprocessor).
+            ImporterMeta.Write(importer);
             importer.m_ImportedSettings = settings;
             guid ??= AssetDatabase.AssetPathToGUID(path);
             if (AssetDatabaseRuntime.IsMainLoaded(guid))

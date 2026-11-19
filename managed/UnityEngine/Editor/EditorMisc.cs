@@ -40,8 +40,12 @@ namespace UnityEditor
         /// <summary>ProjectSettings.asset as editor code edits it through SerializedObject.</summary>
         internal static SerializedObject GetSerializedObject() => new SerializedObject(Project);
 
-        // Build-only settings: what is set is kept for the session (Unbound does not write
-        // ProjectSettings.asset); nothing in Play mode acts on them.
+        /// <summary>A top-level value of ProjectSettings.asset set through the API: in effect at
+        /// once, saved as the Editor saves settings (SettingsAssets.Edit).</summary>
+        static void Save(string key, string value) =>
+            SettingsAssets.Edit("ProjectSettings", body => body.Set(key, YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+
+        // Build-only settings: nothing in Play mode acts on them.
         public partial class Android
         {
             static AndroidSdkVersions? s_MinSdkVersion, s_TargetSdkVersion;
@@ -50,19 +54,19 @@ namespace UnityEditor
             public static AndroidSdkVersions minSdkVersion
             {
                 get => s_MinSdkVersion ?? (AndroidSdkVersions)ProjectSettingsText.Int("AndroidMinSdkVersion", 23);
-                set => s_MinSdkVersion = value;
+                set { s_MinSdkVersion = value; Save("AndroidMinSdkVersion", ((int)value).ToString(System.Globalization.CultureInfo.InvariantCulture)); }
             }
 
             public static AndroidSdkVersions targetSdkVersion
             {
                 get => s_TargetSdkVersion ?? (AndroidSdkVersions)ProjectSettingsText.Int("AndroidTargetSdkVersion", 0);
-                set => s_TargetSdkVersion = value;
+                set { s_TargetSdkVersion = value; Save("AndroidTargetSdkVersion", ((int)value).ToString(System.Globalization.CultureInfo.InvariantCulture)); }
             }
 
             public static AndroidSplashScreenScale splashScreenScale
             {
                 get => s_SplashScreenScale ?? (AndroidSplashScreenScale)ProjectSettingsText.Int("AndroidSplashScreenScale", 0);
-                set => s_SplashScreenScale = value;
+                set { s_SplashScreenScale = value; Save("AndroidSplashScreenScale", ((int)value).ToString(System.Globalization.CultureInfo.InvariantCulture)); }
             }
         }
 
@@ -73,7 +77,7 @@ namespace UnityEditor
             public static string targetOSVersionString
             {
                 get => s_TargetOSVersionString ?? ProjectSettingsText.Text("iOSTargetOSVersionString", "13.0");
-                set => s_TargetOSVersionString = value;
+                set { s_TargetOSVersionString = value; Save("iOSTargetOSVersionString", value); }
             }
         }
     }

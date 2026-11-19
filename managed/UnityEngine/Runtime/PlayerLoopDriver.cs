@@ -714,7 +714,11 @@ namespace Unbound.Runtime
             {
                 try { saveAssets?.Invoke(); }
                 catch (Exception e) { Debug.LogException(e); }
-                try { savePreferences(); }
+                try
+                {
+                    SettingsAssets.SaveOnQuit();
+                    savePreferences();
+                }
                 finally { shutdownPlugins(); }
             }
         }

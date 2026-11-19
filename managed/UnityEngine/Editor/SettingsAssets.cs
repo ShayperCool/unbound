@@ -315,6 +315,32 @@ namespace Unbound.Runtime
             Time.s_TimeScale = body.Float("m_TimeScale", Time.s_TimeScale);
         }
 
+        /// <summary>An editor API changed a value of a settings file (PlayerSettings, EditorSettings,
+        /// EditorBuildSettings): the file's text follows at once; in Edit mode the file is written by
+        /// the next SaveAssets or when the Editor quits, a change made in Play mode is not saved
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/projectwrites 11-14).</summary>
+        internal static void Edit(string name, Action<YText> change)
+        {
+            var file = AtPath("ProjectSettings/" + name + ".asset");
+            if (file?.Body == null) return;
+            change(file.Body);
+            if (!EditorApplication.isPlaying)
+            {
+                file.Dirty = true;
+                if (file.Object != null) EditorUtility.SetDirty(file.Object);
+            }
+        }
+
+        /// <summary>A scalar of a settings file's object ("" when it has none).</summary>
+        internal static string Value(string name, string key) => AtPath("ProjectSettings/" + name + ".asset")?.Body?.Get(key)?.Text ?? "";
+
+        /// <summary>The Editor quits: settings edited in Edit mode and not saved yet are written
+        /// (tests/projects/projectwrites 14.unsaved).</summary>
+        internal static void SaveOnQuit()
+        {
+            if (!EditorApplication.isPlaying) Save();
+        }
+
         /// <summary>AssetDatabase.SaveAssets: edited settings files written as the Editor writes them
         /// — in Edit mode only (in Play mode the Editor keeps them unsaved).</summary>
         internal static void Save(SettingsFile only = null)

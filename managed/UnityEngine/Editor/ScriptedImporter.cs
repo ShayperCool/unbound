@@ -41,7 +41,15 @@ namespace UnityEditor
         public string assetBundleName
         {
             get { CheckImporterState("get_assetBundleName"); return NormalizeString(m_AssetBundleName); }
-            set { CheckImporterState("set_assetBundleName"); m_AssetBundleName = NormalizeString(value); }
+            set
+            {
+                CheckImporterState("set_assetBundleName");
+                var changed = NormalizeString(value) != m_AssetBundleName;
+                m_AssetBundleName = NormalizeString(value);
+                // A new AssetBundle name is saved into the .meta at once, with the importer's other
+                // changes (tests/projects/projectwrites 08.importer.bundle).
+                if (changed && !string.IsNullOrEmpty(m_AssetPath)) Unbound.Runtime.ImporterMeta.Write(this);
+            }
         }
 
         public string assetBundleVariant

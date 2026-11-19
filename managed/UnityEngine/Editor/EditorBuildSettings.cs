@@ -6,8 +6,9 @@ using Object = UnityEngine.Object;
 namespace UnityEditor
 {
     /// <summary>The project's build settings as the Editor exposes them: the scene list and the
-    /// config objects packages register (Addressables, Localization, ...). Changes stay in memory:
-    /// Unbound does not write ProjectSettings.</summary>
+    /// config objects packages register (Addressables, Localization, ...). A new scene list is
+    /// saved into EditorBuildSettings.asset as the Editor saves settings (SettingsAssets.Edit);
+    /// config objects stay in memory.</summary>
     public partial class EditorBuildSettings : Object
     {
         static EditorBuildSettingsScene[] s_Scenes = Array.Empty<EditorBuildSettingsScene>();
@@ -30,6 +31,21 @@ namespace UnityEditor
             set
             {
                 s_Scenes = value ?? Array.Empty<EditorBuildSettingsScene>();
+                var scenes = s_Scenes;
+                Unbound.Runtime.SettingsAssets.Edit("EditorBuildSettings", body =>
+                {
+                    var list = Unbound.Runtime.YText.Seq();
+                    foreach (var scene in scenes)
+                    {
+                        if (scene == null) continue;
+                        var entry = Unbound.Runtime.YText.Map();
+                        entry.Add("enabled", Unbound.Runtime.YText.Scalar(scene.enabled ? "1" : "0"));
+                        entry.Add("path", Unbound.Runtime.YText.Scalar(Unbound.Runtime.UnityYamlWriter.Scalar(scene.path ?? "")));
+                        entry.Add("guid", Unbound.Runtime.YText.Scalar(scene.guid.ToString()));
+                        list.Items.Add(entry);
+                    }
+                    body.Set("m_Scenes", list);
+                });
                 sceneListChanged?.Invoke();
             }
         }
