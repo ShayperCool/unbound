@@ -208,7 +208,7 @@ namespace UnityEngine
         /// <summary>
         /// The SubShader Shader.passCount, Shader.renderQueue and Material.GetTag without
         /// fallbacks answer from: the first of its own then its Fallback chain's SubShaders that
-        /// has passes, runs under the pipeline tag (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>)
+        /// runs under the pipeline tag (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>)
         /// and whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
         /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply); when none is,
         /// the first SubShader, whatever its tag. Matches the Unity 6000.0.71f1 Editor:
@@ -229,8 +229,7 @@ namespace UnityEngine
             foreach (var sub in d.SubShaders)
             {
                 if (sub.Lod is not int lod) return SelectionUnknown(api, keeps, "without SubShader LODs", "this host does not send them");
-                if (lod > limit || sub.Passes.Count == 0
-                    || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline"), pipeline))
+                if (lod > limit || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline"), pipeline))
                     continue;
                 if (sub.Restricted)
                     return SelectionUnknown(api, keeps, "with SubShaders limited to some devices", "their selection is not measured");

@@ -63,7 +63,7 @@ namespace Unbound.Runtime
 
         /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460); Geometry (2000)
         /// for a value Unity does not take, as the Unity 6000.0.71f1 Editor answers
-        /// (tests/projects/graphicsgaps queue.*; it logs the value as the shader loads,
+        /// (tests/projects/graphicsgaps queue.*; the value is logged,
         /// <see cref="UndefinedQueueMessage"/>).</summary>
         internal static int QueueTag(string value) => QueueValue(value) ?? 2000;
 

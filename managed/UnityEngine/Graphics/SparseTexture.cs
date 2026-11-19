@@ -21,6 +21,9 @@ namespace UnityEngine
         const int TileBytes = 65536;
 
         Texture2D m_Tiles;
+        /// <summary>Tiles changed since the texture was last sent: it is sent once, when a draw
+        /// binds it (a game streams many tiles a frame).</summary>
+        bool m_TilesChanged;
         GraphicsFormat m_GraphicsFormat;
         int m_TileWidth, m_TileHeight;
 
@@ -49,8 +52,8 @@ namespace UnityEngine
 
         public SparseTexture(int width, int height, TextureFormat textureFormat, int mipCount, [Internal.DefaultValue("false")] bool linear)
         {
-            if (!ValidateFormat(textureFormat, width, height)) return;
             if (GraphicsFormatUtility.IsCrunchFormat(textureFormat)) throw new ArgumentException("Crunched SparseTexture is not supported.");
+            if (!ValidateFormat(textureFormat, width, height)) return;
             // sRGB only in a linear-space project, as Texture2D's (a gamma project's RGBA32 is
             // R8G8B8A8_UNorm: tests/projects/graphicsgaps sparse.graphicsFormat).
             var format = GraphicsFormatUtility.GetGraphicsFormat(textureFormat, !linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
@@ -126,13 +129,29 @@ namespace UnityEngine
                 wrapModeV = wrapModeV,
                 anisoLevel = anisoLevel,
             };
+            // Every tile starts unloaded: zero.
             for (int mip = 0; mip < m_Tiles.mipmapCount; mip++)
-                m_Tiles.SetPixelData(new byte[m_Tiles.GetPixelData<byte>(mip).Length], mip);
-            m_Tiles.Apply(false, false);
+            {
+                var pixels = m_Tiles.GetPixelData<byte>(mip);
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = 0;
+            }
+            m_TilesChanged = true;
         }
 
-        /// <summary>The texture holding the tiles (null when creation failed): what draws bind.</summary>
-        internal Texture2D Tiles => m_Tiles;
+        /// <summary>The texture holding the tiles (null when creation failed), sent with the tiles
+        /// changed since the last bind: what draws bind.</summary>
+        internal Texture2D Tiles
+        {
+            get
+            {
+                if (m_TilesChanged && m_Tiles != null)
+                {
+                    m_TilesChanged = false;
+                    m_Tiles.Apply(false, false);
+                }
+                return m_Tiles;
+            }
+        }
 
         internal override void OnSamplerChanged()
         {
@@ -165,7 +184,7 @@ namespace UnityEngine
             if (data == null || data.Length < w * h) throw new ArgumentException("SparseTexture.UpdateTile: the data is smaller than the tile.");
             var colors = data.Length == w * h ? data : data.AsSpan(0, w * h).ToArray();
             m_Tiles.SetPixels32(x, y, w, h, colors, miplevel);
-            m_Tiles.Apply(false, false);
+            m_TilesChanged = true;
             IncrementUpdateCount();
         }
 
@@ -182,7 +201,7 @@ namespace UnityEngine
                 int target = ((y + row) * mipWidth + x) * texel;
                 for (int i = 0; i < w * texel; i++) pixels[target + i] = data != null ? data[row * w * texel + i] : (byte)0;
             }
-            m_Tiles.Apply(false, false);
+            m_TilesChanged = true;
             IncrementUpdateCount();
         }
 

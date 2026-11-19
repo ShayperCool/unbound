@@ -1908,8 +1908,9 @@ fn shader_name(text: &str) -> Option<String> {
 }
 
 /// The render pipelines' own shader tags (URP's and HDRP's `renderPipelineShaderTag`). The
-/// Editor keeps one spelling per tag name whatever the case, the first it reads, and reads these
-/// before a project's shaders.
+/// Editor keeps one spelling per tag name whatever the case, the first it reads; with URP
+/// installed its tag is read before a project's shaders (measured), HDRP's or URP's without the
+/// package is not measured.
 const PIPELINE_TAGS: [&str; 2] = ["UniversalPipeline", "HDRenderPipeline"];
 
 /// Whether a SubShader with this `RenderPipeline` tag runs under the pipeline tag: one without

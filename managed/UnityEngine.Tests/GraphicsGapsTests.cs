@@ -230,6 +230,19 @@ namespace Unbound.Tests
             var camera = new GameObject("camera").AddComponent<Camera>();
             Assert.Throws<ArgumentException>(() => camera.SubmitRenderRequest<ObjectIdRequest>(null));
             Assert.True(RenderPipeline.SupportsRenderRequest(camera, request));
+            // A pipeline asset set, its pipeline not made yet (nothing rendered): the pipeline is
+            // made, takes no ObjectIdRequest, and the Editor's own pass answers.
+            var previous = GraphicsSettings.defaultRenderPipeline;
+            GraphicsSettings.defaultRenderPipeline = ScriptableObject.CreateInstance<ProbePipelineAsset>();
+            try
+            {
+                var target = new RenderTexture(8, 8, 24);
+                var ids = new ObjectIdRequest(target);
+                camera.SubmitRenderRequest(ids);
+                Assert.NotNull(ids.result);
+                Assert.Null(ids.result.idToObjectMapping[0]);
+            }
+            finally { GraphicsSettings.defaultRenderPipeline = previous; }
             UnityEngine.Object.DestroyImmediate(camera.gameObject);
         }
 

@@ -192,8 +192,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The Editor's error for each `Queue` value of the shader's SubShaders (its
-        /// Fallback chain's too) it does not take, once per value, as the shader loads (Unity
-        /// 6000.0.71f1 Editor, tests/projects/graphicsgaps queue.errors).</summary>
+        /// Fallback chain's too) it does not take, once per value (Unity 6000.0.71f1 Editor,
+        /// tests/projects/graphicsgaps queue.errors). The Editor logs it as the shader loads;
+        /// Unbound when the shader's declarations are first asked for.</summary>
         static void ReportUndefinedQueues(string name, ShaderDeclarations d)
         {
             if (!d.SubShadersKnown) return;
@@ -291,7 +292,6 @@ namespace Unbound.Runtime
         /// <summary>Tag names Unity stores upper-cased and looks up whatever their case.</summary>
         static readonly string[] s_UpperNames = { "QUEUE", "IGNOREPROJECTOR", "LIGHTMODE", "SHADOWSUPPORT" };
 
-        /// <summary>A tag's value as Unity stores it (null: none).</summary>
         /// <summary>
         /// Whether a SubShader with this <c>RenderPipeline</c> tag runs under the pipeline tag
         /// (<see cref="UnityEngine.Shader.globalRenderPipeline"/>): one without the tag, or whose
@@ -299,37 +299,57 @@ namespace Unbound.Runtime
         /// equal a comma-separated name of the pipeline tag, as written (no trimming, in case). A
         /// tag name that is a render pipeline's own tag in another case reads as that pipeline's
         /// spelling (<see cref="PipelineTagSpelling"/>). Matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/graphicsgaps select.*.
+        /// tests/projects/graphicsgaps select.*. Allocates nothing.
         /// </summary>
         internal static bool RunsUnder(string tag, string pipeline)
         {
             if (tag == null) return true;
             bool named = false;
-            foreach (var part in tag.Split(','))
+            var rest = tag.AsSpan();
+            while (true)
             {
-                if (part.Length == 0) continue;
-                named = true;
-                var name = PipelineTagSpelling(part);
-                foreach (var active in (pipeline ?? "").Split(','))
-                    if (active.Length != 0 && string.Equals(name, active, StringComparison.Ordinal)) return true;
+                int comma = rest.IndexOf(',');
+                var part = comma < 0 ? rest : rest[..comma];
+                if (part.Length != 0)
+                {
+                    named = true;
+                    if (Lists(pipeline, PipelineTagSpelling(part))) return true;
+                }
+                if (comma < 0) return !named;
+                rest = rest[(comma + 1)..];
             }
-            return !named;
+        }
+
+        /// <summary>Whether a comma-separated list names <paramref name="name"/> as written.</summary>
+        static bool Lists(string list, ReadOnlySpan<char> name)
+        {
+            var rest = (list ?? "").AsSpan();
+            while (true)
+            {
+                int comma = rest.IndexOf(',');
+                var part = comma < 0 ? rest : rest[..comma];
+                if (part.Length != 0 && part.SequenceEqual(name)) return true;
+                if (comma < 0) return false;
+                rest = rest[(comma + 1)..];
+            }
         }
 
         /// <summary>The render pipelines' own shader tags (URP's and HDRP's
         /// <c>renderPipelineShaderTag</c>). The Editor keeps one spelling per tag name, whatever
-        /// the case, the first it reads; these are read before a project's shaders
-        /// (tests/projects/graphicsgaps SelD: a "universalpipeline" SubShader runs under
-        /// "UniversalPipeline" and not under "universalpipeline").</summary>
+        /// the case, the first it reads; with URP installed its tag is read before a project's
+        /// shaders (tests/projects/graphicsgaps SelD: a "universalpipeline" SubShader runs under
+        /// "UniversalPipeline" and not under "universalpipeline"). That HDRP's, or URP's without
+        /// the package, is read first is not measured.</summary>
         static readonly string[] s_PipelineTags = { "UniversalPipeline", "HDRenderPipeline" };
 
-        internal static string PipelineTagSpelling(string name)
+        static ReadOnlySpan<char> PipelineTagSpelling(ReadOnlySpan<char> name)
         {
             foreach (var tag in s_PipelineTags)
-                if (string.Equals(tag, name, StringComparison.OrdinalIgnoreCase)) return tag;
+                if (name.Equals(tag, StringComparison.OrdinalIgnoreCase)) return tag;
             return name;
         }
 
+        /// <summary>A tag's value as Unity stores it (null: none).</summary>
         internal static string Tag(Dictionary<string, string> tags, string name)
         {
             if (name == null) return null;

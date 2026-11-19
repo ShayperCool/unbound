@@ -54,7 +54,10 @@ namespace UnityEngine
             {
                 if (objectIdRequest.destination != null && objectIdRequest.destination.depthStencilFormat == GraphicsFormat.None)
                     Debug.LogWarning("ObjectId Render Request submitted without a depth stencil, which can produce results that are not depth tested correctly");
-                if (GraphicsSettings.currentRenderPipeline == null || !RenderPipelineManager.currentPipeline.IsRenderRequestSupported(this, objectIdRequest))
+                // The pipeline is made first when nothing has rendered with it yet.
+                if (GraphicsSettings.currentRenderPipeline == null
+                    || !RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline)
+                    || RenderPipelineManager.currentPipeline?.IsRenderRequestSupported(this, objectIdRequest) != true)
                 {
                     objectIdRequest.result = new ObjectIdResult(ObjectIds());
                     return;
