@@ -102,6 +102,8 @@ static class MovedTypes
             IEnumerable<string> places;
             if (j == 0)
             {
+                // `global::X` names a type of the global namespace, which nothing moves from.
+                if (chain[0].Node is AliasQualifiedNameSyntax) continue;
                 places = Usings(first).Concat(enclosing);
             }
             else

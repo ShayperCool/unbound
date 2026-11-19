@@ -35,8 +35,10 @@ namespace New.Space
     [MovedFrom(""Old.Space"")] public class Legacy { }
     // From a namespace that no longer has any type.
     [MovedFrom(true, ""Gone.Space"")] public class Vanished { public static string Where() => typeof(Vanished).FullName; }
+    [MovedFrom(true, ""Old.Deeper.Space"")] public class DeepMoved { }
 }
 namespace Old.Space { public class Stays { } }
+namespace Old.Deeper.Space { public class Stays { } }
 ";
     const string Consumer = @"
 using O = Old.Space;
@@ -60,7 +62,8 @@ namespace Old
 {
     namespace Deeper
     {
-        public static class Nested { public static string Name() => typeof(Space.Moved).FullName; }
+        // `Space` is Old.Deeper.Space here: the nested declarations' names joined.
+        public static class Nested { public static string Name() => typeof(Space.DeepMoved).FullName; }
     }
 }
 ";
@@ -110,7 +113,7 @@ namespace Old
                 var assembly = consumer.Assembly;
                 string Named(string type) => (string)assembly.GetType(type)!.GetMethod("Name")!.Invoke(null, null)!;
                 Assert.Equal("New.Space.Moved", Named("Old.Inner.Relative"));
-                Assert.Equal("New.Space.Moved", Named("Old.Deeper.Nested"));
+                Assert.Equal("New.Space.DeepMoved", Named("Old.Deeper.Nested"));
             }
             finally { context.Unload(); }
         }
