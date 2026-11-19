@@ -55,6 +55,18 @@ namespace Unbound.Tests
             Assert.Equal(new Color32(0, 0, 0, 0), (Color32)texture.Tiles.GetPixel(10, 10));
             texture.UnloadTile(1, 0, 0);
             Assert.Equal(new Color32(0, 0, 0, 0), (Color32)texture.Tiles.GetPixel(200, 10));
+            // A material given the texture once keeps its handle: the tiles changed afterwards
+            // are sent as the next frame renders, without another bind.
+            var material = new Material(Shader.Find("Unlit/Texture") ?? ShaderUtil.CreateShaderAsset("Shader \"Tests/SparseUser\" { SubShader { Pass { } } }"));
+            material.mainTexture = texture;
+            material.Sync();
+            uint sent = texture.Tiles.updateCount;
+            texture.UpdateTile(0, 1, 0, Enumerable.Repeat(new Color32(0, 255, 0, 255), 128 * 128).ToArray());
+            SparseTexture.SendChanged();
+            Assert.True(texture.Tiles.updateCount > sent);
+            uint again = texture.Tiles.updateCount;
+            SparseTexture.SendChanged();
+            Assert.Equal(again, texture.Tiles.updateCount);
             // A tile past the texture is no tile: nothing changes.
             texture.UpdateTile(5, 5, 0, new Color32[128 * 128]);
             Assert.Throws<ArgumentException>(() => texture.UpdateTile(0, 0, 0, new Color32[3]));
@@ -63,6 +75,7 @@ namespace Unbound.Tests
             var r8 = new SparseTexture(512, 512, GraphicsFormat.R8_UNorm, 1);
             Assert.Equal((256, 256), (r8.tileWidth, r8.tileHeight));
             UnityEngine.Object.DestroyImmediate(r8);
+            Assert.Throws<ArgumentException>(() => new SparseTexture(256, 256, TextureFormat.DXT1Crunched, 1));
         }
 
         /// <summary>A texture under 64 KiB is refused with the Editor's error, and is no texture.</summary>
@@ -233,6 +246,7 @@ namespace Unbound.Tests
             // A pipeline asset set, its pipeline not made yet (nothing rendered): the pipeline is
             // made, takes no ObjectIdRequest, and the Editor's own pass answers.
             var previous = GraphicsSettings.defaultRenderPipeline;
+            var previousTag = Shader.globalRenderPipeline;
             GraphicsSettings.defaultRenderPipeline = ScriptableObject.CreateInstance<ProbePipelineAsset>();
             try
             {
@@ -242,7 +256,14 @@ namespace Unbound.Tests
                 Assert.NotNull(ids.result);
                 Assert.Null(ids.result.idToObjectMapping[0]);
             }
-            finally { GraphicsSettings.defaultRenderPipeline = previous; }
+            finally
+            {
+                var asset = GraphicsSettings.defaultRenderPipeline;
+                GraphicsSettings.defaultRenderPipeline = previous;
+                RenderPipelineManager.CleanupRenderPipeline();
+                Shader.globalRenderPipeline = previousTag;
+                UnityEngine.Object.DestroyImmediate(asset);
+            }
             UnityEngine.Object.DestroyImmediate(camera.gameObject);
         }
 
@@ -326,6 +347,31 @@ namespace Unbound.Tests
                 UnityEngine.Object.DestroyImmediate(shader);
             }
             Assert.Equal(new[] { "Shader Tests/GapsQueue uses undefined Queue: '2450'", "Shader Unknown uses undefined Queue: '2450'" }, logged);
+        }
+
+        /// <summary>A SubShader without passes is selected like any other (the renderer's choice
+        /// too): its pass count is 0.</summary>
+        [Fact]
+        public void APasslessSubShaderIsSelected()
+        {
+            var shader = ShaderUtil.CreateShaderAsset("Shader \"Tests/GapsPassless\" { SubShader { Pass { } } }");
+            ShaderDeclarations.s_CallForTests = (method, request) => request.Contains("Tests/GapsPassless")
+                ? "{\"found\":true,\"builtin\":false,\"transient\":false,\"reason\":\"\",\"subshaders_known\":true,\"keywords_known\":true,\"keywords\":[],"
+                  + "\"subshaders\":[{\"tags\":[[\"QUEUE\",\"Transparent\"]],\"passes\":[],\"lod\":0,\"restricted\":false},"
+                  + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"restricted\":false}]}"
+                : "{\"found\":false}";
+            ShaderDeclarations.ResetForTests();
+            try
+            {
+                Assert.Equal(0, shader.passCount);
+                Assert.Equal(3000, shader.renderQueue);
+            }
+            finally
+            {
+                ShaderDeclarations.s_CallForTests = null;
+                ShaderDeclarations.ResetForTests();
+                UnityEngine.Object.DestroyImmediate(shader);
+            }
         }
 
         [Fact]

@@ -496,6 +496,7 @@ namespace Unbound.Runtime
             else GfxStream.BeginOffscreenFrame(QualitySettings.activeColorSpace);
             EmitLightingGlobals();
             EmitFrameGlobals();
+            SparseTexture.SendChanged();
             if (GraphicsSettings.currentRenderPipeline == null) ReflectionProbe.UpdateRealtime();
 
             var cameras = Camera.CollectActive();

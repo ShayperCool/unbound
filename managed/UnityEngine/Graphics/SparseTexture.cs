@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine.Experimental.Rendering;
 
@@ -22,8 +23,11 @@ namespace UnityEngine
 
         Texture2D m_Tiles;
         /// <summary>Tiles changed since the texture was last sent: it is sent once, when a draw
-        /// binds it (a game streams many tiles a frame).</summary>
+        /// binds it or as the next frame renders (a game streams many tiles a frame, and
+        /// materials and globals keep the texture they were given), under the same handle.</summary>
         bool m_TilesChanged;
+        bool m_Listed;
+        static readonly List<SparseTexture> s_Changed = new List<SparseTexture>();
         GraphicsFormat m_GraphicsFormat;
         int m_TileWidth, m_TileHeight;
 
@@ -135,7 +139,7 @@ namespace UnityEngine
                 var pixels = m_Tiles.GetPixelData<byte>(mip);
                 for (int i = 0; i < pixels.Length; i++) pixels[i] = 0;
             }
-            m_TilesChanged = true;
+            Changed();
         }
 
         /// <summary>The texture holding the tiles (null when creation failed), sent with the tiles
@@ -144,13 +148,38 @@ namespace UnityEngine
         {
             get
             {
-                if (m_TilesChanged && m_Tiles != null)
-                {
-                    m_TilesChanged = false;
-                    m_Tiles.Apply(false, false);
-                }
+                Send();
                 return m_Tiles;
             }
+        }
+
+        void Send()
+        {
+            if (!m_TilesChanged || m_Tiles == null) return;
+            m_TilesChanged = false;
+            m_Tiles.Apply(false, false);
+        }
+
+        void Changed()
+        {
+            m_TilesChanged = true;
+            if (m_Listed) return;
+            m_Listed = true;
+            s_Changed.Add(this);
+        }
+
+        /// <summary>Sends every sparse texture whose tiles changed since it was last sent (once a
+        /// frame, before its cameras render).</summary>
+        internal static void SendChanged()
+        {
+            if (s_Changed.Count == 0) return;
+            foreach (var texture in s_Changed)
+            {
+                if (texture is null) continue;
+                texture.m_Listed = false;
+                if (texture != null) texture.Send();
+            }
+            s_Changed.Clear();
         }
 
         internal override void OnSamplerChanged()
@@ -184,7 +213,7 @@ namespace UnityEngine
             if (data == null || data.Length < w * h) throw new ArgumentException("SparseTexture.UpdateTile: the data is smaller than the tile.");
             var colors = data.Length == w * h ? data : data.AsSpan(0, w * h).ToArray();
             m_Tiles.SetPixels32(x, y, w, h, colors, miplevel);
-            m_TilesChanged = true;
+            Changed();
             IncrementUpdateCount();
         }
 
@@ -201,7 +230,7 @@ namespace UnityEngine
                 int target = ((y + row) * mipWidth + x) * texel;
                 for (int i = 0; i < w * texel; i++) pixels[target + i] = data != null ? data[row * w * texel + i] : (byte)0;
             }
-            m_TilesChanged = true;
+            Changed();
             IncrementUpdateCount();
         }
 
