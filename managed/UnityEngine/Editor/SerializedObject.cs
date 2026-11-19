@@ -108,8 +108,10 @@ namespace UnityEditor
             if (!m_Modified) return false;
             // The recorded changes reach Undo.postprocessModifications when Undo's records are
             // flushed, after the values are applied (measured: tests/projects/scenesave postprocess,
-            // filter.*, throw.*).
-            if (recordUndo && Undo.postprocessModifications != null) Undo.QueueModifications(Modifications());
+            // filter.*, throw.*). They are the changes as this apply makes them; how the Editor
+            // reports an object changed again before the flush (OnValidate, a second apply, a direct
+            // set) is unmeasured.
+            if (recordUndo) Undo.QueueModifications(Modifications());
             for (int i = 0; i < m_Targets.Length; i++)
             {
                 var target = m_Targets[i];

@@ -139,8 +139,10 @@ namespace UnityEngine.Tests
             data.Stored.Add((new ObjectRef(10, "g", 3), "m_LocalRotation.w", "1", default));
             data.Stored.Add((new ObjectRef(20, "g", 3), "count", "5", default));
             data.Stored.Add((new ObjectRef(10, "g", 3), "m_LocalEulerAnglesHint.x", "0", default));
+            // Signed file ids: a model's objects have negative ones, ordered before.
+            data.Stored.Add((new ObjectRef(-8679921383154817045, "g", 3), "m_Materials.Array.size", "1", default));
             data.OrderByTarget();
-            Assert.Equal(new[] { "m_LocalPosition.x", "m_LocalRotation.w", "m_LocalEulerAnglesHint.x", "count", "m_Name" },
+            Assert.Equal(new[] { "m_Materials.Array.size", "m_LocalPosition.x", "m_LocalRotation.w", "m_LocalEulerAnglesHint.x", "count", "m_Name" },
                 data.Stored.ConvertAll(m => m.Path));
         }
 
