@@ -107,7 +107,12 @@ fn ask_compute(provider: &Provider, file: &Path) -> Value {
 
 #[test]
 fn opaque_choices_keep_their_reason_and_retry_state() {
-    let opaque = pass_json("Opaque", &[], Err(Unknown::fixed("unreadable choices")));
+    let opaque = pass_json(
+        "Opaque",
+        &[],
+        Err(Unknown::fixed("unreadable choices")),
+        None,
+    );
     assert!(opaque["keyword_sets"].is_null());
     assert_eq!(opaque["keyword_sets_reason"], "unreadable choices");
     assert_eq!(opaque["keyword_sets_transient"], false);
@@ -115,11 +120,16 @@ fn opaque_choices_keep_their_reason_and_retry_state() {
         "Retry",
         &[],
         Err(Unknown::transient("includes unavailable")),
+        Some(true),
     );
     assert!(retry["keyword_sets"].is_null());
     assert_eq!(retry["keyword_sets_transient"], true);
-    let empty = pass_json("Empty", &[], Ok(Vec::new()));
+    let empty = pass_json("Empty", &[], Ok(Vec::new()), Some(false));
     assert_eq!(empty["keyword_sets"], json!([]));
+    // Whether the pass declares procedural instancing: unknown, yes, no.
+    assert!(opaque["procedural_instancing"].is_null());
+    assert_eq!(retry["procedural_instancing"], true);
+    assert_eq!(empty["procedural_instancing"], false);
     assert_eq!(empty["keyword_sets_reason"], "");
     assert_eq!(empty["keyword_sets_transient"], false);
 }
@@ -1071,7 +1081,7 @@ fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
     assert_eq!(resolved["subshaders_known"], true, "{resolved}");
     assert_eq!(
         resolved["subshaders"][0]["passes"][1],
-        json!({ "name": "Picking", "tags": [["LIGHTMODE", "Picking"]], "keyword_sets": null, "keyword_sets_reason": "serialized built-in variant choices are not read", "keyword_sets_transient": false })
+        json!({ "name": "Picking", "tags": [["LIGHTMODE", "Picking"]], "keyword_sets": null, "keyword_sets_reason": "serialized built-in variant choices are not read", "keyword_sets_transient": false, "procedural_instancing": false })
     );
 
     let unresolved = ask(&provider, "Tests/Unresolved");
@@ -1236,5 +1246,22 @@ fn subshaders_carry_their_lod_and_device_limits() {
     assert!(
         subs.iter()
             .all(|s| s["passes"].as_array().unwrap().len() == 1)
+    );
+}
+
+/// A program declares procedural instancing with `#pragma instancing_options procedural:...`
+/// (the built-in particle Standard shaders); ordinary instancing options do not; an
+/// `#include_with_pragmas` leaves it unknown.
+#[test]
+fn procedural_instancing_is_read_from_the_instancing_options() {
+    let particle = "#pragma multi_compile_instancing\n  #pragma instancing_options procedural:vertInstancingSetup\n";
+    assert_eq!(procedural_instancing(particle), Some(true));
+    let standard =
+        "#pragma multi_compile_instancing\n#pragma instancing_options assumeuniformscaling\n";
+    assert_eq!(procedural_instancing(standard), Some(false));
+    assert_eq!(procedural_instancing("#pragma vertex vert\n"), Some(false));
+    assert_eq!(
+        procedural_instancing("#include_with_pragmas \"Inst.hlsl\"\n"),
+        None
     );
 }

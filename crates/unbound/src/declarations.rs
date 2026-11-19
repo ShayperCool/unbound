@@ -83,17 +83,45 @@ impl Unknown {
 }
 
 /// A known empty choice list and opaque choices remain distinct in every provider reply.
+/// `procedural_instancing` is whether the pass's program declares procedural instancing (null:
+/// not known).
 fn pass_json(
     name: &str,
     tags: &[(String, String)],
     choices: Result<Vec<Vec<String>>, Unknown>,
+    procedural_instancing: Option<bool>,
 ) -> Value {
     let (sets, reason, transient) = match choices {
         Ok(sets) => (Some(sets), String::new(), false),
         Err(unknown) => (None, unknown.reason, unknown.transient),
     };
     json!({"name": name, "tags": tags_json(tags), "keyword_sets": sets,
-        "keyword_sets_reason": reason, "keyword_sets_transient": transient})
+        "keyword_sets_reason": reason, "keyword_sets_transient": transient,
+        "procedural_instancing": procedural_instancing})
+}
+
+/// The keyword of a procedural instancing variant (`#pragma instancing_options procedural:...`).
+const PROCEDURAL_INSTANCING_KEYWORD: &str = "PROCEDURAL_INSTANCING_ON";
+
+/// Whether a program declares procedural instancing: `#pragma instancing_options` with a
+/// `procedural:<function>` option, what particle instancing needs (the built-in particle
+/// Standard shaders declare it). An `#include_with_pragmas` is not followed: unknown.
+fn procedural_instancing(code: &str) -> Option<bool> {
+    let mut found = false;
+    for line in code.lines() {
+        let Some(rest) = line.trim_start().strip_prefix('#') else {
+            continue;
+        };
+        let mut words = rest.split_whitespace();
+        match words.next() {
+            Some("include_with_pragmas") => return None,
+            Some("pragma") if words.next() == Some("instancing_options") => {
+                found |= words.any(|w| w.starts_with("procedural:"));
+            }
+            _ => {}
+        }
+    }
+    Some(found)
 }
 
 /// The resource files' sizes and modification times when they were read: a change reads them
@@ -196,6 +224,12 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
             p.use_pass
         )));
     }
+    // The serialized form names the shader's keywords, not each pass's pragmas: a shader whose
+    // keyword space has the procedural instancing keyword is taken to declare it in every pass.
+    let procedural = builtin
+        .keywords
+        .iter()
+        .any(|k| k.name == PROCEDURAL_INSTANCING_KEYWORD);
     Ok(builtin
         .subshaders
         .iter()
@@ -203,7 +237,7 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
             json!({
                 "tags": tags_json(&sub.tags),
                 "passes": sub.passes.iter().map(|p| pass_json(&p.name, &p.tags,
-                    Err(Unknown::fixed("serialized built-in variant choices are not read")))).collect::<Vec<_>>(),
+                    Err(Unknown::fixed("serialized built-in variant choices are not read")), Some(procedural))).collect::<Vec<_>>(),
                 "lod": sub.lod,
                 // The serialized form does not say which devices a SubShader runs on; a built-in
                 // SubShader is taken as one the device runs, as the renderer does.
@@ -761,6 +795,7 @@ impl State {
                                 generated.name,
                                 &tags,
                                 Err(Unknown::fixed("surface variant choices are not read")),
+                                procedural_instancing(&program.code),
                             ));
                         }
                     }
@@ -774,7 +809,13 @@ impl State {
                     (pass.name.clone(), canonical_tags(pass.own_tags.iter()))
                 };
                 let choices = self.pass_variant_sets(inputs, pass);
-                passes.push(pass_json(&name, &tags, choices));
+                // A UsePass's program is another shader's: not followed here.
+                let procedural = match (&pass.use_pass, &pass.program) {
+                    (None, Some(program)) => procedural_instancing(&program.code),
+                    (None, None) => Some(false),
+                    (Some(_), _) => None,
+                };
+                passes.push(pass_json(&name, &tags, choices, procedural));
             }
             out.push(json!({
                 "tags": tags_json(&canonical_tags(sub.tags.iter())),

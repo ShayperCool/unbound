@@ -38,6 +38,9 @@ namespace Unbound.Runtime
             /// <summary>Each pass's name as declared (empty: unnamed; names are compared
             /// case-insensitively); null for a pass the host sends no name for (an older host).</summary>
             internal readonly List<string> PassNames = new List<string>();
+            /// <summary>Per pass: whether its program declares procedural instancing
+            /// (`#pragma instancing_options procedural:...`); null where the host does not know.</summary>
+            internal readonly List<bool?> ProceduralInstancing = new List<bool?>();
             /// <summary>Each pass's variant choices, null when the host cannot read them.</summary>
             internal readonly List<string[][]> KeywordSets = new List<string[][]>();
             /// <summary>Each pass's reason for unknown choices, empty when known.</summary>
@@ -249,6 +252,8 @@ namespace Unbound.Runtime
                         Tags(pass.GetProperty("tags"), tags);
                         s.Passes.Add(tags);
                         s.PassNames.Add(pass.TryGetProperty("name", out var passName) && passName.ValueKind == JsonValueKind.String ? passName.GetString() : null);
+                        s.ProceduralInstancing.Add(pass.TryGetProperty("procedural_instancing", out var procedural)
+                            && procedural.ValueKind is JsonValueKind.True or JsonValueKind.False ? procedural.GetBoolean() : null);
                         string[][] sets = null;
                         if (pass.TryGetProperty("keyword_sets", out var choices) && choices.ValueKind == JsonValueKind.Array)
                         {

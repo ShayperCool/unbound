@@ -133,11 +133,34 @@ namespace UnityEngine
         public int meshCount => m_Meshes.Count;
         public int activeVertexStreamsCount => m_VertexStreams.Count;
         public int activeTrailVertexStreamsCount => m_TrailVertexStreams.Count;
+        /// <summary>Whether the material's shader can draw the particles instanced: a pass of its
+        /// active SubShader declares procedural instancing (the built-in particle Standard
+        /// shaders; Standard's ordinary instancing does not count), whatever the render mode
+        /// (Unity 6000.0.71f1, tests/projects/particlerender instancing/*). Unbound still draws
+        /// them one by one.</summary>
         public bool supportsMeshInstancing
         {
             get
             {
-                Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing", "is always false: mesh particles are not drawn instanced");
+                var shader = sharedMaterial != null ? sharedMaterial.shader : null;
+                if (shader == null) return false;
+                if (!ShaderDeclarations.Of(shader).SubShadersKnown)
+                {
+                    Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing of a shader Unbound cannot read",
+                        "answers false (its SubShaders are not known)");
+                    return false;
+                }
+                var active = shader.ActiveSubShader("ParticleSystemRenderer.supportsMeshInstancing", "answers false");
+                if (active == null) return false;
+                bool unknown = false;
+                foreach (var procedural in active.ProceduralInstancing)
+                {
+                    if (procedural == true) return true;
+                    unknown |= procedural == null;
+                }
+                if (unknown)
+                    Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing of a shader whose passes are not all read",
+                        "answers false for a pass Unbound cannot read (a UsePass, an include with pragmas, a serialized built-in shader)");
                 return false;
             }
         }
@@ -205,18 +228,64 @@ namespace UnityEngine
         }
 
 #pragma warning disable CS0618
+        /// <summary>The streams each of the obsolete flags stands for: the one that says whether
+        /// the flag is on, the ones enabling it adds after it, and the ones disabling it removes
+        /// (Random removes StableRandomXYZW, not the XYZ it adds). Unity 6000.0.71f1,
+        /// tests/projects/particlerender streams/*.</summary>
+        static readonly (ParticleSystemVertexStreams Flag, ParticleSystemVertexStream[] Added, ParticleSystemVertexStream[] Removed)[] s_LegacyStreams =
+        {
+            Same(ParticleSystemVertexStreams.Position, ParticleSystemVertexStream.Position),
+            Same(ParticleSystemVertexStreams.Normal, ParticleSystemVertexStream.Normal),
+            Same(ParticleSystemVertexStreams.Tangent, ParticleSystemVertexStream.Tangent),
+            Same(ParticleSystemVertexStreams.Color, ParticleSystemVertexStream.Color),
+            Same(ParticleSystemVertexStreams.UV, ParticleSystemVertexStream.UV),
+            Same(ParticleSystemVertexStreams.UV2BlendAndFrame, ParticleSystemVertexStream.UV2, ParticleSystemVertexStream.AnimBlend, ParticleSystemVertexStream.AnimFrame),
+            Same(ParticleSystemVertexStreams.CenterAndVertexID, ParticleSystemVertexStream.Center, ParticleSystemVertexStream.VertexID),
+            Same(ParticleSystemVertexStreams.Size, ParticleSystemVertexStream.SizeXYZ),
+            Same(ParticleSystemVertexStreams.Rotation, ParticleSystemVertexStream.Rotation3D),
+            Same(ParticleSystemVertexStreams.Velocity, ParticleSystemVertexStream.Velocity),
+            Same(ParticleSystemVertexStreams.Lifetime, ParticleSystemVertexStream.AgePercent, ParticleSystemVertexStream.InvStartLifetime),
+            Same(ParticleSystemVertexStreams.Custom1, ParticleSystemVertexStream.Custom1XYZW),
+            Same(ParticleSystemVertexStreams.Custom2, ParticleSystemVertexStream.Custom2XYZW),
+            (ParticleSystemVertexStreams.Random,
+                new[] { ParticleSystemVertexStream.StableRandomXYZ, ParticleSystemVertexStream.VaryingRandomX },
+                new[] { ParticleSystemVertexStream.StableRandomXYZW, ParticleSystemVertexStream.VaryingRandomX }),
+        };
+
+        static (ParticleSystemVertexStreams, ParticleSystemVertexStream[], ParticleSystemVertexStream[]) Same(ParticleSystemVertexStreams flag, params ParticleSystemVertexStream[] streams) =>
+            (flag, streams, streams);
+
+        void SetLegacyStreams(ParticleSystemVertexStreams streams, bool enabled)
+        {
+            var list = new List<ParticleSystemVertexStream>(m_VertexStreams);
+            foreach (var (flag, added, removed) in s_LegacyStreams)
+            {
+                if ((streams & flag) == 0) continue;
+                if (!enabled)
+                    foreach (var s in removed) list.Remove(s);
+                else if (!list.Contains(added[0]))
+                    list.AddRange(added);
+            }
+            SetActiveVertexStreams(list);
+        }
+
         [global::System.@ObsoleteAttribute("EnableVertexStreams is deprecated. Use SetActiveVertexStreams instead.", false)]
-        public void EnableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.EnableVertexStreams", "is not honoured: use SetActiveVertexStreams");
+        public void EnableVertexStreams(ParticleSystemVertexStreams streams) => SetLegacyStreams(streams, true);
 
         [global::System.@ObsoleteAttribute("DisableVertexStreams is deprecated. Use SetActiveVertexStreams instead.", false)]
-        public void DisableVertexStreams(ParticleSystemVertexStreams streams) => Stubs.Ignored("ParticleSystemRenderer.DisableVertexStreams", "is not honoured: use SetActiveVertexStreams");
+        public void DisableVertexStreams(ParticleSystemVertexStreams streams) => SetLegacyStreams(streams, false);
 
         [global::System.@ObsoleteAttribute("AreVertexStreamsEnabled is deprecated. Use GetActiveVertexStreams instead.", false)]
-        public bool AreVertexStreamsEnabled(ParticleSystemVertexStreams streams) => (GetEnabledVertexStreams(streams) & streams) == streams;
+        public bool AreVertexStreamsEnabled(ParticleSystemVertexStreams streams) => GetEnabledVertexStreams(streams) == streams;
 
         [global::System.@ObsoleteAttribute("GetEnabledVertexStreams is deprecated. Use GetActiveVertexStreams instead.", false)]
-        public ParticleSystemVertexStreams GetEnabledVertexStreams(ParticleSystemVertexStreams streams) =>
-            streams & (ParticleSystemVertexStreams.Position | ParticleSystemVertexStreams.Normal | ParticleSystemVertexStreams.Color | ParticleSystemVertexStreams.UV);
+        public ParticleSystemVertexStreams GetEnabledVertexStreams(ParticleSystemVertexStreams streams)
+        {
+            var enabled = ParticleSystemVertexStreams.None;
+            foreach (var (flag, added, _) in s_LegacyStreams)
+                if (m_VertexStreams.Contains(added[0])) enabled |= flag;
+            return enabled & streams;
+        }
 #pragma warning restore CS0618
 
         [Obsolete("BakeMesh with useTransform is deprecated. Use BakeMesh with ParticleSystemBakeMeshOptions instead.", false)]
