@@ -221,9 +221,10 @@ namespace UnityEngine.Tests
                 var filter = go.AddComponent<MeshFilter>();
                 filter.sharedMesh = mesh;
 
-                // The embedded mesh stays as the file has it, and the filter names it.
+                // The embedded mesh stays as the file has it (named as kept as read), and the filter names it.
                 var text = SceneFiles.Write(scene);
                 Assert.NotNull(text);
+                Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects as they were read"));
                 Assert.Contains("--- !u!43 &500\nMesh:\n  m_ObjectHideFlags: 0\n  m_Name: embedded\n  m_Unread: 7\n", text);
                 Assert.Contains("m_Mesh: {fileID: 500}", text);
                 Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
@@ -301,6 +302,35 @@ namespace UnityEngine.Tests
                 m_Messages.Values.Clear();
                 Assert.False(SceneFiles.Save(scene, "Assets/Saved.unity"));
                 Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects made by script"));
+            }
+            finally
+            {
+                Close(scene, previous);
+                ProjectInfo.ProjectPath = previousProject;
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
+        public void ASavedCopyLeavesTheScenesEmbeddedObjectsItsOwn()
+        {
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                var mesh = new Mesh { name = "embedded" };
+                scene.FileIds[mesh] = 500;
+                var filter = new GameObject("holder").AddComponent<MeshFilter>();
+                // A copy that drops the unreferenced mesh leaves the scene's own file holding it.
+                Assert.True(SceneFiles.Save(scene, "Assets/Copy.unity"));
+                Assert.DoesNotContain("--- !u!43 &500", File.ReadAllText(Path.Combine(project, "Assets/Copy.unity")));
+                filter.sharedMesh = mesh;
+                Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                var text = File.ReadAllText(Path.Combine(project, "Assets/Saved.unity"));
+                Assert.Contains("--- !u!43 &500", text);
+                Assert.Contains("m_Mesh: {fileID: 500}", text);
             }
             finally
             {

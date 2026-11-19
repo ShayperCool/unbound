@@ -321,10 +321,8 @@ namespace Unbound.Runtime
             /// <summary>The file ids the scene's objects had when they were read or last saved.</summary>
             readonly HashSet<long> m_Known = new HashSet<long>();
             readonly Dictionary<long, Object> m_KnownObjects = new Dictionary<long, Object>();
-            /// <summary>The documents of embedded objects written this pass, and the embedded objects
-            /// the last pass dropped (nothing referenced them).</summary>
+            /// <summary>The documents of embedded objects written this pass.</summary>
             readonly HashSet<long> m_Embedded = new HashSet<long>();
-            readonly HashSet<Object> m_Pruned = new HashSet<Object>(ReferenceEqualityComparer.Instance);
             readonly Dictionary<long, string> m_KeptEmbeddedClasses = new Dictionary<long, string>();
             readonly HashSet<long> m_LiveGameObjects = new HashSet<long>();
             readonly Dictionary<PrefabInstanceData, InstanceState> m_Instances = new Dictionary<PrefabInstanceData, InstanceState>();
@@ -355,8 +353,12 @@ namespace Unbound.Runtime
                     if (pair.Key is null) continue;
                     m_Known.Add(pair.Value);
                     m_KnownObjects[pair.Value] = pair.Key;
-                    // An object no longer saved (DontSave) is referenced as none, as a new one is.
-                    if (pair.Key != null && Saved(pair.Key)) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
+                    // An object no longer saved (DontSave) is referenced as none, as a new one is; an
+                    // object outside the hierarchy (an embedded Mesh) is the file's only while the
+                    // file holds its document (a save that dropped it, nothing referencing it, made
+                    // it one made by script again).
+                    bool ofFile = pair.Key is GameObject || pair.Key is Component || m_Source.ContainsKey(pair.Value);
+                    if (pair.Key != null && Saved(pair.Key) && ofFile) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
                 }
                 foreach (var id in m_Source.Keys) m_Used.Add(id);
                 foreach (var id in m_Scene.StrippedIds.Values) m_Used.Add(id);
@@ -388,13 +390,6 @@ namespace Unbound.Runtime
                 // later saves agree, tests/projects/scenesave BaseCopy).
                 foreach (var pair in m_Ids)
                     if (pair.Key != null) m_Scene.FileIds[pair.Key] = pair.Value;
-                // An embedded object the file no longer holds is no object of it: a later reference
-                // to it is refused like one to an object made by script.
-                foreach (var pruned in m_Pruned)
-                {
-                    m_Scene.FileIds.Remove(pruned);
-                    m_Ids.Remove(pruned);
-                }
                 var docs = new List<YTextDocument>(m_Out.Values);
                 return UnityYamlText.Write(docs);
             }
@@ -408,7 +403,6 @@ namespace Unbound.Runtime
                 m_KeptAsRead.Clear();
                 m_Unwritten.Clear();
                 m_Embedded.Clear();
-                m_Pruned.Clear();
                 m_KeptEmbeddedClasses.Clear();
                 m_UnlocatedCount = 0;
                 foreach (var root in roots) WriteHierarchy(root.transform);
@@ -453,7 +447,6 @@ namespace Unbound.Runtime
                     foreach (var id in unused)
                     {
                         m_Out.Remove(id);
-                        if (m_Embedded.Contains(id) && m_KnownObjects.TryGetValue(id, out var gone)) m_Pruned.Add(gone);
                     }
                 }
                 foreach (var pair in m_KeptEmbeddedClasses)
@@ -1028,9 +1021,9 @@ namespace Unbound.Runtime
                         // references goes (PruneUnreferenced).
                         if (known == null || known is GameObject || known is Component || !Saved(known)) continue;
                         var doc = Clone(d);
-                        // One kept as read is named, when dirty, once it survives pruning (as an asset
-                        // file's object is named).
-                        if (!NativeDocuments.Write(doc, known, m_Ids, m_Locations, ref m_UnlocatedCount, Record) && EditorUtility.IsDirty(known))
+                        // One kept as read is named once it survives pruning: a scene save writes
+                        // its objects as they are, dirty or not.
+                        if (!NativeDocuments.Write(doc, known, m_Ids, m_Locations, ref m_UnlocatedCount, Record))
                             m_KeptEmbeddedClasses[d.FileId] = known.GetType().Name;
                         m_Out[d.FileId] = doc;
                         m_Embedded.Add(d.FileId);
