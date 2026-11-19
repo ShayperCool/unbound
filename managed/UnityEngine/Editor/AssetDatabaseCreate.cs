@@ -110,9 +110,10 @@ namespace UnityEditor
                 UnityYamlWriter.Write(Objects.Where(p => p.Key != null).OrderBy(p => p.Value).Select(p => p.Key).ToArray(), Objects);
         }
 
-        /// <summary>SaveAssets for the assets CreateAsset made: each one with objects added or
-        /// marked dirty since it was written is written again.</summary>
-        static void SaveCreated()
+        /// <summary>The saves of the assets CreateAsset made (<see cref="AssetFiles.SaveDirty"/>):
+        /// each one with objects added or marked dirty since it was written is written again
+        /// (<paramref name="only"/>: the one holding that object).</summary>
+        internal static void SaveCreated(Object only = null)
         {
             foreach (var pair in s_Created.ToList())
             {
@@ -122,8 +123,9 @@ namespace UnityEditor
                     s_Created.Remove(pair.Key);
                     continue;
                 }
+                if (only is not null && !created.Objects.ContainsKey(only)) continue;
                 if (!created.Unsaved && !created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o))) continue;
-                System.IO.File.WriteAllText(FileOf(created.Path), created.Text());
+                SceneFiles.WriteFile(FileOf(created.Path), created.Text());
                 created.Unsaved = false;
                 foreach (var o in created.Objects.Keys) if (o != null) EditorUtility.ClearDirty(o);
             }

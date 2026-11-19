@@ -181,6 +181,14 @@ namespace UnityEditor
             ImportNew(new[] { path });
         }
 
+        /// <summary>Imports a file Unbound wrote (a saved scene): a new one gets its <c>.meta</c>,
+        /// a new folder's parents too, as an import of a new file does (tests/projects/scenesave
+        /// Fresh.unity.meta, tests/projects/projectwrites 02.import).</summary>
+        internal static void ImportWritten(string path)
+        {
+            if (Unbound.Runtime.Native.IsReady) ImportNew(path);
+        }
+
         static void ImportNew(IReadOnlyList<string> paths)
         {
             var requests = new List<string>();

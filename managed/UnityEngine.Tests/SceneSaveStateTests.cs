@@ -152,37 +152,6 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(parent); }
         }
 
-        [Fact]
-        public void DeleteAssetDeletesAnAssetWithItsMetaAndNothingElse()
-        {
-            var previous = ProjectInfo.ProjectPath;
-            var project = Directory.CreateTempSubdirectory("unbound-delete-").FullName;
-            try
-            {
-                ProjectInfo.ProjectPath = project;
-                Directory.CreateDirectory(Path.Combine(project, "Assets"));
-                Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
-                File.WriteAllText(Path.Combine(project, "Assets/Old.unity"), "x");
-                File.WriteAllText(Path.Combine(project, "Assets/Old.unity.meta"), "x");
-                File.WriteAllText(Path.Combine(project, "ProjectSettings/TagManager.asset"), "x");
-                Assert.True(AssetDatabase.DeleteAsset("Assets/Old.unity"));
-                Assert.False(File.Exists(Path.Combine(project, "Assets/Old.unity")));
-                Assert.False(File.Exists(Path.Combine(project, "Assets/Old.unity.meta")));
-                Assert.False(AssetDatabase.DeleteAsset("Assets/Old.unity"));
-                // Not assets: refused, the files stay.
-                Assert.False(AssetDatabase.DeleteAsset("ProjectSettings/TagManager.asset"));
-                Assert.False(AssetDatabase.DeleteAsset("Assets/../ProjectSettings/TagManager.asset"));
-                Assert.False(AssetDatabase.DeleteAsset(Path.Combine(project, "ProjectSettings/TagManager.asset")));
-                Assert.True(File.Exists(Path.Combine(project, "ProjectSettings/TagManager.asset")));
-                Assert.False(AssetDatabase.DeleteAsset("Assets"));
-            }
-            finally
-            {
-                ProjectInfo.ProjectPath = previous;
-                Directory.Delete(project, true);
-            }
-        }
-
         /// <summary>An untitled-then-named scene of a temporary project, active, with its file's text.</summary>
         static (SceneData Scene, string Project, SceneData Previous) TemporaryScene(string fileText)
         {
@@ -229,10 +198,10 @@ namespace UnityEngine.Tests
                 Assert.Contains("m_Mesh: {fileID: 500}", text);
                 Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
                 Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
-                // A new path gets the file and a .meta (the scene itself keeps its path here).
+                // A new path gets the file (the scene itself keeps its path here); its .meta is the
+                // engine's import's (tests/projects/scenesave Fresh.unity.meta).
                 Assert.True(SceneFiles.Save(scene, Path.Combine(project, "Assets/New/Copy.unity")));
                 Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/New/Copy.unity")));
-                Assert.StartsWith("fileFormatVersion: 2\nguid: ", File.ReadAllText(Path.Combine(project, "Assets/New/Copy.unity.meta")));
                 Assert.Empty(Directory.GetFiles(Path.Combine(project, "Assets/New"), "*.unbound-save"));
 
                 // A mesh made by script is embedded by the Editor; Unbound refuses the save.

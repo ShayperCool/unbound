@@ -16,7 +16,8 @@ namespace Unbound.Runtime
     /// EditorUtility.SetDirty or a change through a material's API; a script's field set by script
     /// alone dirties nothing and is not saved. A saved object is no longer dirty. Each document of the
     /// file starts from the file's: a script object's is written whole, a material's fields Unbound
-    /// models are replaced, the others stay as written.
+    /// models are replaced, the others stay as written. An asset CreateAsset made is written whole
+    /// from its objects, also when AddObjectToAsset added one.
     /// </summary>
     internal static class AssetFiles
     {
@@ -25,6 +26,8 @@ namespace Unbound.Runtime
         internal static void SaveDirty(Object only = null)
         {
             Undo.FlushDirtiness();
+            // The assets CreateAsset made are written from their objects (and so no longer dirty).
+            AssetDatabase.SaveCreated(only);
             var dirty = new List<int>(EditorUtility.DirtyIds);
             var byGuid = new Dictionary<string, List<Object>>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in dirty)

@@ -115,7 +115,7 @@ namespace Unbound.Runtime
                 var file = Path.Combine(ProjectInfo.ProjectPath, path);
                 Directory.CreateDirectory(Path.GetDirectoryName(file));
                 WriteFile(file, text);
-                NewAssetMeta.Write(path, NewAssetMeta.DefaultImporter);
+                UnityEditor.AssetDatabase.ImportWritten(path);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
@@ -1113,23 +1113,6 @@ namespace Unbound.Runtime
         }
 
         internal static bool IsRecorded(Object o) => o is not null && s_Recorded.TryGetValue(o, out _);
-    }
-
-    /// <summary>
-    /// The .meta file of an asset Unbound writes for the first time, as the Editor's import makes
-    /// it: a new random GUID and the importer's settings (measured for scenes:
-    /// tests/projects/scenesave, Fresh.unity.meta). An asset that has one keeps it.
-    /// </summary>
-    internal static class NewAssetMeta
-    {
-        internal const string DefaultImporter = "DefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
-
-        internal static void Write(string assetPath, string importer)
-        {
-            var meta = Path.Combine(ProjectInfo.ProjectPath, assetPath + ".meta");
-            if (File.Exists(meta)) return;
-            File.WriteAllText(meta, "fileFormatVersion: 2\nguid: " + Guid.NewGuid().ToString("N") + "\n" + importer);
-        }
     }
 
     /// <summary>The document of an object Unbound writes whole or in part outside a scene's

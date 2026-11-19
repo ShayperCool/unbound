@@ -325,13 +325,11 @@ namespace UnityEditor
         /// <summary>The labels the asset's .meta lists.</summary>
         public static string[] GetLabels(Object obj) => (string[])(EntryOf(obj)?.Labels ?? Array.Empty<string>()).Clone();
 
-        /// <summary>Writes edited settings assets (in Edit mode, as the Editor), the assets
-        /// CreateAsset made whose objects changed (in both modes, as the Editor) and the files of
-        /// the other dirty assets (<see cref="AssetFiles"/>).</summary>
+        /// <summary>Writes edited settings assets (in Edit mode, as the Editor) and the files of
+        /// dirty assets, in both modes (<see cref="AssetFiles"/>).</summary>
         public static void SaveAssets()
         {
             SettingsAssets.Save();
-            SaveCreated();
             AssetFiles.SaveDirty();
         }
 

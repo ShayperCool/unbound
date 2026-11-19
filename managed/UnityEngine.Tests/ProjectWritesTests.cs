@@ -79,6 +79,11 @@ namespace UnityEngine.Tests
             Assert.False(AssetPaths.Editable(roots, "Packages/com.unity.ugui/Runtime/X.cs"));
             Assert.False(AssetPaths.Editable(roots, "Packages/com.unknown/X.cs"));
             Assert.False(AssetPaths.Editable(roots, "Elsewhere/X.cs"));
+            // The project's settings, a path escaping Assets and an absolute path are no assets.
+            Assert.False(AssetPaths.Editable(roots, "ProjectSettings/TagManager.asset"));
+            Assert.False(AssetPaths.Editable(roots, "Assets/../ProjectSettings/TagManager.asset"));
+            Assert.False(AssetPaths.Editable(roots, "Assets/./X.asset"));
+            Assert.False(AssetPaths.Editable(roots, "/project/ProjectSettings/TagManager.asset"));
             // Hidden names, and what is inside a folder plug-in (the plug-in itself is an asset).
             Assert.False(AssetPaths.Editable(roots, "Assets/.git/X.txt"));
             Assert.False(AssetPaths.Editable(roots, "Assets/Art/.DS_Store"));

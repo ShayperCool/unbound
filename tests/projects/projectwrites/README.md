@@ -63,11 +63,10 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-19: 631/668 values, 0 failures and 37 recorded residuals
-(`residuals.json`): lists of numbers written as YAML sequences instead of the Editor's hex strings
-(the serialized-file writer), the lock not written again after an Edit-mode `Client.Resolve`, no
+Unbound on macOS, 2026-11-19: 649/668 values, 0 failures and 19 recorded residuals
+(`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
-which extensions packages' ScriptedImporters claim), and copies and folders refused in a read-only
+which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
 package (the Editor writes into its per-project copy of the package; Unbound's package files are
 the installation's or the shared store's), and labels YAML reads as something else (the Editor
 reads them back as YAML; Unbound keeps their text).
