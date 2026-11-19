@@ -337,5 +337,24 @@ namespace UnityEngine.Tests
             }
             finally { Done(ps, plane); }
         }
+
+        [Fact]
+        public void EveryWorldContactPathReportsToTheRigidbodysObject()
+        {
+            // The direct contact and the collision cache (Medium, Low) both name the receiver this way.
+            var parent = new GameObject("body");
+            parent.AddComponent<Rigidbody>();
+            var child = new GameObject("child").AddComponent<BoxCollider>();
+            child.transform.SetParent(parent.transform, false);
+            var alone = new GameObject("alone").AddComponent<BoxCollider>();
+            Physics.SyncTransforms();
+            try
+            {
+                Assert.Same(parent, ParticleSystem.CollisionReceiver(child));
+                Assert.Same(alone.gameObject, ParticleSystem.CollisionReceiver(alone));
+                Assert.Null(ParticleSystem.CollisionReceiver(null));
+            }
+            finally { Object.DestroyImmediate(parent); Object.DestroyImmediate(alone.gameObject); }
+        }
     }
 }

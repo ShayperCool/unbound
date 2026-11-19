@@ -124,10 +124,11 @@ public class CollisionProbe : MonoBehaviour
         return texture;
     }
 
-    void VectorField(string name, float attraction, Texture3D texture, Vector3 at, float dt = 0.05f)
+    void VectorField(string name, float attraction, Texture3D texture, Vector3 at, float dt = 0.05f, float yaw = 0f, float multiplier = 1f, bool late = false)
     {
         var fieldGo = new GameObject(name + "Field");
         fieldGo.transform.position = at;
+        fieldGo.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         var field = fieldGo.AddComponent<ParticleSystemForceField>();
         field.shape = ParticleSystemForceFieldShape.Box;
         field.endRange = 2f;
@@ -154,6 +155,7 @@ public class CollisionProbe : MonoBehaviour
         shape.enabled = false;
         var forces = ps.externalForces;
         forces.enabled = true;
+        forces.multiplier = multiplier;
         ps.useAutoRandomSeed = false;
         ps.randomSeed = 3;
         var starts = new[] { new Vector3(-1.5f, -1.5f, -1.5f), Vector3.zero, new Vector3(0.7f, -0.3f, 1.2f), new Vector3(3f, 0f, 0f) };
@@ -162,6 +164,9 @@ public class CollisionProbe : MonoBehaviour
         var particles = new ParticleSystem.Particle[8];
         for (int step = 1; step <= 5; step++)
         {
+            // A particle emitted into a field that has already been simulating.
+            if (late && step == 3)
+                ps.Emit(new ParticleSystem.EmitParams { position = at + new Vector3(0.2f, 0.1f, -0.2f), velocity = new Vector3(0.5f, 0f, 0f), startLifetime = 10f, startSize = 0.1f, applyShapeToPosition = false }, 1);
             ps.Simulate(dt, true, false, false);
             int count = ps.GetParticles(particles);
             for (int i = 0; i < count; i++)
@@ -180,6 +185,10 @@ public class CollisionProbe : MonoBehaviour
         VectorField("pull", 1f, texture, new Vector3(40, 50, 0));
         VectorField("pull2", 2f, texture, new Vector3(60, 50, 0));
         VectorField("pullstep", 1f, texture, new Vector3(80, 50, 0), 0.02f);
+        VectorField("late", 1f, texture, new Vector3(100, 50, 0), 0.02f, late: true);
+        VectorField("negative", -1f, texture, new Vector3(120, 50, 0), 0.02f);
+        VectorField("rotated", 1f, texture, new Vector3(140, 50, 0), 0.02f, yaw: 90f);
+        VectorField("multiplier", 1f, texture, new Vector3(160, 50, 0), 0.02f, multiplier: 0.5f);
         Put("complete", "\"1\"");
         Finished = true;
     }

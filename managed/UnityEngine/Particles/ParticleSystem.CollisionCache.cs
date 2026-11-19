@@ -193,7 +193,7 @@ namespace UnityEngine
             var move = c.SimToWorld.MultiplyPoint3x4(h.end) - w0;
             if (!m_PlaneCache.TryGetValue(KeyOf(w0, move, CacheVoxel), out var plane)) return false;
             if (!CrossesPlane(plane, h.end, h.velocity, h.dt, out h.contact, out h.normal, out var collider)) return false;
-            h.other = collider != null ? collider.gameObject : null;
+            h.other = CollisionReceiver(collider);
             h.colliderId = collider != null ? collider.GetInstanceID() : 0;
             if (m_Collision.colliderForce != 0f && collider != null) ReportColliderForce(collider.attachedRigidbody);
             return true;

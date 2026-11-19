@@ -3,8 +3,8 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>A force field's vector field (tests/projects/particlecollision field/*): the stored
-    /// velocity relaxes toward the nearest texel times the speed by attraction × 30 × dt, not on a
-    /// particle's first step, not at all without a positive attraction, unclamped.</summary>
+    /// velocity relaxes toward the nearest texel times the speed by attraction × 30 × dt, from the
+    /// system's second step on, not at all without a positive attraction, unclamped.</summary>
     public class ParticleForceFieldVectorFieldTests
     {
         const int Size = 4;
@@ -24,12 +24,13 @@ namespace UnityEngine.Tests
             return texture;
         }
 
-        static Vector3[] Run(float attraction, Vector3 start, Texture3D texture, System.Action<Texture3D> between = null)
+        static Vector3[] Run(float attraction, Vector3 start, Texture3D texture, System.Action<Texture3D> between = null, float yaw = 0f, bool late = false)
         {
             var fieldObject = new GameObject("vector field");
             var systemObject = new GameObject("vector field particles");
             try
             {
+                fieldObject.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
                 var field = fieldObject.AddComponent<ParticleSystemForceField>();
                 field.shape = ParticleSystemForceFieldShape.Box;
                 field.endRange = 2f;
@@ -48,15 +49,21 @@ namespace UnityEngine.Tests
                 var shape = ps.shape; shape.enabled = false;
                 var external = ps.externalForces; external.enabled = true;
                 systemObject.SetActive(true);
+                if (late)
+                {
+                    // The system's first step, with a particle outside the field, before the measured one.
+                    ps.Emit(new ParticleSystem.EmitParams { position = new Vector3(30f, 0, 0), startLifetime = 10 }, 1);
+                    ps.Simulate(.02f, false, false, false);
+                }
                 ps.Emit(new ParticleSystem.EmitParams { position = start, velocity = new Vector3(.5f, 0, 0), startLifetime = 10 }, 1);
-                var particles = new ParticleSystem.Particle[1];
+                var particles = new ParticleSystem.Particle[2];
                 var velocities = new Vector3[3];
                 for (int step = 0; step < 3; step++)
                 {
                     if (step == 2) between?.Invoke(texture);
                     ps.Simulate(.02f, false, false, false);
-                    Assert.Equal(1, ps.GetParticles(particles));
-                    velocities[step] = particles[0].velocity;
+                    Assert.Equal(late ? 2 : 1, ps.GetParticles(particles));
+                    velocities[step] = particles[late ? 1 : 0].velocity;
                 }
                 return velocities;
             }
@@ -109,6 +116,24 @@ namespace UnityEngine.Tests
             });
             var v1 = velocities[1];
             Near(v1 + (Vector3.zero - v1) * .6f, velocities[2]);
+        }
+
+        [Fact]
+        public void AParticleEmittedIntoARunningSystemIsMovedInItsFirstStep()
+        {
+            var v0 = new Vector3(.5f, 0, 0);
+            var velocities = Run(1f, Vector3.zero, Field(new Color(2f / 3f, 1f / 3f, 1f / 3f, 1f)), late: true);
+            Near(v0 + (new Vector3(2f, 1f, 1f) - v0) * .6f, velocities[0]);
+        }
+
+        [Fact]
+        public void ANegativeAttractionDoesNothingAndARotatedFieldTurnsItsVectors()
+        {
+            var texture = Field(new Color(2f / 3f, 1f / 3f, 1f / 3f, 1f));
+            foreach (var v in Run(-1f, Vector3.zero, texture)) Near(new Vector3(.5f, 0, 0), v);
+            // (2, 1, 1) turned 90 degrees about y (tests/projects/particlecollision field/rotated).
+            var v0 = new Vector3(.5f, 0, 0);
+            Near(v0 + (new Vector3(1f, 1f, -2f) - v0) * .6f, Run(1f, Vector3.zero, texture, yaw: 90f)[1]);
         }
     }
 }

@@ -16,6 +16,13 @@ namespace UnityEngine
 
         static readonly HashSet<string> s_Unsupported = new HashSet<string>();
 
+        /// <summary>The object a world collision with <paramref name="hit"/> reports to: a collider
+        /// attached to a Rigidbody reports to the Rigidbody's GameObject, which GetCollisionEvents
+        /// then takes (6000.0.71f1, tests/projects/particlecollision collide/Parent); the event's
+        /// collider stays the one hit.</summary>
+        internal static GameObject CollisionReceiver(Collider hit) =>
+            hit == null ? null : hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
+
         /// <summary>Reports a module setting Unbound does not simulate, once per setting.</summary>
         internal static void ReportUnsupported(string what)
         {
@@ -143,10 +150,7 @@ namespace UnityEngine
                     ? CachedWorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit)
                     : WorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit);
                 if (!found) return false;
-                // A collider attached to a Rigidbody reports to the Rigidbody's GameObject, which
-                // GetCollisionEvents then takes (6000.0.71f1, tests/projects/particlecollision
-                // collide/Parent); the event's collider stays the one hit.
-                other = hit == null ? null : hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
+                other = CollisionReceiver(hit);
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
             }
@@ -858,7 +862,22 @@ namespace UnityEngine
 
         /// <summary>Applies field acceleration and the measured sequential velocity relaxation.
         /// Rotation targets a constant tangential speed, rather than an angular acceleration.</summary>
-        void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt, bool firstStep)
+        /// <summary>The system has finished a simulation step since it was made: force-field vector
+        /// fields act from its second step on (6000.0.71f1, tests/projects/particlecollision
+        /// field/pullstep and field/late: a particle emitted later is moved in its first step).</summary>
+        bool m_SteppedOnce;
+
+        /// <summary>Whether a field's vector field is in the measured context; reports it otherwise.</summary>
+        bool VectorFieldSupported(ParticleSystemForceField field)
+        {
+            if (field.shape != ParticleSystemForceFieldShape.Box) { ReportUnsupported("vector field of a force field that is not a Box"); return false; }
+            if (field.m_VectorFieldSpeed.mode != ParticleSystemCurveMode.Constant || field.m_VectorFieldAttraction.mode != ParticleSystemCurveMode.Constant)
+            { ReportUnsupported("vector field speed or attraction that is not a constant"); return false; }
+            if ((field.transform.lossyScale - Vector3.one).sqrMagnitude > 1e-10f) { ReportUnsupported("vector field of a scaled force field"); return false; }
+            return true;
+        }
+
+        void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt)
         {
             var X = m_ExternalForces;
             var toWorld = SimulationToWorld();
@@ -931,10 +950,12 @@ namespace UnityEngine
                 // particle (nearest, over the field's range) times its speed, as the rotation does
                 // toward its tangent (Unity 6000.0.71f1, tests/projects/particlecollision field/*).
                 // Only a positive attraction (its constant or curve multiplier) acts; the blend is
-                // not clamped; a particle's first step (at age 0) is not moved by it (measured).
+                // not clamped (a negative attraction does nothing); the field does not act in the
+                // system's first step. Only the measured context is applied: a Box field without
+                // scale, constant speed and attraction.
                 var vectorField = field.vectorField;
-                if (vectorField != null && field.m_VectorFieldAttraction.scalar > 0f && multiplier > 0f
-                    && !firstStep)
+                if (vectorField != null && field.m_VectorFieldAttraction.scalar > 0f && multiplier > 0f && m_SteppedOnce
+                    && VectorFieldSupported(field))
                 {
                     var texels = field.VectorFieldTexels(vectorField, out int width, out int height, out int depth);
                     if (texels != null)

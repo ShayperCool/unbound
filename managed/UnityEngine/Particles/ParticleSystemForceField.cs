@@ -37,7 +37,6 @@ namespace UnityEngine
         public ParticleSystem.MinMaxCurve vectorFieldAttraction { get => m_VectorFieldAttraction.Get(); set => m_VectorFieldAttraction.Set(value); }
         public Texture3D vectorField { get; set; }
 
-        /// <summary>Whether a point in the field's local space is inside its shape.</summary>
         Texture3D m_TexelSource;
         uint m_TexelVersion;
         bool m_TexelsRead;
@@ -64,6 +63,7 @@ namespace UnityEngine
             return m_Texels;
         }
 
+        /// <summary>Whether a point in the field's local space is inside its shape.</summary>
         internal bool Contains(Vector3 local)
         {
             float start = Mathf.Max(0f, startRange), end = Mathf.Max(start, endRange);
