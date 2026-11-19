@@ -60,6 +60,51 @@ namespace UnityEngine.Tests
             return string.Join(" ", keywords);
         }
 
+        static Material ProjectEdited() => new Material(ShaderUtil.CreateShaderAsset(
+            "Shader \"Tests/Project Validation " + Guid.NewGuid().ToString("N") + "\"\n{\n    Properties\n    {\n        _Value (\"Value\", Float) = 0\n    }\n"
+            + "    SubShader { Pass { } }\n    CustomEditor \"UnityEngine.Tests.ValidationTestProjectGUI\"\n}"));
+
+        /// <summary>While a project's OnPostprocessMaterial has a model's material, the first
+        /// property value access validates it with its shader's editor, once; reading its shader
+        /// or keywords does not (tests/projects/modelimport URPHookRecord; HasProperty, GetFloat
+        /// and GetColor measured). Without the flag nothing is validated (the control).</summary>
+        [Theory]
+        [InlineData("has")]
+        [InlineData("float")]
+        [InlineData("set")]
+        public void APropertyAccessDuringAMaterialPostprocessorValidates(string access)
+        {
+            var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
+                .GetField("s_Assemblies", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+            var own = typeof(ValidationTestProjectGUI).Assembly;
+            bool added = !assemblies.Contains(own);
+            if (added) assemblies.Add(own);
+            try { AccessValidates(access); }
+            finally { if (added) assemblies.Remove(own); }
+        }
+
+        static void AccessValidates(string access)
+        {
+            var m = ProjectEdited();
+            m.m_ValidateOnPropertyAccess = true;
+            _ = m.shader;
+            _ = m.shaderKeywords;
+            Assert.Equal("", Keywords(m));
+            if (access == "has") m.HasProperty("_Value");
+            else if (access == "float") m.GetFloat("_Value");
+            else m.SetFloat("_Value", 1f);
+            Assert.Equal("PROJECT_VALIDATED", Keywords(m));
+            Assert.False(m.m_ValidateOnPropertyAccess);
+            m.DisableKeyword("PROJECT_VALIDATED");
+            m.GetFloat("_Value");
+            Assert.Equal("", Keywords(m));
+
+            var control = ProjectEdited();
+            control.GetFloat("_Value");
+            control.HasProperty("_Value");
+            Assert.Equal("", Keywords(control));
+        }
+
         [Fact]
         public void AStandardCutoutBelowItsRangeTakesTheModesStatesAndSaysSo()
         {

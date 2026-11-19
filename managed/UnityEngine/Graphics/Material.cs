@@ -82,6 +82,7 @@ namespace UnityEngine
         /// property of the shader again (nothing to do while it does).</summary>
         void TouchSheet()
         {
+            ValidateOnAccess();
             var sheet = m_State.m_Sheet;
             if (sheet == null || sheet.FilledFor == m_Shader) return;
             if (sheet.Shared) m_Sheet = sheet = sheet.Clone();
@@ -413,6 +414,21 @@ namespace UnityEngine
         /// <summary>Set while a model's import makes the material: the Editor validates it with the
         /// new shader's editor as its shader is set (<see cref="Unbound.Runtime.ModelMaterialImport"/>).</summary>
         internal bool m_ValidateOnShaderChange;
+
+        /// <summary>Set while a project's OnPostprocessMaterial has a model's material: the first
+        /// read or write of a property value through the Material API (HasProperty and the
+        /// getters measured) validates the material with its shader's editor first; reading its
+        /// shader, GI flags or keywords does not (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/modelimport URPHookRecord: the legacy importer's transparent URP
+        /// materials end opaque).</summary>
+        internal bool m_ValidateOnPropertyAccess;
+
+        void ValidateOnAccess()
+        {
+            if (!m_ValidateOnPropertyAccess) return;
+            m_ValidateOnPropertyAccess = false;
+            Unbound.Runtime.MaterialValidation.Validate(this, editorsOfTheEditor: false);
+        }
 
         /// <summary>
         /// Documented (Material.renderQueue, 6000.0): "if a shader on the material is changed, the
@@ -977,7 +993,12 @@ namespace UnityEngine
 
         // A material has the properties its shader declares and the ones set from script; values
         // saved for other names stay unseen (measured, 6000.0, tests/projects/materials).
-        public bool HasProperty(int nameID) { MainThreadCheck.Check("HasProperty"); return Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _); }
+        public bool HasProperty(int nameID)
+        {
+            MainThreadCheck.Check("HasProperty");
+            ValidateOnAccess();
+            return Declared(nameID) != null || m_ScriptSet.Contains(nameID) || ScaleOffsetOf(nameID, out _);
+        }
 
         ShaderPropertyType? Declared(int nameID) => m_Shader?.PropertyById(nameID)?.Type;
 

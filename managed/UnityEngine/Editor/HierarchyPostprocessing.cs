@@ -355,7 +355,7 @@ namespace UnityEditor
             pass.Used.Add(material);
             var temporary = new Material(own.Source);
             if (pass.Legacy || own.Description == null)
-                AssetPostprocessorHooks.Run(MaterialHooks, pass.Session, new object[] { temporary });
+                RunMaterialHooks(pass, temporary);
             else
                 ModelMaterialImport.Describe(pass.Session, own.Description, temporary);
             var assigned = AssetPostprocessorHooks.Run(AssignHooks, pass.Session, new object[] { temporary, renderer }, untilResult: true) as Material;
@@ -365,11 +365,20 @@ namespace UnityEditor
             if (pass.Made.Add(material))
             {
                 if (pass.Legacy || own.Description == null)
-                    AssetPostprocessorHooks.Run(MaterialHooks, pass.Session, new object[] { material });
+                    RunMaterialHooks(pass, material);
                 else
                     ModelMaterialImport.Describe(pass.Session, own.Description, material);
             }
             return material;
+        }
+
+        /// <summary>OnPostprocessMaterial with the material, which a property access of the
+        /// callbacks validates first (<see cref="Material.m_ValidateOnPropertyAccess"/>).</summary>
+        static void RunMaterialHooks(ModelPass pass, Material material)
+        {
+            material.m_ValidateOnPropertyAccess = true;
+            try { AssetPostprocessorHooks.Run(MaterialHooks, pass.Session, new object[] { material }); }
+            finally { material.m_ValidateOnPropertyAccess = false; }
         }
 
         /// <summary>A user property's value as the callback gets it.</summary>
