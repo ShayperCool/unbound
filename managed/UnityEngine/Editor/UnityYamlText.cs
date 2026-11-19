@@ -128,8 +128,17 @@ namespace Unbound.Runtime
                 docs.Add(current);
                 lines.Clear();
             }
+            char quote = '\0';
             foreach (var raw in text.Split('\n'))
             {
+                if (quote != '\0')
+                {
+                    // A quoted scalar over several lines (blank ones included) is one line's value.
+                    var open = lines[lines.Count - 1];
+                    open.Text += "\n" + raw;
+                    if (Closes(raw, 0, quote)) quote = '\0';
+                    continue;
+                }
                 if (raw.StartsWith("%", StringComparison.Ordinal)) continue;
                 if (raw.StartsWith("--- ", StringComparison.Ordinal))
                 {
@@ -141,10 +150,37 @@ namespace Unbound.Runtime
                 if (raw.Length == 0 || current == null) continue;
                 int indent = 0;
                 while (indent < raw.Length && raw[indent] == ' ') indent++;
-                lines.Add(new Line { Indent = indent, Text = raw.Substring(indent) });
+                var line = new Line { Indent = indent, Text = raw.Substring(indent) };
+                lines.Add(line);
+                quote = OpenQuote(line.Text);
             }
             Flush();
             return docs;
+        }
+
+        /// <summary>The quote of a quoted scalar the line's value starts and does not close
+        /// (<c>'\0'</c>: none).</summary>
+        static char OpenQuote(string text)
+        {
+            while (IsItem(text)) text = text.Length > 2 ? text.Substring(2) : "";
+            int colon = KeyEnd(text);
+            var value = colon < 0 ? text : colon + 2 <= text.Length ? text.Substring(colon + 2) : "";
+            if (value.Length == 0 || (value[0] != '\'' && value[0] != '"')) return '\0';
+            return Closes(value, 1, value[0]) ? '\0' : value[0];
+        }
+
+        /// <summary>Whether a closing <paramref name="quote"/> follows <paramref name="from"/>
+        /// (<c>''</c> inside single quotes and <c>\"</c> inside double quotes are no ends).</summary>
+        static bool Closes(string text, int from, char quote)
+        {
+            for (int i = from; i < text.Length; i++)
+            {
+                if (quote == '"' && text[i] == '\\') { i++; continue; }
+                if (text[i] != quote) continue;
+                if (quote == '\'' && i + 1 < text.Length && text[i + 1] == '\'') { i++; continue; }
+                return true;
+            }
+            return false;
         }
 
         static void ParseHeader(string header, YTextDocument doc)
@@ -559,11 +595,16 @@ namespace Unbound.Runtime
             if (s.IndexOf('\n') < 0) return s;
             var lines = s.Split('\n');
             var sb = new StringBuilder(lines[0].TrimEnd());
-            for (int i = 1; i < lines.Length; i++)
+            int i = 1;
+            while (i < lines.Length)
             {
-                var line = lines[i].Trim();
-                if (line.Length == 0) sb.Append('\n');
-                else sb.Append(sb.Length > 0 && sb[sb.Length - 1] != '\n' ? " " : "").Append(line);
+                // The empty lines after a break (the last line, before the closing quote, is none).
+                int blank = 0;
+                while (i < lines.Length - 1 && lines[i].Trim().Length == 0) { blank++; i++; }
+                if (blank == 0) sb.Append(' ');
+                else sb.Append('\n', blank);
+                sb.Append(i == lines.Length - 1 ? lines[i].TrimStart() : lines[i].Trim());
+                i++;
             }
             return sb.ToString();
         }

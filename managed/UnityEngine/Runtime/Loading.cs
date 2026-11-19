@@ -788,9 +788,9 @@ namespace Unbound.Runtime
             if (guid == null) return null;
             if (guid.StartsWith("bundle:", StringComparison.Ordinal)) return BundleFiles.Load(guid, fileId);
             if (string.Equals(guid, "0000000000000000d000000000000000", StringComparison.OrdinalIgnoreCase))
-                return Unbound.UIElements.UiResources.LoadObject(fileId);
+                return Builtin(Unbound.UIElements.UiResources.LoadObject(fileId), guid, fileId);
             if (guid.StartsWith("0000000000000000", StringComparison.Ordinal))
-                return BuiltinShaders.Resolve(guid, fileId);
+                return Builtin(BuiltinShaders.Resolve(guid, fileId), guid, fileId);
             if (s_Objects.TryGetValue((guid, fileId), out var cached) && !cached.m_Destroyed) return Reloaded(cached);
             var file = LoadFile(guid);
             if (file == null) return null;
@@ -843,8 +843,61 @@ namespace Unbound.Runtime
             o is AnimationClip && (o.HideFlagsNoThrow & HideFlags.HideInHierarchy) != 0;
 
         /// <summary>Where a loaded asset object comes from.</summary>
+        /// <summary>Built-in resources by the references that named them (a saved file names them alike).</summary>
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>> s_Builtins =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Object, Tuple<string, long>>();
+
+        static Object Builtin(Object o, string guid, long fileId)
+        {
+            if (o is not null) s_Builtins.AddOrUpdate(o, Tuple.Create(guid.ToLowerInvariant(), fileId));
+            return o;
+        }
+
+        /// <summary>Where each loaded asset object is, for writing many references at once (a
+        /// save): built in once instead of searched per reference.</summary>
+        internal sealed class Locations
+        {
+            readonly Dictionary<Object, (string Guid, long FileId)> m_Map = new Dictionary<Object, (string, long)>(ReferenceEqualityComparer.Instance);
+            readonly Dictionary<string, int> m_Types = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            internal Locations()
+            {
+                foreach (var pair in s_Objects)
+                    if (pair.Value is not null) m_Map.TryAdd(pair.Value, pair.Key);
+            }
+
+            /// <summary>The object's reference: its file id, GUID and reference type (0 a built-in
+            /// resource, 2 a YAML asset or prefab, 3 an imported asset).</summary>
+            internal bool TryGet(Object o, out string guid, out long fileId, out int type)
+            {
+                if (s_Builtins.TryGetValue(o, out var builtin))
+                {
+                    (guid, fileId, type) = (builtin.Item1, builtin.Item2, 0);
+                    return true;
+                }
+                if (!m_Map.TryGetValue(o, out var at))
+                {
+                    (guid, fileId, type) = (null, 0, 0);
+                    return false;
+                }
+                (guid, fileId) = at;
+                if (!m_Types.TryGetValue(guid, out type))
+                {
+                    try { type = Info(guid)?.Kind is "yaml" or "prefab" ? 2 : 3; }
+                    catch (Exception) { type = 2; }
+                    m_Types[guid] = type;
+                }
+                return true;
+            }
+        }
+
         internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
         {
+            if (obj is not null && s_Builtins.TryGetValue(obj, out var builtin))
+            {
+                (guid, fileId) = (builtin.Item1, builtin.Item2);
+                return true;
+            }
             foreach (var pair in s_Objects)
             {
                 if (pair.Value == obj)

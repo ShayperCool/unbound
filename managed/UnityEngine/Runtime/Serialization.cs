@@ -643,6 +643,7 @@ namespace Unbound.Runtime
             if (type == null) return null;
             var instance = SerializationRules.Create(type);
             m_ManagedReferences[rid] = instance;
+            ManagedReferenceIds.Remember(instance, rid);
             ReadFields(instance, type, found.Get("data"), 1);
             if (instance is ISerializationCallbackReceiver receiver) m_Callbacks.Add(receiver);
             return instance;
@@ -819,7 +820,7 @@ namespace Unbound.Runtime
                 if (i < colorCount) colors[i] = new GradientColorKey(new Color(key.r, key.g, key.b, 1f), node.Int($"ctime{i}") / 65535f);
                 if (i < alphaCount) alphas[i] = new GradientAlphaKey(key.a, node.Int($"atime{i}") / 65535f);
             }
-            var g = new Gradient { mode = (GradientMode)node.Int("m_Mode") };
+            var g = new Gradient { mode = (GradientMode)node.Int("m_Mode"), colorSpace = (ColorSpace)node.Int("m_ColorSpace", (int)ColorSpace.Uninitialized) };
             g.SetKeys(colors, alphas);
             return g;
         }

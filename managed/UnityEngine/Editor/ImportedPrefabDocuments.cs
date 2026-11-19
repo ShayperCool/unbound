@@ -144,13 +144,7 @@ namespace Unbound.Runtime
             if (c is MonoBehaviour)
             {
                 sb.Append("--- !u!114 &").Append(id).Append("\nMonoBehaviour:\n");
-                w.Header(c);
-                if (c is ISerializationCallbackReceiver receiver)
-                {
-                    try { receiver.OnBeforeSerialize(); }
-                    catch (Exception e) { Debug.LogException(e); }
-                }
-                w.Fields(c, c.GetType(), 1);
+                w.ScriptBody(c);
                 return;
             }
             int classId = EngineTypes.EngineClassIdOf(c.GetType());
