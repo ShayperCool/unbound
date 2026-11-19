@@ -1,0 +1,236 @@
+{"key": "settings.defaults", "value": "ByHierarchy|False|False|False|True|False"}
+{"key": "setup.scene", "value": "opening Assets/Scenes/Base.unity Single"}
+{"key": "setup.scene", "value": "closing  True"}
+{"key": "setup.scene", "value": "closed "}
+{"key": "setup.scene", "value": "opened Base Single"}
+{"key": "propApply.updated", "value": "GameObject:Thing"}
+{"key": "propApply.result", "value": "done"}
+{"key": "propApply.asset", "value": 40}
+{"key": "propApply.isDirty", "value": true}
+{"key": "propApply.prefab", "value": "b15f0b4f29acb86eeb7af7528328054658dc1a0f4527927a614668b158c28eec"}
+{"key": "propApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "propApply.objects", "value": ""}
+{"key": "propApply.added", "value": ""}
+{"key": "propApply.removed", "value": ""}
+{"key": "propApply.addedObjects", "value": ""}
+{"key": "propApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "propApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "propApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "undoApply.updated", "value": "GameObject:Thing"}
+{"key": "undoApply.instance", "value": 40}
+{"key": "undoApply.asset", "value": 5}
+{"key": "undoApply.prefab", "value": "5f6c986e01cc563a193c7cd1a54ba2a12c4dc429bd2cb12d859b255388520e65"}
+{"key": "undoApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Holder:Thing|count|40|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "undoApply.objects", "value": "Holder:Thing"}
+{"key": "undoApply.added", "value": ""}
+{"key": "undoApply.removed", "value": ""}
+{"key": "undoApply.addedObjects", "value": ""}
+{"key": "undoApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "undoApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "undoApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "redoApply.updated", "value": "GameObject:Thing"}
+{"key": "redoApply.instance", "value": 40}
+{"key": "redoApply.asset", "value": 40}
+{"key": "redoApply.prefab", "value": "b15f0b4f29acb86eeb7af7528328054658dc1a0f4527927a614668b158c28eec"}
+{"key": "redoApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "redoApply.objects", "value": ""}
+{"key": "redoApply.added", "value": ""}
+{"key": "redoApply.removed", "value": ""}
+{"key": "redoApply.addedObjects", "value": ""}
+{"key": "redoApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "redoApply.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "redoApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "propRevert.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "propRevert.before.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Holder:Thing|label|temporary|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "propRevert.before.objects", "value": "Holder:Thing"}
+{"key": "propRevert.before.added", "value": ""}
+{"key": "propRevert.before.removed", "value": ""}
+{"key": "propRevert.before.addedObjects", "value": ""}
+{"key": "propRevert.result", "value": "done"}
+{"key": "propRevert.label", "value": "plain"}
+{"key": "propRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "propRevert.objects", "value": ""}
+{"key": "propRevert.added", "value": ""}
+{"key": "propRevert.removed", "value": ""}
+{"key": "propRevert.addedObjects", "value": ""}
+{"key": "propRevert.event", "value": "ChangeGameObjectOrComponentProperties Holder:Thing"}
+{"key": "compApply.isAdded", "value": true}
+{"key": "compApply.updated", "value": "GameObject:Thing"}
+{"key": "compApply.result", "value": "done"}
+{"key": "compApply.isInstance", "value": true}
+{"key": "compApply.source", "value": "SphereCollider:Part"}
+{"key": "compApply.prefab", "value": "f15331a1ac535685992558b54db39e45087f812f4ab5bdc492dba8e81c313c6d"}
+{"key": "compApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "compApply.objects", "value": ""}
+{"key": "compApply.added", "value": ""}
+{"key": "compApply.removed", "value": ""}
+{"key": "compApply.addedObjects", "value": ""}
+{"key": "compApply.event", "value": "ChangeGameObjectStructureHierarchy GameObject:Part"}
+{"key": "compApply.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "compApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "compApply.event", "value": "CreateAssetObject SphereCollider:Part Assets/Prefabs/Thing.prefab"}
+{"key": "compApply.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "compRevert.result", "value": "done"}
+{"key": "compRevert.gone", "value": true}
+{"key": "compRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "compRevert.objects", "value": ""}
+{"key": "compRevert.added", "value": ""}
+{"key": "compRevert.removed", "value": ""}
+{"key": "compRevert.addedObjects", "value": ""}
+{"key": "compRevert.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "removeRevert.destroy", "value": "done"}
+{"key": "removeRevert.hasBox", "value": false}
+{"key": "removeRevert.before.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "removeRevert.before.objects", "value": ""}
+{"key": "removeRevert.before.added", "value": ""}
+{"key": "removeRevert.before.removed", "value": "BoxCollider:Part"}
+{"key": "removeRevert.before.addedObjects", "value": ""}
+{"key": "removeRevert.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "removeRevert.result", "value": "done"}
+{"key": "removeRevert.restored", "value": "BoxCollider:Part"}
+{"key": "removeRevert.size", "value": "(1.00, 1.00, 1.00)"}
+{"key": "removeRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "removeRevert.objects", "value": ""}
+{"key": "removeRevert.added", "value": ""}
+{"key": "removeRevert.removed", "value": ""}
+{"key": "removeRevert.addedObjects", "value": ""}
+{"key": "removeRevert.event", "value": "ChangeGameObjectOrComponentProperties GameObject:Part"}
+{"key": "removeRevert.event", "value": "CreateAssetObject BoxCollider:Part "}
+{"key": "removeRevert.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "removeApply.destroy", "value": "done"}
+{"key": "removeApply.event", "value": "ChangeGameObjectStructure GameObject:Part"}
+{"key": "removeApply.updated", "value": "GameObject:Thing"}
+{"key": "removeApply.result", "value": "done"}
+{"key": "removeApply.assetBox", "value": true}
+{"key": "removeApply.prefab", "value": "ef7b3dea31138da9e7426571d0a494a804eb29e7641cd2de35276f17f660248b"}
+{"key": "removeApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "removeApply.objects", "value": ""}
+{"key": "removeApply.added", "value": ""}
+{"key": "removeApply.removed", "value": ""}
+{"key": "removeApply.addedObjects", "value": ""}
+{"key": "removeApply.event", "value": "ChangeGameObjectOrComponentProperties Object:"}
+{"key": "removeApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "goApply.isAdded", "value": true}
+{"key": "goApply.updated", "value": "GameObject:Thing"}
+{"key": "goApply.result", "value": "done"}
+{"key": "goApply.isInstance", "value": true}
+{"key": "goApply.prefab", "value": "96e5e198d45ced3a61c9846614a587e196d90567459bba19f0369347aa2c3569"}
+{"key": "goApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "goApply.objects", "value": ""}
+{"key": "goApply.added", "value": ""}
+{"key": "goApply.removed", "value": ""}
+{"key": "goApply.addedObjects", "value": ""}
+{"key": "goApply.event", "value": "ChangeGameObjectStructureHierarchy GameObject:Thing"}
+{"key": "goApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "goApply.event", "value": "CreateGameObjectHierarchy GameObject:Extra"}
+{"key": "goRevert.result", "value": "done"}
+{"key": "goRevert.gone", "value": true}
+{"key": "goRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "goRevert.objects", "value": ""}
+{"key": "goRevert.added", "value": ""}
+{"key": "goRevert.removed", "value": ""}
+{"key": "goRevert.addedObjects", "value": ""}
+{"key": "goRevert.event", "value": "DestroyGameObjectHierarchy null parent=GameObject:Thing"}
+{"key": "objApply.before.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Holder:Thing|ratio|0.75|null; GameObject:Thing|m_Name|Thing|null; Transform:Part|m_LocalPosition.y|2|null"}
+{"key": "objApply.before.objects", "value": "Holder:Thing,Transform:Part"}
+{"key": "objApply.before.added", "value": ""}
+{"key": "objApply.before.removed", "value": ""}
+{"key": "objApply.before.addedObjects", "value": ""}
+{"key": "objApply.updated", "value": "GameObject:Thing"}
+{"key": "objApply.result", "value": "Transform:Part"}
+{"key": "objApply.prefab", "value": "12f0cdf4b8c8840b175e465cd4d91d0469de9d1ce030f703125bc688d3d9b567"}
+{"key": "objApply.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Holder:Thing|ratio|0.75|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "objApply.objects", "value": "Holder:Thing"}
+{"key": "objApply.added", "value": ""}
+{"key": "objApply.removed", "value": ""}
+{"key": "objApply.addedObjects", "value": ""}
+{"key": "objApply.event", "value": "ChangeGameObjectOrComponentProperties Transform:Part"}
+{"key": "objApply.event", "value": "ChangeGameObjectOrComponentProperties Transform:Part"}
+{"key": "objApply.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "objRevert.result", "value": "(1.00, 1.00, 1.00)"}
+{"key": "objRevert.ratio", "value": "0.75"}
+{"key": "objRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|0|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|5|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; Holder:Thing|ratio|0.75|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "objRevert.objects", "value": "Holder:Thing"}
+{"key": "objRevert.added", "value": ""}
+{"key": "objRevert.removed", "value": ""}
+{"key": "objRevert.addedObjects", "value": ""}
+{"key": "objRevert.event", "value": "ChangeGameObjectOrComponentProperties Transform:Part"}
+{"key": "instRevert.result", "value": "done"}
+{"key": "instRevert.count", "value": 40}
+{"key": "instRevert.ratio", "value": "0.5"}
+{"key": "instRevert.position", "value": "(8.00, 0.00, 0.00)"}
+{"key": "instRevert.mods", "value": "Transform:Thing|m_LocalPosition.x|8|null; Transform:Thing|m_LocalPosition.y|0|null; Transform:Thing|m_LocalPosition.z|0|null; Transform:Thing|m_LocalRotation.w|1|null; Transform:Thing|m_LocalRotation.x|0|null; Transform:Thing|m_LocalRotation.y|0|null; Transform:Thing|m_LocalRotation.z|0|null; Transform:Thing|m_LocalEulerAnglesHint.x|0|null; Transform:Thing|m_LocalEulerAnglesHint.y|0|null; Transform:Thing|m_LocalEulerAnglesHint.z|0|null; GameObject:Thing|m_Name|Thing|null"}
+{"key": "instRevert.objects", "value": ""}
+{"key": "instRevert.added", "value": ""}
+{"key": "instRevert.removed", "value": ""}
+{"key": "instRevert.addedObjects", "value": ""}
+{"key": "instRevert.event", "value": "ChangeGameObjectStructureHierarchy GameObject:Thing"}
+{"key": "assetSave.isDirty", "value": false}
+{"key": "assetSave.updated", "value": "GameObject:Thing"}
+{"key": "assetSave.result", "value": "GameObject:Thing|True"}
+{"key": "assetSave.instance", "value": "0.125"}
+{"key": "assetSave.prefab", "value": "8ddf36b9687c476e2dbb36f56bd94632c522511f16d0d076e53c984f99e827a2"}
+{"key": "assetSave.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "sceneSave.result", "value": true}
+{"key": "sceneSave.scene", "value": "91d1920cefdad704a04bea0ca6b8f8981aa75c276d8c3f7054ba43f328979e3b"}
+{"key": "variant.result", "value": "GameObject:ThingVariant|True"}
+{"key": "variant.type", "value": "Variant"}
+{"key": "variant.instancePath", "value": "Assets/Prefabs/Thing.prefab"}
+{"key": "variant.prefab", "value": "3b55a9bcdafe15b8c161644c624f771fc33217a4b6b8903bcd1ed40d9d76539b"}
+{"key": "connect.updated", "value": "GameObject:Connected"}
+{"key": "connect.result", "value": "GameObject:Connected|True"}
+{"key": "connect.isInstance", "value": true}
+{"key": "connect.isRoot", "value": true}
+{"key": "connect.name", "value": "Connected"}
+{"key": "connect.mods", "value": "GameObject:Connected|m_Name|Connected|null; Transform:Connected|m_LocalEulerAnglesHint.x|0|null; Transform:Connected|m_LocalEulerAnglesHint.y|0|null; Transform:Connected|m_LocalEulerAnglesHint.z|0|null; Transform:Connected|m_LocalPosition.x|0|null; Transform:Connected|m_LocalPosition.y|0|null; Transform:Connected|m_LocalPosition.z|0|null; Transform:Connected|m_LocalRotation.w|1|null; Transform:Connected|m_LocalRotation.x|0|null; Transform:Connected|m_LocalRotation.y|0|null; Transform:Connected|m_LocalRotation.z|0|null"}
+{"key": "connect.prefab", "value": "5fa1b26e38c25d95bc43d584acc6a9e3b9c5d3e99e0accd0bbb9a671dee7a2f7"}
+{"key": "connect.event", "value": "ChangeGameObjectStructureHierarchy GameObject:Connected"}
+{"key": "connect.event", "value": "UpdatePrefabInstances Base GameObject:Connected"}
+{"key": "connect.event", "value": "CreateAssetObject Object: "}
+{"key": "contentsCopy.name", "value": "Thing"}
+{"key": "contentsCopy.preview", "value": true}
+{"key": "contentsCopy.isAsset", "value": false}
+{"key": "contentsCopy.result", "value": "GameObject:ThingCopy"}
+{"key": "contentsCopy.unloaded", "value": true}
+{"key": "contentsCopy.prefab", "value": "931a2fc32d36a9622e0e18c86c977ad6a001288071f5c33cd920bbdef36ec8e4"}
+{"key": "contentsCopy.thing", "value": "8ddf36b9687c476e2dbb36f56bd94632c522511f16d0d076e53c984f99e827a2"}
+{"key": "contentsSave.updated", "value": "GameObject:Thing"}
+{"key": "contentsSave.result", "value": "GameObject:Thing"}
+{"key": "contentsSave.instance", "value": "from contents"}
+{"key": "contentsSave.prefab", "value": "13c816387dff8e4c39d609f7b7eb199c8eebf154b32bf1b4c6b22bdbddfb94ae"}
+{"key": "contentsSave.event", "value": "UpdatePrefabInstances Base GameObject:Thing"}
+{"key": "errors.extension", "value": "throws ArgumentException: Given path is not valid: 'Assets/Prefabs/Bad.asset'"}
+{"key": "errors.nullRoot", "value": "throws ArgumentNullException: Value cannot be null.\nParameter name: Parameter root is null"}
+{"key": "errors.folder", "value": "throws ArgumentException: Given path does not exist: 'Assets/Missing/Plain.prefab'"}
+{"key": "errors.load", "value": "throws ArgumentException: Path: Assets/Prefabs/Missing.prefab, does not exist"}
+{"key": "errors.unload", "value": "throws ArgumentException: Specified object is not part of Prefab contents"}
+{"key": "errors.applyPlain", "value": "throws ArgumentException: Calling apply or revert methods on an object which is not part of a Prefab instance is not supported.\nParameter name: prefabInstanceObject"}
+{"key": "errors.revertPlain", "value": "throws ArgumentException: Calling apply or revert methods on an object which is not part of a Prefab instance is not supported.\nParameter name: prefabInstanceObject"}
+{"key": "errors.files", "value": ""}
+{"key": "sceneFinal.result", "value": true}
+{"key": "sceneFinal.scene", "value": "ee01168aff34c118f7706734935ccfadc3ca7230fbe9e6449944cdfdfc091202"}
+{"key": "reload.method", "value": true}
+{"key": "reload.before", "value": "True|6"}
+{"key": "reload.scene", "value": "opening Assets/Scenes/Base.unity Single"}
+{"key": "reload.scene", "value": "closing Base True"}
+{"key": "reload.scene", "value": "closed Base"}
+{"key": "reload.scene", "value": "opened Base Single"}
+{"key": "reload.result", "value": true}
+{"key": "reload.after", "value": "False|0||False"}
+{"key": "reload.active", "value": "Assets/Scenes/Base.unity"}
+{"key": "reload.oldInstance", "value": true}
+{"key": "reload.roots", "value": "Main Camera,Directional Light,Root,Graph,Thing"}
+{"key": "reload.thing", "value": "from contents"}
+{"key": "reload.event", "value": "ChangeScene "}
+{"key": "reload.event", "value": "ChangeScene Base"}
+{"key": "reloadUndo.done", "value": true}
+{"key": "reloadClean.scene", "value": "opening Assets/Scenes/Base.unity Single"}
+{"key": "reloadClean.scene", "value": "closing Base True"}
+{"key": "reloadClean.scene", "value": "closed Base"}
+{"key": "reloadClean.scene", "value": "opened Base Single"}
+{"key": "reloadClean.result", "value": true}
+{"key": "reloadClean.after", "value": "False|0"}
+{"key": "reloadClean.event", "value": "ChangeScene Base"}
+{"key": "reloadNew.result", "value": "throws ArgumentException: ReloadScene cannot be used with a scene that haven't been saved yet: "}
+{"key": "reloadNew.after", "value": "False|1|True"}
+{"key": "reloadInvalid.result", "value": false}

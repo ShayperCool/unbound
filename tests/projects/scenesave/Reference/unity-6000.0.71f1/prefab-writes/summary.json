@@ -1,0 +1,18 @@
+{
+  "case": "prefab-writes",
+  "exit": 0,
+  "changed": [
+    "Assets/Prefabs/Connected.prefab",
+    "Assets/Prefabs/Connected.prefab.meta",
+    "Assets/Prefabs/Thing.prefab",
+    "Assets/Prefabs/ThingCopy.prefab",
+    "Assets/Prefabs/ThingCopy.prefab.meta",
+    "Assets/Prefabs/ThingVariant.prefab",
+    "Assets/Prefabs/ThingVariant.prefab.meta",
+    "Assets/Scenes/WritesApplied.unity",
+    "Assets/Scenes/WritesApplied.unity.meta",
+    "Assets/Scenes/WritesFinal.unity",
+    "Assets/Scenes/WritesFinal.unity.meta"
+  ],
+  "removed": []
+}

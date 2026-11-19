@@ -27,6 +27,15 @@ file the run added, changed or removed.
   records are flushed, after the values are applied; a filtering or throwing handler changes no
   value, a throwing one is logged), and a SerializedObject's native pointer before and after
   Dispose.
+- `prefab-writes` (Edit Mode, `PrefabWriteTests`): one override at a time on an instance, with
+  the prefabInstanceUpdated calls, the ObjectChangeEvents of the next Editor update and the log
+  messages of each step: ApplyPropertyOverride (then undone and redone), RevertPropertyOverride,
+  ApplyAddedComponent and RevertAddedComponent, a removed component reverted and applied,
+  ApplyAddedGameObject and RevertAddedGameObject, ObjectOverride.Apply and Revert,
+  RevertPrefabInstance, SavePrefabAsset of an edited asset; the writes that make new prefabs
+  (SaveAsPrefabAsset of an instance, which makes a variant, and of a prefab's contents to a new
+  path, SaveAsPrefabAssetAndConnect), their argument errors, a prefab's contents saved in place;
+  EditorSceneManager.ReloadScene of a dirty, a clean, an unsaved and an invalid scene.
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.
@@ -50,7 +59,8 @@ scene, warns and writes no `.meta`.
 The Editor gives new objects random file ids (per session), new managed references ids from its
 clock and new assets random GUIDs, and the Test Framework names its Play Mode scene with a GUID: two
 Editor captures differ exactly there. The comparison (`scenesave_compare.py`) therefore maps those
-ids before comparing bytes, and compares rows holding file hashes by which rows share a hash.
+ids before comparing bytes (a reference into an asset the run created by that asset's GUID and file
+ids), and compares rows holding file hashes by which rows share a hash.
 Everything else is exact. Differences named in `Reference/unity-6000.0.71f1/known-gaps.json`
 (exact values, each with its reason) are queued; any other difference fails.
 

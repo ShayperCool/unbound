@@ -8,7 +8,8 @@ checks a capture against `Reference/unity-<release>/` (or another capture); `gat
 compares it with the reference.
 
 Cases: `edit` (Edit Mode SaveEditTests), `play-nosave` and `play-save` (Play Mode SavePlayTests
-NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests).
+NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-writes` (Edit Mode
+PrefabWriteTests).
 """
 import argparse
 import json
@@ -31,6 +32,7 @@ CASES = {
     'play-nosave': ('PlayMode', 'SavePlayTests.NoSave'),
     'play-save': ('PlayMode', 'SavePlayTests.Save'),
     'prefab-api': ('EditMode', 'PrefabApiTests.PrefabApi'),
+    'prefab-writes': ('EditMode', 'PrefabWriteTests.PrefabWrites'),
 }
 SKIPPED = {'Library', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}

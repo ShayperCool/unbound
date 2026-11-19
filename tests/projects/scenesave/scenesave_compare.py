@@ -5,7 +5,9 @@ assets random GUIDs, so two Editor captures differ there (tests/projects/scenesa
 comparison therefore maps the ids of the actual file onto the reference's: ids both files have stay
 as they are; a new object's document is matched to the reference document of the same class whose
 body agrees once the ids mapped so far are applied, repeatedly, and its managed reference ids by
-their order of first use. The mapped file must then equal the reference byte for byte, and each
+their order of first use; a reference into an asset the run created (its GUID, from its .meta, and
+its file ids) is mapped onto the reference's asset at the same path, and the modifications of an
+instance of such an asset, in the order of its random target ids, are ordered by the mapped ids. The mapped file must then equal the reference byte for byte, and each
 file's documents must be in the Editor's order: a scene's by ascending file id; a prefab's by
 GameObject, the GameObjects by ascending file id, each followed by its components in its
 m_Component order (and any other documents after them, by file id). A row holding a
@@ -25,6 +27,8 @@ FILE_ID = re.compile(r'(fileID: |&)(-?\d+)')
 RID = re.compile(r'(rid: )(-?\d+)')
 HASH = re.compile(r'^[0-9a-f]{64}$')
 GUID_LINE = re.compile(r'^guid: [0-9a-f]{32}$', re.M)
+GUID_VALUE = re.compile(r'^guid: ([0-9a-f]{32})$', re.M)
+ASSET_REF = re.compile(r'\{fileID: (-?\d+), guid: ([0-9a-f]{32}), type: (\d+)\}')
 
 
 def documents(text):
@@ -155,7 +159,103 @@ def in_order(text, prefab):
     return [d[1] for d in docs] == [d[1] for d in ordered(docs, prefab)]
 
 
-def compare_file(reference, actual, path):
+def created_assets(rf, af):
+    """The assets both runs created (a .meta each), as (GUID map actual -> reference, file id map
+    of each actual GUID): references into them are mapped before a file is compared."""
+    def guids(files):
+        out = {}
+        for rel, path in files.items():
+            if rel.endswith('.meta') and not rel.startswith('snapshot:'):
+                m = GUID_VALUE.search(path.read_text('utf-8', 'replace'))
+                if m:
+                    out[rel[:-len('.meta')]] = m.group(1)
+        return out
+    ref_guids, act_guids = guids(rf), guids(af)
+    guid_map = {act_guids[p]: ref_guids[p] for p in act_guids if p in ref_guids}
+    id_maps = {}
+    for p, guid in act_guids.items():
+        if p not in ref_guids or p not in rf or p not in af:
+            continue
+        try:
+            ref_t, act_t = rf[p].read_text('utf-8'), af[p].read_text('utf-8')
+        except UnicodeDecodeError:
+            continue
+        if ref_t.startswith('%YAML') and act_t.startswith('%YAML'):
+            id_maps[guid] = map_ids(ref_t, map_asset_refs(act_t, guid_map, {}))[0]
+    return guid_map, id_maps
+
+
+def map_asset_refs(text, guid_map, id_maps):
+    """References into created assets renamed onto the reference's GUIDs and file ids."""
+    if not guid_map:
+        return text
+
+    def rename(m):
+        fid, guid = int(m.group(1)), m.group(2)
+        if guid not in guid_map:
+            return m.group(0)
+        fid = id_maps.get(guid, {}).get(fid, fid)
+        return f'{{fileID: {fid}, guid: {guid_map[guid]}, type: {m.group(3)}}}'
+    return ASSET_REF.sub(rename, text)
+
+
+MODIFICATION = re.compile(r'^    - target: \{fileID: (-?\d+), guid: ([0-9a-f]{32}), type: \d+\}$')
+
+
+def modification_lists(lines):
+    """Each m_Modifications list of a text: the (start, end) line ranges of its entries."""
+    lists, i = [], 0
+    while i < len(lines):
+        if lines[i] != '    m_Modifications:':
+            i += 1
+            continue
+        i += 1
+        entries = []
+        while i < len(lines) and lines[i].startswith('    - target: '):
+            start = i
+            i += 1
+            while i < len(lines) and lines[i].startswith('      '):
+                i += 1
+            entries.append((start, i))
+        lists.append(entries)
+    return lists
+
+
+def created_modifications_in_order(text, guid_map):
+    """Whether each modification list of an instance of an asset the run created is in the
+    order of its own (random) target ids, as the Editor orders them by target file id."""
+    lines = text.split('\n')
+    for entries in modification_lists(lines):
+        keys = [MODIFICATION.match(lines[a]) for a, _ in entries]
+        if not entries or not all(k and k.group(2) in guid_map for k in keys):
+            continue
+        ids = [int(k.group(1)) for k in keys]
+        if ids != sorted(ids):
+            return False
+    return True
+
+
+def sort_created_modifications(text, created_guids):
+    """Mapped modification lists of created assets, stably sorted by their (mapped) target ids."""
+    lines = text.split('\n')
+    out = []
+    i = 0
+    for entries in modification_lists(lines):
+        keys = [MODIFICATION.match(lines[a]) for a, _ in entries]
+        if not entries or not all(k and k.group(2) in created_guids for k in keys):
+            continue
+        first, last = entries[0][0], entries[-1][1]
+        out.extend(lines[i:first])
+        blocks = [(int(k.group(1)), lines[a:b]) for k, (a, b) in zip(keys, entries)]
+        blocks.sort(key=lambda block: block[0])
+        for _, block in blocks:
+            out.extend(block)
+        i = last
+    out.extend(lines[i:])
+    return '\n'.join(out)
+
+
+def compare_file(reference, actual, path, created=({}, {})):
     """None when equal (after the id mapping), else a short description."""
     ref, act = reference.read_bytes(), actual.read_bytes()
     if ref == act:
@@ -177,6 +277,10 @@ def compare_file(reference, actual, path):
         return 'the final line break differs'
     ref_t = ref_t[:-1] if ref_t.endswith('\n') else ref_t
     act_t = act_t[:-1] if act_t.endswith('\n') else act_t
+    if created[0]:
+        if not created_modifications_in_order(act_t, created[0]):
+            return 'modifications not in the Editor\'s order'
+        act_t = sort_created_modifications(map_asset_refs(act_t, *created), set(created[0].values()))
     prefab = ref_t.count('\n--- !u!1 &') > 0 and '\n--- !u!1660057539 ' not in ref_t and '\nOcclusionCullingSettings:' not in ref_t
     if not in_order(act_t, prefab):
         return 'documents not in the Editor\'s order'
@@ -247,12 +351,13 @@ def compare_runs(reference, actual, cases, report=None):
             if rr.get(key) != ar.get(key):
                 failures.append({'case': case, 'key': key, 'reference': rr.get(key), 'actual': ar.get(key)})
         rf, af = file_set(ref, rs), file_set(act, acs)
+        created = created_assets(rf, af)
         for rel in sorted(set(rf) | set(af)):
             compared += 1
             if rel not in rf or rel not in af:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': rel in rf, 'actual': rel in af})
                 continue
-            problem = compare_file(rf[rel], af[rel], rel)
+            problem = compare_file(rf[rel], af[rel], rel, created)
             if problem:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': 'written', 'actual': problem})
         compared += 1
