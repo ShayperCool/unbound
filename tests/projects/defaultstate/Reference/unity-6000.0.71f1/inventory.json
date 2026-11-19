@@ -1,4 +1,13 @@
 {
+  "constructorStores": {
+    "branchingConstructors": 1102,
+    "differences": [],
+    "equal": 385,
+    "unknown": 1250,
+    "unmatchedConstructors": 1620,
+    "unmatchedFields": 1785
+  },
+  "release": "6000.0.71f1",
   "types": [
     {
       "category": "class",
@@ -1339,6 +1348,12 @@
       "type": "UnityEditor.ConsoleWindow"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ConvertToPrefabInstanceSettings"
+    },
+    {
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -1953,6 +1968,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PropertyModification"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.Purchasing.PurchasingSettings"
     },
@@ -2002,7 +2023,37 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.SceneManagement.AddedComponent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneManagement.AddedGameObject"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.SceneManagement.EditorSceneManager"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneManagement.MainStage"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneManagement.ObjectOverride"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.SceneManagement.PrefabOverride"
     },
     {
       "category": "scriptable",
@@ -2021,6 +2072,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.SceneManagement.PreviewSceneStage"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SceneManagement.RemovedComponent"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.SceneManagement.SceneCullingMasks"
     },
     {
       "category": "class",
@@ -2254,6 +2317,12 @@
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.UndoPropertyModification"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.UndoRedoInfo"
     },
     {
@@ -2267,6 +2336,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.Unsupported"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UpdatePrefabInstancesEventArgs"
     },
     {
       "category": "scriptable",
