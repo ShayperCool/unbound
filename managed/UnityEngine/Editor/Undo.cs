@@ -231,8 +231,6 @@ namespace UnityEditor
 
         public static void PerformUndo()
         {
-            // Changes recorded before are delivered before they are undone or redone.
-            FlushDirtiness();
             if (s_Undo.Count == 0) return;
             var group = s_Undo[^1];
             s_Undo.RemoveAt(s_Undo.Count - 1);
@@ -244,8 +242,6 @@ namespace UnityEditor
 
         public static void PerformRedo()
         {
-            // Changes recorded before are delivered before they are undone or redone.
-            FlushDirtiness();
             if (s_Redo.Count == 0) return;
             var group = s_Redo[^1];
             s_Redo.RemoveAt(s_Redo.Count - 1);
@@ -309,7 +305,6 @@ namespace UnityEditor
 
         public static void RevertAllInCurrentGroup()
         {
-            FlushDirtiness();
             var group = Current(false);
             if (group == null) return;
             s_Undo.Remove(group);
@@ -318,7 +313,6 @@ namespace UnityEditor
 
         public static void RevertAllDownToGroup(int group)
         {
-            FlushDirtiness();
             while (s_Undo.Count > 0 && s_Undo[^1].Index >= group)
             {
                 var top = s_Undo[^1];
@@ -329,7 +323,6 @@ namespace UnityEditor
 
         public static void ClearAll()
         {
-            FlushDirtiness();
             s_Undo.Clear();
             s_Redo.Clear();
         }
