@@ -1,0 +1,483 @@
+{"k":"cooking.defaultOptions","v":"30"}
+{"k":"cooking.none.options","v":"0"}
+{"k":"cooking.none.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.none.ray0.up","v":"miss"}
+{"k":"cooking.none.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.none.ray1.up","v":"miss"}
+{"k":"cooking.none.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.none.ray2.up","v":"miss"}
+{"k":"cooking.none.ray3.down","v":"miss"}
+{"k":"cooking.none.ray3.up","v":"miss"}
+{"k":"cooking.none.ray4.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.none.ray4.up","v":"miss"}
+{"k":"cooking.none.ray5.down","v":"miss"}
+{"k":"cooking.none.ray5.up","v":"miss"}
+{"k":"cooking.none.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.none.logs","v":""}
+{"k":"cooking.none.convex.options","v":"0"}
+{"k":"cooking.none.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.ray5.down","v":"miss"}
+{"k":"cooking.none.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.none.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.none.convex.logs","v":""}
+{"k":"cooking.defaults.options","v":"30"}
+{"k":"cooking.defaults.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.defaults.ray0.up","v":"miss"}
+{"k":"cooking.defaults.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.defaults.ray1.up","v":"miss"}
+{"k":"cooking.defaults.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.defaults.ray2.up","v":"miss"}
+{"k":"cooking.defaults.ray3.down","v":"miss"}
+{"k":"cooking.defaults.ray3.up","v":"miss"}
+{"k":"cooking.defaults.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.defaults.ray4.up","v":"miss"}
+{"k":"cooking.defaults.ray5.down","v":"miss"}
+{"k":"cooking.defaults.ray5.up","v":"miss"}
+{"k":"cooking.defaults.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.defaults.logs","v":""}
+{"k":"cooking.defaults.convex.options","v":"30"}
+{"k":"cooking.defaults.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.ray5.down","v":"miss"}
+{"k":"cooking.defaults.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.defaults.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.defaults.convex.logs","v":""}
+{"k":"cooking.noFaster.options","v":"28"}
+{"k":"cooking.noFaster.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noFaster.ray0.up","v":"miss"}
+{"k":"cooking.noFaster.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.noFaster.ray1.up","v":"miss"}
+{"k":"cooking.noFaster.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noFaster.ray2.up","v":"miss"}
+{"k":"cooking.noFaster.ray3.down","v":"miss"}
+{"k":"cooking.noFaster.ray3.up","v":"miss"}
+{"k":"cooking.noFaster.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.noFaster.ray4.up","v":"miss"}
+{"k":"cooking.noFaster.ray5.down","v":"miss"}
+{"k":"cooking.noFaster.ray5.up","v":"miss"}
+{"k":"cooking.noFaster.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.noFaster.logs","v":""}
+{"k":"cooking.noFaster.convex.options","v":"28"}
+{"k":"cooking.noFaster.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.ray5.down","v":"miss"}
+{"k":"cooking.noFaster.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noFaster.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.noFaster.convex.logs","v":""}
+{"k":"cooking.noCleaning.options","v":"26"}
+{"k":"cooking.noCleaning.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noCleaning.ray0.up","v":"miss"}
+{"k":"cooking.noCleaning.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.noCleaning.ray1.up","v":"miss"}
+{"k":"cooking.noCleaning.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noCleaning.ray2.up","v":"miss"}
+{"k":"cooking.noCleaning.ray3.down","v":"miss"}
+{"k":"cooking.noCleaning.ray3.up","v":"miss"}
+{"k":"cooking.noCleaning.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.noCleaning.ray4.up","v":"miss"}
+{"k":"cooking.noCleaning.ray5.down","v":"miss"}
+{"k":"cooking.noCleaning.ray5.up","v":"miss"}
+{"k":"cooking.noCleaning.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.noCleaning.logs","v":""}
+{"k":"cooking.noCleaning.convex.options","v":"26"}
+{"k":"cooking.noCleaning.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.ray5.down","v":"miss"}
+{"k":"cooking.noCleaning.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noCleaning.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.noCleaning.convex.logs","v":""}
+{"k":"cooking.noWelding.options","v":"22"}
+{"k":"cooking.noWelding.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noWelding.ray0.up","v":"miss"}
+{"k":"cooking.noWelding.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.noWelding.ray1.up","v":"miss"}
+{"k":"cooking.noWelding.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noWelding.ray2.up","v":"miss"}
+{"k":"cooking.noWelding.ray3.down","v":"miss"}
+{"k":"cooking.noWelding.ray3.up","v":"miss"}
+{"k":"cooking.noWelding.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.noWelding.ray4.up","v":"miss"}
+{"k":"cooking.noWelding.ray5.down","v":"miss"}
+{"k":"cooking.noWelding.ray5.up","v":"miss"}
+{"k":"cooking.noWelding.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.noWelding.logs","v":""}
+{"k":"cooking.noWelding.convex.options","v":"22"}
+{"k":"cooking.noWelding.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.ray5.down","v":"miss"}
+{"k":"cooking.noWelding.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noWelding.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.noWelding.convex.logs","v":""}
+{"k":"cooking.noMidphase.options","v":"14"}
+{"k":"cooking.noMidphase.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noMidphase.ray0.up","v":"miss"}
+{"k":"cooking.noMidphase.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.noMidphase.ray1.up","v":"miss"}
+{"k":"cooking.noMidphase.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.noMidphase.ray2.up","v":"miss"}
+{"k":"cooking.noMidphase.ray3.down","v":"miss"}
+{"k":"cooking.noMidphase.ray3.up","v":"miss"}
+{"k":"cooking.noMidphase.ray4.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.noMidphase.ray4.up","v":"miss"}
+{"k":"cooking.noMidphase.ray5.down","v":"miss"}
+{"k":"cooking.noMidphase.ray5.up","v":"miss"}
+{"k":"cooking.noMidphase.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.noMidphase.logs","v":""}
+{"k":"cooking.noMidphase.convex.options","v":"14"}
+{"k":"cooking.noMidphase.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.ray5.down","v":"miss"}
+{"k":"cooking.noMidphase.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.noMidphase.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.noMidphase.convex.logs","v":""}
+{"k":"cooking.cleaningOnly.options","v":"4"}
+{"k":"cooking.cleaningOnly.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.cleaningOnly.ray0.up","v":"miss"}
+{"k":"cooking.cleaningOnly.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.cleaningOnly.ray1.up","v":"miss"}
+{"k":"cooking.cleaningOnly.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.cleaningOnly.ray2.up","v":"miss"}
+{"k":"cooking.cleaningOnly.ray3.down","v":"miss"}
+{"k":"cooking.cleaningOnly.ray3.up","v":"miss"}
+{"k":"cooking.cleaningOnly.ray4.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.cleaningOnly.ray4.up","v":"miss"}
+{"k":"cooking.cleaningOnly.ray5.down","v":"miss"}
+{"k":"cooking.cleaningOnly.ray5.up","v":"miss"}
+{"k":"cooking.cleaningOnly.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.cleaningOnly.logs","v":""}
+{"k":"cooking.cleaningOnly.convex.options","v":"4"}
+{"k":"cooking.cleaningOnly.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.ray5.down","v":"miss"}
+{"k":"cooking.cleaningOnly.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.cleaningOnly.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.cleaningOnly.convex.logs","v":""}
+{"k":"cooking.weldingOnly.options","v":"8"}
+{"k":"cooking.weldingOnly.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.weldingOnly.ray0.up","v":"miss"}
+{"k":"cooking.weldingOnly.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.weldingOnly.ray1.up","v":"miss"}
+{"k":"cooking.weldingOnly.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.weldingOnly.ray2.up","v":"miss"}
+{"k":"cooking.weldingOnly.ray3.down","v":"miss"}
+{"k":"cooking.weldingOnly.ray3.up","v":"miss"}
+{"k":"cooking.weldingOnly.ray4.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.weldingOnly.ray4.up","v":"miss"}
+{"k":"cooking.weldingOnly.ray5.down","v":"miss"}
+{"k":"cooking.weldingOnly.ray5.up","v":"miss"}
+{"k":"cooking.weldingOnly.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.weldingOnly.logs","v":""}
+{"k":"cooking.weldingOnly.convex.options","v":"8"}
+{"k":"cooking.weldingOnly.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.ray5.down","v":"miss"}
+{"k":"cooking.weldingOnly.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.weldingOnly.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.weldingOnly.convex.logs","v":""}
+{"k":"cooking.inflate.options","v":"31"}
+{"k":"cooking.inflate.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.inflate.ray0.up","v":"miss"}
+{"k":"cooking.inflate.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.inflate.ray1.up","v":"miss"}
+{"k":"cooking.inflate.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.inflate.ray2.up","v":"miss"}
+{"k":"cooking.inflate.ray3.down","v":"miss"}
+{"k":"cooking.inflate.ray3.up","v":"miss"}
+{"k":"cooking.inflate.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.inflate.ray4.up","v":"miss"}
+{"k":"cooking.inflate.ray5.down","v":"miss"}
+{"k":"cooking.inflate.ray5.up","v":"miss"}
+{"k":"cooking.inflate.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.inflate.logs","v":""}
+{"k":"cooking.inflate.convex.options","v":"31"}
+{"k":"cooking.inflate.convex.ray0.down","v":"hit d=2.7000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray0.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray1.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray1.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray2.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray2.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray3.down","v":"hit d=2.0000 tri=-1 n=(0.000,0.707,-0.707) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray3.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray4.down","v":"hit d=2.0000 tri=-1 n=(-0.707,0.707,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray4.up","v":"hit d=3.0000 tri=-1 n=(0.000,-1.000,0.000) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.ray5.down","v":"miss"}
+{"k":"cooking.inflate.convex.ray5.up","v":"hit d=7.1667 tri=-1 n=(0.000,-0.514,0.857) bary=(1.000,0.000,0.000)"}
+{"k":"cooking.inflate.convex.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.inflate.convex.logs","v":""}
+{"k":"cooking.changed.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.changed.ray0.up","v":"miss"}
+{"k":"cooking.changed.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.changed.ray1.up","v":"miss"}
+{"k":"cooking.changed.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.changed.ray2.up","v":"miss"}
+{"k":"cooking.changed.ray3.down","v":"miss"}
+{"k":"cooking.changed.ray3.up","v":"miss"}
+{"k":"cooking.changed.ray4.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.changed.ray4.up","v":"miss"}
+{"k":"cooking.changed.ray5.down","v":"miss"}
+{"k":"cooking.changed.ray5.up","v":"miss"}
+{"k":"cooking.changed.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.changed.logs","v":""}
+{"k":"cooking.released.readable","v":false}
+{"k":"cooking.released.mesh","v":"CookingProbe"}
+{"k":"cooking.released.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.released.ray0.up","v":"miss"}
+{"k":"cooking.released.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.released.ray1.up","v":"miss"}
+{"k":"cooking.released.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.released.ray2.up","v":"miss"}
+{"k":"cooking.released.ray3.down","v":"miss"}
+{"k":"cooking.released.ray3.up","v":"miss"}
+{"k":"cooking.released.ray4.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.released.ray4.up","v":"miss"}
+{"k":"cooking.released.ray5.down","v":"miss"}
+{"k":"cooking.released.ray5.up","v":"miss"}
+{"k":"cooking.released.bounds","v":"(1.5000,0.0000,1.0000) (3.0000,0.0000,2.0000)"}
+{"k":"cooking.released.logs","v":""}
+{"k":"cooking.baked.call","v":"ok"}
+{"k":"cooking.baked.ray0.down","v":"hit d=3.0000 tri=0 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.baked.ray0.up","v":"miss"}
+{"k":"cooking.baked.ray1.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.300,0.400,0.300)"}
+{"k":"cooking.baked.ray1.up","v":"miss"}
+{"k":"cooking.baked.ray2.down","v":"hit d=3.0000 tri=2 n=(0.000,1.000,0.000) bary=(0.350,0.300,0.350)"}
+{"k":"cooking.baked.ray2.up","v":"miss"}
+{"k":"cooking.baked.ray3.down","v":"miss"}
+{"k":"cooking.baked.ray3.up","v":"miss"}
+{"k":"cooking.baked.ray4.down","v":"hit d=3.0000 tri=1 n=(0.000,1.000,0.000) bary=(0.000,1.000,0.000)"}
+{"k":"cooking.baked.ray4.up","v":"miss"}
+{"k":"cooking.baked.ray5.down","v":"miss"}
+{"k":"cooking.baked.ray5.up","v":"miss"}
+{"k":"cooking.baked.bounds","v":"(2.5000,2.5000,2.5000) (5.0000,5.0000,5.0000)"}
+{"k":"cooking.baked.logs","v":""}
+{"k":"effector.area.all.A.acted","v":true}
+{"k":"effector.area.all.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.all.B.acted","v":true}
+{"k":"effector.area.all.B.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.all.logs","v":""}
+{"k":"effector.area.maskA.A.acted","v":true}
+{"k":"effector.area.maskA.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.maskA.B.acted","v":false}
+{"k":"effector.area.maskA.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.area.maskA.logs","v":""}
+{"k":"effector.area.matrix.A.acted","v":true}
+{"k":"effector.area.matrix.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.matrix.B.acted","v":false}
+{"k":"effector.area.matrix.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.area.matrix.logs","v":""}
+{"k":"effector.area.excludeB.A.acted","v":true}
+{"k":"effector.area.excludeB.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.excludeB.B.acted","v":false}
+{"k":"effector.area.excludeB.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.area.excludeB.logs","v":""}
+{"k":"effector.area.receiveB.A.acted","v":true}
+{"k":"effector.area.receiveB.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.receiveB.B.acted","v":true}
+{"k":"effector.area.receiveB.B.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.receiveB.logs","v":""}
+{"k":"effector.area.sendNotB.A.acted","v":true}
+{"k":"effector.area.sendNotB.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.sendNotB.B.acted","v":true}
+{"k":"effector.area.sendNotB.B.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.sendNotB.logs","v":""}
+{"k":"effector.area.maskAincludeB.A.acted","v":true}
+{"k":"effector.area.maskAincludeB.A.motion","v":"(1.20,0.00) v=(4.80,0.00)"}
+{"k":"effector.area.maskAincludeB.B.acted","v":false}
+{"k":"effector.area.maskAincludeB.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.area.maskAincludeB.logs","v":""}
+{"k":"effector.point.all.A.acted","v":true}
+{"k":"effector.point.all.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.all.B.acted","v":true}
+{"k":"effector.point.all.B.motion","v":"(0.54,1.07) v=(2.15,4.29)"}
+{"k":"effector.point.all.logs","v":""}
+{"k":"effector.point.maskA.A.acted","v":true}
+{"k":"effector.point.maskA.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.maskA.B.acted","v":false}
+{"k":"effector.point.maskA.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.point.maskA.logs","v":""}
+{"k":"effector.point.matrix.A.acted","v":true}
+{"k":"effector.point.matrix.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.matrix.B.acted","v":false}
+{"k":"effector.point.matrix.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.point.matrix.logs","v":""}
+{"k":"effector.point.excludeB.A.acted","v":true}
+{"k":"effector.point.excludeB.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.excludeB.B.acted","v":false}
+{"k":"effector.point.excludeB.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.point.excludeB.logs","v":""}
+{"k":"effector.point.receiveB.A.acted","v":true}
+{"k":"effector.point.receiveB.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.receiveB.B.acted","v":true}
+{"k":"effector.point.receiveB.B.motion","v":"(0.54,1.07) v=(2.15,4.29)"}
+{"k":"effector.point.receiveB.logs","v":""}
+{"k":"effector.point.sendNotB.A.acted","v":true}
+{"k":"effector.point.sendNotB.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.sendNotB.B.acted","v":true}
+{"k":"effector.point.sendNotB.B.motion","v":"(0.54,1.07) v=(2.15,4.29)"}
+{"k":"effector.point.sendNotB.logs","v":""}
+{"k":"effector.point.maskAincludeB.A.acted","v":true}
+{"k":"effector.point.maskAincludeB.A.motion","v":"(-0.54,-1.07) v=(-2.15,-4.29)"}
+{"k":"effector.point.maskAincludeB.B.acted","v":false}
+{"k":"effector.point.maskAincludeB.B.motion","v":"(0.00,0.00) v=(0.00,0.00)"}
+{"k":"effector.point.maskAincludeB.logs","v":""}
+{"k":"effector.surface.all.A.acted","v":true}
+{"k":"effector.surface.all.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.all.B.acted","v":true}
+{"k":"effector.surface.all.B.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.all.logs","v":""}
+{"k":"effector.surface.maskA.A.acted","v":true}
+{"k":"effector.surface.maskA.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.maskA.B.acted","v":false}
+{"k":"effector.surface.maskA.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.surface.maskA.logs","v":""}
+{"k":"effector.surface.matrix.A.acted","v":true}
+{"k":"effector.surface.matrix.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.matrix.B.acted","v":false}
+{"k":"effector.surface.matrix.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.surface.matrix.logs","v":""}
+{"k":"effector.surface.excludeB.A.acted","v":true}
+{"k":"effector.surface.excludeB.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.excludeB.B.acted","v":false}
+{"k":"effector.surface.excludeB.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.surface.excludeB.logs","v":""}
+{"k":"effector.surface.receiveB.A.acted","v":true}
+{"k":"effector.surface.receiveB.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.receiveB.B.acted","v":true}
+{"k":"effector.surface.receiveB.B.motion","v":"(1.55,-1.30) v=(4.32,-5.15)"}
+{"k":"effector.surface.receiveB.logs","v":""}
+{"k":"effector.surface.sendNotB.A.acted","v":true}
+{"k":"effector.surface.sendNotB.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.sendNotB.B.acted","v":true}
+{"k":"effector.surface.sendNotB.B.motion","v":"(1.55,-1.30) v=(4.32,-5.15)"}
+{"k":"effector.surface.sendNotB.logs","v":""}
+{"k":"effector.surface.maskAincludeB.A.acted","v":true}
+{"k":"effector.surface.maskAincludeB.A.motion","v":"(1.33,0.00) v=(3.99,0.00)"}
+{"k":"effector.surface.maskAincludeB.B.acted","v":false}
+{"k":"effector.surface.maskAincludeB.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.surface.maskAincludeB.logs","v":""}
+{"k":"effector.buoyancy.all.A.acted","v":true}
+{"k":"effector.buoyancy.all.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.all.B.acted","v":true}
+{"k":"effector.buoyancy.all.B.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.all.logs","v":""}
+{"k":"effector.buoyancy.maskA.A.acted","v":true}
+{"k":"effector.buoyancy.maskA.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.maskA.B.acted","v":false}
+{"k":"effector.buoyancy.maskA.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.buoyancy.maskA.logs","v":""}
+{"k":"effector.buoyancy.matrix.A.acted","v":true}
+{"k":"effector.buoyancy.matrix.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.matrix.B.acted","v":false}
+{"k":"effector.buoyancy.matrix.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.buoyancy.matrix.logs","v":""}
+{"k":"effector.buoyancy.excludeB.A.acted","v":true}
+{"k":"effector.buoyancy.excludeB.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.excludeB.B.acted","v":false}
+{"k":"effector.buoyancy.excludeB.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.buoyancy.excludeB.logs","v":""}
+{"k":"effector.buoyancy.receiveB.A.acted","v":true}
+{"k":"effector.buoyancy.receiveB.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.receiveB.B.acted","v":true}
+{"k":"effector.buoyancy.receiveB.B.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.receiveB.logs","v":""}
+{"k":"effector.buoyancy.sendNotB.A.acted","v":true}
+{"k":"effector.buoyancy.sendNotB.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.sendNotB.B.acted","v":true}
+{"k":"effector.buoyancy.sendNotB.B.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.sendNotB.logs","v":""}
+{"k":"effector.buoyancy.maskAincludeB.A.acted","v":true}
+{"k":"effector.buoyancy.maskAincludeB.A.motion","v":"(0.00,-0.50) v=(0.00,-1.68)"}
+{"k":"effector.buoyancy.maskAincludeB.B.acted","v":false}
+{"k":"effector.buoyancy.maskAincludeB.B.motion","v":"(0.00,-1.28) v=(0.00,-4.90)"}
+{"k":"effector.buoyancy.maskAincludeB.logs","v":""}
+{"k":"video.twotracks.clip.audioTrackCount","v":"2"}
+{"k":"video.twotracks.clip.track0","v":"channels=2 rate=44100 language=eng"}
+{"k":"video.twotracks.clip.track1","v":"channels=1 rate=22050 language=fra"}
+{"k":"video.twotracks.clip.track2","v":"channels=0 rate=0 language="}
+{"k":"video.twotracks.clip.logs","v":""}
+{"k":"video.twotracks.player.before","v":"tracks=2 controlled=2 max=64"}
+{"k":"video.twotracks.player.before.logs","v":""}
+{"k":"video.twotracks.player.prepared","v":true}
+{"k":"video.twotracks.player.audioTrackCount","v":"2"}
+{"k":"video.twotracks.player.track0","v":"channels=2 rate=44100 language=eng enabled=True"}
+{"k":"video.twotracks.player.track1","v":"channels=1 rate=22050 language=fra enabled=True"}
+{"k":"video.twotracks.player.track2","v":"channels=0 rate=0 language= enabled=-"}
+{"k":"video.twotracks.player.logs","v":""}
+{"k":"video.silent.clip.audioTrackCount","v":"0"}
+{"k":"video.silent.clip.track0","v":"channels=0 rate=0 language="}
+{"k":"video.silent.clip.track1","v":"channels=0 rate=0 language="}
+{"k":"video.silent.clip.track2","v":"channels=0 rate=0 language="}
+{"k":"video.silent.clip.logs","v":""}
+{"k":"video.silent.player.before","v":"tracks=0 controlled=0 max=64"}
+{"k":"video.silent.player.before.logs","v":""}
+{"k":"video.silent.player.prepared","v":true}
+{"k":"video.silent.player.audioTrackCount","v":"0"}
+{"k":"video.silent.player.track0","v":"channels=0 rate=0 language= enabled=-"}
+{"k":"video.silent.player.track1","v":"channels=0 rate=0 language= enabled=-"}
+{"k":"video.silent.player.track2","v":"channels=0 rate=0 language= enabled=-"}
+{"k":"video.silent.player.logs","v":""}
+{"k":"complete","v":true}

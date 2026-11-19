@@ -1,0 +1,6 @@
+{
+  "Collider2D force send/receive layers are kept but not applied to contacts (reported through Stubs.Ignored): the Editor's body that receives no force from the surface's layer falls through it while the surface effector still carries it": [
+    "effector.surface.receiveB.B.motion",
+    "effector.surface.sendNotB.B.motion"
+  ]
+}

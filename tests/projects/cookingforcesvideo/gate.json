@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/cookingforcesvideo/run.py gate"
+  ],
+  "summary": "cookingforcesvideo: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Physics/Collider.cs",
+    "native/unbound_physx.cpp",
+    "managed/UnityEngine/Physics2D/Effector2D.cs",
+    "managed/UnityEngine/Physics2D/Collider2D.cs",
+    "managed/UnityEngine/Video/VideoPlayer.cs",
+    "managed/UnityEngine/Video/VideoClip.cs"
+  ]
+}
