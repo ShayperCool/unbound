@@ -40,22 +40,9 @@ static class MovedTypes
             var replacements = new Dictionary<SyntaxNode, SyntaxNode>();
             foreach (var error in file)
             {
-                // The error spans the missing name, or in an expression the whole qualified name.
-                var name = root.FindNode(error.Location.SourceSpan, getInnermostNodeForTie: true) switch
-                {
-                    SimpleNameSyntax simple => simple,
-                    MemberAccessExpressionSyntax access => access.Name,
-                    QualifiedNameSyntax qualified => qualified.Right,
-                    _ => null,
-                };
-                if (name == null) continue;
-                var (target, places) = Places(name, model);
-                foreach (var place in places)
-                {
-                    if (!moved.TryGetValue(place + "." + MetadataName(name), out var type)) continue;
-                    replacements[target] = NameOf(type, name).WithTriviaFrom(target);
-                    break;
-                }
+                if (root.FindNode(error.Location.SourceSpan, getInnermostNodeForTie: true) is not ExpressionSyntax at) continue;
+                if (Moved(Chain(at), model, moved) is { } found)
+                    replacements[found.Node] = NameOf(found.Type, found.Name).WithTriviaFrom(found.Node);
             }
             if (replacements.Count == 0) continue;
             var rewritten = root.ReplaceNodes(replacements.Keys, (original, _) => replacements[original]);
@@ -64,43 +51,100 @@ static class MovedTypes
         return ReferenceEquals(updated, compilation) ? null : updated;
     }
 
-    /// <summary>The node naming the type and the namespaces it may have been named in: the one
-    /// qualifying it (directly or through an alias), else those its usings and enclosing
-    /// namespaces bring into scope.</summary>
-    static (SyntaxNode Target, IEnumerable<string> Places) Places(SimpleNameSyntax name, SemanticModel model)
+    /// <summary>The dotted name the error lies in (<c>A.B.C</c>, as a type or in an expression), as
+    /// its parts, each with the node that ends with it.</summary>
+    static List<(SimpleNameSyntax Part, ExpressionSyntax Node)> Chain(ExpressionSyntax at)
     {
-        ExpressionSyntax? qualifier = name.Parent switch
+        var top = at;
+        while (top.Parent is QualifiedNameSyntax or AliasQualifiedNameSyntax
+               || top.Parent is MemberAccessExpressionSyntax { RawKind: (int)SyntaxKind.SimpleMemberAccessExpression })
+            top = (ExpressionSyntax)top.Parent;
+        var parts = new List<(SimpleNameSyntax, ExpressionSyntax)>();
+        bool Flatten(ExpressionSyntax e)
         {
-            QualifiedNameSyntax q when q.Right == name => q.Left,
-            MemberAccessExpressionSyntax m when m.Name == name => m.Expression,
-            _ => null,
-        };
-        if (qualifier != null)
-        {
-            // A namespace named through an alias, else by its name, which may be relative to the
-            // enclosing namespaces.
-            if (qualifier is IdentifierNameSyntax id
-                && model.GetSpeculativeAliasInfo(qualifier.SpanStart, id, SpeculativeBindingOption.BindAsTypeOrNamespace) is { Target: INamespaceSymbol target })
-                return (name.Parent!, new[] { target.ToDisplayString() });
-            var written = qualifier.ToString().Replace("global::", "");
-            var qualified = new List<string> { written };
-            qualified.AddRange(name.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Select(n => n.Name + "." + written));
-            return (name.Parent!, qualified);
+            switch (e)
+            {
+                case QualifiedNameSyntax q:
+                    if (!Flatten(q.Left)) return false;
+                    parts.Add((q.Right, q));
+                    return true;
+                case MemberAccessExpressionSyntax { RawKind: (int)SyntaxKind.SimpleMemberAccessExpression } m:
+                    if (!Flatten(m.Expression)) return false;
+                    parts.Add((m.Name, m));
+                    return true;
+                // `global::A`: A from the global namespace.
+                case AliasQualifiedNameSyntax { Alias.Identifier.ValueText: "global" } g:
+                    parts.Add((g.Name, g));
+                    return true;
+                case SimpleNameSyntax simple:
+                    parts.Add((simple, simple));
+                    return true;
+                default:
+                    return false;
+            }
         }
-        var places = new List<string>();
-        foreach (var node in name.Ancestors())
+        return Flatten(top) ? parts : new List<(SimpleNameSyntax, ExpressionSyntax)>();
+    }
+
+    /// <summary>The first part of <paramref name="chain"/> that names a moved type from where it
+    /// was: the parts before it are the namespace it was in, named through an alias, else as
+    /// written from the global namespace or relative to an enclosing one; a first part is the type
+    /// itself in a namespace the usings or the enclosing namespaces bring into scope.</summary>
+    static (ExpressionSyntax Node, SimpleNameSyntax Name, INamedTypeSymbol Type)? Moved(
+        List<(SimpleNameSyntax Part, ExpressionSyntax Node)> chain, SemanticModel model, Dictionary<string, INamedTypeSymbol> moved)
+    {
+        if (chain.Count == 0) return null;
+        var first = chain[0].Part;
+        var enclosing = EnclosingNamespaces(first);
+        for (int j = 0; j < chain.Count; j++)
         {
-            var usings = node switch
+            var (part, node) = chain[j];
+            IEnumerable<string> places;
+            if (j == 0)
+            {
+                places = Usings(first).Concat(enclosing);
+            }
+            else
+            {
+                var written = string.Join(".", chain.Take(j).Select(c => c.Part.Identifier.ValueText));
+                var rooted = chain[0].Node is AliasQualifiedNameSyntax;
+                if (!rooted && first is IdentifierNameSyntax id
+                    && model.GetSpeculativeAliasInfo(first.SpanStart, id, SpeculativeBindingOption.BindAsTypeOrNamespace) is { Target: INamespaceSymbol alias })
+                    places = new[] { string.Join(".", new[] { alias.ToDisplayString() }.Concat(chain.Skip(1).Take(j - 1).Select(c => c.Part.Identifier.ValueText))) };
+                else if (rooted)
+                    places = new[] { written };
+                else
+                    places = enclosing.Select(n => n + "." + written).Append(written);
+            }
+            foreach (var place in places)
+                if (moved.TryGetValue(place + "." + MetadataName(part), out var type))
+                    return (node, part, type);
+        }
+        return null;
+    }
+
+    /// <summary>The namespaces enclosing <paramref name="node"/> and their parents, innermost
+    /// first (<c>A.B.C</c>, <c>A.B</c>, <c>A</c>), across nested declarations.</summary>
+    static List<string> EnclosingNamespaces(SyntaxNode node)
+    {
+        var parts = node.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Reverse()
+            .SelectMany(n => n.Name.ToString().Split('.')).ToList();
+        var names = new List<string>();
+        for (int k = parts.Count; k > 0; k--) names.Add(string.Join(".", parts.Take(k)));
+        return names;
+    }
+
+    /// <summary>The namespaces the using directives in scope of <paramref name="node"/> import.</summary>
+    static IEnumerable<string> Usings(SyntaxNode node) =>
+        node.Ancestors()
+            .SelectMany(n => n switch
             {
                 CompilationUnitSyntax unit => unit.Usings,
                 BaseNamespaceDeclarationSyntax ns => ns.Usings,
                 _ => default,
-            };
-            places.AddRange(usings.Where(u => u.Alias == null && u.StaticKeyword.IsKind(SyntaxKind.None)).Select(u => u.Name!.ToString()));
-            if (node is BaseNamespaceDeclarationSyntax declared) places.Add(declared.Name.ToString());
-        }
-        return (name, places);
-    }
+            })
+            .Where(u => u.Alias == null && u.StaticKeyword.IsKind(SyntaxKind.None))
+            .Select(u => u.Name!.ToString().Replace("global::", ""));
 
     static string MetadataName(SimpleNameSyntax name) =>
         name is GenericNameSyntax generic ? $"{name.Identifier.ValueText}`{generic.Arity}" : name.Identifier.ValueText;

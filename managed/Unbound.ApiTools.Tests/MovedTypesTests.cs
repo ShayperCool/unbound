@@ -33,6 +33,8 @@ namespace New.Space
     [MovedFrom(true, ""Old.Space"")] public class Box<T> { }
     [MovedFrom(false, ""Old.Space"")] public class Manual { }
     [MovedFrom(""Old.Space"")] public class Legacy { }
+    // From a namespace that no longer has any type.
+    [MovedFrom(true, ""Gone.Space"")] public class Vanished { public static string Where() => typeof(Vanished).FullName; }
 }
 namespace Old.Space { public class Stays { } }
 ";
@@ -46,6 +48,20 @@ public static class Consumer
     public static string Renamed() => typeof(OldName).FullName;
     public static string Generic() => typeof(Box<int>).Name;
     public static string Legacy() => typeof(O.Legacy).FullName;
+    public static string Vanished() => typeof(Gone.Space.Vanished).FullName;
+    public static string VanishedCall() => Gone.Space.Vanished.Where();
+}
+namespace Old.Inner
+{
+    // `Space` relative to the enclosing namespace's parent.
+    public static class Relative { public static string Name() => typeof(Space.Moved).FullName; }
+}
+namespace Old
+{
+    namespace Deeper
+    {
+        public static class Nested { public static string Name() => typeof(Space.Moved).FullName; }
+    }
 }
 ";
 
@@ -89,6 +105,12 @@ public static class Consumer
                 Assert.Equal("Box`1", Call("Generic"));
                 // The release's MovedFrom(string sourceNamespace) declares autoUpdateAPI true.
                 Assert.Equal("New.Space.Legacy", Call("Legacy"));
+                Assert.Equal("New.Space.Vanished", Call("Vanished"));
+                Assert.Equal("New.Space.Vanished", Call("VanishedCall"));
+                var assembly = consumer.Assembly;
+                string Named(string type) => (string)assembly.GetType(type)!.GetMethod("Name")!.Invoke(null, null)!;
+                Assert.Equal("New.Space.Moved", Named("Old.Inner.Relative"));
+                Assert.Equal("New.Space.Moved", Named("Old.Deeper.Nested"));
             }
             finally { context.Unload(); }
         }
