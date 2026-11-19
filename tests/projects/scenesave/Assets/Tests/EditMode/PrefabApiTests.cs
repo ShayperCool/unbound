@@ -29,6 +29,7 @@ public class PrefabApiTests
 
         ProbeLog.Try("cull.mask", () => EditorSceneManager.GetSceneCullingMask(scene).ToString());
         ProbeLog.Try("cull.default", () => SceneCullingMasks.DefaultSceneCullingMask.ToString());
+        ProbeLog.Try("cull.combined", () => StageUtility.GetMainStage().GetCombinedSceneCullingMaskForCamera().ToString());
         ProbeLog.Try("preview.scene", () => EditorSceneManager.IsPreviewScene(scene));
         ProbeLog.Try("preview.object", () => EditorSceneManager.IsPreviewSceneObject(instance));
         ProbeLog.Try("preview.prefabAsset", () => EditorSceneManager.IsPreviewSceneObject(prefab));
@@ -40,13 +41,23 @@ public class PrefabApiTests
         ProbeLog.Try("stage.prefabOfInstance", () => PrefabStageUtility.GetPrefabStage(instance) == null ? "null" : "stage");
         var placed = new GameObject("Placed");
         ProbeLog.Try("stage.place", () => { StageUtility.PlaceGameObjectInCurrentStage(placed); return placed.scene.name + "|" + (placed.transform.parent == null); });
+        var placedChild = new GameObject("Placed Child");
+        placedChild.transform.SetParent(placed.transform, false);
+        ProbeLog.Try("stage.placeChild", () => { StageUtility.PlaceGameObjectInCurrentStage(placedChild); return Name(placedChild.transform.parent); });
+        ProbeLog.Try("stage.placeNull", () => { StageUtility.PlaceGameObjectInCurrentStage(null); return "done"; });
 
 #pragma warning disable CS0618
         ProbeLog.Try("findPrefabRoot.part", () => Name(PrefabUtility.FindPrefabRoot(part)));
         ProbeLog.Try("findPrefabRoot.plain", () => Name(PrefabUtility.FindPrefabRoot(placed)));
+        ProbeLog.Try("findPrefabRoot.plainChild", () => Name(PrefabUtility.FindPrefabRoot(placedChild)));
+        ProbeLog.Try("findPrefabRoot.null", () => Name(PrefabUtility.FindPrefabRoot(null)));
 #pragma warning restore CS0618
         ProbeLog.Try("instances", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(prefab).Select(Name)));
         ProbeLog.Try("instances.scene", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(prefab, scene).Select(Name)));
+        ProbeLog.Try("instances.child", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(prefab.transform.GetChild(0).gameObject).Select(Name)));
+        ProbeLog.Try("instances.sceneObject", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(instance).Select(Name)));
+        ProbeLog.Try("instances.null", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(null).Select(Name)));
+        ProbeLog.Try("instances.invalidScene", () => string.Join(",", PrefabUtility.FindAllInstancesOfPrefab(prefab, default).Select(Name)));
 
         var mods = PrefabUtility.GetPropertyModifications(instance);
         ProbeLog.Row("mods.count", mods == null ? -1 : mods.Length);
@@ -57,6 +68,9 @@ public class PrefabApiTests
         ProbeLog.Try("mods.plain", () => PrefabUtility.GetPropertyModifications(placed) == null ? "null" : "array");
         foreach (var o in PrefabUtility.GetObjectOverrides(instance, false)) ProbeLog.Row("overrides", Name(o.instanceObject));
         foreach (var o in PrefabUtility.GetObjectOverrides(instance, true)) ProbeLog.Row("overrides.default", Name(o.instanceObject));
+        ProbeLog.Try("overrides.plain", () => PrefabUtility.GetObjectOverrides(placed).Count);
+        ProbeLog.Try("overrides.null", () => PrefabUtility.GetObjectOverrides(null).Count);
+        ProbeLog.Try("overrides.part", () => PrefabUtility.GetObjectOverrides(part, true).Count);
 
         var sourceHolder = prefab.GetComponent<Holder>();
         var edited = mods.ToList();

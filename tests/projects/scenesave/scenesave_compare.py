@@ -175,7 +175,8 @@ def compare_file(reference, actual, path):
     # would move it).
     if ref_t.endswith('\n') != act_t.endswith('\n'):
         return 'the final line break differs'
-    ref_t, act_t = ref_t.rstrip('\n'), act_t.rstrip('\n')
+    ref_t = ref_t[:-1] if ref_t.endswith('\n') else ref_t
+    act_t = act_t[:-1] if act_t.endswith('\n') else act_t
     prefab = ref_t.count('\n--- !u!1 &') > 0 and '\n--- !u!1660057539 ' not in ref_t and '\nOcclusionCullingSettings:' not in ref_t
     if not in_order(act_t, prefab):
         return 'documents not in the Editor\'s order'

@@ -1,5 +1,6 @@
 {"key": "cull.mask", "value": "16140901064495857664"}
 {"key": "cull.default", "value": "16140901064495857664"}
+{"key": "cull.combined", "value": "6917529027641081856"}
 {"key": "preview.scene", "value": false}
 {"key": "preview.object", "value": false}
 {"key": "preview.prefabAsset", "value": false}
@@ -10,10 +11,18 @@
 {"key": "stage.ofScene", "value": true}
 {"key": "stage.prefabOfInstance", "value": "null"}
 {"key": "stage.place", "value": "Base|True"}
+{"key": "stage.placeChild", "value": "Transform:Placed"}
+{"key": "stage.placeNull", "value": "done"}
 {"key": "findPrefabRoot.part", "value": "GameObject:Thing"}
 {"key": "findPrefabRoot.plain", "value": "GameObject:Placed"}
+{"key": "findPrefabRoot.plainChild", "value": "GameObject:Placed Child"}
+{"key": "findPrefabRoot.null", "value": "throws ArgumentNullException: Value cannot be null.\nParameter name: source"}
 {"key": "instances", "value": "GameObject:Thing"}
 {"key": "instances.scene", "value": "GameObject:Thing"}
+{"key": "instances.child", "value": "throws ArgumentException: FindAllInstancesOfPrefab must be called with a root Prefab GameObject."}
+{"key": "instances.sceneObject", "value": "throws ArgumentException: FindAllInstancesOfPrefab must be called with a Prefab asset."}
+{"key": "instances.null", "value": "throws ArgumentNullException: Value cannot be null.\nParameter name: prefabRoot"}
+{"key": "instances.invalidScene", "value": "throws ArgumentException: Input scene is not valid: Could not be found."}
 {"key": "mods.count", "value": 11}
 {"key": "mods", "value": "Transform:Thing|m_LocalPosition.x|0|null"}
 {"key": "mods", "value": "Transform:Thing|m_LocalPosition.y|0|null"}
@@ -30,13 +39,16 @@
 {"key": "mods.plain", "value": "null"}
 {"key": "overrides.default", "value": "GameObject:Thing"}
 {"key": "overrides.default", "value": "Transform:Thing"}
+{"key": "overrides.plain", "value": "throws ArgumentException: Provided GameObject is not a Prefab instance"}
+{"key": "overrides.null", "value": "throws ArgumentNullException: Value cannot be null.\nParameter name: prefabInstance"}
+{"key": "overrides.part", "value": 2}
 {"key": "set.result", "value": "done"}
 {"key": "set.count", "value": 21}
 {"key": "set.target", "value": "GameObject:Placed"}
 {"key": "set.isDirty", "value": false}
 {"key": "set.mods.count", "value": 13}
 {"key": "set.save", "value": true}
-{"key": "set.scene", "value": "d47123207b774873b0ccbfa6fc4f18df8fb30dbd181b0f3ea596514f9e85768d"}
+{"key": "set.scene", "value": "32d387fd4376117735627cb6c15cc4d375e1c7635fff14eea772c447d8d0dabc"}
 {"key": "updated", "value": "GameObject:Thing"}
 {"key": "apply.result", "value": "done"}
 {"key": "apply.prefab", "value": "2def38c3326544000a907a3850d9a3b76193f3b25e769c507532f3ae3bf7de3b"}
@@ -46,12 +58,12 @@
 {"key": "convert.count", "value": 21}
 {"key": "convert.mods", "value": 11}
 {"key": "convert.save", "value": true}
-{"key": "convert.scene", "value": "b2fd4dd4cdf49de95c19e2372f6da4bad79786d5bad31ce45d36b3f622be8418"}
+{"key": "convert.scene", "value": "37f53091d7554e65ac7e6af11d739eb10d2694f66a6d59af1d6bab7f5c1393fc"}
 {"key": "create.result", "value": "GameObject:Created"}
-{"key": "create.prefab", "value": "4d9faf5148a1f3070fac42ee764c705a3f681329c9930a02ac1431926b9c1664"}
+{"key": "create.prefab", "value": "e9af65f0f9d70a5a12c18dd14c2bfa52be3d6ebb3d0db5d66d6d3d950e937087"}
 {"key": "create.isInstance", "value": false}
 {"key": "replace.result", "value": "GameObject:Created"}
-{"key": "replace.prefab", "value": "f273bba0ecb968721b86e5ac6740802d20ae62426a6b3ba0318fbbce56928ac3"}
+{"key": "replace.prefab", "value": "fa75d63a3723692c502c218c0a098d3ab62f5127d135683fff8f7cf5039f3193"}
 {"key": "replace.isInstance", "value": false}
 {"key": "postprocess.applied", "value": true}
 {"key": "postprocess", "value": "Transform:Placed|m_LocalPosition.x|9|0"}
