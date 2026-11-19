@@ -248,8 +248,7 @@ fn asset_kind(path: &str) -> &'static str {
 }
 
 /// The file id of an asset file's first object: its main object.
-fn first_file_id(file: &std::path::Path) -> Option<i64> {
-    let text = std::fs::read_to_string(file).ok()?;
+fn first_file_id_in(text: &str) -> Option<i64> {
     let header = text.lines().find(|l| l.starts_with("--- "))?;
     header
         .split_whitespace()
@@ -485,11 +484,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let main = if kind == "yaml" {
                 unbound_assets::meta::main_object_file_id(&asset.file)
                     .or_else(|| {
-                        std::fs::read_to_string(&asset.file)
-                            .ok()
-                            .and_then(|text| unbound_assets::meta::conventional_main_file_id(&text))
+                        let text = std::fs::read_to_string(&asset.file).ok()?;
+                        unbound_assets::meta::conventional_main_file_id(&text)
+                            .or_else(|| first_file_id_in(&text))
                     })
-                    .or_else(|| first_file_id(&asset.file))
                     .unwrap_or(0)
             } else {
                 0

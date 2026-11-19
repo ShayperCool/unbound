@@ -1749,7 +1749,8 @@ namespace UnityEditor.Animations
 
         /// <summary>Whether every child loops (an empty tree does); the state playing the tree
         /// reports the same (Unity 6000.0.71f1, tests/projects/animatorapi extra.loop.*,
-        /// extra.loopState.*: one non-looping child of two makes the tree not loop).</summary>
+        /// extra.loopState.*: one non-looping child of two makes the tree not loop). A child
+        /// without a motion counts as not looping (unmeasured).</summary>
         internal override bool GetIsLooping()
         {
             foreach (var c in Children)
@@ -1757,8 +1758,9 @@ namespace UnityEditor.Animations
             return true;
         }
 
-        /// <summary>Whether every child is a human motion: an empty tree is (Unity 6000.0.71f1,
-        /// tests/projects/defaultstate BlendTree; trees with children are unmeasured).</summary>
+        /// <summary>Whether every child is a human motion: an empty tree is, trees of generic clips
+        /// are not (Unity 6000.0.71f1, tests/projects/defaultstate BlendTree, animatorapi
+        /// extra.loop.*); whether one human child is enough is unmeasured.</summary>
         internal override bool GetIsHumanMotion()
         {
             foreach (var c in Children)
