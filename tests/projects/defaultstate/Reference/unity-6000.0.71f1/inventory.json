@@ -969,6 +969,42 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.AnimatorController"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.AnimatorControllerLayer"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.AnimatorState"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.AnimatorStateMachine"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.ChildAnimatorState"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.ChildAnimatorStateMachine"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.AssemblyReloadEvents"
     },
@@ -1065,6 +1101,18 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AudioImporter"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AudioImporterSampleSettings"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.Build.Content.ContentBuildInterface"
     },
@@ -1135,6 +1183,54 @@
       "type": "UnityEditor.CanEditMultipleObjects"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeAssetObjectPropertiesEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeChildrenOrderEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeGameObjectOrComponentPropertiesEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeGameObjectParentEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeGameObjectStructureEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeGameObjectStructureHierarchyEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeRootOrderEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ChangeSceneEventArgs"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
@@ -1174,6 +1270,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.Compilation.ResponseFileData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.Compilation.ScriptCompilerOptions"
     },
     {
@@ -1181,6 +1283,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.ConsoleWindow"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.CreateAssetObjectEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.CreateGameObjectHierarchyEventArgs"
     },
     {
       "category": "class",
@@ -1199,6 +1313,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.DecoratorDrawer"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.DestroyAssetObjectEventArgs"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.DestroyGameObjectHierarchyEventArgs"
     },
     {
       "category": "class",
@@ -1576,6 +1702,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.ModelImporter"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.MonoImporter"
     },
     {
@@ -1601,6 +1733,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.ObjectChangeEventStream"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ObjectChangeEventStream+Builder"
     },
     {
       "category": "class",

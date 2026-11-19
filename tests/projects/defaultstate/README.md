@@ -35,6 +35,18 @@ The compiler options slice adds 14 rows for ScriptCompilerOptions and UnityStats
 hand-written) from two independent Linux GPU captures that agree on them; earlier rows are
 unchanged. UnityStats has only static members; reading the obsolete EmitReferenceAssembly throws.
 
+The animation, importer and object-change slice adds 228 rows for 23 newly hand-written types
+(the AnimatorController graph types, AudioImporter and its sample settings, ModelImporter,
+ResponseFileData and the ObjectChangeEvents argument structs and stream builder) from two
+independent Linux GPU Editor captures that agree on them; earlier rows are unchanged. Reading
+`clipAnimations`, `defaultClipAnimations`, `referencedClips` or `splitAnimations` of a ModelImporter
+made with new ends the Editor, so the recorder lists them as `requires-context` rows on both
+runtimes. A new AnimatorState has empty, inactive parameters and the obsolete `uniqueName` empty and
+`uniqueNameHash` -1; a new AnimatorStateMachine draws its Any State, Entry, Exit and parent nodes at
+(50, 20), (50, 120), (800, 120) and (800, 20); an invalid Scene reads `isSubScene` true, which
+retires four queued rows. The two text-asset identity rows record their shifted implementation
+values.
+
 This probe records Unity 6000.0.71f1 Editor Play mode on NVIDIA GeForce RTX 4060,
 then runs the same recorder in Unbound. It measures creation-time observations;
 it does not establish release-independent or device-independent default contracts.

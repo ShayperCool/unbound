@@ -912,19 +912,6 @@
       }
     },
     {
-      "key": "UnityEditor.SceneManagement.PrefabStage/Property/UnityEditor.SceneManagement.PreviewSceneStage/scene",
-      "module": "UnityEditor.CoreModule",
-      "reason": "The stage wrapper lacks its preview-scene and prefab context. Base-window construction does not initialize a stage; a valid opened-stage control remains needed. Q410 visibility migration narrows the recorded public member surface; this remaining exact observation is retained with unchanged Native expectation and no wider variable policy.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=true;name=null;path=null;rootCount=0}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=false;name=null;path=null;rootCount=0}"
-      }
-    },
-    {
       "key": "UnityEditor.SceneManagement.PrefabStage/Property/UnityEngine.Object/hideFlags",
       "module": "UnityEditor.CoreModule",
       "reason": "The stage wrapper lacks its preview-scene and prefab context. Base-window construction does not initialize a stage; a valid opened-stage control remains needed.",
@@ -1575,19 +1562,6 @@
       }
     },
     {
-      "key": "UnityEngine.Camera/Property/UnityEngine.Camera/scene",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry. Q410 visibility migration narrows the recorded public member surface; this remaining exact observation is retained with unchanged Native expectation and no wider variable policy.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=true;name=null;path=null;rootCount=0}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=false;name=null;path=null;rootCount=0}"
-      }
-    },
-    {
       "key": "UnityEngine.Canvas/Property/UnityEngine.Canvas/renderingDisplaySize",
       "module": "UnityEngine.UIModule",
       "reason": "Q411 viewport context now matches the Editor at 640x480. The fresh Canvas renderingDisplaySize still disagrees before layout; keep this exact raw discrepancy for the UI initialization migration.",
@@ -1670,19 +1644,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.JointLimits{maxBounce=0;minBounce=0;bounceMinVelocity=0.200000003;bounciness=0;contactDistance=0;max=0;min=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.InstantiateParameters/Field/UnityEngine.InstantiateParameters/scene",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry. Q410 visibility migration narrows the recorded public member surface; this remaining exact observation is retained with unchanged Native expectation and no wider variable policy.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=true;name=null;path=null;rootCount=0}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.SceneManagement.Scene{buildIndex=-1;handle=0;isDirty=false;isLoaded=false;isSubScene=false;name=null;path=null;rootCount=0}"
       }
     },
     {
@@ -2016,19 +1977,6 @@
       }
     },
     {
-      "key": "UnityEngine.SceneManagement.Scene/Property/UnityEngine.SceneManagement.Scene/isSubScene",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
       "key": "UnityEngine.SocialPlatforms.Impl.Leaderboard/Property/UnityEngine.SocialPlatforms.Impl.Leaderboard/localUserScore",
       "module": "UnityEngine.GameCenterModule",
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
@@ -2153,14 +2101,14 @@
     {
       "key": "UnityEngine.TextCore.Text.FontAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22670 to -22852. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22852 to -22894.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22670 to -22852. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22852 to -22894. The animation, importer and object-change event types added to the inventory shift it again, from -22894 to -23186.",
       "expected": {
         "status": "value",
         "value": "-26654"
       },
       "actual": {
         "status": "value",
-        "value": "-22894"
+        "value": "-23186"
       }
     },
     {
@@ -2192,14 +2140,14 @@
     {
       "key": "UnityEngine.TextCore.Text.SpriteAsset/Property/UnityEngine.TextCore.Text.TextAsset/instanceID",
       "module": "UnityEngine.TextCoreTextEngineModule",
-      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22696 to -22878. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22878 to -22920.",
+      "reason": "Q411 object allocation now includes constructor-owned social textures and rejects unattached layout components. The exact implementation identity shifts with that creation sequence; retain the original reference identity and this exact raw difference until a relational asset identity control resolves it. No variable policy is added. The added editor-window and player-connection construction controls shift the exact implementation identity again, from -22696 to -22878. The original reference identity is unchanged; both raw discrepancies remain recorded and no variable policy is introduced. The build window and build options types added to the inventory shift it again, from -22878 to -22920. The animation, importer and object-change event types added to the inventory shift it again, from -22920 to -23212.",
       "expected": {
         "status": "value",
         "value": "-26680"
       },
       "actual": {
         "status": "value",
-        "value": "-22920"
+        "value": "-23212"
       }
     },
     {

@@ -1856,6 +1856,8 @@ public sealed class DefaultStateProbe : MonoBehaviour
                 if (type.FullName == "UnityEngine.VFX.VFXSpawnerState" && property != null
                     && (property.Name == "spawnCount" || property.Name == "vfxEventAttribute"))
                 { Emit(key,"requires-context","a spawner state filled by VisualEffect.GetSpawnSystemInfo: one made with new has no event attributes");continue; }
+                if (type.FullName == "UnityEditor.ModelImporter" && property != null && ModelImporterNeedsModel.Contains(property.Name))
+                { Emit(key,"requires-context","the importer of an imported model: on one made with new the Editor ends reading it");continue; }
                 if (property != null && IsIntegratedDescriptor(type))
                 { Emit(key,"requires-context","an integrated subsystem descriptor returned by SubsystemManager");continue; }
                 Progress(key);
@@ -1895,6 +1897,10 @@ public sealed class DefaultStateProbe : MonoBehaviour
         else if(value is UnityEngine.Object)UnityEngine.Object.DestroyImmediate((UnityEngine.Object)value);
         else if(value is IDisposable)try { ((IDisposable)value).Dispose(); }catch(Exception){}
     }
+    /// <summary>ModelImporter properties whose read ends the Unity 6000.0.71f1 Editor (a native
+    /// fault) on an importer made with new, which has no model.</summary>
+    static readonly HashSet<string> ModelImporterNeedsModel = new HashSet<string> { "clipAnimations", "defaultClipAnimations", "referencedClips", "splitAnimations" };
+
     static bool IsIntegratedDescriptor(Type type)
     {
         for(var current=type;current!=null;current=current.BaseType)
