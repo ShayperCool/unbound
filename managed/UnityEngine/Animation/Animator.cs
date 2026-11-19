@@ -353,7 +353,18 @@ namespace UnityEngine
 
         AnimatorPlayer EnsurePlayer()
         {
-            if (m_Player != null) return m_Player;
+            if (m_Player != null)
+            {
+                // An edit of the controller (the Editor's object model) compiled it again: the
+                // Animator starts over as with a newly assigned controller (Unity 6000.0.71f1,
+                // tests/projects/animatorapi play.*).
+                if (m_Controller == null || ReferenceEquals(m_Player.Graph, m_Controller.Graph)) return m_Player;
+                ResetBindings();
+                m_Player = null;
+                var restarted = EnsurePlayer();
+                if (restarted != null) restarted.Restarted = true;
+                return restarted;
+            }
             if (m_Controller == null || m_GameObject == null) return null;
             // An inactive hierarchy whose controller was cleared has no current state.
             // A disabled component on an active hierarchy retains its controller (animstartup).
@@ -915,7 +926,7 @@ namespace UnityEngine
         public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex)
         {
             MainThreadCheck.Check("GetAnimatorStateInfo");
-            if (!Layer(layerIndex, out var player)) return default;
+            if (!Layer(layerIndex, out var player) || player.Restarted && !player.Ticked) return default;
             var layer = player.Layers[layerIndex];
             var source = Source(player, layer);
             return player.StateInfo(layer, source.Current);

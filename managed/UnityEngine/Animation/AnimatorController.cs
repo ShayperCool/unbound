@@ -39,8 +39,46 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The compiled state machines (of the base controller, for an override controller).</summary>
-        internal virtual ControllerGraph Graph => m_Graph ??= ControllerGraph.Build(this);
+        /// <summary>The <see cref="ControllerEdits.Version"/> the graph was last known current at.</summary>
+        int m_GraphVersion;
+
+        /// <summary>When the controller's own settings (parameters, layers) were last edited
+        /// (<see cref="ControllerEdits"/>).</summary>
+        internal int m_EditStamp;
+
+        /// <summary>The controller is the player form an AssetBundle holds (already compiled).</summary>
+        internal bool m_PlayerForm;
+
+        internal void Edited() => m_EditStamp = ControllerEdits.Next();
+
+        /// <summary>The compiled state machines (of the base controller, for an override
+        /// controller). An edit of the controller or of an object it plays makes the next read
+        /// compile it again.</summary>
+        internal virtual ControllerGraph Graph
+        {
+            get
+            {
+                if (m_Graph != null && m_GraphVersion != ControllerEdits.Version)
+                {
+                    if (EditedSince(m_GraphVersion)) m_Graph = null;
+                    m_GraphVersion = ControllerEdits.Version;
+                }
+                if (m_Graph == null)
+                {
+                    m_GraphVersion = ControllerEdits.Version;
+                    m_Graph = ControllerGraph.Build(this);
+                    if (!m_PlayerForm) Compiled();
+                }
+                return m_Graph;
+            }
+        }
+
+        /// <summary>Whether the controller or an object of its layers was edited after
+        /// <paramref name="version"/>.</summary>
+        internal virtual bool EditedSince(int version) => m_EditStamp > version;
+
+        /// <summary>Called when the controller's graph is built (the Editor compiles it then).</summary>
+        internal virtual void Compiled() { }
 
         /// <summary>Whether layer <paramref name="index"/> is a synced layer with "Timing" on
         /// (AnimatorControllerLayer.syncedLayerAffectsTiming). The flag of a layer that is not
@@ -62,6 +100,7 @@ namespace UnityEngine
             {
                 // Player form (an AssetBundle's): the compiled controller.
                 CompiledController.Read(this, body, resolver);
+                m_PlayerForm = true;
                 m_Graph = null;
                 return;
             }
@@ -115,6 +154,7 @@ namespace UnityEngine
         {
             m_Parameters = new List<AnimatorControllerParameter>(m_Parameters),
             m_Layers = new List<ControllerLayerData>(m_Layers),
+            m_PlayerForm = m_PlayerForm,
         };
 
         internal Object CloneObject() => CloneController();
@@ -379,111 +419,6 @@ namespace Unbound.Runtime
         internal readonly List<(UnityEditor.Animations.AnimatorState State, List<StateMachineBehaviour> Behaviours)> SyncedBehaviours = new List<(UnityEditor.Animations.AnimatorState, List<StateMachineBehaviour>)>();
     }
 
-    /// <summary>AnimatorTransition (class 1109: entry and state machine transitions) and the base of
-    /// AnimatorStateTransition.</summary>
-    [ClassId(1109)]
-    internal class ControllerTransitionAsset : Object, ISerializedAsset
-    {
-        internal readonly List<(int Mode, string Parameter, float Threshold)> Conditions = new List<(int, string, float)>();
-        internal UnityEditor.Animations.AnimatorState DstState;
-        internal UnityEditor.Animations.AnimatorStateMachine DstStateMachine;
-        internal bool Solo;
-        internal bool Mute;
-        internal bool IsExit;
-        internal float Duration;
-        internal float Offset;
-        internal float ExitTime;
-        internal bool HasExitTime;
-        internal bool HasFixedDuration;
-        internal int InterruptionSource;
-        internal bool OrderedInterruption = true;
-        internal bool CanTransitionToSelf = true;
-
-        public virtual void ReadSerialized(YNode body, IReferenceResolver resolver)
-        {
-            foreach (var c in body.Get("m_Conditions")?.Seq() ?? Array.Empty<YNode>())
-                Conditions.Add((c.Int("m_ConditionMode"), c.Str("m_ConditionEvent"), c.Float("m_EventTreshold")));
-            DstState = RuntimeAnimatorController.Resolve<UnityEditor.Animations.AnimatorState>(resolver, body.Ref("m_DstState"));
-            DstStateMachine = RuntimeAnimatorController.Resolve<UnityEditor.Animations.AnimatorStateMachine>(resolver, body.Ref("m_DstStateMachine"));
-            Solo = body.Bool("m_Solo");
-            Mute = body.Bool("m_Mute");
-            IsExit = body.Bool("m_IsExit");
-        }
-    }
-
-    /// <summary>AnimatorStateTransition (class 1101): a transition out of a state (or Any State).</summary>
-    [ClassId(1101)]
-    internal sealed class ControllerStateTransitionAsset : ControllerTransitionAsset
-    {
-        public override void ReadSerialized(YNode body, IReferenceResolver resolver)
-        {
-            base.ReadSerialized(body, resolver);
-            Duration = body.Float("m_TransitionDuration");
-            Offset = body.Float("m_TransitionOffset");
-            ExitTime = body.Float("m_ExitTime", 0.75f);
-            HasExitTime = body.Bool("m_HasExitTime");
-            HasFixedDuration = body.Bool("m_HasFixedDuration");
-            InterruptionSource = body.Int("m_InterruptionSource");
-            OrderedInterruption = body.Bool("m_OrderedInterruption", true);
-            CanTransitionToSelf = body.Bool("m_CanTransitionToSelf", true);
-        }
-    }
-
-    /// <summary>BlendTree (class 206): a motion blending child motions by parameters.</summary>
-    [ClassId(206)]
-    internal sealed class BlendTreeMotion : Motion, ISerializedAsset
-    {
-        internal sealed class Child
-        {
-            internal Motion Motion;
-            internal float Threshold;
-            internal Vector2 Position;
-            internal float TimeScale = 1f;
-            internal float CycleOffset;
-            /// <summary>ChildMotion.mirror: toggles the state's mirror for this child (humanoid clips).</summary>
-            internal bool Mirror;
-            internal string DirectParameter;
-        }
-
-        internal readonly List<Child> Children = new List<Child>();
-        internal string Parameter = "";
-        internal string ParameterY = "";
-        /// <summary>0 Simple1D, 1 SimpleDirectional2D, 2 FreeformDirectional2D, 3 FreeformCartesian2D, 4 Direct.</summary>
-        internal int BlendType;
-        internal bool NormalizedBlendValues;
-
-        public void ReadSerialized(YNode body, IReferenceResolver resolver)
-        {
-            foreach (var c in body.Get("m_Childs")?.Seq() ?? Array.Empty<YNode>())
-            {
-                var motion = c.Ref("m_Motion");
-                var resolved = RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
-                if (resolved == null && !motion.IsNull) MissingMotion.Report(motion, $"blend tree '{m_Name}'");
-                Children.Add(new Child
-                {
-                    Motion = resolved,
-                    Threshold = c.Float("m_Threshold"),
-                    Position = c.Vector2("m_Position"),
-                    TimeScale = c.Float("m_TimeScale", 1f),
-                    CycleOffset = c.Float("m_CycleOffset"),
-                    Mirror = c.Bool("m_Mirror"),
-                    DirectParameter = c.Str("m_DirectBlendParameter"),
-                });
-            }
-            Parameter = body.Str("m_BlendParameter");
-            ParameterY = body.Str("m_BlendParameterY");
-            BlendType = body.Int("m_BlendType");
-            NormalizedBlendValues = body.Bool("m_NormalizedBlendValues");
-        }
-
-        internal override bool GetIsLooping()
-        {
-            foreach (var c in Children)
-                if (c.Motion != null && c.Motion.isLooping) return true;
-            return false;
-        }
-    }
-
     /// <summary>A motion a controller or Animation component names that could not be loaded (a clip
     /// inside a model file, a missing asset): reported once, the state plays nothing.</summary>
     internal static class MissingMotion
@@ -510,326 +445,4 @@ namespace Unbound.Runtime
             Debug.LogWarning($"Unbound: the animation clip {{fileID: {reference.FileId}, guid: {reference.Guid}}} used by {user} could not be loaded{why}; it plays nothing.");
         }
     }
-}
-
-namespace UnityEditor.Animations
-{
-    using System;
-    using System.Collections.Generic;
-    using Unbound.Runtime;
-    using UnityEngine;
-    using Object = UnityEngine.Object;
-
-    /// <summary>The Editor's class of a `.controller` file (class 91): its parameters and layers as
-    /// the file holds them (Unity 6000.0.71f1, tests/projects/gameinterop editor_controller.*).
-    /// Setting them rebuilds the controller's graph when it next plays.</summary>
-    [ClassId(91)]
-    public sealed partial class AnimatorController : RuntimeAnimatorController
-    {
-        public AnimatorController() { }
-
-        public AnimatorControllerParameter[] parameters
-        {
-            get
-            {
-                var result = new AnimatorControllerParameter[m_Parameters.Count];
-                for (int i = 0; i < result.Length; i++)
-                {
-                    var p = m_Parameters[i];
-                    result[i] = new AnimatorControllerParameter { m_Name = p.m_Name, m_Type = p.m_Type, m_DefaultFloat = p.m_DefaultFloat, m_DefaultInt = p.m_DefaultInt, m_DefaultBool = p.m_DefaultBool };
-                }
-                return result;
-            }
-            set
-            {
-                m_Parameters = new List<AnimatorControllerParameter>(value ?? Array.Empty<AnimatorControllerParameter>());
-                m_Graph = null;
-            }
-        }
-
-        public AnimatorControllerLayer[] layers
-        {
-            get
-            {
-                var result = new AnimatorControllerLayer[m_Layers.Count];
-                for (int i = 0; i < result.Length; i++)
-                {
-                    var l = m_Layers[i];
-                    result[i] = new AnimatorControllerLayer
-                    {
-                        name = l.Name, stateMachine = l.StateMachine, avatarMask = l.Mask, blendingMode = (AnimatorLayerBlendingMode)l.BlendingMode,
-                        syncedLayerIndex = l.SyncedLayerIndex, iKPass = l.IKPass, defaultWeight = l.DefaultWeight, syncedLayerAffectsTiming = l.SyncedLayerAffectsTiming,
-                    };
-                }
-                return result;
-            }
-            set
-            {
-                var previous = m_Layers;
-                m_Layers = new List<ControllerLayerData>();
-                foreach (var l in value ?? Array.Empty<AnimatorControllerLayer>())
-                {
-                    var data = new ControllerLayerData
-                    {
-                        Name = l.name, StateMachine = l.stateMachine, Mask = l.avatarMask, BlendingMode = (int)l.blendingMode,
-                        SyncedLayerIndex = l.syncedLayerIndex, IKPass = l.iKPass, DefaultWeight = l.defaultWeight, SyncedLayerAffectsTiming = l.syncedLayerAffectsTiming,
-                    };
-                    // A synced layer keeps the motions and behaviours it had for its states.
-                    var same = previous.Find(p => p.Name == l.name);
-                    if (same != null)
-                    {
-                        data.SyncedMotions.AddRange(same.SyncedMotions);
-                        data.SyncedBehaviours.AddRange(same.SyncedBehaviours);
-                    }
-                    m_Layers.Add(data);
-                }
-                m_Graph = null;
-            }
-        }
-    }
-
-    public enum AnimatorLayerBlendingMode
-    {
-        Override = 0,
-        Additive = 1,
-    }
-
-    /// <summary>A controller layer's settings (a copy: set <see cref="AnimatorController.layers"/> to apply).</summary>
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    public partial class AnimatorControllerLayer
-    {
-        public AnimatorControllerLayer() { }
-        public string name { get; set; }
-        public AnimatorStateMachine stateMachine { get; set; }
-        public AvatarMask avatarMask { get; set; }
-        public AnimatorLayerBlendingMode blendingMode { get; set; }
-        public int syncedLayerIndex { get; set; } = -1;
-        public bool iKPass { get; set; }
-        public float defaultWeight { get; set; }
-        public bool syncedLayerAffectsTiming { get; set; }
-    }
-
-    public partial struct ChildAnimatorState
-    {
-        AnimatorState m_State;
-        Vector3 m_Position;
-        public AnimatorState state { get => m_State; set => m_State = value; }
-        public Vector3 position { get => m_Position; set => m_Position = value; }
-    }
-
-    public partial struct ChildAnimatorStateMachine
-    {
-        AnimatorStateMachine m_StateMachine;
-        Vector3 m_Position;
-        public AnimatorStateMachine stateMachine { get => m_StateMachine; set => m_StateMachine = value; }
-        public Vector3 position { get => m_Position; set => m_Position = value; }
-    }
-
-    /// <summary>AnimatorStateMachine (class 1107): an editor object of a controller file. The
-    /// Editor's API reads what the file holds (Unity 6000.0.71f1, tests/projects/gameinterop
-    /// editor_controller.*); editing it does not change a graph already built from it.</summary>
-    [ClassId(1107)]
-    [HelpURL("NestedStateMachines")]
-    public sealed partial class AnimatorStateMachine : Object
-    {
-        internal readonly List<Vector3> StatePositions = new List<Vector3>();
-        internal readonly List<Vector3> MachinePositions = new List<Vector3>();
-
-        public AnimatorStateMachine() { }
-
-        // Where the graph view draws the Any State, Entry, Exit and parent nodes; a new state
-        // machine's defaults match Unity 6000.0.71f1 (tests/projects/defaultstate).
-        static readonly Vector3 k_AnyStatePosition = new Vector3(50, 20, 0), k_EntryPosition = new Vector3(50, 120, 0),
-            k_ExitPosition = new Vector3(800, 120, 0), k_ParentStateMachinePosition = new Vector3(800, 20, 0);
-        public Vector3 anyStatePosition { get; set; } = k_AnyStatePosition;
-        public Vector3 entryPosition { get; set; } = k_EntryPosition;
-        public Vector3 exitPosition { get; set; } = k_ExitPosition;
-        public Vector3 parentStateMachinePosition { get; set; } = k_ParentStateMachinePosition;
-
-        public ChildAnimatorState[] states
-        {
-            get
-            {
-                var result = new ChildAnimatorState[States.Count];
-                for (int i = 0; i < result.Length; i++)
-                    result[i] = new ChildAnimatorState { state = States[i], position = i < StatePositions.Count ? StatePositions[i] : default };
-                return result;
-            }
-            set
-            {
-                States.Clear();
-                StatePositions.Clear();
-                foreach (var child in value ?? Array.Empty<ChildAnimatorState>())
-                {
-                    States.Add(child.state);
-                    StatePositions.Add(child.position);
-                }
-            }
-        }
-
-        public ChildAnimatorStateMachine[] stateMachines
-        {
-            get
-            {
-                var result = new ChildAnimatorStateMachine[Machines.Count];
-                for (int i = 0; i < result.Length; i++)
-                    result[i] = new ChildAnimatorStateMachine { stateMachine = Machines[i], position = i < MachinePositions.Count ? MachinePositions[i] : default };
-                return result;
-            }
-            set
-            {
-                Machines.Clear();
-                MachinePositions.Clear();
-                foreach (var child in value ?? Array.Empty<ChildAnimatorStateMachine>())
-                {
-                    Machines.Add(child.stateMachine);
-                    MachinePositions.Add(child.position);
-                }
-            }
-        }
-
-        public AnimatorState defaultState { get => DefaultState; set => DefaultState = value; }
-
-        internal readonly List<AnimatorState> States = new List<AnimatorState>();
-        internal readonly List<AnimatorStateMachine> Machines = new List<AnimatorStateMachine>();
-        internal readonly List<ControllerTransitionAsset> AnyStateTransitions = new List<ControllerTransitionAsset>();
-        internal readonly List<ControllerTransitionAsset> EntryTransitions = new List<ControllerTransitionAsset>();
-        internal readonly List<(AnimatorStateMachine Source, List<ControllerTransitionAsset> Transitions)> MachineTransitions =
-            new List<(AnimatorStateMachine, List<ControllerTransitionAsset>)>();
-        internal readonly List<StateMachineBehaviour> Behaviours = new List<StateMachineBehaviour>();
-        internal AnimatorState DefaultState;
-
-        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
-        {
-            foreach (var child in body.Get("m_ChildStates")?.Seq() ?? Array.Empty<YNode>())
-                if (UnityEngine.RuntimeAnimatorController.Resolve<AnimatorState>(resolver, child.Ref("m_State")) is AnimatorState s)
-                {
-                    States.Add(s);
-                    StatePositions.Add(child.Vector3("m_Position"));
-                }
-            foreach (var child in body.Get("m_ChildStateMachines")?.Seq() ?? Array.Empty<YNode>())
-                if (UnityEngine.RuntimeAnimatorController.Resolve<AnimatorStateMachine>(resolver, child.Ref("m_StateMachine")) is AnimatorStateMachine m)
-                {
-                    Machines.Add(m);
-                    MachinePositions.Add(child.Vector3("m_Position"));
-                }
-            ReadTransitions(body.Get("m_AnyStateTransitions"), resolver, AnyStateTransitions);
-            ReadTransitions(body.Get("m_EntryTransitions"), resolver, EntryTransitions);
-            var machineTransitions = body.Get("m_StateMachineTransitions");
-            foreach (var pair in machineTransitions?.Seq() ?? Array.Empty<YNode>())
-            {
-                var source = UnityEngine.RuntimeAnimatorController.Resolve<AnimatorStateMachine>(resolver, pair.Ref("first"));
-                var list = new List<ControllerTransitionAsset>();
-                ReadTransitions(pair.Get("second"), resolver, list);
-                if (source != null) MachineTransitions.Add((source, list));
-            }
-            foreach (var b in body.Get("m_StateMachineBehaviours")?.Seq() ?? Array.Empty<YNode>())
-                if (UnityEngine.RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
-            DefaultState = UnityEngine.RuntimeAnimatorController.Resolve<AnimatorState>(resolver, body.Ref("m_DefaultState"));
-            anyStatePosition = body.Vector3("m_AnyStatePosition", k_AnyStatePosition);
-            entryPosition = body.Vector3("m_EntryPosition", k_EntryPosition);
-            exitPosition = body.Vector3("m_ExitPosition", k_ExitPosition);
-            parentStateMachinePosition = body.Vector3("m_ParentStateMachinePosition", k_ParentStateMachinePosition);
-        }
-
-        internal static void ReadTransitions(YNode list, IReferenceResolver resolver, List<ControllerTransitionAsset> into)
-        {
-            foreach (var item in list?.Seq() ?? Array.Empty<YNode>())
-                if (UnityEngine.RuntimeAnimatorController.Resolve<ControllerTransitionAsset>(resolver, item.AsRef()) is ControllerTransitionAsset t) into.Add(t);
-        }
-    }
-
-    /// <summary>AnimatorState (class 1102), read as <see cref="AnimatorStateMachine"/> is.</summary>
-    [ClassId(1102)]
-    [HelpURL("class-State")]
-    public sealed partial class AnimatorState : Object
-    {
-        public AnimatorState() { }
-
-        public int nameHash => Animator.StringToHash(name);
-        public Motion motion { get => Motion; set => Motion = value; }
-        public float speed { get => Speed; set => Speed = value; }
-        public float cycleOffset { get => CycleOffset; set => CycleOffset = value; }
-        public bool mirror { get => Mirror; set => Mirror = value; }
-        public bool iKOnFeet { get => IKOnFeet; set => IKOnFeet = value; }
-        public bool writeDefaultValues { get => WriteDefaults; set => WriteDefaults = value; }
-        public string tag { get => Tag; set => Tag = value ?? ""; }
-
-        internal float Speed = 1f;
-        internal float CycleOffset;
-        internal readonly List<ControllerTransitionAsset> Transitions = new List<ControllerTransitionAsset>();
-        internal readonly List<StateMachineBehaviour> Behaviours = new List<StateMachineBehaviour>();
-        internal bool WriteDefaults = true;
-        internal bool IKOnFeet;
-        internal bool Mirror;
-        internal Motion Motion;
-        internal string Tag = "";
-
-        // A state's optional parameters keep their names whether or not they are active; a new
-        // state has empty names and none active (Unity 6000.0.71f1, tests/projects/defaultstate).
-        string m_SpeedParameter = "", m_CycleOffsetParameter = "", m_TimeParameter = "", m_MirrorParameter = "";
-        public string speedParameter { get => m_SpeedParameter; set => m_SpeedParameter = value ?? ""; }
-        public string cycleOffsetParameter { get => m_CycleOffsetParameter; set => m_CycleOffsetParameter = value ?? ""; }
-        public string mirrorParameter { get => m_MirrorParameter; set => m_MirrorParameter = value ?? ""; }
-        public string timeParameter { get => m_TimeParameter; set => m_TimeParameter = value ?? ""; }
-        public bool speedParameterActive { get; set; }
-        public bool cycleOffsetParameterActive { get; set; }
-        public bool mirrorParameterActive { get; set; }
-        public bool timeParameterActive { get; set; }
-
-        /// <summary>The parameter each multiplier reads: its name when active, else null (setting
-        /// null deactivates it).</summary>
-        internal string SpeedParameter
-        {
-            get => speedParameterActive ? m_SpeedParameter : null;
-            set { speedParameterActive = value != null; speedParameter = value; }
-        }
-        internal string CycleOffsetParameter
-        {
-            get => cycleOffsetParameterActive ? m_CycleOffsetParameter : null;
-            set { cycleOffsetParameterActive = value != null; cycleOffsetParameter = value; }
-        }
-        internal string TimeParameter
-        {
-            get => timeParameterActive ? m_TimeParameter : null;
-            set { timeParameterActive = value != null; timeParameter = value; }
-        }
-        internal string MirrorParameter
-        {
-            get => mirrorParameterActive ? m_MirrorParameter : null;
-            set { mirrorParameterActive = value != null; mirrorParameter = value; }
-        }
-
-        [Obsolete("uniqueName does not exist anymore. Consider using .name instead.", true)]
-        [Unbound.EditorFaithful("an obsolete member: empty, as a new state answers in Unity 6000.0.71f1 (tests/projects/defaultstate)")]
-        public string uniqueName => string.Empty;
-        [Obsolete("uniqueNameHash does not exist anymore.", true)]
-        [Unbound.EditorFaithful("an obsolete member: -1, as a new state answers in Unity 6000.0.71f1 (tests/projects/defaultstate)")]
-        public int uniqueNameHash => -1;
-
-        internal void ReadSerialized(YNode body, IReferenceResolver resolver)
-        {
-            Speed = body.Float("m_Speed", 1f);
-            CycleOffset = body.Float("m_CycleOffset");
-            AnimatorStateMachine.ReadTransitions(body.Get("m_Transitions"), resolver, Transitions);
-            foreach (var b in body.Get("m_StateMachineBehaviours")?.Seq() ?? Array.Empty<YNode>())
-                if (UnityEngine.RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
-            WriteDefaults = body.Bool("m_WriteDefaultValues", true);
-            IKOnFeet = body.Bool("m_IKOnFeet");
-            Mirror = body.Bool("m_Mirror");
-            var motion = body.Ref("m_Motion");
-            Motion = UnityEngine.RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
-            if (Motion == null && !motion.IsNull) MissingMotion.Report(motion, $"animator state '{m_Name}'");
-            Tag = body.Str("m_Tag");
-            speedParameter = body.Str("m_SpeedParameter");
-            cycleOffsetParameter = body.Str("m_CycleOffsetParameter");
-            timeParameter = body.Str("m_TimeParameter");
-            mirrorParameter = body.Str("m_MirrorParameter");
-            speedParameterActive = body.Bool("m_SpeedParameterActive");
-            cycleOffsetParameterActive = body.Bool("m_CycleOffsetParameterActive");
-            timeParameterActive = body.Bool("m_TimeParameterActive");
-            mirrorParameterActive = body.Bool("m_MirrorParameterActive");
-        }
-    }
-
 }

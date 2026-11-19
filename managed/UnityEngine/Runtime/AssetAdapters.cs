@@ -102,6 +102,8 @@ namespace Unbound.Runtime
             Read<SpriteAtlas>((a, b, r) => a.ReadSerialized(b, r));
             Read<UnityEditor.Animations.AnimatorStateMachine>((a, b, r) => a.ReadSerialized(b, r));
             Read<UnityEditor.Animations.AnimatorState>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEditor.Animations.AnimatorTransitionBase>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEditor.Animations.BlendTree>((a, b, r) => a.ReadSerialized(b, r));
 
             // Cloned only: loaded from their compiled forms.
             Clone<ComputeShader>(a => a.CloneObject());

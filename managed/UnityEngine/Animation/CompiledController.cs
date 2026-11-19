@@ -204,9 +204,9 @@ namespace Unbound.Runtime
                 var path = ctx.Name(U(sel, "m_FullPathID"));
                 return path != null && byPath.TryGetValue(path, out var m) ? m : root;
             }
-            ControllerTransitionAsset Transition(YNode t, bool state)
+            UnityEditor.Animations.AnimatorTransitionBase Transition(YNode t, bool state)
             {
-                var asset = state ? Make<ControllerStateTransitionAsset>(ctx.Name(U(t, "m_ID")) ?? "") : Make<ControllerTransitionAsset>("");
+                UnityEditor.Animations.AnimatorTransitionBase asset = state ? Make<UnityEditor.Animations.AnimatorStateTransition>(ctx.Name(U(t, "m_ID")) ?? "") : Make<UnityEditor.Animations.AnimatorTransition>("");
                 foreach (var c in Items(t, "m_ConditionConstantArray"))
                 {
                     var cond = Data(c);
@@ -249,7 +249,7 @@ namespace Unbound.Runtime
             foreach (var sel in selectors)
             {
                 var m = SelectorMachine(sel);
-                var transitions = new List<ControllerTransitionAsset>();
+                var transitions = new List<UnityEditor.Animations.AnimatorTransitionBase>();
                 foreach (var t in Items(sel, "m_TransitionConstantArray")) transitions.Add(Transition(Data(t), state: false));
                 if (sel.Bool("m_IsEntry"))
                 {
@@ -313,7 +313,7 @@ namespace Unbound.Runtime
                 uint clip = U(node, "m_ClipID");
                 return clip != None && clip < ctx.Clips.Count ? ctx.Clips[(int)clip] : null;
             }
-            var tree = Make<BlendTreeMotion>("Blend Tree");
+            var tree = Make<UnityEditor.Animations.BlendTree>("Blend Tree");
             tree.BlendType = node.Int("m_BlendType");
             tree.NormalizedBlendValues = Data(node.Get("m_BlendDirectData"))?.Bool("m_NormalizedBlendValues") ?? false;
             tree.Parameter = ctx.Name(U(node, "m_BlendEventID")) ?? "";
@@ -327,14 +327,15 @@ namespace Unbound.Runtime
             for (int i = 0; i < children.Count; i++)
             {
                 var child = nodes[children[i]];
-                tree.Children.Add(new BlendTreeMotion.Child
+                tree.Children.Add(new UnityEditor.Animations.ChildMotion
                 {
-                    Motion = NodeMotion(nodes, children[i], ctx),
-                    Threshold = i < thresholds.Count ? thresholds[i] : 0f,
-                    Position = i < positions.Count ? positions[i] : Vector2.zero,
-                    CycleOffset = child.Float("m_CycleOffset"),
-                    Mirror = child.Bool("m_Mirror"),
-                    DirectParameter = i < direct.Count ? ctx.Name(direct[i]) : null,
+                    motion = NodeMotion(nodes, children[i], ctx),
+                    threshold = i < thresholds.Count ? thresholds[i] : 0f,
+                    position = i < positions.Count ? positions[i] : Vector2.zero,
+                    timeScale = 1f,
+                    cycleOffset = child.Float("m_CycleOffset"),
+                    mirror = child.Bool("m_Mirror"),
+                    directBlendParameter = i < direct.Count ? ctx.Name(direct[i]) : null,
                 });
             }
             return tree;

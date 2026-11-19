@@ -270,10 +270,6 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.HumanPoseHandler humanPoseHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    public unsafe partial interface IAnimationClipSource
-    {
-        void GetAnimationClips(global::System.Collections.Generic.List<global::UnityEngine.AnimationClip> results);
-    }
     unsafe partial class Motion
     {
         [global::System.Obsolete("ValidateIfRetargetable is not supported anymore, please use isHumanMotion instead.")] [global::Unbound.Stub] public bool ValidateIfRetargetable(bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.ValidateIfRetargetable"); return default; }

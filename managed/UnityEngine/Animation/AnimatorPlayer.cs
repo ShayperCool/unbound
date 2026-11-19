@@ -352,6 +352,11 @@ namespace Unbound.Runtime
         /// Animator's first update runs even while culled).</summary>
         internal bool Ticked;
 
+        /// <summary>The player replaces one whose controller was edited (the Editor's object
+        /// model): until its first update it has no current state, and that update evaluates the
+        /// default state at time 0 (Unity 6000.0.71f1, tests/projects/animatorapi play.*).</summary>
+        internal bool Restarted;
+
         /// <summary>Set by the Animator for a culled update (<see cref="Animator.Tick"/>): the state
         /// machines, events, callbacks and root motion run, the Transforms and the humanoid pose are
         /// not written and the IK pass does not run; other properties (parameter curves, materials,
@@ -411,6 +416,7 @@ namespace Unbound.Runtime
                 m_OverrideVersion = Controller.OverrideVersion;
                 BindClips();
             }
+            if (Restarted && !Ticked) deltaTime = 0f;
             m_RootDeltaTime = deltaTime;
             m_CallbacksStarted |= deltaTime != 0f;
             StepLayers(deltaTime * m_Animator.m_Speed);
@@ -1006,7 +1012,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Adds a tree's clips' lengths by their weights in the whole tree.</summary>
-        void AddLeafLengths(LayerRun layer, BlendTreeMotion tree, float weight, int depth, ref float sum, ref float total)
+        void AddLeafLengths(LayerRun layer, UnityEditor.Animations.BlendTree tree, float weight, int depth, ref float sum, ref float total)
         {
             if (depth > 16) return;
             var weights = BlendWeights(tree);
@@ -1015,15 +1021,15 @@ namespace Unbound.Runtime
                 if (weights[i] <= 0f) continue;
                 var child = tree.Children[i];
                 float w = weight * weights[i];
-                if (child.Motion is BlendTreeMotion subtree)
+                if (child.motion is UnityEditor.Animations.BlendTree subtree)
                 {
                     // A child tree's time scale applies to its clips.
                     float before = sum;
                     AddLeafLengths(layer, subtree, w, depth + 1, ref sum, ref total);
-                    sum = before + (sum - before) / Math.Max(Math.Abs(child.TimeScale), 1e-4f);
+                    sum = before + (sum - before) / Math.Max(Math.Abs(child.timeScale), 1e-4f);
                     continue;
                 }
-                sum += w * MotionLength(layer, child.Motion) / Math.Max(Math.Abs(child.TimeScale), 1e-4f);
+                sum += w * MotionLength(layer, child.motion) / Math.Max(Math.Abs(child.timeScale), 1e-4f);
                 total += w;
             }
         }
@@ -1055,7 +1061,7 @@ namespace Unbound.Runtime
                     float length = clip != null ? clip.length : 0f;
                     return length > 0f ? length : 1f;
                 }
-                case BlendTreeMotion tree:
+                case UnityEditor.Animations.BlendTree tree:
                 {
                     float sum = 0f, total = 0f;
                     AddLeafLengths(layer, tree, 1f, 0, ref sum, ref total);
@@ -1088,11 +1094,11 @@ namespace Unbound.Runtime
                     if (clip != null) into.Add(new AnimatorClipInfo { m_Clip = clip, m_Weight = weight });
                     break;
                 }
-                case BlendTreeMotion tree:
+                case UnityEditor.Animations.BlendTree tree:
                 {
                     var weights = BlendWeights(tree);
                     for (int i = 0; i < weights.Length; i++)
-                        if (weights[i] > 0f) ClipWeights(tree.Children[i].Motion, weight * weights[i], into);
+                        if (weights[i] > 0f) ClipWeights(tree.Children[i].motion, weight * weights[i], into);
                     break;
                 }
             }
@@ -1614,7 +1620,7 @@ namespace Unbound.Runtime
             m_SamplingStateWeight = weight;
             // A blend tree's children may animate different channels: what a child does not
             // animate is left to the state's rule below with that child's share of the weight.
-            bool tree = motion is BlendTreeMotion && !layer.Def.Additive;
+            bool tree = motion is UnityEditor.Animations.BlendTree && !layer.Def.Additive;
             if (tree)
             {
                 if (m_WeightBeforeState.Length < Bindings.FloatCount) m_WeightBeforeState = new float[pose.Weight.Length];
@@ -1752,7 +1758,7 @@ namespace Unbound.Runtime
                     m_Contributions.Add((layer, layerIndex, run, clip, weight, humanSample));
                     break;
                 }
-                case BlendTreeMotion tree:
+                case UnityEditor.Animations.BlendTree tree:
                 {
                     if (tree.BlendType == 4) { SampleDirect(layer, layerIndex, run, tree, mirror, normalized, weight, pose, mask, objectMask); break; }
                     var weights = BlendWeights(tree);
@@ -1761,8 +1767,8 @@ namespace Unbound.Runtime
                         if (weights[i] > 0f)
                         {
                             any = true;
-                            SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, mirror ^ tree.Children[i].Mirror,
-                                normalized + tree.Children[i].CycleOffset, weight * weights[i], pose, mask, objectMask);
+                            SampleMotion(layer, layerIndex, run, tree.Children[i].motion, mirror ^ tree.Children[i].mirror,
+                                normalized + tree.Children[i].cycleOffset, weight * weights[i], pose, mask, objectMask);
                         }
                     if (!any && !layer.Def.Additive) SampleEmptyTree(tree, mirror, weight, pose, mask, objectMask);
                     break;
@@ -1846,8 +1852,8 @@ namespace Unbound.Runtime
                         }
                     break;
                 }
-                case BlendTreeMotion tree:
-                    foreach (var c in tree.Children) Collect(c.Motion, mirror ^ c.Mirror, floats, objects, depth + 1);
+                case UnityEditor.Animations.BlendTree tree:
+                    foreach (var c in tree.Children) Collect(c.motion, mirror ^ c.mirror, floats, objects, depth + 1);
                     break;
             }
         }

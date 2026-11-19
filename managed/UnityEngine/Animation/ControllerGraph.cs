@@ -97,8 +97,8 @@ namespace Unbound.Runtime
                     g.ClipReferences.Add(clip);
                     if (!g.Clips.Contains(clip)) g.Clips.Add(clip);
                     break;
-                case BlendTreeMotion tree:
-                    foreach (var c in tree.Children) CollectClips(g, c.Motion);
+                case UnityEditor.Animations.BlendTree tree:
+                    foreach (var c in tree.Children) CollectClips(g, c.motion);
                     break;
             }
         }
@@ -188,7 +188,7 @@ namespace Unbound.Runtime
                 }
             }
 
-            TransitionDef[] Transitions(List<ControllerTransitionAsset> assets, StateDef source, bool isAny)
+            TransitionDef[] Transitions(List<UnityEditor.Animations.AnimatorTransitionBase> assets, StateDef source, bool isAny)
             {
                 var result = new List<TransitionDef>();
                 bool solo = assets.Exists(t => t != null && t.Solo);

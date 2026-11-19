@@ -7,7 +7,7 @@ namespace Unbound.Runtime
     internal sealed partial class AnimatorPlayer
     {
         /// <summary>Child weights of a blend tree for the current parameters.</summary>
-        internal float[] BlendWeights(BlendTreeMotion tree)
+        internal float[] BlendWeights(UnityEditor.Animations.BlendTree tree)
         {
             int n = tree.Children.Count;
             var w = new float[n];
@@ -19,7 +19,7 @@ namespace Unbound.Runtime
                     float total = 0f;
                     for (int i = 0; i < n; i++)
                     {
-                        int p = ParameterIndex(tree.Children[i].DirectParameter);
+                        int p = ParameterIndex(tree.Children[i].directBlendParameter);
                         w[i] = p >= 0 ? Math.Max(0f, Floats[p]) : 0f;
                         total += w[i];
                     }
@@ -33,12 +33,12 @@ namespace Unbound.Runtime
                     float x = p >= 0 ? GetAsFloat(p) : 0f;
                     var order = new List<int>();
                     for (int i = 0; i < n; i++) order.Add(i);
-                    order.Sort((a, b) => tree.Children[a].Threshold.CompareTo(tree.Children[b].Threshold));
-                    if (x <= tree.Children[order[0]].Threshold) { w[order[0]] = 1f; return w; }
-                    if (x >= tree.Children[order[n - 1]].Threshold) { w[order[n - 1]] = 1f; return w; }
+                    order.Sort((a, b) => tree.Children[a].threshold.CompareTo(tree.Children[b].threshold));
+                    if (x <= tree.Children[order[0]].threshold) { w[order[0]] = 1f; return w; }
+                    if (x >= tree.Children[order[n - 1]].threshold) { w[order[n - 1]] = 1f; return w; }
                     for (int k = 0; k < n - 1; k++)
                     {
-                        float a = tree.Children[order[k]].Threshold, b = tree.Children[order[k + 1]].Threshold;
+                        float a = tree.Children[order[k]].threshold, b = tree.Children[order[k + 1]].threshold;
                         if (x < a || x > b) continue;
                         float t = b > a ? (x - a) / (b - a) : 0f;
                         w[order[k]] = 1f - t;
@@ -66,12 +66,12 @@ namespace Unbound.Runtime
                     float total = 0f;
                     for (int i = 0; i < n; i++)
                     {
-                        var pi = tree.Children[i].Position;
+                        var pi = tree.Children[i].position;
                         float h = 1f;
                         for (int j = 0; j < n; j++)
                         {
                             if (j == i) continue;
-                            var pij = tree.Children[j].Position - pi;
+                            var pij = tree.Children[j].position - pi;
                             float d = Vector2.Dot(pij, pij);
                             if (d <= 0f) continue;
                             h = Math.Min(h, 1f - Vector2.Dot(p - pi, pij) / d);
@@ -89,7 +89,7 @@ namespace Unbound.Runtime
                         float bestDistance = float.MaxValue;
                         for (int i = 0; i < n; i++)
                         {
-                            float d = (tree.Children[i].Position - p).sqrMagnitude;
+                            float d = (tree.Children[i].position - p).sqrMagnitude;
                             if (d < bestDistance) { bestDistance = d; best = i; }
                         }
                         w[best] = 1f;
@@ -102,13 +102,13 @@ namespace Unbound.Runtime
         static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
         static float Angle(Vector2 a, Vector2 b) => (float)Math.Atan2(Cross(a, b), Vector2.Dot(a, b));
 
-        static float[] SimpleDirectional(BlendTreeMotion tree, Vector2 p)
+        static float[] SimpleDirectional(UnityEditor.Animations.BlendTree tree, Vector2 p)
         {
             int n = tree.Children.Count, center = -1;
             var w = new float[n];
             var directions = new List<int>();
             for (int i = 0; i < n; i++)
-                if (tree.Children[i].Position.sqrMagnitude < 1e-12f) center = i; else directions.Add(i);
+                if (tree.Children[i].position.sqrMagnitude < 1e-12f) center = i; else directions.Add(i);
             if (directions.Count == 0) { w[0] = 1f; return w; }
             if (p.sqrMagnitude < 1e-12f)
             {
@@ -116,14 +116,14 @@ namespace Unbound.Runtime
                 else for (int i = 0; i < n; i++) w[i] = 1f / n;
                 return w;
             }
-            directions.Sort((a, b) => Math.Atan2(tree.Children[a].Position.y, tree.Children[a].Position.x)
-                .CompareTo(Math.Atan2(tree.Children[b].Position.y, tree.Children[b].Position.x)));
+            directions.Sort((a, b) => Math.Atan2(tree.Children[a].position.y, tree.Children[a].position.x)
+                .CompareTo(Math.Atan2(tree.Children[b].position.y, tree.Children[b].position.x)));
             double angle = Math.Atan2(p.y, p.x);
-            int hi = directions.FindIndex(i => Math.Atan2(tree.Children[i].Position.y, tree.Children[i].Position.x) > angle);
+            int hi = directions.FindIndex(i => Math.Atan2(tree.Children[i].position.y, tree.Children[i].position.x) > angle);
             if (hi < 0) hi = 0;
             int a = directions[(hi + directions.Count - 1) % directions.Count], b = directions[hi];
-            var pa = tree.Children[a].Position;
-            var pb = tree.Children[b].Position;
+            var pa = tree.Children[a].position;
+            var pb = tree.Children[b].position;
             float det = Cross(pa, pb);
             // Keep signed-zero division for degenerate fans, as the Editor does. A NaN
             // contribution is inactive; an infinite total removes the center's remainder.
@@ -142,21 +142,21 @@ namespace Unbound.Runtime
 
         /// <summary>Gradient bands in polar space (Johansen 2009, eq. 6.14-6.15). The Editor uses
         /// unit angular scale and assigns the query direction to a child at the origin.</summary>
-        static float[] PolarWeights(BlendTreeMotion tree, Vector2 p)
+        static float[] PolarWeights(UnityEditor.Animations.BlendTree tree, Vector2 p)
         {
             int n = tree.Children.Count;
             var w = new float[n];
             float radius = p.magnitude, total = 0f;
             for (int i = 0; i < n; i++)
             {
-                var pi = tree.Children[i].Position;
+                var pi = tree.Children[i].position;
                 float ri = pi.magnitude, h = 1f;
                 var direction = ri > 0f ? pi : p;
                 float pointAngle = Angle(direction, p);
                 for (int j = 0; j < n; j++)
                 {
                     if (j == i) continue;
-                    var pj = tree.Children[j].Position;
+                    var pj = tree.Children[j].position;
                     float rj = pj.magnitude, average = (ri + rj) * 0.5f;
                     if (average == 0f) continue;
                     var difference = new Vector2((rj - ri) / average, Angle(direction, rj > 0f ? pj : p));
@@ -175,7 +175,7 @@ namespace Unbound.Runtime
         readonly List<AnimationPose> m_DirectScratch = new List<AnimationPose>();
         int m_DirectDepth;
 
-        void SampleEmptyTree(BlendTreeMotion tree, bool mirror, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
+        void SampleEmptyTree(UnityEditor.Animations.BlendTree tree, bool mirror, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             var (animated, objects) = MotionMask(tree, mirror);
             for (int c = 0; c < Bindings.FloatCount; c++)
@@ -202,7 +202,7 @@ namespace Unbound.Runtime
             return owner.HumanBody || Unbound.Runtime.Humanoid.HumanStateGoals.Slot(owner.HumanCurve) >= 0;
         }
 
-        void SampleDirect(LayerRun layer, int layerIndex, StateRun run, BlendTreeMotion tree, bool mirror, double normalized,
+        void SampleDirect(LayerRun layer, int layerIndex, StateRun run, UnityEditor.Animations.BlendTree tree, bool mirror, double normalized,
             float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (m_DirectDepth == m_DirectScratch.Count) m_DirectScratch.Add(new AnimationPose());
@@ -213,7 +213,7 @@ namespace Unbound.Runtime
                 var weights = BlendWeights(tree);
                 for (int i = 0; i < weights.Length; i++)
                     if (weights[i] > 0f)
-                        SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, mirror ^ tree.Children[i].Mirror, normalized + tree.Children[i].CycleOffset,
+                        SampleMotion(layer, layerIndex, run, tree.Children[i].motion, mirror ^ tree.Children[i].mirror, normalized + tree.Children[i].cycleOffset,
                             weight * weights[i], scratch, mask, objectMask);
                 var (animated, animatedObjects) = MotionMask(tree, mirror);
                 pose.Total += weight;
