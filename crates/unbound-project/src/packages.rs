@@ -167,13 +167,21 @@ pub fn lock_text(project: &Path, packages: &[Package]) -> Result<Option<String>>
         return Ok(None);
     }
     let by_name: BTreeMap<&str, &Package> = packages.iter().map(|p| (p.name.as_str(), p)).collect();
-    // Depths: the manifest's dependencies at 0, then what each asks for, breadth first.
+    // Depths: the manifest's dependencies and the embedded packages (the project's own, named by
+    // the manifest or not) at 0, then what each asks for, breadth first. What only an embedded
+    // package asks for is at depth 1 (no Editor lock measured with such a package).
     let mut depth: BTreeMap<&str, usize> = BTreeMap::new();
     let mut level: Vec<&str> = manifest
         .dependencies
         .keys()
         .map(String::as_str)
         .filter(|name| by_name.contains_key(name))
+        .chain(
+            packages
+                .iter()
+                .filter(|p| p.source == PackageSource::Embedded)
+                .map(|p| p.name.as_str()),
+        )
         .collect();
     let mut d = 0;
     while !level.is_empty() {
@@ -192,12 +200,9 @@ pub fn lock_text(project: &Path, packages: &[Package]) -> Result<Option<String>>
         level = next;
         d += 1;
     }
-    // Embedded packages are the project's own: depth 0 whether or not the manifest names them.
-    for p in packages
-        .iter()
-        .filter(|p| p.source == PackageSource::Embedded)
-    {
-        depth.insert(p.name.as_str(), 0);
+    // A lock without a resolved package would hold the project to less than it uses.
+    if let Some(name) = by_name.keys().find(|name| !depth.contains_key(*name)) {
+        anyhow::bail!("{name} is not reached from the manifest or an embedded package");
     }
     let quote = |s: &str| serde_json::to_string(s).expect("a string");
     let mut out = String::from("{\n  \"dependencies\": {");
@@ -206,9 +211,7 @@ pub fn lock_text(project: &Path, packages: &[Package]) -> Result<Option<String>>
     let mut order: Vec<(&&str, &&Package)> = by_name.iter().collect();
     order.sort_by_key(|(name, _)| (name.starts_with("com.unity.modules."), **name));
     for (name, package) in order {
-        let Some(&depth) = depth.get(name) else {
-            continue;
-        };
+        let depth = depth[name];
         let (version, source) = match package.source {
             PackageSource::Embedded => (
                 format!(
@@ -1104,6 +1107,60 @@ mod tests {
             testable: false,
         };
         assert_eq!(lock_text(&scratch, &[git]).unwrap(), None);
+        std::fs::remove_dir_all(&scratch).unwrap();
+    }
+
+    /// An embedded package the manifest does not name brings what it asks for into the lock
+    /// (tests/projects/packageresolve: Timeline and Settings Manager, which only it asks for).
+    #[test]
+    fn what_only_an_embedded_package_asks_for_is_locked() {
+        let scratch =
+            std::env::temp_dir().join(format!("unbound-lock-embedded-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let embedded = scratch.join("Packages/com.probe.own");
+        let timeline = scratch.join("cache/com.unity.timeline");
+        std::fs::create_dir_all(&embedded).unwrap();
+        std::fs::create_dir_all(&timeline).unwrap();
+        std::fs::write(
+            scratch.join("Packages/manifest.json"),
+            "{\"dependencies\": {}}",
+        )
+        .unwrap();
+        std::fs::write(
+            embedded.join("package.json"),
+            "{\"name\": \"com.probe.own\", \"version\": \"1.0.0\", \
+             \"dependencies\": {\"com.unity.timeline\": \"1.7.0\"}}",
+        )
+        .unwrap();
+        std::fs::write(
+            timeline.join("package.json"),
+            "{\"name\": \"com.unity.timeline\", \"version\": \"1.8.10\", \"dependencies\": {}}",
+        )
+        .unwrap();
+        let package = |name: &str, version: &str, source, root: &Path| Package {
+            name: name.into(),
+            version: version.into(),
+            source,
+            root: root.to_path_buf(),
+            testable: false,
+        };
+        let packages = [
+            package(
+                "com.unity.timeline",
+                "1.8.10",
+                PackageSource::Registry,
+                &timeline,
+            ),
+            package("com.probe.own", "1.0.0", PackageSource::Embedded, &embedded),
+        ];
+        let text = lock_text(&scratch, &packages).unwrap().unwrap();
+        let lock: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(lock["dependencies"]["com.probe.own"]["depth"], 0);
+        assert_eq!(
+            lock["dependencies"]["com.unity.timeline"]["version"],
+            "1.8.10"
+        );
+        assert_eq!(lock["dependencies"]["com.unity.timeline"]["depth"], 1);
         std::fs::remove_dir_all(&scratch).unwrap();
     }
 
