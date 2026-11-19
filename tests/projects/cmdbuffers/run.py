@@ -126,6 +126,16 @@ def publish(labels, section=None, merge=False):
     return 0
 
 
+def zero_where_masked(actual, masked):
+    """Whether a one-layer pixel read equals a reference read with masked (`-`) columns,
+    where each masked character reads `0` or stays masked."""
+    if not (isinstance(actual, list) and isinstance(masked, list) and len(actual) == len(masked) == 1):
+        return False
+    actual, masked = actual[0], masked[0]
+    return len(actual) == len(masked) and all(
+        a == m or (m == '-' and a in '0-') for a, m in zip(actual, masked))
+
+
 def verify(candidate, safe_append_skip=False):
     reference = device_reference(reference_file(ROOT, 'jsonl'), ROOT)
     code = subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference), str(candidate)]).returncode
@@ -148,13 +158,14 @@ def verify(candidate, safe_append_skip=False):
                 or act.get(stereo + '.pixels') != ref.get('device.stereo.0.pixels')):
             return code or 1
     # The instances a multiplier adds read zero in Unbound, the Editor's what an earlier call
-    # left in its instance buffer: the call's own two colors must still match.
-    # (On Metal the added columns are masked, so the stale and fresh rows are equal.)
+    # left in its instance buffer: the call's own two colors must still match the fresh row, and
+    # its added columns, masked (`-`) in the fresh reference row, must read zero (or stay masked,
+    # as on Metal, where the stale row is masked too).
     stale, fresh = 'device.multiplier.stale.colors.2.pixels', 'device.multiplier.placed.colors.2.pixels'
     if stale in ref:
         if ref[stale] != ref.get(fresh):
             expected.add(stale)
-        if act.get(stale) != ref.get(fresh):
+        if not zero_where_masked(act.get(stale), ref.get(fresh)):
             return code or 1
     if (differences == expected
             and act.get('uav.append.nocounter') == [0xAAAA0000] * 48

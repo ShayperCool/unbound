@@ -19,9 +19,11 @@ class SafeAppendGateTests(unittest.TestCase):
                          'Unbound: side-by-side stereo clipping without an XR device is not supported.')
         mono = next(row['v'] for row in self.rows if row['k'] == 'device.stereo.0.pixels')
         next(row for row in self.rows if row['k'] == 'device.stereo.1.pixels')['v'] = mono
-        # The instances a multiplier adds read zero, not what an earlier call left.
+        # The instances a multiplier adds read zero, not what an earlier call left: the engine's
+        # stale row is the fresh reference row with its masked added columns zero.
         fresh = next(row['v'] for row in self.rows if row['k'] == 'device.multiplier.placed.colors.2.pixels')
-        next(row for row in self.rows if row['k'] == 'device.multiplier.stale.colors.2.pixels')['v'] = fresh
+        next(row for row in self.rows if row['k'] == 'device.multiplier.stale.colors.2.pixels')['v'] = [
+            fresh[0].replace('-', '0')]
         (self.out/'engine.log').write_text('shader uses the counter of buffer `_App`, which is not set or not an Append or Counter buffer: the draw is skipped')
 
     def unsupported(self, key, message):
@@ -64,6 +66,18 @@ class SafeAppendGateTests(unittest.TestCase):
         row = next(row for row in self.rows if row['k'] == 'device.multiplier.stale.colors.2.pixels')
         row['v'] = ['0' * len(row['v'][0])]
         self.assertNotEqual(self.verify(), 0)
+
+    def test_stale_added_instances_read_from_an_earlier_call_fail(self):
+        fresh = next(row['v'] for row in self.rows if row['k'] == 'device.multiplier.placed.colors.2.pixels')
+        next(row for row in self.rows if row['k'] == 'device.multiplier.stale.colors.2.pixels')['v'] = [
+            fresh[0].replace('-', 'f')]
+        self.assertNotEqual(self.verify(), 0)
+
+    def test_masked_stale_added_instances_pass(self):
+        # Metal masks the added columns of the stale row too.
+        fresh = next(row['v'] for row in self.rows if row['k'] == 'device.multiplier.placed.colors.2.pixels')
+        next(row for row in self.rows if row['k'] == 'device.multiplier.stale.colors.2.pixels')['v'] = fresh
+        self.assertEqual(self.verify(), 0)
 
     def test_unrelated_device_difference_still_fails(self):
         next(row for row in self.rows if row['k'] == 'device.rayTracing')['v'] = True

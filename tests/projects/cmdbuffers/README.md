@@ -106,6 +106,10 @@ as it is: the `bind.*` rows were added so. `verify` compares every value exactly
 same strict report, then checks the explicitly required safe Append skip separately: exactly the
 `uav.append.nocounter` payload and its missing Editor warning may differ, the entire 48-word
 buffer must retain its sentinel, and the engine log must contain the counter-owner warning.
+`device.stereo.1` (side-by-side) may differ only by its explicit `NotSupportedException` and the
+mono pixels of `device.stereo.0`; `device.multiplier.stale.colors.2.pixels` must equal the fresh
+`device.multiplier.placed.colors.2.pixels` reference row, its masked (`-`) added columns read as
+zero (Unbound's added instances read zero) or masked (Metal).
 All other missing, extra and failing values fail the gate. This is an intentional safety
 difference for invalid Append bindings, not an insignificant visual residual.
 
