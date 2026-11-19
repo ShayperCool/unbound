@@ -23,7 +23,8 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   repeat captures outside Git. Do not keep Before/Final/Followup copies of the same oracle.
 - Probe runs never write into the checkout: every engine or Editor run of a probe uses a private
   copy of its project (`tests/probe_paths.py` `project_copy`), and `suite.py`/`land.py` fail a run
-  that changed a file of the checkout.
+  that changed a file of the checkout. Only a runner's explicit authoring modes (`create`, ...) edit
+  the probe's own files, to be committed.
 - All engine outputs, candidates, comparisons, gates, manifests and logs go to the
   project's `Library/Unbound/` or `$XDG_CACHE_HOME/unbound` (`~/.cache/unbound` by default).
   Never add `Evidence*` or `*Evidence` run directories to Git.

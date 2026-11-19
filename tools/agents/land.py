@@ -576,7 +576,10 @@ class Gate:
         try:
             self.steps()
         except BaseException:
-            self.check_checkout(before, failing=True)
+            try:
+                self.check_checkout(before, failing=True)
+            except Exception as error:  # the gate's own failure stays the one reported
+                print(f'land: the checkout could not be checked after the failure: {error!r}', file=sys.stderr)
             raise
         self.check_checkout(before)
         self.note('gate passed')

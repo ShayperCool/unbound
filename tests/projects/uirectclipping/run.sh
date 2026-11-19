@@ -10,7 +10,12 @@ fixture="$PWD/tests/projects/uirectclipping"
 output="$HOME/.cache/compat/rectclip-${2:-run}"
 managed="${UNBOUND_MANAGED_DIR:-$HOME/.cache/compat/rectclip-managed}"
 heavy="$HOME/.cache/compat/with-heavy-job"
-trap 'python3 "$fixture/cleanup.py"' EXIT
+# Runs (not the authoring modes) use a private copy of the project (tests/probe_paths.py
+# project_copy): Unbound and the Editor write project files.
+case "${1:-}" in
+ native|native-gamma|engine) fixture="$(python3 -c 'import sys; sys.path.insert(0, "tests"); from probe_paths import project_copy; print(project_copy(sys.argv[1], sys.argv[2], fresh=True))' "$fixture" "$output.project")" ;;
+esac
+trap 'RECT_CLIP_PROJECT="$fixture" python3 tests/projects/uirectclipping/cleanup.py' EXIT
 editor="$HOME/Unity/Hub/Editor/6000.0.71f1/Editor/Unity"
 case "${1:-}" in
  create) "$heavy" timeout 600 "$editor" -batchmode -quit -projectPath "$fixture" -executeMethod ProbeRunner.Create -logFile "$output.log" ;;

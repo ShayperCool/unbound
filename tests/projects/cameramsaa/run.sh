@@ -14,7 +14,7 @@ if [[ "${CAMERA_MSAA_FOCUSED:-0}" == 1 ]]; then profile="Focused$space"; fi
 output="${CAMERA_MSAA_OUTPUT:-$cache/${2:-current}/$profile}"
 # Every run but the authoring modes (create, linear) uses a private copy of the project: Unbound
 # writes project files as the Editor does.
-if [[ "$1" != create && "$1" != linear ]]; then
+if [[ "${1:-}" != create && "${1:-}" != linear ]]; then
  export PROBE_SOURCE="$fixture" PROBE_COPY="$output.project" PROBE_SPACE="$space"
  fixture="$(python3 - <<'PYCOPY'
 import os

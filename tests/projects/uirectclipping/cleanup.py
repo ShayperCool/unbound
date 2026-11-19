@@ -4,7 +4,8 @@ import os
 from pathlib import Path
 import signal
 
-fixture = str(Path(__file__).resolve().parent)
+# The project the Editor ran on: this fixture, or the copy run.sh made of it.
+fixture = os.environ.get('RECT_CLIP_PROJECT') or str(Path(__file__).resolve().parent)
 for process in Path('/proc').glob('[0-9]*'):
     try:
         command = (process/'cmdline').read_bytes()

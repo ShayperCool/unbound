@@ -143,12 +143,13 @@ def checkout_state(root, paths=('.',)):
 
 def checkout_writes(root, before, paths=('.',)):
     """The files under `paths` a run created, changed or removed since checkout_state `before`:
-    sorted 'XY path' lines in git's porcelain form (' D' for a file the run restored)."""
+    sorted 'XY path' lines in git's porcelain form, the earlier status with '(restored)' for an
+    edited file the run put back as committed or '(removed)' for an untracked file it removed."""
     after = checkout_state(root, paths)
     inside = lambda path: any(p in ('.', '') or path == p or path.startswith(p.rstrip('/')+'/') for p in paths)
     changed = [f'{after[path][0]} {path}' for path in sorted(after) if before.get(path) != after[path]]
-    restored = [f'{before[path][0]} {path} (restored)' for path in sorted(before)
-                if path not in after and inside(path)]
+    restored = [f'{before[path][0]} {path} ' + ('(removed)' if before[path][0] == '??' else '(restored)')
+                for path in sorted(before) if path not in after and inside(path)]
     return changed + restored
 
 

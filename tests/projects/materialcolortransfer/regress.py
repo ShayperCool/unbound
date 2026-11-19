@@ -9,8 +9,7 @@ out=Path(os.environ.get('MATERIAL_COLOR_REGRESS_OUT',run_root(f,sys.argv[1] if l
 cli=os.environ.get('MATERIAL_COLOR_TRANSFER_CLI',str(root/'target/release/unbound'));heavy=str(Path.home()/'.cache/compat/with-heavy-job')
 projects=root/'tests/projects'
 def copy(project,space):
- p=out/'projects'/('Regression'+project+space)
- for part in ['Assets','Packages','ProjectSettings']:shutil.copytree(projects/project/part,p/part,dirs_exist_ok=True)
+ p=project_copy(projects/project,out/'projects'/('Regression'+project+space),fresh=True)
  if space=='Gamma':
   s=p/'ProjectSettings/ProjectSettings.asset';s.write_text(s.read_text().replace('m_ActiveColorSpace: 1','m_ActiveColorSpace: 0'))
  return p

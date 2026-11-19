@@ -99,8 +99,14 @@ class ProjectCopyTests(unittest.TestCase):
         (self.source/'Reference/unity-R.jsonl').write_text('reference')
         (self.source/'Library/Unbound/cache').write_text('private to the source')
         (self.source/'run.py').write_text('driver')
+        (self.source/'Content/bundles').mkdir(parents=True)
+        (self.source/'Content/bundles/crc.txt').write_text('crc')
+        (self.source/'Probe.csproj').write_text('generated')
+        (self.source/'Temp').mkdir()
+        (self.source/'Packages/com.probe.embedded').mkdir()
         (self.source/'Packages/manifest.json').write_text(
-            '{"dependencies": {"local": "file:../../local", "registry": "1.0.0"}}')
+            '{"dependencies": {"local": "file:../../local", "registry": "1.0.0", '
+            '"embedded": "file:com.probe.embedded"}}')
 
     def test_a_run_writes_only_its_copy(self):
         project = probe_paths.project_copy(self.source, Path(self.temp.name)/'run/project')
@@ -117,10 +123,15 @@ class ProjectCopyTests(unittest.TestCase):
         self.assertEqual((project/'Reference/unity-R.jsonl').read_text(), 'reference')
         self.assertTrue((project/'Library/PackageCache').is_symlink())
         self.assertFalse((project/'Library/Unbound').exists())
-        self.assertFalse((project/'run.py').exists())
+        # Other root inputs (a probe's Content/, its scripts) are the source's too.
+        self.assertEqual((project/'Content/bundles/crc.txt').read_text(), 'crc')
+        self.assertTrue((project/'Content').is_symlink() and (project/'run.py').is_symlink())
+        self.assertFalse((project/'Probe.csproj').exists() or (project/'Temp').exists())
         manifest = (project/'Packages/manifest.json').read_text()
         self.assertIn('"file:' + str((self.source/'Packages/../../local').resolve()) + '"', manifest)
         self.assertIn('"registry": "1.0.0"', manifest)
+        # An embedded package is copied with Packages/: its path stays as authored.
+        self.assertIn('"embedded": "file:com.probe.embedded"', manifest)
 
     def test_steps_of_one_run_share_a_copy_and_fresh_replaces_it(self):
         target = Path(self.temp.name)/'run/project'

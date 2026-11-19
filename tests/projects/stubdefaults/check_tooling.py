@@ -10,6 +10,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import project_copy, run_root  # noqa: E402
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 
 
@@ -36,8 +38,9 @@ def main():
     # Reporting, source locations and inherited declarations of an unsent message are covered by
     # Unbound.ApiTools.Tests' MessageCoverageTests with an injected rule list.
     expected = set()
+    project = project_copy(ROOT, run_root(ROOT, f'tooling-{os.getpid()}')/'project', fresh=True)
     for repeat in range(2):
-        run = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'doctor', '-p', str(ROOT), '--json'],
+        run = subprocess.run([str(HEAVY), '--kind', 'tool', cli, 'doctor', '-p', str(project), '--json'],
                              cwd=REPO, capture_output=True, text=True)
         if run.returncode:
             print(run.stdout, run.stderr)

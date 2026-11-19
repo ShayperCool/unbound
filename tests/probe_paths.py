@@ -89,6 +89,8 @@ def cache_artifact_path(path):
 
 # What a project copy holds: the authored folders an engine or Editor run reads and may write.
 PROJECT_FOLDERS = ('Assets', 'Packages', 'ProjectSettings')
+# What the Editor (or Unbound) makes in a project's root for itself: never part of a copy.
+GENERATED = ('Library', 'Temp', 'Logs', 'UserSettings', 'obj', '__pycache__')
 CHECKOUT = Path(__file__).resolve().parents[1]
 
 
@@ -97,12 +99,13 @@ def project_copy(source, project, fresh=False):
 
     Unbound, like the Editor, writes a project's files (new .meta files, settings, the package
     lock), so no run may use a project of the checkout itself: everything it writes stays in the
-    copy. The copy holds PROJECT_FOLDERS. Local packages named relative to Packages/ in the
-    manifest or lock keep naming the source's; Library/PackageCache (resolved package contents,
-    an input) and Reference/ (some captures load committed inputs relative to the project root)
-    are links to the source's, never written by a run. An existing `project` is used as it is, so
-    the steps of one run share their copy, unless `fresh` (a driver reusing its run directory)
-    replaces it with a new copy. Returns `project`."""
+    copy. The copy holds PROJECT_FOLDERS. Every other entry of the source's root (the probe's
+    Reference/, inputs such as Content/ that a probe reads relative to its project, its scripts)
+    is a link to the source's, as is Library/PackageCache (resolved package contents); none of
+    them is a run's to write. GENERATED folders, IDE files and hidden entries are left out.
+    Local packages named relative to Packages/ outside it keep naming the source's. An existing
+    `project` is used as it is, so the steps of one run share their copy, unless `fresh` (a
+    driver reusing its run directory) replaces it with a new copy. Returns `project`."""
     source, project = Path(source).resolve(), Path(project)
     if project.exists() and fresh:
         shutil.rmtree(project)
@@ -120,20 +123,27 @@ def project_copy(source, project, fresh=False):
         changed = False
         for name, dependency in document.get('dependencies', {}).items():
             version = dependency.get('version') if isinstance(dependency, dict) else dependency
-            if isinstance(version, str) and version.startswith('file:') and not Path(version[5:]).is_absolute():
-                absolute = 'file:'+str((source/'Packages'/version[5:]).resolve())
-                if isinstance(dependency, dict):
-                    dependency['version'] = absolute
-                else:
-                    document['dependencies'][name] = absolute
-                changed = True
+            if not (isinstance(version, str) and version.startswith('file:')) or Path(version[5:]).is_absolute():
+                continue
+            location = (source/'Packages'/version[5:]).resolve()
+            if location.is_relative_to(source/'Packages'):
+                continue  # an embedded package: copied with Packages/, its relative path holds
+            absolute = 'file:'+str(location)
+            if isinstance(dependency, dict):
+                dependency['version'] = absolute
+            else:
+                document['dependencies'][name] = absolute
+            changed = True
         if changed:
             copied.write_text(json.dumps(document, indent=2)+'\n')
     if (source/'Library/PackageCache').is_dir():
         (project/'Library').mkdir()
         (project/'Library/PackageCache').symlink_to(source/'Library/PackageCache', target_is_directory=True)
-    if (source/'Reference').is_dir():
-        (project/'Reference').symlink_to(source/'Reference', target_is_directory=True)
+    for entry in sorted(source.iterdir()):
+        if (entry.name in PROJECT_FOLDERS or entry.name in GENERATED or entry.name.startswith('.')
+                or entry.suffix in ('.csproj', '.sln')):
+            continue
+        (project/entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
     return project
 
 

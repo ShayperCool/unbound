@@ -11,7 +11,7 @@ if [[ "$space" != Linear && "$space" != Gamma ]]; then echo 'color space must be
 export MATERIAL_COLOR_TRANSFER_OUT="${MATERIAL_COLOR_TRANSFER_OUT:-$root/${2:-current}/$space}"
 # Every run but `create` (which authors the probe's assets) uses a private copy of the project:
 # the probe edits loaded assets, and Unbound writes project files as the Editor does.
-if [[ "$1" != create ]]; then
+if [[ "${1:-}" != create ]]; then
  export PROBE_SOURCE="$fixture" PROBE_COPY="$MATERIAL_COLOR_TRANSFER_OUT.project" PROBE_SPACE="$space"
  fixture="$(python3 - <<'PYCOPY'
 import os
