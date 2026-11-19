@@ -377,7 +377,7 @@ namespace UnityEditor
             return false;
         }
         public static bool DisplayDialog(string title, string message, string ok) => DisplayDialog(title, message, ok, "");
-        public static Object InstanceIDToObject(int instanceID) => ObjectRegistry.FindById(instanceID);
+        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.Reloaded(ObjectRegistry.FindById(instanceID));
         public static void UnloadUnusedAssetsImmediate() => Resources.UnloadUnusedAssetsInternal();
         public static void UnloadUnusedAssetsImmediate(bool includeMonoReferencesAsRoots) => Resources.UnloadUnusedAssetsInternal();
         public static void CopySerialized(Object source, Object dest)
