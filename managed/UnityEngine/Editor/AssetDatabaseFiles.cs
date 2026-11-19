@@ -48,6 +48,22 @@ namespace UnityEditor
             public string Error { get; set; }
             /// <summary>The GUID of an asset a refresh found gone.</summary>
             public string Removed { get; set; }
+            /// <summary>The GUID the asset's .meta had, which another asset holds (it got a new one).</summary>
+            public Conflict Conflict { get; set; }
+        }
+
+        sealed class Conflict
+        {
+            public string Guid { get; set; }
+            public string Owner { get; set; }
+        }
+
+        /// <summary>What the Editor says when a .meta repeats another asset's GUID (its first line
+        /// measured: tests/projects/projectwrites 07.batch.logs).</summary>
+        static void SayConflict(string path, Imported asset)
+        {
+            if (asset?.Conflict == null) return;
+            Debug.LogWarning($"GUID [{asset.Conflict.Guid}] for asset '{path}' conflicts with:\n  '{asset.Conflict.Owner}' (current owner)\nAssigning a new guid.");
         }
 
         sealed class ImportResult
@@ -77,6 +93,7 @@ namespace UnityEditor
                     Debug.LogWarning("Unbound: " + asset.Error);
                     continue;
                 }
+                SayConflict(list[i].Path, asset);
                 if (relist) Relist(list[i].Path, asset);
             }
             if (!relist) Invalidate();
@@ -199,6 +216,7 @@ namespace UnityEditor
             var changes = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-refresh", "{}"), s_Json)?.Assets ?? Array.Empty<Imported>();
             foreach (var change in changes)
             {
+                SayConflict(change.Path, change);
                 // An asset gone from disk is remembered as deleted (tests/projects/projectwrites 07.outside).
                 if (!string.IsNullOrEmpty(change.Removed))
                 {
@@ -392,7 +410,7 @@ namespace UnityEditor
             foreach (var end in new[] { oldPath, newPath })
             {
                 if (Editable(end)) continue;
-                if (InReadOnlyPackage(end)) return $"Cannot move asset. {end} is an immutable path.";
+                if (InReadOnlyPackage(end) || IsRoot(end)) return $"Cannot move asset. {end} is an immutable path.";
                 Refused("AssetDatabase.MoveAsset", end);
                 return $"Cannot move asset. {end} is not an asset of the project's own.";
             }
@@ -486,7 +504,7 @@ namespace UnityEditor
             {
                 // An asset of a read-only package is not deleted: false, nothing logged
                 // (tests/projects/projectwrites 06.readonly); other paths are said so.
-                if (!InReadOnlyPackage(path)) Refused(trash ? "AssetDatabase.MoveAssetToTrash" : "AssetDatabase.DeleteAsset", path);
+                if (!InReadOnlyPackage(path) && !IsRoot(path)) Refused(trash ? "AssetDatabase.MoveAssetToTrash" : "AssetDatabase.DeleteAsset", path);
                 return false;
             }
             var removed = TreeOf(path);

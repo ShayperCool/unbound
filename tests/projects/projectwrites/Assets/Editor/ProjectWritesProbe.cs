@@ -180,7 +180,12 @@ public static class ProjectWritesProbe
     {
         try { action(); }
         catch (Exception e) { Put(step + ".threw", e.GetType().FullName + ": " + e.Message); }
-        Put(step + ".logs", string.Join(" | ", s_Logs));
+        // GUIDs in the logs as the assets they name.
+        Put(step + ".logs", s_Guid.Replace(string.Join(" | ", s_Logs), m =>
+        {
+            var path = AssetDatabase.GUIDToAssetPath(m.Value);
+            return "<guid:" + (string.IsNullOrEmpty(path) ? "?" : path) + ">";
+        }));
         s_Logs.Clear();
     }
 
@@ -441,7 +446,15 @@ public static class ProjectWritesProbe
         System.IO.File.Copy("Assets/New/Even.txt", "Assets/New/Copied.txt");
         System.IO.File.WriteAllText("Assets/New/Copied.txt.meta", "fileFormatVersion: 2\nguid: 9d4f3e0c9b2d4e5f8a7b6c5d4e3f2a10\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n");
         System.IO.File.WriteAllText("Assets/New/Even.txt.meta", Read("Assets/New/Even.txt.meta").Replace("TextScriptImporter:", "labels:\n- outside\nTextScriptImporter:"));
+        // A copy whose .meta repeats the original's GUID.
+        var even = AssetDatabase.AssetPathToGUID("Assets/New/Even.txt");
+        System.IO.File.Copy("Assets/New/Even.txt", "Assets/New/Twin.txt");
+        System.IO.File.Copy("Assets/New/Even.txt.meta", "Assets/New/Twin.txt.meta");
         AssetDatabase.Refresh();
+        Put("07.outside.twin.original", AssetDatabase.AssetPathToGUID("Assets/New/Even.txt") == even);
+        var twin = AssetDatabase.AssetPathToGUID("Assets/New/Twin.txt");
+        Put("07.outside.twin", twin.Length == 32 ? (twin == even ? "the original's GUID" : "a GUID of its own") : twin);
+        Snap("07.outside", "Assets/New/Twin.txt.meta");
         Put("07.outside.deleted", AssetDatabase.AssetPathToGUID("Assets/New/Batch.txt", AssetPathToGUIDOptions.OnlyExistingAssets));
         Put("07.outside.deletedPath", AssetDatabase.GUIDToAssetPath(deleted));
         Put("07.outside.copied", AssetDatabase.AssetPathToGUID("Assets/New/Copied.txt"));

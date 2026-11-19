@@ -145,12 +145,16 @@ impl RuntimeState {
         let db = self.db();
         for request in paths {
             match self.import_path(request, &db, &taken) {
-                Ok(Some(asset)) => {
-                    found.push(json!({
+                Ok(Some((asset, conflict))) => {
+                    let mut result = json!({
                         "guid": asset.guid.to_string(),
                         "kind": if asset.is_folder { "folder" } else { asset_kind(&request.path) },
                         "labels": asset.labels,
-                    }));
+                    });
+                    if let Some((guid, owner)) = conflict {
+                        result["conflict"] = json!({ "guid": guid.to_string(), "owner": owner });
+                    }
+                    found.push(result);
                     taken.insert(asset.guid, request.path.to_ascii_lowercase());
                     entries.push((request.path.clone(), Some(asset)));
                 }
@@ -175,13 +179,15 @@ impl RuntimeState {
         found
     }
 
-    /// One path of [`Self::import_paths`]: the asset it is now, None when nothing is there.
+    /// One path of [`Self::import_paths`]: the asset it is now (with the GUID it had and the
+    /// asset that holds it when that GUID was another's), None when nothing is there.
+    #[allow(clippy::type_complexity)]
     fn import_path(
         &self,
         request: &ImportPath,
         db: &AssetDb,
         taken: &HashMap<Guid, String>,
-    ) -> Result<Option<unbound_project::assetdb::Asset>> {
+    ) -> Result<Option<(unbound_project::assetdb::Asset, Option<(Guid, String)>)>> {
         let file = self
             .file_of(&request.path)
             .with_context(|| format!("{} is no asset of the project", request.path))?;
@@ -236,11 +242,13 @@ impl RuntimeState {
         let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
         let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
         let path = request.path.to_ascii_lowercase();
-        let collides = db
+        let owner = db
             .by_guid(guid)
-            .is_some_and(|other| other.path.to_ascii_lowercase() != path && other.file.exists())
-            || taken.get(&guid).is_some_and(|other| *other != path);
-        if collides {
+            .filter(|other| other.path.to_ascii_lowercase() != path && other.file.exists())
+            .map(|other| other.path.clone())
+            .or_else(|| taken.get(&guid).filter(|other| **other != path).cloned());
+        let mut conflict = None;
+        if let Some(owner) = owner {
             let fresh = unbound_assets::new_meta::new_guid();
             // Written again with LF, as the Editor writes a .meta (tests/projects/projectwrites 06.crlf).
             let text = std::fs::read_to_string(&meta)?.replace("\r\n", "\n");
@@ -252,26 +260,28 @@ impl RuntimeState {
                 .context("no guid line")?;
             let after = rest.find(['\r', '\n']).unwrap_or(rest.len());
             std::fs::write(&meta, format!("{line}guid: {fresh}{}", &rest[after..]))?;
-            tracing::warn!(
-                "{}: its .meta had the GUID of another asset; it gets a new one",
-                request.path
-            );
+            conflict = Some((guid, owner));
             guid = fresh;
         }
-        Ok(Some(unbound_project::assetdb::Asset {
-            guid,
-            path: request.path.clone(),
-            is_folder: file.is_dir(),
-            file,
-            labels,
-        }))
+        Ok(Some((
+            unbound_project::assetdb::Asset {
+                guid,
+                path: request.path.clone(),
+                is_folder: file.is_dir(),
+                file,
+                labels,
+            },
+            conflict,
+        )))
     }
 
     /// AssetDatabase.Refresh as the Editor refreshes: every new file and folder of the project's
-    /// own assets imported (a `.meta` written), and the database scanned again for what changed
-    /// on disk without the AssetDatabase (assets deleted, copied with their `.meta`, `.meta` files
-    /// edited: tests/projects/projectwrites 07.outside). Returns each path that changed: what it
-    /// is now, or for a gone one its former GUID as `removed`.
+    /// own assets imported (a `.meta` written), and what changed on disk without the
+    /// AssetDatabase imported again (assets deleted, copied with their `.meta`, `.meta` files
+    /// edited: tests/projects/projectwrites 07.outside), a copy whose `.meta` repeats another
+    /// asset's GUID getting a new one. Read-only packages do not change in a session and are not
+    /// looked at. Returns each path that changed: what it is now, or for a gone asset its former
+    /// GUID as `removed` (none when the GUID is listed again elsewhere: the asset moved).
     fn refresh_assets(&self) -> Vec<serde_json::Value> {
         if self.new_meta_measured {
             unbound_assets::new_meta::import_roots(
@@ -283,41 +293,46 @@ impl RuntimeState {
         let roots: Vec<_> = self
             .asset_roots
             .iter()
+            .filter(|(dir, _)| self.editable_roots.contains(dir))
             .map(|(dir, path)| unbound_project::assetdb::Root {
                 dir,
                 virtual_path: path.clone(),
             })
             .collect();
-        let scanned = AssetDb::scan(&roots);
-        let old = self.db();
-        let mut changes = Vec::new();
-        let mut resources = false;
-        for asset in scanned.iter() {
-            let same = old.by_path(&asset.path).is_some_and(|o| {
-                o.guid == asset.guid && o.labels == asset.labels && o.path == asset.path
-            });
-            if !same {
-                resources |= !resources_keys(&asset.path).is_empty();
-                changes.push(json!({
-                    "path": asset.path,
-                    "guid": asset.guid.to_string(),
-                    "kind": if asset.is_folder { "folder" } else { asset_kind(&asset.path) },
-                    "labels": asset.labels,
-                }));
-            }
-        }
-        for asset in old.iter() {
-            if scanned.by_path(&asset.path).is_none() {
-                resources |= !resources_keys(&asset.path).is_empty();
-                changes.push(
-                    json!({ "path": asset.path, "guid": "", "removed": asset.guid.to_string() }),
-                );
-            }
-        }
-        if !changes.is_empty() {
-            self.update_db(resources, |db| *db = scanned);
-        }
-        changes
+        let (changed, gone) = unbound_project::assetdb::changes(
+            &self.db(),
+            &roots,
+            unbound_assets::new_meta::is_folder_plugin,
+        );
+        let requests: Vec<ImportPath> = changed
+            .into_iter()
+            .chain(gone.iter().map(|asset| asset.path.clone()))
+            .map(|path| ImportPath { path, main: None })
+            .collect();
+        let results = self.import_paths(&requests);
+        let listed: std::collections::HashSet<String> = results
+            .iter()
+            .filter_map(|r| {
+                r["guid"]
+                    .as_str()
+                    .filter(|g| !g.is_empty())
+                    .map(str::to_string)
+            })
+            .collect();
+        requests
+            .iter()
+            .zip(results)
+            .map(|(request, mut result)| {
+                result["path"] = json!(request.path);
+                if let Some(asset) = gone.iter().find(|a| a.path == request.path) {
+                    let guid = asset.guid.to_string();
+                    if !listed.contains(&guid) {
+                        result["removed"] = json!(guid);
+                    }
+                }
+                result
+            })
+            .collect()
     }
 }
 

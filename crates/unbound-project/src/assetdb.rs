@@ -146,6 +146,56 @@ impl AssetDb {
     }
 }
 
+/// What changed on disk under `roots` since `db` was made: the asset paths whose `.meta` is new or
+/// says something else (a GUID, labels) than `db` has, and the assets of `db` under those roots
+/// whose file is gone. Hidden names and what is inside a folder plug-in (`is_folder_plugin`) are
+/// not assets; a `.meta` without its asset is no asset either.
+pub fn changes(
+    db: &AssetDb,
+    roots: &[Root<'_>],
+    is_folder_plugin: impl Fn(&Path) -> bool,
+) -> (Vec<String>, Vec<Asset>) {
+    let mut changed = Vec::new();
+    for root in roots {
+        let mut walker = walkdir::WalkDir::new(root.dir)
+            .follow_links(true)
+            .sort_by_file_name()
+            .into_iter()
+            .filter_entry(|e| e.depth() == 0 || !is_hidden(&e.file_name().to_string_lossy()));
+        while let Some(entry) = walker.next() {
+            let Ok(entry) = entry else { continue };
+            if entry.file_type().is_dir() && entry.depth() > 0 && is_folder_plugin(entry.path()) {
+                walker.skip_current_dir();
+            }
+            let name = entry.file_name().to_string_lossy();
+            if !entry.file_type().is_file() || !name.ends_with(".meta") {
+                continue;
+            }
+            let file = entry.path().with_extension("");
+            if !file.exists() {
+                continue;
+            }
+            let relative = file.strip_prefix(root.dir).unwrap_or(&file);
+            let path = format!("{}/{}", root.virtual_path, relative.to_string_lossy());
+            let (guid, labels) = read_meta_header(entry.path());
+            let same = db.by_path(&path).is_some_and(|known| {
+                Some(known.guid) == guid && known.labels == labels && known.path == path
+            });
+            if !same {
+                changed.push(path);
+            }
+        }
+    }
+    let gone = db
+        .iter()
+        .filter(|asset| {
+            roots.iter().any(|root| asset.file.starts_with(root.dir)) && !asset.file.exists()
+        })
+        .cloned()
+        .collect();
+    (changed, gone)
+}
+
 /// The `guid:` and the `labels:` of a `.meta`; the rest is parsed by the importer that needs it.
 pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>) {
     let Ok(text) = std::fs::read_to_string(meta) else {
@@ -233,6 +283,44 @@ mod header_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
+
+    #[test]
+    fn changes_list_new_edited_and_gone_assets_only() {
+        let dir = std::env::temp_dir().join(format!("unbound-db-changes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("Plug.bundle/Contents")).unwrap();
+        let meta = |guid: u128, labels: &str| {
+            format!("fileFormatVersion: 2\nguid: {guid:032x}\n{labels}TextScriptImporter:\n")
+        };
+        for (name, guid) in [("Kept.txt", 1u128), ("Edited.txt", 2), ("Gone.txt", 3)] {
+            std::fs::write(dir.join(name), "x").unwrap();
+            std::fs::write(dir.join(format!("{name}.meta")), meta(guid, "")).unwrap();
+        }
+        std::fs::write(dir.join("Plug.bundle/Contents/Inner.txt"), "x").unwrap();
+        std::fs::write(dir.join("Plug.bundle/Contents/Inner.txt.meta"), meta(9, "")).unwrap();
+        let roots = [Root {
+            dir: &dir,
+            virtual_path: "Assets".into(),
+        }];
+        let db = AssetDb::scan(&roots);
+        let plugin = |p: &Path| p.extension().is_some_and(|e| e == "bundle");
+        // Nothing changed; what is inside the plug-in is not looked at.
+        let (changed, gone) = changes(&db, &roots, plugin);
+        assert!(changed.is_empty() && gone.is_empty());
+        // Outside the AssetDatabase: labels edited, a file gone, a copy with the original's .meta.
+        std::fs::write(dir.join("Edited.txt.meta"), meta(2, "labels:\n- outside\n")).unwrap();
+        std::fs::remove_file(dir.join("Gone.txt")).unwrap();
+        std::fs::copy(dir.join("Kept.txt"), dir.join("Copy.txt")).unwrap();
+        std::fs::copy(dir.join("Kept.txt.meta"), dir.join("Copy.txt.meta")).unwrap();
+        let (mut changed, gone) = changes(&db, &roots, plugin);
+        changed.sort();
+        assert_eq!(changed, ["Assets/Copy.txt", "Assets/Edited.txt"]);
+        assert_eq!(
+            gone.iter().map(|a| a.path.as_str()).collect::<Vec<_>>(),
+            ["Assets/Gone.txt"]
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     fn asset(guid: u128, path: &str) -> Asset {
         Asset {
