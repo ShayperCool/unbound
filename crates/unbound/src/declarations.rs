@@ -491,23 +491,24 @@ impl State {
         }
     }
 
-    /// A project shader must not publish a partial space when its Fallback adds declarations.
-    /// The ordering/flag merge for such spaces is not measured for arbitrary project shaders.
+    /// A project shader's keyword space: its own, then each keyword its Fallback chain declares
+    /// that it does not, in the chain's order, as that shader declares it (a name it declares
+    /// itself keeps its own flags). Matches the Unity 6000.0.71f1 Editor,
+    /// tests/projects/graphicsgaps `keywords.*` (KwOwn, KwPlain, KwFall).
     fn project_keywords(
         &mut self,
         inputs: &Inputs,
         lab: &ShaderLab,
     ) -> Result<Vec<Declared>, Unknown> {
-        let own = self.keywords(inputs, lab)?;
+        let mut space = self.keywords(inputs, lab)?;
         let mut chain = Vec::new();
         self.fallback_keywords(inputs, lab.fallback.as_deref().unwrap_or(""), &mut chain, 0)?;
-        if let Some(k) = chain.iter().find(|k| !own.contains(k)) {
-            return Err(Unknown::fixed(format!(
-                "its Fallback chain adds or changes `{}`; this keyword space is not measured",
-                k.name
-            )));
+        for k in chain {
+            if !space.iter().any(|own| own.name == k.name) {
+                space.push(k);
+            }
         }
-        Ok(own)
+        Ok(space)
     }
 
     fn fallback_keywords(

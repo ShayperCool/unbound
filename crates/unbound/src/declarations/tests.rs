@@ -902,15 +902,52 @@ fn serialized_builtins_do_not_enable_unmeasured_release_rules() {
     assert!(answer["reason"].as_str().unwrap().contains("not measured"));
 }
 
+/// A Fallback chain's keywords join the shader's own space after them, in the chain's order;
+/// a name the shader declares keeps its own flags (canonical tests/projects/graphicsgaps
+/// keywords.Probe/KwOwn, KwPlain).
 #[test]
-fn fallback_extensions_surface_options_and_fog_are_not_partial_known_spaces() {
+fn fallback_keywords_follow_the_shaders_own() {
+    let scratch = Scratch::new("decl-fallback-space");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write("Assets/Own.shader", "Shader \"Tests/Own\" { SubShader { Pass { HLSLPROGRAM\n#pragma multi_compile_local _ A_ON\n#pragma shader_feature B_ON\nENDHLSL } } Fallback \"Tests/Fall\" }");
+    scratch.write("Assets/Plain.shader", "Shader \"Tests/Plain\" { SubShader { Pass { HLSLPROGRAM\nENDHLSL } } Fallback \"Tests/Fall\" }");
+    scratch.write("Assets/Fall.shader", "Shader \"Tests/Fall\" { SubShader { Pass { HLSLPROGRAM\n#pragma multi_compile _ C_ON\n#pragma shader_feature_local B_ON\n#pragma dynamic_branch D_ON\nENDHLSL } } Fallback \"Tests/Fall2\" }");
+    scratch.write("Assets/Fall2.shader", "Shader \"Tests/Fall2\" { SubShader { Pass { HLSLPROGRAM\n#pragma multi_compile_local _ E_ON\nENDHLSL } } }");
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        scratch.0.join("no-install"),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let space = |name: &str| {
+        let answer = ask(&provider, name);
+        assert_eq!(answer["keywords_known"], true, "{name}: {answer}");
+        answer["keywords"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .skip(4)
+            .map(|k| {
+                format!(
+                    "{}{}{}",
+                    k["name"].as_str().unwrap(),
+                    if k["local"] == true { ":l" } else { "" },
+                    if k["dynamic"] == true { ":d" } else { "" }
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(space("Tests/Own"), ["B_ON", "A_ON:l", "C_ON", "D_ON:d", "E_ON:l"]);
+    assert_eq!(space("Tests/Plain"), ["C_ON", "D_ON:d", "B_ON:l", "E_ON:l"]);
+    assert_eq!(space("Tests/Fall"), ["C_ON", "D_ON:d", "B_ON:l", "E_ON:l"]);
+}
+
+#[test]
+fn surface_options_and_fog_are_not_partial_known_spaces() {
     let scratch = Scratch::new("decl-unsupported-space");
     scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
-    scratch.write(
-        "Assets/A.shader",
-        r#"Shader "Tests/A" { SubShader { Pass { } } Fallback "Tests/B" }"#,
-    );
-    scratch.write("Assets/B.shader", "Shader \"Tests/B\" { SubShader { Pass { HLSLPROGRAM\n#pragma multi_compile _ FALLBACK_ONLY\nENDHLSL } } }");
     scratch.write("Assets/Surface.shader", "Shader \"Tests/SurfaceOptions\" { SubShader { CGPROGRAM\n#pragma surface surf Lambert nolightmap\nENDCG } }");
     scratch.write(
         "Assets/Fog.shader",
@@ -924,7 +961,7 @@ fn fallback_extensions_surface_options_and_fog_are_not_partial_known_spaces() {
         Arc::new(AtomicUsize::new(0)),
         Arc::new(AtomicBool::new(false)),
     ));
-    for name in ["Tests/A", "Tests/SurfaceOptions", "Tests/Fog"] {
+    for name in ["Tests/SurfaceOptions", "Tests/Fog"] {
         let answer = ask(&provider, name);
         assert_eq!(answer["keywords_known"], false, "{name}: {answer}");
         assert_eq!(answer["keywords"], json!([]), "{name}");
@@ -934,7 +971,6 @@ fn fallback_extensions_surface_options_and_fog_are_not_partial_known_spaces() {
         ask(&provider, "Tests/SurfaceOptions")["subshaders_known"],
         false
     );
-    assert_eq!(ask(&provider, "Tests/A")["subshaders_known"], true);
 }
 
 #[test]
