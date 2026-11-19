@@ -119,7 +119,7 @@ namespace UnityEngine
             probe.m_Velocity = Vector3.zero;
             float age01 = Mathf.Clamp01(age * p.m_InvStartLifetime);
             // A step of one second from rest: the velocity it ends with is the acceleration.
-            speedModifier = Move(ref probe, 1f, ref c, age01, out var moving);
+            speedModifier = Move(ref probe, 1f, ref c, age01, false, out var moving);
             accel = probe.m_Velocity;
             animated = probe.m_AnimatedVelocity;
             angular = m_Rotation.enabled || m_RotationBySpeed.enabled ? AngularVelocity(in p, age01, moving) : p.m_AngularVelocity;

@@ -296,5 +296,46 @@ namespace UnityEngine.Tests
             }
             finally { Done(ps, plane); }
         }
+
+        [Fact]
+        public void AColliderUnderARigidbodyReportsToTheRigidbodysObject()
+        {
+            // tests/projects/particlecollision collide/Parent: the Rigidbody's GameObject takes the
+            // events, which still name the collider hit.
+            var parent = new GameObject("body");
+            var body = parent.AddComponent<Rigidbody>();
+            body.isKinematic = true;
+            var box = Box(Vector3.zero, new Vector3(2f, 2f, 2f));
+            box.transform.SetParent(parent.transform, true);
+            Physics.SyncTransforms();
+            var ps = World();
+            var c = ps.collision; c.sendCollisionMessages = true;
+            try
+            {
+                StepOne(ps, new Vector3(0f, 1.15f, 0f), new Vector3(0f, -4f, 0f));
+                var events = new System.Collections.Generic.List<ParticleCollisionEvent>();
+                Assert.Equal(0, ps.GetCollisionEvents(box.gameObject, events));
+                Assert.Equal(1, ps.GetCollisionEvents(parent, events));
+                Assert.Same(box, events[0].colliderComponent);
+                Assert.Equal(1, ps.GetSafeCollisionEventSize());
+            }
+            finally { Done(ps); Object.DestroyImmediate(parent); }
+        }
+
+        [Fact]
+        public void APlanesEventNamesItsTransform()
+        {
+            var plane = Plane(0f);
+            var ps = Planes(plane);
+            var c = ps.collision; c.sendCollisionMessages = true;
+            try
+            {
+                StepOne(ps, new Vector3(0f, .15f, 0f), new Vector3(0f, -4f, 0f));
+                var events = new System.Collections.Generic.List<ParticleCollisionEvent>();
+                Assert.Equal(1, ps.GetCollisionEvents(plane.gameObject, events));
+                Assert.Same(plane, events[0].colliderComponent);
+            }
+            finally { Done(ps, plane); }
+        }
     }
 }

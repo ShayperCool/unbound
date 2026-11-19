@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace UnityEngine
@@ -37,6 +38,32 @@ namespace UnityEngine
         public Texture3D vectorField { get; set; }
 
         /// <summary>Whether a point in the field's local space is inside its shape.</summary>
+        Texture3D m_TexelSource;
+        uint m_TexelVersion;
+        bool m_TexelsRead;
+        Color[] m_Texels;
+
+        /// <summary>The vector field's texels (x fastest, then y, then z), read again only when the
+        /// texture is another or has been applied since; null (reported) for one that cannot be read.</summary>
+        internal Color[] VectorFieldTexels(Texture3D texture, out int width, out int height, out int depth)
+        {
+            width = texture.width; height = texture.height; depth = texture.depth;
+            if (!ReferenceEquals(texture, m_TexelSource) || texture.updateCount != m_TexelVersion || !m_TexelsRead)
+            {
+                m_TexelsRead = true;
+                m_TexelSource = texture;
+                m_TexelVersion = texture.updateCount;
+                try { m_Texels = texture.GetPixels(0); }
+                catch (Exception e)
+                {
+                    m_Texels = null;
+                    Debug.LogWarning($"Unbound: the force field '{name}' cannot read its vector field '{texture.name}' ({e.Message}); it does not act.");
+                }
+                if (m_Texels != null && m_Texels.Length < width * height * depth) m_Texels = null;
+            }
+            return m_Texels;
+        }
+
         internal bool Contains(Vector3 local)
         {
             float start = Mathf.Max(0f, startRange), end = Mathf.Max(start, endRange);

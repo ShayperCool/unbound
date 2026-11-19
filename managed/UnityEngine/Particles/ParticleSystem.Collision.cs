@@ -127,6 +127,9 @@ namespace UnityEngine
             if (C.type == ParticleSystemCollisionType.Planes)
             {
                 if (!PlaneContact(end, velocity, radius, out contact, out normal, out other)) return false;
+                // A plane's events name its Transform as the collider (6000.0.71f1,
+                // tests/projects/particlecollision collide/Plane).
+                colliderId = other != null ? other.transform.GetInstanceID() : 0;
             }
             else
             {
@@ -140,7 +143,10 @@ namespace UnityEngine
                     ? CachedWorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit)
                     : WorldContact(end, velocity, radius, dt, c, out contact, out normal, out hit);
                 if (!found) return false;
-                other = hit != null ? hit.gameObject : null;
+                // A collider attached to a Rigidbody reports to the Rigidbody's GameObject, which
+                // GetCollisionEvents then takes (6000.0.71f1, tests/projects/particlecollision
+                // collide/Parent); the event's collider stays the one hit.
+                other = hit == null ? null : hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
                 colliderId = hit != null ? hit.GetInstanceID() : 0;
                 if (C.colliderForce != 0f && hit != null) ReportColliderForce(hit.attachedRigidbody);
             }
@@ -852,7 +858,7 @@ namespace UnityEngine
 
         /// <summary>Applies field acceleration and the measured sequential velocity relaxation.
         /// Rotation targets a constant tangential speed, rather than an angular acceleration.</summary>
-        void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt)
+        void ApplyForceFields(ref Particle p, ref Vector3 velocity, float age, Quaternion worldToSim, float dt, bool firstStep)
         {
             var X = m_ExternalForces;
             var toWorld = SimulationToWorld();
@@ -920,8 +926,31 @@ namespace UnityEngine
                         accel -= dragVelocity / speed * drag;
                     }
                 }
-                if (field.vectorField != null) ReportUnsupported("force field vector field");
                 total += accel;
+                // The vector field: the stored velocity relaxes toward the field's texel at the
+                // particle (nearest, over the field's range) times its speed, as the rotation does
+                // toward its tangent (Unity 6000.0.71f1, tests/projects/particlecollision field/*).
+                // Only a positive attraction (its constant or curve multiplier) acts; the blend is
+                // not clamped; a particle's first step (at age 0) is not moved by it (measured).
+                var vectorField = field.vectorField;
+                if (vectorField != null && field.m_VectorFieldAttraction.scalar > 0f && multiplier > 0f
+                    && !firstStep)
+                {
+                    var texels = field.VectorFieldTexels(vectorField, out int width, out int height, out int depth);
+                    if (texels != null)
+                    {
+                        velocity += worldToSim * (total * (multiplier * dt));
+                        total = Vector3.zero;
+                        float range = Mathf.Max(field.endRange, 1e-6f);
+                        int Index(float coordinate, int size) => Mathf.Clamp((int)(size * (coordinate * (0.5f / range) + 0.5f)), 0, size - 1);
+                        var texel = texels[Index(local.x, width) + width * (Index(local.y, height) + height * Index(local.z, depth))];
+                        float fieldSpeed = field.m_VectorFieldSpeed.Evaluate(age, r);
+                        float fieldAttraction = field.m_VectorFieldAttraction.Evaluate(age, r);
+                        var fieldTarget = toWorld.inverseDoublePrecision.MultiplyVector(t.TransformVector(new Vector3(texel.r, texel.g, texel.b) * fieldSpeed));
+                        velocity += (fieldTarget - velocity) * (fieldAttraction * multiplier * (30f * dt));
+                        rotated = true;
+                    }
+                }
             }
             // Wind zones, by layer only: the influence list holds force fields (measured).
             if (X.influenceFilter != ParticleSystemGameObjectFilter.List)

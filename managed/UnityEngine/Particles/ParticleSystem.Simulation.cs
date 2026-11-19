@@ -1855,7 +1855,7 @@ namespace UnityEngine
                     // particle itself, its trail and what children inherit from it stay as they were.
                     // The movement uses this slot's module samples, so it is taken now.
                     var end = m_Particles[i];
-                    if (killed || agedOut) Move(ref end, dt, ref m_Context, ageBefore, out _);
+                    if (killed || agedOut) Move(ref end, dt, ref m_Context, ageBefore, false, out _);
                     m_SlotPoints[i] = end.m_Position;
                 }
             }
@@ -1929,7 +1929,7 @@ namespace UnityEngine
                 return true;
             }
             var before = p.m_Position;
-            float speedModifier = Move(ref p, dt, ref c, age, out var moving);
+            float speedModifier = Move(ref p, dt, ref c, age, ageBefore <= 0f, out var moving);
             // The step's rotation comes before collisions and triggers, so a Collision or Trigger
             // sub-emitter inherits the parent's rotation at the end of the step (6000.0.71f1,
             // particlerender inherit/collision/rotation, inherit/trigger/rotation); it depends only
@@ -1991,7 +1991,7 @@ namespace UnityEngine
         /// <summary>The velocity modules and one step's movement: sets the particle's velocity,
         /// animated velocity and position, with the lifetime curves at <paramref name="age"/>. Returns
         /// the speed modifier; <paramref name="moving"/> is the whole velocity it moved with.</summary>
-        float Move(ref Particle p, float dt, ref StepContext c, float age, out Vector3 moving)
+        float Move(ref Particle p, float dt, ref StepContext c, float age, bool firstStep, out Vector3 moving)
         {
             uint seed = p.m_RandomSeed;
             var v = p.m_Velocity;
@@ -2002,7 +2002,7 @@ namespace UnityEngine
                 v += c.Gravity * (m_Main.gravityModifier.Evaluate(c.Nt, ModuleValue(seed, 3803694019u)) * dt);
 
             if (m_ExternalForces.enabled)
-                ApplyForceFields(ref p, ref v, age, c.WorldToSim, dt);
+                ApplyForceFields(ref p, ref v, age, c.WorldToSim, dt, firstStep);
 
             if (F.enabled)
             {
