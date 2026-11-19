@@ -1732,18 +1732,26 @@ namespace Unbound.Runtime
                 int transparent = 0;
                 while (transparent < s_Items.Count && s_Items[transparent].Queue <= 2500) transparent++;
                 int forwardOpaque = 0;
+                // A deferred camera drawing with its target's depth samples deferredDepth, a copy.
+                bool ownTargetDepth = false;
+                ulong depthAttachment = 0;
+                RenderTexture deferredDepth = null;
                 if (deferred)
                 {
                     // An LDR camera drawing into a target with a depth buffer draws its G-buffer
                     // with the target's own depth and stencil, as Unity's does; the passes sample
                     // a copy (measured: tests/projects/builtinfx deferredDontClear.*: an LDR
                     // camera that clears nothing finds the marks of the target's last render,
-                    // whatever another camera renders into another target between). With image
-                    // effects (an intermediate of their own) unmeasured: the G-buffer's own.
-                    bool ownTargetDepth = !camera.allowHDR && !onScreen && cameraTarget != null && cameraTarget.depth > 0
+                    // whatever another camera renders into another target between). Unmeasured, the
+                    // G-buffer's own depth instead: image effects (an intermediate of their own),
+                    // target buffers set from script, a target depth without stencil (16-bit) or
+                    // with samples (the G-buffer has one).
+                    ownTargetDepth = !camera.allowHDR && !onScreen && buffers == null && cameraTarget != null && cameraTarget.depth > 0
+                        && GraphicsFormatUtility.IsStencilFormat(cameraTarget.depthStencilFormat) && cameraTarget.antiAliasing == 1
                         && cameraTarget.width == width && cameraTarget.height == height && effects.Count == 0 && opaqueEffects.Count == 0;
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
-                    ulong depthAttachment = TextureHandles.Of(ownTargetDepth ? cameraTarget : gbufferDepth);
+                    depthAttachment = TextureHandles.Of(ownTargetDepth ? cameraTarget : gbufferDepth);
+                    deferredDepth = gbufferDepth;
                     // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above),
                     // over a cleared stencil (a pooled buffer may hold another camera's G-buffer
                     // marks, which the lights test).
@@ -1778,6 +1786,14 @@ namespace Unbound.Runtime
                     EmitItems(forwardOpaque, transparent, !deferred && !vertexLit
                         ? RenderDispatchContext.BuiltinForwardOpaque : RenderDispatchContext.Unknown);
                     RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
+                    // The sampled depth takes the forward opaque objects too, as a live G-buffer
+                    // depth has them.
+                    if (ownTargetDepth)
+                    {
+                        GfxStream.CopyDepth(depthAttachment, TextureHandles.Of(deferredDepth));
+                        GfxStream.SetTarget(TextureHandles.Of(sceneTarget), depthAttachment);
+                        GfxStream.Viewport(viewport);
+                    }
                 }
                 // The sky's events come with the sky alone (measured: none with a solid color or
                 // without a skybox material).

@@ -221,9 +221,14 @@ namespace Unbound.Runtime
             {
                 // The lights test the G-buffer's stencil and depth, bound as their depth buffer,
                 // and read its depth from a copy (a texture is not sampled while it is drawn into).
-                var sampledDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
-                GfxStream.CopyDepth(depthHandle, TextureHandles.Of(sampledDepth));
-                GfxStream.GlobalTexture("_CameraDepthTexture", TextureHandles.Of(sampledDepth));
+                // (A target's depth is drawn with already: its copy is the sampled one.)
+                ulong sampled = sampledHandle;
+                if (sampledHandle == depthHandle)
+                {
+                    sampled = TextureHandles.Of(Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt)));
+                    GfxStream.CopyDepth(depthHandle, sampled);
+                }
+                GfxStream.GlobalTexture("_CameraDepthTexture", sampled);
                 GfxStream.SetTarget(lightHandle, depthHandle);
                 GfxStream.Viewport(viewport);
             }
