@@ -1,8 +1,8 @@
 namespace Probe.ExplicitNew
 {
-    /// <summary>Names its plugins by file only (precompiledReferences): which ones it gets is
-    /// read from CompilationPipeline, so the assembly builds whichever they are.</summary>
+    /// <summary>Names its plugin by file only (precompiledReferences: ProbeAliasNew.dll).</summary>
     public static class ExplicitReferences
     {
+        public static string Alias() => ProbeAlias.Marker.Built + "/" + ProbeAlias.Marker.Runtime();
     }
 }

@@ -13,15 +13,17 @@ plugins, the local tarball package and the `.meta` files from `PluginSources/` a
   `Assets/Plugins/Same` and in the package; `ProbeOrder` 1.0.0.0 in `Assets/Plugins/Order1` and
   `Order2`; `ProbeAlias` 1.0.0.0 as `Assets/Plugins/Alias/ProbeAlias.dll` and 2.0.0.0 as the
   package's `ProbeAliasNew.dll`, both with Auto Reference off, named by `Probe.Explicit`
-  (`ProbeAlias.dll`, `ProbeDup.dll`) and `Probe.ExplicitNew` (`ProbeAliasNew.dll`). Rows give the
-  constant the scripts compiled against, the value of the loaded copy and what each assembly
-  references. Measured: an assembly references one plugin per file name; of the plugins of one
+  (`ProbeAlias.dll`, `ProbeDup.dll`) and `Probe.ExplicitNew` (`ProbeAliasNew.dll`), which the
+  probe calls. Rows give the constant the scripts compiled against, the value of the loaded copy
+  and what each assembly references. Measured: an assembly references one plugin per file name; of the plugins of one
   assembly name the highest version comes first, so it is the one of its file name every
   assembly references and loads (the Editor logs "Duplicate assembly 'ProbeDup.dll' with
   different versions detected, using '…' and ignoring '…'.", also for `ProbeAliasNew.dll` over
   `ProbeAlias.dll`), while a lower version under another file name is still referenced by that
-  name (`Probe.Explicit` gets `ProbeAlias.dll`; an assembly that references both files does not
-  compile, CS1704, seen in a capture with both auto-referenced). Of copies of the same version
+  name (`Probe.Explicit` compiles against `ProbeAlias.dll`; an assembly that references both files
+  does not compile, CS1704, seen in a capture with both auto-referenced). At run time one copy of
+  an assembly loads, the highest version: `Probe.Explicit`, compiled against 1.0.0.0, runs 2.0.0.0
+  (`plugins.alias.explicit` "v1/v2"). Of copies of the same version
   and file name the Editor references one, silently, and loads the same one. Which one is not
   specified: it changed with the project's other plugins between captures (a pair whose GUIDs
   and paths were ordered either way picked different copies), so the rows record only that

@@ -71,6 +71,10 @@ public class CompileSetupProbe : MonoBehaviour
         Try("plugins.dup.version", () => typeof(ProbeDup.Marker).Assembly.GetName().Version);
         Try("plugins.same.consistent", () => ProbeSame.Marker.Built == ProbeSame.Marker.Runtime());
         Try("plugins.order.consistent", () => ProbeOrder.Marker.Built == ProbeOrder.Marker.Runtime());
+        // One assembly under two file names, each named by one assembly: what each compiled
+        // against and which copy runs.
+        Try("plugins.alias.explicit", () => Probe.Explicit.ExplicitReferences.Alias());
+        Try("plugins.alias.explicit_new", () => Probe.ExplicitNew.ExplicitReferences.Alias());
     }
 
     /// <summary>The probe's assemblies as the Editor builds them for Play mode.</summary>

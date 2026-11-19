@@ -3,12 +3,14 @@
 {"k":"plugins.dup.version","v":"2.0.0.0"}
 {"k":"plugins.same.consistent","v":"True"}
 {"k":"plugins.order.consistent","v":"True"}
+{"k":"plugins.alias.explicit","v":"v1/v2"}
+{"k":"plugins.alias.explicit_new","v":"v2/v2"}
 {"k":"assemblies","v":"Assembly-CSharp,Assembly-CSharp-Editor,Probe.AssetsTests,Probe.Consumer,Probe.Explicit,Probe.ExplicitNew,Probe.Setup.Editor,Probe.Setup.EditorHidden,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
 {"k":"assembly.Assembly-CSharp.flags","v":"None"}
-{"k":"assembly.Assembly-CSharp.references","v":"Probe.AssetsTests,Probe.Consumer,Probe.Setup.Editor,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
+{"k":"assembly.Assembly-CSharp.references","v":"Probe.AssetsTests,Probe.Consumer,Probe.Explicit,Probe.ExplicitNew,Probe.Setup.Editor,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
 {"k":"assembly.Assembly-CSharp.plugins","v":"Packages/com.probe.setup/Plugins/ProbeDup.dll,ProbeOrder.dll,ProbeSame.dll"}
 {"k":"assembly.Assembly-CSharp-Editor.flags","v":"EditorAssembly"}
-{"k":"assembly.Assembly-CSharp-Editor.references","v":"Assembly-CSharp,Probe.AssetsTests,Probe.Consumer,Probe.Setup.Editor,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
+{"k":"assembly.Assembly-CSharp-Editor.references","v":"Assembly-CSharp,Probe.AssetsTests,Probe.Consumer,Probe.Explicit,Probe.ExplicitNew,Probe.Setup.Editor,Probe.Setup.Tests,Unity.2D.PixelPerfect,Unity.2D.PixelPerfect.Editor"}
 {"k":"assembly.Assembly-CSharp-Editor.plugins","v":"Packages/com.probe.setup/Plugins/ProbeDup.dll,ProbeOrder.dll,ProbeSame.dll"}
 {"k":"assembly.Probe.AssetsTests.flags","v":"None"}
 {"k":"assembly.Probe.AssetsTests.references","v":"Probe.Setup.Tests"}
