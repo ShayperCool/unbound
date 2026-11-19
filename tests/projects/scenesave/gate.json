@@ -20,6 +20,12 @@
     "managed/UnityEngine/Editor/Undo.cs",
     "managed/UnityEngine/Editor/SerializedObject.cs",
     "managed/UnityEngine/Runtime/PrefabLinks.cs",
+    "managed/UnityEngine/Editor/PrefabOverrides.cs",
+    "managed/UnityEngine/Editor/PrefabInstances.cs",
+    "managed/UnityEngine/Editor/PrefabAssets.cs",
+    "managed/UnityEngine/Editor/PrefabWrites.cs",
+    "managed/UnityEngine/Editor/ObjectChangeEvents.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
     "tests/projects/scenesave/"
   ]
 }

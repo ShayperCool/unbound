@@ -1,87 +1,6 @@
 [
   {
     "case": "edit",
-    "key": "prefab.apply.file",
-    "reference": [
-      "same as prefab.apply.file"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.apply.isDirty",
-    "reference": [
-      false
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.apply.result",
-    "reference": [
-      "done"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.apply.saveResult",
-    "reference": [
-      true
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.apply.scene",
-    "reference": [
-      "same as prefab.apply.scene"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.contents.file",
-    "reference": [
-      "same as prefab.contents.file"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.contents.instanceCount",
-    "reference": [
-      12
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.contents.instanceLabel",
-    "reference": [
-      "edited contents"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.contents.result",
-    "reference": [
-      "Thing"
-    ],
-    "actual": null,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
     "key": "prefab.made.file",
     "reference": [
       "same as prefab.made.file"
@@ -89,64 +8,21 @@
     "actual": [
       "missing"
     ],
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.made.result",
-    "reference": [
-      "Made"
-    ],
-    "actual": [
-      "throws NullReferenceException: Object reference not set to an instance of an object"
-    ],
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "prefab.section",
-    "reference": [
-      "done"
-    ],
-    "actual": [
-      "throws NullReferenceException: Object reference not set to an instance of an object"
-    ],
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "edit",
     "key": "file:Assets/Prefabs/Made.prefab",
     "reference": true,
     "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "edit",
     "key": "file:Assets/Prefabs/Made.prefab.meta",
     "reference": true,
     "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "file:Assets/Prefabs/Thing.prefab",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "file:Assets/Scenes/BaseApplied.unity",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "file:Assets/Scenes/BaseApplied.unity.meta",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "edit",
@@ -157,75 +33,10 @@
   },
   {
     "case": "edit",
-    "key": "file:snapshot:prefab.apply.file",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "file:snapshot:prefab.apply.scene",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
-    "key": "file:snapshot:prefab.contents.file",
-    "reference": true,
-    "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "edit",
     "key": "file:snapshot:prefab.made.file",
     "reference": true,
     "actual": false,
-    "reason": "Prefab asset writes (PrefabUtility.SaveAsPrefabAsset, LoadPrefabContents/UnloadPrefabContents, ApplyPrefabInstance) are not implemented yet: the follow-up landing of Q622a."
-  },
-  {
-    "case": "prefab-api",
-    "key": "apply.mods.count",
-    "reference": [
-      12
-    ],
-    "actual": [
-      11
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "convert.count",
-    "reference": [
-      21
-    ],
-    "actual": [
-      77
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "convert.isInstance",
-    "reference": [
-      true
-    ],
-    "actual": [
-      false
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "convert.mods",
-    "reference": [
-      11
-    ],
-    "actual": [
-      "throws NullReferenceException: Object reference not set to an instance of an object."
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "prefab-api",
@@ -236,7 +47,7 @@
     "actual": [
       "missing"
     ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "prefab-api",
@@ -247,7 +58,7 @@
     "actual": [
       "null"
     ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "prefab-api",
@@ -258,7 +69,46 @@
     "actual": [
       "missing"
     ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Prefabs/Created.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:Assets/Prefabs/Created.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:create.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-api",
+    "key": "file:snapshot:replace.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "edit",
+    "key": "prefab.made.result",
+    "reference": [
+      "Made"
+    ],
+    "actual": [
+      "throws NotSupportedException: Unbound cannot make a new prefab asset (Assets/Prefabs/Made.prefab) yet: only a prefab that exists can be saved"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
     "case": "prefab-api",
@@ -267,120 +117,215 @@
       "GameObject:Created"
     ],
     "actual": [
-      "null"
+      "throws ArgumentException: The target is not a Prefab asset.\nParameter name: targetPrefab"
     ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "set.count",
+    "case": "prefab-writes",
+    "key": "connect.event",
     "reference": [
-      21
-    ],
-    "actual": [
-      5
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "set.mods.count",
-    "reference": [
-      13
-    ],
-    "actual": [
-      11
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "set.target",
-    "reference": [
-      "GameObject:Placed"
-    ],
-    "actual": [
-      "null"
-    ],
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "updated",
-    "reference": [
-      "GameObject:Thing"
+      "ChangeGameObjectStructureHierarchy GameObject:Connected",
+      "UpdatePrefabInstances Base GameObject:Connected",
+      "CreateAssetObject Object: "
     ],
     "actual": null,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:Assets/Prefabs/Created.prefab",
+    "case": "prefab-writes",
+    "key": "connect.isInstance",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "connect.isRoot",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "connect.mods",
+    "reference": [
+      "GameObject:Connected|m_Name|Connected|null; Transform:Connected|m_LocalEulerAnglesHint.x|0|null; Transform:Connected|m_LocalEulerAnglesHint.y|0|null; Transform:Connected|m_LocalEulerAnglesHint.z|0|null; Transform:Connected|m_LocalPosition.x|0|null; Transform:Connected|m_LocalPosition.y|0|null; Transform:Connected|m_LocalPosition.z|0|null; Transform:Connected|m_LocalRotation.w|1|null; Transform:Connected|m_LocalRotation.x|0|null; Transform:Connected|m_LocalRotation.y|0|null; Transform:Connected|m_LocalRotation.z|0|null"
+    ],
+    "actual": [
+      "null"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "connect.prefab",
+    "reference": [
+      "same as connect.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "connect.result",
+    "reference": [
+      "GameObject:Connected|True"
+    ],
+    "actual": [
+      "null|False"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "connect.updated",
+    "reference": [
+      "GameObject:Connected"
+    ],
+    "actual": null,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "contentsCopy.prefab",
+    "reference": [
+      "same as contentsCopy.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "contentsCopy.result",
+    "reference": [
+      "GameObject:ThingCopy"
+    ],
+    "actual": [
+      "throws NotSupportedException: Unbound cannot make a new prefab asset (Assets/Prefabs/ThingCopy.prefab) yet: only a prefab that exists can be saved"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "variant.prefab",
+    "reference": [
+      "same as variant.prefab"
+    ],
+    "actual": [
+      "missing"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "variant.result",
+    "reference": [
+      "GameObject:ThingVariant|True"
+    ],
+    "actual": [
+      "throws NotSupportedException: Unbound cannot make a new prefab asset (Assets/Prefabs/ThingVariant.prefab) yet: only a prefab that exists can be saved"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "variant.type",
+    "reference": [
+      "Variant"
+    ],
+    "actual": [
+      "NotAPrefab"
+    ],
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/Connected.prefab",
     "reference": true,
     "actual": false,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:Assets/Prefabs/Created.prefab.meta",
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/Connected.prefab.meta",
     "reference": true,
     "actual": false,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:Assets/Prefabs/Thing.prefab",
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/ThingCopy.prefab",
     "reference": true,
     "actual": false,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:Assets/Scenes/ApiConverted.unity",
-    "reference": "written",
-    "actual": "lines 348-404: reference ['--- !u!1001 &607814517', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 5150910721065944833, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_Name', '      value: Thing (1)', '      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: cbd4e62ce7b3045a485591c760497429, type: 3}'], actual []; lines 673-676: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 1801548939}'], actual []; lines 728-728: reference ['  - {fileID: 607814517}'], actual ['  - {fileID: 9223372036854775810}', '--- !u!1 &9223372036854775808', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775810}', '  - component: {fileID: 9223372036854775812}', '  m_Layer: 0', '  m_Name: Thing', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!1 &9223372036854775809', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775811}', '  m_Layer: 0', '  m_Name: Part', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &9223372036854775810', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 9223372036854775811}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!4 &9223372036854775811', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775809}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 1, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 9223372036854775810}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &9223372036854775812', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 77', '  ratio: 0.5', '  precise: 0.25', '  label: plain', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']",
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "file:Assets/Scenes/ApiSet.unity",
-    "reference": "written",
-    "actual": "lines 616-623: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: count', '      value: 21', '      objectReference: {fileID: 0}', '    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 1801548939}'], actual []",
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "file:snapshot:apply.prefab",
-    "reference": "written",
-    "actual": "lines 101-101: reference ['  count: 21'], actual ['  count: 5']; lines 112-112: reference ['  peer: {fileID: 0}'], actual []",
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "file:snapshot:convert.scene",
-    "reference": "written",
-    "actual": "lines 348-404: reference ['--- !u!1001 &607814517', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 2511078877221938635, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 5150910721065944833, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: m_Name', '      value: Thing (1)', '      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: cbd4e62ce7b3045a485591c760497429, type: 3}'], actual []; lines 673-676: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 1801548939}'], actual []; lines 728-728: reference ['  - {fileID: 607814517}'], actual ['  - {fileID: 9223372036854775810}', '--- !u!1 &9223372036854775808', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775810}', '  - component: {fileID: 9223372036854775812}', '  m_Layer: 0', '  m_Name: Thing', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!1 &9223372036854775809', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775811}', '  m_Layer: 0', '  m_Name: Part', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &9223372036854775810', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 9223372036854775811}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!4 &9223372036854775811', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775809}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 1, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 9223372036854775810}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &9223372036854775812', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 77', '  ratio: 0.5', '  precise: 0.25', '  label: plain', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']",
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
-  },
-  {
-    "case": "prefab-api",
-    "key": "file:snapshot:create.prefab",
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/ThingCopy.prefab.meta",
     "reference": true,
     "actual": false,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:snapshot:replace.prefab",
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/ThingVariant.prefab",
     "reference": true,
     "actual": false,
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   },
   {
-    "case": "prefab-api",
-    "key": "file:snapshot:set.scene",
+    "case": "prefab-writes",
+    "key": "file:Assets/Prefabs/ThingVariant.prefab.meta",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:Assets/Scenes/WritesFinal.unity",
     "reference": "written",
-    "actual": "lines 616-623: reference ['    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: count', '      value: 21', '      objectReference: {fileID: 0}', '    - target: {fileID: 2710480425889320747, guid: cbd4e62ce7b3045a485591c760497429, type: 3}', '      propertyPath: target', '      value: ', '      objectReference: {fileID: 1801548939}'], actual []",
-    "reason": "Prefab writes are not implemented yet (SetPropertyModifications applying values, ApplyPrefabInstance, ConvertToPrefabInstance, CreatePrefab, ReplacePrefab, and the prefabInstanceUpdated callbacks they raise): the follow-up landing of Q622a/Q625, after new-asset registration (Q622b) lands."
+    "actual": "lines 594-650: reference ['--- !u!1001 &1955936067569155745', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 6504989978826369923, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_Name', '      value: Connected', '      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}'], actual []; lines 660-660: reference ['  - {fileID: 1955936067569155745}'], actual ['  - {fileID: 9223372036854775810}', '--- !u!1 &9223372036854775808', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775810}', '  - component: {fileID: 9223372036854775812}', '  m_Layer: 0', '  m_Name: Connected', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!1 &9223372036854775809', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775811}', '  m_Layer: 0', '  m_Name: Connected Child', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &9223372036854775810', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 9223372036854775811}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!4 &9223372036854775811', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775809}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 9223372036854775810}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &9223372036854775812', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 3', '  ratio: 0.5', '  precise: 0.25', '  label: connected', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']",
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:snapshot:connect.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:snapshot:contentsCopy.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:snapshot:sceneFinal.scene",
+    "reference": "written",
+    "actual": "lines 594-650: reference ['--- !u!1001 &1955936067569155745', 'PrefabInstance:', '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3', '    m_TransformParent: {fileID: 0}', '    m_Modifications:', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalPosition.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.w', '      value: 1', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalRotation.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.x', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.y', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 538420513156734114, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_LocalEulerAnglesHint.z', '      value: 0', '      objectReference: {fileID: 0}', '    - target: {fileID: 6504989978826369923, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}', '      propertyPath: m_Name', '      value: Connected', '      objectReference: {fileID: 0}', '    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []', '    m_AddedComponents: []', '  m_SourcePrefab: {fileID: 100100000, guid: a9d569c15e65d4f77babe5cea0cb9588, type: 3}'], actual []; lines 660-660: reference ['  - {fileID: 1955936067569155745}'], actual ['  - {fileID: 9223372036854775810}', '--- !u!1 &9223372036854775808', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775810}', '  - component: {fileID: 9223372036854775812}', '  m_Layer: 0', '  m_Name: Connected', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!1 &9223372036854775809', 'GameObject:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  serializedVersion: 6', '  m_Component:', '  - component: {fileID: 9223372036854775811}', '  m_Layer: 0', '  m_Name: Connected Child', '  m_TagString: Untagged', '  m_Icon: {fileID: 0}', '  m_NavMeshLayer: 0', '  m_StaticEditorFlags: 0', '  m_IsActive: 1', '--- !u!4 &9223372036854775810', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children:', '  - {fileID: 9223372036854775811}', '  m_Father: {fileID: 0}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!4 &9223372036854775811', 'Transform:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775809}', '  serializedVersion: 2', '  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}', '  m_LocalPosition: {x: 0, y: 0, z: 0}', '  m_LocalScale: {x: 1, y: 1, z: 1}', '  m_ConstrainProportionsScale: 0', '  m_Children: []', '  m_Father: {fileID: 9223372036854775810}', '  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}', '--- !u!114 &9223372036854775812', 'MonoBehaviour:', '  m_ObjectHideFlags: 0', '  m_CorrespondingSourceObject: {fileID: 0}', '  m_PrefabInstance: {fileID: 0}', '  m_PrefabAsset: {fileID: 0}', '  m_GameObject: {fileID: 9223372036854775808}', '  m_Enabled: 1', '  m_EditorHideFlags: 0', '  m_Script: {fileID: 11500000, guid: 9729cd7f334ad4a9980be0f0f9f77d71, type: 3}', '  m_Name: ', '  m_EditorClassIdentifier: ', '  count: 3', '  ratio: 0.5', '  precise: 0.25', '  label: connected', '  offset: {x: 0, y: 0, z: 0}', '  tint: {r: 1, g: 1, b: 1, a: 1}', '  numbers: ', '  words: []', '  target: {fileID: 0}', '  material: {fileID: 0}', '  data: {fileID: 0}', '  peer: {fileID: 0}']",
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
+  },
+  {
+    "case": "prefab-writes",
+    "key": "file:snapshot:variant.prefab",
+    "reference": true,
+    "actual": false,
+    "reason": "New prefab assets are not written yet: SaveAsPrefabAsset to a new path (of a plain hierarchy, of a prefab's contents, or of an instance, which makes a variant), SaveAsPrefabAssetAndConnect, CreatePrefab and ReplacePrefab of the prefab CreatePrefab makes need new-asset registration (.meta, GUID, the asset database: Q622b); they throw NotSupportedException until then. Prefab writes to existing prefabs match."
   }
 ]
