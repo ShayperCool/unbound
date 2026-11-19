@@ -108,8 +108,9 @@ public class DescriptionDump : AssetPostprocessor
 /// at points of their import to that path plus <c>.stages</c>, which <see cref="ModelImportProbe"/>
 /// adds to its record (<c>stages.&lt;model&gt;.&lt;material&gt;.&lt;stage&gt;.*</c>): after the
 /// render pipeline's FBX preprocessor (order -975), after its Autodesk Interactive one (-965),
-/// and after its Arnold and 3ds Max Physical ones (-955); no OnPostprocessMaterial (a project
-/// postprocessor with one changes how the legacy importer's materials end). Each point gives the shader, the GI flags, whether the shader has _EmissionColor and its
+/// and after its Arnold and 3ds Max Physical ones (-955); no OnPostprocessMaterial (one that
+/// reads a material's values changes how the legacy importer's materials end: the URPHookRecord
+/// profile, README). Each point gives the shader, the GI flags, whether the shader has _EmissionColor and its
 /// _QueueControl (none without one).
 /// </summary>
 public static class MaterialStages

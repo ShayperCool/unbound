@@ -650,7 +650,7 @@ def recipes(release):
             py('compare.py', f'{{probe}}/Reference/unity-{{release}}/{profile}.jsonl',
                f'{{runs}}-{profile}/{profile}/unbound/indirectspec.jsonl', '--profile', profile,
                '--report', f'{{work}}/report-{profile}.json', '--residuals', f'{{probe}}/residuals-{profile}.json')]
-    for name, comparator, profiles in [('modelimport', 'compare.py', ('Gamma', 'Linear', 'URP')),
+    for name, comparator, profiles in [('modelimport', 'compare.py', ('Gamma', 'Linear', 'URP', 'URPHookRecord')),
                                        ('texturearrays', 'compare.py', ('Android', 'Gamma', 'Linear')),
                                        ('textureimport', 'compare.py', ('Android', 'Gamma', 'Linear')),
                                        ('texturepixels', 'texturearrays/compare.py', ('Gamma', 'Linear'))]:

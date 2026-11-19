@@ -25,7 +25,12 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 # Profile → color space. URP: the urp probe's pipeline asset, renderer and packages, so that the
 # render pipeline's own material preprocessors run.
-SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1}
+SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1, 'URPHookRecord': 1}
+# Profiles staged as URP. URPHookRecord adds Hook/MaterialPostprocessRecord.cs to Assets/Editor:
+# a project postprocessor whose OnPostprocessMaterial reads each material's state (and records
+# the Exotic ones', MaterialStages stage "postprocess") and changes nothing.
+URP_PROFILES = ('URP', 'URPHookRecord')
+HOOKS = {'URPHookRecord': 'MaterialPostprocessRecord.cs'}
 URP = PROBE.parent/'urp'
 URP_FILES = ['Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.asset',
              'Assets/UniversalRenderPipelineGlobalSettings.asset', 'Assets/DefaultVolumeProfile.asset',
@@ -49,7 +54,9 @@ def copy_project(dest, space, material_slots=False, mtl=False, smoothing=False):
         (dest/'Assets/Resources/Slots.meta').unlink()
     (dest/'ProjectSettings/ProjectVersion.txt').write_text(
         'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
-    if space == 'URP':
+    if space in HOOKS:
+        shutil.copyfile(PROBE/'Hook'/HOOKS[space], dest/'Assets/Editor'/HOOKS[space])
+    if space in URP_PROFILES:
         (dest/'Assets/Settings').mkdir(parents=True, exist_ok=True)
         for name in URP_FILES:
             shutil.copyfile(URP/name, dest/name)
