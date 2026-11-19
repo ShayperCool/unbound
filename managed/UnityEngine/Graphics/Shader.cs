@@ -260,7 +260,10 @@ namespace UnityEngine
         static string s_GlobalRenderPipeline = "";
 
         /// <summary>The active pipeline's tag: SubShaders whose <c>RenderPipeline</c> tag names
-        /// another pipeline are skipped (empty: the built-in pipeline, which skips every tagged one).</summary>
+        /// another pipeline are skipped (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>;
+        /// empty: the built-in pipeline, which skips every tagged one). A new tag selects every
+        /// loaded shader's SubShader again, and the Editor then reports a selected SubShader's
+        /// undefined Queue value again (tests/projects/graphicsgaps queue.errors.unknown).</summary>
         public static string globalRenderPipeline
         {
             get => s_GlobalRenderPipeline;
@@ -270,6 +273,9 @@ namespace UnityEngine
                 if (value == s_GlobalRenderPipeline) return;
                 s_GlobalRenderPipeline = value;
                 GfxStream.RenderPipeline(value);
+                foreach (var shader in Resources.FindObjectsOfTypeAll<Shader>())
+                    if (Unbound.Runtime.ShaderDeclarations.Kept(shader) != null)
+                        Unbound.Runtime.ShaderDeclarations.ReportUndefinedQueueAfterPipelineChange(shader.ActiveSubShader("Shader.globalRenderPipeline", "reports nothing"));
             }
         }
 

@@ -212,8 +212,8 @@ namespace UnityEngine.Tests
             Assert.Equal("Mine", material.GetTag("SubId", true, "none"));
         }
 
-        /// <summary>Unknown declarations and SRP selection preserve the renderer's tag answers.
-        /// Warning assertions count calls rather than depending on process-wide log deduplication.</summary>
+        /// <summary>Unknown declarations preserve the renderer's tag answers; under a render
+        /// pipeline the declared selection answers (graphicsgaps select.*.tag / tagFallbacks).</summary>
         [Fact]
         public void UnknownConditionsKeepTheRenderersTagAnswers()
         {
@@ -231,11 +231,13 @@ namespace UnityEngine.Tests
                 Shader.globalRenderPipeline = "UniversalPipeline";
                 SeedRenderer(shader, "R", "R0");
                 var material = new Material(shader);
-                int warned = Hits("Material.GetTag with fallbacks under a render pipeline");
-                Assert.Equal("R", material.GetTag("SubId", false, "none"));
-                Assert.Equal("R", material.GetTag("SubId", true, "none"));
-                Assert.True(Hits("Material.GetTag with fallbacks under a render pipeline") > warned);
-                Assert.True(Hits("Material.GetTag under a render pipeline") > 0);
+                Assert.Equal("P0", material.GetTag("SubId", false, "none"));
+                Assert.Equal("P0", material.GetTag("SubId", true, "none"));
+                // Another pipeline's tag selects the untagged SubShader; with fallbacks the first
+                // carrying the tag answers, whatever its pipeline.
+                Shader.globalRenderPipeline = "HDRenderPipeline";
+                Assert.Equal("P1", material.GetTag("SubId", false, "none"));
+                Assert.Equal("P0", material.GetTag("SubId", true, "none"));
             }
             finally
             {

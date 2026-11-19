@@ -132,6 +132,14 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A shader's declarations when they were read and kept already (null otherwise):
+        /// nothing is asked.</summary>
+        internal static ShaderDeclarations Kept(UnityEngine.Shader shader)
+        {
+            if (shader == null || string.IsNullOrEmpty(shader.name)) return null;
+            lock (s_Lock) return s_Kept.TryGetValue(("shader-declarations", shader.name), out var kept) ? kept : null;
+        }
+
         /// <summary>A shader's declarations (by its name).</summary>
         internal static ShaderDeclarations Of(UnityEngine.Shader shader) =>
             Get("shader-declarations", shader != null ? shader.name : null, "name");
@@ -173,12 +181,39 @@ namespace Unbound.Runtime
             if (d.Reason.Length > 0)
                 Stubs.Ignored("ShaderDeclarations: " + d.Reason,
                     d.Transient ? "(asked again later; name-based answers meanwhile)" : "(name-based answers are used)");
+            bool first = false;
             lock (s_Lock)
             {
-                if (d.Found && !d.Transient) s_Kept[key] = d;
+                if (d.Found && !d.Transient) first = s_Kept.TryAdd(key, d);
                 else s_Recent[key] = (d, Frame);
             }
+            if (first && method == "shader-declarations") ReportUndefinedQueues(name, d);
             return d;
+        }
+
+        /// <summary>The Editor's error for each `Queue` value of the shader's SubShaders (its
+        /// Fallback chain's too) it does not take, once per value, as the shader loads (Unity
+        /// 6000.0.71f1 Editor, tests/projects/graphicsgaps queue.errors).</summary>
+        static void ReportUndefinedQueues(string name, ShaderDeclarations d)
+        {
+            if (!d.SubShadersKnown) return;
+            HashSet<string> reported = null;
+            foreach (var sub in d.SubShaders)
+            {
+                var queue = Tag(sub.Tags, "Queue");
+                if (queue == null || ShaderLab.QueueValue(queue) != null) continue;
+                reported ??= new HashSet<string>(StringComparer.Ordinal);
+                if (reported.Add(queue)) Debug.LogError(ShaderLab.UndefinedQueueMessage(name, queue));
+            }
+        }
+
+        /// <summary>The Editor's error for a selected SubShader's `Queue` value it does not take
+        /// when a new pipeline tag selects again, which names no shader (tests/projects/graphicsgaps
+        /// queue.errors.unknown).</summary>
+        internal static void ReportUndefinedQueueAfterPipelineChange(SubShader active)
+        {
+            var queue = active != null ? Tag(active.Tags, "Queue") : null;
+            if (queue != null && ShaderLab.QueueValue(queue) == null) Debug.LogError(ShaderLab.UndefinedQueueMessage("Unknown", queue));
         }
 
         /// <summary>An answer; a known flag that is missing counts as unknown.</summary>
@@ -257,6 +292,44 @@ namespace Unbound.Runtime
         static readonly string[] s_UpperNames = { "QUEUE", "IGNOREPROJECTOR", "LIGHTMODE", "SHADOWSUPPORT" };
 
         /// <summary>A tag's value as Unity stores it (null: none).</summary>
+        /// <summary>
+        /// Whether a SubShader with this <c>RenderPipeline</c> tag runs under the pipeline tag
+        /// (<see cref="UnityEngine.Shader.globalRenderPipeline"/>): one without the tag, or whose
+        /// tag lists no name, runs under any; otherwise a comma-separated name of the tag must
+        /// equal a comma-separated name of the pipeline tag, as written (no trimming, in case). A
+        /// tag name that is a render pipeline's own tag in another case reads as that pipeline's
+        /// spelling (<see cref="PipelineTagSpelling"/>). Matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/graphicsgaps select.*.
+        /// </summary>
+        internal static bool RunsUnder(string tag, string pipeline)
+        {
+            if (tag == null) return true;
+            bool named = false;
+            foreach (var part in tag.Split(','))
+            {
+                if (part.Length == 0) continue;
+                named = true;
+                var name = PipelineTagSpelling(part);
+                foreach (var active in (pipeline ?? "").Split(','))
+                    if (active.Length != 0 && string.Equals(name, active, StringComparison.Ordinal)) return true;
+            }
+            return !named;
+        }
+
+        /// <summary>The render pipelines' own shader tags (URP's and HDRP's
+        /// <c>renderPipelineShaderTag</c>). The Editor keeps one spelling per tag name, whatever
+        /// the case, the first it reads; these are read before a project's shaders
+        /// (tests/projects/graphicsgaps SelD: a "universalpipeline" SubShader runs under
+        /// "UniversalPipeline" and not under "universalpipeline").</summary>
+        static readonly string[] s_PipelineTags = { "UniversalPipeline", "HDRenderPipeline" };
+
+        internal static string PipelineTagSpelling(string name)
+        {
+            foreach (var tag in s_PipelineTags)
+                if (string.Equals(tag, name, StringComparison.OrdinalIgnoreCase)) return tag;
+            return name;
+        }
+
         internal static string Tag(Dictionary<string, string> tags, string name)
         {
             if (name == null) return null;

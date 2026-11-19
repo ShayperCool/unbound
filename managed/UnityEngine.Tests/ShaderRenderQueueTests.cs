@@ -156,23 +156,23 @@ namespace UnityEngine.Tests
             Assert.Equal(3999, fallback.renderQueue);
         }
 
-        /// <summary>The documented value forms: a name, a name with a positive or negative
-        /// offset, a queue number; whitespace around the sign as the reference signature
-        /// writes it.</summary>
+        /// <summary>The forms the Editor takes: a name in any case, a signed offset right after
+        /// it, trailing whitespace (canonical tests/projects/graphicsgaps queue.*).</summary>
         [Fact]
-        public void NamedOffsetAndNumericQueuesAreTheirValues()
+        public void NamedAndOffsetQueuesAreTheirValues()
         {
             foreach (var (value, want) in new[]
             {
                 ("Background", 1000), ("Geometry", 2000), ("AlphaTest", 2450), ("Transparent", 3000), ("Overlay", 4000),
                 ("Geometry+1", 2001), ("Transparent-1", 2999), ("AlphaTest+10", 2460), ("Overlay-4000", 0),
-                ("3000", 3000), ("2001", 2001), ("Geometry + 1", 2001), (" Transparent ", 3000),
+                ("transparent", 3000), ("GEOMETRY", 2000), ("Geometry+0", 2000), ("Geometry-1", 1999), ("Geometry+1 ", 2001),
+                ("Overlay+5000", 9000),
             })
             {
                 Assert.Equal(want, Make(Decoy, Sub(value)).renderQueue);
                 Assert.Equal(want, ShaderLab.QueueTag(value));
             }
-            Assert.Equal(2001, ShaderLab.Queue("SubShader { Tags { \"Queue\" = \"2001\" } Pass { } }"));
+            Assert.Equal(2001, ShaderLab.Queue("SubShader { Tags { \"Queue\" = \"Geometry+1\" } Pass { } }"));
         }
 
         /// <summary>The source fallback reads SubShader Tags only: a Pass's `Queue` (URP Simple
@@ -200,17 +200,25 @@ namespace UnityEngine.Tests
             Assert.Equal(1000, ShaderLab.Queue("Subshader { tags { \"Queue\"=\"Background\" } }"));
         }
 
-        /// <summary>A value of no documented form keeps Geometry and says so; Unity's answer for
-        /// it is not measured (names are not assumed to match in another case).</summary>
+        /// <summary>A value the Editor does not take is Geometry, and the Editor logs it once per
+        /// value as the shader loads, its Fallback's SubShaders' too (canonical
+        /// tests/projects/graphicsgaps queue.*, queue.errors).</summary>
         [Fact]
-        public void AnUnrecognisedQueueValueKeepsGeometryAndIsReported()
+        public void AnUndefinedQueueValueIsGeometryAndLogged()
         {
-            foreach (var value in new[] { "transparent", "Opaque", "Geometry+", "+5", "-1", "" })
+            foreach (var value in new[] { "2450", "-5", "2000.5", " Transparent", "Geometry + 1", "Geometry+-3", "Bogus", "Opaque", "Geometry+", "+5", "" })
             {
-                var member = "Shader.renderQueue of the Queue tag \"" + value + "\"";
-                int before = Hits(member);
-                Assert.Equal(2000, Make(Decoy, Sub(value)).renderQueue);
-                Assert.True(Hits(member) > before, value);
+                var logged = new List<string>();
+                Application.LogCallback listen = (message, _, type) => { if (type == LogType.Error) logged.Add(message); };
+                Application.logMessageReceived += listen;
+                try
+                {
+                    var shader = Make(Decoy, Sub(value), Sub(value));
+                    Assert.Equal(2000, shader.renderQueue);
+                    Assert.Equal(new[] { "Shader " + shader.name + " uses undefined Queue: '" + value + "'" }, logged);
+                }
+                finally { Application.logMessageReceived -= listen; }
+                Assert.Null(ShaderLab.QueueValue(value));
             }
         }
 
@@ -244,10 +252,9 @@ namespace UnityEngine.Tests
             var stream = length.GetValue(null);
             try
             {
+                // Under URP its UniversalPipeline SubShader is selected (graphicsgaps select.*).
                 Shader.globalRenderPipeline = "UniversalPipeline";
-                before = Hits("Shader.renderQueue under a render pipeline");
-                Assert.Equal(2007, shader.renderQueue);
-                Assert.True(Hits("Shader.renderQueue under a render pipeline") > before);
+                Assert.Equal(4000, shader.renderQueue);
             }
             finally
             {

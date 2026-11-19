@@ -462,7 +462,7 @@ namespace Unbound.Runtime
             if (!declarations.SubShadersKnown || pass == null) return false;
             foreach (var sub in declarations.SubShaders)
             {
-                if (sub.Tags.TryGetValue("RenderPipeline", out var tag) && tag != pipeline) continue;
+                if (!ShaderDeclarations.RunsUnder(ShaderDeclarations.Tag(sub.Tags, "RenderPipeline"), pipeline)) continue;
                 for (int j = 0; j < sub.PassNames.Count; j++)
                 {
                     if (!string.Equals(sub.PassNames[j], pass, StringComparison.OrdinalIgnoreCase)) continue;

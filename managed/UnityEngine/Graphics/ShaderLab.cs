@@ -15,8 +15,9 @@ namespace Unbound.Runtime
         // whole), words, braces and `=`.
         static readonly Regex s_QueueScan = new Regex(
             @"""(?:\\.|[^""\\])*""|/\*[\s\S]*?\*/|//[^\r\n]*|\b(?:HLSL|CG|GLSL)(?:PROGRAM|INCLUDE)\b[\s\S]*?\bEND(?:HLSL|CG|GLSL)\b|[A-Za-z_]\w*|[{}=]");
-        // A named queue with an optional signed offset, or a queue number.
-        static readonly Regex s_QueueValue = new Regex(@"^(?:(?<name>[A-Za-z]+)(?:\s*(?<sign>[+-])\s*(?<offset>\d+))?|(?<number>\d+))$");
+        // A queue name with an optional signed offset right after it, and nothing but whitespace
+        // after that.
+        static readonly Regex s_QueueValue = new Regex(@"^(?<name>[A-Za-z]+)(?:(?<sign>[+-])(?<offset>\d+))?\s*$");
         static readonly Regex s_Property = new Regex(
             @"(?<attributes>(?:\[[^\]]*\]\s*)*)(\w+)\s*\(\s*""([^""]*)""\s*,\s*(\w+)[^)]*?(?:\(([^)]*)\))?\s*\)\s*=\s*(""[^""]*""(?:\s*\{[^{}]*\})?|\([^()]*\)|[^\s{}()""]+)",
             RegexOptions.Multiline);
@@ -31,27 +32,27 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// A SubShader `Queue` tag's value as a render queue, null when it is not one of the
-        /// documented forms (Unity 6000.0 Manual, SubShader tags and "Add a shader tag": a queue
-        /// name, the name with a `+`/`-` integer offset, or a queue number such as `"3000"`; the
-        /// names' values from the render queues page). Whitespace around the sign follows the
-        /// reference signature `"[queue name] + [offset]"`; whether Unity's parser accepts it is
-        /// not measured. Names match as documented, in their case.
+        /// A SubShader `Queue` tag's value as a render queue, null when Unity does not take it: a
+        /// queue name in any case, optionally followed at once by a `+`/`-` integer offset, then
+        /// only whitespace (the Unity 6000.0 Manual's "[queue name]" and "[queue name] +
+        /// [offset]"; the names' values from its render queues page). Matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/graphicsgaps queue.*: "transparent", "GEOMETRY",
+        /// "Geometry-1", "Geometry+0", "Geometry+1 " and "Overlay+5000" are queues; a number
+        /// ("2450", "-5", "2000.5"), leading whitespace, spaces around the sign, "Geometry+-3"
+        /// and unknown names are not.
         /// </summary>
         internal static int? QueueValue(string value)
         {
             if (value == null) return null;
-            var m = s_QueueValue.Match(value.Trim());
+            var m = s_QueueValue.Match(value);
             if (!m.Success) return null;
-            if (m.Groups["number"].Success)
-                return int.TryParse(m.Groups["number"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : null;
-            int? queue = m.Groups["name"].Value switch
+            int? queue = m.Groups["name"].Value.ToLowerInvariant() switch
             {
-                "Background" => 1000,
-                "Geometry" => 2000,
-                "AlphaTest" => 2450,
-                "Transparent" => 3000,
-                "Overlay" => 4000,
+                "background" => 1000,
+                "geometry" => 2000,
+                "alphatest" => 2450,
+                "transparent" => 3000,
+                "overlay" => 4000,
                 _ => null,
             };
             if (queue == null || !m.Groups["offset"].Success) return queue;
@@ -60,15 +61,17 @@ namespace Unbound.Runtime
             return sum < int.MinValue || sum > int.MaxValue ? null : (int)sum;
         }
 
-        /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460). A value that
-        /// is none of the documented forms keeps Geometry (2000, the behaviour before values were
-        /// checked) and is reported: what Unity makes of it is not measured.</summary>
-        internal static int QueueTag(string value)
-        {
-            if (QueueValue(value) is int queue) return queue;
-            Stubs.Ignored("Shader.renderQueue of the Queue tag \"" + value + "\"", "is 2000: the value is not a documented queue form");
-            return 2000;
-        }
+        /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460); Geometry (2000)
+        /// for a value Unity does not take, as the Unity 6000.0.71f1 Editor answers
+        /// (tests/projects/graphicsgaps queue.*; it logs the value as the shader loads,
+        /// <see cref="UndefinedQueueMessage"/>).</summary>
+        internal static int QueueTag(string value) => QueueValue(value) ?? 2000;
+
+        /// <summary>The error the Editor logs for a SubShader `Queue` value it does not take, naming
+        /// the shader ("Unknown" when the selection is made again for a new pipeline tag; Unity
+        /// 6000.0.71f1 Editor, tests/projects/graphicsgaps queue.errors).</summary>
+        internal static string UndefinedQueueMessage(string shader, string value) =>
+            "Shader " + shader + " uses undefined Queue: '" + value + "'";
 
         /// <summary>
         /// The first SubShader's `Queue` tag in a source (2000 without one), as a render queue: a
@@ -264,6 +267,16 @@ namespace Unbound.Runtime
                         // `Int` is the legacy type, a float (measured, 6000.0); `Integer` is an int.
                         info.Type = type == "Range" ? ShaderPropertyType.Range : type == "Integer" ? ShaderPropertyType.Int : ShaderPropertyType.Float;
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) info.DefaultValue = new Vector4(number, 0, 0, 0);
+                        // A Range's limits (Shader.GetPropertyRangeLimits; measured,
+                        // tests/projects/graphicsgaps materialProperty._Rng.range).
+                        if (info.Type == ShaderPropertyType.Range)
+                        {
+                            var limits = m.Groups[4].Value.Split(',');
+                            if (limits.Length == 2
+                                && float.TryParse(limits[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var min)
+                                && float.TryParse(limits[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var max))
+                                info.Range = new Vector2(min, max);
+                        }
                         break;
                 }
                 // Names get their ids as the shader is read, as in Unity (ids order texture names).

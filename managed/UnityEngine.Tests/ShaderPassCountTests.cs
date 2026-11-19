@@ -216,9 +216,10 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Unmeasured selections keep the renderer's pass list: a SubShader that may be
-        /// limited to some devices where one would be picked, a negative limit, an empty
-        /// RenderPipeline tag, nothing in reach with a first SubShader for another pipeline or
-        /// a limited one. A limited SubShader out of reach does not matter.</summary>
+        /// limited to some devices where one would be picked, a negative limit, nothing in reach
+        /// with a limited first SubShader. A limited SubShader out of reach does not matter. A
+        /// RenderPipeline tag of a space names a pipeline (no trimming), and with nothing in reach
+        /// a first SubShader for another pipeline answers (graphicsgaps select.*).</summary>
         [Fact]
         public void UnmeasuredSelectionsKeepTheRenderersList()
         {
@@ -235,23 +236,23 @@ namespace UnityEngine.Tests
             Assert.Equal(7, negative.passCount);
             Shader.globalMaximumLOD = m_GlobalLod;
 
-            var empty = Make(Sub(0, 3, " "), Sub(0, 2));
-            SeedRenderer(empty, 7);
-            Assert.Equal(7, empty.passCount);
+            var space = Make(Sub(0, 3, " "), Sub(0, 2));
+            SeedRenderer(space, 7);
+            Assert.Equal(2, space.passCount);
 
             var taggedFirst = Make(Sub(300, 3, "UniversalPipeline"), Sub(200, 2));
             var limitedFirst = Make(Sub(300, 3, restricted: true), Sub(200, 2));
             Shader.globalMaximumLOD = 100;
             SeedRenderer(taggedFirst, 7);
             SeedRenderer(limitedFirst, 7);
-            Assert.Equal(7, taggedFirst.passCount);
+            Assert.Equal(3, taggedFirst.passCount);
             Assert.Equal(7, limitedFirst.passCount);
         }
 
-        /// <summary>Under a render pipeline the selection is not measured: the renderer's list.
-        /// The pipeline's command is discarded afterwards (no engine).</summary>
+        /// <summary>Under a render pipeline its tagged SubShader is selected (graphicsgaps
+        /// select.*.passCount). The pipeline's command is discarded afterwards (no engine).</summary>
         [Fact]
-        public void ARenderPipelineKeepsTheRenderersList()
+        public void ARenderPipelineSelectsItsSubShader()
         {
             var shader = Make(Sub(0, 3, "UniversalPipeline"), Sub(0, 2));
             var length = typeof(GfxStream).GetField("s_Length", BindingFlags.NonPublic | BindingFlags.Static);
@@ -260,7 +261,11 @@ namespace UnityEngine.Tests
             {
                 Shader.globalRenderPipeline = "UniversalPipeline";
                 SeedRenderer(shader, 7);
-                Assert.Equal(7, shader.passCount);
+                Assert.Equal(3, shader.passCount);
+                Shader.globalRenderPipeline = "UniversalPipeline,Other";
+                Assert.Equal(3, shader.passCount);
+                Shader.globalRenderPipeline = "Other, UniversalPipeline";
+                Assert.Equal(2, shader.passCount);
             }
             finally
             {

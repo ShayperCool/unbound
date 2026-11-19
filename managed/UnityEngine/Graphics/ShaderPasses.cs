@@ -206,40 +206,39 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// The SubShader Shader.passCount and Material.GetTag without fallbacks answer from: the one the built-in pipeline picks from the declarations, the
-        /// first of its own then its Fallback chain's SubShaders without a <c>RenderPipeline</c>
-        /// tag whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
-        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply). When none
-        /// is in reach, the first SubShader (canonical tests/projects/shaderpasscount: Shader and
-        /// Material counts, before and after drawing, and SubId tags of the first SubShader in the nine cells where nothing is drawn; a Fallback's SubShader when
-        /// it is the one picked; an observation of that fixture, not a rule measured for every
-        /// shader). Null (unknown, warned once per <paramref name="api"/> and condition) under a
-        /// render pipeline, for a negative limit, a SubShader that may be limited to some
-        /// devices, an unread or older-host answer, or a first SubShader the description does
-        /// not cover; the caller then keeps its renderer-based answer.
+        /// The SubShader Shader.passCount, Shader.renderQueue and Material.GetTag without
+        /// fallbacks answer from: the first of its own then its Fallback chain's SubShaders that
+        /// has passes, runs under the pipeline tag (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>)
+        /// and whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
+        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply); when none is,
+        /// the first SubShader, whatever its tag. Matches the Unity 6000.0.71f1 Editor:
+        /// tests/projects/shaderpasscount (the built-in pipeline's LOD cells) and
+        /// tests/projects/graphicsgaps select.* (under URP and other pipeline tags, a Fallback's
+        /// SubShader, tagged first SubShaders when none is in reach). Null (unknown, warned once
+        /// per <paramref name="api"/> and condition) for a negative limit, a SubShader that may be
+        /// limited to some devices or an older-host answer; the caller then keeps its
+        /// renderer-based answer.
         /// </summary>
         internal Unbound.Runtime.ShaderDeclarations.SubShader ActiveSubShader(string api, string keeps)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);
             if (!d.SubShadersKnown || d.SubShaders.Count == 0) return null;
-            if (globalRenderPipeline.Length != 0)
-                return SelectionUnknown(api, keeps, "under a render pipeline", "its SubShader selection is not measured");
             int limit = EffectiveLOD;
             if (limit < 0) return SelectionUnknown(api, keeps, "under a negative maximum LOD", "it is not measured");
+            var pipeline = globalRenderPipeline;
             foreach (var sub in d.SubShaders)
             {
                 if (sub.Lod is not int lod) return SelectionUnknown(api, keeps, "without SubShader LODs", "this host does not send them");
-                var pipeline = Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline");
-                if (pipeline != null && pipeline.Trim().Length == 0)
-                    return SelectionUnknown(api, keeps, "with an empty RenderPipeline tag", "its selection is not measured");
-                if (pipeline != null || lod > limit) continue;
+                if (lod > limit || sub.Passes.Count == 0
+                    || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline"), pipeline))
+                    continue;
                 if (sub.Restricted)
                     return SelectionUnknown(api, keeps, "with SubShaders limited to some devices", "their selection is not measured");
                 return sub;
             }
             var first = d.SubShaders[0];
-            if (first.Restricted || Unbound.Runtime.ShaderDeclarations.Tag(first.Tags, "RenderPipeline") != null)
-                return SelectionUnknown(api, keeps, "with no SubShader in reach", "a first SubShader for another pipeline or device is not measured");
+            if (first.Restricted)
+                return SelectionUnknown(api, keeps, "with no SubShader in reach", "a first SubShader limited to some devices is not measured");
             return first;
         }
 

@@ -917,9 +917,9 @@ namespace UnityEngine
         /// SubShader carrying the tag among the shader's own then its Fallback chain's, in
         /// order and whatever its LOD or RenderPipeline tag (canonical
         /// tests/projects/shaderpasscount case.*.mat.subTag / mat.subTagFallbacks: SubShader 0's
-        /// tag under every limit, a pipeline-tagged one included). The renderer's drawn SubShader
-        /// while the declarations or, without fallbacks, the selection are unknown, and with
-        /// fallbacks under a render pipeline (not measured there).
+        /// tag under every limit, a pipeline-tagged one included; tests/projects/graphicsgaps
+        /// select.*.tag / tagFallbacks under URP and other pipeline tags). The renderer's drawn
+        /// SubShader while the declarations or, without fallbacks, the selection are unknown.
         /// </summary>
         public string GetTag(string tag, bool searchFallbacks, string defaultValue)
         {
@@ -931,7 +931,7 @@ namespace UnityEngine
                     if (m_Shader.ActiveSubShader("Material.GetTag", "follows the renderer's SubShader") is { } active)
                         return Unbound.Runtime.ShaderDeclarations.Tag(active.Tags, tag) ?? defaultValue;
                 }
-                else if (Shader.globalRenderPipeline.Length == 0)
+                else
                 {
                     var d = Unbound.Runtime.ShaderDeclarations.Of(m_Shader);
                     if (d.SubShadersKnown && d.SubShaders.Count > 0)
@@ -941,9 +941,6 @@ namespace UnityEngine
                         return defaultValue;
                     }
                 }
-                else
-                    Unbound.Runtime.Stubs.Ignored("Material.GetTag with fallbacks under a render pipeline",
-                        "follows the renderer's SubShader: the search order is not measured there");
             }
             var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
             if (info != null)

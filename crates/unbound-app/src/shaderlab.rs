@@ -650,9 +650,9 @@ impl ShaderLab {
             .map(|(_, v)| v)
     }
 
-    /// Picks the SubShader a render pipeline runs: the first whose `RenderPipeline` tag is the
-    /// pipeline's (`Shader.globalRenderPipeline`) or absent; the built-in pipeline (empty tag)
-    /// runs only untagged ones.
+    /// Picks the SubShader a render pipeline runs: the first that runs under the pipeline's tag
+    /// (`Shader.globalRenderPipeline`, [`runs_under`]); the built-in pipeline (empty tag) runs
+    /// only untagged ones.
     pub fn select(&mut self, pipeline: &str) {
         self.select_with(pipeline, &Selection::default());
     }
@@ -660,7 +660,6 @@ impl ShaderLab {
     /// [`ShaderLab::select`] under a maximum LOD (SubShaders above it are skipped) or for a
     /// replacement tag (the first SubShader whose tag has the value; none: no SubShader).
     pub fn select_with(&mut self, pipeline: &str, selection: &Selection) {
-        let pipeline = pipeline.trim();
         // The screen-space shadow collector's SubShaders, one per filter (`ShadowmapFilter`), are
         // all available, as passes in order: the engine picks hard or soft by pass.
         if !self.subshaders.is_empty()
@@ -679,10 +678,7 @@ impl ShaderLab {
             return;
         }
         let found = self.subshaders.iter().find(|sub| {
-            let runs = match sub.tags.get("RenderPipeline").map(|t| t.trim()) {
-                None | Some("") => true,
-                Some(tag) => !pipeline.is_empty() && tag == pipeline,
-            };
+            let runs = runs_under(sub.tags.get("RenderPipeline").map(String::as_str), pipeline);
             let vertex_lit = !selection.vertex_lit
                 || sub
                     .passes
@@ -1911,8 +1907,65 @@ fn shader_name(text: &str) -> Option<String> {
     Some(rest[open + 1..open + 1 + close].to_string())
 }
 
+/// The render pipelines' own shader tags (URP's and HDRP's `renderPipelineShaderTag`). The
+/// Editor keeps one spelling per tag name whatever the case, the first it reads, and reads these
+/// before a project's shaders.
+const PIPELINE_TAGS: [&str; 2] = ["UniversalPipeline", "HDRenderPipeline"];
+
+/// Whether a SubShader with this `RenderPipeline` tag runs under the pipeline tag: one without
+/// the tag, or whose tag lists no name, runs under any; otherwise a comma-separated name of the
+/// tag must equal a comma-separated name of the pipeline tag as written (no trimming, in case),
+/// a render pipeline's own tag in another case reading as its spelling ([`PIPELINE_TAGS`]).
+/// Matches the Unity 6000.0.71f1 Editor, tests/projects/graphicsgaps `select.*` (the managed
+/// queries' `ShaderDeclarations.RunsUnder` is the same rule).
+pub fn runs_under(tag: Option<&str>, pipeline: &str) -> bool {
+    let Some(tag) = tag else { return true };
+    let mut named = false;
+    for part in tag.split(',').filter(|p| !p.is_empty()) {
+        named = true;
+        let name = PIPELINE_TAGS
+            .iter()
+            .find(|t| t.eq_ignore_ascii_case(part))
+            .copied()
+            .unwrap_or(part);
+        if pipeline.split(',').any(|active| !active.is_empty() && active == name) {
+            return true;
+        }
+    }
+    !named
+}
+
 #[cfg(test)]
 mod tests {
+
+    /// The managed queries' rule (ShaderDeclarations.RunsUnder), canonical
+    /// tests/projects/graphicsgaps `select.*`.
+    #[test]
+    fn pipeline_tags_match_by_name() {
+        for (tag, pipeline, runs) in [
+            (None, "", true),
+            (Some(""), "Foo", true),
+            (Some("UniversalPipeline"), "", false),
+            (Some("UniversalPipeline"), "UniversalPipeline,Foo", true),
+            (Some("UniversalPipeline"), "Foo, UniversalPipeline", false),
+            (Some(" UniversalPipeline"), "Foo, UniversalPipeline", true),
+            (Some("universalpipeline"), "UniversalPipeline", true),
+            (Some("UniversalPipeline"), "universalpipeline", false),
+            (Some("UniversalPipeline,HDRenderPipeline"), "HDRenderPipeline", true),
+            (Some("foo"), "Foo", false),
+            (Some(" "), "", false),
+        ] {
+            assert_eq!(runs_under(tag, pipeline), runs, "{tag:?} under {pipeline:?}");
+        }
+        let mut lab = ShaderLab::parse(
+            r#"Shader "T" { SubShader { Tags { "RenderPipeline"="HDRenderPipeline,UniversalPipeline" } Pass { ColorMask R } } SubShader { Pass { ColorMask G } } }"#,
+        )
+        .unwrap();
+        lab.select("UniversalPipeline");
+        assert_eq!(lab.tags.get("RenderPipeline").map(String::as_str), Some("HDRenderPipeline,UniversalPipeline"));
+        lab.select(" UniversalPipeline");
+        assert!(lab.tags.get("RenderPipeline").is_none());
+    }
     use super::*;
 
     #[test]
