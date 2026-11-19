@@ -50,14 +50,19 @@ pub fn dotnet_candidates() -> Vec<std::path::PathBuf> {
     if let Some(path) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path) {
             let exe = dir.join("dotnet");
+            if !exe.is_file() {
+                continue;
+            }
+            // The directory a link resolves to (an installation's own `dotnet`), else the one on
+            // PATH itself (a wrapper that lives in its installation).
             if let Some(root) = exe
-                .is_file()
-                .then(|| exe.canonicalize().ok())
-                .flatten()
+                .canonicalize()
+                .ok()
                 .and_then(|e| e.parent().map(PathBuf::from))
             {
                 candidates.push(root);
             }
+            candidates.push(dir);
         }
     }
     let mut seen = std::collections::HashSet::new();
