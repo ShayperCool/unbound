@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using Xunit;
@@ -170,6 +171,108 @@ namespace UnityEngine.Tests
                 ProjectInfo.ProjectPath = previous;
                 Directory.Delete(project, true);
             }
+        }
+
+        /// <summary>An untitled-then-named scene of a temporary project, active, with its file's text.</summary>
+        static (SceneData Scene, string Project, SceneData Previous) TemporaryScene(string fileText)
+        {
+            var project = Directory.CreateTempSubdirectory("unbound-scene-").FullName;
+            Directory.CreateDirectory(Path.Combine(project, "Assets"));
+            File.WriteAllText(Path.Combine(project, "Assets/Saved.unity"), fileText);
+            var previous = SceneRegistry.Active;
+            var data = UnityEngine.SceneManagement.SceneManagerInternal.NewEmpty(additive: true).Data;
+            data.Path = "Assets/Saved.unity";
+            SceneRegistry.Active = data;
+            return (data, project, previous);
+        }
+
+        static void Close(SceneData scene, SceneData previous)
+        {
+            foreach (var root in scene.Roots.ToArray()) Object.DestroyImmediate(root);
+            SceneRegistry.Active = previous;
+            SceneRegistry.Forget(scene);
+        }
+
+        const string FileWithEmbeddedMesh = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!43 &500\nMesh:\n  m_ObjectHideFlags: 0\n  m_Name: embedded\n  m_Unread: 7\n";
+
+        [Fact]
+        public void ASceneSaveKeepsItsEmbeddedObjectsAndRefusesWhatItCannotWrite()
+        {
+            var previousProject = ProjectInfo.ProjectPath;
+            var (scene, project, previous) = TemporaryScene(FileWithEmbeddedMesh);
+            try
+            {
+                ProjectInfo.ProjectPath = project;
+                EditorSession.IsPlaying = false;
+                var mesh = new Mesh { name = "embedded" };
+                scene.FileIds[mesh] = 500;
+                var go = new GameObject("holder");
+                Assert.Same(scene, SceneRegistry.Get(go.m_Scene));
+                var filter = go.AddComponent<MeshFilter>();
+                filter.sharedMesh = mesh;
+
+                // The embedded mesh stays as the file has it, and the filter names it.
+                var text = SceneFiles.Write(scene);
+                Assert.NotNull(text);
+                Assert.Contains("--- !u!43 &500\nMesh:\n  m_ObjectHideFlags: 0\n  m_Name: embedded\n  m_Unread: 7\n", text);
+                Assert.Contains("m_Mesh: {fileID: 500}", text);
+                Assert.True(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+
+                // A mesh made by script is embedded by the Editor; Unbound refuses the save.
+                filter.sharedMesh = new Mesh();
+                Assert.Null(SceneFiles.Write(scene));
+                Assert.Contains(m_Messages.Values, m => m.Contains("Mesh objects made by script"));
+                filter.sharedMesh = mesh;
+
+                // A new component Unbound has no writer for would be saved with the release's defaults.
+                var source = go.AddComponent<AudioSource>();
+                m_Messages.Values.Clear();
+                Assert.False(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                Assert.Contains(m_Messages.Values, m => m.Contains("new AudioSource components"));
+                Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+                Object.DestroyImmediate(source);
+
+                // Lighting Settings made by script are no asset to name.
+                scene.LightingSettings = new LightingSettings();
+                m_Messages.Values.Clear();
+                Assert.Null(SceneFiles.Write(scene));
+                Assert.Contains(m_Messages.Values, m => m.Contains("Lighting Settings"));
+                scene.LightingSettings = null;
+
+                // Paths outside Assets/, an unloaded scene and a failed write are refused.
+                Assert.False(SceneFiles.Save(scene, "../Escaped.unity"));
+                Assert.False(SceneFiles.Save(scene, "Assets/Saved.txt"));
+                Directory.CreateDirectory(Path.Combine(project, "Assets/Taken.unity"));
+                Assert.False(SceneFiles.Save(scene, "Assets/Taken.unity"));
+                Assert.False(File.Exists(Path.Combine(project, "Assets/Taken.unity.unbound-save")));
+                scene.IsLoaded = false;
+                Assert.False(SceneFiles.Save(scene, "Assets/Saved.unity"));
+                scene.IsLoaded = true;
+                Assert.Equal(text, File.ReadAllText(Path.Combine(project, "Assets/Saved.unity")));
+            }
+            finally
+            {
+                Close(scene, previous);
+                ProjectInfo.ProjectPath = previousProject;
+                Directory.Delete(project, true);
+            }
+        }
+
+        [Fact]
+        public void AnAssetFileNotInTheTextSerializationIsNotWritten()
+        {
+            var counter = ScriptableObject.CreateInstance<SavedCounter>();
+            try
+            {
+                var objects = new Dictionary<long, Object> { [11400000] = counter };
+                var dirty = new List<Object> { counter };
+                Assert.Null(AssetFiles.TextDocuments("\0\0\0\u0016binary serialized file", objects, dirty));
+                Assert.Null(AssetFiles.TextDocuments(UnityYamlText.Preamble + "--- !u!114 &2\nMonoBehaviour:\n  m_Name: other\n", objects, dirty));
+                var docs = AssetFiles.TextDocuments(UnityYamlText.Preamble + "--- !u!114 &11400000\nMonoBehaviour:\n  m_Name: x\n", objects, dirty);
+                Assert.Single(docs);
+            }
+            finally { Object.DestroyImmediate(counter); }
         }
 
         [Fact]

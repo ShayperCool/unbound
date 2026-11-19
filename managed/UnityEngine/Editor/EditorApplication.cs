@@ -57,6 +57,7 @@ namespace UnityEditor
 
         static void RunEditorCallbacks()
         {
+            Undo.FlushDirtiness();
             ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }
             catch (Exception e) { Debug.LogException(e); }

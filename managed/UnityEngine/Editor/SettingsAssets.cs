@@ -1034,8 +1034,8 @@ namespace Unbound.Runtime
         static object ReadScalarLike(SerializedNode node, YText old) =>
             node.Shape == Shape.String ? old.Text : ReadScalar(node.Shape, old, node.Schema ?? new TypeTreeNode());
 
-        /// <summary>A number as the Editor writes it: integers plainly, floats in their shortest
-        /// round-trip form without an exponent.</summary>
+        /// <summary>A number as the Editor writes it: integers plainly, floats and doubles as every
+        /// saved file has them (<see cref="FloatText"/>).</summary>
         internal static string Number(object value)
         {
             var inv = CultureInfo.InvariantCulture;

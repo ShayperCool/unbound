@@ -46,6 +46,18 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The documents of an asset file in the text serialization holding a document for
+        /// each dirty object; null for a binary serialized file or one that does not hold them (it is
+        /// then left as it is).</summary>
+        internal static List<YTextDocument> TextDocuments(string text, Dictionary<long, Object> objects, List<Object> dirty)
+        {
+            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)) return null;
+            var docs = UnityYamlText.Parse(text);
+            foreach (var o in dirty)
+                if (!docs.Exists(d => objects.TryGetValue(d.FileId, out var x) && ReferenceEquals(x, o))) return null;
+            return docs;
+        }
+
         static void Save(string guid, List<Object> dirty)
         {
             var info = AssetDatabaseRuntime.Info(guid);
@@ -60,11 +72,9 @@ namespace Unbound.Runtime
                 foreach (var o in dirty) EditorUtility.ClearDirty(o);
                 return;
             }
-            var text = File.ReadAllText(info.File);
-            var docs = text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal) ? UnityYamlText.Parse(text) : null;
-            if (docs == null || !dirty.TrueForAll(o => loaded.Objects.ContainsValue(o) && docs.Exists(d => loaded.Objects.TryGetValue(d.FileId, out var x) && ReferenceEquals(x, o))))
+            var docs = TextDocuments(File.ReadAllText(info.File), loaded.Objects, dirty);
+            if (docs == null)
             {
-                // A binary serialized file (or one whose documents do not hold the objects) is left as it is.
                 Debug.LogError($"Unbound: {info.Path} is not saved: Unbound writes Unity's text serialization only, and this file is not in it.");
                 return;
             }
@@ -90,7 +100,7 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: {info.Path} is saved with its {string.Join(", ", keptAsRead)} objects as they were read: Unbound does not write their fields yet, so changes to them are not saved.");
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is saved with {unlocated} references to assets Unbound cannot name written as none.");
-            File.WriteAllText(info.File, UnityYamlText.Write(docs));
+            SceneFiles.WriteFile(info.File, UnityYamlText.Write(docs));
             foreach (var o in loaded.Objects.Values)
                 if (o is not null) EditorUtility.ClearDirty(o);
         }

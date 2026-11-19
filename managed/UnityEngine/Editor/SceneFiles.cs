@@ -35,6 +35,35 @@ namespace Unbound.Runtime
         /// <summary>SceneRoots' file id: the largest, so it is the last document.</summary>
         const long SceneRootsFileId = long.MaxValue;
 
+        /// <summary>Whether a path names an asset file of the project: relative, under Assets/ or
+        /// a package folder inside the project's Packages/ (an embedded package), no <c>..</c>,
+        /// with the extension.</summary>
+        internal static bool IsAssetPath(string path, string extension)
+        {
+            var p = path.Replace('\\', '/');
+            var parts = p.Split('/');
+            if (Array.IndexOf(parts, "..") >= 0 || !p.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return false;
+            if (p.StartsWith("Assets/", StringComparison.Ordinal)) return true;
+            return parts.Length > 2 && parts[0] == "Packages" && Directory.Exists(Path.Combine(ProjectInfo.ProjectPath, "Packages", parts[1]));
+        }
+
+        /// <summary>Replaces a file's text whole: written beside it, then moved over it, so a failed
+        /// write leaves the file as it was.</summary>
+        internal static void WriteFile(string file, string text)
+        {
+            var temporary = file + ".unbound-save";
+            try
+            {
+                File.WriteAllText(temporary, text);
+                File.Move(temporary, file, overwrite: true);
+            }
+            catch
+            {
+                try { File.Delete(temporary); } catch (IOException) { }
+                throw;
+            }
+        }
+
         /// <summary>The scene's file text; null (with an error logged) when a part of it cannot be written.</summary>
         internal static string Write(SceneData scene) => new SceneWriter(scene).Write();
 
@@ -42,6 +71,16 @@ namespace Unbound.Runtime
         /// .meta when the file is new; false, with the reason logged, when it cannot be written.</summary>
         internal static bool Save(SceneData scene, string path)
         {
+            if (!scene.IsLoaded)
+            {
+                Debug.LogError($"Unbound: {path} is not saved: the scene is not loaded.");
+                return false;
+            }
+            if (!IsAssetPath(path, ".unity"))
+            {
+                Debug.LogError($"Unbound: {path} is not saved: a scene is saved under Assets/ (or an embedded package) with the .unity extension.");
+                return false;
+            }
             string text;
             try { text = Write(scene); }
             catch (NotSupportedException e)
@@ -54,7 +93,7 @@ namespace Unbound.Runtime
             {
                 var file = Path.Combine(ProjectInfo.ProjectPath, path);
                 Directory.CreateDirectory(Path.GetDirectoryName(file));
-                File.WriteAllText(file, text);
+                WriteFile(file, text);
                 NewAssetMeta.Write(path, NewAssetMeta.DefaultImporter);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
@@ -260,6 +299,7 @@ namespace Unbound.Runtime
             readonly HashSet<long> m_Used = new HashSet<long>();
             /// <summary>The file ids the scene's objects had when they were read or last saved.</summary>
             readonly HashSet<long> m_Known = new HashSet<long>();
+            readonly Dictionary<long, Object> m_KnownObjects = new Dictionary<long, Object>();
             readonly HashSet<long> m_LiveGameObjects = new HashSet<long>();
             readonly Dictionary<PrefabInstanceData, InstanceState> m_Instances = new Dictionary<PrefabInstanceData, InstanceState>();
             readonly SortedSet<string> m_KeptAsRead = new SortedSet<string>(StringComparer.Ordinal);
@@ -288,6 +328,7 @@ namespace Unbound.Runtime
                 {
                     if (pair.Key is null) continue;
                     m_Known.Add(pair.Value);
+                    m_KnownObjects[pair.Value] = pair.Key;
                     if (pair.Key != null) { m_Ids[pair.Key] = pair.Value; m_Used.Add(pair.Value); }
                 }
                 foreach (var id in m_Source.Keys) m_Used.Add(id);
@@ -382,6 +423,10 @@ namespace Unbound.Runtime
             string Record(Object o)
             {
                 if (m_Recording && Link(o) != null) m_Referenced.Add(o);
+                // An object made by script (a Mesh, a Material) that a scene object references is
+                // embedded in the scene by the Editor; Unbound does not embed new objects yet.
+                if (!o.IsPersistentAsset && !m_Ids.ContainsKey(o) && o is not GameObject && o is not Component)
+                    m_Unwritten.Add($"{o.GetType().Name} objects made by script that the scene references (the Editor embeds them in the scene)");
                 return null;
             }
 
@@ -903,8 +948,6 @@ namespace Unbound.Runtime
                 // None now may be a reference the file names that did not load: kept.
                 if (current == null) return;
                 var written = FlowValue(current == null ? "{fileID: 0}" : new UnityYamlWriter.Writer(new StringBuilder(), m_Ids, null, null, m_Locations).ReferenceText(current));
-                var old = body.Get("m_LightingSettings");
-                if (old != null && UnityYamlText.FlowText(old) == UnityYamlText.FlowText(written)) return;
                 if (written.Raw == UnityYamlWriter.Writer.UnlocatedReference || ParseFileId(written) == 0)
                 {
                     m_Unwritten.Add("Lighting Settings that are no asset of the project");
@@ -931,7 +974,15 @@ namespace Unbound.Runtime
                             m_Out[d.FileId] = Clone(d);
                         continue;
                     }
-                    if (m_Known.Contains(d.FileId)) continue;
+                    if (m_KnownObjects.TryGetValue(d.FileId, out var known))
+                    {
+                        // An object of the file outside the hierarchy (an embedded Mesh, Material or
+                        // Lighting Settings) is kept while it lives, as the file has it.
+                        if (known == null || known is GameObject || known is Component) continue;
+                        if (EditorUtility.IsDirty(known)) m_KeptAsRead.Add(known.GetType().Name);
+                        m_Out[d.FileId] = Clone(d);
+                        continue;
+                    }
                     if (d.ClassId == SceneRootsId || d.ClassId == EngineTypes.PrefabInstanceId || SceneSettings.IsSettingsClass(d.ClassId)) continue;
                     if (d.ClassId == EngineTypes.GameObjectId) continue;
                     var owner = d.Body.Get("m_GameObject");
