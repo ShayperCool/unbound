@@ -103,6 +103,7 @@ namespace UnityEditor
             importer.m_SettingsType = typeName;
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
             importer.m_AssetPath = path;
+            importer.m_Guid = guid;
             importer.userData = body.Str("userData");
             importer.assetBundleName = body.Str("assetBundleName");
             importer.assetBundleVariant = body.Str("assetBundleVariant");

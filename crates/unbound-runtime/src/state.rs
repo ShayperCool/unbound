@@ -1011,6 +1011,26 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "hasAlpha": texture.has_alpha,
                 "rgba": crate::models::base64(&mip.data) }).to_string())
         }
+        "texture-source" => {
+            // What an imported texture's source image is: its size before scaling and whether
+            // some pixel is not opaque (TextureImporter.GetSourceTextureWidthAndHeight and
+            // DoesSourceTextureHaveAlpha), and the imported size.
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let texture = imported_texture(s, &r.guid)?;
+            Ok(json!({
+                "width": texture.original_width,
+                "height": texture.original_height,
+                "alpha": texture.has_alpha,
+                "importedWidth": texture.width,
+                "importedHeight": texture.height,
+                "compressedFormat": texture.blocks.as_ref().map(|b| b.format.unity_format()),
+            })
+            .to_string())
+        }
         "texture-raw" => {
             // An imported block-compressed texture's mip chain as stored (none for others).
             #[derive(Deserialize)]

@@ -168,6 +168,8 @@ namespace UnityEditor
         /// <summary>The settings the asset last imported with, as JSON (the .meta's until the
         /// settings a preprocessor leaves differ).</summary>
         internal string m_ImportedSettings;
+        /// <summary>The asset's GUID, as its .meta names it.</summary>
+        internal string m_Guid;
 
         internal void Changed() => m_SettingsChanged = true;
     }
