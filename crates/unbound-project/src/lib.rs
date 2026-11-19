@@ -1,6 +1,7 @@
 //! The model of a Unity project: release and compatibility profile, settings, packages, the asset
 //! database and the script assembly graph.
 pub mod assemblies;
+pub mod assembly_identity;
 pub mod assetdb;
 pub mod builtin_shaders;
 pub mod compile;
@@ -412,6 +413,82 @@ mod tests {
         let removed: Vec<&String> = with.iter().filter(|d| !without.contains(d)).collect();
         assert_eq!(removed.len(), 2, "{removed:?}");
         assert!(without.iter().any(|d| d == "UNITY_6000_0_67"));
+    }
+
+    /// Plugins with one assembly name: every assembly references one of them, the highest version
+    /// among those enabled for the platform, by name and by file name, also through
+    /// `precompiledReferences` (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`).
+    #[test]
+    fn plugins_with_one_assembly_name_bind_the_highest_version() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-plugin-versions-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/compilesetup");
+        let v1 = probe.join("Assets/Plugins/Dup/ProbeDup.dll");
+        let v2 = probe.join("Packages/com.probe.setup/Plugins/ProbeDup.dll");
+        let any = "PluginImporter:\n  platformData:\n    Any:\n      enabled: 1\n";
+        let no_editor = "PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n    Android:\n      enabled: 1\n";
+        let place = |dir: &str, name: &str, from: &Path, importer: &str| {
+            let file = root.join("Assets").join(dir).join(name);
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::copy(from, &file).unwrap();
+            std::fs::write(
+                format!("{}.meta", file.display()),
+                format!("fileFormatVersion: 2\nguid: {:032x}\n{importer}", dir.len()),
+            )
+            .unwrap();
+        };
+        // The older version first by path, the newer one under another file name.
+        place("A", "ProbeDup.dll", &v1, any);
+        place("B", "Renamed.dll", &v2, any);
+        // A newer version the Editor platform does not take: it does not count.
+        place("C", "ProbeDup.dll", &v2, no_editor);
+        std::fs::write(root.join("Assets/A.cs"), "class A {}\n").unwrap();
+        std::fs::create_dir_all(root.join("Assets/Explicit")).unwrap();
+        std::fs::write(
+            root.join("Assets/Explicit/Explicit.asmdef"),
+            r#"{"name": "Explicit", "overrideReferences": true, "precompiledReferences": ["ProbeDup.dll", "Renamed.dll"]}"#,
+        )
+        .unwrap();
+        std::fs::write(root.join("Assets/Explicit/E.cs"), "class E {}\n").unwrap();
+        let data = scratch.join("install/Editor/Data");
+        std::fs::create_dir_all(data.join("Managed/UnityEngine")).unwrap();
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let project = Project {
+            assets: root.join("Assets"),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            install: UnityInstall { data, version },
+            settings: Settings::default(),
+            packages: Vec::new(),
+            missing_packages: Vec::new(),
+        };
+        let editor = project
+            .script_graph(CompileMode::EditorPlayMode, "Android")
+            .unwrap();
+        let player = project
+            .script_graph(CompileMode::Player, "Android")
+            .unwrap();
+        let _ = std::fs::remove_dir_all(&scratch);
+        let names = |graph: &Graph, assembly: &str| -> Vec<String> {
+            let assembly = graph.get(assembly).unwrap();
+            assembly
+                .plugins
+                .iter()
+                .map(|p| p.strip_prefix(&root).unwrap().display().to_string())
+                .collect()
+        };
+        assert_eq!(names(&editor, "Assembly-CSharp"), ["Assets/B/Renamed.dll"]);
+        // Only the newest is left, so the old file's name finds nothing.
+        assert_eq!(names(&editor, "Explicit"), ["Assets/B/Renamed.dll"]);
+        // On Android the platform's copy is a candidate too: it has the same (highest) version
+        // as Renamed.dll and comes later by path.
+        assert_eq!(names(&player, "Assembly-CSharp"), ["Assets/B/Renamed.dll"]);
     }
 
     /// Each assembly takes its asmdef folder's csc.rsp, else the project's: the file's defines

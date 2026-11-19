@@ -12,6 +12,8 @@ pub struct Plugin {
     pub define_constraints: Vec<String>,
     /// Labelled `RoslynAnalyzer`: a Roslyn analyzer or source generator, not a reference.
     pub analyzer: bool,
+    /// The assembly name and version the DLL declares (`None` where they cannot be read).
+    pub identity: Option<crate::assembly_identity::AssemblyIdentity>,
     importer: Value,
 }
 
@@ -115,6 +117,7 @@ pub fn native_editor_plugin_from_meta(file: &Path, meta: &Value) -> bool {
         explicitly_referenced: false,
         define_constraints: Vec::new(),
         analyzer: false,
+        identity: None,
         importer,
     };
     if !plugin.compatible_with("Editor") {
@@ -178,7 +181,9 @@ pub fn read_plugin(file: &Path, path: String) -> Option<Plugin> {
     }
     let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
     let meta = unbound_yaml::parse_value(&meta).ok()?;
-    Some(plugin_from_meta(file, path, &meta))
+    let mut plugin = plugin_from_meta(file, path, &meta);
+    plugin.identity = crate::assembly_identity::read(file);
+    Some(plugin)
 }
 
 pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
@@ -208,6 +213,7 @@ pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
         explicitly_referenced,
         define_constraints,
         analyzer: labels.contains(&"RoslynAnalyzer"),
+        identity: None,
         importer,
     }
 }
@@ -266,6 +272,7 @@ mod tests {
             explicitly_referenced: false,
             define_constraints: Vec::new(),
             analyzer: false,
+            identity: None,
             importer: managed_importer(&meta),
         }
     }

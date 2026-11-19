@@ -8,7 +8,8 @@
 //!   Package scripts outside every asmdef are not compiled.
 //! * An assembly builds for the Editor unless its platforms exclude it, and is dropped when its
 //!   `defineConstraints` fail. Predefined assemblies reference every auto-referenced assembly;
-//!   every assembly references the auto-referenced plugins unless `overrideReferences` is set.
+//!   every assembly references the auto-referenced plugins unless `overrideReferences` is set,
+//!   one per assembly name: the highest version (see [`one_per_assembly`]).
 //! * Each assembly takes its response file's options (see [`crate::response_files`]).
 use crate::{
     assetdb::is_hidden,
@@ -466,14 +467,29 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
         out.retain(|r| r != name && exists(r));
         out
     };
-    let nunit = |editor_only: bool, test: bool, defines: &[String]| -> Option<PathBuf> {
+    let logged_duplicates = std::cell::RefCell::new(HashSet::new());
+    // The managed plugins an assembly with these defines may reference.
+    let available = |defines: &[String]| -> Vec<&Plugin> {
+        let (kept, ignored) = one_per_assembly(
+            input
+                .plugins
+                .iter()
+                .filter(|p| !p.analyzer && plugin_ok(p, defines)),
+        );
+        for (used, dropped) in ignored {
+            if logged_duplicates.borrow_mut().insert(dropped.file.clone()) {
+                log_ignored_duplicate(used, dropped);
+            }
+        }
+        kept
+    };
+    let nunit = |editor_only: bool, test: bool, available: &[&Plugin]| -> Option<PathBuf> {
         if !(test || (editor_only && input.profile.has(Feature::ImplicitTestRunnerReferences))) {
             return None;
         }
-        input
-            .plugins
+        available
             .iter()
-            .find(|p| p.file_name() == NUNIT && plugin_ok(p, defines))
+            .find(|p| p.file_name() == NUNIT)
             .map(|p| p.file.clone())
     };
 
@@ -499,27 +515,26 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
                 )),
             }
         }
+        let available = available(defines);
         let mut plugins: Vec<PathBuf> = if def.json.override_references {
             def.json
                 .precompiled_references
                 .iter()
                 .filter_map(|name| {
-                    input
-                        .plugins
+                    available
                         .iter()
-                        .find(|p| !p.analyzer && p.file_name() == name && plugin_ok(p, defines))
+                        .find(|p| p.file_name() == name)
                         .map(|p| p.file.clone())
                 })
                 .collect()
         } else {
-            input
-                .plugins
+            available
                 .iter()
-                .filter(|p| !p.analyzer && !p.explicitly_referenced && plugin_ok(p, defines))
+                .filter(|p| !p.explicitly_referenced)
                 .map(|p| p.file.clone())
                 .collect()
         };
-        plugins.extend(nunit(def.json.is_editor_only(), test, defines));
+        plugins.extend(nunit(def.json.is_editor_only(), test, &available));
         dedup_paths(&mut plugins);
         dedup(&mut references);
         let mut sources = def.sources.clone();
@@ -577,13 +592,13 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
                 references.push(e.name().to_string());
             }
         }
-        let mut plugins: Vec<PathBuf> = input
-            .plugins
+        let available = available(&defines);
+        let mut plugins: Vec<PathBuf> = available
             .iter()
-            .filter(|p| !p.analyzer && !p.explicitly_referenced && plugin_ok(p, &defines))
+            .filter(|p| !p.explicitly_referenced)
             .map(|p| p.file.clone())
             .collect();
-        plugins.extend(nunit(kind.is_editor(), false, &defines));
+        plugins.extend(nunit(kind.is_editor(), false, &available));
         let response = response_file(None, &mut graph.warnings);
         dedup_paths(&mut plugins);
         dedup(&mut references);
@@ -616,6 +631,62 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     );
     graph.assemblies = topological(assemblies)?;
     Ok(graph)
+}
+
+/// The precompiled plugins of `candidates` (enabled for the platform, define constraints met) an
+/// assembly references, as the Editor narrows them: one per assembly name, the highest version,
+/// and then one per file name (Unity 6000.0.71f1, tests/projects/compilesetup `plugins.*`). Which
+/// of several of the same version the Editor keeps is not specified (it changes with the
+/// project's other plugins); here the first by path. Returns the plugins kept, in the order of
+/// the first of their name, and each one left out of a different version with the one used.
+fn one_per_assembly<'p>(
+    candidates: impl Iterator<Item = &'p Plugin>,
+) -> (Vec<&'p Plugin>, Vec<(&'p Plugin, &'p Plugin)>) {
+    let mut kept: Vec<&Plugin> = Vec::new();
+    let mut ignored = Vec::new();
+    let mut by_name: HashMap<&str, usize> = HashMap::new();
+    for plugin in candidates {
+        // A DLL whose identity cannot be read goes by its file name.
+        let name = plugin
+            .identity
+            .as_ref()
+            .map_or(plugin.file_name(), |i| i.name.as_str());
+        let Some(&slot) = by_name.get(name) else {
+            by_name.insert(name, kept.len());
+            kept.push(plugin);
+            continue;
+        };
+        let version = |p: &Plugin| p.identity.as_ref().map(|i| i.version);
+        let (old, new) = (version(kept[slot]), version(plugin));
+        if new > old {
+            ignored.push((plugin, kept[slot]));
+            kept[slot] = plugin;
+        } else if new < old {
+            ignored.push((kept[slot], plugin));
+        }
+    }
+    let mut file_names = HashSet::new();
+    kept.retain(|p| file_names.insert(p.file_name()));
+    (kept, ignored)
+}
+
+/// The line the Editor logs for a plugin it leaves out for a newer one of the same name.
+fn log_ignored_duplicate(used: &Plugin, dropped: &Plugin) {
+    let describe = |p: &Plugin| {
+        let identity = p.identity.as_ref();
+        format!(
+            "{}, AssemblyName={}, Version={}, Culture=neutral",
+            p.path,
+            identity.map_or("", |i| i.name.as_str()),
+            identity.map_or_else(String::new, |i| i.version_text())
+        )
+    };
+    tracing::info!(
+        "Duplicate assembly '{}' with different versions detected, using '{}' and ignoring '{}'.",
+        used.file_name(),
+        describe(used),
+        describe(dropped)
+    );
 }
 
 /// Roslyn analyzers and source generators of plugins (labelled `RoslynAnalyzer`), scoped as the
