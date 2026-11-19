@@ -72,7 +72,9 @@ namespace UnityEngine.SceneManagement
         internal int dirtyID => 0;
         public int rootCount => PublicData?.Roots.Count ?? 0;
         bool m_Value_isSubScene;
-        public bool isSubScene { get => m_Value_isSubScene; set => m_Value_isSubScene = value; }
+        /// <summary>An invalid scene (the default Scene among them) reads true, matching the Unity
+        /// 6000.0.71f1 Editor (tests/projects/defaultstate).</summary>
+        public bool isSubScene { get => PublicData == null || m_Value_isSubScene; set => m_Value_isSubScene = value; }
 
         internal LoadingState loadingState => Data?.LoadingState ?? LoadingState.NotLoaded;
 

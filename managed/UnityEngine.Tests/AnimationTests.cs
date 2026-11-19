@@ -1321,6 +1321,51 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ANewStateAndStateMachineHaveTheEditorsDefaults()
+        {
+            // Unity 6000.0.71f1 (tests/projects/defaultstate).
+            var state = new UnityEditor.Animations.AnimatorState();
+            Assert.Equal("", state.speedParameter); Assert.False(state.speedParameterActive);
+            Assert.Equal("", state.cycleOffsetParameter); Assert.False(state.cycleOffsetParameterActive);
+            Assert.Equal("", state.timeParameter); Assert.False(state.timeParameterActive);
+            Assert.Equal("", state.mirrorParameter); Assert.False(state.mirrorParameterActive);
+            var type = typeof(UnityEditor.Animations.AnimatorState);
+            Assert.Equal("", type.GetProperty("uniqueName").GetValue(state));
+            Assert.Equal(-1, type.GetProperty("uniqueNameHash").GetValue(state));
+            var machine = new UnityEditor.Animations.AnimatorStateMachine();
+            Assert.Equal(new Vector3(50, 20, 0), machine.anyStatePosition);
+            Assert.Equal(new Vector3(50, 120, 0), machine.entryPosition);
+            Assert.Equal(new Vector3(800, 120, 0), machine.exitPosition);
+            Assert.Equal(new Vector3(800, 20, 0), machine.parentStateMachinePosition);
+            Object.DestroyImmediate(state);
+            Object.DestroyImmediate(machine);
+        }
+
+        [Fact]
+        public void AStateKeepsAnInactiveParametersNameAndOnlyAnActiveOneDrivesItsDefinition()
+        {
+            // A serialized position replaces the default; the others keep theirs.
+            var yaml = AnimationFixtures.Locomotion
+                .Replace("  m_DefaultState: {fileID: 1102000001}", "  m_DefaultState: {fileID: 1102000001}\n  m_AnyStatePosition: {x: 10, y: 30, z: 0}");
+            Assert.NotEqual(AnimationFixtures.Locomotion, yaml);
+            var file = Load(yaml);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var walk = file.Objects.Values.OfType<UnityEditor.Animations.AnimatorState>().Single(s => s.m_Name == "Walk");
+            Assert.Equal("Speed", walk.speedParameter);
+            Assert.True(walk.speedParameterActive);
+            var machine = file.Objects.Values.OfType<UnityEditor.Animations.AnimatorStateMachine>().Single();
+            Assert.Equal(new Vector3(10, 30, 0), machine.anyStatePosition);
+            Assert.Equal(new Vector3(50, 120, 0), machine.entryPosition);
+            int speed = controller.m_Parameters.FindIndex(p => p.m_Name == "Speed");
+            StateDef Walk() => ControllerGraph.Build(controller).Layers.SelectMany(l => l.States).Single(s => s.Name == "Walk");
+            Assert.Equal(speed, Walk().SpeedParameter);
+            // Deactivated, the name stays and the definition no longer reads it.
+            walk.speedParameterActive = false;
+            Assert.Equal("Speed", walk.speedParameter);
+            Assert.Equal(-1, Walk().SpeedParameter);
+        }
+
+        [Fact]
         public void AStatesMirrorReachesItsDefinition()
         {
             // Mirrored states play humanoid clips mirrored: the flag must get there.
@@ -1334,7 +1379,8 @@ namespace UnityEngine.Tests
             Assert.All(graph.Layers.SelectMany(l => l.States).Where(s => s != def), s => Assert.False(s.Mirror));
             Assert.Equal(-1, def.MirrorParameter);
             // A mirror parameter (a bool) decides instead when it is active.
-            state.MirrorParameter = "Run";
+            state.mirrorParameter = "Run";
+            state.mirrorParameterActive = true;
             def = ControllerGraph.Build(controller).Layers.SelectMany(l => l.States).Single(s => s.Name == state.m_Name);
             Assert.Equal(controller.m_Parameters.FindIndex(p => p.m_Name == "Run"), def.MirrorParameter);
         }

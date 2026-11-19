@@ -637,6 +637,15 @@ namespace UnityEditor.Animations
 
         public AnimatorStateMachine() { }
 
+        // Where the graph view draws the Any State, Entry, Exit and parent nodes; a new state
+        // machine's defaults match Unity 6000.0.71f1 (tests/projects/defaultstate).
+        static readonly Vector3 k_AnyStatePosition = new Vector3(50, 20, 0), k_EntryPosition = new Vector3(50, 120, 0),
+            k_ExitPosition = new Vector3(800, 120, 0), k_ParentStateMachinePosition = new Vector3(800, 20, 0);
+        public Vector3 anyStatePosition { get; set; } = k_AnyStatePosition;
+        public Vector3 entryPosition { get; set; } = k_EntryPosition;
+        public Vector3 exitPosition { get; set; } = k_ExitPosition;
+        public Vector3 parentStateMachinePosition { get; set; } = k_ParentStateMachinePosition;
+
         public ChildAnimatorState[] states
         {
             get
@@ -717,6 +726,10 @@ namespace UnityEditor.Animations
             foreach (var b in body.Get("m_StateMachineBehaviours")?.Seq() ?? Array.Empty<YNode>())
                 if (UnityEngine.RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
             DefaultState = UnityEngine.RuntimeAnimatorController.Resolve<AnimatorState>(resolver, body.Ref("m_DefaultState"));
+            anyStatePosition = body.Vector3("m_AnyStatePosition", k_AnyStatePosition);
+            entryPosition = body.Vector3("m_EntryPosition", k_EntryPosition);
+            exitPosition = body.Vector3("m_ExitPosition", k_ExitPosition);
+            parentStateMachinePosition = body.Vector3("m_ParentStateMachinePosition", k_ParentStateMachinePosition);
         }
 
         internal static void ReadTransitions(YNode list, IReferenceResolver resolver, List<ControllerTransitionAsset> into)
@@ -751,10 +764,48 @@ namespace UnityEditor.Animations
         internal bool Mirror;
         internal Motion Motion;
         internal string Tag = "";
-        internal string SpeedParameter;
-        internal string CycleOffsetParameter;
-        internal string TimeParameter;
-        internal string MirrorParameter;
+
+        // A state's optional parameters keep their names whether or not they are active; a new
+        // state has empty names and none active (Unity 6000.0.71f1, tests/projects/defaultstate).
+        string m_SpeedParameter = "", m_CycleOffsetParameter = "", m_TimeParameter = "", m_MirrorParameter = "";
+        public string speedParameter { get => m_SpeedParameter; set => m_SpeedParameter = value ?? ""; }
+        public string cycleOffsetParameter { get => m_CycleOffsetParameter; set => m_CycleOffsetParameter = value ?? ""; }
+        public string mirrorParameter { get => m_MirrorParameter; set => m_MirrorParameter = value ?? ""; }
+        public string timeParameter { get => m_TimeParameter; set => m_TimeParameter = value ?? ""; }
+        public bool speedParameterActive { get; set; }
+        public bool cycleOffsetParameterActive { get; set; }
+        public bool mirrorParameterActive { get; set; }
+        public bool timeParameterActive { get; set; }
+
+        /// <summary>The parameter each multiplier reads: its name when active, else null (setting
+        /// null deactivates it).</summary>
+        internal string SpeedParameter
+        {
+            get => speedParameterActive ? m_SpeedParameter : null;
+            set { speedParameterActive = value != null; speedParameter = value; }
+        }
+        internal string CycleOffsetParameter
+        {
+            get => cycleOffsetParameterActive ? m_CycleOffsetParameter : null;
+            set { cycleOffsetParameterActive = value != null; cycleOffsetParameter = value; }
+        }
+        internal string TimeParameter
+        {
+            get => timeParameterActive ? m_TimeParameter : null;
+            set { timeParameterActive = value != null; timeParameter = value; }
+        }
+        internal string MirrorParameter
+        {
+            get => mirrorParameterActive ? m_MirrorParameter : null;
+            set { mirrorParameterActive = value != null; mirrorParameter = value; }
+        }
+
+        [Obsolete("uniqueName does not exist anymore. Consider using .name instead.", true)]
+        [Unbound.EditorFaithful("an obsolete member: empty, as a new state answers in Unity 6000.0.71f1 (tests/projects/defaultstate)")]
+        public string uniqueName => string.Empty;
+        [Obsolete("uniqueNameHash does not exist anymore.", true)]
+        [Unbound.EditorFaithful("an obsolete member: -1, as a new state answers in Unity 6000.0.71f1 (tests/projects/defaultstate)")]
+        public int uniqueNameHash => -1;
 
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
@@ -770,10 +821,14 @@ namespace UnityEditor.Animations
             Motion = UnityEngine.RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
             if (Motion == null && !motion.IsNull) MissingMotion.Report(motion, $"animator state '{m_Name}'");
             Tag = body.Str("m_Tag");
-            SpeedParameter = body.Bool("m_SpeedParameterActive") ? body.Str("m_SpeedParameter") : null;
-            CycleOffsetParameter = body.Bool("m_CycleOffsetParameterActive") ? body.Str("m_CycleOffsetParameter") : null;
-            TimeParameter = body.Bool("m_TimeParameterActive") ? body.Str("m_TimeParameter") : null;
-            MirrorParameter = body.Bool("m_MirrorParameterActive") ? body.Str("m_MirrorParameter") : null;
+            speedParameter = body.Str("m_SpeedParameter");
+            cycleOffsetParameter = body.Str("m_CycleOffsetParameter");
+            timeParameter = body.Str("m_TimeParameter");
+            mirrorParameter = body.Str("m_MirrorParameter");
+            speedParameterActive = body.Bool("m_SpeedParameterActive");
+            cycleOffsetParameterActive = body.Bool("m_CycleOffsetParameterActive");
+            timeParameterActive = body.Bool("m_TimeParameterActive");
+            mirrorParameterActive = body.Bool("m_MirrorParameterActive");
         }
     }
 

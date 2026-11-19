@@ -30,6 +30,24 @@ namespace UnityEngine.Tests
             Assert.False(first.Equals((object)(-1024)));
         }
         [Fact]
+        public void AnInvalidSceneReadsAsASubSceneAndAValidOneByItsFlag()
+        {
+            // Matches the Unity 6000.0.71f1 Editor (tests/projects/defaultstate): the default Scene
+            // and a removed handle read true, a created scene false until set.
+            Assert.True(default(Scene).isSubScene);
+            Assert.True(Handle(int.MaxValue).isSubScene);
+            var scene = SceneManager.CreateScene("SubSceneFlag");
+            try
+            {
+                Assert.False(scene.isSubScene);
+                scene.isSubScene = true;
+                Assert.True(scene.isSubScene);
+                scene.isSubScene = false;
+                Assert.False(scene.isSubScene);
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+        [Fact]
         public void BoxedAndNullableSceneCopiesKeepTheSameEqualityRule()
         {
             var first = Handle(int.MinValue); var second = Handle(int.MaxValue);
