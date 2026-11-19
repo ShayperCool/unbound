@@ -137,7 +137,8 @@ static class MovedTypes
 
     /// <summary>The attribute's arguments: <c>MovedFrom(bool autoUpdateAPI, string
     /// sourceNamespace = null, string sourceAssembly = null, string sourceClassName = null)</c>
-    /// or the obsolete <c>MovedFrom(string sourceNamespace)</c>, which updates too.</summary>
+    /// or <c>MovedFrom(string sourceNamespace)</c>, which the release declares as updating
+    /// automatically (<c>autoUpdateAPI: true</c>).</summary>
     static bool AutoUpdates(AttributeData attribute, out string? sourceNamespace, out string? sourceClass)
     {
         sourceNamespace = sourceClass = null;

@@ -20,6 +20,7 @@ namespace UnityEngine.Scripting.APIUpdating
     public class MovedFromAttribute : System.Attribute
     {
         public MovedFromAttribute(bool autoUpdateAPI, string sourceNamespace = null, string sourceAssembly = null, string sourceClassName = null) { }
+        public MovedFromAttribute(string sourceNamespace) { }
     }
 }
 ";
@@ -31,6 +32,7 @@ namespace New.Space
     [MovedFrom(true, ""Old.Space"", null, ""OldName"")] public class Renamed { }
     [MovedFrom(true, ""Old.Space"")] public class Box<T> { }
     [MovedFrom(false, ""Old.Space"")] public class Manual { }
+    [MovedFrom(""Old.Space"")] public class Legacy { }
 }
 namespace Old.Space { public class Stays { } }
 ";
@@ -43,6 +45,7 @@ public static class Consumer
     public static string Called() => Old.Space.Moved.Where();
     public static string Renamed() => typeof(OldName).FullName;
     public static string Generic() => typeof(Box<int>).Name;
+    public static string Legacy() => typeof(O.Legacy).FullName;
 }
 ";
 
@@ -84,6 +87,8 @@ public static class Consumer
                 Assert.Equal("New.Space.Moved", Call("Called"));
                 Assert.Equal("New.Space.Renamed", Call("Renamed"));
                 Assert.Equal("Box`1", Call("Generic"));
+                // The release's MovedFrom(string sourceNamespace) declares autoUpdateAPI true.
+                Assert.Equal("New.Space.Legacy", Call("Legacy"));
             }
             finally { context.Unload(); }
         }
