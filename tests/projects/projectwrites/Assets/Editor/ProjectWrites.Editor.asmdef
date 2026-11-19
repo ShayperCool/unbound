@@ -1,0 +1,9 @@
+{
+    "name": "ProjectWrites.Editor",
+    "references": [
+        "ProjectWrites.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ]
+}

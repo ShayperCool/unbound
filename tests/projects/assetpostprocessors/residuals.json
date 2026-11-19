@@ -51,10 +51,7 @@
     "events.Assets/Trees.03",
     "events.Assets/Trees.count"
   ],
-  "Unbound writes no .meta file: the Editor saves the settings preprocessors changed into the asset's .meta (Unbound imports with them in memory)": [
-    "meta.Assets/Audio/Tone.wav",
-    "meta.Assets/Models/Materials.fbx",
-    "meta.Assets/Tex/Shrink.png",
+  "The settings preprocessors changed are written into the asset's .meta as the Editor writes them, but the Editor also writes the spriteID it generates for a single sprite there (Unbound does not derive it)": [
     "meta.Assets/Tex/Sprite.png"
   ],
   "Unbound has one editor domain, loaded as Play mode starts: its editor scripts load before Play mode entry's ExitingEditMode, which the Editor sends in its Edit-mode domain (tests/projects/compileevents start.load)": [

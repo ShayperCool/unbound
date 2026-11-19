@@ -97,9 +97,10 @@ Values compare exactly (tolerance 0). The folder `.meta` files are committed so 
 see them (an asset without one has `importSettingsMissing` set in the Editor); the context's build
 target is left out (it is the Editor's platform).
 
-Unbound on macOS, 2026-11-19: 356/536 values, 0 failures and 180 recorded residuals
+Unbound on macOS, 2026-11-19: 359/536 values, 0 failures and 177 recorded residuals
 (`residuals.json`, eight causes): OnPreprocessAsset is given only the assets Unbound imports (not
-folders, scenes or materials), the Editor's rewritten `.meta` files, the Play mode domain's
+folders, scenes or materials), the single sprite's generated ID in a rewritten `.meta` (the
+settings preprocessors change are written as the Editor writes them), the Play mode domain's
 ExitingEditMode (as in compileevents), OnPreprocessAnimation's place (Unbound runs it with the
 model's preprocessors), the Editor's second import of the tree's maps, a model import's ImportLog,
 a prefab's nested prefab instance objects in its asset listing, and the file ids of objects a

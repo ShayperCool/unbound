@@ -1,0 +1,25 @@
+{
+  "Unbound writes a list of numbers of a script object as a YAML sequence; the Editor writes it as one hex string of the elements' little-endian bytes (the serialized-file writer of Q622a)": [
+    "edit.04.create.Assets/Made/Data.asset",
+    "edit.04.create.added.Assets/Made/Data.asset",
+    "edit.04.create.saved.Assets/Made/Data.asset",
+    "edit.05.copy.Assets/Made/Copy.asset",
+    "edit.05.rename.Assets/New/Renamed.asset",
+    "edit.07.batch.inside.Assets/Made/Batched.asset",
+    "edit.exit.Assets/Made/Batched.asset",
+    "edit.exit.Assets/Made/Data.asset",
+    "edit.exit.Assets/New/Tex.asset",
+    "play.04.create.Assets/Made/Data.asset",
+    "play.04.create.added.Assets/Made/Data.asset",
+    "play.04.create.saved.Assets/Made/Data.asset",
+    "play.05.copy.Assets/Made/Copy.asset",
+    "play.05.rename.Assets/New/Renamed.asset",
+    "play.07.batch.inside.Assets/Made/Batched.asset",
+    "play.exit.Assets/Made/Batched.asset",
+    "play.exit.Assets/Made/Data.asset",
+    "play.exit.Assets/New/Tex.asset"
+  ],
+  "In Edit mode the Editor resolves the packages again after a manifest change (Client.Resolve) and writes the new lock by the time it quits; Unbound writes the lock only when the project has none": [
+    "edit.exit.Packages/packages-lock.json"
+  ]
+}

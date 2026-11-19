@@ -1,0 +1,19 @@
+{
+  "commands": [
+    "python3 tests/projects/projectwrites/run.py gate"
+  ],
+  "summary": "projectwrites: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/new_meta.rs",
+    "crates/unbound-assets/src/new_meta/",
+    "crates/unbound-project/src/packages.rs",
+    "crates/unbound-project/src/assetdb.rs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseCreate.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "managed/UnityEngine/Editor/EditorBuildSettings.cs",
+    "managed/UnityEngine/Editor/UnityYamlText.cs"
+  ]
+}
