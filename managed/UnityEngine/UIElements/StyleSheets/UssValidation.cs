@@ -40,7 +40,7 @@ namespace UnityEngine.UIElements.StyleSheets
         internal static Result? Validate(string property, string value)
         {
             if (property.StartsWith("--", StringComparison.Ordinal)) return new Result();
-            if (!LoadTable()) return null;
+            if (!Unbound.Runtime.Compat.UssValuesValidated || !LoadTable()) return null;
             if (!s_Syntaxes.TryGetValue(property, out var syntax))
             {
                 var message = "Unknown property '" + property + "'";
@@ -75,11 +75,13 @@ namespace UnityEngine.UIElements.StyleSheets
         /// color); true for a custom property and when there is no table to check with.</summary>
         internal static bool Fits(string property, IParts values)
         {
-            if (property.StartsWith("--", StringComparison.Ordinal) || !LoadTable()) return true;
+            if (property.StartsWith("--", StringComparison.Ordinal) || !Unbound.Runtime.Compat.UssValuesValidated || !LoadTable()) return true;
             if (!s_Syntaxes.TryGetValue(property, out var syntax)) return false;
             var node = Parse(syntax);
             if (node == null || values.Count == 0) return false;
             var m = new Matcher(values);
+            // As the importer's check: a leading initial or env() fits (unmeasured for substitutions).
+            if (m.Current == "initial" || m.Current != null && m.Current.StartsWith("env(", StringComparison.Ordinal)) return m.Step() && !m.HasCurrent;
             return m.Match(node) && !m.HasCurrent;
         }
 
@@ -202,6 +204,16 @@ namespace UnityEngine.UIElements.StyleSheets
         }
 
         // ------------------------------------------------------------------ the syntax table
+
+        /// <summary>The release's property syntaxes Unbound cannot read (tests: none).</summary>
+        internal static List<string> UnreadSyntaxes()
+        {
+            var unread = new List<string>();
+            if (!LoadTable()) return unread;
+            foreach (var pair in s_Syntaxes)
+                if (Parse(pair.Value) == null) unread.Add(pair.Key);
+            return unread;
+        }
 
         /// <summary>Forgets the table read (tests that name an installation).</summary>
         internal static void Reset()
@@ -425,6 +437,14 @@ namespace UnityEngine.UIElements.StyleSheets
                 i++;
                 // A group stands alone, so its multiplier applies to the whole of it.
                 node = new Node { Kind = Kind.Juxtaposition, Children = new[] { node } };
+            }
+            else if (token.StartsWith("<'", StringComparison.Ordinal))
+            {
+                // Another property's syntax (flex-basis is <'width'>).
+                var name = token.Substring(2, token.Length - 4);
+                if (!s_Syntaxes.TryGetValue(name, out var referenced)) throw new FormatException(name);
+                var inner = Parse(referenced) ?? throw new FormatException(name);
+                node = new Node { Kind = Kind.Juxtaposition, Children = new[] { inner } };
             }
             else if (token.StartsWith("<", StringComparison.Ordinal))
             {

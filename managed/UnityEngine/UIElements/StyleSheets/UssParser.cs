@@ -62,6 +62,10 @@ namespace Unbound.UIElements
 
         internal UssImporter(string assetPath) { m_AssetPath = assetPath; }
 
+        /// <summary>Whether declarations are checked against their property's syntax (not for UXML
+        /// inline styles: unmeasured).</summary>
+        internal bool validate = true;
+
         internal IReadOnlyList<string> errors => m_Errors;
         internal IReadOnlyList<string> warnings => m_Warnings;
 
@@ -270,7 +274,7 @@ namespace Unbound.UIElements
                 if (Cur == ';') Advance();
                 var property = new StyleProperty { name = name, line = propLine };
                 m_Values = new List<StyleValueHandle>();
-                ParseValue(valueText, propLine, name, validate: true);
+                ParseValue(valueText, propLine, name, validate);
                 property.values = m_Values.ToArray();
                 properties.Add(property);
             }

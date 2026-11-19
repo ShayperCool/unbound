@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using UnityEngine.UIElements;
 using UnityEngine.UIElements.StyleSheets;
 using Xunit;
 
@@ -69,11 +70,60 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EveryPropertySyntaxOfTheReleaseIsRead()
+        {
+            if (!Installed()) return;
+            Assert.Empty(UssValidation.UnreadSyntaxes());
+            Assert.Null(Message("flex", "1 0 auto"));
+            Assert.Null(Message("flex-basis", "10px"));
+            Assert.Equal("Expected (<length-percentage> | auto) but found 'inherit'", Message("width", "inherit"));
+        }
+
+        [Fact]
         public void ResolvedValuesAreCheckedByTheirTypes()
         {
             if (!Installed()) return;
             Assert.True(UssValidation.Fits("--custom", new Parts()));
             Assert.False(UssValidation.Fits("width", new Parts()));
+            // Values as a sheet holds them (as a var() substitution gives them to the style pass).
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+            try
+            {
+                new Unbound.UIElements.UssImporter("test.uss").Import(sheet, ".a { width: 0; height: 12px; color: red; border-color: #ff0000; opacity: 0.5;"
+                    + " transition-duration: 1s; rotate: 2deg; flex-direction: row; left: 3; top: 20%; display: wide; -unity-slice-left: 4; }");
+                bool Fits(string property, string as_)
+                {
+                    foreach (var p in sheet.rules[0].properties)
+                        if (p.name == as_)
+                        {
+                            var values = new System.Collections.Generic.List<Unbound.UIElements.UssValue>();
+                            foreach (var h in p.values) values.Add(new Unbound.UIElements.UssValue { sheet = sheet, handle = h });
+                            return UssValidation.Fits(property, new Unbound.UIElements.UssReader.ResolvedParts(values));
+                        }
+                    throw new InvalidOperationException(as_);
+                }
+                Assert.True(Fits("width", "width"));               // a float 0 is a length
+                Assert.True(Fits("width", "height"));
+                Assert.False(Fits("width", "left"));               // another float is not
+                Assert.True(Fits("width", "top"));                 // a percentage
+                Assert.True(Fits("color", "color"));               // a color name
+                Assert.True(Fits("color", "border-color"));
+                Assert.False(Fits("width", "color"));
+                Assert.False(Fits("border-left-width", "border-color"));
+                Assert.True(Fits("opacity", "opacity"));
+                Assert.False(Fits("opacity", "height"));
+                Assert.True(Fits("transition-duration", "transition-duration"));
+                Assert.False(Fits("transition-duration", "height"));
+                Assert.True(Fits("rotate", "rotate"));
+                Assert.True(Fits("flex-direction", "flex-direction"));
+                Assert.False(Fits("flex-direction", "display"));   // an unknown keyword
+                Assert.True(Fits("-unity-slice-left", "-unity-slice-left"));
+                Assert.True(Fits("transition-property", "flex-direction")); // a custom ident
+            }
+            finally
+            {
+                Object.DestroyImmediate(sheet);
+            }
         }
 
         sealed class Parts : UssValidation.IParts

@@ -260,7 +260,7 @@ namespace Unbound.UIElements
         /// Unity 6000.0.71f1 Editor: tests/projects/toolapis uss, a length in a colour property and a
         /// colour in a width; tests/projects/ussvalidation var-fallback, a fallback word for a length).
         /// </summary>
-        sealed class ResolvedParts : UnityEngine.UIElements.StyleSheets.UssValidation.IParts
+        internal sealed class ResolvedParts : UnityEngine.UIElements.StyleSheets.UssValidation.IParts
         {
             readonly List<UssValue> m_Values;
             internal ResolvedParts(List<UssValue> values) => m_Values = values;
@@ -582,6 +582,19 @@ namespace Unbound.UIElements
         }
 
         const string WarningIcon = "d_console.warnicon";
+        static Texture2D s_WarningIcon;
+
+        /// <summary>A transparent texture named as the Editor's warning icon: the name as the Editor
+        /// gives it, no pixels drawn (the icon's own pixels are unmeasured).</summary>
+        static Texture2D WarningIconTexture()
+        {
+            if (s_WarningIcon != null) return s_WarningIcon;
+            if (UnityEditor.EditorIcons.LoadNamed(WarningIcon) == null) return null;
+            s_WarningIcon = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = WarningIcon, hideFlags = HideFlags.HideAndDontSave };
+            s_WarningIcon.SetPixel(0, 0, Color.clear);
+            s_WarningIcon.Apply();
+            return s_WarningIcon;
+        }
 
         public Background ReadBackground(int index)
         {
@@ -595,7 +608,7 @@ namespace Unbound.UIElements
             // 6000.0.71f1 Editor, tests/projects/ussvalidation url-bad).
             if (!TryGetImage(v, dpiScaling, out var image))
             {
-                var icon = UnityEditor.EditorIcons.LoadNamed(WarningIcon);
+                var icon = WarningIconTexture();
                 return icon != null ? Background.FromTexture2D(icon) : default;
             }
             return image;

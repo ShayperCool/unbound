@@ -1424,6 +1424,7 @@ namespace Unbound.UIElements
             var sheet = ScriptableObject.CreateInstance<StyleSheet>();
             var importer = new UssImporter(assetPath + " (inline style)")
             {
+                validate = false,
                 resolveAsset = AssetPaths.LoadUrl,
             };
             importer.Import(sheet, "* {" + declarations + "}");
