@@ -90,6 +90,69 @@ public partial class FxProbe
         DontClearCase("ldrOther", false, CameraClearFlags.Nothing, true);
         DeferredEventDraws("ldr", false);
         DeferredEventDraws("hdr", true);
+        DeferredDepth("ldr", false);
+        DeferredDepth("hdr", true);
+    }
+
+    /// <summary>What a deferred camera's sampled depth (_CameraDepthTexture) holds at each camera
+    /// event from the G-buffer on: a command buffer copies it (Probe/DepthCopy) into a texture of
+    /// its own at BeforeLighting, AfterLighting, BeforeForwardOpaque, AfterForwardOpaque and
+    /// AfterEverything, over a Standard floor (deferred) with a forward-only opaque cube
+    /// (Probe/Color, no deferred pass) and a deferred sphere in front of the floor
+    /// (<c>deferredDepth.&lt;camera&gt;.&lt;event&gt;.&lt;point&gt;</c>: the copy's linear depth
+    /// and far-plane mark at the cube, the sphere and the floor beside them), for an LDR and an
+    /// HDR camera that clear to a solid colour.</summary>
+    void DeferredDepth(string name, bool hdr)
+    {
+        string key = "deferredDepth." + name;
+        try
+        {
+            var floor = Primitive(PrimitiveType.Plane, Vector3.zero, Standard(new Color(0.7f, 0.7f, 0.7f)));
+            floor.transform.localScale = new Vector3(3f, 1f, 3f);
+            var cube = Primitive(PrimitiveType.Cube, new Vector3(1f, 0.5f, 0.5f), Unlit(new Color(0.2f, 0.8f, 0.3f)));
+            var sphere = Primitive(PrimitiveType.Sphere, new Vector3(-1f, 0.5f, 0.5f), Standard(new Color(0.8f, 0.4f, 0.3f)));
+            Directional(new Vector3(50f, -30f, 0f), Color.white, 0.8f);
+            var camera = MakeCamera();
+            camera.renderingPath = RenderingPath.DeferredShading;
+            camera.allowHDR = hdr;
+            Vector2Int At(Vector3 p)
+            {
+                var s = camera.WorldToScreenPoint(p);
+                return new Vector2Int((int)s.x, (int)s.y);
+            }
+            var points = new[] { ("cube", At(cube.transform.position)), ("sphere", At(sphere.transform.position)), ("floor", At(new Vector3(0f, 0f, -1f))) };
+            var events = new[] { CameraEvent.BeforeLighting, CameraEvent.AfterLighting, CameraEvent.BeforeForwardOpaque, CameraEvent.AfterForwardOpaque, CameraEvent.AfterEverything };
+            var copy = Add(new Material(Shader.Find("Probe/DepthCopy")));
+            var targets = new RenderTexture[events.Length];
+            var buffers = new CommandBuffer[events.Length];
+            for (int i = 0; i < events.Length; i++)
+            {
+                targets[i] = Add(new RenderTexture(Width, Height, 0, RenderTextureFormat.ARGBFloat));
+                buffers[i] = new CommandBuffer { name = "deferredDepth." + events[i] };
+                buffers[i].Blit((Texture)null, targets[i], copy);
+                camera.AddCommandBuffer(events[i], buffers[i]);
+            }
+            camera.Render();
+            for (int i = 0; i < events.Length; i++)
+            {
+                var t = Read(targets[i], TextureFormat.RGBAFloat);
+                foreach (var (point, at) in points)
+                {
+                    var c = t.GetPixel(at.x, at.y);
+                    // Three decimals: which surface the depth is, not its last bits.
+                    Value(key + "." + events[i] + "." + point, "[" + F(Mathf.Round(c.r * 1000f) / 1000f) + "," + F(c.g) + "]");
+                }
+                DestroyImmediate(t);
+                camera.RemoveCommandBuffer(events[i], buffers[i]);
+                buffers[i].Release();
+            }
+        }
+        catch (Exception e)
+        {
+            Value(key + ".exception", S(e.GetType().Name + ": " + e.Message));
+        }
+        Clear();
+        Environment(new Color(0.1f, 0.1f, 0.1f));
     }
 
     /// <summary>What a command buffer draws into CameraTarget at the deferred camera events leaves

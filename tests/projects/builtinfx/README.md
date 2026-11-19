@@ -57,7 +57,12 @@ render 200x150 textures with `Camera.Render`, a few cases wait for the player lo
   set; HDR and LDR cameras that clear nothing, and that clear to a solid colour; an LDR camera that
   clears nothing with another LDR deferred camera of the same size rendering between
   (`ldrOther`). Command buffers drawing into CameraTarget at BeforeLighting, AfterLighting,
-  BeforeFinalPass and AfterFinalPass of an LDR and an HDR camera (`deferredEvents.*`).
+  BeforeFinalPass and AfterFinalPass of an LDR and an HDR camera (`deferredEvents.*`). What the
+  sampled depth (`_CameraDepthTexture`, copied by `Probe/DepthCopy` into a texture of its own)
+  holds at BeforeLighting, AfterLighting, BeforeForwardOpaque, AfterForwardOpaque and
+  AfterEverything over a Standard floor, a deferred sphere and a forward-only opaque cube
+  (`Probe/Color`), for an LDR and an HDR camera (`deferredDepth.*`: the linear depth to three
+  decimals and a far-plane mark): the cube is never in it, at every event, the sphere always.
 
 `ProbeRunner.Create` made the scene (a camera with a Skybox and a FlareLayer, a projector, lights
 with a halo and a flare, a lens flare, a halo, occlusion components, a proxy volume) and the assets
