@@ -30,8 +30,10 @@ fn write_package_lock(project: &Project) {
     if disabled {
         return;
     }
-    if !project.missing_packages.is_empty() {
-        tracing::warn!("Packages/packages-lock.json is not written: some packages did not resolve");
+    if !project.missing_packages.is_empty() || !project.inexact_packages.is_empty() {
+        tracing::warn!(
+            "Packages/packages-lock.json is not written: some packages did not resolve as the manifest asks"
+        );
         return;
     }
     match unbound_project::packages::lock_text(&project.root, &project.packages) {
@@ -52,7 +54,17 @@ fn write_package_lock(project: &Project) {
 /// project's own assets). Tools that only read the project (`info`, `doctor`, ...) use [`open`].
 fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
     let project = open(args)?;
-    project.complete_version_file()?;
+    // What the Editor writes when it opens a project is measured for 6000.0 only.
+    if unbound_compat::MeasuredFamily::of(project.version).is_none() {
+        tracing::warn!(
+            "Unity {} is not a measured release: Unbound writes no .meta, lock or version file for this project",
+            project.version
+        );
+        return Ok(project);
+    }
+    if let Err(e) = project.complete_version_file() {
+        tracing::warn!("ProjectSettings/ProjectVersion.txt is not completed: {e:#}");
+    }
     write_package_lock(&project);
     let context = unbound_assets::new_meta::MetaContext::for_install(
         &unbound_project::install::playback_engines(&project.install.data),

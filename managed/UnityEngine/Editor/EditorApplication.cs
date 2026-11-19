@@ -364,7 +364,16 @@ namespace UnityEditor
                 if (map == null || map.Kind != YKind.Map) return;
                 map.Flow = false;
                 map.Raw = null;
-                map.Set(name, YText.Scalar(UnityYamlWriter.Scalar(defines ?? "")));
+                var value = YText.Scalar(UnityYamlWriter.Scalar(defines ?? ""));
+                if (map.Get(name) != null) map.Set(name, value);
+                else
+                {
+                    // A new target in ordinal order of the targets' names (Android, Standalone, iPhone).
+                    int at = 0;
+                    while (at < map.Keys.Count && string.CompareOrdinal(map.Keys[at], name) < 0) at++;
+                    map.Keys.Insert(at, name);
+                    map.Values.Insert(at, value);
+                }
             });
             Native.Call("scripting-defines", System.Text.Json.JsonSerializer.Serialize(new { group = name, defines = defines ?? "" }));
             bool active = name == UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettingsInfo.ActiveGroup).TargetName;

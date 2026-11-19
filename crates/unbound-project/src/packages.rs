@@ -43,6 +43,9 @@ pub struct Resolution {
     pub packages: Vec<Package>,
     /// Packages the lock names that no source has: `(name, version, source)`.
     pub missing: Vec<(String, String, String)>,
+    /// Registry packages taken at another version than asked for (a cached one, offline or when
+    /// the download failed): `(name, asked for)`.
+    pub inexact: Vec<(String, String)>,
 }
 
 #[derive(Deserialize)]
@@ -453,12 +456,20 @@ pub fn resolve(
                                 &version,
                             ),
                         });
+                    let mut fallback = |cached: Option<(PathBuf, String)>| {
+                        cached.map(|(root, found_version)| {
+                            if found_version != version {
+                                resolution.inexact.push((name.clone(), version.clone()));
+                            }
+                            (root, kind, found_version)
+                        })
+                    };
                     match fetched {
                         Ok(Some(root)) => Some((root, kind, version.clone())),
-                        Ok(None) => cached.map(|(root, found_version)| (root, kind, found_version)),
+                        Ok(None) => fallback(cached),
                         Err(e) => {
                             tracing::warn!("package {name}@{version}: {e:#}");
-                            cached.map(|(root, found_version)| (root, kind, found_version))
+                            fallback(cached)
                         }
                     }
                 } else {

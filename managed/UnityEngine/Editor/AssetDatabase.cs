@@ -354,7 +354,7 @@ namespace UnityEditor
             // A file or folder the database does not list yet is imported: its .meta written
             // (tests/projects/projectwrites 02.import).
             var normalized = path?.Replace('\\', '/').TrimEnd('/');
-            if (!string.IsNullOrEmpty(normalized) && ExistingGuid(normalized).Length == 0 && Exists(normalized))
+            if (!string.IsNullOrEmpty(normalized) && ExistingGuid(normalized).Length == 0 && Editable(normalized) && Exists(normalized))
             {
                 ImportNew(normalized);
                 return;

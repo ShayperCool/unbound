@@ -38,6 +38,11 @@ namespace UnityEditor
                 Debug.LogError($"Couldn't create asset file at '{path}': its folder does not exist or it has no extension.");
                 return;
             }
+            if (!Editable(path))
+            {
+                Refused("AssetDatabase.CreateAsset", path);
+                return;
+            }
             if (!SerializedTree.IsScript(asset))
             {
                 Debug.LogError($"Unbound does not write {asset.GetType().Name} assets yet: '{path}' is not created.");

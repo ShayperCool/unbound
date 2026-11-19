@@ -55,6 +55,8 @@ pub struct Project {
     pub settings: Settings,
     pub packages: Vec<Package>,
     pub missing_packages: Vec<(String, String, String)>,
+    /// Registry packages resolved at another version than asked for (`Resolution::inexact`).
+    pub inexact_packages: Vec<(String, String)>,
 }
 
 impl Project {
@@ -91,6 +93,7 @@ impl Project {
             settings,
             packages: resolution.packages,
             missing_packages: resolution.missing,
+            inexact_packages: resolution.inexact,
         })
     }
 
@@ -446,6 +449,7 @@ mod tests {
                 settings: Settings::default(),
                 packages: Vec::new(),
                 missing_packages: Vec::new(),
+                inexact_packages: Vec::new(),
             };
             let graph = project
                 .script_graph(CompileMode::EditorPlayMode, "Android")
@@ -728,6 +732,7 @@ mod tests {
             settings: Settings::default(),
             packages: Vec::new(),
             missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
         };
         let graph = project
             .script_graph(CompileMode::EditorPlayMode, "Standalone")

@@ -265,9 +265,11 @@ def engine(mode, out, project, capture, cli):
         command = [cli, 'run', '-p', str(project), '--no-watch', '--headless', '600']
     else:
         command = [cli, 'test', '-p', str(project), '--platform', 'EditMode', '--results', str(out/'results.xml')]
+    # MoveAssetToTrash puts a file in the user's trash: on Linux the freedesktop.org trash, here the run's.
+    env = {**os.environ, VARIABLE: str(capture), 'XDG_DATA_HOME': str(out/'data')}
     with (out/'engine.log').open('w') as log:
         return subprocess.run([str(LAUNCHER), '--kind', 'engine-cpu', 'timeout', '600', *command],
-                              env={**os.environ, VARIABLE: str(capture)}, stdout=log, stderr=subprocess.STDOUT).returncode
+                              env=env, stdout=log, stderr=subprocess.STDOUT).returncode
 
 
 def gate(label):

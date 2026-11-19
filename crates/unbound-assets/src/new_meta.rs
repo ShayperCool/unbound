@@ -6,9 +6,12 @@
 //! settings at their defaults, with LF line endings and no creation time. Each importer's
 //! defaults do not depend on the file's format (a PNG, TGA, PSD, EXR and HDR texture get the
 //! same; an OBJ and an FBX model; a WAV, OGG and MP3 clip), except a font's names, which come
-//! from the font. An extension without an importer gets the DefaultImporter (measured: `.xyz`).
-//! Extensions whose importer has not been measured get no `.meta` ([`importer_for`] says so):
-//! the caller reports them instead of writing a guess.
+//! from the font. A scene gets the DefaultImporter. Extensions whose importer has not been
+//! measured get no `.meta` ([`importer_for`] says so), nor does an extension no importer of the
+//! Editor claims (the Editor gives it the DefaultImporter, measured with `.xyz`, but a package's
+//! ScriptedImporter may claim any extension, which is not known before the scripts compile): the
+//! caller reports them instead of writing a guess. A folder plug-in (`.bundle`, `.framework`, ...)
+//! is one asset of a plug-in importer, not measured either; nothing inside it gets a `.meta`.
 
 use std::path::Path;
 use unbound_yaml::Guid;
@@ -55,7 +58,7 @@ const THEME_STYLE_SHEET_IMPORTER: i64 = 12388;
 /// importer has not been measured (a `.meta` would be a guess).
 pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
     if is_dir {
-        return Some(NewImporter::Folder);
+        return (!is_folder_plugin(path)).then_some(NewImporter::Folder);
     }
     let extension = path
         .extension()
@@ -94,9 +97,16 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
             script: THEME_STYLE_SHEET_IMPORTER,
             validation: true,
         },
-        // A scene gets the DefaultImporter (measured); so does an extension no importer claims.
-        "unity" | "xyz" => NewImporter::Default,
+        "unity" => NewImporter::Default,
         _ => return None,
+    })
+}
+
+/// A directory the Editor imports as one plug-in asset, whose contents are no assets.
+pub fn is_folder_plugin(path: &Path) -> bool {
+    path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+        ["bundle", "framework", "xcframework", "plugin", "androidlib"]
+            .contains(&e.to_ascii_lowercase().as_str())
     })
 }
 
@@ -241,14 +251,19 @@ pub struct Imported {
 /// them (`unbound_project::assetdb::is_hidden`); `root` itself is not an asset.
 pub fn import_new(root: &Path, context: &MetaContext, hidden: impl Fn(&str) -> bool) -> Imported {
     let mut imported = Imported::default();
-    let walker = walkdir::WalkDir::new(root)
+    let mut walker = walkdir::WalkDir::new(root)
         .follow_links(true)
         .sort_by_file_name()
         .into_iter()
         .filter_entry(|e| e.depth() == 0 || !hidden(&e.file_name().to_string_lossy()));
-    for entry in walker.flatten() {
+    while let Some(entry) = walker.next() {
+        let Ok(entry) = entry else { continue };
         if entry.depth() == 0 {
             continue;
+        }
+        // A folder plug-in is one asset: what is inside it is not imported on its own.
+        if entry.file_type().is_dir() && is_folder_plugin(entry.path()) {
+            walker.skip_current_dir();
         }
         let path = entry.path();
         if path
@@ -319,6 +334,8 @@ mod tests {
         assert_eq!(of("a.unity"), Some(NewImporter::Default));
         assert_eq!(of("a.asmdef"), Some(NewImporter::AssemblyDefinition));
         assert_eq!(of("a.asmref"), None);
+        assert_eq!(of("a.xyz"), None);
+        assert_eq!(importer_for(Path::new("Plugin.framework"), true), None);
         assert_eq!(of("a.dll"), None);
         assert_eq!(
             importer_for(Path::new("Folder.png"), true),
@@ -398,6 +415,8 @@ mod tests {
         std::fs::write(dir.join("Sub/b.asmref"), "{}").unwrap();
         std::fs::write(dir.join("Sub/.hidden/c.txt"), "c").unwrap();
         std::fs::write(dir.join("Kept.txt"), "k").unwrap();
+        std::fs::create_dir_all(dir.join("Native.bundle/Contents")).unwrap();
+        std::fs::write(dir.join("Native.bundle/Contents/Info.plist"), "<plist/>").unwrap();
         std::fs::write(dir.join("Kept.txt.meta"), "fileFormatVersion: 2\nguid: 1\n").unwrap();
         let context = MetaContext::default();
         let imported = import_new(&dir, &context, |name| name.starts_with('.'));
@@ -408,8 +427,11 @@ mod tests {
             .collect();
         written.sort();
         assert_eq!(written, ["Sub.meta", "Sub/a.txt.meta"]);
-        assert_eq!(imported.unsupported.len(), 1);
-        assert!(imported.unsupported[0].contains(".asmref"));
+        // The plug-in is reported, nothing inside it written.
+        assert_eq!(imported.unsupported.len(), 2);
+        assert!(imported.unsupported.iter().any(|u| u.contains(".asmref")));
+        assert!(imported.unsupported.iter().any(|u| u.contains(".bundle")));
+        assert!(!dir.join("Native.bundle/Contents.meta").exists());
         assert_eq!(
             std::fs::read_to_string(dir.join("Kept.txt.meta")).unwrap(),
             "fileFormatVersion: 2\nguid: 1\n"

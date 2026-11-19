@@ -38,25 +38,91 @@ namespace UnityEditor
             public long? Main { get; set; }
         }
 
+        sealed class Imported
+        {
+            public string Guid { get; set; }
+            public string Kind { get; set; }
+            public string[] Labels { get; set; }
+        }
+
         sealed class ImportResult
         {
-            public string[] Guids { get; set; }
+            public Imported[] Assets { get; set; }
         }
 
         /// <summary>The engine's asset database brought up to date for these paths (a missing
-        /// <c>.meta</c> written, a gone asset dropped); each path's GUID, "" for a gone one.</summary>
+        /// <c>.meta</c> written, a gone asset dropped), and the listing with it; each path's GUID,
+        /// "" for a gone one.</summary>
         internal static string[] Import(IEnumerable<ImportRequest> requests)
         {
             var list = requests.ToList();
             if (list.Count == 0) return Array.Empty<string>();
             var json = JsonSerializer.Serialize(new { paths = list }, s_Json);
-            var result = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-import", json), s_Json);
-            Invalidate();
-            return result?.Guids ?? Array.Empty<string>();
+            var assets = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-import", json), s_Json)?.Assets ?? Array.Empty<Imported>();
+            var guids = new string[list.Count];
+            for (int i = 0; i < list.Count; i++)
+            {
+                var asset = i < assets.Length ? assets[i] : null;
+                guids[i] = asset?.Guid ?? "";
+                Relist(list[i].Path, asset);
+            }
+            return guids;
+        }
+
+        /// <summary>The listing's entry for a path as an import left it.</summary>
+        static void Relist(string path, Imported asset)
+        {
+            if (s_Entries == null) return;  // listed from the engine when first asked
+            if (s_ByPath.TryGetValue(path, out var old))
+            {
+                s_Entries.Remove(old);
+                s_ByPath.Remove(path);
+                if (s_ByGuid.TryGetValue(old.Guid, out var same) && same == old) s_ByGuid.Remove(old.Guid);
+            }
+            if (asset == null || string.IsNullOrEmpty(asset.Guid)) return;
+            if (s_ByGuid.TryGetValue(asset.Guid, out var moved))
+            {
+                s_Entries.Remove(moved);
+                s_ByPath.Remove(moved.Path);
+            }
+            var entry = new Entry { Guid = asset.Guid, Path = path, Kind = asset.Kind, Labels = asset.Labels ?? Array.Empty<string>() };
+            s_Entries.Add(entry);
+            s_ByPath[path] = entry;
+            s_ByGuid[asset.Guid] = entry;
         }
 
         static string ImportOne(string path, long? main = null) =>
             Import(new[] { new ImportRequest { Path = path, Main = main } }).FirstOrDefault() ?? "";
+
+        sealed class Root
+        {
+            public string Path { get; set; }
+            public bool Editable { get; set; }
+        }
+
+        static Root[] s_Roots;
+
+        /// <summary>The asset database's roots: <c>Assets</c> and each package, and whether the
+        /// project holds it (Assets, embedded and local packages) or it is read-only.</summary>
+        static Root[] Roots => s_Roots ??= JsonSerializer.Deserialize<Root[]>(Native.Call("asset-roots", "{}"), s_Json) ?? Array.Empty<Root>();
+
+        static bool IsRoot(string path) =>
+            string.Equals(path, "Packages", StringComparison.OrdinalIgnoreCase) || Roots.Any(r => string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>Whether the Editor writes at <paramref name="path"/>: inside <c>Assets</c> or a
+        /// package the project holds; never a root itself, nor a registry or built-in package.</summary>
+        internal static bool Editable(string path)
+        {
+            if (string.IsNullOrEmpty(path) || IsRoot(path)) return false;
+            Root best = null;
+            foreach (var root in Roots)
+                if (path.StartsWith(root.Path + "/", StringComparison.OrdinalIgnoreCase) && (best == null || root.Path.Length > best.Path.Length))
+                    best = root;
+            return best?.Editable == true;
+        }
+
+        static void Refused(string operation, string path) =>
+            Debug.LogError($"{operation}: '{path}' is not in the project's own assets (Assets/, or a package embedded or kept locally); nothing is written there.");
 
         /// <summary>The file or folder a project path names (absolute).</summary>
         internal static string FileOf(string path)
@@ -73,21 +139,33 @@ namespace UnityEditor
         /// without a <c>.meta</c>, imported now or (between Start/StopAssetEditing) later.</summary>
         static void ImportNew(string path)
         {
+            if (!Editable(path)) return;
             if (s_Editing > 0)
             {
                 s_PendingImports.Add(path);
                 return;
             }
-            var folders = new List<string>();
-            for (var folder = Path.GetDirectoryName(path)?.Replace('\\', '/'); !string.IsNullOrEmpty(folder) && folder != "Assets" && folder != "Packages" && folder.Contains('/'); folder = Path.GetDirectoryName(folder)?.Replace('\\', '/'))
+            ImportNew(new[] { path });
+        }
+
+        static void ImportNew(IReadOnlyList<string> paths)
+        {
+            var requests = new List<string>();
+            foreach (var path in paths)
             {
-                if (File.Exists(FileOf(folder) + ".meta")) break;
-                folders.Add(folder);
+                var folders = new List<string>();
+                for (var folder = Path.GetDirectoryName(path)?.Replace('\\', '/'); Editable(folder); folder = Path.GetDirectoryName(folder)?.Replace('\\', '/'))
+                {
+                    if (File.Exists(FileOf(folder) + ".meta") || requests.Contains(folder)) break;
+                    folders.Add(folder);
+                }
+                folders.Reverse();
+                requests.AddRange(folders);
+                if (!requests.Contains(path)) requests.Add(path);
             }
-            folders.Reverse();
-            Import(folders.Append(path).Select(p => new ImportRequest { Path = p }));
-            // The import runs the asset's preprocessors (whose settings changes its .meta keeps).
-            AssetPostprocessing.EnsurePreprocessed(path, Kind(path));
+            Import(requests.Select(p => new ImportRequest { Path = p }));
+            // The import runs the assets' preprocessors (whose settings changes their .meta keeps).
+            foreach (var path in paths) AssetPostprocessing.EnsurePreprocessed(path, Kind(path));
         }
 
         [Unbound.EditorFaithful("tests/projects/projectwrites 01.refresh: new files and folders get their .meta, the database is scanned again")]
@@ -113,9 +191,9 @@ namespace UnityEditor
         {
             if (s_Editing == 0) return;
             if (--s_Editing > 0) return;
-            var pending = s_PendingImports.ToList();
+            var pending = s_PendingImports.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             s_PendingImports.Clear();
-            foreach (var path in pending) ImportNew(path);
+            if (pending.Count > 0) ImportNew(pending);
             if (s_PendingRefresh)
             {
                 s_PendingRefresh = false;
@@ -126,13 +204,19 @@ namespace UnityEditor
         // ------------------------------------------------------------------ folders and paths
 
         /// <summary>A new folder in <paramref name="parentFolder"/>, named uniquely as
-        /// GenerateUniqueAssetPath names it; its GUID, "" when the parent is not a folder.</summary>
+        /// GenerateUniqueAssetPath names it; its GUID, "" when the parent is not a folder of the
+        /// project's own assets.</summary>
         public static string CreateFolder(string parentFolder, string newFolderName)
         {
             parentFolder = Normalize(parentFolder);
             if (!IsValidFolder(parentFolder) || string.IsNullOrEmpty(newFolderName)) return "";
             var path = GenerateUniqueAssetPath(parentFolder + "/" + newFolderName);
             if (string.IsNullOrEmpty(path)) return "";
+            if (!Editable(path))
+            {
+                Refused("AssetDatabase.CreateFolder", path);
+                return "";
+            }
             Directory.CreateDirectory(FileOf(path));
             return ImportOne(path);
         }
@@ -165,7 +249,23 @@ namespace UnityEditor
             }
         }
 
-        static bool Taken(string path) => Exists(path) || File.Exists(FileOf(path) + ".meta");
+        /// <summary>Whether an asset, a file or a <c>.meta</c> has this path, its case ignored as
+        /// Unity's paths compare.</summary>
+        static bool Taken(string path)
+        {
+            if (ExistingGuid(path).Length > 0) return true;
+            var file = FileOf(path);
+            var directory = Path.GetDirectoryName(file);
+            if (directory == null || !Directory.Exists(directory)) return false;
+            var name = Path.GetFileName(file);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+            {
+                var other = Path.GetFileName(entry);
+                if (string.Equals(other, name, StringComparison.OrdinalIgnoreCase) || string.Equals(other, name + ".meta", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
 
         /// <summary>A folder path as the project spells it, or null when there is none.</summary>
         static string ProjectFolder(string folder)
@@ -179,7 +279,7 @@ namespace UnityEditor
 
         // ------------------------------------------------------------------ copy, move, rename
 
-        static readonly Regex s_GuidLine = new Regex("^guid: [0-9a-fA-F]{32}$", RegexOptions.Multiline);
+        static readonly Regex s_GuidLine = new Regex("^guid: [0-9a-fA-F]{32}(?=\\r?$)", RegexOptions.Multiline);
 
         /// <summary>A copy of the asset at <paramref name="newPath"/> with a new GUID; its
         /// <c>.meta</c> is the original's with that GUID (tests/projects/projectwrites 05.copy).</summary>
@@ -190,6 +290,16 @@ namespace UnityEditor
             if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(newPath) || !Exists(path) || Taken(newPath)) return false;
             var parent = Path.GetDirectoryName(newPath)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(parent) || ProjectFolder(parent) == null) return false;
+            if (!Editable(newPath))
+            {
+                Refused("AssetDatabase.CopyAsset", newPath);
+                return false;
+            }
+            if (File.Exists(FileOf(path) + ".meta") && !s_GuidLine.IsMatch(File.ReadAllText(FileOf(path) + ".meta")))
+            {
+                Debug.LogError($"AssetDatabase.CopyAsset: the .meta of '{path}' has no GUID line; nothing is copied.");
+                return false;
+            }
             var copied = new List<string>();
             CopyTree(FileOf(path), FileOf(newPath), newPath, copied);
             RenameMainObject(newPath);
@@ -238,6 +348,8 @@ namespace UnityEditor
                 return $"Trying to move asset as a sub directory of a directory that does not exist {newPath}";
             if (Taken(newPath) && !string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
                 return $"Cannot move asset from {oldPath} to {newPath}. Destination path name does already exist";
+            if (!Editable(oldPath) || !Editable(newPath))
+                return $"Cannot move asset from {oldPath} to {newPath}: only the project's own assets move (Assets/, or a package embedded or kept locally)";
             return "";
         }
 
@@ -275,9 +387,9 @@ namespace UnityEditor
             return MoveAsset(pathName, folder + "/" + newName + extension);
         }
 
-        static readonly Regex s_MainObjectFileId = new Regex("^  mainObjectFileID: (-?[0-9]+)$", RegexOptions.Multiline);
-        static readonly Regex s_DocumentHeader = new Regex("^--- !u![0-9]+ &(-?[0-9]+).*$", RegexOptions.Multiline);
-        static readonly Regex s_NameLine = new Regex("^  m_Name: .*$", RegexOptions.Multiline);
+        static readonly Regex s_MainObjectFileId = new Regex("^  mainObjectFileID: (-?[0-9]+)(?=\\r?$)", RegexOptions.Multiline);
+        static readonly Regex s_DocumentHeader = new Regex("^--- !u![0-9]+ &(-?[0-9]+)[^\\r\\n]*", RegexOptions.Multiline);
+        static readonly Regex s_NameLine = new Regex("^  m_Name: [^\\r\\n]*", RegexOptions.Multiline);
 
         /// <summary>A native asset's main object named after its file, in the file and, when it is
         /// loaded, in memory: the Editor names it so when it copies, moves or renames the asset
@@ -299,7 +411,7 @@ namespace UnityEditor
                 var document = text.Substring(start, end - start);
                 var line = s_NameLine.Match(document);
                 if (!line.Success) return;
-                File.WriteAllText(file, text.Substring(0, start) + document.Substring(0, line.Index) + "  m_Name: " + name + document.Substring(line.Index + line.Length) + text.Substring(end));
+                File.WriteAllText(file, text.Substring(0, start) + document.Substring(0, line.Index) + "  m_Name: " + UnityYamlWriter.Scalar(name) + document.Substring(line.Index + line.Length) + text.Substring(end));
                 var guid = s_GuidLine.Match(meta);
                 if (guid.Success && AssetDatabaseRuntime.IsMainLoaded(guid.Value.Substring("guid: ".Length)))
                     AssetDatabaseRuntime.LoadMain(guid.Value.Substring("guid: ".Length), null).name = name;
@@ -345,7 +457,12 @@ namespace UnityEditor
 
         static bool Remove(string path, bool trash)
         {
-            if (string.IsNullOrEmpty(path) || !Exists(path) || path == "Assets") return false;
+            if (string.IsNullOrEmpty(path) || !Exists(path)) return false;
+            if (!Editable(path))
+            {
+                Refused(trash ? "AssetDatabase.MoveAssetToTrash" : "AssetDatabase.DeleteAsset", path);
+                return false;
+            }
             var removed = TreeOf(path);
             foreach (var p in removed)
             {
@@ -374,7 +491,7 @@ namespace UnityEditor
 
         // ------------------------------------------------------------------ labels
 
-        static readonly Regex s_LabelsBlock = new Regex("^labels:\n(?:- .*\n)*", RegexOptions.Multiline);
+        static readonly Regex s_LabelsBlock = new Regex("^labels:\\r?\\n(?:- [^\\r\\n]*\\r?\\n)*", RegexOptions.Multiline);
 
         /// <summary>The labels written into the asset's <c>.meta</c> at once, after its GUID, in
         /// ordinal order with repeats kept; none: no labels block (matches the Unity 6000.0.71f1
@@ -383,16 +500,22 @@ namespace UnityEditor
         {
             var path = obj != null ? GetAssetPath(obj) : null;
             if (string.IsNullOrEmpty(path)) return;
+            if (!Editable(path))
+            {
+                Refused("AssetDatabase.SetLabels", path);
+                return;
+            }
             var meta = FileOf(path) + ".meta";
             if (!File.Exists(meta)) return;
             var text = s_LabelsBlock.Replace(File.ReadAllText(meta), "", 1);
+            var newline = text.Contains("\r\n") ? "\r\n" : "\n";
             var sorted = (labels ?? Array.Empty<string>()).Where(l => !string.IsNullOrEmpty(l)).OrderBy(l => l, StringComparer.Ordinal).ToArray();
             if (sorted.Length > 0)
             {
-                var block = new StringBuilder("labels:\n");
-                foreach (var label in sorted) block.Append("- ").Append(label).Append('\n');
+                var block = new StringBuilder("labels:").Append(newline);
+                foreach (var label in sorted) block.Append("- ").Append(UnityYamlWriter.Scalar(label)).Append(newline);
                 var guid = s_GuidLine.Match(text);
-                int at = guid.Success ? guid.Index + guid.Length + 1 : text.Length;
+                int at = guid.Success ? guid.Index + guid.Length + newline.Length : text.Length;
                 text = text.Insert(Math.Min(at, text.Length), block.ToString());
             }
             File.WriteAllText(meta, text);

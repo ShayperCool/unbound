@@ -33,6 +33,8 @@ pub struct RuntimeState {
     editable_roots: Vec<PathBuf>,
     /// What new `.meta` files depend on (the installation's platform modules).
     new_meta: unbound_assets::new_meta::MetaContext,
+    /// The project's release family's new `.meta` files are measured (6000.0).
+    new_meta_measured: bool,
     backend: RwLock<Arc<dyn RenderBackend>>,
     imports: AssetCache,
     /// Imports textures with the active build target's overrides.
@@ -108,38 +110,42 @@ impl RuntimeState {
     }
 
     /// Changes the asset database and what follows from it (the `Resources` index).
-    fn update_db(&self, change: impl FnOnce(&mut AssetDb)) {
+    /// Changes the asset database; the `Resources` index follows when `resources` (a change of an
+    /// asset below a `Resources` folder, or a new scan).
+    fn update_db(&self, resources: bool, change: impl FnOnce(&mut AssetDb)) {
         let mut db = self.db.write().unwrap();
         change(Arc::make_mut(&mut db));
-        *self.resources.write().unwrap() = resources_of(&db);
+        if resources {
+            *self.resources.write().unwrap() = resources_of(&db);
+        }
     }
 
     /// The asset path (`Assets/...`, `Packages/<name>/...`) of a file or folder of the project's
-    /// asset roots, and its root's directory.
+    /// asset roots (not a root itself: `Assets` and a package's folder are no assets).
     fn file_of(&self, asset_path: &str) -> Option<PathBuf> {
         self.asset_roots.iter().find_map(|(dir, root)| {
-            let rest = asset_path.strip_prefix(root.as_str())?;
-            if rest.is_empty() {
-                return Some(dir.clone());
-            }
-            rest.strip_prefix('/').map(|rest| dir.join(rest))
+            let rest = asset_path.strip_prefix(root.as_str())?.strip_prefix('/')?;
+            (!rest.is_empty()).then(|| dir.join(rest))
         })
     }
 
     /// Brings the database up to date for the assets at `paths` as the Editor imports them: a
     /// file or folder without a `.meta` gets one (`main` the main object's file id of a native
     /// asset an API created), one that is gone leaves the database, and one with a `.meta` is
-    /// listed as its `.meta` says. Returns each path's GUID ("" when it is not an asset).
-    fn import_paths(&self, paths: &[ImportPath]) -> Result<Vec<String>> {
+    /// listed as its `.meta` says; a `.meta` whose GUID another asset has (a copied file) gets a
+    /// new one, as the Editor gives it. Returns what each path is now (an empty GUID: not an
+    /// asset).
+    fn import_paths(&self, paths: &[ImportPath]) -> Result<Vec<serde_json::Value>> {
         let mut found = Vec::with_capacity(paths.len());
         let mut entries = Vec::with_capacity(paths.len());
+        let db = self.db();
         for request in paths {
             let file = self
                 .file_of(&request.path)
-                .with_context(|| format!("{} is not in the project's assets", request.path))?;
+                .with_context(|| format!("{} is no asset of the project", request.path))?;
             if !file.exists() {
                 entries.push((request.path.clone(), None));
-                found.push(String::new());
+                found.push(json!({ "guid": "" }));
                 continue;
             }
             let meta = unbound_assets::new_meta::meta_path(&file);
@@ -149,6 +155,11 @@ impl RuntimeState {
                         .iter()
                         .any(|root| file.starts_with(root)),
                     "{} is in a read-only package: the Editor imports nothing there",
+                    request.path
+                );
+                anyhow::ensure!(
+                    self.new_meta_measured,
+                    "Unbound has not measured the .meta files this release's Editor writes: {} is left without one",
                     request.path
                 );
                 let importer = match request.main {
@@ -168,8 +179,33 @@ impl RuntimeState {
                 )?;
             }
             let (guid, labels) = unbound_project::assetdb::read_meta_header(&meta);
-            let guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
-            found.push(guid.to_string());
+            let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
+            let taken = db.by_guid(guid).is_some_and(|other| {
+                !other.path.eq_ignore_ascii_case(&request.path) && other.file.exists()
+            }) || entries.iter().any(
+                |(path, asset): &(String, Option<unbound_project::assetdb::Asset>)| {
+                    asset.as_ref().is_some_and(|a| a.guid == guid)
+                        && !path.eq_ignore_ascii_case(&request.path)
+                },
+            );
+            if taken {
+                let fresh = unbound_assets::new_meta::new_guid();
+                let text = std::fs::read_to_string(&meta)?;
+                std::fs::write(
+                    &meta,
+                    text.replacen(&format!("guid: {guid}"), &format!("guid: {fresh}"), 1),
+                )?;
+                tracing::warn!(
+                    "{}: its .meta had the GUID of another asset; it gets a new one",
+                    request.path
+                );
+                guid = fresh;
+            }
+            found.push(json!({
+                "guid": guid.to_string(),
+                "kind": if file.is_dir() { "folder" } else { asset_kind(&request.path) },
+                "labels": labels,
+            }));
             entries.push((
                 request.path.clone(),
                 Some(unbound_project::assetdb::Asset {
@@ -181,7 +217,10 @@ impl RuntimeState {
                 }),
             ));
         }
-        self.update_db(|db| {
+        let resources = entries
+            .iter()
+            .any(|(path, _)| !resources_keys(path).is_empty());
+        self.update_db(resources, |db| {
             for (path, asset) in entries {
                 db.remove_path(&path);
                 if let Some(asset) = asset {
@@ -195,13 +234,17 @@ impl RuntimeState {
     /// AssetDatabase.Refresh: every new file and folder of the project's own assets imported (a
     /// `.meta` written), and the database scanned again.
     fn refresh_assets(&self) -> Result<usize> {
-        let written = unbound_assets::new_meta::import_roots(
-            &self.editable_roots,
-            &self.new_meta,
-            unbound_project::assetdb::is_hidden,
-        )
-        .written
-        .len();
+        let written = if self.new_meta_measured {
+            unbound_assets::new_meta::import_roots(
+                &self.editable_roots,
+                &self.new_meta,
+                unbound_project::assetdb::is_hidden,
+            )
+            .written
+            .len()
+        } else {
+            0
+        };
         let roots: Vec<_> = self
             .asset_roots
             .iter()
@@ -211,7 +254,7 @@ impl RuntimeState {
             })
             .collect();
         let scanned = AssetDb::scan(&roots);
-        self.update_db(|db| *db = scanned);
+        self.update_db(true, |db| *db = scanned);
         Ok(written)
     }
 }
@@ -266,6 +309,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .into_iter()
             .map(Path::to_path_buf)
             .collect(),
+        new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
         new_meta: unbound_assets::new_meta::MetaContext::for_install(
             &unbound_project::install::playback_engines(&project.install.data),
         ),
@@ -687,9 +731,23 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 paths: Vec<ImportPath>,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(json!({ "guids": s.import_paths(&r.paths)? }).to_string())
+            Ok(json!({ "assets": s.import_paths(&r.paths)? }).to_string())
         }
         "asset-refresh" => Ok(json!({ "written": s.refresh_assets()? }).to_string()),
+        "asset-roots" => {
+            // The asset database's roots, and whether the project holds each (where editor APIs write).
+            let roots: Vec<_> = s
+                .asset_roots
+                .iter()
+                .map(|(dir, path)| {
+                    json!({
+                        "path": path,
+                        "editable": s.editable_roots.iter().any(|root| root == dir),
+                    })
+                })
+                .collect();
+            Ok(serde_json::Value::Array(roots).to_string())
+        }
         "asset-list" => {
             // Every asset: what AssetDatabase.GetAllAssetPaths and FindAssets search.
             let list: Vec<_> = s

@@ -21,5 +21,9 @@
   ],
   "In Edit mode the Editor resolves the packages again after a manifest change (Client.Resolve) and writes the new lock by the time it quits; Unbound writes the lock only when the project has none": [
     "edit.exit.Packages/packages-lock.json"
+  ],
+  "The Editor gives a file of an extension no importer claims the DefaultImporter; Unbound cannot tell when it opens the project which extensions packages' ScriptedImporters claim (the scripts are not compiled yet), so it reports the file and writes no .meta": [
+    "edit.exit.Assets/Startup/Unknown.xyz.meta",
+    "play.exit.Assets/Startup/Unknown.xyz.meta"
   ]
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Unbound.Runtime;
 using UnityEditor;
@@ -54,14 +55,17 @@ namespace Unbound.Runtime
         {
             if (importer?.m_Settings == null || string.IsNullOrEmpty(importer.m_SettingsType)) return false;
             var path = importer.assetPath;
-            if (string.IsNullOrEmpty(path)) return false;
+            if (string.IsNullOrEmpty(path) || !AssetDatabase.Editable(path)) return false;
             var meta = AssetDatabase.FileOf(path) + ".meta";
             if (!File.Exists(meta)) return false;
             var text = File.ReadAllText(meta);
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(importer.m_SettingsType);
             if (section == null || section.Kind != YKind.Map) return false;
-            Patch(section, importer.m_Settings);
+            var unwritten = new List<string>();
+            Patch(section, importer.m_Settings, "", unwritten);
+            if (unwritten.Count > 0)
+                Debug.LogWarning($"Unbound does not write these {importer.m_SettingsType} settings of '{path}' into its .meta yet (their place in it is not measured): {string.Join(", ", unwritten)}");
             SetScalar(section, "userData", importer.userData);
             SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
             SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
@@ -95,7 +99,7 @@ namespace Unbound.Runtime
         /// <summary>Each scalar of <paramref name="settings"/> (the importer's tree) into the same
         /// place of <paramref name="text"/> where it differs; entries the file does not have stay
         /// out (their place in the Editor's layout is not known).</summary>
-        static void Patch(YText text, YNode settings)
+        static void Patch(YText text, YNode settings, string at, List<string> unwritten)
         {
             if (text == null || settings == null) return;
             switch (settings.Kind)
@@ -103,24 +107,34 @@ namespace Unbound.Runtime
                 case YKind.Map when text.Kind == YKind.Map:
                     for (int i = 0; i < settings.Keys.Length; i++)
                     {
-                        var child = text.Get(settings.Keys[i]);
-                        if (child == null) continue;
+                        var key = settings.Keys[i];
+                        var child = text.Get(key);
+                        if (child == null)
+                        {
+                            unwritten.Add(at + key);
+                            continue;
+                        }
                         if (child.Kind == YKind.Scalar && settings.Values[i].Kind == YKind.Scalar)
                         {
-                            if (child.Text != settings.Values[i].Scalar) Replace(text, settings.Keys[i], settings.Values[i].Scalar);
+                            if (child.Text != settings.Values[i].Scalar) Replace(text, key, settings.Values[i].Scalar);
                         }
-                        else Patch(child, settings.Values[i]);
+                        else Patch(child, settings.Values[i], at + key + ".", unwritten);
                     }
                     if (text.Flow) text.Raw = null;
                     break;
                 case YKind.Seq when text.Kind == YKind.Seq:
-                    for (int i = 0; i < Math.Min(settings.Items.Length, text.Items.Count); i++)
+                    for (int i = 0; i < settings.Items.Length; i++)
                     {
+                        if (i >= text.Items.Count)
+                        {
+                            unwritten.Add(at + "[" + i + "]");
+                            continue;
+                        }
                         if (text.Items[i].Kind == YKind.Scalar && settings.Items[i].Kind == YKind.Scalar)
                         {
                             if (text.Items[i].Text != settings.Items[i].Scalar) text.Items[i] = YText.Scalar(Plain(settings.Items[i].Scalar));
                         }
-                        else Patch(text.Items[i], settings.Items[i]);
+                        else Patch(text.Items[i], settings.Items[i], at + "[" + i + "].", unwritten);
                     }
                     break;
             }

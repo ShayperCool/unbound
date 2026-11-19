@@ -52,14 +52,18 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-19: 511/530 values, 0 failures and 19 recorded residuals
+Unbound on macOS, 2026-11-19: 509/530 values, 0 failures and 21 recorded residuals
 (`residuals.json`): lists of numbers written as YAML sequences instead of the Editor's hex strings
-(the serialized-file writer), and the lock not written again after an Edit-mode `Client.Resolve`.
+(the serialized-file writer), the lock not written again after an Edit-mode `Client.Resolve`, and
+no `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot
+tell which extensions packages' ScriptedImporters claim).
 
-Unmeasured: other importers (`.asmref`, plug-ins, videos, packages' ScriptedImporters: Unbound
-reports such new files and writes no `.meta`), a `.meta` left without its asset, labels with YAML
-special characters, the trash's file names on a name clash, settings changed in Play mode and then
-saved in Edit mode, other releases.
+Unmeasured: other importers (`.asmref`, plug-ins and folder plug-ins such as `.bundle`, videos,
+packages' ScriptedImporters: Unbound reports such new files and writes no `.meta`), file operations
+in registry or built-in packages (Unbound refuses them with an error and writes nothing), a `.meta`
+left without its asset, labels with YAML special characters, the trash's file names on a name
+clash, settings changed in Play mode and then saved in Edit mode, other release families (Unbound
+writes no new `.meta`, lock or version file for them).
 
 Record (macOS, holding the machine's heavy-job lock), publish and gate:
 

@@ -229,3 +229,45 @@ mod header_tests {
         assert_eq!(header(malformed).0, header(text).0);
     }
 }
+
+#[cfg(test)]
+mod db_tests {
+    use super::*;
+
+    fn asset(guid: u128, path: &str) -> Asset {
+        Asset {
+            guid: Guid(guid),
+            path: path.into(),
+            file: PathBuf::from(path),
+            is_folder: false,
+            labels: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn inserting_and_removing_keeps_both_indexes() {
+        let mut db = AssetDb::default();
+        for (guid, path) in [
+            (1, "Assets/A.asset"),
+            (2, "Assets/B.asset"),
+            (3, "Assets/C.asset"),
+        ] {
+            db.insert(asset(guid, path));
+        }
+        // Removing the first moves the last into its place; both lookups follow.
+        db.remove_path("assets/a.ASSET");
+        assert!(db.by_guid(Guid(1)).is_none() && db.by_path("Assets/A.asset").is_none());
+        assert_eq!(db.by_guid(Guid(3)).unwrap().path, "Assets/C.asset");
+        assert_eq!(db.by_path("Assets/C.asset").unwrap().guid, Guid(3));
+        // A move: the GUID's old path goes, the new one answers.
+        db.insert(asset(2, "Assets/Moved.asset"));
+        assert!(db.by_path("Assets/B.asset").is_none());
+        assert_eq!(db.by_path("Assets/Moved.asset").unwrap().guid, Guid(2));
+        // A new asset at a listed path replaces it.
+        db.insert(asset(4, "Assets/C.asset"));
+        assert!(db.by_guid(Guid(3)).is_none());
+        assert_eq!(db.len(), 2);
+        db.remove_path("Assets/Nothing.asset");
+        assert_eq!(db.len(), 2);
+    }
+}
