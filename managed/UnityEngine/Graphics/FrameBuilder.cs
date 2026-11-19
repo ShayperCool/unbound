@@ -1746,9 +1746,8 @@ namespace Unbound.Runtime
                     // G-buffer's own depth instead: image effects (an intermediate of their own),
                     // target buffers set from script, a target depth without stencil (16-bit) or
                     // with samples (the G-buffer has one).
-                    ownTargetDepth = !camera.allowHDR && !onScreen && buffers == null && cameraTarget != null && cameraTarget.depth > 0
-                        && GraphicsFormatUtility.IsStencilFormat(cameraTarget.depthStencilFormat) && cameraTarget.antiAliasing == 1
-                        && cameraTarget.width == width && cameraTarget.height == height && effects.Count == 0 && opaqueEffects.Count == 0;
+                    ownTargetDepth = !onScreen && buffers == null && effects.Count == 0 && opaqueEffects.Count == 0
+                        && DrawsWithTargetDepth(camera.allowHDR, cameraTarget, width, height);
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
                     depthAttachment = TextureHandles.Of(ownTargetDepth ? cameraTarget : gbufferDepth);
                     deferredDepth = gbufferDepth;
@@ -1786,8 +1785,8 @@ namespace Unbound.Runtime
                     EmitItems(forwardOpaque, transparent, !deferred && !vertexLit
                         ? RenderDispatchContext.BuiltinForwardOpaque : RenderDispatchContext.Unknown);
                     RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
-                    // The sampled depth takes the forward opaque objects too, as a live G-buffer
-                    // depth has them.
+                    // The sampled depth takes the forward opaque objects too, as the pooled
+                    // G-buffer depth, drawn into and sampled, has them from here on.
                     if (ownTargetDepth)
                     {
                         GfxStream.CopyDepth(depthAttachment, TextureHandles.Of(deferredDepth));

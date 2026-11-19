@@ -64,6 +64,15 @@ namespace Unbound.Runtime
             stencilState = new StencilState(true, LightMarkBit, 0, CompareFunction.Equal, StencilOp.Keep, StencilOp.Keep, StencilOp.Keep),
         };
 
+        /// <summary>Whether a deferred camera (LDR unless <paramref name="hdr"/>) drawing off the
+        /// screen into <paramref name="target"/> at this size draws its G-buffer with the target's
+        /// own depth and stencil: an LDR camera into a target of its size whose depth has stencil
+        /// and one sample (the G-buffer's); otherwise with a depth of its own (unmeasured for those
+        /// targets).</summary>
+        internal static bool DrawsWithTargetDepth(bool hdr, RenderTexture target, int width, int height) =>
+            !hdr && target != null && target.depth > 0 && RenderTexture.SupportsStencil(target) && target.antiAliasing == 1
+            && target.width == width && target.height == height;
+
         /// <summary>The 10-bit buffers of the G-buffer: normals, and an LDR camera's light buffer.</summary>
         static RenderTextureDescriptor TenBit(int width, int height) =>
             new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB2101010, 0) { sRGB = false };
