@@ -73,7 +73,8 @@ on the Mac the gate also lists `Opposed`'s NaN rows.
 
 Not measured: the order in which the trees of a local wind that has become its asset's wind
 again leave it (the recorded constants are the same whichever leaves first), and the constants
-outside Play mode (Unbound renders in Play mode only).
+outside Play mode (the probe records Play mode only), and a local wind whose winds come to
+cancel exactly after it has started with a direction (`Opposed` cancels from its start).
 
     python3 tests/projects/speedtree9wind/make_trees.py              # rewrite the trees
     python3 tests/projects/speedtree9wind/run.py record --label A     # Editor capture (GPU)

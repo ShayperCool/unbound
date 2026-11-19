@@ -169,7 +169,8 @@ namespace UnityEngine
             var wind = new Vector3(directional.x + spherical.x, directional.y + spherical.y, directional.z + spherical.z);
             float length = MathF.Sqrt((wind.x * wind.x + wind.y * wind.y) + wind.z * wind.z);
             // While a spherical zone reaches the tree, the winds at it normalized (NaN when they
-            // cancel exactly: tests/projects/speedtree9wind `Opposed`); out of reach toward the
+            // cancel exactly: tests/projects/speedtree9wind `Opposed`, whose winds cancel from its
+            // start; winds that come to cancel later are unmeasured); out of reach toward the
             // directional wind, which keeps its direction when there is none.
             var direction = reached || length > 0f ? Divide(wind, length) : wind;
             fixed (SpeedTreeWindConfig9* c = &config)
@@ -781,10 +782,11 @@ namespace UnityEngine
         {
             if (s_Trees.Count == 0 || !s_Trees.TryGetValue(renderer.m_GameObject, out var tree)) return properties;
             var asset = tree.windAsset;
-            // A tree without a wind asset (or whose asset is destroyed, whose wind is no longer
-            // advanced) binds no wind constants. In the Unity 6000.0.71f1 Editor such a draw
-            // reads the constants an earlier draw left (tests/projects/speedtree9wind `Windless`,
-            // a recorded residual: the draw order is the renderer's); here it reads none.
+            // A tree without a wind asset binds no wind constants: in the Unity 6000.0.71f1 Editor
+            // its draw reads the constants an earlier draw left (tests/projects/speedtree9wind
+            // `Windless`, a recorded residual: the draw order is the renderer's); here it reads
+            // none. A destroyed asset's wind is no longer advanced, and its tree draws the same
+            // way (unmeasured).
             if (asset == null) return properties;
             if (s_AnyWind) tree.m_DrawnWithWind = true;
             var wind = WindOf(tree, renderer, asset);
