@@ -4,6 +4,27 @@ use std::{collections::BTreeMap, path::Path};
 use unbound_compat::InputHandling;
 use unbound_yaml::{Document, Guid, Value};
 
+/// Writes `ProjectSettings/InputManager.asset` as the Editor does when it opens a project that
+/// lacks it: the release's default axes (Unity 6000.0.71f1, tests/projects/inputdefaults). A file
+/// that cannot be written is reported and the defaults apply without it.
+pub fn write_missing_input_manager(project: &Path, profile: &unbound_compat::Profile) {
+    let file = project.join("ProjectSettings/InputManager.asset");
+    if file.exists() {
+        return;
+    }
+    let text = profile.default_input_manager();
+    let temporary = file.with_extension("asset.unbound-tmp");
+    let written =
+        std::fs::write(&temporary, text).and_then(|()| std::fs::rename(&temporary, &file));
+    if let Err(e) = written {
+        let _ = std::fs::remove_file(&temporary);
+        tracing::warn!(
+            "{}: writing the default Input Manager settings: {e}",
+            file.display()
+        );
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct BuildScene {
     pub path: String,
@@ -757,6 +778,37 @@ pub fn parse_defines(defines: &str) -> Vec<String> {
 mod tests {
     use super::{PlayModeAtlases, Settings, TierDefaults, TierSettings, parse_defines};
     use unbound_compat::GraphicsDevice::{Metal, OpenGLCore};
+
+    /// A project without InputManager.asset gets the Editor's default file once; an existing one
+    /// is kept as it is (Unity 6000.0.71f1, tests/projects/inputdefaults).
+    #[test]
+    fn a_missing_input_manager_is_written_with_the_editors_defaults() {
+        let project =
+            std::env::temp_dir().join(format!("unbound-input-defaults-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&project);
+        std::fs::create_dir_all(project.join("ProjectSettings")).unwrap();
+        let profile = unbound_compat::Profile::for_version("6000.0.67f1".parse().unwrap()).unwrap();
+        let file = project.join("ProjectSettings/InputManager.asset");
+        super::write_missing_input_manager(&project, &profile);
+        let written = std::fs::read_to_string(&file).unwrap();
+        let input = unbound_yaml::parse_documents(&written)
+            .unwrap()
+            .remove(0)
+            .body;
+        let axes = input
+            .get("m_Axes")
+            .and_then(unbound_yaml::Value::as_seq)
+            .unwrap();
+        assert_eq!(axes.len(), 18);
+        assert_eq!(
+            axes[0].get("m_Name").and_then(unbound_yaml::Value::as_str),
+            Some("Horizontal")
+        );
+        std::fs::write(&file, "kept").unwrap();
+        super::write_missing_input_manager(&project, &profile);
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "kept");
+        let _ = std::fs::remove_dir_all(&project);
+    }
 
     #[test]
     fn set_defines_replace_a_groups_symbols_under_the_key_player_settings_uses() {

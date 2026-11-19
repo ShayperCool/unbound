@@ -183,6 +183,13 @@ const BUILTINS: &[(&str, &str)] = &[(
     include_str!("../../../data/profiles/builtin-6000.0.json"),
 )];
 
+/// The `ProjectSettings/InputManager.asset` the Editor writes for a project that has none, by
+/// family (Unity 6000.0.71f1, tests/projects/inputdefaults).
+const INPUT_MANAGER_DEFAULTS: &[(&str, &str)] = &[(
+    "6000.0",
+    include_str!("../../../data/profiles/inputmanager-6000.0.asset"),
+)];
+
 /// A bundled table's family.
 fn parse_key(key: &str) -> (u32, u32) {
     let mut parts = key
@@ -235,6 +242,12 @@ impl Profile {
     /// `{"extra": {fileId: {class, name}}, "default": {...}}` of the profile's family.
     pub fn builtin_resources(&self) -> &'static str {
         select(BUILTINS, self.release()).map_or("{}", |(json, _)| json)
+    }
+
+    /// The Input Manager settings file (its default axes) the Editor writes where a project has
+    /// none.
+    pub fn default_input_manager(&self) -> &'static str {
+        select(INPUT_MANAGER_DEFAULTS, self.release()).map_or("", |(text, _)| text)
     }
 
     pub fn has(&self, feature: Feature) -> bool {

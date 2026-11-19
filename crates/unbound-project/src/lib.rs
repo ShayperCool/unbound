@@ -75,6 +75,7 @@ impl Project {
             );
         }
         let install = UnityInstall::find(version, profile.release())?;
+        settings::write_missing_input_manager(&root, &profile);
         let settings = Settings::read(&root)?;
         let resolution = packages::resolve(
             &root,

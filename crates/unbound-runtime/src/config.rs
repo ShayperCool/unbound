@@ -648,7 +648,15 @@ fn rendering_layers(project: &Project) -> Vec<String> {
 }
 
 fn input_axes(project: &Project) -> Vec<Json> {
-    let Some(input) = read_settings(project, "InputManager.asset") else {
+    // A project without the file has the Editor's default axes (written when it opened, where
+    // that was possible).
+    let Some(input) = read_settings(project, "InputManager.asset").or_else(|| {
+        unbound_yaml::parse_documents(project.profile.default_input_manager())
+            .ok()?
+            .into_iter()
+            .next()
+            .map(|d| d.body)
+    }) else {
         return Vec::new();
     };
     let mut axes = Vec::new();
