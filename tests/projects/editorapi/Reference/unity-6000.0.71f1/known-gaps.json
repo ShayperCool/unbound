@@ -1,11 +1,5 @@
 [
   {
-    "key": "event.undo.published",
-    "reference": "1",
-    "actual": "0",
-    "reason": "Undo operations explicitly report unsupported ObjectChangeEvents payload production when a listener is present. A frame-owned change stream and producer coverage remain a follow-up."
-  },
-  {
     "key": "toolbar.root.field",
     "reference": "UnityEngine.UIElements.VisualElement",
     "actual": "<null>",

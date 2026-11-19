@@ -78,7 +78,7 @@ describes the singleton and message subscriptions. The no-peer and worker-thread
 here are measured observations. The documented
 [ObjectChangeEvents callback](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ObjectChangeEvents-changesPublished.html)
 publishes undoable changes once per frame and lends the stream only for callback duration.
-The active divergent-state control records the missing producer rather than claiming parity.
+The active divergent-state control (`event.undo.published`) now matches: an undo publishes one stream.
 [CreatingMetadata](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Unity.Profiling.Memory.MemoryProfiler.CreatingMetadata.html)
 allows subscribers to supply a description when a snapshot is taken; this probe tests storage
 and subscription, and does not request a snapshot.
