@@ -55,5 +55,42 @@ public sealed partial class ImguiSkinProbe
         {
             GUILayout.EndArea();
         }
+        RecordNumericLayoutRects(phase);
+    }
+
+    void RecordNumericLayoutRects(string phase)
+    {
+        void Write(string name, Rect rect) =>
+            Put("numericGetRect/" + phase + "/" + name,
+                $"[{F(rect.x)},{F(rect.y)},{F(rect.width)},{F(rect.height)}]");
+
+        GUILayout.BeginArea(new Rect(20, 15, 200, 65));
+        try
+        {
+            var style = new GUIStyle { stretchWidth = false };
+            Write("range", GUILayoutUtility.GetRect(11, 31, 5, 17, style, GUILayout.Width(44), GUILayout.Height(9)));
+            Write("fixed", GUILayoutUtility.GetRect(12, 6, GUILayout.Width(25), GUILayout.Height(8)));
+            Write("content", GUILayoutUtility.GetRect(GUIContent.none, style, GUILayout.Width(27), GUILayout.Height(7)));
+
+            if (phase == "Repaint")
+            {
+                var current = Event.current;
+                try
+                {
+                    current.type = EventType.MouseDown;
+                    current.Use();
+                    Write("used", GUILayoutUtility.GetRect(81, 19));
+                }
+                finally { current.type = EventType.Repaint; }
+            }
+
+            Write("next", GUILayoutUtility.GetRect(21, 4, style));
+            if (phase == "Layout")
+            {
+                // A spare entry makes it possible to observe an incorrect cursor advance in Repaint.
+                GUILayoutUtility.GetRect(37, 11, style);
+            }
+        }
+        finally { GUILayout.EndArea(); }
     }
 }

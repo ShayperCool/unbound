@@ -276,6 +276,10 @@ namespace Unbound.Runtime
         /// Repaint by tests/projects/imguiskin on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorPropertyScopeMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Numeric GUILayoutUtility.GetRect results in Layout and Used events,
+        /// measured in tests/projects/imguiskin on Unity 6000.0.71f1.</summary>
+        internal static bool NumericGUILayoutRectMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;

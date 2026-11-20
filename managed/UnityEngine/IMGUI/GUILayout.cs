@@ -1048,11 +1048,13 @@ namespace UnityEngine
         static Rect DoGetRect(float minWidth, float maxWidth, float minHeight, float maxHeight, GUIStyle style, GUILayoutOption[] options)
         {
             GUIUtility.CheckOnGUI();
-            if (IsLayout)
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout)
             {
                 current.groups.Peek().Add(new GUILayoutEntry(minWidth, maxWidth, minHeight, maxHeight, style, options));
-                return kDummyRect;
+                return Compat.NumericGUILayoutRectMeasured ? new Rect(0f, 0f, maxWidth, maxHeight) : kDummyRect;
             }
+            if (eventType == EventType.Used && Compat.NumericGUILayoutRectMeasured) return kDummyRect;
             return current.groups.Peek().GetNext().rect;
         }
 

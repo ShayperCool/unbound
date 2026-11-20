@@ -34,10 +34,16 @@ restoration of enabled state and background color, and repeated disposal.
 The editor layout controls check horizontal and vertical group rectangles in Layout and Repaint,
 including nested groups, width options, padding and repeated scope disposal. Group rectangles
 start at zero in Layout and report the arranged bounds in Repaint. Explicit fixed style sizes
-take precedence over width and height options in this capture. The 12 numeric child rectangle
-observations in Q655 track the size that `GUILayoutUtility.GetRect` returns during Layout.
+take precedence over width and height options in this capture.
 [Unity 6000.0 `BeginHorizontal`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginHorizontal.html)
 [Unity 6000.0 `BeginVertical`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginVertical.html)
+
+The numeric `GetRect` controls record fixed sizes and size ranges with options that give different
+sizes on Repaint. Layout reports the supplied maximum dimensions before options apply. A Used
+event returns a 1×1 rectangle at the origin and leaves the next arranged entry available. The
+content overload also returns a 1×1 rectangle at the origin during Layout.
+[Unity 6000.0 `GUILayoutUtility.GetRect`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUILayoutUtility.GetRect.html)
+[Unity 6000.0 `Event.Use`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Event.Use.html)
 
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
