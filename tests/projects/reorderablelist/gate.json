@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/reorderablelist/run.py gate"],
+  "summary": "reorderablelist: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ReorderableList.cs",
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

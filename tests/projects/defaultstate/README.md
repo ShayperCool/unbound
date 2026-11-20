@@ -687,3 +687,7 @@ The local 2D physics scene slice adds the static `PhysicsSceneExtensions2D` to t
 inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree on its one row (excluded,
 static), inserted after `PhysicsSceneExtensions` where the captures place it; every earlier
 committed row and inventory entry is unchanged (15,750 rows).
+
+The ReorderableList state slice adds one inventory entry and its factory row. Two independent
+6000.0.71f1 Linux GPU captures exclude it because it has no public parameterless constructor.
+The explicit constructors are covered by `tests/projects/reorderablelist`.

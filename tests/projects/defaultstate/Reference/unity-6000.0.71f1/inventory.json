@@ -2357,6 +2357,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditorInternal.ReorderableList"
+    },
+    {
+      "category": "class",
       "module": "UnityEngine.AIModule",
       "status": "static",
       "type": "UnityEngine.AI.NavMesh"
