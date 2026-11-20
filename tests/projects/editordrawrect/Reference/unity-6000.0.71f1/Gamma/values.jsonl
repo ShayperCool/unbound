@@ -13,4 +13,12 @@
 {"k":"zeroWidth","v":[0,0,0]}
 {"k":"negativeWidth","v":[0,255,255]}
 {"k":"followingControl","v":[255,255,255]}
+{"k":"texture/opaqueDisabled","v":[255,255,255]}
+{"k":"texture/alphaDisabled","v":[128,64,32]}
+{"k":"texture/noBlendDisabled","v":[255,0,0]}
+{"k":"texture/uvBlendDisabled","v":[0,64,0]}
+{"k":"texture/uvNoBlendDisabled","v":[0,128,0]}
+{"k":"texture/roundedDisabled","v":[255,255,255]}
+{"k":"texture/opaqueEnabled","v":[255,255,255]}
+{"k":"texture/guiStateRestored","v":true}
 {"k":"complete","v":true}

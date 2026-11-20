@@ -284,6 +284,10 @@ namespace Unbound.Runtime
         /// tests/projects/imguiskin on Unity 6000.0.71f1.</summary>
         internal static bool UsedGUILayoutGroupMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Explicit GUI texture draws keep their tint alpha inside disabled groups,
+        /// measured in tests/projects/editordrawrect on Unity 6000.0.71f1.</summary>
+        internal static bool ExplicitGuiTextureAlphaMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;

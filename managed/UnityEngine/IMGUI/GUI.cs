@@ -263,8 +263,7 @@ namespace UnityEngine
             var screen = default(Rect);
             var source = default(Rect);
             if (!CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screen, ref source)) return;
-            var tint = color;
-            if (!enabled) tint.a *= 0.5f;
+            var tint = DrawTextureTint(color);
             if (!DrawTextureNeedsShape(borderWidths, borderRadiuses))
             {
                 GuiRender.DrawTexture(screen, image, source, tint, alphaBlend);
@@ -353,9 +352,13 @@ namespace UnityEngine
         {
             GUIUtility.CheckOnGUI();
             if (Current.type != EventType.Repaint || image == null) return;
-            var tint = color;
-            if (!enabled) tint.a *= 0.5f;
-            GuiRender.DrawTexture(position, image, texCoords, tint, alphaBlend);
+            GuiRender.DrawTexture(position, image, texCoords, DrawTextureTint(color), alphaBlend);
+        }
+
+        static Color DrawTextureTint(Color tint)
+        {
+            if (!enabled && !Compat.ExplicitGuiTextureAlphaMeasured) tint.a *= 0.5f;
+            return tint;
         }
 
         // ------------------------------------------------------------------ buttons and toggles

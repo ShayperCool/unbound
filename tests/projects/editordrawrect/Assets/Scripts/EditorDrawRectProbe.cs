@@ -8,7 +8,9 @@ using UnityEngine;
 public sealed class EditorDrawRectProbe : MonoBehaviour
 {
     readonly StringBuilder m_Values = new StringBuilder();
+    Texture2D m_AlphaTexture;
     bool m_Restored;
+    bool m_TextureStateRestored;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -27,6 +29,13 @@ public sealed class EditorDrawRectProbe : MonoBehaviour
         camera.backgroundColor = Color.black;
         camera.allowHDR = false;
         camera.allowMSAA = false;
+        m_AlphaTexture = new Texture2D(2, 1, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        m_AlphaTexture.SetPixels32(new[] { new Color32(255, 0, 0, 64), new Color32(0, 255, 0, 128) });
+        m_AlphaTexture.Apply();
 
         try
         {
@@ -59,6 +68,15 @@ public sealed class EditorDrawRectProbe : MonoBehaviour
         Pixel("zeroWidth", 139, 16);
         Pixel("negativeWidth", 172, 16);
         Pixel("followingControl", 215, 16);
+        Pixel("texture/opaqueDisabled", 18, 94);
+        Pixel("texture/alphaDisabled", 49, 94);
+        Pixel("texture/noBlendDisabled", 80, 94);
+        Pixel("texture/uvBlendDisabled", 111, 94);
+        Pixel("texture/uvNoBlendDisabled", 142, 94);
+        Pixel("texture/roundedDisabled", 173, 94);
+        Pixel("texture/opaqueEnabled", 204, 94);
+        Put("texture/guiStateRestored", m_TextureStateRestored ? "true" : "false");
+        Destroy(m_AlphaTexture);
         Destroy(image);
         Put("complete", "true");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_DRAW_RECT_OUT"), "values.jsonl"), m_Values.ToString());
@@ -97,5 +115,28 @@ public sealed class EditorDrawRectProbe : MonoBehaviour
         EditorGUI.DrawRect(new Rect(139, 10, 0, 12), Color.red);
         EditorGUI.DrawRect(new Rect(180, 10, -12, 12), Color.cyan);
         GUI.DrawTexture(new Rect(210, 10, 12, 12), Texture2D.whiteTexture);
+        DrawTextureControls();
+    }
+
+    void DrawTextureControls()
+    {
+        var white = Texture2D.whiteTexture;
+        var rightHalf = new Rect(.5f, 0, .5f, 1);
+        using (new EditorGUI.DisabledScope(true))
+        {
+            GUI.DrawTexture(new Rect(10, 88, 24, 16), white);
+            GUI.DrawTexture(new Rect(41, 88, 24, 16), white, ScaleMode.StretchToFill, true, 0,
+                new Color(1, .5f, .25f, .5f), 0, 0);
+            GUI.DrawTexture(new Rect(72, 88, 24, 16), m_AlphaTexture, ScaleMode.StretchToFill, false);
+            GUI.color = new Color(1, .5f, 1, 1);
+            GUI.DrawTextureWithTexCoords(new Rect(103, 88, 24, 16), m_AlphaTexture, rightHalf);
+            GUI.DrawTextureWithTexCoords(new Rect(134, 88, 24, 16), m_AlphaTexture, rightHalf, false);
+            GUI.color = Color.white;
+            GUI.DrawTexture(new Rect(165, 88, 24, 16), white, ScaleMode.StretchToFill, true, 0,
+                Color.white, 0, 5);
+            m_TextureStateRestored = !GUI.enabled && GUI.color == Color.white;
+        }
+        m_TextureStateRestored &= GUI.enabled && GUI.color == Color.white;
+        GUI.DrawTexture(new Rect(196, 88, 24, 16), white);
     }
 }

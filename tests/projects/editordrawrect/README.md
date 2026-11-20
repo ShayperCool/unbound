@@ -11,6 +11,12 @@ negative width. A disabled GUI at full alpha still draws opaque white. Calls in 
 no visible effect, and the call outside OnGUI records the exception type.
 [Unity 6000.0 `EditorGUI.DrawRect`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.DrawRect.html)
 
+The direct texture controls sample draws inside a disabled group and an opaque draw after
+closing it. They cover tint alpha, source alpha and the `alphaBlend` setting, cropped UVs,
+and a rounded rectangle. Each texture draw keeps the supplied alpha while the group is disabled.
+[Unity 6000.0 `GUI.DrawTexture`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUI.DrawTexture.html)
+[Unity 6000.0 `GUI.DrawTextureWithTexCoords`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUI.DrawTextureWithTexCoords.html)
+
 ```sh
 for space in Gamma Linear; do
     python3 tests/projects/editordrawrect/run.py record --space "$space" --label "native-$space-a"
