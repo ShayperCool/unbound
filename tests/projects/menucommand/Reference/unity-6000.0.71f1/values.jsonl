@@ -1,0 +1,30 @@
+{"k":"ctor.contextAndData","v":"context=GameObject:Target;userData=7"}
+{"k":"ctor.context","v":"context=GameObject:Target;userData=0"}
+{"k":"ctor.null","v":"context=<null>;userData=0"}
+{"k":"ctor.negative","v":"context=Transform:Target;userData=-3"}
+{"k":"fields.writable","v":"context=GameObject:Target;userData=2"}
+{"k":"execute.plain","v":"True"}
+{"k":"execute.plain.calls","v":"Plain"}
+{"k":"execute.withCommand","v":"True"}
+{"k":"execute.withCommand.calls","v":"WithCommand context=<null>;userData=0"}
+{"k":"enabled.withCommand","v":"True"}
+{"k":"enabled.withCommand.calls","v":""}
+{"k":"enabled.validated.true","v":"True"}
+{"k":"enabled.validated.true.calls","v":"ValidateValidated context=<null>;userData=0"}
+{"k":"execute.validated.true","v":"True"}
+{"k":"execute.validated.true.calls","v":"ValidateValidated context=<null>;userData=0|Validated context=<null>;userData=0"}
+{"k":"enabled.validated.false","v":"False"}
+{"k":"enabled.validated.false.calls","v":"ValidateValidated context=<null>;userData=0"}
+{"k":"execute.validated.false","v":"False"}
+{"k":"execute.validated.false.calls","v":"ValidateValidated context=<null>;userData=0"}
+{"k":"enabled.throwing","v":"False"}
+{"k":"enabled.throwing.calls","v":"ValidateThrowing context=<null>;userData=0"}
+{"k":"execute.throwing","v":"False"}
+{"k":"execute.throwing.calls","v":"ValidateThrowing context=<null>;userData=0"}
+{"k":"execute.context","v":"True"}
+{"k":"execute.context.calls","v":"TransformContext context=<null>;userData=0"}
+{"k":"enabled.context","v":"True"}
+{"k":"enabled.context.calls","v":""}
+{"k":"execute.withCommand.selected","v":"True"}
+{"k":"execute.withCommand.selected.calls","v":"WithCommand context=<null>;userData=0"}
+{"k":"complete","v":true}
