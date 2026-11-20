@@ -71,6 +71,7 @@ public class TextColorProbe : MonoBehaviour
         int initialFrame = Time.frameCount;
         yield return null;
         Step("full/next", () => FullTextureNextFrame(atlasCharacters, Time.frameCount - initialFrame));
+        Step("legacy-size", () => LegacySizes(spacing0));
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR
@@ -458,6 +459,30 @@ public class TextColorProbe : MonoBehaviour
 
     static string Read(Font font, char character, int size) =>
         font.GetCharacterInfo(character, out var info, size) ? Info(info) : "null";
+
+    void LegacySizes(Font source)
+    {
+        var font = Instantiate(source);
+        try
+        {
+            int[] queries = { 0, font.fontSize, 499, 500, 501, 1536, int.MaxValue };
+            foreach (int size in new[] { 0, 499, 500, 501, 1536 })
+            {
+                font.RequestCharactersInTexture(".", size);
+                var entries = new List<string>();
+                foreach (int query in queries)
+                    entries.Add("\"" + query + "\":" + Read(font, '.', query));
+                Value("legacy/size/" + size, "{" + string.Join(",", entries) + "}");
+            }
+
+            font.RequestCharactersInTexture(".", 501, FontStyle.Bold);
+            var bold = new List<string>();
+            foreach (int query in new[] { 499, 500, 501, 1536 })
+                bold.Add(font.GetCharacterInfo('.', out var info, query, FontStyle.Bold) ? Info(info) : "null");
+            Value("legacy/size/bold", "[" + string.Join(",", bold) + "]");
+        }
+        finally { DestroyImmediate(font); }
+    }
 
     // A texture's texels, read back through a copy into a render texture of its colour space.
     static Color32[] Pixels(Texture2D texture)

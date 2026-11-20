@@ -91,3 +91,12 @@ frame is dropped. `Font.textureRebuilt` fires once with the new glyph available 
 glyph's UV coordinates updated. This tests the
 [Unity 6000.0 rebuild callback](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font-textureRebuilt.html)
 on an atlas whose coordinates actually change.
+
+The `legacy/size/` rows test the two Font APIs with zero, 499, 500, 501 and 1536-pixel
+requests. Size zero uses the font's default size, as
+[`Font.RequestCharactersInTexture`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Font.RequestCharactersInTexture.html)
+specifies. The 6000.0.71f1 Editor uses one atlas entry for requests or lookups of at least 500
+pixels. A lookup at 499 pixels uses a separate entry. A bold request uses the same limit.
+`GetCharacterInfo` reports the queried size, including zero and `int.MaxValue`.
+These rows cover the explicit Font atlas APIs. Larger text layout sizes through TextMesh or
+TextGenerator remain unmeasured. Two Editor runs agreed on all six added observations.
