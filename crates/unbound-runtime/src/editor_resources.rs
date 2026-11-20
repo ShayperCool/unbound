@@ -344,6 +344,51 @@ mod tests {
         }
     }
 
+    /// A UXML document of the Editor's resources reads whole: its elements, and the
+    /// `[SerializeReference]` attribute data of its managed reference registry, each entry read
+    /// with the type tree of the type it names (the first entry is the registry's null entry).
+    #[test]
+    fn the_toolbar_document_reads_with_its_managed_references() {
+        let Some(data) = installed() else { return };
+        let found = find(&data, "UXML/Toolbars/MainToolbar.uxml").unwrap();
+        assert_eq!(found["classId"], 114);
+        let id = found["pathId"].as_i64().unwrap();
+        let fields = &object(&data, id).unwrap()["fields"];
+        assert_eq!(fields["m_Name"], "MainToolbar");
+        let elements = fields["m_VisualElementAssets"].as_array().unwrap();
+        let names: Vec<_> = elements
+            .iter()
+            .map(|e| {
+                e["m_Properties"]
+                    .get(1)
+                    .and_then(Json::as_str)
+                    .unwrap_or("")
+            })
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "",
+                "ToolbarContainerContent",
+                "ToolbarZoneLeftAlign",
+                "ToolbarProductCaption",
+                "ToolbarZonePlayMode",
+                "ToolbarZoneRightAlign"
+            ]
+        );
+        let refs = fields["references"]["RefIds"].as_array().unwrap();
+        assert_eq!(refs[0]["rid"], "-2");
+        assert_eq!(refs[0]["data"], Json::Null);
+        let data_names: Vec<_> = refs[1..]
+            .iter()
+            .map(|r| {
+                assert_eq!(r["type"]["class"], "VisualElement/UxmlSerializedData");
+                r["data"]["name"].as_str().unwrap()
+            })
+            .collect();
+        assert_eq!(&data_names[..], &names[1..]);
+    }
+
     /// An id the file does not hold is an error naming the object and the file.
     #[test]
     fn a_missing_object_is_an_error_naming_it() {

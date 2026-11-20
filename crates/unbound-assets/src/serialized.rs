@@ -30,9 +30,20 @@ pub struct SerializedFile<'a> {
     pub unity_version: String,
     /// Per type: its class and type tree (empty without type trees).
     types: Vec<(i32, Vec<TypeNode>)>,
+    /// The types `[SerializeReference]` data is read with (empty without type trees).
+    ref_types: Vec<RefType>,
     pub objects: Vec<ObjectInfo>,
     /// The files references with a nonzero `m_FileID` point to (`m_FileID` 1 is the first).
     pub externals: Vec<External>,
+}
+
+/// A type of the objects managed references hold: its class, namespace, assembly and type tree.
+#[derive(Debug, Clone)]
+struct RefType {
+    class: String,
+    namespace: String,
+    assembly: String,
+    nodes: Vec<TypeNode>,
 }
 
 /// A file another file references: by asset GUID (in a project) or by path (built-in files).
@@ -66,11 +77,6 @@ impl<'a> SerializedFile<'a> {
         let be64 = |o: usize| -> Result<u64> {
             Ok(u64::from_be_bytes(
                 data.get(o..o + 8).context("truncated")?.try_into()?,
-            ))
-        };
-        let le16 = |o: usize| -> Result<u16> {
-            Ok(u16::from_le_bytes(
-                data.get(o..o + 2).context("truncated")?.try_into()?,
             ))
         };
         let le32 = |o: usize| -> Result<u32> {
@@ -116,51 +122,7 @@ impl<'a> SerializedFile<'a> {
         off += 4;
         let mut types = Vec::with_capacity(type_count);
         for _ in 0..type_count {
-            let class_id = le32(off)? as i32;
-            off += 4 + 1 + 2;
-            if class_id == 114 || class_id < 0 {
-                off += 16;
-            }
-            off += 16;
-            let mut nodes = Vec::new();
-            if type_trees {
-                if version < 12 {
-                    bail!("serialized files with old-style type trees are not supported");
-                }
-                let count = le32(off)? as usize;
-                let strings_size = le32(off + 4)? as usize;
-                let node_size = if version >= 19 { 32 } else { 24 };
-                let nodes_at = off + 8;
-                let strings_at = nodes_at + count * node_size;
-                let strings = data
-                    .get(strings_at..strings_at + strings_size)
-                    .context("truncated type tree")?;
-                let name = |offset: u32| -> String {
-                    if offset & 0x8000_0000 != 0 {
-                        common_string(offset & 0x7fff_ffff).to_string()
-                    } else {
-                        let s = &strings[(offset as usize).min(strings.len())..];
-                        let end = s.iter().position(|&b| b == 0).unwrap_or(s.len());
-                        String::from_utf8_lossy(&s[..end]).to_string()
-                    }
-                };
-                for k in 0..count {
-                    let n = nodes_at + k * node_size;
-                    let _ = le16(n)?;
-                    nodes.push(TypeNode {
-                        level: data[n + 2],
-                        type_name: name(le32(n + 4)?),
-                        name: name(le32(n + 8)?),
-                        byte_size: le32(n + 12)? as i32,
-                        meta_flag: le32(n + 20)?,
-                    });
-                }
-                off = strings_at + strings_size;
-                if version >= 21 {
-                    let dependencies = le32(off)? as usize;
-                    off += 4 + 4 * dependencies;
-                }
-            }
+            let (class_id, nodes, _) = parse_type(data, version, type_trees, &mut off, false)?;
             types.push((class_id, nodes));
         }
         let object_count = le32(off)? as usize;
@@ -224,11 +186,20 @@ impl<'a> SerializedFile<'a> {
                 externals.push(External { guid, path });
             }
         }
+        // The types of the objects `[SerializeReference]` fields hold (format 20 and later). A
+        // table that does not read leaves the file's other objects readable: only reading a
+        // managed reference's data then fails, naming its type.
+        let ref_types = if version >= 20 {
+            parse_ref_types(data, version, type_trees, off).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         Ok(SerializedFile {
             data,
             version,
             unity_version,
             types,
+            ref_types,
             objects,
             externals,
         })
@@ -259,9 +230,127 @@ impl<'a> SerializedFile<'a> {
             bail!("the file has no type tree for object {path_id}");
         }
         let mut r = Reader::new(self.object_data(path_id)?);
-        let (value, _) = read_node(nodes, 0, &mut r)?;
+        let (value, _) = read_node(nodes, 0, &mut r, &self.ref_types)?;
         Ok(value)
     }
+}
+
+/// The table of managed reference types at `off`: a count, then each type.
+fn parse_ref_types(
+    data: &[u8],
+    version: u32,
+    type_trees: bool,
+    mut off: usize,
+) -> Result<Vec<RefType>> {
+    let count = u32::from_le_bytes(data.get(off..off + 4).context("truncated")?.try_into()?);
+    off += 4;
+    let mut types = Vec::new();
+    for _ in 0..count {
+        let (_, nodes, names) = parse_type(data, version, type_trees, &mut off, true)?;
+        let (class, namespace, assembly) = names.unwrap_or_default();
+        types.push(RefType {
+            class,
+            namespace,
+            assembly,
+            nodes,
+        });
+    }
+    Ok(types)
+}
+
+/// A parsed type: its class, type tree and, for a managed reference's type, its class,
+/// namespace and assembly names.
+type ParsedType = (i32, Vec<TypeNode>, Option<(String, String, String)>);
+
+/// One type of the file's type table at `off` (advanced past it); `is_ref` for the table of
+/// managed reference types, whose entries name their type instead of listing dependencies.
+fn parse_type(
+    data: &[u8],
+    version: u32,
+    type_trees: bool,
+    off: &mut usize,
+    is_ref: bool,
+) -> Result<ParsedType> {
+    let le16 = |o: usize| -> Result<u16> {
+        Ok(u16::from_le_bytes(
+            data.get(o..o + 2).context("truncated")?.try_into()?,
+        ))
+    };
+    let le32 = |o: usize| -> Result<u32> {
+        Ok(u32::from_le_bytes(
+            data.get(o..o + 4).context("truncated")?.try_into()?,
+        ))
+    };
+    let cstr = |o: usize| -> Result<(String, usize)> {
+        let rest = data.get(o..).context("truncated")?;
+        let end = rest.iter().position(|&b| b == 0).context("truncated")?;
+        Ok((
+            String::from_utf8_lossy(&rest[..end]).to_string(),
+            o + end + 1,
+        ))
+    };
+    let class_id = le32(*off)? as i32;
+    let script_index = le16(*off + 5)? as i16;
+    *off += 4 + 1 + 2;
+    // A script's hash: of a MonoBehaviour type, or of a referenced type that names its script.
+    let has_script = if is_ref {
+        script_index >= 0
+    } else {
+        class_id == 114 || class_id < 0
+    };
+    if has_script {
+        *off += 16;
+    }
+    *off += 16;
+    let mut nodes = Vec::new();
+    if type_trees {
+        if version < 12 {
+            bail!("serialized files with old-style type trees are not supported");
+        }
+        let count = le32(*off)? as usize;
+        let strings_size = le32(*off + 4)? as usize;
+        let node_size = if version >= 19 { 32 } else { 24 };
+        let nodes_at = *off + 8;
+        let strings_at = nodes_at + count * node_size;
+        let strings = data
+            .get(strings_at..strings_at + strings_size)
+            .context("truncated type tree")?;
+        let name = |offset: u32| -> String {
+            if offset & 0x8000_0000 != 0 {
+                common_string(offset & 0x7fff_ffff).to_string()
+            } else {
+                let s = &strings[(offset as usize).min(strings.len())..];
+                let end = s.iter().position(|&b| b == 0).unwrap_or(s.len());
+                String::from_utf8_lossy(&s[..end]).to_string()
+            }
+        };
+        for k in 0..count {
+            let n = nodes_at + k * node_size;
+            let _ = le16(n)?;
+            nodes.push(TypeNode {
+                level: data[n + 2],
+                type_name: name(le32(n + 4)?),
+                name: name(le32(n + 8)?),
+                byte_size: le32(n + 12)? as i32,
+                meta_flag: le32(n + 20)?,
+            });
+        }
+        *off = strings_at + strings_size;
+    }
+    let mut names = None;
+    if version >= 21 {
+        if is_ref {
+            let (class, next) = cstr(*off)?;
+            let (namespace, next) = cstr(next)?;
+            let (assembly, next) = cstr(next)?;
+            *off = next;
+            names = Some((class, namespace, assembly));
+        } else {
+            let dependencies = le32(*off)? as usize;
+            *off += 4 + 4 * dependencies;
+        }
+    }
+    Ok((class_id, nodes, names))
 }
 
 /// The node after `i`'s subtree.
@@ -282,7 +371,12 @@ fn children(nodes: &[TypeNode], i: usize) -> Vec<usize> {
         .collect()
 }
 
-fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usize)> {
+fn read_node(
+    nodes: &[TypeNode],
+    i: usize,
+    r: &mut Reader,
+    refs: &[RefType],
+) -> Result<(Value, usize)> {
     let node = &nodes[i];
     let kids = children(nodes, i);
     let value = if node.type_name == "TypelessData" {
@@ -322,7 +416,7 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
         } else {
             let mut items = Vec::with_capacity(count.min(1 << 16));
             for _ in 0..count {
-                items.push(read_node(nodes, element, r)?.0);
+                items.push(read_node(nodes, element, r, refs)?.0);
             }
             Value::Seq(items)
         };
@@ -333,8 +427,12 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
     } else {
         let mut map = Map::default();
         for k in kids {
-            let (v, _) = read_node(nodes, k, r)
-                .with_context(|| format!("field `{}` ({})", nodes[k].name, nodes[k].type_name))?;
+            let (v, _) = if nodes[k].type_name == REFERENCED_DATA {
+                read_referenced(&map, &nodes[k], r, refs)
+            } else {
+                read_node(nodes, k, r, refs)
+            }
+            .with_context(|| format!("field `{}` ({})", nodes[k].name, nodes[k].type_name))?;
             map.0.push((nodes[k].name.clone(), v));
         }
         Value::Map(map)
@@ -343,6 +441,64 @@ fn read_node(nodes: &[TypeNode], i: usize, r: &mut Reader) -> Result<(Value, usi
         r.align();
     }
     Ok((value, subtree_end(nodes, i)))
+}
+
+/// The node type of a managed reference's data: its layout is its type's, which the entry's
+/// `type` field (`class`, `ns`, `asm`, read before it) names.
+const REFERENCED_DATA: &str = "ReferencedObjectData";
+/// The node type of an object's managed reference registry.
+const REGISTRY: &str = "ManagedReferencesRegistry";
+
+/// A managed reference's data, read with the type tree of the type its entry names; a null
+/// reference (an empty class) has none.
+fn read_referenced(
+    entry: &Map,
+    node: &TypeNode,
+    r: &mut Reader,
+    refs: &[RefType],
+) -> Result<(Value, usize)> {
+    let name = |key: &str| {
+        entry
+            .get("type")
+            .and_then(|t| t.get(key))
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
+    let (class, namespace, assembly) = (name("class"), name("ns"), name("asm"));
+    let value = if class.is_empty() {
+        Value::Null
+    } else {
+        let ty = refs
+            .iter()
+            .find(|t| t.class == class && t.namespace == namespace && t.assembly == assembly)
+            .with_context(|| {
+                format!("no type tree for the referenced type {namespace}.{class} ({assembly})")
+            })?;
+        if ty.nodes.is_empty() {
+            bail!("no type tree for the referenced type {namespace}.{class} ({assembly})");
+        }
+        // A referenced type's tree ends with the registry of the object holding it, which its
+        // data does not repeat.
+        let mut map = Map::default();
+        for k in children(&ty.nodes, 0) {
+            if ty.nodes[k].type_name == REGISTRY {
+                continue;
+            }
+            let (v, _) = read_node(&ty.nodes, k, r, refs).with_context(|| {
+                format!("field `{}` ({})", ty.nodes[k].name, ty.nodes[k].type_name)
+            })?;
+            map.0.push((ty.nodes[k].name.clone(), v));
+        }
+        if ty.nodes[0].meta_flag & ALIGN != 0 {
+            r.align();
+        }
+        Value::Map(map)
+    };
+    if node.meta_flag & ALIGN != 0 {
+        r.align();
+    }
+    Ok((value, 0))
 }
 
 fn read_leaf(type_name: &str, r: &mut Reader) -> Result<Value> {
