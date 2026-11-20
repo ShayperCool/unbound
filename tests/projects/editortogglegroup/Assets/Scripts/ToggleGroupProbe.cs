@@ -5,7 +5,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-public sealed class ToggleGroupProbe : MonoBehaviour
+public sealed partial class ToggleGroupProbe : MonoBehaviour
 {
     [Serializable] public class Step
     {
@@ -48,10 +48,13 @@ public sealed class ToggleGroupProbe : MonoBehaviour
         if (m_Frame == 1 || m_Frame == 3 || m_Frame == 5) Calibrate?.Invoke(m_Frame);
         if (Drive != null && m_NextStep < m_Steps.Length && m_Steps[m_NextStep].frame == m_Frame)
             Drive(m_Steps[m_NextStep++]);
-        if (m_Frame != 54) return;
-
-        Put("input/count", m_InputCount.ToString(CultureInfo.InvariantCulture));
-        Put("input/final", $"[{Flag(m_Enabled)},{m_ChildClicks}]");
+        if (m_Frame == 54)
+        {
+            Put("input/count", m_InputCount.ToString(CultureInfo.InvariantCulture));
+            Put("input/final", $"[{Flag(m_Enabled)},{m_ChildClicks}]");
+        }
+        if (m_Frame != 103) return;
+        Put("left/inputCount", m_LeftInputCount.ToString(CultureInfo.InvariantCulture));
         Put("complete", "true");
         File.WriteAllText(Path.Combine(Environment.GetEnvironmentVariable("EDITOR_TOGGLE_GROUP_OUT"), "values.jsonl"), m_Values.ToString());
         EditorApplication.Exit(0);
@@ -59,6 +62,11 @@ public sealed class ToggleGroupProbe : MonoBehaviour
 
     void OnGUI()
     {
+        if (m_Frame >= 55)
+        {
+            DrawToggleLeft();
+            return;
+        }
         if (m_Frame >= 49)
         {
             DrawManualCapture();

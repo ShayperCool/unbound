@@ -163,7 +163,7 @@ namespace UnityEngine
 
         public static void SetNextControlName(string name) => s_NextControlName = name;
 
-        static int NamedId(int id)
+        internal static int NamedId(int id)
         {
             if (s_NextControlName != null)
             {

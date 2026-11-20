@@ -23,6 +23,15 @@ Capture stays set on the following Repaint. The control without a group confirms
 that an unused MouseUp keeps an explicitly set hot control until the caller clears it.
 [Unity 6000.0 `GUI.BeginGroup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUI.BeginGroup.html)
 
+The `ToggleLeft` controls cover fixed and automatic layout with strings, GUIContent,
+and an explicit label style. The automatic controls record their arranged rectangles
+with and without width and height options. The input run checks the indicator and label
+hit areas, named keyboard focus and Space, a disabled control, and the mixed value
+before and after a click. A pair of image labels records the icon's horizontal extent
+and the pixels changed by checking the box to its left.
+[Unity 6000.0 `EditorGUI.ToggleLeft`](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/editorgui/toggleleft)
+[Unity 6000.0 `EditorGUILayout.ToggleLeft`](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityeditor/editorguilayout/toggleleft)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b

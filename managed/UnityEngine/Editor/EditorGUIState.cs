@@ -203,6 +203,26 @@ namespace UnityEditor
         public static bool Toggle(Rect position, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, null, value); }
         public static bool Toggle(Rect position, string label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, new GUIContent(label), value); }
         public static bool Toggle(Rect position, GUIContent label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, label, value); }
+        public static bool ToggleLeft(Rect position, string label, bool value) =>
+            ToggleLeft(position, GUIContent.Temp(label), value, null);
+
+        public static bool ToggleLeft(Rect position, string label, bool value, GUIStyle labelStyle) =>
+            ToggleLeft(position, GUIContent.Temp(label), value, labelStyle);
+
+        public static bool ToggleLeft(Rect position, GUIContent label, bool value) =>
+            ToggleLeft(position, label, value, null);
+
+        public static bool ToggleLeft(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUI.ToggleLeft");
+                return default;
+            }
+            RequireGUI();
+            return EditorGUIControls.LeftToggle(position, label, value, labelStyle ?? EditorStyles.label);
+        }
+
         public static bool Foldout(Rect position, bool foldout, string content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, new GUIContent(content)); }
         public static bool Foldout(Rect position, bool foldout, GUIContent content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, content); }
         public static void LabelField(Rect position, string label) { RequireGUI(); EditorGUIControls.Label(position, new GUIContent(label)); }
@@ -380,6 +400,25 @@ namespace UnityEditor
 
         public static void EndVertical() => GUILayout.EndVertical();
 
+        public static bool ToggleLeft(string label, bool value, params GUILayoutOption[] options) =>
+            ToggleLeft(GUIContent.Temp(label), value, null, options);
+
+        public static bool ToggleLeft(GUIContent label, bool value, params GUILayoutOption[] options) =>
+            ToggleLeft(label, value, null, options);
+
+        public static bool ToggleLeft(string label, bool value, GUIStyle labelStyle, params GUILayoutOption[] options) =>
+            ToggleLeft(GUIContent.Temp(label), value, labelStyle, options);
+
+        public static bool ToggleLeft(GUIContent label, bool value, GUIStyle labelStyle, params GUILayoutOption[] options)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleLeft");
+                return default;
+            }
+            return EditorGUI.ToggleLeft(GetControlRect(options), label, value, labelStyle);
+        }
+
         public static bool BeginToggleGroup(string label, bool toggle) => BeginToggleGroup(GUIContent.Temp(label), toggle);
 
         public static bool BeginToggleGroup(GUIContent label, bool toggle)
@@ -392,7 +431,7 @@ namespace UnityEditor
 
             var labelStyle = EditorStyles.boldLabel;
             var rect = GetControlRect();
-            toggle = EditorGUIControls.ToggleGroupHeader(rect, label, toggle, labelStyle);
+            toggle = EditorGUIControls.LeftToggle(rect, label, toggle, labelStyle);
             EditorGUI.BeginDisabledGroup(!toggle);
             GUILayout.BeginVertical();
             return toggle;
@@ -456,7 +495,7 @@ namespace UnityEditor
     /// own controls with the editor's label column.</summary>
     internal static class EditorGUIControls
     {
-        static GUIStyle s_MixedToggleGroupHeader;
+        static GUIStyle s_MixedLeftToggle;
 
         static Rect Field(Rect position, GUIContent label)
         {
@@ -490,11 +529,11 @@ namespace UnityEditor
 
         internal static bool Toggle(Rect position, GUIContent label, bool value) => GUI.Toggle(Field(position, label), value, GUIContent.none);
 
-        internal static bool ToggleGroupHeader(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
+        internal static bool LeftToggle(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
         {
             var current = Event.current;
             var type = current.type;
-            int id = GUIUtility.GetControlID(FocusType.Keyboard, position);
+            int id = GUI.NamedId(GUIUtility.GetControlID(FocusType.Keyboard, position));
             var toggleStyle = EditorStyles.toggle;
             var togglePosition = EditorGUI.IndentedRect(position);
             var labelPosition = togglePosition;
@@ -519,7 +558,7 @@ namespace UnityEditor
             if (EditorGUI.showMixedValue)
             {
                 value = false;
-                toggleStyle = s_MixedToggleGroupHeader ??= new GUIStyle { name = InspectorTogglePaint.MixedStyleName };
+                toggleStyle = s_MixedLeftToggle ??= new GUIStyle { name = InspectorTogglePaint.MixedStyleName };
             }
             if (type == EventType.MouseDown && current.button != 0) return value;
             bool selected = GUI.DoToggle(togglePosition, id, value, GUIContent.none, toggleStyle);
