@@ -985,7 +985,7 @@ namespace UnityEngine
         {
             GUILayoutGroup g;
             var eventType = Event.current?.type;
-            if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutGroupMeasured))
+            if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
             {
                 g = CreateGroup(layoutType);
                 g.style = style;
@@ -1053,7 +1053,8 @@ namespace UnityEngine
         static Rect DoGetRect(GUIContent content, GUIStyle style, GUILayoutOption[] options)
         {
             GUIUtility.CheckOnGUI();
-            if (IsLayout)
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout)
             {
                 if (style.isHeightDependantOnWidth)
                 {
@@ -1066,6 +1067,7 @@ namespace UnityEngine
                 }
                 return kDummyRect;
             }
+            if (eventType == EventType.Used && Compat.UsedGUILayoutMeasured) return kDummyRect;
             return current.groups.Peek().GetNext().rect;
         }
 
@@ -1087,7 +1089,7 @@ namespace UnityEngine
                 current.groups.Peek().Add(new GUILayoutEntry(minWidth, maxWidth, minHeight, maxHeight, style, options));
                 return Compat.NumericGUILayoutRectMeasured ? new Rect(0f, 0f, maxWidth, maxHeight) : kDummyRect;
             }
-            if (eventType == EventType.Used && Compat.NumericGUILayoutRectMeasured) return kDummyRect;
+            if (eventType == EventType.Used && Compat.UsedGUILayoutMeasured) return kDummyRect;
             return current.groups.Peek().GetNext().rect;
         }
 

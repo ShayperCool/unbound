@@ -280,9 +280,9 @@ namespace Unbound.Runtime
         /// measured in tests/projects/imguiskin on Unity 6000.0.71f1.</summary>
         internal static bool NumericGUILayoutRectMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Opening a GUILayout group after Event.Use, measured in
-        /// tests/projects/imguiskin on Unity 6000.0.71f1.</summary>
-        internal static bool UsedGUILayoutGroupMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Consumed events use empty layout groups and do not advance arranged rects
+        /// in Unity 6000.0.71f1 (tests/projects/imguiskin and editortogglegroup).</summary>
+        internal static bool UsedGUILayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Explicit GUI texture draws keep their tint alpha inside disabled groups,
         /// measured in tests/projects/editordrawrect on Unity 6000.0.71f1.</summary>

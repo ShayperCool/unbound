@@ -225,9 +225,6 @@ namespace UnityEditor
 
         public static bool Foldout(Rect position, bool foldout, string content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, new GUIContent(content)); }
         public static bool Foldout(Rect position, bool foldout, GUIContent content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, content); }
-        public static void LabelField(Rect position, string label) { RequireGUI(); EditorGUIControls.Label(position, new GUIContent(label)); }
-        public static void LabelField(Rect position, GUIContent label) { RequireGUI(); EditorGUIControls.Label(position, label); }
-        public static void LabelField(Rect position, string label, string label2) { RequireGUI(); EditorGUIControls.Label(position, new GUIContent(label + " " + label2)); }
         public static bool PropertyField(Rect position, SerializedProperty property) { RequireGUI(); return EditorGUIControls.Property(position, property, null); }
         public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) { RequireGUI(); return EditorGUIControls.Property(position, property, null); }
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) { RequireGUI(); return EditorGUIControls.Property(position, property, label); }
@@ -359,9 +356,6 @@ namespace UnityEditor
         public static Enum EnumPopup(Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), null, selected);
         public static Enum EnumPopup(string label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), new GUIContent(label), selected);
         public static Enum EnumPopup(GUIContent label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), label, selected);
-        public static void LabelField(string label, params GUILayoutOption[] options) => EditorGUIControls.Label(Line(options), new GUIContent(label));
-        public static void LabelField(GUIContent label, params GUILayoutOption[] options) => EditorGUIControls.Label(Line(options), label);
-        public static void LabelField(string label, string label2, params GUILayoutOption[] options) => EditorGUIControls.Label(Line(options), new GUIContent(label + " " + label2));
         public static bool Foldout(bool foldout, string content) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
         public static bool Foldout(bool foldout, GUIContent content) => EditorGUIControls.Foldout(Line(null), foldout, content);
         public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));

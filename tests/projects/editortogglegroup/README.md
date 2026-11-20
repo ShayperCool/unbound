@@ -59,6 +59,18 @@ horizontal group has children of different heights and vertical margins. Its
 following row confirms the group's height is based on the tallest child.
 [Unity 6000.0 `EditorGUILayout.PrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUILayout.PrefixLabel.html)
 
+The LabelField controls compare fixed and automatic layout. Image markers measure
+the value column at two label widths and when the prefix is empty or only has a
+tooltip. An explicit style moves the value by its padding. The automatic controls
+compare single-line and wrapping rows. Width and height options are exercised
+with a style whose own height differs from the requested height. Independent
+`GUIStyle.CalcHeight` and `GUILayout` controls reproduce the wrapped height and
+narrow group width differences listed in `residuals.json`. A separate input
+step calls a wrapping label after consuming MouseDown and checks the call
+returns with the event still Used.
+[Unity 6000.0 `EditorGUI.LabelField`](https://docs.unity3d.com/cn/6000.0/ScriptReference/EditorGUI.LabelField.html)
+[Unity 6000.0 `EditorGUILayout.LabelField`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUILayout.LabelField.html)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b
