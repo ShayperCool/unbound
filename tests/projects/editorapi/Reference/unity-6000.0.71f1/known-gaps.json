@@ -1,14 +1,1 @@
-[
-  {
-    "key": "toolbar.root.field",
-    "reference": "UnityEngine.UIElements.VisualElement",
-    "actual": "<null>",
-    "reason": "Coherent Inspector custom-editor cache and Editor toolbar UI lifecycle are not implemented; the captured client reflection contract remains a follow-up."
-  },
-  {
-    "key": "toolbar.root.zones",
-    "reference": "True:True:True",
-    "actual": "NullReferenceException",
-    "reason": "Coherent Inspector custom-editor cache and Editor toolbar UI lifecycle are not implemented; the captured client reflection contract remains a follow-up."
-  }
-]
+[]

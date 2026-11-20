@@ -363,6 +363,110 @@ namespace Unbound.UIElements
             long fileId = script.TryGetProperty("fileID", out var fid) ? fid.GetInt64() : 0;
             var type = EngineScripts.Resolve(script.TryGetProperty("guid", out var g) ? g.GetString() : null, fileId);
             if (type == typeof(ThemeStyleSheet) || type == typeof(StyleSheet)) return ReadStyleSheet(f, type);
+            if (type == typeof(VisualTreeAsset)) return ReadVisualTreeAsset(f);
+            return null;
+        }
+
+        /// <summary>
+        /// A UXML document of the Editor's resources from its serialized form: its elements
+        /// (`m_VisualElementAssets`: type, attributes in document order, parent and order among its
+        /// siblings) as the tree Unbound's UXML importer makes from the document's source, the root
+        /// being the document's &lt;UXML&gt; element. The elements' serialized attribute data
+        /// (`m_SerializedData`) holds the same values as their attributes and is not read. Documents
+        /// with what this reader does not read (templates, slots, UXML objects, style sheets or
+        /// inline styles, element text) are refused with a warning naming the document and answer
+        /// null.
+        /// </summary>
+        internal static VisualTreeAsset ReadVisualTreeAsset(JsonElement f)
+        {
+            string name = Str(f, "m_Name") ?? "";
+            string unsupported = UnsupportedVisualTreeContent(f);
+            if (unsupported != null)
+            {
+                Debug.LogWarning($"Unbound: the Editor's UXML document '{name}' is not read: it has {unsupported}.");
+                return null;
+            }
+            var nodes = new Dictionary<int, (UxmlNode Node, int Parent, int Order, int Position)>();
+            foreach (var e in f.GetProperty("m_VisualElementAssets").EnumerateArray())
+            {
+                string fullName = Str(e, "m_FullTypeName") ?? "";
+                int dot = fullName.LastIndexOf('.');
+                var node = new UxmlNode
+                {
+                    Namespace = dot < 0 ? "" : fullName.Substring(0, dot),
+                    Type = dot < 0 ? fullName : fullName.Substring(dot + 1),
+                };
+                if (e.TryGetProperty("m_Properties", out var properties))
+                {
+                    var list = new List<string>();
+                    foreach (var p in properties.EnumerateArray()) list.Add(p.GetString());
+                    for (int i = 0; i + 1 < list.Count; i += 2) node.Attributes.Add(new KeyValuePair<string, string>(list[i], list[i + 1]));
+                }
+                nodes[Int(e, "m_Id")] = (node, Int(e, "m_ParentId"), Int(e, "m_OrderInDocument"), nodes.Count);
+            }
+            UxmlNode root = null;
+            var children = new List<(int Order, int Position, int Parent, UxmlNode Node)>();
+            foreach (var (node, parent, order, position) in nodes.Values)
+            {
+                if (parent == 0)
+                {
+                    if (root != null || node.Type != "UXML")
+                    {
+                        Debug.LogWarning($"Unbound: the Editor's UXML document '{name}' is not read: it has elements outside its <UXML> element.");
+                        return null;
+                    }
+                    root = node;
+                }
+                else children.Add((order, position, parent, node));
+            }
+            if (root == null)
+            {
+                Debug.LogWarning($"Unbound: the Editor's UXML document '{name}' is not read: it has no <UXML> element.");
+                return null;
+            }
+            // Siblings in document order (an order the asset lists twice keeps the listing's order).
+            children.Sort((a, b) => a.Order != b.Order ? a.Order.CompareTo(b.Order) : a.Position.CompareTo(b.Position));
+            foreach (var (order, _, parent, node) in children)
+            {
+                if (!nodes.TryGetValue(parent, out var p))
+                {
+                    Debug.LogWarning($"Unbound: the Editor's UXML document '{name}' is not read: an element's parent {parent} is not in it.");
+                    return null;
+                }
+                node.Index = order;
+                p.Node.Children.Add(node);
+            }
+            VisualTreeAsset asset;
+            using (ObjectRegistry.AsAssets())
+            {
+                asset = ScriptableObject.CreateInstance<VisualTreeAsset>();
+                asset.name = name;
+                asset.IsPersistentAsset = true;
+            }
+            asset.m_UaRoot = root;
+            asset.contentHash = Int(f, "m_ContentHash");
+            asset.importedWithErrors = Str(f, "m_ImportedWithErrors") == "1";
+            asset.importedWithWarnings = Str(f, "m_ImportedWithWarnings") == "1";
+            return asset;
+        }
+
+        /// <summary>What a serialized UXML document holds that <see cref="ReadVisualTreeAsset"/> does
+        /// not read, or null.</summary>
+        static string UnsupportedVisualTreeContent(JsonElement f)
+        {
+            static bool NonEmpty(JsonElement e, string field) =>
+                e.TryGetProperty(field, out var v) && v.ValueKind == JsonValueKind.Array && v.GetArrayLength() > 0;
+            if (!f.TryGetProperty("m_VisualElementAssets", out var elements) || elements.ValueKind != JsonValueKind.Array) return "no elements";
+            if (NonEmpty(f, "m_TemplateAssets")) return "template instances";
+            if (NonEmpty(f, "m_Slots")) return "slots";
+            if (NonEmpty(f, "m_UxmlObjectEntries")) return "UXML objects";
+            foreach (var e in elements.EnumerateArray())
+            {
+                // An element without inline styles has no rule (-1).
+                if (e.TryGetProperty("m_RuleIndex", out _) && Int(e, "m_RuleIndex") >= 0) return "inline styles";
+                if (NonEmpty(e, "m_StylesheetPaths") || NonEmpty(e, "m_Stylesheets")) return "style sheets";
+                if (!string.IsNullOrEmpty(Str(e, "m_Text"))) return "element text";
+            }
             return null;
         }
 

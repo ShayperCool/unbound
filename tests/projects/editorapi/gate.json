@@ -16,6 +16,9 @@
     "managed/UnityEngine/Core/Events.cs",
     "managed/UnityEngine/Editor/EditorConnection.cs",
     "managed/UnityEngine/Runtime/ConnectionMessageRegistry.cs",
-    "managed/UnityEngine/Editor/EditorApplication.cs"
+    "managed/UnityEngine/Editor/EditorApplication.cs",
+    "managed/UnityEngine/Editor/EditorViews.cs",
+    "managed/UnityEngine/UIElements/Assets/UiAssets.cs",
+    "crates/unbound-assets/src/serialized.rs"
   ]
 }
