@@ -220,10 +220,10 @@ namespace UnityEngine
         public static int supportsTextureWrapMirrorOnce => Device.TextureWrapMirrorOnce;
         [Unbound.EditorFaithful("measured on both devices: tests/projects/urp CapsProbe")]
         public static bool usesReversedZBuffer => Device.ReversedZ;
-        [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
-        public static int maxTextureSize => 16384;
-        [Unbound.EditorFaithful("the Editor caps texture sizes at 16384")]
-        public static int maxCubemapSize => 16384;
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
+        public static int maxTextureSize => Device.MaxTextureSize;
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
+        public static int maxCubemapSize => Device.MaxTextureSize;
         internal static int maxRenderTextureSize => 16384;
         public static NPOTSupport npotSupport => NPOTSupport.Full;
         [Unbound.EditorFaithful("readbacks complete (see AsyncReadbacks), as on the Editor's OpenGLCore device")]
@@ -376,21 +376,21 @@ namespace UnityEngine
         public static bool supportsRenderTargetArrayIndexFromVertexShader { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsRenderTargetArrayIndexFromVertexShader", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsMultisampled2DArrayTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsMultisampled2DArrayTextures", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
 
-        // Measured on the Metal device alone (GraphicsDeviceProfile.Limits: tests/projects/urp
-        // CapsProbe `device-metal.jsonl`); still stubs on the other devices.
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        // Measured on each device (GraphicsDeviceProfile.Limits: tests/projects/urp CapsProbe
+        // `device-opengl.jsonl`, `device-vulkan.jsonl`, `device-metal.jsonl`).
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static int maxComputeBufferInputsVertex => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsVertex");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static int maxComputeBufferInputsFragment => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsFragment");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static int maxComputeBufferInputsGeometry => Measured(static l => l.GeometryComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsGeometry");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static int maxComputeBufferInputsDomain => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsDomain");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static int maxComputeBufferInputsHull => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsHull");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
-        public static int maxComputeBufferInputsCompute => Measured(static l => l.ComputeBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsCompute");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
+        public static int maxComputeBufferInputsCompute => Measured(static l => l.ComputeStageBufferInputs, "UnityEngine.SystemInfo.maxComputeBufferInputsCompute");
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl, srpmembers tiled.max")]
         public static int maxTiledPixelStorageSize
         {
             get
@@ -410,10 +410,10 @@ namespace UnityEngine
             Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.GetTiledRenderTargetStorageSize");
             return 0;
         }
-        /// <summary>The Metal Editor's answer (true: block-compressed volumes are kept and sampled,
-        /// or decoded where the renderer's device lacks their blocks in 3D); a stub on the other
-        /// devices.</summary>
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/nativegfx metal.jsonl volume.compressed3d")]
+        /// <summary>The device's Editor's answer: true on Metal and Vulkan (block-compressed volumes are
+        /// kept and sampled, or decoded where the renderer's device lacks their blocks in 3D), false
+        /// on OpenGL Core.</summary>
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/nativegfx metal.jsonl volume.compressed3d, urp device-opengl.jsonl, device-vulkan.jsonl")]
         public static bool supportsCompressed3DTextures
         {
             get
@@ -424,20 +424,23 @@ namespace UnityEngine
             }
         }
         /// <summary>True on the Metal device, whose Editor answers true and scales buffers
-        /// (ScalableBufferManager); unmeasured on the other devices (false).</summary>
+        /// (ScalableBufferManager); false on OpenGL Core, as its Editor answers; a stub on Vulkan,
+        /// whose Editor answers true but whose scaling is unmeasured.</summary>
         public static bool supportsDynamicResolution
         {
             get
             {
                 if (Device.EditorDynamicResolution) return true;
+                if (Device.DynamicResolutionMeasured) return false;
                 Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SystemInfo.supportsDynamicResolution");
                 return false;
             }
         }
-        /// <summary>The Metal Editor's answer; textures load whole (streaming is not simulated).</summary>
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        /// <summary>The device's Editor's answer (true on the three devices); textures load whole
+        /// (streaming is not simulated).</summary>
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static bool supportsMipStreaming => Measured(static l => l.MipStreaming, "UnityEngine.SystemInfo.supportsMipStreaming");
-        [Unbound.EditorFaithful("measured on the Metal device: tests/projects/urp device-metal.jsonl")]
+        [Unbound.EditorFaithful("measured on the three devices: tests/projects/urp device-*.jsonl")]
         public static bool supportsParallelPSOCreation => Measured(static l => l.ParallelPSOCreation, "UnityEngine.SystemInfo.supportsParallelPSOCreation");
 
         /// <summary>maxGraphicsBufferSize where it is measured (Metal), else 0, without a warning.</summary>

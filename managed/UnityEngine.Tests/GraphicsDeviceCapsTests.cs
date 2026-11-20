@@ -168,6 +168,22 @@ namespace Unbound.Tests
             "supportsConservativeRaster: True -> False",
         };
 
+        static List<string> LinuxSystemInfoResiduals(string device)
+        {
+            var expected = new List<string>(s_NotDrawn);
+            expected.AddRange(s_LinuxNotDrawn);
+            if (device == "Vulkan")
+                expected.AddRange(new[]
+                {
+                    // Not done by Unbound's renderer (no foveation, no GPU recorder).
+                    "foveatedRenderingCaps: FoveationImage -> None",
+                    "supportsGpuRecorder: True -> False",
+                    // The Vulkan Editor's buffer scaling is unmeasured: a stub (false).
+                    "supportsDynamicResolution: True -> False",
+                });
+            return expected;
+        }
+
         [Fact]
         public void LinuxDevicesAnswerAsTheLinuxEditor()
         {
@@ -179,26 +195,25 @@ namespace Unbound.Tests
             Assert.Equal(Sorted(expected), Differences("Vulkan", "unity-6000.0.71f1/caps-vulkan.jsonl", ColorSpace.Gamma));
         }
 
-        /// <summary>Every SystemInfo property the macOS Editor recorded (`device-metal.jsonl`: the
-        /// ones the machine decides are not recorded) against Unbound's on the Metal device. The
-        /// GPU's own strings and ids are read from Metal and the OS family is the host's, so they
-        /// are compared on macOS only.</summary>
-        [Fact]
-        public void MetalSystemInfoAsTheMacEditor()
+        /// <summary>Every SystemInfo property a device's Editor recorded (`device-*.jsonl`: the ones
+        /// the machine decides are not recorded) against Unbound's answers on that device, as the
+        /// differences "name: Editor -> Unbound". The GPU's own strings and ids are read from the
+        /// device and the OS family is the host's, so they are compared on the device's own OS
+        /// only.</summary>
+        List<string> SystemInfoDifferences(string device, string reference, bool hostOs)
         {
-            var editor = Read(Reference("unity-6000.0.71f1/device-metal.jsonl"));
-            // Read from Metal or decided by the OS: compared on macOS only.
+            var editor = Read(Reference(reference));
             var identity = new[] { "graphicsDeviceVendor", "graphicsDeviceVersion", "graphicsDeviceVendorID", "graphicsDeviceID", "operatingSystemFamily" };
             var previous = GraphicsDeviceProfile.Current;
             var differences = new List<string>();
             try
             {
-                GraphicsDeviceProfile.Select("Metal");
+                GraphicsDeviceProfile.Select(device);
                 foreach (var (key, recorded) in editor)
                 {
                     if (!key.StartsWith("SystemInfo.", StringComparison.Ordinal)) continue;
                     var name = key.Substring("SystemInfo.".Length);
-                    if (!OperatingSystem.IsMacOS() && Array.IndexOf(identity, name) >= 0) continue;
+                    if (!hostOs && Array.IndexOf(identity, name) >= 0) continue;
                     var property = typeof(SystemInfo).GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                     string value;
                     try { value = Convert.ToString(property.GetValue(null), System.Globalization.CultureInfo.InvariantCulture); }
@@ -210,7 +225,13 @@ namespace Unbound.Tests
             {
                 GraphicsDeviceProfile.Select(previous.Type.ToString());
             }
-            foreach (var d in differences) m_Output.WriteLine(d);
+            foreach (var d in differences) m_Output.WriteLine($"{device}: {d}");
+            return Sorted(differences);
+        }
+
+        [Fact]
+        public void MetalSystemInfoAsTheMacEditor()
+        {
             var expected = new List<string>
             {
                 // Not done by Unbound's renderer (no foveation or HDR output).
@@ -218,13 +239,26 @@ namespace Unbound.Tests
                 "hdrDisplaySupportFlags: Supported, RuntimeSwitchable, AutomaticTonemapping -> None",
             };
             expected.AddRange(s_NotDrawn);
-            Assert.Equal(Sorted(expected), Sorted(differences));
+            Assert.Equal(Sorted(expected), SystemInfoDifferences("Metal", "unity-6000.0.71f1/device-metal.jsonl", OperatingSystem.IsMacOS()));
+        }
+
+        /// <summary>The Linux Editor's OpenGL Core and Vulkan devices (`device-opengl.jsonl`,
+        /// `device-vulkan.jsonl`, NVIDIA RTX 4060): what differs is what Unbound's renderer does not
+        /// do, and Vulkan's dynamic resolution, whose scaling is unmeasured (a stub).</summary>
+        [Fact]
+        public void LinuxSystemInfoAsTheLinuxEditor()
+        {
+            var expected = LinuxSystemInfoResiduals("OpenGLCore");
+            Assert.Equal(Sorted(expected), SystemInfoDifferences("OpenGLCore", "unity-6000.0.71f1/device-opengl.jsonl", OperatingSystem.IsLinux()));
+            expected = LinuxSystemInfoResiduals("Vulkan");
+            Assert.Equal(Sorted(expected), SystemInfoDifferences("Vulkan", "unity-6000.0.71f1/device-vulkan.jsonl", OperatingSystem.IsLinux()));
         }
 
         /// <summary>maxGraphicsBufferSize on Metal is the device's maxBufferLength (the macOS
         /// Editor on an Apple M2 Pro with 16 GB answers 9534832640, that device's maxBufferLength;
-        /// the value is the machine's, so it is not in the reference); the members measured on
-        /// Metal alone stay stubs (0, false) on the other devices.</summary>
+        /// the value is the machine's, so it is not in the reference); on the Linux devices it is
+        /// unmeasured and stays a stub (0), as Vulkan's dynamic resolution does. The members the
+        /// Linux devices' references now hold answer their values without a stub.</summary>
         [Fact]
         public void MetalBufferLimitAndUnmeasuredDevices()
         {
@@ -239,15 +273,24 @@ namespace Unbound.Tests
                     Assert.True(gpu.MaxBufferBytes > 0);
                     Assert.Equal(gpu.MaxBufferBytes, SystemInfo.maxGraphicsBufferSize);
                 }
-                foreach (var device in new[] { "OpenGLCore", "Vulkan" })
-                {
-                    GraphicsDeviceProfile.Select(device);
-                    Assert.Equal(0, SystemInfo.maxComputeBufferInputsVertex);
-                    Assert.Equal(device == "OpenGLCore" ? int.MaxValue : 0, SystemInfo.maxTiledPixelStorageSize);
-                    Assert.False(SystemInfo.supportsMipStreaming);
-                    Assert.False(SystemInfo.supportsDynamicResolution);
-                    Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
-                }
+                GraphicsDeviceProfile.Select("OpenGLCore");
+                Assert.Equal(new[] { 16, 16, 16 }, new[] { SystemInfo.maxComputeBufferInputsVertex, SystemInfo.maxComputeBufferInputsGeometry, SystemInfo.maxComputeBufferInputsCompute });
+                Assert.Equal(int.MaxValue, SystemInfo.maxTiledPixelStorageSize);
+                Assert.False(SystemInfo.supportsDynamicResolution);
+                Assert.False(SystemInfo.supportsCompressed3DTextures);
+                Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
+                GraphicsDeviceProfile.Select("Vulkan");
+                // Control: the compute stage's limit differs from the graphics stages'.
+                Assert.Equal(new[] { 1048576, 1048576, 32 }, new[] { SystemInfo.maxComputeBufferInputsVertex, SystemInfo.maxComputeBufferInputsGeometry, SystemInfo.maxComputeBufferInputsCompute });
+                Assert.Equal(32, SystemInfo.maxTiledPixelStorageSize);
+                Assert.True(SystemInfo.supportsCompressed3DTextures);
+                Assert.True(SystemInfo.supportsParallelPSOCreation);
+                Assert.False(SystemInfo.supportsDynamicResolution);
+                Assert.Equal(0L, SystemInfo.maxGraphicsBufferSize);
+                Assert.Equal(32768, SystemInfo.maxTextureSize);
+                GraphicsDeviceProfile.Select("Metal");
+                Assert.Equal(16384, SystemInfo.maxTextureSize);
+                Assert.Equal(31, SystemInfo.maxComputeBufferInputsCompute);
             }
             finally
             {

@@ -481,9 +481,10 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       and `GraphicsSettings` asset values, `Time.captureDeltaTimeRational`, serialized component
       values (`AudioReverbFilter`/`AudioChorusFilter`/`AudioReverbZone`, physical camera,
       `ArticulationBody`), the
-      stubbed `SystemInfo` caps (`maxGraphicsBufferSize`, `maxComputeBufferInputs*`, a rendering
-      decision: stubs on OpenGL Core and Vulkan; answered on Metal since Q475, except
-      `supportsDynamicResolution`), and obsolete members that should forward to their replacement
+      stubbed `SystemInfo` caps (`maxGraphicsBufferSize`, a machine's value: a stub on OpenGL Core
+      and Vulkan, answered on Metal since Q475; `supportsDynamicResolution` on Vulkan, whose
+      buffer scaling is unmeasured; Q636 answers the other device limits on OpenGL Core and Vulkan
+      from tests/projects/urp `device-opengl.jsonl` and `device-vulkan.jsonl`), and obsolete members that should forward to their replacement
       (`Physics.solverIterationCount`, `Application.levelCount`, `RenderSettings.ambientSkyboxAmount`,
       `Light.pixelLightCount`, `SystemInfo.supportsGPUFence`, ...). Q57 done (`stubdefaults`, Unity
       6000.0.71f1): measured setter storage and clamps are generated from the release-family table;

@@ -64,6 +64,10 @@ namespace Unbound.Runtime
         internal int MaxMsaaSamples { get; init; } = 8;
         internal bool DepthFetchInRenderPass { get; init; } = true;
         internal int MaxTexture3DSize { get; init; } = 16384;
+        /// <summary>SystemInfo.maxTextureSize and maxCubemapSize: 32768 on the Linux Editor's OpenGL
+        /// Core and Vulkan devices (NVIDIA RTX 4060), 16384 on the Metal one (tests/projects/urp
+        /// CapsProbe `device-*.jsonl`); the renderer requests the adapter's own limits.</summary>
+        internal int MaxTextureSize { get; init; } = 32768;
         internal int MaxComputeWorkGroupSizeZ { get; init; } = 64;
         /// <summary>The target a readable mesh's buffers gain once a visual effect reads the mesh
         /// (its vertex buffer once it is an effect's value, its index buffer once an effect's
@@ -143,6 +147,12 @@ namespace Unbound.Runtime
         /// tests/projects/nativegfx `metal.jsonl` volume.compressed3d); null elsewhere (a stub).</summary>
         internal bool? Compressed3DTextures { get; init; }
 
+        /// <summary>SystemInfo.supportsDynamicResolution is measured on the device: true where
+        /// <see cref="EditorDynamicResolution"/> (Metal), else false (OpenGL Core: tests/projects/urp
+        /// `device-opengl.jsonl`). The Vulkan Editor answers true, but whether it scales buffers as
+        /// the Metal one does is unmeasured, so it stays a stub there.</summary>
+        internal bool DynamicResolutionMeasured { get; init; }
+
         /// <summary>How Texture2D.ReadPixels and AsyncGPUReadback treat a render texture whose format
         /// answers no ReadPixels usage. Null: they refuse it (Vulkan's ReadPixels and every device's
         /// AsyncGPUReadback, tests/projects/textureformats). Metal's rule:
@@ -178,9 +188,9 @@ namespace Unbound.Runtime
             internal bool ReadsStoredChannelBits { get; init; }
         }
 
-        /// <summary>SystemInfo.maxTiledPixelStorageSize where it is measured (Metal: 64, tests/projects/urp
-        /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max);
-        /// null on Vulkan, where it stays a stub. On OpenGL Core GetTiledRenderTargetStorageSize is
+        /// <summary>SystemInfo.maxTiledPixelStorageSize (Metal: 64, tests/projects/urp
+        /// `device-metal.jsonl`; OpenGL Core: int.MaxValue, tests/projects/srpmembers tiled.max;
+        /// Vulkan: 32, `device-vulkan.jsonl`). On OpenGL Core GetTiledRenderTargetStorageSize is
         /// measured too (<see cref="TiledStorageMeasured"/>).</summary>
         internal int? MaxTiledPixelStorage { get; init; }
         internal bool TiledStorageMeasured { get; init; }
@@ -191,9 +201,9 @@ namespace Unbound.Runtime
 
         internal sealed class MeasuredLimits
         {
-            /// <summary>maxComputeBufferInputs of the vertex, fragment, hull, domain and compute
-            /// stages, and of the geometry stage.</summary>
-            internal int ComputeBufferInputs, GeometryComputeBufferInputs;
+            /// <summary>maxComputeBufferInputs of the vertex, fragment, hull and domain stages, of
+            /// the geometry stage and of compute shaders.</summary>
+            internal int ComputeBufferInputs, GeometryComputeBufferInputs, ComputeStageBufferInputs;
             internal bool MipStreaming, ParallelPSOCreation;
         }
 
@@ -252,6 +262,18 @@ namespace Unbound.Runtime
             TiledStorageMeasured = true,
             ProceduralQuads = UnityEngine.MeshTopology.Points,
             PackedTargetsKeepChannelBits = true,
+            // tests/projects/urp CapsProbe `device-opengl.jsonl` (two identical captures, NVIDIA
+            // RTX 4060).
+            Compressed3DTextures = false,
+            DynamicResolutionMeasured = true,
+            Limits = new MeasuredLimits
+            {
+                ComputeBufferInputs = 16,
+                GeometryComputeBufferInputs = 16,
+                ComputeStageBufferInputs = 16,
+                MipStreaming = true,
+                ParallelPSOCreation = false,
+            },
         };
 
         internal static readonly GraphicsDeviceProfile Vulkan = new GraphicsDeviceProfile(
@@ -262,6 +284,19 @@ namespace Unbound.Runtime
         {
             ProceduralQuads = UnityEngine.MeshTopology.Triangles,
             PackedTargetsKeepChannelBits = true,
+            // tests/projects/urp CapsProbe `device-vulkan.jsonl` (two identical captures, NVIDIA
+            // RTX 4060): the driver's per-stage storage buffer limit for the graphics stages, 32
+            // for compute shaders.
+            Compressed3DTextures = true,
+            MaxTiledPixelStorage = 32,
+            Limits = new MeasuredLimits
+            {
+                ComputeBufferInputs = 1048576,
+                GeometryComputeBufferInputs = 1048576,
+                ComputeStageBufferInputs = 32,
+                MipStreaming = true,
+                ParallelPSOCreation = true,
+            },
         };
 
         /// <summary>The macOS Editor's device (tests/projects/urp CapsProbe
@@ -276,6 +311,7 @@ namespace Unbound.Runtime
             MaxMsaaSamples = 4,
             DepthFetchInRenderPass = false,
             MaxTexture3DSize = 2048,
+            MaxTextureSize = 16384,
             MaxComputeWorkGroupSizeZ = 1024,
             EditorGeometryShaders = false,
             EditorConservativeRaster = false,
@@ -289,6 +325,7 @@ namespace Unbound.Runtime
             CopyCountAssertsRange = false,
             TextureWrapMirrorOnce = 0,
             EditorDynamicResolution = true,
+            DynamicResolutionMeasured = true,
             Compressed3DTextures = true,
             TargetReadback = new TargetReadbackRule
             {
@@ -351,6 +388,7 @@ namespace Unbound.Runtime
             {
                 ComputeBufferInputs = 31,
                 GeometryComputeBufferInputs = 0,
+                ComputeStageBufferInputs = 31,
                 MipStreaming = true,
                 ParallelPSOCreation = true,
             },
