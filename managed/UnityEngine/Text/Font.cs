@@ -236,7 +236,7 @@ namespace UnityEngine
                 info = default;
                 return false;
             }
-            return Atlas.TryGetCharacterInfo(ch, PixelSize(size), size, style, out info);
+            return Atlas.TryGetCharacterInfo(ch, TextureRequestPixelSize(size), size, style, out info);
         }
 
         public bool GetCharacterInfo(char ch, out CharacterInfo info, int size) => GetCharacterInfo(ch, out info, size, FontStyle.Normal);
@@ -247,7 +247,7 @@ namespace UnityEngine
         {
             if (m_Source == null || string.IsNullOrEmpty(characters)) return;
             var keys = new List<GlyphKey>(characters.Length);
-            int pixelSize = PixelSize(size);
+            int pixelSize = TextureRequestPixelSize(size);
             for (int i = 0; i < characters.Length; i++)
             {
                 int c = characters[i];
@@ -266,6 +266,12 @@ namespace UnityEngine
 
         /// <summary>The pixel size a request renders at: 0 is the font's own size.</summary>
         internal int PixelSize(int size) => size <= 0 || !m_Dynamic ? Math.Max(1, (int)m_FontSize) : size;
+
+        int TextureRequestPixelSize(int size)
+        {
+            int pixels = PixelSize(size);
+            return m_Dynamic ? Compat.LegacyFontAtlasPixelSize(pixels) : pixels;
+        }
 
         /// <summary>Ascent, descent and line spacing at a pixel size (Unity scales its m_FontSize metrics).</summary>
         internal float AscentAt(int size) => m_Dynamic ? m_Ascent * size / Math.Max(1f, m_FontSize) : m_Ascent;

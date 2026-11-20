@@ -271,6 +271,14 @@ namespace Unbound.Runtime
         /// <summary>Reading an existing dynamic glyph keeps it for this frame's atlas rebuild.
         /// Measured in tests/projects/textcolor on Unity 6000.0.71f1.</summary>
         internal static bool LegacyFontReadKeepsGlyph => Family == ReleaseFamily.Unity6000_0;
+
+        /// <summary>Dynamic Font texture requests and queries share a 500-pixel maximum on
+        /// Unity 6000.0.71f1 (tests/projects/textcolor). Other families are unmeasured.</summary>
+        internal static int LegacyFontAtlasPixelSize(int pixels)
+        {
+            const int MaximumMeasuredSize = 500;
+            return Family == ReleaseFamily.Unity6000_0 ? Math.Min(pixels, MaximumMeasuredSize) : pixels;
+        }
         /// <summary>Constructor, animation-job API contexts and component initialization defaults measured in tests/projects/threadapis.</summary>
         internal static bool MainThreadContextsMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Invoke deadlines and delayed-call points measured in tests/projects/invokesteps.</summary>
