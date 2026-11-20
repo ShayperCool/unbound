@@ -124,7 +124,7 @@ namespace UnityEditor.U2D
     /// Unity 6000.0.71f1 Editor answers it (tests/projects/spriteatlaseditor): its packables in their
     /// stored order (a folder as its folder asset, a texture, a sprite; a packable whose asset is gone
     /// is left out), its master atlas (a variant's; null otherwise), whether builds include it, and
-    /// its packing and texture settings. A null atlas throws ArgumentNullException.
+    /// its packing, texture and per-platform settings. A null atlas throws ArgumentNullException.
     /// </summary>
     public static partial class SpriteAtlasExtensions
     {
@@ -155,6 +155,12 @@ namespace UnityEditor.U2D
         {
             if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
             return spriteAtlas.TextureSettings;
+        }
+
+        public static TextureImporterPlatformSettings GetPlatformSettings(this SpriteAtlas spriteAtlas, string buildTarget)
+        {
+            if (spriteAtlas == null) throw new ArgumentNullException(nameof(spriteAtlas));
+            return spriteAtlas.ReadPlatformSettings(TextureImporter.GetTexturePlatformSerializationName(buildTarget));
         }
 
         public static SpriteAtlas GetMasterAtlas(this SpriteAtlas spriteAtlas)

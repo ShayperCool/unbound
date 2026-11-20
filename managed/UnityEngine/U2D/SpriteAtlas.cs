@@ -29,12 +29,13 @@ namespace UnityEngine.U2D
 
         readonly List<ObjectRef> m_Packables = new List<ObjectRef>();
         bool m_IsVariant;
-        // Editor settings ("Include in Build", packingSettings, textureSettings): a V1 atlas reads
-        // them from its editor data; a V2 atlas reads them from its SpriteAtlasImporter .meta when
-        // first asked (m_ImporterSettingsRead).
+        // Editor settings ("Include in Build", packingSettings, textureSettings, platformSettings):
+        // a V1 atlas reads them from its editor data; a V2 atlas reads them from its
+        // SpriteAtlasImporter .meta when first asked (m_ImporterSettingsRead).
         bool m_IncludeInBuild = true;
         SpriteAtlasPackingSettings m_PackingSettings = SpriteAtlasPackingSettings.Default;
         SpriteAtlasTextureSettings m_TextureSettings = SpriteAtlasTextureSettings.Default;
+        List<TextureImporterPlatformSettings> m_PlatformSettings;
         bool m_FromImporter;
         bool m_ImporterSettingsRead = true;
         SpriteAtlas m_Master;
@@ -143,6 +144,14 @@ namespace UnityEngine.U2D
             }
         }
 
+        /// <summary>A fresh copy of the atlas's platform settings for <paramref name="buildTarget"/>,
+        /// or fresh Editor defaults named after the normalized target when no entry matches.</summary>
+        internal TextureImporterPlatformSettings ReadPlatformSettings(string buildTarget)
+        {
+            EnsureImporterSettingsRead();
+            return TextureImporterPlatformSettings.FindOrDefault(m_PlatformSettings, buildTarget);
+        }
+
         void EnsureImporterSettingsRead()
         {
             if (m_ImporterSettingsRead) return;
@@ -158,6 +167,7 @@ namespace UnityEngine.U2D
                         m_IncludeInBuild = importer.Bool("bindAsDefault", true);
                         m_PackingSettings = SpriteAtlasPackingSettings.Read(importer.Get("packingSettings"));
                         m_TextureSettings = SpriteAtlasTextureSettings.Read(importer.Get("textureSettings"));
+                        m_PlatformSettings = TextureImporterPlatformSettings.ReadList(importer.Get("platformSettings"), prefixed: false);
                     }
                 }
                 catch (Exception e)
@@ -179,6 +189,7 @@ namespace UnityEngine.U2D
                 m_IncludeInBuild = true;
                 m_PackingSettings = SpriteAtlasPackingSettings.Default;
                 m_TextureSettings = SpriteAtlasTextureSettings.Default;
+                m_PlatformSettings = null;
                 m_ImporterSettingsRead = false;
             }
             else
@@ -186,6 +197,7 @@ namespace UnityEngine.U2D
                 m_IncludeInBuild = data?.Bool("bindAsDefault", true) ?? true;
                 m_PackingSettings = SpriteAtlasPackingSettings.Read(data?.Get("packingSettings"));
                 m_TextureSettings = SpriteAtlasTextureSettings.Read(data?.Get("textureSettings"));
+                m_PlatformSettings = TextureImporterPlatformSettings.ReadList(data?.Get("platformSettings"), prefixed: true);
                 m_ImporterSettingsRead = true;
             }
             m_IsVariant = body.Bool("m_IsVariant");

@@ -180,6 +180,9 @@ namespace UnityEditor
     {
         const string Default = "platformSettings.[buildTarget=DefaultTexturePlatform].";
 
+        internal static string GetTexturePlatformSerializationName(string platformName) =>
+            TextureImporterPlatformSettings.NormalizePlatformName(platformName);
+
         int I(string path, int fallback = 0) => MetaSettings.Int(m_Settings, path, fallback);
         bool B(string path) => MetaSettings.Bool(m_Settings, path);
         void SetI(string path, long value) { NeedsPlatform(path); MetaSettings.SetInt(m_Settings, path, value); Changed(); }

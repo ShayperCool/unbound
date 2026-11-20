@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine;
 
 namespace UnityEditor
@@ -330,5 +332,205 @@ namespace UnityEditor
         public bool crunchedCompression { get => m_CrunchedCompression != 0; set => m_CrunchedCompression = value ? 1 : 0; }
         public bool allowsAlphaSplitting { get => m_AllowsAlphaSplitting != 0; set => m_AllowsAlphaSplitting = value ? 1 : 0; }
         public AndroidETC2FallbackOverride androidETC2FallbackOverride { get => (AndroidETC2FallbackOverride)m_AndroidETC2FallbackOverride; set => m_AndroidETC2FallbackOverride = (int)value; }
+
+        const string StandalonePlatformName = "Standalone";
+
+        // Canonical texture platform serialization names and lookup aliases for Unity 6000.0
+        // (tests/projects/spriteatlaseditor v1platform/v2platform).
+        static readonly Dictionary<string, (int TargetId, string CanonicalName, bool IsStandalone)> s_PlatformTargets =
+            new Dictionary<string, (int, string, bool)>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Standalone desktop targets share the "Standalone" texture platform.
+                ["Standalone"] = (1, StandalonePlatformName, true),
+                ["StandaloneOSX"] = (2, StandalonePlatformName, true),
+                ["OSXUniversal"] = (2, StandalonePlatformName, true),
+                ["StandaloneWindows"] = (5, StandalonePlatformName, true),
+                ["Win"] = (5, StandalonePlatformName, true),
+                ["StandaloneWindows64"] = (19, StandalonePlatformName, true),
+                ["Win64"] = (19, StandalonePlatformName, true),
+                ["StandaloneLinux64"] = (24, StandalonePlatformName, true),
+                ["Linux64"] = (24, StandalonePlatformName, true),
+                // Non-standalone targets resolve to their canonical platform name.
+                ["iOS"] = (9, "iOS", false),
+                ["iPhone"] = (9, "iOS", false),
+                ["Android"] = (13, "Android", false),
+                ["WebGL"] = (20, "WebGL", false),
+                ["Web"] = (20, "WebGL", false),
+                ["WSAPlayer"] = (21, "WindowsStoreApps", false),
+                ["WindowsStoreApps"] = (21, "WindowsStoreApps", false),
+                ["Windows Store Apps"] = (21, "WindowsStoreApps", false),
+                ["WSA"] = (21, "WindowsStoreApps", false),
+                ["PS4"] = (31, "PS4", false),
+                ["XboxOne"] = (33, "XboxOne", false),
+                ["tvOS"] = (37, "tvOS", false),
+                ["AppleTV"] = (37, "tvOS", false),
+                ["Switch"] = (38, "Switch", false),
+                ["CloudRendering"] = (41, "CloudRendering", false),
+                ["LinuxHeadlessSimulation"] = (41, "CloudRendering", false),
+                ["GameCoreScarlett"] = (42, "GameCoreScarlett", false),
+                ["GameCoreXboxSeries"] = (42, "GameCoreScarlett", false),
+                ["GameCoreXboxOne"] = (43, "GameCoreXboxOne", false),
+                ["PS5"] = (44, "PS5", false),
+                ["EmbeddedLinux"] = (45, "EmbeddedLinux", false),
+                ["QNX"] = (46, "QNX", false),
+                ["VisionOS"] = (47, "VisionOS", false),
+                ["Switch2"] = (48, "Switch2", false),
+                ["Kepler"] = (49, "Kepler", false),
+                // Legacy/deprecated build target names kept for older serialized assets.
+                ["StandaloneOSXIntel"] = (4, "OSXIntel", false),
+                ["OSXIntel"] = (4, "OSXIntel", false),
+                ["WebStreamed"] = (7, "WebStreamed", false),
+                ["PS3"] = (10, "PS3", false),
+                ["Linux"] = (17, "Linux", false),
+                ["LinuxUniversal"] = (25, "LinuxUniversal", false),
+                ["WP8"] = (26, "WP8", false),
+                ["OSXIntel64"] = (27, "OSXIntel64", false),
+                ["BlackBerry"] = (28, "BlackBerry", false),
+                ["Tizen"] = (29, "Tizen", false),
+                ["PSP2"] = (30, "PSP2", false),
+                ["PSM"] = (32, "PSM", false),
+                ["SamsungTV"] = (34, "SamsungTV", false),
+                ["N3DS"] = (35, "N3DS", false),
+                ["WiiU"] = (36, "WiiU", false),
+                ["Lumin"] = (39, "Lumin", false),
+                ["Stadia"] = (40, "Stadia", false),
+            };
+
+        // BuildTargetGroup names upgraded to build target names in serializedVersion 3 entries.
+        static readonly Dictionary<string, string> s_BuildTargetGroupToPlatformName =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["iPhone"] = "iOS",
+                ["iOS"] = "iOS",
+                ["Android"] = "Android",
+                ["WebGL"] = "WebGL",
+                ["Windows Store Apps"] = "WindowsStoreApps",
+                ["WSA"] = "WindowsStoreApps",
+                ["Metro"] = "WindowsStoreApps",
+                ["PS4"] = "PS4",
+                ["PS5"] = "PS5",
+                ["XboxOne"] = "XboxOne",
+                ["tvOS"] = "tvOS",
+                ["VisionOS"] = "VisionOS",
+                ["Nintendo Switch"] = "Switch",
+                ["Switch"] = "Switch",
+                ["Nintendo Switch 2"] = "Switch2",
+                ["Switch2"] = "Switch2",
+                ["LinuxHeadlessSimulation"] = "CloudRendering",
+                ["CloudRendering"] = "CloudRendering",
+                ["GameCoreScarlett"] = "GameCoreScarlett",
+                ["GameCoreXboxSeries"] = "GameCoreScarlett",
+                ["GameCoreXboxOne"] = "GameCoreXboxOne",
+                ["EmbeddedLinux"] = "EmbeddedLinux",
+                ["QNX"] = "QNX",
+                ["Kepler"] = "Kepler",
+            };
+
+        internal static string NormalizePlatformName(string platformName)
+        {
+            if (string.IsNullOrEmpty(platformName)) return "";
+            return s_PlatformTargets.TryGetValue(platformName, out var info) ? info.CanonicalName : platformName;
+        }
+
+        static bool MatchesPlatform(string storedName, string normalizedQuery)
+        {
+            if (string.Equals(normalizedQuery, StandalonePlatformName, StringComparison.OrdinalIgnoreCase))
+                return string.Equals(storedName, StandalonePlatformName, StringComparison.Ordinal);
+            if (s_PlatformTargets.TryGetValue(normalizedQuery, out var queryInfo))
+            {
+                if (queryInfo.IsStandalone)
+                    return string.Equals(storedName, StandalonePlatformName, StringComparison.Ordinal);
+                return storedName != null
+                    && s_PlatformTargets.TryGetValue(storedName, out var storedInfo)
+                    && storedInfo.TargetId == queryInfo.TargetId;
+            }
+            return string.Equals(storedName, normalizedQuery, StringComparison.Ordinal);
+        }
+
+        internal static List<TextureImporterPlatformSettings> ReadList(YNode listNode, bool prefixed)
+        {
+            if (listNode == null || listNode.Kind != YKind.Seq || listNode.Items.Length == 0)
+                return null;
+            var entries = new List<TextureImporterPlatformSettings>(listNode.Items.Length);
+            foreach (var item in listNode.Items)
+            {
+                if (item == null || item.Kind != YKind.Map) continue;
+                entries.Add(ReadEntry(item, prefixed));
+            }
+            return entries.Count > 0 ? entries : null;
+        }
+
+        static TextureImporterPlatformSettings ReadEntry(YNode node, bool prefixed)
+        {
+            var settings = new TextureImporterPlatformSettings();
+            int version = node.Int("serializedVersion", 1);
+
+            string buildTargetKey = prefixed ? "m_BuildTarget" : "buildTarget";
+            string name = node.Get(buildTargetKey) != null ? node.Str(buildTargetKey, "") : DefaultPlatformName;
+            if (version == 3
+                && !string.Equals(name, StandalonePlatformName, StringComparison.OrdinalIgnoreCase)
+                && s_BuildTargetGroupToPlatformName.TryGetValue(name, out var upgraded))
+            {
+                name = upgraded;
+            }
+            string serializedName = NormalizePlatformName(name);
+            if (!string.Equals(serializedName, StandalonePlatformName, StringComparison.OrdinalIgnoreCase))
+                name = serializedName;
+            settings.m_Name = name;
+
+            settings.m_MaxTextureSize = node.Int(prefixed ? "m_MaxTextureSize" : "maxTextureSize", settings.m_MaxTextureSize);
+            settings.m_ResizeAlgorithm = node.Int(prefixed ? "m_ResizeAlgorithm" : "resizeAlgorithm", settings.m_ResizeAlgorithm);
+
+            int textureFormat = node.Int(prefixed ? "m_TextureFormat" : "textureFormat", settings.m_TextureFormat);
+            if (version <= 1)
+            {
+                if (textureFormat == 35) textureFormat = 34;
+                else if (textureFormat == 36) textureFormat = 47;
+            }
+            settings.m_TextureFormat = textureFormat;
+
+            settings.m_TextureCompression = node.Int(prefixed ? "m_TextureCompression" : "textureCompression", settings.m_TextureCompression);
+            settings.m_CompressionQuality = node.Int(prefixed ? "m_CompressionQuality" : "compressionQuality", settings.m_CompressionQuality);
+            settings.m_CrunchedCompression = node.Bool(prefixed ? "m_CrunchedCompression" : "crunchedCompression", settings.m_CrunchedCompression != 0) ? 1 : 0;
+            settings.m_AllowsAlphaSplitting = node.Bool(prefixed ? "m_AllowsAlphaSplitting" : "allowsAlphaSplitting", settings.m_AllowsAlphaSplitting != 0) ? 1 : 0;
+            settings.m_Overridden = node.Bool(prefixed ? "m_Overridden" : "overridden", settings.m_Overridden != 0) ? 1 : 0;
+            settings.m_IgnorePlatformSupport = node.Bool(prefixed ? "m_IgnorePlatformSupport" : "ignorePlatformSupport", settings.m_IgnorePlatformSupport != 0) ? 1 : 0;
+            settings.m_AndroidETC2FallbackOverride = node.Int(prefixed ? "m_AndroidETC2FallbackOverride" : "androidETC2FallbackOverride", settings.m_AndroidETC2FallbackOverride);
+
+            if (version <= 2)
+            {
+                settings.m_ForceMaximumCompressionQuality_BC6H_BC7 = 1;
+                if (textureFormat is 24 or 25)
+                    settings.m_CompressionQuality = 100;
+            }
+            else
+            {
+                settings.m_ForceMaximumCompressionQuality_BC6H_BC7 =
+                    node.Bool(prefixed ? "m_ForceMaximumCompressionQuality_BC6H_BC7" : "forceMaximumCompressionQuality_BC6H_BC7", false) ? 1 : 0;
+            }
+            return settings;
+        }
+
+        internal static TextureImporterPlatformSettings FindOrDefault(List<TextureImporterPlatformSettings> entries, string buildTarget)
+        {
+            string canonical = NormalizePlatformName(buildTarget);
+            var result = new TextureImporterPlatformSettings();
+            if (entries != null)
+            {
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    var entry = entries[i];
+                    if (MatchesPlatform(entry.m_Name, canonical))
+                    {
+                        entry.CopyTo(result);
+                        if ((result.m_TextureFormat is 24 or 25) && result.m_ForceMaximumCompressionQuality_BC6H_BC7 != 0)
+                            result.m_CompressionQuality = 100;
+                        return result;
+                    }
+                }
+            }
+            result.m_Name = canonical;
+            return result;
+        }
     }
 }
