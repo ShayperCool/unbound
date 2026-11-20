@@ -13,16 +13,20 @@ namespace UnityEditor
 
         public EditorWindow editorWindow { get; internal set; }
 
+        [Unbound.EditorFaithful("empty base hook, tested by tests/projects/popupcontent")]
         public virtual void OnGUI(Rect rect) { }
 
+        [Unbound.EditorFaithful("base content has no retained tree, tested by tests/projects/popupcontent")]
         public virtual VisualElement CreateGUI() => null;
 
         public virtual Vector2 GetWindowSize() => Compat.EditorPopupWindowMeasured
             ? new Vector2(DefaultWindowExtent, DefaultWindowExtent)
             : Vector2.zero;
 
+        [Unbound.EditorFaithful("empty base hook, tested by tests/projects/popupcontent")]
         public virtual void OnOpen() { }
 
+        [Unbound.EditorFaithful("empty base hook, tested by tests/projects/popupcontent")]
         public virtual void OnClose() { }
     }
 
