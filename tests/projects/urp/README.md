@@ -267,6 +267,10 @@ is written from the captures by `caps_table.py`.
 
 - `Reference/caps-6000.0.71f1.jsonl`: OpenGL Core, the Linux Editor on an NVIDIA RTX 4060.
 - `Reference/unity-6000.0.71f1/caps-vulkan.jsonl`: the same Editor with `-force-vulkan`.
+- `Reference/unity-6000.0.71f1/device-opengl.jsonl`, `device-vulkan.jsonl`: the SystemInfo
+  rows (`CAPS_PROBE_DEVICE_OUT`) of the Linux Editor on the NVIDIA RTX 4060, on OpenGL Core and
+  with `-force-vulkan` (batchmode with graphics), two identical captures each; their caps rows
+  equal the two files above byte for byte.
 - `Reference/unity-6000.0.71f1/caps-metal.jsonl`, `device-metal.jsonl`: Metal, the macOS
   Editor (arm64, Apple M2 Pro, batchmode with graphics), two identical captures. The macOS Editor
   ran Metal with `-force-glcore`, with `-force-vulkan` (two captures each) and with a
