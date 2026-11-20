@@ -309,12 +309,35 @@ namespace UnityEditor
         public static Object ObjectField(Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), null, obj, objType);
         public static Object ObjectField(string label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), new GUIContent(label), obj, objType);
         public static Object ObjectField(GUIContent label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), label, obj, objType);
-        public static Rect GetControlRect(params GUILayoutOption[] options) => Line(options);
-        public static Rect GetControlRect(bool hasLabel, params GUILayoutOption[] options) => Line(options);
+        public static Rect GetControlRect(params GUILayoutOption[] options) => GetControlRect(true, options);
+        public static Rect GetControlRect(bool hasLabel, params GUILayoutOption[] options) =>
+            GetControlRect(hasLabel, EditorGUIUtility.singleLineHeight, options);
+
         public static Rect GetControlRect(bool hasLabel, float height, params GUILayoutOption[] options)
         {
             EditorGUI.RequireGUI();
-            return GUILayoutUtility.GetRect(0, height, options);
+            return Compat.EditorControlRectMeasured
+                ? ReserveControlRect(hasLabel, height, Compat.EditorControlRectStyle, options)
+                : GUILayoutUtility.GetRect(0, height, options);
+        }
+
+        public static Rect GetControlRect(bool hasLabel, float height, GUIStyle style, params GUILayoutOption[] options)
+        {
+            if (!Compat.EditorControlRectMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.GetControlRect");
+                return default;
+            }
+            EditorGUI.RequireGUI();
+            if (style == null && Event.current.type == EventType.Layout) throw new NullReferenceException();
+            return ReserveControlRect(hasLabel, height, style, options);
+        }
+
+        static Rect ReserveControlRect(bool hasLabel, float height, GUIStyle style, GUILayoutOption[] options)
+        {
+            float field = EditorGUIUtility.fieldWidth;
+            float preferred = EditorGUIUtility.labelWidth + field + Compat.EditorControlLabelGap;
+            return GUILayoutUtility.GetRect(hasLabel ? preferred : field, preferred, height, height, style, options);
         }
 
         public static void HelpBox(string message, MessageType type)

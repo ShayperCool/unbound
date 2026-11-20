@@ -57,6 +57,7 @@ public sealed partial class ImguiSkinProbe
         }
         RecordNumericLayoutRects(phase);
         RecordUsedLayoutGroups(phase);
+        RecordEditorControlRects(phase);
     }
 
     void RecordNumericLayoutRects(string phase)

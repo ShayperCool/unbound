@@ -288,6 +288,22 @@ namespace Unbound.Runtime
         /// measured in tests/projects/editordrawrect on Unity 6000.0.71f1.</summary>
         internal static bool ExplicitGuiTextureAlphaMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>EditorGUILayout.GetControlRect sizing and default margins measured in
+        /// tests/projects/imguiskin on Unity 6000.0.71f1.</summary>
+        internal static bool EditorControlRectMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal const float EditorControlLabelGap = 5f;
+        static UnityEngine.GUIStyle s_EditorControlRectStyle;
+        internal static UnityEngine.GUIStyle EditorControlRectStyle => s_EditorControlRectStyle ??= new UnityEngine.GUIStyle
+        {
+            margin = new UnityEngine.RectOffset(3, 3, 2, 2),
+            fixedHeight = UnityEditor.EditorGUIUtility.singleLineHeight,
+            stretchWidth = true,
+        };
+
+        /// <summary>Explicit group size options keep the opposite axis's outer child margins
+        /// inside its measured size (Unity 6000.0.71f1, tests/projects/imguiskin).</summary>
+        internal static bool OppositeLayoutSizeKeepsMarginsInside => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;

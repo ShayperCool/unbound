@@ -50,6 +50,18 @@ consuming a mouse event. The new groups have empty rectangles. Returning to Repa
 same layout pass read its arranged group, both children and the following entry.
 [Unity 6000.0 `Event.Use`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Event.Use.html)
 
+The `GetControlRect` controls check all four overloads with two label and field width settings.
+Layout reports the maximum width and requested height before options apply. The unlabeled
+control can shrink to the field width in a constrained row. Repaint checks default margins,
+caller-supplied margins and fixed size options. The geometry agrees in both Editor themes.
+A null style supplied during Layout raises `NullReferenceException`.
+[Unity 6000.0 `EditorGUILayout.GetControlRect`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.GetControlRect.html)
+
+The group margin controls use ordinary fixed-size layout entries with different margins.
+In the capture an explicit group width includes the vertical child margins in its height.
+An explicit group height includes the horizontal child margins in its width. The controls
+record the group bounds, the children and the next entry.
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b
