@@ -645,6 +645,7 @@
 {"key":"UnityEditor.CustomEditor/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.CustomPropertyDrawer/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.DecoratorDrawer/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEditor.DefaultAsset/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.DestroyAssetObjectEventArgs/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.DestroyAssetObjectEventArgs/Property/UnityEditor.DestroyAssetObjectEventArgs/guid","status":"value","value":"UnityEditor.GUID{}"}
 {"key":"UnityEditor.DestroyAssetObjectEventArgs/Property/UnityEditor.DestroyAssetObjectEventArgs/instanceId","status":"value","value":"0"}
@@ -1404,6 +1405,7 @@
 {"key":"UnityEditor.TypeCache+TypeCollection/Property/UnityEditor.TypeCache+TypeCollection/Item(System.Int32)","status":"not-readable","value":"indexer-requires-arguments"}
 {"key":"UnityEditor.TypeCache+TypeCollection+Enumerator/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.TypeCache+TypeCollection+Enumerator/Property/UnityEditor.TypeCache+TypeCollection+Enumerator/Current","status":"getter-threw","value":"System.NullReferenceException"}
+{"key":"UnityEditor.U2D.SpriteAtlasExtensions/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.U2D.SpriteEditorExtension/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.UIElements.UxmlAttributeConverter`1/@factory","status":"excluded","value":"open-generic"}
 {"key":"UnityEditor.Undo/@factory","status":"value","value":"class"}

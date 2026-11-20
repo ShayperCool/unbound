@@ -287,6 +287,9 @@ namespace UnityEditor
                 case "visualeffectsubgraphoperator": return ext == UnityEditor.VFX.VisualEffectSubgraphOperator.Extension;
                 case "visualeffectsubgraphblock": return ext == UnityEditor.VFX.VisualEffectSubgraphBlock.Extension;
                 case "font": return e.Kind == "font";
+                // V1 atlases and the SpriteAtlas a V2 atlas imports to (tests/projects/spriteatlaseditor,
+                // each in its own Sprite Packer mode).
+                case "spriteatlas": return ext == ".spriteatlas" || ext == ".spriteatlasv2";
                 case "model": case "mesh": return e.Kind == "model";
                 case "monoscript": case "script": return e.Kind == "script";
                 case "defaultasset": return e.Kind == "folder" || e.Kind == "unknown";

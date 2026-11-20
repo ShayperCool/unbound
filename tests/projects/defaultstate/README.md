@@ -709,3 +709,8 @@ handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agr
 rows; every earlier committed row and inventory entry is unchanged. One row is queued in
 `debt.json`: `GenericStack` inherits `Stack.SyncRoot` from the runtime library, which in the
 Editor's Mono runtime is a separate object and in CoreCLR the stack itself.
+
+The sprite atlas extension slice adds `UnityEditor.DefaultAsset` (no public parameterless
+constructor) and the static `UnityEditor.U2D.SpriteAtlasExtensions` to the handwritten inventory.
+Two independent 6000.0.71f1 Linux GPU Editor captures agree on their two excluded rows; every
+earlier committed row and inventory entry is unchanged.

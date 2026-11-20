@@ -36,7 +36,7 @@ namespace Unbound.Runtime
             Unbound.UIElements.UiImporters.Register();
             // Files Unity imports as DefaultAsset: nothing loadable.
             AssetDatabaseRuntime.Importers["unknown"] = _ => new LoadedFile();
-            AssetDatabaseRuntime.Importers["folder"] = _ => new LoadedFile();
+            AssetDatabaseRuntime.Importers["folder"] = ImportFolder;
         }
 
         internal const long TextAssetFileId = 4900000;
@@ -62,6 +62,15 @@ namespace Unbound.Runtime
                     { IsPersistentAsset = true, hideFlags = HideFlags.NotEditable };
             var file = new LoadedFile { MainObject = asset };
             file.Objects[TextAssetFileId] = asset;
+            return file;
+        }
+
+        /// <summary>A folder: its DefaultAsset, named after the folder.</summary>
+        static LoadedFile ImportFolder(AssetDatabaseRuntime.AssetInfo info)
+        {
+            var folder = UnityEditor.DefaultAsset.ForFolder(System.IO.Path.GetFileName(info.Path.TrimEnd('/')));
+            var file = new LoadedFile { MainObject = folder };
+            file.Objects[UnityEditor.DefaultAsset.FolderFileId] = folder;
             return file;
         }
 

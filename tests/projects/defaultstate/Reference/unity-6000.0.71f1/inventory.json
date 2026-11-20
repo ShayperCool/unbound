@@ -1390,6 +1390,12 @@
       "type": "UnityEditor.DecoratorDrawer"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.DefaultAsset"
+    },
+    {
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -2336,6 +2342,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.TypeCache+TypeCollection+Enumerator"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.U2D.SpriteAtlasExtensions"
     },
     {
       "category": "class",

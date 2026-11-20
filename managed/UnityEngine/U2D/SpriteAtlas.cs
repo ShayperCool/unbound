@@ -28,6 +28,11 @@ namespace UnityEngine.U2D
 
         readonly List<ObjectRef> m_Packables = new List<ObjectRef>();
         bool m_IsVariant;
+        // "Include in Build" (bindAsDefault, on when absent): a V1 atlas's from its editor data; a
+        // V2 atlas's from its importer settings, read when first asked (m_IncludeInBuildRead).
+        bool m_IncludeInBuild = true;
+        bool m_FromImporter;
+        bool m_IncludeInBuildRead;
         SpriteAtlas m_Master;
         string m_Tag;
         List<Sprite> m_Sprites;
@@ -93,12 +98,45 @@ namespace UnityEngine.U2D
             return m_Sprites = found.Distinct().OrderBy(s => s.name, StringComparer.Ordinal).ToList();
         }
 
+        /// <summary>The packables as stored, in order.</summary>
+        internal IReadOnlyList<ObjectRef> Packables => m_Packables;
+
+        /// <summary>The master atlas of a variant (null for an atlas without one).</summary>
+        internal SpriteAtlas MasterAtlas => m_Master;
+
+        /// <summary>Whether builds include the atlas ("Include in Build").</summary>
+        internal bool IncludeInBuild
+        {
+            get
+            {
+                if (m_IncludeInBuildRead) return m_IncludeInBuild;
+                m_IncludeInBuildRead = true;
+                if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out string guid, out long _) && !string.IsNullOrEmpty(guid))
+                {
+                    try
+                    {
+                        var docs = Native.LoadDocuments("meta:" + guid);
+                        if (docs.Count > 0 && docs[0].TypeName == "SpriteAtlasImporter")
+                            m_IncludeInBuild = docs[0].Body.Bool("bindAsDefault", true);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"Unbound: the import settings of sprite atlas {name} could not be read ({e.Message}); it reports being included in builds");
+                    }
+                }
+                return m_IncludeInBuild;
+            }
+        }
+
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Packables.Clear();
             var data = body.Get("m_ImporterData") ?? body.Get("m_EditorData");
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
                 m_Packables.Add(packable.AsRef());
+            m_FromImporter = body.Get("m_ImporterData") != null;
+            m_IncludeInBuild = m_FromImporter || (data?.Bool("bindAsDefault", true) ?? true);
+            m_IncludeInBuildRead = !m_FromImporter;
             m_IsVariant = body.Bool("m_IsVariant");
             m_Tag = body.Str("m_Tag", null);
             var master = body.Ref("m_MasterAtlas");

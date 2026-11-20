@@ -6816,10 +6816,8 @@ namespace UnityEditor
         [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreatePropertyGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CreatePropertyGUI"); return default; }
         [global::System.Obsolete("CanCacheInspectorGUI has been deprecated and is no longer used.")] [global::Unbound.Stub] public virtual bool CanCacheInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DecoratorDrawer.CanCacheInspectorGUI"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class DefaultAsset : global::UnityEngine.Object
+    unsafe partial class DefaultAsset
     {
-        [global::Unbound.Stub] private protected DefaultAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DefaultAsset.ctor"); }
         internal string message { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DefaultAsset.message"); return default; } }
         internal bool isWarning { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DefaultAsset.isWarning"); return default; } }
     }
@@ -47106,13 +47104,11 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public static void Save(global::UnityEditor.U2D.SpriteAtlasAsset asset, string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.Save"); }
         public bool isVariant { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasAsset.isVariant"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class SpriteAtlasExtensions
+    unsafe static partial class SpriteAtlasExtensions
     {
         [global::Unbound.Stub] public static void Add(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.Add"); }
         [global::Unbound.Stub] public static void Remove(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.Remove"); }
         [global::Unbound.Stub] internal static void RemoveAt(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.RemoveAt"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Object[] GetPackables(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetPackables"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
         [global::Unbound.Stub] public static global::UnityEditor.U2D.SpriteAtlasTextureSettings GetTextureSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetTextureSettings"); return default; }
         [global::Unbound.Stub] public static void SetTextureSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEditor.U2D.SpriteAtlasTextureSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetTextureSettings"); }
         [global::Unbound.Stub] public static global::UnityEditor.U2D.SpriteAtlasPackingSettings GetPackingSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetPackingSettings"); return default; }
@@ -47123,8 +47119,6 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public static void SetIsVariant(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetIsVariant"); }
         [global::Unbound.Stub] public static void SetMasterAtlas(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.U2D.SpriteAtlas value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetMasterAtlas"); }
         [global::Unbound.Stub] public static void SetVariantScale(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetVariantScale"); }
-        [global::Unbound.Stub] public static bool IsIncludeInBuild(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.IsIncludeInBuild"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.U2D.SpriteAtlas GetMasterAtlas(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetMasterAtlas"); return default; }
         [global::Unbound.Stub] internal static void CopyMasterAtlasSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.CopyMasterAtlasSettings"); }
         [global::Unbound.Stub] internal static string GetHash(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetHash"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Texture2D[] GetPreviewTextures(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetPreviewTextures"); return global::System.Array.Empty<global::UnityEngine.Texture2D>(); }
