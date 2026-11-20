@@ -8143,6 +8143,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.BindableElement+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.BindableElement+UxmlTraits"
     },
     {
@@ -8156,6 +8162,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "abstract",
       "type": "UnityEngine.UIElements.Binding"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "abstract",
+      "type": "UnityEngine.UIElements.Binding+UxmlSerializedData"
     },
     {
       "category": "struct",
@@ -8368,6 +8380,12 @@
       "type": "UnityEngine.UIElements.CustomBinding"
     },
     {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "abstract",
+      "type": "UnityEngine.UIElements.CustomBinding+UxmlSerializedData"
+    },
+    {
       "category": "struct",
       "module": "UnityEngine.UIElementsModule",
       "status": "open-generic",
@@ -8384,6 +8402,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.DataBinding"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.DataBinding+UxmlSerializedData"
     },
     {
       "category": "struct",
@@ -8834,6 +8858,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.Image+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.Image+UxmlSerializedData"
     },
     {
       "category": "class",
@@ -9409,6 +9439,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.RegisterUxmlCacheAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.RepeatButton"
     },
     {
@@ -9739,6 +9775,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.TextElement+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.TextElement+UxmlTraits"
     },
     {
@@ -10054,6 +10096,12 @@
       "type": "UnityEngine.UIElements.UxmlAttributeDescription"
     },
     {
+      "category": "struct",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.UxmlAttributeNames"
+    },
+    {
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
@@ -10076,6 +10124,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.UxmlColorAttributeDescription"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "static",
+      "type": "UnityEngine.UIElements.UxmlDescriptionCache"
     },
     {
       "category": "class",
@@ -10129,6 +10183,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.UxmlIgnoreAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.UxmlIntAttributeDescription"
     },
     {
@@ -10147,7 +10207,25 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.UxmlObjectReferenceAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.UxmlRootElementTraits"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "abstract",
+      "type": "UnityEngine.UIElements.UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "static",
+      "type": "UnityEngine.UIElements.UxmlSerializedDataUtility"
     },
     {
       "category": "class",
@@ -10328,6 +10406,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.VisualElement+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.VisualElement+UxmlSerializedData"
     },
     {
       "category": "class",

@@ -362,46 +362,10 @@ namespace UnityEngine.UIElements
         public abstract global::Unity.Profiling.ProfilerMarker profilerMarker { get; }
         public event global::System.Action<global::UnityEngine.UIElements.BaseVisualElementPanel> panelChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BaseVisualTreeUpdater.panelChanged"); } [global::Unbound.Stub] remove { } }
     }
-    unsafe partial class BindableElement
-    {
-        internal const string k_BindingPathTooltip = "Default method to define a path to a serialized property. Most often used for Editor extensions and inspectors.";
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindableElement.UxmlSerializedData.ctor"); }
-        }
-    }
-    unsafe partial class Binding
-    {
-        internal const string k_UpdateTriggerTooltip = "This informs the binding system of whether the binding object should be updated on every frame, when a change occurs in the source or on every frame if change detection is impossible, and when explicitly marked as dirty.";
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
-        {
-            [global::Unbound.Stub] internal string property;
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Binding.UxmlSerializedData.ctor"); }
-        }
-    }
     unsafe readonly partial struct BindingInfo
     {
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BindingInfo FromRequest(global::UnityEngine.UIElements.VisualElement target, in global::Unity.Properties.PropertyPath targetPath, global::UnityEngine.UIElements.Binding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.FromRequest"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.UIElements.BindingInfo FromBindingData(in global::UnityEngine.UIElements.DataBindingManager.BindingData bindingData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingInfo.FromBindingData"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class BindingModeDrawerAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public BindingModeDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingModeDrawerAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class BindingPathDrawerAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public BindingPathDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.BindingPathDrawerAttribute.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe readonly partial struct BindingTarget
@@ -761,12 +725,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static bool GetTransitionProperty(this ref global::UnityEngine.UIElements.ComputedStyle computedStyle, global::UnityEngine.UIElements.StyleSheets.StylePropertyId id, out global::UnityEngine.UIElements.ComputedTransitionProperty result) { result = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ComputedTransitionUtils.GetTransitionProperty"); return default; }
         [global::Unbound.Stub] internal static bool SameTransitionProperty(ref global::UnityEngine.UIElements.ComputedStyle x, ref global::UnityEngine.UIElements.ComputedStyle y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ComputedTransitionUtils.SameTransitionProperty"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ConverterDrawerAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public bool isConverterToSource;
-        [global::Unbound.Stub] public ConverterDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterDrawerAttribute.ctor"); }
-    }
     unsafe static partial class ConverterGroups
     {
         internal static global::UnityEngine.UIElements.ConverterGroup primitivesConverters { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ConverterGroups.primitivesConverters"); return default; } }
@@ -814,37 +772,10 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] public PropertyBag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Cursor.PropertyBag.ctor"); }
         }
     }
-    unsafe partial class CustomBinding
-    {
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe abstract partial class UxmlSerializedData : global::UnityEngine.UIElements.Binding.UxmlSerializedData
-        {
-            [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.CustomBinding.UxmlSerializedData.ctor"); }
-        }
-    }
     unsafe partial class DataBinding
     {
-        internal const string k_DataSourceTooltip = "A data source is a collection of information. By default, a binding will inherit the existing data source from the hierarchy. You can instead define another object here as the data source, or define the type of property it may be if the source is not yet available.";
-        internal const string k_DataSourcePathTooltip = "The path to the value in the data source used by this binding. To see resolved bindings in the UI Builder, define a path that is compatible with the target source property.";
-        internal const string k_BindingModeTooltip = "Controls how a binding is updated, which can include the direction in which data is written.";
-        internal const string k_SourceToUiConvertersTooltip = "Define one or more converter groups for this binding that will be used between the data source to the target UI.";
-        internal const string k_UiToSourceConvertersTooltip = "Define one or more converter groups for this binding that will be used between the target UI to the data source.";
         [global::Unbound.Stub] internal static string GetSetValueErrorString<TValue>(global::Unity.Properties.VisitReturnCode returnCode, object source, in global::Unity.Properties.PropertyPath sourcePath, object target, in global::UnityEngine.UIElements.BindingId targetPath, TValue extractedValueFromSource) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.GetSetValueErrorString"); return default; }
         internal static global::System.Reflection.MethodInfo updateUIMethod { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.updateUIMethod"); return default; } }
-        internal string dataSourceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceTypeString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourceTypeString"); } }
-        internal string dataSourcePathString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePathString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.dataSourcePathString"); } }
-        internal string sourceToUiConvertersString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.sourceToUiConvertersString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.sourceToUiConvertersString"); } }
-        internal string uiToSourceConvertersString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.uiToSourceConvertersString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.uiToSourceConvertersString"); } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.Binding.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBinding.UxmlSerializedData.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class DataBindingManager : global::System.IDisposable
@@ -941,11 +872,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.BindingTypeResult IsPathValid(global::System.Type type, string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.IsPathValid"); return default; }
         [global::Unbound.Stub] public static void GetPropertyPaths(object dataSource, int depth, global::System.Collections.Generic.List<global::UnityEngine.UIElements.PropertyPathInfo> listResult) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.GetPropertyPaths"); }
         [global::Unbound.Stub] public static void GetPropertyPaths(global::System.Type type, int depth, global::System.Collections.Generic.List<global::UnityEngine.UIElements.PropertyPathInfo> listResult) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataBindingUtility.GetPropertyPaths"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class DataSourceDrawerAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public DataSourceDrawerAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.DataSourceDrawerAttribute.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class DebuggerEventDispatchUtilities
@@ -1639,10 +1565,6 @@ namespace UnityEngine.UIElements
     {
         void SerializeCustomAttributes(global::UnityEngine.UIElements.IUxmlAttributes bag, global::System.Collections.Generic.HashSet<string> handledAttributes);
     }
-    internal unsafe partial interface IUxmlSerializedDataDeserializeReference
-    {
-        object DeserializeReference();
-    }
     internal unsafe partial interface IVisualTreeEditorUpdater : global::System.IDisposable
     {
         global::UnityEngine.UIElements.IVisualTreeUpdater GetUpdater(global::UnityEngine.UIElements.VisualTreeEditorUpdatePhase phase);
@@ -1669,13 +1591,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId uvProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId scaleModeProperty;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId tintColorProperty;
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Image.UxmlSerializedData.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ImageFieldValueDecoratorAttribute : global::UnityEngine.PropertyAttribute
@@ -2260,11 +2175,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public MultilineDecoratorAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultilineDecoratorAttribute.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class MultilineTextFieldAttribute : global::UnityEngine.PropertyAttribute
-    {
-        [global::Unbound.Stub] public MultilineTextFieldAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.MultilineTextFieldAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class NavigateFocusRing : global::UnityEngine.UIElements.IFocusRing
     {
         [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.NavigateFocusRing.ChangeDirection Left;
@@ -2588,12 +2498,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] void global::UnityEngine.UIElements.IUxmlSerializedDataCustomAttributeHandler.SerializeCustomAttributes(global::UnityEngine.UIElements.IUxmlAttributes bag, global::System.Collections.Generic.HashSet<string> handledAttributes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.UxmlSerializedData.SerializeCustomAttributes"); }
             [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RectIntField.UxmlSerializedData.ctor"); }
         }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)64)]
-    [global::Unbound.Stub]
-    public unsafe partial class RegisterUxmlCacheAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public RegisterUxmlCacheAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.RegisterUxmlCacheAttribute.ctor"); }
     }
     [global::System.Flags]
     internal enum RenderHints
@@ -3330,15 +3234,6 @@ namespace UnityEngine.UIElements
         internal global::UnityEngine.UIElements.TextEditingManipulator editingManipulator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.editingManipulator"); return default; } }
         internal global::UnityEngine.TextCore.Text.RenderedText renderedText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.renderedText"); return default; } }
         internal global::UnityEngine.UIElements.TextSelectingManipulator selectingManipulator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.selectingManipulator"); return default; } }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.BindableElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TextElement.UxmlSerializedData.ctor"); }
-        }
     }
     unsafe partial class TextField
     {
@@ -4021,26 +3916,11 @@ namespace UnityEngine.UIElements
         public int parentId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAsset.parentId"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAsset.parentId"); } }
         public global::System.Collections.Generic.List<global::UnityEngine.UIElements.UxmlNamespaceDefinition> namespaceDefinitions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAsset.namespaceDefinitions"); return new global::System.Collections.Generic.List<global::UnityEngine.UIElements.UxmlNamespaceDefinition>(); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class UxmlAttributeBindingPathAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public UxmlAttributeBindingPathAttribute(string bindingPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeBindingPathAttribute.ctor"); }
-        public string path { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeBindingPathAttribute.path"); return default; } }
-    }
     unsafe partial class UxmlAttributeDescription
     {
         [global::Unbound.Stub] internal bool TryFindValueInAttributeOverrides(string elementName, global::UnityEngine.UIElements.CreationContext cc, global::System.Collections.Generic.List<global::UnityEngine.UIElements.TemplateAsset.AttributeOverride> attributeOverrides, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.TryFindValueInAttributeOverrides"); return default; }
         [global::Unbound.Stub] internal bool TryGetAttributeOverrideValueFromBagAsString(global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc, out string value, out global::UnityEngine.UIElements.VisualTreeAsset sourceAsset) { value = default; sourceAsset = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.TryGetAttributeOverrideValueFromBagAsString"); return default; }
         [global::Unbound.Stub] internal bool ValidateName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeDescription.ValidateName"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct UxmlAttributeNames
-    {
-        [global::Unbound.Stub] public readonly string fieldName;
-        [global::Unbound.Stub] public readonly string uxmlName;
-        [global::Unbound.Stub] public readonly global::System.Type typeReference;
-        [global::Unbound.Stub] public readonly string[] obsoleteNames;
-        [global::Unbound.Stub] public UxmlAttributeNames(string fieldName, string uxmlName, global::System.Type typeReference = null, params string[] obsoleteNames) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlAttributeNames.ctor"); }
     }
     [global::System.Obsolete("UxmlAttributeOverridesFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
@@ -4069,12 +3949,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public UxmlDescription(global::System.Reflection.FieldInfo serializedField, global::UnityEngine.UIElements.UxmlAttributeNames names, string overriddenCSharpName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlDescription.ctor"); }
     }
     [global::Unbound.Stub]
-    public unsafe static partial class UxmlDescriptionCache
-    {
-        [global::Unbound.Stub] public static void RegisterType(global::System.Type type, global::UnityEngine.UIElements.UxmlAttributeNames[] attributeNames) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlDescriptionCache.RegisterType"); }
-        [global::Unbound.Stub] internal static bool TryGetCachedDescription(global::System.Type type, out global::UnityEngine.UIElements.UxmlAttributeNames[] attributes) { attributes = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlDescriptionCache.TryGetCachedDescription"); return default; }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class UxmlDescriptionRegistry
     {
         [global::Unbound.Stub] public static global::UnityEngine.UIElements.UxmlTypeDescription GetDescription(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlDescriptionRegistry.GetDescription"); return default; }
@@ -4091,12 +3965,6 @@ namespace UnityEngine.UIElements
         internal const string k_PathAttributeName = "path";
         internal const string k_SrcAttributeName = "src";
         [global::Unbound.Stub] public UxmlGenericAttributeNames() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlGenericAttributeNames.ctor"); }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)256, Inherited = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlIgnoreAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public UxmlIgnoreAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlIgnoreAttribute.ctor"); }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -4149,16 +4017,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public override global::System.Collections.Generic.List<T> GetValueFromBag(global::UnityEngine.UIElements.IUxmlAttributes bag, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectListAttributeDescription<T>.GetValueFromBag"); return new global::System.Collections.Generic.List<T>(); }
         [global::Unbound.Stub] public UxmlObjectListAttributeDescription() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectListAttributeDescription<T>.ctor"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)384, Inherited = false)]
-    [global::Unbound.Stub]
-    public unsafe partial class UxmlObjectReferenceAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] public global::System.Type[] types;
-        [global::Unbound.Stub] public UxmlObjectReferenceAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectReferenceAttribute.ctor"); }
-        [global::Unbound.Stub] public UxmlObjectReferenceAttribute(string uxmlName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectReferenceAttribute.ctor"); }
-        [global::Unbound.Stub] public UxmlObjectReferenceAttribute(string uxmlName, params global::System.Type[] acceptedTypes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlObjectReferenceAttribute.ctor"); }
-    }
     [global::System.Obsolete("UxmlObjectTraits<T> is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
     internal unsafe abstract partial class UxmlObjectTraits<T> : global::UnityEngine.UIElements.BaseUxmlTraits
@@ -4178,51 +4036,6 @@ namespace UnityEngine.UIElements
         public override string substituteForTypeName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementFactory.substituteForTypeName"); return default; } }
         public override string substituteForTypeNamespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementFactory.substituteForTypeNamespace"); return default; } }
         public override string substituteForTypeQualifiedName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlRootElementFactory.substituteForTypeQualifiedName"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class UxmlSerializableAdapterBase
-    {
-        public abstract object CloneInstanceBoxed(object value);
-        [global::Unbound.Stub] protected UxmlSerializableAdapterBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapterBase.ctor"); }
-        public abstract object dataBoxed { get; set; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class UxmlSerializableAdapter<T> : global::UnityEngine.UIElements.UxmlSerializableAdapterBase
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.UIElements.UxmlSerializableAdapter<T> SharedInstance;
-        [global::Unbound.Stub] public T data;
-        [global::Unbound.Stub] public T CloneInstance(T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapter<T>.CloneInstance"); return default; }
-        [global::Unbound.Stub] public override object CloneInstanceBoxed(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapter<T>.CloneInstanceBoxed"); return default; }
-        [global::Unbound.Stub] public UxmlSerializableAdapter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapter<T>.ctor"); }
-        public override object dataBoxed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapter<T>.dataBoxed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializableAdapter<T>.dataBoxed"); } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe abstract partial class UxmlSerializedData
-    {
-        internal const string AttributeFlagSuffix = "_UxmlAttributeFlags";
-        [global::Unbound.Stub] internal int uxmlAssetId;
-        [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedData.Register"); }
-        [global::Unbound.Stub] public static bool ShouldWriteAttributeValue(global::UnityEngine.UIElements.UxmlSerializedData.UxmlAttributeFlags attributeFlags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedData.ShouldWriteAttributeValue"); return default; }
-        public abstract object CreateInstance();
-        public abstract void Deserialize(object obj);
-        [global::Unbound.Stub] internal void Deserialize(object obj, global::UnityEngine.UIElements.UxmlSerializedData.UxmlAttributeFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedData.Deserialize"); }
-        [global::Unbound.Stub] protected UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedData.ctor"); }
-        [global::System.Flags]
-        public enum UxmlAttributeFlags : byte
-        {
-            Ignore = 0,
-            OverriddenInUxml = 1,
-            DefaultValue = 2,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class UxmlSerializedDataUtility
-    {
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<global::System.Type, global::UnityEngine.UIElements.UxmlSerializableAdapterBase> s_Adapters;
-        [global::Unbound.Stub] public static object CopySerialized(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedDataUtility.CopySerialized"); return default; }
-        [global::Unbound.Stub] public static T CopySerialized<T>(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlSerializedDataUtility.CopySerialized"); return default; }
     }
     [global::System.Obsolete("UxmlStyleFactory is deprecated and will be removed. Use UxmlElementAttribute instead.")]
     [global::Unbound.Stub]
@@ -4260,10 +4073,8 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public UxmlTypeDescription(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeDescription.ctor"); }
         [global::Unbound.Stub] internal static global::System.ValueTuple<bool, string, string[]> GetUxmlNames(global::System.Reflection.FieldInfo fieldInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlTypeDescription.GetUxmlNames"); return default; }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class UxmlUtility
+    unsafe static partial class UxmlUtility
     {
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<string> ParseStringListAttribute(string itemList) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ParseStringListAttribute"); return new global::System.Collections.Generic.List<string>(); }
         [global::Unbound.Stub] public static void MoveListItem(global::System.Collections.IList list, int src, int dst) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.MoveListItem"); }
         [global::Unbound.Stub] public static float ParseFloat(string value, float defaultValue = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ParseFloat"); return default; }
         [global::Unbound.Stub] public static byte ParseByte(string value, byte defaultValue = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ParseByte"); return default; }
@@ -4274,9 +4085,7 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static uint ParseUint(string value, uint defaultValue = 0U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ParseUint"); return default; }
         [global::Unbound.Stub] public static float TryParseFloatAttribute(string attributeName, global::UnityEngine.UIElements.IUxmlAttributes bag, ref int foundAttributeCounter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.TryParseFloatAttribute"); return default; }
         [global::Unbound.Stub] public static int TryParseIntAttribute(string attributeName, global::UnityEngine.UIElements.IUxmlAttributes bag, ref int foundAttributeCounter) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.TryParseIntAttribute"); return default; }
-        [global::Unbound.Stub] public static global::System.Type ParseType(string value, global::System.Type defaultType = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ParseType"); return default; }
         [global::Unbound.Stub] public static string ValidateUxmlName(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ValidateUxmlName"); return default; }
-        [global::Unbound.Stub] public static string TypeToString(global::System.Type value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.TypeToString"); return default; }
         [global::Unbound.Stub] public static string ValueToString(global::UnityEngine.Bounds value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ValueToString"); return default; }
         [global::Unbound.Stub] public static string ValueToString(global::UnityEngine.BoundsInt value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ValueToString"); return default; }
         [global::Unbound.Stub] public static string ValueToString(global::UnityEngine.Rect value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.UxmlUtility.ValueToString"); return default; }
@@ -4535,9 +4344,6 @@ namespace UnityEngine.UIElements
         internal global::UnityEngine.UIElements.LanguageDirection localLanguageDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.localLanguageDirection"); } }
         internal global::UnityEngine.UIElements.VisualElement.RenderTargetMode subRenderTargetMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.subRenderTargetMode"); } }
         internal global::UnityEngine.Material defaultMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.defaultMaterial"); return default; } }
-        internal global::UnityEngine.Object dataSourceUnityObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceUnityObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceUnityObject"); } }
-        internal string dataSourcePathString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePathString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourcePathString"); } }
-        internal string dataSourceTypeString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceTypeString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.dataSourceTypeString"); } }
         internal global::UnityEngine.UIElements.VisualElement nextParentWithEventInterests { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.nextParentWithEventInterests"); return default; } }
         internal int eventInterestSelfCategories { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.eventInterestSelfCategories"); return default; } }
         internal int eventInterestParentCategories { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.eventInterestParentCategories"); return default; } }
@@ -4715,16 +4521,6 @@ namespace UnityEngine.UIElements
             [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId whiteSpaceProperty;
             [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId widthProperty;
             [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId wordSpacingProperty;
-        }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] internal bool HasBindingInternal(string property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlSerializedData.HasBindingInternal"); return default; }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElement.UxmlSerializedData.ctor"); }
         }
         internal enum RenderTargetMode
         {

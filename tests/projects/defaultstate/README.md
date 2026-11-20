@@ -730,3 +730,11 @@ The SettingsProvider and SettingsService slice adds `UnityEditor.PreferenceItem`
 inventory (seven added rows: three excluded and four attribute rows). Two independent 6000.0.71f1
 Linux GPU Editor captures agree on them; every earlier committed row and inventory entry is
 unchanged.
+
+The UxmlSerializedData slice adds 14 handwritten UIElements serialization types
+(`UxmlSerializedData`, `UxmlAttributeNames`, `UxmlIgnoreAttribute`, `RegisterUxmlCacheAttribute`,
+`UxmlDescriptionCache`, `UxmlObjectReferenceAttribute`, `UxmlSerializedDataUtility`, and the
+nested `UxmlSerializedData` classes of `VisualElement`, `BindableElement`, `TextElement`, `Image`,
+`Binding`, `CustomBinding`, and `DataBinding`) to the handwritten inventory. Two independent
+6000.0.71f1 Linux GPU Editor captures agree on all 23 added rows; every earlier committed row and
+inventory entry is unchanged.

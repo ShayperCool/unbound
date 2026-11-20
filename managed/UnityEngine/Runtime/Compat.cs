@@ -67,6 +67,11 @@ namespace Unbound.Runtime
         /// tests/projects/ussvalidation); other families get no importer check and keep the earlier
         /// colour check of var() values, unmeasured.</summary>
         internal static bool UssValuesValidated => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>UxmlSerializedData metadata helpers measured by tests/projects/uxmlserializeddata
+        /// on 6000.0.71f1: UxmlObjectReferenceAttribute(string) rejects the literal "null" (the
+        /// two-argument overload accepts it) and UxmlAttributeNames normalizes a null obsoleteNames
+        /// array to an empty array. Other families retain their unmeasured constructor values.</summary>
+        internal static bool UxmlSerializedDataMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
         internal static bool UncreatedObjectWrappersMeasured => Family == ReleaseFamily.Unity6000_0;
