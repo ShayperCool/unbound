@@ -1,0 +1,16 @@
+{
+  "Q655: numeric GUILayoutUtility.GetRect returns the requested size on Layout in Unity 6000.0.71f1. Unbound returns the shared 1×1 placeholder.": [
+    "editorLayout/Layout/afterGroups",
+    "editorLayout/Layout/horizontal/first",
+    "editorLayout/Layout/horizontal/second",
+    "editorLayout/Layout/styledColumn/last",
+    "editorLayout/Layout/styledColumn/row/first",
+    "editorLayout/Layout/styledColumn/row/second",
+    "editorLayout/Layout/styledRow/column/first",
+    "editorLayout/Layout/styledRow/column/second",
+    "editorLayout/Layout/styledRow/first",
+    "editorLayout/Layout/styledRow/last",
+    "editorLayout/Layout/vertical/first",
+    "editorLayout/Layout/vertical/second"
+  ]
+}

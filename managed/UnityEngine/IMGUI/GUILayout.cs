@@ -1269,13 +1269,8 @@ namespace UnityEngine
         public static void BeginHorizontal(string text, GUIStyle style, params GUILayoutOption[] options) => BeginHorizontal(GUIContent.Temp(text), style, options);
         public static void BeginHorizontal(Texture image, GUIStyle style, params GUILayoutOption[] options) => BeginHorizontal(GUIContent.Temp(image), style, options);
 
-        public static void BeginHorizontal(GUIContent content, GUIStyle style, params GUILayoutOption[] options)
-        {
-            var g = GUILayoutUtility.BeginLayoutGroup(style, options, typeof(GUILayoutGroup));
-            g.isVertical = false;
-            if (style != GUIStyle.none || content != GUIContent.none)
-                GUI.Box(g.rect, content, style);
-        }
+        public static void BeginHorizontal(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+            BeginLayoutGroup(content, style, options, vertical: false, drawContent: true);
 
         public static void EndHorizontal() => GUILayoutUtility.EndLayoutGroup();
 
@@ -1284,12 +1279,17 @@ namespace UnityEngine
         public static void BeginVertical(string text, GUIStyle style, params GUILayoutOption[] options) => BeginVertical(GUIContent.Temp(text), style, options);
         public static void BeginVertical(Texture image, GUIStyle style, params GUILayoutOption[] options) => BeginVertical(GUIContent.Temp(image), style, options);
 
-        public static void BeginVertical(GUIContent content, GUIStyle style, params GUILayoutOption[] options)
+        public static void BeginVertical(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+            BeginLayoutGroup(content, style, options, vertical: true, drawContent: true);
+
+        internal static Rect BeginLayoutGroup(GUIContent content, GUIStyle style, GUILayoutOption[] options,
+            bool vertical, bool drawContent)
         {
-            var g = GUILayoutUtility.BeginLayoutGroup(style, options, typeof(GUILayoutGroup));
-            g.isVertical = true;
+            var group = GUILayoutUtility.BeginLayoutGroup(style, options, typeof(GUILayoutGroup));
+            group.isVertical = vertical;
             if (style != GUIStyle.none || content != GUIContent.none)
-                GUI.Box(g.rect, content, style);
+                GUI.Box(group.rect, drawContent ? content : GUIContent.none, style);
+            return group.rect;
         }
 
         public static void EndVertical() => GUILayoutUtility.EndLayoutGroup();

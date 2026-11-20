@@ -332,23 +332,45 @@ namespace UnityEditor
             GUILayoutUtility.GetRect(width, width);
         }
 
-        public static Rect BeginHorizontal(params GUILayoutOption[] options)
-        {
-            EditorGUI.RequireGUI();
-            GUILayout.BeginHorizontal(options);
-            return default;
-        }
+        public static Rect BeginHorizontal(params GUILayoutOption[] options) => BeginHorizontal(GUIStyle.none, options);
+        public static Rect BeginHorizontal(GUIStyle style, params GUILayoutOption[] options) => BeginHorizontal(GUIContent.none, style, options);
+        internal static Rect BeginHorizontal(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+            BeginLayoutGroup(content, style, options, vertical: false);
 
         public static void EndHorizontal() => GUILayout.EndHorizontal();
 
-        public static Rect BeginVertical(params GUILayoutOption[] options)
+        public static Rect BeginVertical(params GUILayoutOption[] options) => BeginVertical(GUIStyle.none, options);
+        public static Rect BeginVertical(GUIStyle style, params GUILayoutOption[] options) => BeginVertical(GUIContent.none, style, options);
+        internal static Rect BeginVertical(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+            BeginLayoutGroup(content, style, options, vertical: true);
+
+        static Rect BeginLayoutGroup(GUIContent content, GUIStyle style, GUILayoutOption[] options, bool vertical)
         {
             EditorGUI.RequireGUI();
-            GUILayout.BeginVertical(options);
-            return default;
+            return GUILayout.BeginLayoutGroup(content, style, options, vertical, drawContent: false);
         }
 
         public static void EndVertical() => GUILayout.EndVertical();
+
+        public partial class HorizontalScope : GUI.Scope
+        {
+            public Rect rect { get; protected set; }
+            public HorizontalScope(params GUILayoutOption[] options) => rect = BeginHorizontal(options);
+            public HorizontalScope(GUIStyle style, params GUILayoutOption[] options) => rect = BeginHorizontal(style, options);
+            internal HorizontalScope(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+                rect = BeginHorizontal(content, style, options);
+            protected override void CloseScope() => EndHorizontal();
+        }
+
+        public partial class VerticalScope : GUI.Scope
+        {
+            public Rect rect { get; protected set; }
+            public VerticalScope(params GUILayoutOption[] options) => rect = BeginVertical(options);
+            public VerticalScope(GUIStyle style, params GUILayoutOption[] options) => rect = BeginVertical(style, options);
+            internal VerticalScope(GUIContent content, GUIStyle style, params GUILayoutOption[] options) =>
+                rect = BeginVertical(content, style, options);
+            protected override void CloseScope() => EndVertical();
+        }
 
         /// <summary>A slider: an IMGUI control, outside OnGUI refused as GUI's are.</summary>
         public static float Slider(float value, float leftValue, float rightValue, params GUILayoutOption[] options)

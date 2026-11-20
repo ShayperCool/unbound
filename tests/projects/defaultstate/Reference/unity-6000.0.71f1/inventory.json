@@ -1500,6 +1500,18 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.EditorGUILayout+HorizontalScope"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.EditorGUILayout+VerticalScope"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.EditorGUIUtility"
     },

@@ -3,11 +3,49 @@
 {"k":"propertyLabels/Layout","v":[["absent",["Authored Value","Stored on the field",false],false,null],["inheritTooltip",["Custom","Stored on the field",true],false,["Custom","",true]],["givenTooltip",["Custom","Override",false],false,["Custom","Override",false]],["none",["","Stored on the field",false],false,["","",false]],["nullText",[null,"Stored on the field",false],false,[null,"",false]],["nested",["Authored Value","Stored on the field",false],["Common Value","",false],true,["Common Value","",false]]]}
 {"k":"propertyArrayLabel/Layout","v":["Element 0","Element 1"]}
 {"k":"propertyState/Layout","v":[["outerMixed",true,false,[1,0,0,1]],["innerCommon",false,false,[1,0,0,1]],["innerDisposed",false,false,[1,0,0,1]],["innerDisposedAgain",false,false,[0,0,1,1]],["outerDisposed",false,false,[1,0,0,1]],["locked",false,false,[1,0,0,1]],["lockedDisposed",false,true,[1,0,0,1]]]}
+{"k":"editorLayout/Layout/horizontal","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/horizontal/first","v":[0,0,17,8]}
+{"k":"editorLayout/Layout/horizontal/second","v":[0,0,23,10]}
+{"k":"editorLayout/Layout/vertical","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/vertical/first","v":[0,0,19,9]}
+{"k":"editorLayout/Layout/vertical/second","v":[0,0,21,11]}
+{"k":"editorLayout/Layout/styledRow","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/styledRow/first","v":[0,0,18,8]}
+{"k":"editorLayout/Layout/styledRow/column","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/styledRow/column/first","v":[0,0,12,7]}
+{"k":"editorLayout/Layout/styledRow/column/second","v":[0,0,14,9]}
+{"k":"editorLayout/Layout/styledRow/last","v":[0,0,9,6]}
+{"k":"editorLayout/Layout/styledColumn","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/styledColumn/row","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/styledColumn/row/first","v":[0,0,10,6]}
+{"k":"editorLayout/Layout/styledColumn/row/second","v":[0,0,13,7]}
+{"k":"editorLayout/Layout/styledColumn/row/disposed","v":[0,0,0,0]}
+{"k":"editorLayout/Layout/styledColumn/last","v":[0,0,13,6]}
+{"k":"editorLayout/Layout/afterGroups","v":[0,0,16,5]}
 {"k":"propertyHook/Repaint","v":[["outer","a","m_First",[4,8,110,18]],["outer","b","m_First",[4,8,110,18]],["inner","a","m_Second",[12,28,100,18]],["inner","b","m_Second",[12,28,100,18]],["field","a","m_First",[12,28,100,18]],["field","b","m_First",[12,28,100,18]],["afterRemove","b","m_Second",[4,8,110,18]],"NullReferenceException: Probe: SerializedProperty is null"]}
 {"k":"listFocus/Repaint","v":[false,true,true,true,true,true,true,false,true,true,true,true,false]}
 {"k":"propertyLabels/Repaint","v":[["absent",["Authored Value","Stored on the field",false],false,null],["inheritTooltip",["Custom","Stored on the field",true],false,["Custom","",true]],["givenTooltip",["Custom","Override",false],false,["Custom","Override",false]],["none",["","Stored on the field",false],false,["","",false]],["nullText",[null,"Stored on the field",false],false,[null,"",false]],["nested",["Authored Value","Stored on the field",false],["Common Value","",false],true,["Common Value","",false]]]}
 {"k":"propertyArrayLabel/Repaint","v":["Element 0","Element 1"]}
 {"k":"propertyState/Repaint","v":[["outerMixed",true,false,[1,0,0,1]],["innerCommon",false,false,[1,0,0,1]],["innerDisposed",false,false,[1,0,0,1]],["innerDisposedAgain",false,false,[0,0,1,1]],["outerDisposed",false,false,[1,0,0,1]],["locked",false,false,[1,0,0,1]],["lockedDisposed",false,true,[1,0,0,1]]]}
+{"k":"editorLayout/Repaint/horizontal","v":[0,0,68,10]}
+{"k":"editorLayout/Repaint/horizontal/first","v":[0,0,31,8]}
+{"k":"editorLayout/Repaint/horizontal/second","v":[31,0,37,10]}
+{"k":"editorLayout/Repaint/vertical","v":[0,10,40,20]}
+{"k":"editorLayout/Repaint/vertical/first","v":[0,10,40,9]}
+{"k":"editorLayout/Repaint/vertical/second","v":[0,19,40,11]}
+{"k":"editorLayout/Repaint/styledRow","v":[0,30,82,34]}
+{"k":"editorLayout/Repaint/styledRow/first","v":[3,32,29,8]}
+{"k":"editorLayout/Repaint/styledRow/column","v":[32,32,23,16]}
+{"k":"editorLayout/Repaint/styledRow/column/first","v":[32,32,23,7]}
+{"k":"editorLayout/Repaint/styledRow/column/second","v":[32,39,23,9]}
+{"k":"editorLayout/Repaint/styledRow/last","v":[55,32,20,6]}
+{"k":"editorLayout/Repaint/styledColumn","v":[0,64,74,18]}
+{"k":"editorLayout/Repaint/styledColumn/row","v":[5,67,41,7]}
+{"k":"editorLayout/Repaint/styledColumn/row/first","v":[5,67,19,6]}
+{"k":"editorLayout/Repaint/styledColumn/row/second","v":[24,67,22,7]}
+{"k":"editorLayout/Repaint/styledColumn/row/disposed","v":[5,67,41,7]}
+{"k":"editorLayout/Repaint/styledColumn/last","v":[5,74,65,6]}
+{"k":"editorLayout/Repaint/afterGroups","v":[0,82,260,5]}
 {"k":"listFocus/Update","v":[false,true,true,"ArgumentException: You can only call GUI functions from inside OnGUI.",true,true,true,false,"ArgumentException: You can only call GUI functions from inside OnGUI.",true,true,false]}
 {"k":"onGUI","v":"called"}
 {"k":"skin/name","v":"GameSkin"}

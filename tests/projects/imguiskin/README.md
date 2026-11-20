@@ -31,6 +31,14 @@ mixed value indicator changes during nested scopes. The controls also check read
 restoration of enabled state and background color, and repeated disposal.
 [Unity 6000.0 `EditorGUI.PropertyScope`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.PropertyScope.html)
 
+The editor layout controls check horizontal and vertical group rectangles in Layout and Repaint,
+including nested groups, width options, padding and repeated scope disposal. Group rectangles
+start at zero in Layout and report the arranged bounds in Repaint. Explicit fixed style sizes
+take precedence over width and height options in this capture. The 12 numeric child rectangle
+observations in Q655 track the size that `GUILayoutUtility.GetRect` returns during Layout.
+[Unity 6000.0 `BeginHorizontal`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginHorizontal.html)
+[Unity 6000.0 `BeginVertical`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.BeginVertical.html)
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b
