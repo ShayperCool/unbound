@@ -380,6 +380,46 @@ namespace UnityEditor
 
         public static void EndVertical() => GUILayout.EndVertical();
 
+        public static bool BeginToggleGroup(string label, bool toggle) => BeginToggleGroup(GUIContent.Temp(label), toggle);
+
+        public static bool BeginToggleGroup(GUIContent label, bool toggle)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginToggleGroup");
+                return default;
+            }
+
+            var labelStyle = EditorStyles.boldLabel;
+            var rect = GetControlRect();
+            toggle = EditorGUIControls.ToggleGroupHeader(rect, label, toggle, labelStyle);
+            EditorGUI.BeginDisabledGroup(!toggle);
+            GUILayout.BeginVertical();
+            return toggle;
+        }
+
+        public static void EndToggleGroup()
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndToggleGroup");
+                return;
+            }
+
+            GUILayout.EndVertical();
+            EditorGUI.EndDisabledGroup();
+        }
+
+        public partial class ToggleGroupScope : GUI.Scope
+        {
+            public bool enabled { get; protected set; }
+
+            public ToggleGroupScope(string label, bool toggle) => enabled = BeginToggleGroup(label, toggle);
+            public ToggleGroupScope(GUIContent label, bool toggle) => enabled = BeginToggleGroup(label, toggle);
+
+            protected override void CloseScope() => EndToggleGroup();
+        }
+
         public partial class HorizontalScope : GUI.Scope
         {
             public Rect rect { get; protected set; }
@@ -447,6 +487,39 @@ namespace UnityEditor
         internal static string TextField(Rect position, GUIContent label, string text) => GUI.TextField(Field(position, label), text ?? "");
 
         internal static bool Toggle(Rect position, GUIContent label, bool value) => GUI.Toggle(Field(position, label), value, GUIContent.none);
+
+        internal static bool ToggleGroupHeader(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
+        {
+            var current = Event.current;
+            var type = current.type;
+            int id = GUIUtility.GetControlID(FocusType.Keyboard, position);
+            var toggleStyle = EditorStyles.toggle;
+            var togglePosition = EditorGUI.IndentedRect(position);
+            var labelPosition = togglePosition;
+            labelPosition.xMin += toggleStyle.padding.left;
+            labelPosition.y -= (toggleStyle.margin.top - toggleStyle.margin.bottom) / 2;
+
+            if (type == EventType.Repaint && label != null)
+            {
+                labelPosition.width = Mathf.Max(1f, labelPosition.width);
+                Color previous = GUI.backgroundColor;
+                GUI.backgroundColor = Color.white;
+                try { labelStyle.DrawPrefixLabel(labelPosition, label, id); }
+                finally { GUI.backgroundColor = previous; }
+            }
+            else if (type == EventType.MouseDown && current.button == 0 && GUI.enabled &&
+                label != null && labelPosition.Contains(current.mousePosition))
+            {
+                GUIUtility.keyboardControl = id;
+                EditorGUIUtility.editingTextField = false;
+            }
+
+            if (EditorGUI.showMixedValue) value = false;
+            if (type == EventType.MouseDown && current.button != 0) return value;
+            bool selected = GUI.DoToggle(togglePosition, id, value, GUIContent.none, toggleStyle);
+            if (current.type != type) GUIUtility.keyboardControl = id;
+            return selected;
+        }
 
         internal static bool Foldout(Rect position, bool foldout, GUIContent content) => GUI.Toggle(EditorGUI.IndentedRect(position), foldout, content);
 

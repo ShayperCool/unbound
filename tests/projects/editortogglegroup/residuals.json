@@ -1,0 +1,5 @@
+{
+  "Mouse release outside GUILayout.BeginArea is left unused with capture held in the Editor. Unbound consumes it and releases capture. Both cancel the toggle. The clip input routing remains open.": [
+    "input/8"
+  ]
+}

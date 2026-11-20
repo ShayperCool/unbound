@@ -8631,9 +8631,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void PrefixLabelInternal(global::UnityEngine.GUIContent label, global::UnityEngine.GUIStyle followingStyle, global::UnityEngine.GUIStyle labelStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.PrefixLabelInternal"); }
         [global::Unbound.Stub] public static void Space(float width, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.Space"); }
         [global::Unbound.Stub] public static void Separator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.Separator"); }
-        [global::Unbound.Stub] public static bool BeginToggleGroup(string label, bool toggle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginToggleGroup"); return default; }
-        [global::Unbound.Stub] public static bool BeginToggleGroup(global::UnityEngine.GUIContent label, bool toggle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginToggleGroup"); return default; }
-        [global::Unbound.Stub] public static void EndToggleGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EndToggleGroup"); }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, bool alwaysShowHorizontal, bool alwaysShowVertical, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 BeginScrollView(global::UnityEngine.Vector2 scrollPosition, global::UnityEngine.GUIStyle horizontalScrollbar, global::UnityEngine.GUIStyle verticalScrollbar, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.BeginScrollView"); return default; }
@@ -8702,14 +8699,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool EditorToolbar<T>(global::UnityEngine.GUIContent content, T selected, global::System.Collections.Generic.IList<T> tools, out T clicked) where T : global::UnityEditor.EditorTools.IEditor { clicked = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.EditorToolbar"); return default; }
         internal static float kLabelFloatMinW { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.kLabelFloatMinW"); return default; } }
         internal static float kLabelFloatMaxW { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.kLabelFloatMaxW"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial class ToggleGroupScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public ToggleGroupScope(string label, bool toggle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleGroupScope.ctor"); }
-            [global::Unbound.Stub] public ToggleGroupScope(global::UnityEngine.GUIContent label, bool toggle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleGroupScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleGroupScope.CloseScope"); }
-            public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleGroupScope.enabled"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUILayout.ToggleGroupScope.enabled"); } }
-        }
         [global::Unbound.Stub]
         public unsafe partial class ScrollViewScope : global::UnityEngine.GUI.Scope
         {

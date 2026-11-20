@@ -699,3 +699,6 @@ records their new actual values alongside the original reference values.
 
 The property label slice adds one inventory entry for `EditorGUI.PropertyScope`. Two independent
 6000.0.71f1 Linux GPU captures agree that the scope has no public parameterless constructor.
+
+The toggle group slice adds `EditorGUILayout.ToggleGroupScope`. Two independent 6000.0.71f1
+Linux GPU captures agree that the scope has no public parameterless constructor.

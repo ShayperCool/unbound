@@ -16148,4 +16148,5 @@
 {"key":"UnityEditor.EditorGUI+PropertyScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorGUILayout+HorizontalScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.EditorGUILayout+VerticalScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.EditorGUILayout+ToggleGroupScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"complete","status":"value","value":"1"}

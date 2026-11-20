@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/editortogglegroup/run.py gate"],
+  "summary": "editortogglegroup: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/IMGUI/GUILayout.cs",
+    "managed/UnityEngine/IMGUI/GUI.cs"
+  ]
+}
