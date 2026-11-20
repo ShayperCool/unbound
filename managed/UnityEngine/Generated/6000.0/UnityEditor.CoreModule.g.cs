@@ -47089,9 +47089,7 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public static void Add(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.Add"); }
         [global::Unbound.Stub] public static void Remove(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEngine.Object[] objects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.Remove"); }
         [global::Unbound.Stub] internal static void RemoveAt(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.RemoveAt"); }
-        [global::Unbound.Stub] public static global::UnityEditor.U2D.SpriteAtlasTextureSettings GetTextureSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetTextureSettings"); return default; }
         [global::Unbound.Stub] public static void SetTextureSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEditor.U2D.SpriteAtlasTextureSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetTextureSettings"); }
-        [global::Unbound.Stub] public static global::UnityEditor.U2D.SpriteAtlasPackingSettings GetPackingSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetPackingSettings"); return default; }
         [global::Unbound.Stub] public static void SetPackingSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEditor.U2D.SpriteAtlasPackingSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetPackingSettings"); }
         [global::Unbound.Stub] public static global::UnityEditor.TextureImporterPlatformSettings GetPlatformSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, string buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.GetPlatformSettings"); return default; }
         [global::Unbound.Stub] public static void SetPlatformSettings(this global::UnityEngine.U2D.SpriteAtlas spriteAtlas, global::UnityEditor.TextureImporterPlatformSettings src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasExtensions.SetPlatformSettings"); }
@@ -47163,25 +47161,6 @@ namespace UnityEditor.U2D
         [global::Unbound.Stub] public override void OnPreviewSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasInspector.OnPreviewSettings"); }
         [global::Unbound.Stub] public override void OnPreviewGUI(global::UnityEngine.Rect r, global::UnityEngine.GUIStyle background) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasInspector.OnPreviewGUI"); }
         [global::Unbound.Stub] public SpriteAtlasInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasInspector.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteAtlasPackingSettings
-    {
-        public int blockOffset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.blockOffset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.blockOffset"); } }
-        public int padding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.padding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.padding"); } }
-        public bool enableRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableRotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableRotation"); } }
-        public bool enableTightPacking { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableTightPacking"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableTightPacking"); } }
-        public bool enableAlphaDilation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableAlphaDilation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasPackingSettings.enableAlphaDilation"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct SpriteAtlasTextureSettings
-    {
-        public int maxTextureSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.maxTextureSize"); return default; } }
-        public int anisoLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.anisoLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.anisoLevel"); } }
-        public global::UnityEngine.FilterMode filterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.filterMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.filterMode"); } }
-        public bool generateMipMaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.generateMipMaps"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.generateMipMaps"); } }
-        public bool readable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.readable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.readable"); } }
-        public bool sRGB { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.sRGB"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.U2D.SpriteAtlasTextureSettings.sRGB"); } }
     }
     [global::Unbound.Stub]
     public unsafe partial class SpriteAtlasUtility

@@ -2356,6 +2356,18 @@
       "type": "UnityEditor.U2D.SpriteAtlasExtensions"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.U2D.SpriteAtlasPackingSettings"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.U2D.SpriteAtlasTextureSettings"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",

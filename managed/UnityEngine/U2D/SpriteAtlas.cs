@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
+using UnityEditor.U2D;
 using Object = UnityEngine.Object;
 
 namespace UnityEngine.U2D
@@ -28,11 +29,14 @@ namespace UnityEngine.U2D
 
         readonly List<ObjectRef> m_Packables = new List<ObjectRef>();
         bool m_IsVariant;
-        // "Include in Build" (bindAsDefault, on when absent): a V1 atlas's from its editor data; a
-        // V2 atlas's from its importer settings, read when first asked (m_IncludeInBuildRead).
+        // Editor settings ("Include in Build", packingSettings, textureSettings): a V1 atlas reads
+        // them from its editor data; a V2 atlas reads them from its SpriteAtlasImporter .meta when
+        // first asked (m_ImporterSettingsRead).
         bool m_IncludeInBuild = true;
+        SpriteAtlasPackingSettings m_PackingSettings = SpriteAtlasPackingSettings.Default;
+        SpriteAtlasTextureSettings m_TextureSettings = SpriteAtlasTextureSettings.Default;
         bool m_FromImporter;
-        bool m_IncludeInBuildRead;
+        bool m_ImporterSettingsRead = true;
         SpriteAtlas m_Master;
         string m_Tag;
         List<Sprite> m_Sprites;
@@ -109,22 +113,57 @@ namespace UnityEngine.U2D
         {
             get
             {
-                if (m_IncludeInBuildRead) return m_IncludeInBuild;
-                m_IncludeInBuildRead = true;
-                if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out string guid, out long _) && !string.IsNullOrEmpty(guid))
+                EnsureImporterSettingsRead();
+                return m_IncludeInBuild;
+            }
+        }
+
+        /// <summary>The atlas's packing settings (for a V2 variant with a non-variant master, its master's).</summary>
+        internal SpriteAtlasPackingSettings PackingSettings
+        {
+            get
+            {
+                EnsureImporterSettingsRead();
+                if (m_FromImporter && m_IsVariant && m_Master != null && !ReferenceEquals(m_Master, this) && !m_Master.m_IsVariant)
                 {
-                    try
+                    m_Master.EnsureImporterSettingsRead();
+                    return m_Master.m_PackingSettings;
+                }
+                return m_PackingSettings;
+            }
+        }
+
+        /// <summary>The atlas's texture settings.</summary>
+        internal SpriteAtlasTextureSettings TextureSettings
+        {
+            get
+            {
+                EnsureImporterSettingsRead();
+                return m_TextureSettings;
+            }
+        }
+
+        void EnsureImporterSettingsRead()
+        {
+            if (m_ImporterSettingsRead) return;
+            m_ImporterSettingsRead = true;
+            if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this, out string guid, out long _) && !string.IsNullOrEmpty(guid))
+            {
+                try
+                {
+                    var docs = Native.LoadDocuments("meta:" + guid);
+                    if (docs.Count > 0 && docs[0].TypeName == "SpriteAtlasImporter")
                     {
-                        var docs = Native.LoadDocuments("meta:" + guid);
-                        if (docs.Count > 0 && docs[0].TypeName == "SpriteAtlasImporter")
-                            m_IncludeInBuild = docs[0].Body.Bool("bindAsDefault", true);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"Unbound: the import settings of sprite atlas {name} could not be read ({e.Message}); it reports being included in builds");
+                        var importer = docs[0].Body;
+                        m_IncludeInBuild = importer.Bool("bindAsDefault", true);
+                        m_PackingSettings = SpriteAtlasPackingSettings.Read(importer.Get("packingSettings"));
+                        m_TextureSettings = SpriteAtlasTextureSettings.Read(importer.Get("textureSettings"));
                     }
                 }
-                return m_IncludeInBuild;
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Unbound: the import settings of sprite atlas {name} could not be read ({e.Message}); it reports default settings");
+                }
             }
         }
 
@@ -135,8 +174,20 @@ namespace UnityEngine.U2D
             foreach (var packable in data?.Get("packables")?.Seq() ?? Array.Empty<YNode>())
                 m_Packables.Add(packable.AsRef());
             m_FromImporter = body.Get("m_ImporterData") != null;
-            m_IncludeInBuild = m_FromImporter || (data?.Bool("bindAsDefault", true) ?? true);
-            m_IncludeInBuildRead = !m_FromImporter;
+            if (m_FromImporter)
+            {
+                m_IncludeInBuild = true;
+                m_PackingSettings = SpriteAtlasPackingSettings.Default;
+                m_TextureSettings = SpriteAtlasTextureSettings.Default;
+                m_ImporterSettingsRead = false;
+            }
+            else
+            {
+                m_IncludeInBuild = data?.Bool("bindAsDefault", true) ?? true;
+                m_PackingSettings = SpriteAtlasPackingSettings.Read(data?.Get("packingSettings"));
+                m_TextureSettings = SpriteAtlasTextureSettings.Read(data?.Get("textureSettings"));
+                m_ImporterSettingsRead = true;
+            }
             m_IsVariant = body.Bool("m_IsVariant");
             m_Tag = body.Str("m_Tag", null);
             var master = body.Ref("m_MasterAtlas");

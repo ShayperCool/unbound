@@ -718,3 +718,8 @@ earlier committed row and inventory entry is unchanged.
 The MenuCommand slice adds `UnityEditor.MenuCommand` (no public parameterless constructor) to the
 handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree on its one
 excluded row; every earlier committed row and inventory entry is unchanged.
+
+The sprite atlas settings-getter slice adds `UnityEditor.U2D.SpriteAtlasPackingSettings` and
+`UnityEditor.U2D.SpriteAtlasTextureSettings` to the handwritten inventory. Two independent
+6000.0.71f1 Linux GPU Editor captures agree on their 13 new struct rows; every earlier committed
+row and inventory entry is unchanged.
