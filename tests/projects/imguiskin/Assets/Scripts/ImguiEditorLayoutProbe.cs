@@ -56,6 +56,7 @@ public sealed partial class ImguiSkinProbe
             GUILayout.EndArea();
         }
         RecordNumericLayoutRects(phase);
+        RecordUsedLayoutGroups(phase);
     }
 
     void RecordNumericLayoutRects(string phase)
@@ -90,6 +91,54 @@ public sealed partial class ImguiSkinProbe
                 // A spare entry makes it possible to observe an incorrect cursor advance in Repaint.
                 GUILayoutUtility.GetRect(37, 11, style);
             }
+        }
+        finally { GUILayout.EndArea(); }
+    }
+
+    void RecordUsedLayoutGroups(string phase)
+    {
+        string prefix = "usedLayoutGroup/" + phase + "/";
+        void Write(string name, Rect rect) =>
+            Put(prefix + name, $"[{F(rect.x)},{F(rect.y)},{F(rect.width)},{F(rect.height)}]");
+
+        GUILayout.BeginArea(new Rect(10, 20, 124, 50));
+        try
+        {
+            if (phase == "Repaint")
+            {
+                var current = Event.current;
+                try
+                {
+                    current.type = EventType.MouseDown;
+                    current.Use();
+                    Write("temporaryRow", EditorGUILayout.BeginHorizontal(GUILayout.Width(33)));
+                    try
+                    {
+                        using (var column = new EditorGUILayout.VerticalScope(GUILayout.Height(16)))
+                        {
+                            Write("temporaryColumn", column.rect);
+                            using (new GUILayout.HorizontalScope())
+                                Write("temporaryChild", GUILayoutUtility.GetRect(81, 19));
+                        }
+                    }
+                    finally { EditorGUILayout.EndHorizontal(); }
+                }
+                catch (System.ArgumentException exception) { Put(prefix + "usedError", Json(exception.GetType().Name)); }
+                finally { current.type = EventType.Repaint; }
+            }
+
+            try
+            {
+                Write("arrangedRow", EditorGUILayout.BeginHorizontal(GUILayout.Width(46)));
+                try
+                {
+                    Write("arrangedFirst", GUILayoutUtility.GetRect(8, 6));
+                    Write("arrangedSecond", GUILayoutUtility.GetRect(12, 9));
+                }
+                finally { EditorGUILayout.EndHorizontal(); }
+                Write("next", GUILayoutUtility.GetRect(14, 7));
+            }
+            catch (System.ArgumentException exception) { Put(prefix + "arrangedError", Json(exception.GetType().Name)); }
         }
         finally { GUILayout.EndArea(); }
     }

@@ -948,11 +948,13 @@ namespace UnityEngine
             group.SetVertical(group.rect.y, Mathf.Clamp(group.maxHeight, minH, maxH));
         }
 
-        /// <summary>Opens a nested group: a new one in Layout, the next one otherwise.</summary>
+        /// <summary>Opens a new group in Layout and after a measured Used event. Other events
+        /// reopen the next arranged group.</summary>
         internal static GUILayoutGroup BeginLayoutGroup(GUIStyle style, GUILayoutOption[] options, Type layoutType)
         {
             GUILayoutGroup g;
-            if (IsLayout)
+            var eventType = Event.current?.type;
+            if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutGroupMeasured))
             {
                 g = CreateGroup(layoutType);
                 g.style = style;

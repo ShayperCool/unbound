@@ -45,6 +45,11 @@ content overload also returns a 1×1 rectangle at the origin during Layout.
 [Unity 6000.0 `GUILayoutUtility.GetRect`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GUILayoutUtility.GetRect.html)
 [Unity 6000.0 `Event.Use`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Event.Use.html)
 
+The Used-event group controls open nested `EditorGUILayout` and `GUILayout` groups after
+consuming a mouse event. The new groups have empty rectangles. Returning to Repaint lets the
+same layout pass read its arranged group, both children and the following entry.
+[Unity 6000.0 `Event.Use`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Event.Use.html)
+
 ```sh
 python3 tests/projects/imguiskin/run.py record --label native-a
 python3 tests/projects/imguiskin/run.py record --label native-b
