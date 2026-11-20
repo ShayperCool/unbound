@@ -405,6 +405,7 @@ namespace UnityEngine.UIElements
         {
             if (elementPanel == null) return;
             UaUnregisterRunningAnimations();
+            if (UaBindingRequests.HasAny(this)) elementPanel.UaUnregisterPendingBindingRequests(this);
             UaUnregisterBindings();
             uaTransitions?.CancelAll();
             elementPanel.OnElementLeavingPanel(this);
@@ -425,6 +426,7 @@ namespace UnityEngine.UIElements
             {
                 yogaNode.Config = elementPanel.uaLayoutConfig;
                 UaRegisterRunningAnimations();
+                if (UaBindingRequests.HasAny(this)) elementPanel.UaRegisterPendingBindingRequests(this);
                 UaRegisterBindings();
                 pseudoStatesNoNotify &= ~(PseudoStates.Active | PseudoStates.Hover | PseudoStates.Focus);
                 if (m_NeedsAttach)

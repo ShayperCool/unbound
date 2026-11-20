@@ -24,7 +24,9 @@ namespace UnityEditor
         /// <summary>Bumped whenever nodes may have moved (Update, array changes); properties then
         /// find their node again by path.</summary>
         internal int m_UnboundTreeVersion;
+        uint m_ObjectVersion;
         bool m_Modified;
+        bool m_IsDifferentCacheDirty;
         SerializedNode[] m_OtherRoots;
 
         public SerializedObject(Object obj) : this(new[] { obj }, null) { }
@@ -50,13 +52,24 @@ namespace UnityEditor
         internal IntPtr m_NativeObjectPtr;
         static long s_NextNativeObject;
 
+        internal uint objectVersion => m_ObjectVersion;
+
+        internal bool isValid => m_NativeObjectPtr != IntPtr.Zero && m_Targets != null && m_Targets.Length > 0 && m_Targets[0] != null;
+
         void Read()
         {
+            var previous = m_UnboundRoot;
             var tree = TypeTreeTargets.Of(m_Targets[0]);
             m_UnboundRoot = tree != null ? TypeTreeSerialized.BuildRoot(tree, m_Targets[0]) : SerializedTree.BuildRoot(m_Targets[0], callbacks: true);
             m_UnboundTreeVersion++;
             m_Modified = false;
-            m_OtherRoots = null;
+            bool dataChanged = previous == null || !SerializedTree.DataEquals(previous, m_UnboundRoot);
+            if (dataChanged || m_IsDifferentCacheDirty)
+            {
+                m_ObjectVersion++;
+                m_OtherRoots = null;
+                m_IsDifferentCacheDirty = false;
+            }
         }
 
         internal void MarkModified() => m_Modified = true;
@@ -134,7 +147,9 @@ namespace UnityEditor
             }
             SerializedTree.ClearDirty(m_UnboundRoot);
             m_Modified = false;
+            m_ObjectVersion++;
             m_OtherRoots = null;
+            m_IsDifferentCacheDirty = false;
             // Applying marks the targets dirty (Scripting API, ApplyModifiedProperties; measured:
             // tests/projects/scenesave asset.serialized), records the changes of a prefab
             // instance's objects as its overrides and, recorded for Undo, publishes them
@@ -211,7 +226,11 @@ namespace UnityEditor
             objectReference = value as Object,
         };
 
-        public void SetIsDifferentCacheDirty() => m_OtherRoots = null;
+        public void SetIsDifferentCacheDirty()
+        {
+            m_IsDifferentCacheDirty = true;
+            m_OtherRoots = null;
+        }
 
         public void CopyFromSerializedProperty(SerializedProperty prop)
         {
@@ -233,6 +252,7 @@ namespace UnityEditor
             var target = SerializedTree.Find(m_UnboundRoot, source.Path);
             if (target == null || !SerializedTree.CopyData(target, source)) return false;
             m_Modified = true;
+            m_ObjectVersion++;
             InvalidateNodes();
             return true;
         }
@@ -319,6 +339,26 @@ namespace UnityEditor
         public string displayName => N.DisplayName;
 
         public string propertyPath => N.Path;
+
+        internal int hashCodeForPropertyPath => ComputePathHash(propertyPath);
+
+        internal bool isValid => m_SerializedObject != null && m_SerializedObject.isValid && !m_UnboundAtEnd
+            && (m_UnboundNode != null || SerializedTree.Find(m_SerializedObject.m_UnboundRoot, m_UnboundPath) != null);
+
+        static int ComputePathHash(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return 0;
+            unchecked
+            {
+                uint hash = 2166136261u;
+                for (int i = 0; i < path.Length; i++)
+                {
+                    hash ^= path[i];
+                    hash *= 16777619u;
+                }
+                return hash == 0u ? 1 : (int)hash;
+            }
+        }
 
         public string type => N.TypeName;
 

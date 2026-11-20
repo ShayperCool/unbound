@@ -1375,11 +1375,6 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] public static bool IsBound(this global::UnityEngine.UIElements.IBindable control) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.IBindingExtensions.IsBound"); return default; }
     }
-    internal unsafe partial interface IBindingRequest
-    {
-        void Bind(global::UnityEngine.UIElements.VisualElement element);
-        void Release();
-    }
     public unsafe partial interface IDebugPanelChangeReceiver
     {
         void OnVisualElementChange(global::UnityEngine.UIElements.VisualElement element, global::UnityEngine.UIElements.VersionChangeType changeType);
@@ -2202,17 +2197,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public static global::System.Collections.Generic.List<T> Get() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectListPool<T>.Get"); return new global::System.Collections.Generic.List<T>(); }
         [global::Unbound.Stub] public static void Release(global::System.Collections.Generic.List<T> elements) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectListPool<T>.Release"); }
         [global::Unbound.Stub] public ObjectListPool() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectListPool<T>.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class ObjectPool<T> where T : new()
-    {
-        [global::Unbound.Stub] internal global::System.Func<T> CreateFunc;
-        [global::Unbound.Stub] public ObjectPool(global::System.Func<T> CreateFunc, int maxSize = 100) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.ctor"); }
-        [global::Unbound.Stub] public int Size() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Size"); return default; }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Clear"); }
-        [global::Unbound.Stub] public T Get() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Get"); return default; }
-        [global::Unbound.Stub] public void Release(T element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.Release"); }
-        public int maxSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.maxSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.ObjectPool<T>.maxSize"); } }
     }
     unsafe partial class Painter2D
     {

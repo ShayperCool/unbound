@@ -42,8 +42,56 @@ namespace UnityEngine.UIElements
     {
         internal readonly UaValueAnimationSystem uaValueAnimations = new UaValueAnimationSystem();
         private protected UaDataBindingSystem m_UaDataBinding;
+        HashSet<VisualElement> m_UaPendingBindingRequests;
+        List<VisualElement> m_UaPendingBindingScratch;
+        Dictionary<object, object> m_UaBindingTemporaryCache;
 
         internal UaDataBindingSystem uaDataBinding => m_UaDataBinding ??= new UaDataBindingSystem(this);
+        internal Dictionary<object, object> uaBindingTemporaryCache => m_UaBindingTemporaryCache ??= new Dictionary<object, object>();
+
+        internal void UaRegisterPendingBindingRequests(VisualElement ve)
+        {
+            if (ve == null) return;
+            (m_UaPendingBindingRequests ??= new HashSet<VisualElement>()).Add(ve);
+        }
+
+        internal void UaUnregisterPendingBindingRequests(VisualElement ve) => m_UaPendingBindingRequests?.Remove(ve);
+
+        internal void UaProcessPendingBindingRequests()
+        {
+            if (m_UaPendingBindingRequests != null && m_UaPendingBindingRequests.Count > 0)
+            {
+                var scratch = m_UaPendingBindingScratch ??= new List<VisualElement>();
+                while (m_UaPendingBindingRequests.Count > 0)
+                {
+                    scratch.Clear();
+                    foreach (var ve in m_UaPendingBindingRequests) scratch.Add(ve);
+                    m_UaPendingBindingRequests.Clear();
+                    for (int i = 0; i < scratch.Count; i++)
+                    {
+                        var ve = scratch[i];
+                        if (ve.elementPanel != this) continue;
+                        var requests = UaBindingRequests.Take(ve);
+                        if (requests == null) continue;
+                        try
+                        {
+                            for (int r = 0; r < requests.Count; r++)
+                            {
+                                requests[r].Bind(ve);
+                                requests[r].Release();
+                            }
+                        }
+                        finally
+                        {
+                            requests.Clear();
+                        }
+                    }
+                }
+                scratch.Clear();
+            }
+            if (m_UaBindingTemporaryCache != null && m_UaBindingTemporaryCache.Count > 0)
+                m_UaBindingTemporaryCache.Clear();
+        }
 
         float m_Scale = 1f;
         float m_PixelsPerPoint = 1f;
@@ -145,6 +193,9 @@ namespace UnityEngine.UIElements
             {
                 visualTree.uaTransitions?.CancelAll();
                 uaTransitionUpdates.Clear();
+                m_UaPendingBindingRequests?.Clear();
+                m_UaPendingBindingScratch?.Clear();
+                m_UaBindingTemporaryCache?.Clear();
                 m_UaDataBinding?.Dispose();
                 uaAtlas?.Dispose();
                 PointerDeviceState.RemovePanelData(this);
@@ -606,6 +657,7 @@ namespace UnityEngine.UIElements
             ValidateLayout();
             uaValueAnimations.Update();
             UpdateAnimations();
+            UaProcessPendingBindingRequests();
         }
 
         internal Vector2 ScreenToPanel(Vector2 screen) => screenToPanelSpace(screen) / scale;

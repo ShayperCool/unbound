@@ -255,6 +255,8 @@ namespace UnityEngine.UIElements
 
         [Unbound.EditorFaithful("Unity's: a hook for derived bindings")]
         protected internal virtual void OnDataSourceChanged(in DataSourceContextChanged context) { }
+
+        internal virtual void UaOnRequestProcessed() { }
     }
 
     /// <summary>A binding that copies a value between a data source path and the element property,

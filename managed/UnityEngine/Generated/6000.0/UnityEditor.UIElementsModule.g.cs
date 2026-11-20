@@ -824,42 +824,6 @@ namespace UnityEditor.UIElements.Bindings
         protected override string bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.BaseListViewSerializedObjectBinding.bindingId"); return default; } }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class DefaultSerializedObjectBindingImplementation : global::UnityEditor.UIElements.ISerializedObjectBindingImplementation
-    {
-        [global::Unbound.Stub] public void Bind(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.Bind"); }
-        [global::Unbound.Stub] public void Unbind(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.Unbind"); }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty BindProperty(global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindProperty"); return default; }
-        [global::Unbound.Stub] public void BindProperty(global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindProperty"); }
-        [global::Unbound.Stub] public void TrackPropertyValue(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedProperty property, global::System.Action<object, global::UnityEditor.SerializedProperty> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.TrackPropertyValue"); }
-        [global::Unbound.Stub] public void TrackSerializedObjectValue(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedObject serializedObject, global::System.Action<global::UnityEditor.SerializedObject> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.TrackSerializedObjectValue"); }
-        [global::Unbound.Stub] void global::UnityEditor.UIElements.ISerializedObjectBindingImplementation.Bind(global::UnityEngine.UIElements.VisualElement element, object bindingContext, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.Bind"); }
-        [global::Unbound.Stub] public void HandleStyleUpdate(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.HandleStyleUpdate"); }
-        [global::Unbound.Stub] public DefaultSerializedObjectBindingImplementation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.ctor"); }
-        [global::Unbound.Stub]
-        internal unsafe partial class BindingRequest : global::UnityEngine.UIElements.IBindingRequest
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.UIElements.ObjectPool<global::UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest> s_Pool;
-            [global::Unbound.Stub] public global::UnityEditor.SerializedObject obj;
-            [global::Unbound.Stub] public global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context;
-            [global::Unbound.Stub] public global::UnityEditor.SerializedProperty parentProperty;
-            [global::Unbound.Stub] public global::System.Action<object, global::UnityEditor.SerializedProperty> callback;
-            [global::Unbound.Stub] public global::System.Action<object, global::UnityEditor.SerializedObject> objectChangedCallback;
-            [global::Unbound.Stub] public global::UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.RequestType requestType;
-            [global::Unbound.Stub] public static global::UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest Create(global::UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.RequestType reqType, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.Create"); return default; }
-            [global::Unbound.Stub] public static global::UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest CreateDelayBinding(global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.CreateDelayBinding"); return default; }
-            [global::Unbound.Stub] public void Bind(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.Bind"); }
-            [global::Unbound.Stub] public void Release() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.Release"); }
-            [global::Unbound.Stub] public BindingRequest() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.DefaultSerializedObjectBindingImplementation.BindingRequest.ctor"); }
-            public enum RequestType
-            {
-                Bind = 0,
-                DelayBind = 1,
-                TrackProperty = 2,
-                TrackObject = 3,
-            }
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class EditorListViewController : global::UnityEngine.UIElements.ListViewController
     {
         [global::Unbound.Stub] public EditorListViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.EditorListViewController.ctor"); }
@@ -940,87 +904,12 @@ namespace UnityEditor.UIElements.Bindings
         [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.OnRelease"); }
         [global::Unbound.Stub] public SerializedManagedEnumBinding() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedManagedEnumBinding.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class SerializedObjectBindingBase : global::UnityEngine.UIElements.CustomBinding, global::UnityEngine.UIElements.IDataSourceProvider, global::UnityEngine.UIElements.IDataSourceViewHashProvider
+    unsafe partial class SerializedObjectBindingContext
     {
-        [global::Unbound.Stub] public string boundPropertyPath;
-        [global::Unbound.Stub] public int boundPropertyHash;
-        [global::Unbound.Stub] internal static readonly global::UnityEngine.PropertyName UndoGroupPropertyKey;
-        [global::Unbound.Stub] protected global::UnityEngine.UIElements.IBindable m_Field;
-        [global::Unbound.Stub] protected bool IsBindingContextUninitialized() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.IsBindingContextUninitialized"); return default; }
-        [global::Unbound.Stub] public long GetViewHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.GetViewHashCode"); return default; }
-        public abstract void OnRelease();
-        [global::Unbound.Stub] public void Unbind() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.Unbind"); }
-        [global::Unbound.Stub] protected internal override void OnActivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.OnActivated"); }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.UIElements.BindingResult Update(in global::UnityEngine.UIElements.BindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.Update"); return default; }
-        public abstract global::UnityEngine.UIElements.BindingResult OnUpdate(in global::UnityEngine.UIElements.BindingContext context);
-        [global::Unbound.Stub] protected void SetContext(global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context, global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.SetContext"); }
-        [global::Unbound.Stub] protected void ResetContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.ResetContext"); }
-        [global::Unbound.Stub] public virtual void ResetUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.ResetUpdate"); }
-        [global::Unbound.Stub] protected SerializedObjectBindingBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.ctor"); }
-        [global::Unbound.Stub] protected virtual void OnFieldAttached() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.OnFieldAttached"); }
-        [global::Unbound.Stub] protected void UpdateFieldIsAttached() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.UpdateFieldIsAttached"); }
-        protected abstract void ResetCachedValues();
-        [global::Unbound.Stub] public virtual void OnPropertyValueChanged(global::UnityEditor.SerializedProperty currentPropertyIterator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.OnPropertyValueChanged"); }
-        [global::Unbound.Stub] public virtual void SyncValueWithoutNotify(object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.SyncValueWithoutNotify"); }
-        [global::Unbound.Stub] public bool ResolveProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.ResolveProperty"); return default; }
-        [global::Unbound.Stub] public void SyncObjectVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.SyncObjectVersion"); }
-        [global::Unbound.Stub] public bool IsSynced() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.IsSynced"); return default; }
-        public object dataSource { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.dataSource"); return default; } }
-        public global::Unity.Properties.PropertyPath dataSourcePath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.dataSourcePath"); return default; } }
-        protected abstract string bindingId { get; }
-        public global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext bindingContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.bindingContext"); return default; } }
-        public global::UnityEditor.SerializedProperty boundProperty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.boundProperty"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.boundProperty"); } }
-        protected internal bool isReleased { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.isReleased"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.isReleased"); } }
-        protected virtual global::UnityEngine.UIElements.VisualElement owner { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.owner"); return default; } }
-        protected global::UnityEngine.UIElements.IBindable boundElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.boundElement"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.boundElement"); } }
-        protected bool isFieldAttached { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingBase.isFieldAttached"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializedObjectBindingContext
-    {
-        [global::Unbound.Stub] internal static global::System.Action PostProcessTrackedPropertyChanges;
-        [global::Unbound.Stub] public SerializedObjectBindingContext(global::UnityEditor.SerializedObject so) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ctor"); }
-        [global::Unbound.Stub] public bool TargetsSerializedObject(global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.TargetsSerializedObject"); return default; }
-        [global::Unbound.Stub] public bool IsInitialized() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.IsInitialized"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Object GetTargetObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.GetTargetObject"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.SerializedProperty FindProperty(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.FindProperty"); return default; }
         [global::Unbound.Stub] public void Bind(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.Bind"); }
-        [global::Unbound.Stub] public bool RequestSerializedObject(out global::UnityEditor.SerializedObject so) { so = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.RequestSerializedObject"); return default; }
         [global::Unbound.Stub] internal void ContinueBinding(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ContinueBinding"); }
-        [global::Unbound.Stub] public void Unbind(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.Unbind"); }
         [global::Unbound.Stub] internal void BindTree(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.BindTree"); }
         [global::Unbound.Stub] internal global::UnityEditor.SerializedProperty BindPropertyRelative(global::UnityEngine.UIElements.IBindable field, global::UnityEditor.SerializedProperty parentProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.BindPropertyRelative"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext GetBindingContextFromElement(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.GetBindingContextFromElement"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext FindBindingContext(global::UnityEngine.UIElements.VisualElement element, global::UnityEditor.SerializedObject obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.FindBindingContext"); return default; }
-        [global::Unbound.Stub] internal void UpdateRevision() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.UpdateRevision"); }
-        [global::Unbound.Stub] internal bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.IsValid"); return default; }
-        [global::Unbound.Stub] internal void UpdateIfNecessary(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.UpdateIfNecessary"); }
-        [global::Unbound.Stub] internal void ResetUpdate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.ResetUpdate"); }
-        [global::Unbound.Stub] public bool RegisterSerializedPropertyChangeCallback(object cookie, global::UnityEditor.SerializedProperty property, global::System.Action<object, global::UnityEditor.SerializedProperty> valueChangedCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.RegisterSerializedPropertyChangeCallback"); return default; }
-        [global::Unbound.Stub] public void UnregisterSerializedPropertyChangeCallback(object cookie, int propertyPathHash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.UnregisterSerializedPropertyChangeCallback"); }
-        [global::Unbound.Stub] public global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater AddBindingUpdater(global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.AddBindingUpdater"); return default; }
-        [global::Unbound.Stub] internal void RegisterBindingObject(global::UnityEditor.UIElements.Bindings.SerializedObjectBindingBase b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.RegisterBindingObject"); }
-        [global::Unbound.Stub] internal void UnregisterBindingObject(global::UnityEditor.UIElements.Bindings.SerializedObjectBindingBase b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.UnregisterBindingObject"); }
-        public ulong lastRevision { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.lastRevision"); return default; } }
-        internal int updateCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.updateCount"); return default; } }
-        public uint objectVersion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext.objectVersion"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe sealed partial class SerializedObjectBindingContextUpdater : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingBase
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater Create(global::UnityEngine.UIElements.VisualElement owner, global::UnityEditor.UIElements.Bindings.SerializedObjectBindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.Create"); return default; }
-        [global::Unbound.Stub] public SerializedObjectBindingContextUpdater() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.ctor"); }
-        [global::Unbound.Stub] protected internal override global::UnityEngine.UIElements.BindingResult Update(in global::UnityEngine.UIElements.BindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.Update"); return default; }
-        [global::Unbound.Stub] public override global::UnityEngine.UIElements.BindingResult OnUpdate(in global::UnityEngine.UIElements.BindingContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.OnUpdate"); return default; }
-        [global::Unbound.Stub] public override void OnRelease() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.OnRelease"); }
-        [global::Unbound.Stub] public void AddTracking(global::UnityEditor.SerializedProperty prop, global::System.Action<object, global::UnityEditor.SerializedProperty> callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.AddTracking"); }
-        [global::Unbound.Stub] protected override void ResetCachedValues() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.ResetCachedValues"); }
-        [global::Unbound.Stub] protected internal override void OnActivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.OnActivated"); }
-        [global::Unbound.Stub] protected internal override void OnDeactivated(in global::UnityEngine.UIElements.BindingActivationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.OnDeactivated"); }
-        protected override string bindingId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.bindingId"); return default; } }
-        protected override global::UnityEngine.UIElements.VisualElement owner { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.owner"); return default; } }
-        public event global::System.Action<object, global::UnityEditor.SerializedObject> registeredCallbacks { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.Bindings.SerializedObjectBindingContextUpdater.registeredCallbacks"); } [global::Unbound.Stub] remove { } }
     }
     [global::Unbound.Stub]
     internal unsafe abstract partial class SerializedObjectBindingPropertyToBaseField<TProperty, TValue> : global::UnityEditor.UIElements.Bindings.SerializedObjectBindingToBaseField<TValue, global::UnityEngine.UIElements.INotifyValueChanged<TValue>>

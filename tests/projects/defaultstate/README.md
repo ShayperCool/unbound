@@ -738,3 +738,12 @@ nested `UxmlSerializedData` classes of `VisualElement`, `BindableElement`, `Text
 `Binding`, `CustomBinding`, and `DataBinding`) to the handwritten inventory. Two independent
 6000.0.71f1 Linux GPU Editor captures agree on all 23 added rows; every earlier committed row and
 inventory entry is unchanged.
+
+The `BindingExtensions.TrackPropertyValue` slice adds `UnityEditor.UIElements.BindingExtensions`
+(static) and `UnityEditor.UIElements.SerializedPropertyChangeEvent` to the handwritten inventory
+(16 added rows from two independent 6000.0.71f1 Linux GPU Editor captures: 15 deterministic rows
+identical across both repeats, plus the variable creation-time `EventBase.timestamp`). Because
+`SerializedPropertyChangeEvent` sorts before `UnityEngine.UIElements.*Event`, `debt.json` records
+its `timestamp` and `eventTypeId` rows and updates the shifted `eventTypeId` actuals for the
+subsequent `UnityEngine.UIElements.*Event` types (removing four that now coincide with the Editor's
+numbering); every earlier committed reference row and inventory entry is unchanged.

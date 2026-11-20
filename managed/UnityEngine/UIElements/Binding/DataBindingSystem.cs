@@ -86,6 +86,7 @@ namespace UnityEngine.UIElements
         HashSet<VisualElement> m_ProcessingRequests = new HashSet<VisualElement>();
 
         internal BindingLogLevel? logLevel;
+        internal long uaFrameCount;
 
         public UaDataBindingSystem(BaseVisualElementPanel panel)
         {
@@ -274,9 +275,11 @@ namespace UnityEngine.UIElements
 
         public void Update()
         {
+            m_Panel.UaProcessPendingBindingRequests();
             if (m_Requests.Count > 0) ProcessRequests();
             if (m_PerElement.Count == 0 && m_ChangesFromUI.Count == 0)
             {
+                uaFrameCount++;
                 if (m_Sources.Count > 0) PruneSources();
                 return;
             }
@@ -286,6 +289,7 @@ namespace UnityEngine.UIElements
             }
             finally
             {
+                uaFrameCount++;
                 m_VersionChanges.Clear();
                 m_TrackedThisUpdate.Clear();
                 m_RanUpdate.Clear();
@@ -845,7 +849,8 @@ namespace UnityEngine.UIElements
         internal void UaProcessBindingRequests(string panelName)
         {
             if (m_UaBindings == null) return;
-            for (int i = m_UaBindings.Count - 1; i >= m_UaProcessed; i--)
+            int firstNew = m_UaProcessed;
+            for (int i = m_UaBindings.Count - 1; i >= firstNew; i--)
             {
                 if (!((PropertyPath)m_UaBindings[i].id).IsEmpty) continue;
                 RemoveBindingAt(i);
@@ -853,6 +858,8 @@ namespace UnityEngine.UIElements
                     + TypeUtility.GetTypeDisplayName(GetType()) + ")` without setting the \"property\" attribute is not supported (" + panelName + ").");
             }
             m_UaProcessed = m_UaBindings.Count;
+            for (int i = firstNew; i < m_UaProcessed; i++)
+                m_UaBindings[i].binding.UaOnRequestProcessed();
         }
 
         int IndexOfBinding(in BindingId id)

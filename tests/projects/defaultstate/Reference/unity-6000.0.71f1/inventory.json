@@ -2405,6 +2405,18 @@
     },
     {
       "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.UIElements.BindingExtensions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.UIElements.SerializedPropertyChangeEvent"
+    },
+    {
+      "category": "class",
       "module": "UnityEditor.UIElementsModule",
       "status": "open-generic",
       "type": "UnityEditor.UIElements.UxmlAttributeConverter`1"
