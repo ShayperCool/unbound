@@ -220,7 +220,7 @@ namespace UnityEditor
             RequireGUI();
             if (!Compat.EditorPropertyScopeMeasured)
             {
-                s_PropertyStack.Push(default);
+                s_PropertyStates.Push(default);
                 return label;
             }
             if (property == null)
@@ -233,8 +233,8 @@ namespace UnityEditor
 
             var state = (Enabled: GUI.enabled, Background: GUI.backgroundColor);
             bool previousMixed = showMixedValue;
-            int previousDepth = s_PropertyStack.Count;
-            s_PropertyStack.Push(state);
+            int previousDepth = s_PropertyStates.Count;
+            s_PropertyStates.Push(state);
             try
             {
                 EditorGUIUtility.NotifyBeginProperty(totalPosition, property);
@@ -244,7 +244,7 @@ namespace UnityEditor
             }
             catch
             {
-                while (s_PropertyStack.Count > previousDepth) s_PropertyStack.Pop();
+                while (s_PropertyStates.Count > previousDepth) s_PropertyStates.Pop();
                 showMixedValue = previousMixed;
                 GUI.enabled = state.Enabled;
                 GUI.backgroundColor = state.Background;
@@ -254,13 +254,13 @@ namespace UnityEditor
 
         public static void EndProperty()
         {
-            if (!s_PropertyStack.TryPop(out var state) || !Compat.EditorPropertyScopeMeasured) return;
+            if (!s_PropertyStates.TryPop(out var state) || !Compat.EditorPropertyScopeMeasured) return;
             showMixedValue = false;
             GUI.enabled = state.Enabled;
             GUI.backgroundColor = state.Background;
         }
 
-        static readonly Stack<(bool Enabled, Color Background)> s_PropertyStack = new Stack<(bool, Color)>();
+        static readonly Stack<(bool Enabled, Color Background)> s_PropertyStates = new Stack<(bool, Color)>();
         static readonly GUIContent s_PropertyContent = new GUIContent();
     }
 
