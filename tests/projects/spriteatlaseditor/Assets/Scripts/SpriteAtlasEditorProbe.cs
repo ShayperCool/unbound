@@ -63,10 +63,84 @@ static class SpriteAtlasEditorProbe
         Check("null.packingSettings", () => DescribePacking(none.GetPackingSettings()));
         Check("null.textureSettings", () => DescribeTexture(none.GetTextureSettings()));
 
+        if (paths.Any(p => p.StartsWith("Assets/PlatformAtlases/", StringComparison.Ordinal)))
+            RecordPlatformSettings(paths, fresh, none, Check);
+
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), output.ToString());
         EditorApplication.Exit(0);
     }
+
+    static void RecordPlatformSettings(string[] paths, SpriteAtlas fresh, SpriteAtlas none, Action<string, Func<string>> check)
+    {
+        var byStem = new System.Collections.Generic.Dictionary<string, (string key, SpriteAtlas atlas)>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            var atlas = AssetDatabase.LoadAssetAtPath<SpriteAtlas>(path);
+            if (atlas != null)
+                byStem[Path.GetFileNameWithoutExtension(path)] = (Path.GetFileName(path), atlas);
+        }
+
+        string Label(string target) => target == null ? "<null>" : target.Length == 0 ? "<empty>" : target;
+
+        void Query(string prefix, SpriteAtlas atlas, params string[] targets)
+        {
+            foreach (var target in targets)
+                check(prefix + ".platform." + Label(target), () => DescribePlatform(atlas.GetPlatformSettings(target)));
+        }
+
+        if (byStem.TryGetValue("Defaults", out var defaults))
+        {
+            Query(defaults.key, defaults.atlas,
+                "DefaultTexturePlatform", "Android", "iOS", "iPhone", "Standalone", "StandaloneWindows64",
+                "WebGL", "", null, "UnknownPlatform");
+        }
+
+        if (byStem.TryGetValue("Custom", out var custom))
+        {
+            Query(custom.key, custom.atlas,
+                "DefaultTexturePlatform", "defaulttextureplatform",
+                "Android", "android", "ANDROID",
+                "iPhone", "iOS", "ios", "iphone",
+                "Standalone", "standalone", "StandaloneWindows", "StandaloneWindows64",
+                "StandaloneOSX", "StandaloneLinux64", "Win", "Win64", "OSXUniversal", "Linux64",
+                "WebGL", "webgl", "Web",
+                "WSAPlayer", "Windows Store Apps", "WSA", "UWP",
+                "tvOS", "PS4", "PS5", "XboxOne", "Switch", "VisionOS",
+                "GameCoreXboxSeries", "GameCoreScarlett", "GameCoreXboxOne",
+                "EmbeddedLinux", "QNX", "LinuxHeadlessSimulation", "CloudRendering",
+                "Switch2", "Kepler", "Server",
+                "", null, "UnknownPlatform");
+
+            check(custom.key + ".platform.mutationIsolation", () =>
+            {
+                var copy = custom.atlas.GetPlatformSettings("Android");
+                copy.name = "Mutated";
+                copy.maxTextureSize = 32;
+                copy.overridden = false;
+                copy.compressionQuality = 1;
+                return DescribePlatform(custom.atlas.GetPlatformSettings("Android"));
+            });
+        }
+
+        if (byStem.TryGetValue("CustomVariant", out var variant))
+            Query(variant.key, variant.atlas, "DefaultTexturePlatform", "Android", "iPhone", "Standalone");
+
+        if (byStem.TryGetValue("Legacy", out var legacy))
+            Query(legacy.key, legacy.atlas,
+                "DefaultTexturePlatform", "Android", "Standalone", "StandaloneWindows64");
+
+        if (byStem.TryGetValue("LegacyV3", out var legacyV3))
+            Query(legacyV3.key, legacyV3.atlas,
+                "iPhone", "iOS", "WSAPlayer", "Windows Store Apps", "Switch", "Standalone", "StandaloneWindows64");
+
+        Query("new", fresh, "DefaultTexturePlatform", "Android", "iOS", "StandaloneWindows64", "", null, "UnknownPlatform");
+        Query("null", none, "DefaultTexturePlatform", "Android", null);
+    }
+
+    static string DescribePlatform(TextureImporterPlatformSettings s) => s == null
+        ? "<null>"
+        : $"name={s.name ?? "<null>"}|overridden={s.overridden}|ignorePlatformSupport={s.ignorePlatformSupport}|maxTextureSize={s.maxTextureSize}|resizeAlgorithm={s.resizeAlgorithm}|format={(int)s.format}|textureCompression={s.textureCompression}|compressionQuality={s.compressionQuality}|crunchedCompression={s.crunchedCompression}|allowsAlphaSplitting={s.allowsAlphaSplitting}|androidETC2FallbackOverride={s.androidETC2FallbackOverride}";
 
     static string DescribePacking(SpriteAtlasPackingSettings s) =>
         $"blockOffset={s.blockOffset}|padding={s.padding}|enableRotation={s.enableRotation}|enableTightPacking={s.enableTightPacking}|enableAlphaDilation={s.enableAlphaDilation}";

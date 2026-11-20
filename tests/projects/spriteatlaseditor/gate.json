@@ -3,6 +3,8 @@
   "summary": "spriteatlaseditor [a-z0-9]+: [0-9]+/[0-9]+ values match.*",
   "engine_paths": [
     "managed/UnityEngine/Editor/SpriteAtlasExtensions.cs",
+    "managed/UnityEngine/Editor/TextureImporterSettings.cs",
+    "managed/UnityEngine/Editor/ImporterSettings.cs",
     "managed/UnityEngine/U2D/SpriteAtlas.cs",
     "managed/UnityEngine/Editor/DefaultAsset.cs",
     "managed/UnityEngine/Graphics/AssetImporters.cs",
