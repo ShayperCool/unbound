@@ -267,6 +267,7 @@
 {"key":"Unity.Properties.VisitContext`2/@factory","status":"excluded","value":"open-generic"}
 {"key":"Unity.Properties.VisitParameters/@factory","status":"value","value":"struct"}
 {"key":"Unity.Properties.VisitParameters/Property/Unity.Properties.VisitParameters/IgnoreExceptions","status":"value","value":"enum:0"}
+{"key":"UnityEditor.AI.NavMeshBuilder/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.AI.NavMeshEditorHelpers/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ActiveEditorTracker/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.ActiveEditorTracker/Property/UnityEditor.ActiveEditorTracker/activeEditors","status":"value","value":"[]"}
@@ -2148,6 +2149,7 @@
 {"key":"UnityEngine.AssemblyIsEditorAssembly/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.AssemblyIsEditorAssembly"}
 {"key":"UnityEngine.Assertions.Assert/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.Assertions.AssertionException/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEngine.Assertions.Comparers.FloatComparer/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.AssetBundle/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AssetBundleCreateRequest/@factory","status":"value","value":"class"}
 {"key":"UnityEngine.AssetBundleCreateRequest/Property/UnityEngine.AssetBundleCreateRequest/assetBundle","status":"getter-threw","value":"System.NullReferenceException"}
@@ -12217,6 +12219,10 @@
 {"key":"UnityEngine.jvalue/Field/UnityEngine.jvalue/l","status":"value","value":"null-pointer"}
 {"key":"UnityEngine.jvalue/Field/UnityEngine.jvalue/s","status":"value","value":"0"}
 {"key":"UnityEngine.jvalue/Field/UnityEngine.jvalue/z","status":"value","value":"false"}
+{"key":"UnityEngineInternal.GenericStack/@factory","status":"value","value":"class"}
+{"key":"UnityEngineInternal.GenericStack/Property/System.Collections.Stack/Count","status":"value","value":"0"}
+{"key":"UnityEngineInternal.GenericStack/Property/System.Collections.Stack/IsSynchronized","status":"value","value":"false"}
+{"key":"UnityEngineInternal.GenericStack/Property/System.Collections.Stack/SyncRoot","status":"value","value":"System.Object{}"}
 {"key":"FreshStateControl/@factory","status":"value","value":"class"}
 {"key":"FreshStateControl/Field/FreshStateControl/field","status":"value","value":"0"}
 {"key":"FreshStateControl/Property/FreshStateControl/AChanges","status":"value","value":"1"}

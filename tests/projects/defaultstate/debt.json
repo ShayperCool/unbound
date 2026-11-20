@@ -3927,6 +3927,19 @@
         "status": "value",
         "value": "null"
       }
+    },
+    {
+      "key": "UnityEngineInternal.GenericStack/Property/System.Collections.Stack/SyncRoot",
+      "module": "UnityEngine.CoreModule",
+      "reason": "Inherited from the runtime library's System.Collections.Stack: the Editor's Mono stack answers a separate lazily created object, CoreCLR's stack answers itself. GenericStack declares no members, so matching it would change its declaration; no Unity or game behaviour depends on the root's identity.",
+      "expected": {
+        "status": "value",
+        "value": "System.Object{}"
+      },
+      "actual": {
+        "status": "value",
+        "value": "[]"
+      }
     }
   ],
   "constructorStores": []

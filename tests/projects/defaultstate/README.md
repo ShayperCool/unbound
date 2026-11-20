@@ -702,3 +702,10 @@ The property label slice adds one inventory entry for `EditorGUI.PropertyScope`.
 
 The toggle group slice adds `EditorGUILayout.ToggleGroupScope`. Two independent 6000.0.71f1
 Linux GPU captures agree that the scope has no public parameterless constructor.
+
+The misc core and navigation stub slice adds `UnityEngine.Assertions.Comparers.FloatComparer`,
+`UnityEngineInternal.GenericStack` and the obsolete `UnityEditor.AI.NavMeshBuilder` to the
+handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree on the six added
+rows; every earlier committed row and inventory entry is unchanged. One row is queued in
+`debt.json`: `GenericStack` inherits `Stack.SyncRoot` from the runtime library, which in the
+Editor's Mono runtime is a separate object and in CoreCLR the stack itself.

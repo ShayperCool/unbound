@@ -906,6 +906,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.AI.NavMeshBuilder"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.AI.NavMeshEditorHelpers"
     },
@@ -2882,6 +2888,12 @@
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.Assertions.AssertionException"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Assertions.Comparers.FloatComparer"
     },
     {
       "category": "class",
@@ -10670,6 +10682,12 @@
       "module": "UnityEngine.AndroidJNIModule",
       "status": "candidate",
       "type": "UnityEngine.jvalue"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngineInternal.GenericStack"
     }
   ]
 }
