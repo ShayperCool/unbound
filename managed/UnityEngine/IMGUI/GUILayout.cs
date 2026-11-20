@@ -514,6 +514,7 @@ namespace UnityEngine
                 return;
             }
             bool containMargins = !Styled && m_UserSpecifiedWidth && Compat.OppositeLayoutSizeKeepsMarginsInside;
+            bool useChildHeights = containMargins || (!Styled && Compat.UnstyledHorizontalHeightUsesChildMaximum);
             float childMin = 0f, childMax = 0f;
             int stretch = 0;
             int topMargin = int.MaxValue, bottomMargin = int.MaxValue;
@@ -522,7 +523,7 @@ namespace UnityEngine
                 foreach (var e in entries)
                 {
                     e.CalcHeight();
-                    if (!containMargins || e.consideredForMargin)
+                    if (!useChildHeights || e.consideredForMargin)
                     {
                         int t = e.consideredForMargin ? e.marginTop : 0, b = e.consideredForMargin ? e.marginBottom : 0;
                         topMargin = Math.Min(topMargin, t);
@@ -532,7 +533,7 @@ namespace UnityEngine
                 }
                 foreach (var e in entries)
                 {
-                    if (containMargins)
+                    if (useChildHeights)
                     {
                         if (!e.consideredForMargin) continue;
                         childMin = Math.Max(childMin, e.minHeight);

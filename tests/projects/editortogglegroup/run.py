@@ -14,7 +14,7 @@ import value_probe  # noqa: E402
 BASE = (PROBE.parent/'imguiskin', ('Assets/Scenes', 'Packages', 'ProjectSettings'))
 
 def run():
-    args = ['--frames', '209', '--size', '320x240', '--focus', '1:on']
+    args = ['--frames', '228', '--size', '320x240', '--focus', '1:on']
     steps = json.loads((PROBE/'Assets/Resources/ToggleGroupSteps.json').read_text())['steps']
     for step in steps:
         value = f"{step['x']},{step['y']}" if step['command'] == 'move' else step['key']

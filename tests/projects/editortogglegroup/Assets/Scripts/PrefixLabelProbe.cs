@@ -15,6 +15,13 @@ public sealed partial class ToggleGroupProbe
     bool m_NextPrefixRecorded;
     int m_HandlePrefixInputCount;
     bool m_HandlePrefixRecorded;
+    int m_LayoutPrefixInputCount;
+    bool m_LayoutPrefixRecorded;
+    GUIStyle m_PrefixFollowingStyle;
+    GUIStyle m_RowTallMarginStyle;
+    GUIStyle m_RowShortMarginStyle;
+    readonly string[] m_LayoutPrefixNames =
+        { "string", "content", "stringFollowing", "contentFollowing", "stringBoth", "contentBoth", "empty" };
 
     void DrawPrefixLabels()
     {
@@ -208,6 +215,75 @@ public sealed partial class ToggleGroupProbe
         {
             GUI.EndGroup();
             if (recordRepaint) m_HandlePrefixRecorded = true;
+        }
+    }
+
+    void DrawLayoutPrefixes()
+    {
+        bool down = Event.current.type == EventType.MouseDown;
+        bool record = Event.current.type == EventType.Repaint && !m_LayoutPrefixRecorded && m_Frame >= 206;
+        int previousIndent = EditorGUI.indentLevel;
+        float previousWidth = EditorGUIUtility.labelWidth;
+        EditorGUI.indentLevel = 1;
+        EditorGUIUtility.labelWidth = 58;
+        GUILayout.BeginArea(new Rect(12, 12, 280, 220));
+        try
+        {
+            m_PrefixFollowingStyle ??= new GUIStyle(GUI.skin.textField) { margin = new RectOffset(7, 9, 2, 2) };
+            int previous = GUIUtility.GetControlID(FocusType.Keyboard);
+            if (down)
+            {
+                GUIUtility.keyboardControl = previous;
+                EditorGUIUtility.editingTextField = true;
+            }
+            for (int row = 0; row < m_LayoutPrefixNames.Length; row++)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    switch (row)
+                    {
+                        case 0: EditorGUILayout.PrefixLabel("Plain"); break;
+                        case 1: EditorGUILayout.PrefixLabel(m_Prefix); break;
+                        case 2: EditorGUILayout.PrefixLabel("Following style", m_PrefixFollowingStyle); break;
+                        case 3: EditorGUILayout.PrefixLabel(m_Prefix, m_PrefixFollowingStyle); break;
+                        case 4: EditorGUILayout.PrefixLabel("Both styles", m_PrefixFollowingStyle, m_PrefixStyle); break;
+                        case 5: EditorGUILayout.PrefixLabel(m_Prefix, m_PrefixFollowingStyle, m_PrefixStyle); break;
+                        default: EditorGUILayout.PrefixLabel(GUIContent.none, m_PrefixFollowingStyle); break;
+                    }
+                    string name = m_LayoutPrefixNames[row];
+                    if (record) Position("layoutPrefix/label/", name, GUILayoutUtility.GetLastRect());
+                    if (row == 0) GUI.SetNextControlName("layout-prefix-field");
+                    GUILayout.TextField("", m_PrefixFollowingStyle, GUILayout.Width(90), GUILayout.Height(18));
+                    if (record) Position("layoutPrefix/field/", name, GUILayoutUtility.GetLastRect());
+                }
+            }
+            m_RowTallMarginStyle ??= new GUIStyle(GUIStyle.none) { margin = new RectOffset(2, 2, 7, 6) };
+            m_RowShortMarginStyle ??= new GUIStyle(GUIStyle.none) { margin = new RectOffset(2, 2, 2, 2) };
+            using (new GUILayout.HorizontalScope())
+            {
+                var first = GUILayoutUtility.GetRect(48, 25, m_RowTallMarginStyle);
+                var second = GUILayoutUtility.GetRect(34, 20, m_RowShortMarginStyle);
+                if (record)
+                {
+                    Position("layoutPrefix/rowControl/", "first", first);
+                    Position("layoutPrefix/rowControl/", "second", second);
+                }
+            }
+            var followingRow = GUILayoutUtility.GetRect(42, 8, m_RowShortMarginStyle);
+            if (record) Position("layoutPrefix/rowControl/", "nextRow", followingRow);
+            if (down)
+            {
+                bool focus = GUI.GetNameOfFocusedControl() == "layout-prefix-field";
+                Put("layoutPrefix/input/" + m_LayoutPrefixInputCount++,
+                    $"[{Flag(focus)},{Flag(GUIUtility.keyboardControl == previous)},{Flag(EditorGUIUtility.editingTextField)},{Flag(Event.current.type == EventType.Used)}]");
+            }
+        }
+        finally
+        {
+            GUILayout.EndArea();
+            EditorGUI.indentLevel = previousIndent;
+            EditorGUIUtility.labelWidth = previousWidth;
+            if (record) m_LayoutPrefixRecorded = true;
         }
     }
 }

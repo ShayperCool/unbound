@@ -110,6 +110,12 @@
     {"frame": 195, "command": "release", "key": "Mouse0"},
     {"frame": 198, "command": "move", "x": 38, "y": 142},
     {"frame": 199, "command": "press", "key": "Mouse0"},
-    {"frame": 200, "command": "release", "key": "Mouse0"}
+    {"frame": 200, "command": "release", "key": "Mouse0"},
+    {"frame": 207, "command": "move", "x": 42, "y": 21},
+    {"frame": 209, "command": "press", "key": "Mouse0"},
+    {"frame": 210, "command": "release", "key": "Mouse0"},
+    {"frame": 213, "command": "move", "x": 254, "y": 21},
+    {"frame": 215, "command": "press", "key": "Mouse0"},
+    {"frame": 216, "command": "release", "key": "Mouse0"}
   ]
 }

@@ -53,6 +53,12 @@ style overloads. Passing an explicit null style throws on Repaint for both
 the Inspector label style.
 [Unity 6000.0 `EditorGUI.HandlePrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUI.HandlePrefixLabel.html)
 
+The `EditorGUILayout.PrefixLabel` controls record all six overloads, the space left
+for an empty indented label, and a click inside and outside the label. An independent
+horizontal group has children of different heights and vertical margins. Its
+following row confirms the group's height is based on the tallest child.
+[Unity 6000.0 `EditorGUILayout.PrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUILayout.PrefixLabel.html)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b

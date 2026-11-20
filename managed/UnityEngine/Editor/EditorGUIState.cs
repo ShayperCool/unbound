@@ -241,7 +241,7 @@ namespace UnityEditor
 
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label, GUIStyle style) => PrefixLabel(totalPosition, 0, label, style);
 
-        static GUIStyle DefaultPrefixLabelStyle =>
+        internal static GUIStyle DefaultPrefixLabelStyle =>
             Compat.InspectorGuiStylesMeasured && Event.current != null ? EditorStyles.label : null;
 
         public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) =>
@@ -334,6 +334,8 @@ namespace UnityEditor
     /// <summary>The auto-layout forms of the editor controls (see <see cref="EditorGUI"/>).</summary>
     public sealed partial class EditorGUILayout
     {
+        static readonly GUILayoutOption[] s_PrefixLayoutOptions = { GUILayout.ExpandWidth(false) };
+
         static Rect Line(GUILayoutOption[] options)
         {
             EditorGUI.RequireGUI();
@@ -442,6 +444,36 @@ namespace UnityEditor
 
         public static void EndVertical() => GUILayout.EndVertical();
 
+        public static void PrefixLabel(string label) => PrefixLabel(GUIContent.Temp(label));
+
+        public static void PrefixLabel(string label, GUIStyle followingStyle) =>
+            PrefixLabel(GUIContent.Temp(label), followingStyle);
+
+        public static void PrefixLabel(string label, GUIStyle followingStyle, GUIStyle labelStyle) =>
+            PrefixLabel(GUIContent.Temp(label), followingStyle, labelStyle);
+
+        public static void PrefixLabel(GUIContent label) =>
+            PrefixLabel(label, Compat.InspectorGuiStylesMeasured && Event.current != null ? (GUIStyle)"Button" : null);
+
+        public static void PrefixLabel(GUIContent label, GUIStyle followingStyle) =>
+            PrefixLabel(label, followingStyle, EditorGUI.DefaultPrefixLabelStyle);
+
+        public static void PrefixLabel(GUIContent label, GUIStyle followingStyle, GUIStyle labelStyle)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.PrefixLabel");
+                return;
+            }
+            EditorGUI.RequireGUI();
+            bool hasLabel = EditorGUIControls.HasLabelContent(label);
+            float prefixWidth = (hasLabel ? EditorGUIUtility.labelWidth : EditorGUI.indent) - followingStyle.margin.left;
+            var labelPosition = GUILayoutUtility.GetRect(prefixWidth, EditorGUIUtility.singleLineHeight, followingStyle, s_PrefixLayoutOptions);
+            if (!hasLabel) return;
+            labelPosition.xMin += EditorGUI.indent;
+            EditorGUIControls.HandlePrefixLabel(labelPosition, label, 0, labelStyle);
+        }
+
         public static bool ToggleLeft(string label, bool value, params GUILayoutOption[] options) =>
             ToggleLeft(GUIContent.Temp(label), value, null, options);
 
@@ -548,9 +580,12 @@ namespace UnityEditor
 
         static Rect Field(Rect position, GUIContent label)
         {
-            if (label == null || (string.IsNullOrEmpty(label.text) && label.image == null)) return EditorGUI.IndentedRect(position);
+            if (!HasLabelContent(label)) return EditorGUI.IndentedRect(position);
             return PrefixLabel(position, label);
         }
+
+        internal static bool HasLabelContent(GUIContent label) =>
+            label != null && (!string.IsNullOrEmpty(label.text) || label.image != null);
 
         internal static Rect PrefixLabel(Rect position, GUIContent label)
         {
@@ -563,7 +598,7 @@ namespace UnityEditor
         internal static Rect PrefixLabel(Rect position, int id, GUIContent label, GUIStyle style)
         {
             var indented = EditorGUI.IndentedRect(position);
-            if (label == null || (string.IsNullOrEmpty(label.text) && label.image == null)) return indented;
+            if (!HasLabelContent(label)) return indented;
 
             float labelWidth = EditorGUIUtility.labelWidth;
             var labelPosition = new Rect(indented.x, position.y, labelWidth - EditorGUI.indent, EditorGUIUtility.singleLineHeight);

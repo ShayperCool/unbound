@@ -316,6 +316,11 @@ namespace Unbound.Runtime
         /// inside its measured size (Unity 6000.0.71f1, tests/projects/imguiskin).</summary>
         internal static bool OppositeLayoutSizeKeepsMarginsInside => Family == ReleaseFamily.Unity6000_0;
 
+        // An unstyled horizontal group's height uses the tallest child. Child margins still
+        // offset the children and the smallest margins are passed to the parent.
+        // Measured by tests/projects/editortogglegroup.
+        internal static bool UnstyledHorizontalHeightUsesChildMaximum => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;
