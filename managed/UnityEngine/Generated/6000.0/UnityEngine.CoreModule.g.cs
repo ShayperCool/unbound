@@ -612,14 +612,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Color AlphaMultiplied(float multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.AlphaMultiplied"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Color RGBMultiplied(global::UnityEngine.Color multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.RGBMultiplied"); return default; }
     }
-    unsafe partial class ColorUsageAttribute
-    {
-        [global::System.Obsolete("This field is no longer used for anything.")] [global::Unbound.Stub] public readonly float minBrightness;
-        [global::System.Obsolete("This field is no longer used for anything.")] [global::Unbound.Stub] public readonly float maxBrightness;
-        [global::System.Obsolete("This field is no longer used for anything.")] [global::Unbound.Stub] public readonly float minExposureValue;
-        [global::System.Obsolete("This field is no longer used for anything.")] [global::Unbound.Stub] public readonly float maxExposureValue;
-        [global::System.Obsolete("Brightness and exposure parameters are no longer used for anything. Use ColorUsageAttribute(bool showAlpha, bool hdr)")] [global::Unbound.Stub] public ColorUsageAttribute(bool showAlpha, bool hdr, float minBrightness, float maxBrightness, float minExposureValue, float maxExposureValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ColorUsageAttribute.ctor"); }
-    }
     unsafe partial class Component
     {
         [global::Unbound.Stub] internal void GetComponentFastPath(global::System.Type type, global::System.IntPtr oneFurtherThanResultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Component.GetComponentFastPath"); }
@@ -2534,23 +2526,6 @@ namespace UnityEngine.Assertions
         [global::Unbound.Stub] public static string NullFailureMessage(object value, bool expectNull) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.AssertionMessageUtil.NullFailureMessage"); return default; }
         [global::Unbound.Stub] public static string BooleanFailureMessage(bool expected) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.AssertionMessageUtil.BooleanFailureMessage"); return default; }
         [global::Unbound.Stub] public AssertionMessageUtil() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.AssertionMessageUtil.ctor"); }
-    }
-}
-namespace UnityEngine.Assertions.Comparers
-{
-    [global::Unbound.Stub]
-    public unsafe partial class FloatComparer : global::System.Collections.Generic.IEqualityComparer<float>
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEngine.Assertions.Comparers.FloatComparer s_ComparerWithDefaultTolerance;
-        public const float kEpsilon = 1E-05f;
-        [global::Unbound.Stub] public FloatComparer() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.ctor"); }
-        [global::Unbound.Stub] public FloatComparer(bool relative) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.ctor"); }
-        [global::Unbound.Stub] public FloatComparer(float error) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.ctor"); }
-        [global::Unbound.Stub] public FloatComparer(float error, bool relative) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.ctor"); }
-        [global::Unbound.Stub] public bool Equals(float a, float b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.Equals"); return default; }
-        [global::Unbound.Stub] public int GetHashCode(float obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool AreEqual(float expected, float actual, float error) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.AreEqual"); return default; }
-        [global::Unbound.Stub] public static bool AreEqualRelative(float expected, float actual, float error) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Assertions.Comparers.FloatComparer.AreEqualRelative"); return default; }
     }
 }
 namespace UnityEngine.Assertions.Must
@@ -5176,11 +5151,6 @@ namespace UnityEngineInternal
         BakedTexelValidity = 12,
         BakedUVOverlap = 13,
         BakedLightmapCulling = 14,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class GenericStack : global::System.Collections.Stack
-    {
-        [global::Unbound.Stub] public GenericStack() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngineInternal.GenericStack.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class GraphicsDeviceDebug

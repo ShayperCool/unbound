@@ -35,7 +35,7 @@ namespace UnityEngine.Assertions
 
         static void AreApproximatelyEqual(float expected, float actual, string message, float tolerance)
         {
-            if (Math.Abs(actual - expected) > tolerance) Fail($"Values are not close enough.\nExpected: {expected}\nActual: {actual}", message);
+            if (!Comparers.FloatComparer.AreEqual(expected, actual, tolerance)) Fail($"Values are not close enough.\nExpected: {expected}\nActual: {actual}", message);
         }
 
         [Conditional(UNITY_ASSERTIONS)] public static void AreNotApproximatelyEqual(float expected, float actual) { if (Math.Abs(actual - expected) <= 1E-05f) Fail("Values are close.", null); }
