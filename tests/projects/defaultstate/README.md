@@ -691,3 +691,8 @@ committed row and inventory entry is unchanged (15,750 rows).
 The ReorderableList state slice adds one inventory entry and its factory row. Two independent
 6000.0.71f1 Linux GPU captures exclude it because it has no public parameterless constructor.
 The explicit constructors are covered by `tests/projects/reorderablelist`.
+
+The popup content slice adds `PopupWindow` and `PopupWindowContent` to the inventory. Two independent
+6000.0.71f1 Linux GPU captures agree on the 23 added rows. Three inherited `EditorWindow` properties
+remain queued. The added factory calls shift two implementation instance IDs, so the debt file
+records their new actual values alongside the original reference values.

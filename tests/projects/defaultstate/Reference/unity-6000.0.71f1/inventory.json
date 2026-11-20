@@ -1942,6 +1942,18 @@
       "type": "UnityEditor.PluginImporter"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PopupWindow"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.PopupWindowContent"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

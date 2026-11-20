@@ -19058,31 +19058,13 @@ namespace UnityEditor
         [global::Unbound.Stub] public static global::UnityEngine.Rect GetDropDownRect(global::UnityEngine.Rect buttonRect, global::UnityEngine.Vector2 minSize, global::UnityEngine.Vector2 maxSize, global::UnityEditor.ContainerWindow popupContainerWindow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupLocationHelper.GetDropDownRect"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Rect GetDropDownRect(global::UnityEngine.Rect buttonRect, global::UnityEngine.Vector2 minSize, global::UnityEngine.Vector2 maxSize, global::UnityEditor.ContainerWindow popupContainerWindow, global::UnityEditor.PopupLocation[] locationPriorityOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupLocationHelper.GetDropDownRect"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class PopupWindow : global::UnityEditor.EditorWindow
+    unsafe partial class PopupWindow
     {
         [global::Unbound.Stub] public static readonly string invalidSizeLabelUssClassName;
-        [global::Unbound.Stub] internal PopupWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.ctor"); }
-        [global::Unbound.Stub] public static void Show(global::UnityEngine.Rect activatorRect, global::UnityEditor.PopupWindowContent windowContent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.Show"); }
         [global::Unbound.Stub] internal static void Show(global::UnityEngine.Rect activatorRect, global::UnityEditor.PopupWindowContent windowContent, global::UnityEditor.PopupLocation[] locationPriorityOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.Show"); }
         [global::Unbound.Stub] internal static void Show(global::UnityEngine.Rect activatorRect, global::UnityEditor.PopupWindowContent windowContent, global::UnityEditor.PopupLocation[] locationPriorityOrder, global::UnityEditor.ShowMode showMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.Show"); }
-        [global::Unbound.Stub] internal static bool ShouldShowWindow(global::UnityEngine.Rect activatorRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.ShouldShowWindow"); return default; }
         [global::Unbound.Stub] internal void Init(global::UnityEngine.Rect activatorRect, global::UnityEditor.PopupWindowContent windowContent, global::UnityEditor.PopupLocation[] locationPriorityOrder, global::UnityEditor.ShowMode showMode, bool giveFocus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.Init"); }
         [global::Unbound.Stub] internal void OnGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.OnGUI"); }
-        [global::Unbound.Stub] protected virtual void OnEnable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.OnEnable"); }
-        [global::Unbound.Stub] protected virtual void OnDisable() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.OnDisable"); }
-        [global::Unbound.Stub] private protected void CloseContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindow.CloseContent"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class PopupWindowContent
-    {
-        [global::Unbound.Stub] public virtual void OnGUI(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.OnGUI"); }
-        [global::Unbound.Stub] public virtual global::UnityEngine.UIElements.VisualElement CreateGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.CreateGUI"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Vector2 GetWindowSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.GetWindowSize"); return default; }
-        [global::Unbound.Stub] public virtual void OnOpen() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.OnOpen"); }
-        [global::Unbound.Stub] public virtual void OnClose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.OnClose"); }
-        [global::Unbound.Stub] protected PopupWindowContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.ctor"); }
-        public global::UnityEditor.EditorWindow editorWindow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.editorWindow"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PopupWindowContent.editorWindow"); } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PopupWindowContentForNewLibrary : global::UnityEditor.PopupWindowContent
