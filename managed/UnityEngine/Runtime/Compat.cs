@@ -304,6 +304,10 @@ namespace Unbound.Runtime
         /// tests/projects/editorstyles on Unity 6000.0.71f1.</summary>
         internal static bool InspectorGuiStylesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>IMGUI buttons and toggles submit on an unmodified key event with a key code
+        /// in Unity 6000.0.71f1 (tests/projects/editortogglegroup).</summary>
+        internal static bool GuiControlKeySubmitMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Explicit group size options keep the opposite axis's outer child margins
         /// inside its measured size (Unity 6000.0.71f1, tests/projects/imguiskin).</summary>
         internal static bool OppositeLayoutSizeKeepsMarginsInside => Family == ReleaseFamily.Unity6000_0;

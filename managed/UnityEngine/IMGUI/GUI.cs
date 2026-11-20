@@ -410,7 +410,11 @@ namespace UnityEngine
                     }
                     break;
                 case EventType.KeyDown:
-                    bool submit = e.character == ' ' || e.keyCode == KeyCode.Space || e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter;
+                    bool submit = e.keyCode is KeyCode.Space or KeyCode.Return or KeyCode.KeypadEnter;
+                    if (Compat.GuiControlKeySubmitMeasured)
+                        submit &= !e.alt && !e.shift && !e.command && !e.control;
+                    else
+                        submit |= e.character == ' ';
                     if (submit && GUIUtility.keyboardControl == id)
                     {
                         e.Use();
