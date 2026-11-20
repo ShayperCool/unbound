@@ -46,6 +46,13 @@ The explicit style transfers focus on the first text field. In the later field's
 focus comparison, Unity retains the previous control and Unbound focuses the field.
 [Unity 6000.0 `GUI.GetNameOfFocusedControl`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/GUI.GetNameOfFocusedControl.html)
 
+The `HandlePrefixLabel` controls place the label outside the total rectangle and
+click each region. The probe covers explicit and following control IDs and both
+style overloads. Passing an explicit null style throws on Repaint for both
+`HandlePrefixLabel` and `PrefixLabel`. The overloads without a style draw using
+the Inspector label style.
+[Unity 6000.0 `EditorGUI.HandlePrefixLabel`](https://docs.unity.cn/6000.0/Documentation/ScriptReference/EditorGUI.HandlePrefixLabel.html)
+
 ```sh
 python3 tests/projects/editortogglegroup/run.py record --label native-a
 python3 tests/projects/editortogglegroup/run.py record --label native-b

@@ -13,6 +13,8 @@ public sealed partial class ToggleGroupProbe
     readonly GUIContent m_ReusablePrefix = new GUIContent();
     int m_NextPrefixInputCount;
     bool m_NextPrefixRecorded;
+    int m_HandlePrefixInputCount;
+    bool m_HandlePrefixRecorded;
 
     void DrawPrefixLabels()
     {
@@ -146,6 +148,66 @@ public sealed partial class ToggleGroupProbe
             EditorGUI.indentLevel = previousIndent;
             EditorGUIUtility.labelWidth = previousWidth;
             if (recordRects) m_NextPrefixRecorded = true;
+        }
+    }
+
+    void DrawHandledPrefixes()
+    {
+        bool down = Event.current.type == EventType.MouseDown;
+        bool recordRepaint = Event.current.type == EventType.Repaint && !m_HandlePrefixRecorded;
+        GUI.BeginGroup(new Rect(6, 5, 280, 180));
+        try
+        {
+            int other = GUIUtility.GetControlID(FocusType.Keyboard);
+            int basic = GUIUtility.GetControlID(FocusType.Keyboard);
+            int nullStyle = GUIUtility.GetControlID(FocusType.Keyboard);
+            if (down)
+            {
+                GUIUtility.keyboardControl = other;
+                EditorGUIUtility.editingTextField = true;
+            }
+
+            // The custom label is outside the supplied total rectangle.
+            var total = new Rect(100, 18, 142, 25);
+            var label = new Rect(8, 18, 46, 13);
+            if (m_Frame < 187)
+                EditorGUI.HandlePrefixLabel(total, label, m_Prefix, basic);
+            else
+                EditorGUI.HandlePrefixLabel(total, label, m_Prefix, basic, m_PrefixStyle);
+            EditorGUI.HandlePrefixLabel(new Rect(100, 94, 142, 25), new Rect(8, 94, 46, 13), m_Prefix);
+            int next = GUIUtility.GetControlID(FocusType.Keyboard);
+            try
+            {
+                EditorGUI.HandlePrefixLabel(new Rect(100, 132, 142, 25), new Rect(8, 132, 46, 13), m_Prefix, basic, null);
+                if (recordRepaint) Put("handlePrefix/nullStyleRepaint", "\"ok\"");
+            }
+            catch (Exception error)
+            {
+                if (recordRepaint) Put("handlePrefix/nullStyleRepaint", $"\"{error.GetType().Name}\"");
+            }
+            try
+            {
+                EditorGUI.PrefixLabel(new Rect(130, 155, 110, 18), nullStyle, m_Prefix, null);
+                if (recordRepaint) Put("handlePrefix/prefixNullStyleRepaint", "\"ok\"");
+            }
+            catch (Exception error)
+            {
+                if (recordRepaint) Put("handlePrefix/prefixNullStyleRepaint", $"\"{error.GetType().Name}\"");
+            }
+
+            if (down)
+            {
+                int focus = GUIUtility.keyboardControl;
+                string name = focus == basic ? "basic" : focus == next ? "next" :
+                    focus == nullStyle ? "nullStyle" : focus == other ? "other" : "none";
+                Put("handlePrefix/input/" + m_HandlePrefixInputCount++,
+                    $"[\"{name}\",{Flag(EditorGUIUtility.editingTextField)},{Flag(Event.current.type == EventType.Used)}]");
+            }
+        }
+        finally
+        {
+            GUI.EndGroup();
+            if (recordRepaint) m_HandlePrefixRecorded = true;
         }
     }
 }

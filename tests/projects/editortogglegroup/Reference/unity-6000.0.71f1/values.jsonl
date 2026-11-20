@@ -166,4 +166,12 @@
 {"k":"nextPrefix/input/5","v":["other",true,false,false]}
 {"k":"nextPrefix/input/6","v":["default",false,false,true]}
 {"k":"nextPrefix/inputCount","v":7}
+{"k":"handlePrefix/nullStyleRepaint","v":"NullReferenceException"}
+{"k":"handlePrefix/prefixNullStyleRepaint","v":"NullReferenceException"}
+{"k":"handlePrefix/input/0","v":["basic",false,false]}
+{"k":"handlePrefix/input/1","v":["other",true,false]}
+{"k":"handlePrefix/input/2","v":["basic",false,false]}
+{"k":"handlePrefix/input/3","v":["next",false,false]}
+{"k":"handlePrefix/input/4","v":["basic",false,false]}
+{"k":"handlePrefix/inputCount","v":5}
 {"k":"complete","v":true}

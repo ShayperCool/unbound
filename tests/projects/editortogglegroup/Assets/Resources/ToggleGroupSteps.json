@@ -95,6 +95,21 @@
     {"frame": 169, "command": "release", "key": "Mouse0"},
     {"frame": 171, "command": "move", "x": 55, "y": 28},
     {"frame": 172, "command": "press", "key": "Mouse0"},
-    {"frame": 173, "command": "release", "key": "Mouse0"}
+    {"frame": 173, "command": "release", "key": "Mouse0"},
+    {"frame": 178, "command": "move", "x": 38, "y": 30},
+    {"frame": 179, "command": "press", "key": "Mouse0"},
+    {"frame": 180, "command": "release", "key": "Mouse0"},
+    {"frame": 183, "command": "move", "x": 134, "y": 30},
+    {"frame": 184, "command": "press", "key": "Mouse0"},
+    {"frame": 185, "command": "release", "key": "Mouse0"},
+    {"frame": 188, "command": "move", "x": 38, "y": 30},
+    {"frame": 189, "command": "press", "key": "Mouse0"},
+    {"frame": 190, "command": "release", "key": "Mouse0"},
+    {"frame": 193, "command": "move", "x": 38, "y": 104},
+    {"frame": 194, "command": "press", "key": "Mouse0"},
+    {"frame": 195, "command": "release", "key": "Mouse0"},
+    {"frame": 198, "command": "move", "x": 38, "y": 142},
+    {"frame": 199, "command": "press", "key": "Mouse0"},
+    {"frame": 200, "command": "release", "key": "Mouse0"}
   ]
 }

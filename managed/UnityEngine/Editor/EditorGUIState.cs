@@ -241,7 +241,11 @@ namespace UnityEditor
 
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label, GUIStyle style) => PrefixLabel(totalPosition, 0, label, style);
 
-        public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) => PrefixLabel(totalPosition, id, label, null);
+        static GUIStyle DefaultPrefixLabelStyle =>
+            Compat.InspectorGuiStylesMeasured && Event.current != null ? EditorStyles.label : null;
+
+        public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) =>
+            PrefixLabel(totalPosition, id, label, DefaultPrefixLabelStyle);
 
         public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label, GUIStyle style)
         {
@@ -251,7 +255,24 @@ namespace UnityEditor
                 return default;
             }
             RequireGUI();
-            return EditorGUIControls.PrefixLabel(totalPosition, id, label, style ?? EditorStyles.label);
+            return EditorGUIControls.PrefixLabel(totalPosition, id, label, style);
+        }
+
+        public static void HandlePrefixLabel(Rect totalPosition, Rect labelPosition, GUIContent label) =>
+            HandlePrefixLabel(totalPosition, labelPosition, label, 0, DefaultPrefixLabelStyle);
+
+        public static void HandlePrefixLabel(Rect totalPosition, Rect labelPosition, GUIContent label, int id) =>
+            HandlePrefixLabel(totalPosition, labelPosition, label, id, DefaultPrefixLabelStyle);
+
+        public static void HandlePrefixLabel(Rect totalPosition, Rect labelPosition, GUIContent label, int id, GUIStyle style)
+        {
+            if (!Compat.InspectorGuiStylesMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUI.HandlePrefixLabel");
+                return;
+            }
+            RequireGUI();
+            EditorGUIControls.HandlePrefixLabel(labelPosition, label, id, style);
         }
 
         public static void DrawRect(Rect rect, Color color)
@@ -523,6 +544,7 @@ namespace UnityEditor
         static GUIStyle s_PendingPrefixStyle;
         static Rect s_PendingPrefixRect;
         static Color s_PendingPrefixColor;
+        static bool s_HasPendingPrefix;
 
         static Rect Field(Rect position, GUIContent label)
         {
@@ -545,28 +567,33 @@ namespace UnityEditor
 
             float labelWidth = EditorGUIUtility.labelWidth;
             var labelPosition = new Rect(indented.x, position.y, labelWidth - EditorGUI.indent, EditorGUIUtility.singleLineHeight);
-            if (id != 0)
-            {
-                DrawPrefixLabel(labelPosition, label, id, style);
-            }
-            else
-            {
-                s_PendingPrefixContent ??= new GUIContent();
-                s_PendingPrefixContent.text = label.text;
-                s_PendingPrefixContent.image = label.image;
-                s_PendingPrefixContent.tooltip = label.tooltip;
-                s_PendingPrefixStyle = style;
-                s_PendingPrefixRect = labelPosition;
-                s_PendingPrefixColor = GUI.color;
-            }
+            HandlePrefixLabel(labelPosition, label, id, style);
             float fieldOffset = labelWidth + PrefixLabelGap;
             return new Rect(position.x + fieldOffset, position.y, position.width - fieldOffset, position.height);
         }
 
+        internal static void HandlePrefixLabel(Rect labelPosition, GUIContent label, int id, GUIStyle style)
+        {
+            if (id != 0)
+            {
+                DrawPrefixLabel(labelPosition, label, id, style);
+                return;
+            }
+            s_PendingPrefixContent ??= new GUIContent();
+            s_PendingPrefixContent.text = label.text;
+            s_PendingPrefixContent.image = label.image;
+            s_PendingPrefixContent.tooltip = label.tooltip;
+            s_PendingPrefixStyle = style;
+            s_PendingPrefixRect = labelPosition;
+            s_PendingPrefixColor = GUI.color;
+            s_HasPendingPrefix = true;
+        }
+
         internal static void CompletePendingPrefixLabel(int id)
         {
+            if (!s_HasPendingPrefix || Event.current == null) return;
             var style = s_PendingPrefixStyle;
-            if (style == null || Event.current == null) return;
+            s_HasPendingPrefix = false;
             s_PendingPrefixStyle = null;
             var label = s_PendingPrefixContent;
             var previous = GUI.color;
