@@ -303,6 +303,7 @@ fn parse_type(
     }
     *off += 16;
     let mut nodes = Vec::new();
+    let mut names = None;
     if type_trees {
         if version < 12 {
             bail!("serialized files with old-style type trees are not supported");
@@ -336,18 +337,18 @@ fn parse_type(
             });
         }
         *off = strings_at + strings_size;
-    }
-    let mut names = None;
-    if version >= 21 {
-        if is_ref {
-            let (class, next) = cstr(*off)?;
-            let (namespace, next) = cstr(next)?;
-            let (assembly, next) = cstr(next)?;
-            *off = next;
-            names = Some((class, namespace, assembly));
-        } else {
-            let dependencies = le32(*off)? as usize;
-            *off += 4 + 4 * dependencies;
+        // Type trees end with the type's dependencies, or a referenced type's names (format 21).
+        if version >= 21 {
+            if is_ref {
+                let (class, next) = cstr(*off)?;
+                let (namespace, next) = cstr(next)?;
+                let (assembly, next) = cstr(next)?;
+                *off = next;
+                names = Some((class, namespace, assembly));
+            } else {
+                let dependencies = le32(*off)? as usize;
+                *off += 4 + 4 * dependencies;
+            }
         }
     }
     Ok((class_id, nodes, names))
