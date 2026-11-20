@@ -272,9 +272,9 @@ namespace Unbound.Runtime
         /// Measured in tests/projects/textcolor on Unity 6000.0.71f1.</summary>
         internal static bool LegacyFontReadKeepsGlyph => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Property scopes call subscribers in Layout and Repaint on Unity 6000.0.71f1.
-        /// Measured in tests/projects/imguiskin. Other families are unmeasured.</summary>
-        internal static bool EditorPropertyBeginCallbackMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>Property scope labels, notifications and GUI state measured in Layout and
+        /// Repaint by tests/projects/imguiskin on Unity 6000.0.71f1. Other families are unmeasured.</summary>
+        internal static bool EditorPropertyScopeMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
         /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>

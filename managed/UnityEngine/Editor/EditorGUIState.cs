@@ -158,6 +158,16 @@ namespace UnityEditor
             }
         }
 
+        public partial class PropertyScope : GUI.Scope
+        {
+            public GUIContent content { get; protected set; }
+
+            public PropertyScope(Rect totalPosition, GUIContent label, SerializedProperty property) =>
+                content = BeginProperty(totalPosition, label, property);
+
+            protected override void CloseScope() => EndProperty();
+        }
+
         // ---------------------------------------------------------------- property heights
 
         public static float GetPropertyHeight(SerializedProperty property) => GetPropertyHeight(property, null, true);
@@ -208,20 +218,50 @@ namespace UnityEditor
         public static GUIContent BeginProperty(Rect totalPosition, GUIContent label, SerializedProperty property)
         {
             RequireGUI();
-            bool notify = Compat.EditorPropertyBeginCallbackMeasured;
-            if (notify && property == null)
+            if (!Compat.EditorPropertyScopeMeasured)
+            {
+                s_PropertyStack.Push(default);
+                return label;
+            }
+            if (property == null)
                 throw new NullReferenceException((label == null ? "" : label.text + ": ") + "SerializedProperty is null");
-            s_PropertyStack.Push(property);
-            if (notify) EditorGUIUtility.NotifyBeginProperty(totalPosition, property);
-            return label;
+
+            string tooltip = label?.tooltip;
+            s_PropertyContent.text = label == null ? property.displayName : label.text;
+            s_PropertyContent.tooltip = string.IsNullOrEmpty(tooltip) ? property.tooltip : tooltip;
+            s_PropertyContent.image = label?.image;
+
+            var state = (Enabled: GUI.enabled, Background: GUI.backgroundColor);
+            bool previousMixed = showMixedValue;
+            int previousDepth = s_PropertyStack.Count;
+            s_PropertyStack.Push(state);
+            try
+            {
+                EditorGUIUtility.NotifyBeginProperty(totalPosition, property);
+                showMixedValue = property.hasMultipleDifferentValues;
+                GUI.enabled = GUI.enabled && property.editable;
+                return s_PropertyContent;
+            }
+            catch
+            {
+                while (s_PropertyStack.Count > previousDepth) s_PropertyStack.Pop();
+                showMixedValue = previousMixed;
+                GUI.enabled = state.Enabled;
+                GUI.backgroundColor = state.Background;
+                throw;
+            }
         }
 
         public static void EndProperty()
         {
-            if (s_PropertyStack.Count > 0) s_PropertyStack.Pop();
+            if (!s_PropertyStack.TryPop(out var state) || !Compat.EditorPropertyScopeMeasured) return;
+            showMixedValue = false;
+            GUI.enabled = state.Enabled;
+            GUI.backgroundColor = state.Background;
         }
 
-        static readonly Stack<SerializedProperty> s_PropertyStack = new Stack<SerializedProperty>();
+        static readonly Stack<(bool Enabled, Color Background)> s_PropertyStack = new Stack<(bool, Color)>();
+        static readonly GUIContent s_PropertyContent = new GUIContent();
     }
 
     /// <summary>The auto-layout forms of the editor controls (see <see cref="EditorGUI"/>).</summary>

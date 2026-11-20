@@ -1488,6 +1488,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.EditorGUI+PropertyScope"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.EditorGUILayout"
     },

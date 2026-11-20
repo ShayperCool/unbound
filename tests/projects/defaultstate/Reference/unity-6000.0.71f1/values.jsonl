@@ -16145,4 +16145,5 @@
 {"key":"UnityEditor.PopupWindow/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:52"}
 {"key":"UnityEditor.PopupWindow/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.PopupWindowContent/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEditor.EditorGUI+PropertyScope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"complete","status":"value","value":"1"}

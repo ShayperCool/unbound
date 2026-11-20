@@ -205,9 +205,25 @@ namespace Unbound.Runtime
         internal string Path;
         internal string TypeName;
         internal string Tooltip;
+        string m_DisplayName;
+        int m_Index = -1;
         internal int Depth;
         /// <summary>The index of an array element; -1 otherwise.</summary>
-        internal int Index = -1;
+        internal int Index
+        {
+            get => m_Index;
+            set
+            {
+                if (m_Index == value) return;
+                m_Index = value;
+                m_DisplayName = null;
+            }
+        }
+
+        internal string DisplayName => Kind == SerializedNodeKind.Root ? Name : m_DisplayName ??= IsElement
+            ? "Element " + Index.ToString(CultureInfo.InvariantCulture)
+            : ObjectNames.NicifyVariableName(Name);
+
         internal Type ClrType;
         internal Shape Shape;
         internal Type ElementType;

@@ -316,16 +316,7 @@ namespace UnityEditor
 
         public string name => N.Name;
 
-        public string displayName
-        {
-            get
-            {
-                var n = N;
-                if (n.IsElement) return "Element " + n.Index.ToString(CultureInfo.InvariantCulture);
-                if (n.Kind == SerializedNodeKind.Root) return n.Name;
-                return ObjectNames.NicifyVariableName(n.Name);
-            }
-        }
+        public string displayName => N.DisplayName;
 
         public string propertyPath => N.Path;
 

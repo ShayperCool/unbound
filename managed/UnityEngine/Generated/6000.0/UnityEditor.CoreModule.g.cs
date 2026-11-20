@@ -8294,13 +8294,6 @@ namespace UnityEditor
             OnlyVisible = 1,
         }
         [global::Unbound.Stub]
-        public unsafe partial class PropertyScope : global::UnityEngine.GUI.Scope
-        {
-            [global::Unbound.Stub] public PropertyScope(global::UnityEngine.Rect totalPosition, global::UnityEngine.GUIContent label, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.PropertyScope.ctor"); }
-            [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.PropertyScope.CloseScope"); }
-            public global::UnityEngine.GUIContent content { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.PropertyScope.content"); return default; } [global::Unbound.Stub] protected set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.PropertyScope.content"); } }
-        }
-        [global::Unbound.Stub]
         internal unsafe static partial class EnumNamesCache
         {
             [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] GetEnumTypeLocalizedGUIContents(global::System.Type enumType, global::UnityEngine.EnumData enumData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EnumNamesCache.GetEnumTypeLocalizedGUIContents"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
