@@ -15264,14 +15264,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int FindHotkeyStartIndex(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.FindHotkeyStartIndex"); return default; }
         [global::Unbound.Stub] internal static bool MenuItemExists(string menuPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Menu.MenuItemExists"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class MenuCommand
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Object context;
-        [global::Unbound.Stub] public int userData;
-        [global::Unbound.Stub] public MenuCommand(global::UnityEngine.Object inContext, int inUserData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MenuCommand.ctor"); }
-        [global::Unbound.Stub] public MenuCommand(global::UnityEngine.Object inContext) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MenuCommand.ctor"); }
-    }
     unsafe partial class MenuItem
     {
         [global::Unbound.Stub] public float secondaryPriority;

@@ -714,3 +714,7 @@ The sprite atlas extension slice adds `UnityEditor.DefaultAsset` (no public para
 constructor) and the static `UnityEditor.U2D.SpriteAtlasExtensions` to the handwritten inventory.
 Two independent 6000.0.71f1 Linux GPU Editor captures agree on their two excluded rows; every
 earlier committed row and inventory entry is unchanged.
+
+The MenuCommand slice adds `UnityEditor.MenuCommand` (no public parameterless constructor) to the
+handwritten inventory. Two independent 6000.0.71f1 Linux GPU Editor captures agree on its one
+excluded row; every earlier committed row and inventory entry is unchanged.

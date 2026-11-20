@@ -1807,6 +1807,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.MenuCommand"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.MenuItem"
     },
     {

@@ -121,19 +121,36 @@ namespace UnityEditor
                 AddParents(path, items);
                 var item = new Item();
                 var method = command.Value;
-                item.Supported = method.GetParameters().Length == 0;
+                item.Supported = TakesCommand(method, out bool withCommand);
                 if (item.Supported)
                 {
                     try
                     {
-                        item.Execute = method.ReturnType == typeof(void) ? method.CreateDelegate<Action>() : () => method.Invoke(null, null);
+                        if (withCommand)
+                        {
+                            if (method.ReturnType == typeof(void))
+                            {
+                                var run = method.CreateDelegate<Action<MenuCommand>>();
+                                item.Execute = () => run(PathCommand());
+                            }
+                            else item.Execute = () => method.Invoke(null, new object[] { PathCommand() });
+                        }
+                        else item.Execute = method.ReturnType == typeof(void) ? method.CreateDelegate<Action>() : () => method.Invoke(null, null);
                     }
                     catch (ArgumentException error) { item.Supported = false; UnityEngine.Debug.LogWarning(error.Message); }
                 }
                 if (validators.TryGetValue(command.Key, out var validator)
-                    && validator.GetParameters().Length == 0 && validator.ReturnType == typeof(bool))
+                    && TakesCommand(validator, out bool validatorWithCommand) && validator.ReturnType == typeof(bool))
                 {
-                    try { item.Validate = validator.CreateDelegate<Func<bool>>(); }
+                    try
+                    {
+                        if (validatorWithCommand)
+                        {
+                            var validate = validator.CreateDelegate<Func<MenuCommand, bool>>();
+                            item.Validate = () => validate(PathCommand());
+                        }
+                        else item.Validate = validator.CreateDelegate<Func<bool>>();
+                    }
                     catch (ArgumentException error) { item.Supported = false; UnityEngine.Debug.LogWarning(error.Message); }
                 }
                 items[path] = item;
@@ -143,6 +160,19 @@ namespace UnityEditor
             s_Generation = GameDomain.Generation;
             s_AssemblyCount = assemblies.Count;
         }
+        /// <summary>Whether a menu method has a signature the registry runs: no parameters, or one
+        /// MenuCommand (<paramref name="withCommand"/>).</summary>
+        static bool TakesCommand(MethodInfo method, out bool withCommand)
+        {
+            var parameters = method.GetParameters();
+            withCommand = parameters.Length == 1 && parameters[0].ParameterType == typeof(MenuCommand);
+            return parameters.Length == 0 || withCommand;
+        }
+
+        /// <summary>The command a method run by its menu path receives: no context, user data 0
+        /// (tests/projects/menucommand), a new one each call.</summary>
+        static MenuCommand PathCommand() => new MenuCommand(null, 0);
+
         internal static string NormalizeItemPath(string name)
         {
             int space = name.LastIndexOf(' ');

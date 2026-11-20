@@ -918,6 +918,7 @@
 {"key":"UnityEditor.MaterialProperty/Property/UnityEditor.MaterialProperty/type","status":"value","value":"enum:0"}
 {"key":"UnityEditor.MaterialProperty/Property/UnityEditor.MaterialProperty/vectorValue","status":"value","value":"UnityEngine.Vector4{x=0;y=0;z=0;w=0}"}
 {"key":"UnityEditor.Menu/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.MenuCommand/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.MenuItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.MeshUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.ModelImporter/@factory","status":"value","value":"class"}
